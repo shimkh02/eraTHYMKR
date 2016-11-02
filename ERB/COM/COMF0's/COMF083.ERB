@@ -1,0 +1,288 @@
+﻿;=============================================================================
+;가슴 주사
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE83
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:83 > 0
+	RETURN 0
+;강력 아이템·커맨드 무효시는 안 됨
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;주사계 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 64) == 0
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;기교 3 이하의 ASSI의 경우 주사할 수 없다(바늘 다루기라면 OK)
+IF ASSIPLAY
+	SIF ABL:ASSI:12 <= 3 && TALENT:ASSI:53 == 0
+		RETURN 0
+ENDIF
+;주사 세트와 미약을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF (ITEM:53 == 0 || ITEM:61 == 0) && NOITEM == 0
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;B계 장착도구 사용중은 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;훈도시 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;웨딩 드레스·고스로리 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 19 || TEQUIP:59 == 20
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;분유 어떻게 하지 생각중.
+@COM83
+PRINTL 가슴 주사
+TSTR:0 = 가슴 주사
+CALL TRAIN_MESSAGE_COM083
+
+;조제 지식이 있으면 소비를 억제한다
+LOCAL:3 = (TALENT:MASTER:55) ?  1 # 0
+SIF ASSI >= 0 && TALENT:ASSI:55
+	LOCAL:3 = 1
+
+;조교 대상으로 미약중독이 있으면 소비를 억제한다
+IF LOCAL:3
+	LOCAL:1 = (TALENT:46) ?  375 # 750
+	LOCAL:2 = (TALENT:46) ?  300 # 600
+ELSE
+	LOCAL:1 = (TALENT:46) ?  500 # 1000
+	LOCAL:2 = (TALENT:46) ?  400 # 800
+ENDIF
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:2
+
+SOURCE:3 = 500
+SOURCE:24 = 500
+SOURCE:26 = 2600
+SOURCE:31 = 3000
+
+;촉수가 아닌 경우는 미약을 1개 사용
+IF TEQUIP:90
+	TFLAG:90 = 1
+ELSEIF NOITEM == 0
+	ITEM:61 -= 1
+	SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+		CALL FILL_PLURAL_ITEM, 61
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:31 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:31 , 1.80
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:31 , 1.20
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:31 , 1.00
+ELSE
+	TIMES SOURCE:31 , 0.80
+ENDIF
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	TIMES SOURCE:3 , 0.50
+ELSEIF ABL:3 == 1
+	TIMES SOURCE:3 , 1.00
+ELSEIF ABL:3 == 2
+	TIMES SOURCE:3 , 1.50
+ELSEIF ABL:3 == 3
+	TIMES SOURCE:3 , 2.00
+	EX:3 += RAND:1
+ELSEIF ABL:3 == 4
+	TIMES SOURCE:3 , 2.50
+	EX:3 += 1
+ELSE
+	TIMES SOURCE:3 , 3.00
+	EX:3 += 2
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:24 , 0.80
+	TIMES DOWNBASE:0 , 1.20
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:24 , 1.10
+	TIMES DOWNBASE:0 , 1.10
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:24 , 1.30
+	TIMES DOWNBASE:0 , 1.00
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:24 , 1.50
+	TIMES DOWNBASE:0 , 0.90
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:24 , 1.70
+	TIMES DOWNBASE:0 , 0.80
+ELSE
+	TIMES SOURCE:24 , 2.10
+	TIMES DOWNBASE:0 , 0.70
+ENDIF
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 3000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 3300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 3600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 4000
+ELSE
+	SOURCE:20 = 4500
+ENDIF
+
+;아양 약효과를 발휘
+TEQUIP:11 = 1
+
+;반항적
+SIF TALENT:11
+	TIMES SOURCE:20 , 1.10
+;저항
+SIF TALENT:34
+	TIMES SOURCE:20 , 1.10
+;미약중독
+IF TALENT:46
+	SOURCE:24 += 500
+	TIMES SOURCE:3 , 1.50
+	TIMES SOURCE:31 , 1.50
+	SOURCE:42 = 300
+ELSE
+	SOURCE:42 = 2 + RAND:5
+ENDIF
+;B민감
+IF TALENT:106
+	IF ABL:3 <= 3
+		TIMES SOURCE:3 , 1.80
+	ELSEIF ABL:3 == 4
+		TIMES SOURCE:3 , 2.00
+		EX:3 += RAND:2
+	ELSE
+		TIMES SOURCE:3 , 2.20
+		EX:3 += RAND:3
+	ENDIF
+;B둔감
+ELSEIF TALENT:107
+	IF ABL:3 <= 3
+		TIMES SOURCE:3 , 0.70
+		EX:3 -= (EX:3 > 1) ?  1 # 0
+	ELSEIF ABL:3 == 4
+		TIMES SOURCE:3 , 0.75
+		EX:3 -= (EX:3 > 1) ?  1 # 0
+	ELSE
+		TIMES SOURCE:3 , 0.80
+	ENDIF
+ENDIF
+
+;촉수 보정
+IF TEQUIP:90
+	TIMES SOURCE:20 , 0.30
+	TIMES SOURCE:31 , 0.80
+	LOCAL:1 -= 300
+	DOWNBASE:0 -= LOCAL:1
+	DOWNBASE:1 -= 400
+ENDIF
+
+;조교자에게 바늘 다루기
+SIF TALENT:PLAYER:53
+	TIMES SOURCE:20 , 0.90
+;조교자에게 유치
+SIF TALENT:PLAYER:131
+	TIMES SOURCE:20 , 1.20
+
+;레이센이나 에이린에 의한 사용
+IF TEQUIP:90 == 0
+	SIF NO:PLAYER == 28
+		TIMES SOURCE:20 , 0.70
+	SIF NO:PLAYER == 29
+		TIMES SOURCE:20 , 0.50
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;약물 경험
+TCVAR:40 += 2
+
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM083
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+SIF TALENT:106
+	PRINT 민감한 
+IF TALENT:110 || TALENT:111
+	PRINT 풍만함을 느낄 수 없는 
+ELSEIF TALENT:112 || TALENT:113
+	PRINT 커다랗게 출렁거리는 
+ENDIF
+IF ABL:3 >= 4
+	PRINT 유두 끝에 
+ELSE
+	PRINT 새하얀 가슴에 
+ENDIF
+PRINTL 주사바늘을 꽂았다…. 
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF ABL:3 >= 5
+	PRINT 머릿속이 새하얗게 될 정도의 쾌락으로 
+ELSEIF ABL:3 >= 3 && ABL:3 <= 4
+	PRINT 주입된 미약이 서서히 퍼지는 감각으로 
+ELSE
+	PRINT 날카로운 아픔과 가슴에서 오는 뜨거움으로 
+ENDIF
+SIF TFLAG:899 > 0
+	PRINT 무의식 중에 
+IF TALENT:134
+	PRINT 대량의 모유를 분출하면서 
+ELSE
+	PRINT 턱을 덜덜 떨면서 
+ENDIF
+IF PALAM:13 >= PALAMLV:5 && TEQUIP:40 == 0
+	PRINT 침을 흘리고 
+ELSEIF PALAM:13 >= PALAMLV:3 && PALAM:13 < PALAMLV:5
+	PRINT 쭈그리고 앉아 허리를 부들부들 떨고 
+ELSE
+	PRINT 몸을 이완시킨 채로 떨고 
+ENDIF
+PRINTW 있다….

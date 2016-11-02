@@ -1,0 +1,181 @@
+﻿;=============================================================================
+;얻어맞기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE272
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:272 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;奴隷が새드持ちまたはドＳ持ちまたは새드끼Lv1이상이 아니면 불가
+SIF TALENT:81 == 0 && TALENT:177 == 0 && ABL:20 < 1
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(マゾか마조끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:82 == 0 && ABL:ASSI:21 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;효과는 굉장히 미묘.
+@COM272
+IF NO:PLAYER == 11
+	PRINTL 궁디 팡팡 받기
+	TSTR:0 = 궁디 팡팡 받기
+ELSE
+	PRINTL 얻어맞기
+	TSTR:0 = 얻어맞기
+ENDIF
+CALL TRAIN_MESSAGE_COM272
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 15
+DOWNBASE:1 += 20
+
+DOWNBASE:PLAYER:0 += 160
+DOWNBASE:PLAYER:1 += 80
+
+SOURCE:14 = 550
+SOURCE:16 = 150
+SOURCE:17 = 80
+SOURCE:31 = 20
+
+;ABL:새드끼를 본다
+IF ABL:20 <= 1
+	TIMES SOURCE:14 , 0.8
+	TIMES SOURCE:16 , 0.8
+	TIMES SOURCE:17 , 0.7
+ELSEIF ABL:20 == 2
+	TIMES SOURCE:14 , 1.0
+	TIMES SOURCE:16 , 1.0
+	TIMES SOURCE:17 , 0.9
+ELSEIF ABL:20 == 3
+	TIMES SOURCE:14 , 1.4
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:20 == 4
+	TIMES SOURCE:14 , 1.8
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.2
+ELSE
+	TIMES SOURCE:14 , 2.2
+	TIMES SOURCE:16 , 2.0
+	TIMES SOURCE:17 , 1.6
+ENDIF
+
+;ABL:조교자의 마조끼를 본다
+IF ABL:PLAYER:21 == 0
+	TIMES SOURCE:14 , 0.8
+	TIMES SOURCE:16 , 0.8
+	TIMES SOURCE:17 , 0.8
+ELSEIF ABL:PLAYER:21 == 1
+	TIMES SOURCE:14 , 1.0
+	TIMES SOURCE:16 , 1.0
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:PLAYER:21 == 2
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.1
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:PLAYER:21 == 3
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.3
+	TIMES SOURCE:17 , 1.1
+ELSEIF ABL:PLAYER:21 == 4
+	TIMES SOURCE:14 , 1.8
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.2
+ELSE
+	TIMES SOURCE:14 , 2.0
+	TIMES SOURCE:16 , 1.8
+	TIMES SOURCE:17 , 1.5
+ENDIF
+
+;조교자가 왕M
+IF TALENT:PLAYER:178
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.5
+	SOURCE:18 = 300
+;조교자가 마조
+ELSEIF TALENT:PLAYER:82
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.2
+	SOURCE:18 = 150
+ENDIF
+;왕S
+IF TALENT:177
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.5
+	TIMES DOWNBASE:PLAYER:0 , 1.5
+	TIMES DOWNBASE:PLAYER:1 , 1.5
+;새드
+ELSEIF TALENT:81
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.2
+	TIMES DOWNBASE:PLAYER:0 , 1.2
+	TIMES DOWNBASE:PLAYER:1 , 1.2
+ENDIF
+
+;반발 각인 2이상
+SIF MARK:9 >= 2
+	SOURCE:32 = 500
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM272
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 엉덩이를 손바닥으로 강하게 후려쳤다.
+PRINTFORM 몇 번이고 얻어맞고 있는 동안에, %CALLNAME:PLAYER%의 
+IF ABL:PLAYER:21 >= 2 && TALENT:PLAYER:120 == 0
+	PRINTW 가랑이는 자신의 애액으로 젖기 시작하고 있다….
+ELSE
+	PRINTW 엉덩이는 새빨갛게 부어 오르고 있다….
+ENDIF

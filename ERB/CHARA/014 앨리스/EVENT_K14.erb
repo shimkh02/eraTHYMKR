@@ -1,0 +1,6308 @@
+﻿;-------------------------------------------------
+;앨리스 대사
+;
+;-------------------------------------------------
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+;대사의 존재 판정(YM판
+@TRY_14
+RETURN 1
+
+;--------------------------------------------------
+;엑스트라 모드 구문	CFLAG:7001을 사용
+;-------------------------------------------------;
+@SET_CHARA_KOJO_EXTRA_K14
+	CSTR:90 = 당신
+	;IF ASSI > 0
+	;	SIF NO:ASSI == Y1
+	;		CFLAG:7002 = 1
+	;ENDIF
+	PRINTL 처녀 모드로 이행하겠습니까?
+	PRINTL [0] 예
+	PRINTL [1] 아니오
+	$INPUT_LOOP_1
+	INPUT
+	SIF RESULT >= 2
+		GOTO INPUT_LOOP_1
+	IF RESULT == 0
+		PRINTFORMW ―처녀 모드로 소질, 능력을 변경합니다―
+		TALENT:0 = 1
+		ABL:1 = 0
+		EXP:0 = 0
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드로 조교를 개시합니다―
+	ENDIF
+		CFLAG:7001 = 1
+
+;--------------------------------------------------
+;EVENTTRAIN関係(X1をキャラ番号に置換)
+;調教開始時のセリフ CFLAG:7001～
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 < 0
+	RETURN 0
+SIF NO:TARGET != 14
+	RETURN 0
+;2주차 이후, 조교 개시시에 엑스트라 모드의 설정을 시행하지 않으면 설정 이벤트를 CALL
+SIF CFLAG:7001 == 0
+	CALL SET_CHARA_KOJO_EXTRA_K14
+SIF EXP:0 >= 1
+	CFLAG:7609 = 1
+
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTTRAIN_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF NO:ASSI == Y1
+;		CALL LES_EVENTTRAIN_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;--------------------------------------------------
+;簡易助手口上の発動時に初調教時口上をスキップ(Y1を助手のキャラ番号にする)
+;複数人いる際には, SIF NO:ASSI == Y1 || NO:ASSI == Z1と追加していく
+;--------------------------------------------------
+;IF CFLAG:7003 == 0 && ASSI > 0
+;	SIF NO:ASSI == Y1
+;		CFLAG:7003 = 1
+;ENDIF
+
+;-------------------------------------------------
+;初調教時 CFLAG:7003
+;-------------------------------------------------
+IF CFLAG:7003 == 0
+	DRAWLINE
+	PRINTFORMW 문을 열자, 앨리스의 날카로운 시선이 %조사처리(CALLNAME:MASTER,"를")% 향했다.
+	PRINTFORMW 「이런 곳에 가둬놓고, 대체 뭘 할 작정이야?」
+	PRINTFORMW 「납치감금이라니, 보통 인간이 할 일이 아니잖아」
+	PRINTFORMW 침대에 앉은 앨리스는 또렷한 목소리로 %CALLNAME:MASTER%에게 단언한다.
+	PRINTFORMW 수면제를 먹여두었던 터이지만, 완전히 통하지 않았던 것 같다.
+	PRINTFORMW 　
+	PRINTFORMW 하지만, 여기까지는 상정내의 사건이다.
+	PRINTFORMW 마법을 봉하고 있는 한, 앨리스에게 승산은 없다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스를 넘어뜨려, 가슴에 손을 댔다.
+	PRINTFORMW 「꺄! 잠깐 뭘 하는거야! 그만둬!」
+	PRINTFORMW 속옷을 벗겨냈지만 마법을 쓸 낌새는 없다.
+	PRINTFORMW 몇 번쯤 무릎으로 차 왔지만, 그 힘도 약하다.
+	PRINTFORMW 점차 그것마저도 약해져, 최후엔 노려보기만 했다.
+	PRINTFORMW 「큿…… 마법만 쓸 수 있다면…… 읏」
+	PRINTFORMW 어쨌든 저항은 여기까지인 것 같다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 의복을 잡아찢어, 도자기 같은 아름다운 피부를 바깥 공기에 드러냈다.
+	CFLAG:7003 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;調教開始時(一回のみ) CFLAG:7003
+;-------------------------------------------------
+;屈服刻印Lv1
+ELSEIF CFLAG:7003 < 2 && MARK:2 == 1 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「흥, 빨리 시작하지그래?」
+	PRINTFORMW 「당신 따위에게, 나를 함락시키는 일 따위 가능할리 없으니까」
+	CFLAG:7003 = 2
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF CFLAG:7003 < 3 && MARK:2 == 2 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「……읏, 뭐야, 빨리 시작하지그래?」
+	PRINTFORMW 이전보다도 저항은 약해져, 조금이지만 뺨도 붉게 물들어 있다.
+	PRINTFORMW 착실히 함락으로의 길을 걷고 있는 것 같다.
+	CFLAG:7003 = 3
+	RETURN 1
+
+;屈服刻印Lv3
+ELSEIF CFLAG:7003 < 4 && MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「앗…… 왔구나. 오늘도 할 거지?」
+	PRINTFORMW 「아아, 알고 있어. 잠깐 기다려……」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 명령할 것까지도 없이, 앨리스는 옷을 벗었다.
+	CFLAG:7003 = 4
+	RETURN 1
+
+;恋慕
+ELSEIF CFLAG:7003 < 5 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 방에 들어가자, 침대에 앉아있는 앨리스의 모습이 눈에 들어왔다.
+	PRINTFORMW 「저기, 잠깐 괜찮을까? 시간을 낭비하게 하진 않으니까……」
+	PRINTFORMW 평소엔 슬픈 표정을 짓고 있는 앨리스였지만, 오늘은 다른 것 같다.
+	PRINTFORMW %CALLNAME:MASTER%에게 시선을 고정해, 희미하게 뺨을 붉히고 있었다.
+	PRINTFORMW 「저기 말이야…… 그…… 그냥 잠깐 눈을 감아주지 않을래?」
+	PRINTFORMW 「뭐, 뭐야! 별로 기습하기 위해서라던가, 그런게 아니고……」
+	PRINTFORMW 「아― 정말, 됐으니까 눈을 감아!」
+	PRINTFORMW 얼굴을 새빨갛게 하면서, 앨리스는 소리를 지른다.
+	PRINTFORMW 이제 와서 반항할 리도 없을 것이다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 살짝 눈을 감았다.
+	PRINTFORMW 　
+	PRINTFORMW 　
+	PRINTFORMW 뭔가 부드러운 것이, 입술에 닿았던 느낌이 든다.
+	PRINTFORMW 　
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 눈을 뜨자, 거기엔 상냥하게 웃는 앨리스가 있다.
+	PRINTFORMW 「고마워, 이제 끝났어」
+	PRINTFORMW 「자, 오늘도 하는거지? 먼저 가 있을게」
+	PRINTFORMW 처음 만났을 때와는 다른 사람 같이 밝은 웃음을 지으며 앨리스는 방을 뒤로했다.
+	CFLAG:7003 = 5
+	RETURN 1
+
+;上記が発生済み＋好感度3000以上
+ELSEIF CFLAG:7003 == 5 && CFLAG:2 >= 3000
+	CALL NAME_CHANGE_14
+	RETURN 1
+
+;助手の有無をチェック(いない場合は二回目以降へ飛ぶ)
+ELSEIF ASSI < 0 
+	CALL K14_KOJO2
+
+;-------------------------------------------------
+;簡易助手口上(Y1を助手のキャラ番号に置換, X1をキャラ番号に変更する) CFLAG:7004
+;掛け合いをするキャラを増やす場合は, コピ―＆ペ―ストをして, CFLAGの数を:7005, 7006と増やす
+;-------------------------------------------------
+;魔理沙が助手
+ELSEIF ASSINO() == 02
+	DRAWLINE
+	;魔理沙が処女
+	IF TALENT:ASSI:0 == 1 && EXP:ASSI:0 == 0
+		CFLAG:7004 = 1
+	;それ以外
+	ELSE
+		CFLAG:7004 = 2
+	ENDIF
+	;初めて
+	IF CFLAG:7005 == 0
+		;앨리스と魔理沙に恋慕
+		IF TALENT:150 == 1 && TALENT:ASSI:150 == 1
+			PRINTFORMW 「어머, 너도 있었던 거네」
+			PRINTFORMW 「아니 그보다 오늘은 무슨 용무야? 방해라도 하러 온 거야?」
+			PRINTFORMW 『쯧쯧, 그런걸 하기 위한게 아냐. 오늘은 조수』
+			PRINTFORMW 「흐―응……어디까지 진심일까……」
+		;앨리스にのみ恋慕
+		ELSEIF TALENT:150 == 1 && TALENT:ASSI:150 == 0
+			PRINTFORMW 「어머, 앨리스 아냐. 너도 여기에 있던거네」
+			PRINTFORMW 『뭣, 앨리스……너……』
+			PRINTFORMW 「왜 그래? 오늘은 내가 안아주는 날. 대신해 주지 않는다구?」
+			PRINTFORMW 『아니……이제 됐어. 너는 이제, 옛날의 네가 아닌것 같고 말이야』
+		;魔理沙にのみ恋慕
+		ELSEIF TALENT:150 == 0 && TALENT:ASSI:150 == 1
+			PRINTFORMW 「마, 마리사? 너 왜 여기에……」
+			PRINTFORMW 『뭐라니, 오늘은 조수로 불려졌기 때문일까나』
+			PRINTFORMW 「조수라니……너 설마!」
+			PRINTFORMW 이미 함락된 마리사에게, 앨리스는 공포를 느꼈다
+		;それ以外
+		ELSE
+			PRINTFORMW 「앗……마리사……」
+			PRINTFORMW 『뭣, 왜 너가 여기에……설마!』
+			PRINTFORMW 「아아, 너의 상상대로. 나도 너와 같이 끌려온 몸이야……」
+		ENDIF
+			CFLAG:7005 = 1
+			RETURN 1
+	;二回目以降
+	ELSEIF CFLAG:7005 == 1 && FLAG:11 == 2
+		;앨리스と魔理沙に恋慕
+		IF TALENT:150 == 1 && TALENT:ASSI:150 == 1
+			PRINTFORMW 「오늘은 내가 주역이야. 넌 찌그러지라구」
+			PRINTFORMW 『그렇게 말하지 마. 너와 나의  사이잖아?』
+		;앨리스にのみ恋慕
+		ELSEIF TALENT:150 == 1 && TALENT:ASSI:150 == 0
+			PRINTFORMW 『저기, 싫지 않은거야? 이런 자식의 상대를 하다니』
+			PRINTFORMW 「아아, 싫지 않아」
+			PRINTFORMW 「후훗, 조금 어른이 되면, 너라고 해도 그 사람의 매력을 알게 될거야」
+		;魔理沙にのみ恋慕
+		ELSEIF TALENT:150 == 0 && TALENT:ASSI:150 == 1
+			PRINTFORMW 「마리사……으응, 달라!」
+			PRINTFORMW 「나는 마리사같이 되지 않을테니까!」
+		;それ以外
+		ELSE
+			PRINTFORMW 『저기……또 오늘도 인건가?』
+			PRINTFORMW 『앨리스는 범하는건, 이제……』
+			PRINTFORMW 마리사는 설득을 시도했지만, 그 말이 %CALLNAME:MASTER%에게 닿는 일은 없었다
+		ENDIF
+			RETURN 1
+	ENDIF
+
+;口上のある助手が居ない場合は, 通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K14_KOJO2
+ENDIF
+
+;-------------------------------------------------
+;調教開始時(2回目以降, X1をキャラ番号に変更する) CFLAGなし 
+;-------------------------------------------------
+@K14_KOJO2
+;反発刻印Lv3
+IF MARK:9 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「만약에 마법을 쓸 수 있었다면, 너 따위의 말대로는 되지 않아!」
+	PRINTFORMW 살기로 가득찬 시선을 퍼부으며, 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 매도했다
+	RETURN 1
+
+;屈服刻印Lv0
+ELSEIF MARK:2 == 0 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「귀찮은 일에 말려들어버렸네……」
+	PRINTFORMW 「빨리 돌아가서, 인형을 손질하고 싶은데……」
+	RETURN 1
+
+;屈服刻印Lv1
+ELSEIF MARK:2 == 1 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「넌, 이거 말고 하는 일이 없는거야?」
+	PRINTFORMW 앨리스는 기막힌 표정으로 %CALLNAME:MASTER%에게 물었다
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF MARK:2 == 2 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「오늘도 할 거지? 빨리 시작하자」
+	PRINTFORMW 「……엣, 적극적이 됐다구? 빨리 끝내고 싶을 뿐이야」
+	RETURN 1
+
+;屈服刻印Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「앗…… 어서 와……」
+	PRINTFORMW 울다 지친 표정을 감추고, 앨리스는 옷을 벗어갔다
+	RETURN 1
+
+;恋慕
+ELSEIF TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	IF RAND:3 == 0
+		PRINTFORMW 「앗…… 와 줬구나」
+		PRINTFORMW 「후훗, 같이 기분 좋게 되자구. 자, 와 줘」
+		PRINTFORMW 앨리스는 %CALLNAME:MASTER%의 손을 잡아, 침대로 이끌었다
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「후훗, 오늘도 즐거운 일, 잔뜩 하자」
+		PRINTFORMW 앨리스는 싱긋 웃으면서, 옷을 정중하게 벗어갔다
+	ELSE
+		PRINTFORMW 「응……오늘도, 부탁해」
+		PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"과")% 입을 맞추고, 볼을 붉혔다
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND関係(X1をキャラ番号に置換)
+;調教終了時のセリフ
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 < 0
+	RETURN 0
+SIF NO:TARGET != 14
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTEND_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	SIF NO:ASSI == Y1
+;	CALL LES_EVENTEND_KX1_MY1
+;	RETURN 0
+;ENDIF
+;--------------------------------------------------
+;調教終了時のセリフ CFLAG:7021～
+;--------------------------------------------------
+;反発刻印Lv3
+IF MARK:9 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「저주해 주겠어……읏!」
+	RETURN 1
+
+;屈服刻印Lv1以下
+ELSEIF MARK:2 <= 1 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「후우, 겨우 끝난거야?」
+	PRINTFORMW 「욕실 빌려줄래? 샤워 정도, 해도 괜찮지?」
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF MARK:2 == 2 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「겨우 끝났다……후우……」
+	PRINTFORMW (이런 생활, 언제까지 계속되는 걸까나……)
+	RETURN 1
+
+;屈服刻印Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「이제 된거야……? 아아, 알았어」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 끝을 고하자, 앨리스는 쏜살같이 방을 뒤로 했다
+	PRINTFORMW 그리고 자신의 방에 틀어박혀, 몇 번이나 오열을 반복했다
+	RETURN 1
+
+;恋慕＋体力500未満
+ELSEIF TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「하―앗, 하―앗……조금 심하게 해버렸네」
+	PRINTFORMW 「……으응 괜찮아, 조금 자면, 나으니까……」
+	RETURN 1
+
+;恋慕
+ELSEIF TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「벌써……가버리는거야?」
+	PRINTFORMW 「저기, 조금만 더 어울려줘. 아직 만족 못했어……」
+	RETURN 1
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM関係(X1をキャラ番号に置換)
+;コマンド実行時に出力されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_14
+;助手が調教した時に口上をスキップする(好みに応じて使う, 行頭の;を消すとスキップするようになる)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ, 強制開口器, 触手口辱, 触手強制飲酒時は口上をスキップする(OFFだと口を塞いでるのに喋りまくる)
+SIF (TEQUIP:42 == 1 && SELECTCOM != 226) && (TEQUIP:42 == 3 && SELECTCOM != 229) && (TEQUIP:42 == 2 && SELECTCOM != 506) && (TEQUIP:42 == 4 && SELECTCOM != 583)
+	RETURN 0
+;睡眠・失神時に口上をスキップする(OFFだと寝言が凄いことに)
+SIF EQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_COM_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF NO:ASSI == Y1
+;		CALL LES_MESSAGE_COM_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;アナル処女喪失処理 CFLAG:7051
+;-------------------------------------------------
+IF EXP:1 > 0
+	CFLAG:7051 = 1
+ENDIF
+
+;-------------------------------------------------
+;コマンド実行時のセリフ CFLAG:7101～
+;-------------------------------------------------
+;-------------------------------------------------
+;愛撫 CFLAG:7101
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;初めて
+	IF CFLAG:7101 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗……응……」
+			PRINTFORMW 부드럽게 쓰다듬어 돌리자, 앨리스는 달콤한 목소리를 흘렸다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 키스를 나누면서, 천천히 몰아세웠다
+		;屈服刻印Lv2以上
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「그만, 읏……응……」
+			PRINTFORMW %CALLNAME:MASTER%의 손이 닿은 순간, 앨리스는 조용해졌다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……좋아하지도 않는 상대에게 만져져서, 기뻐하는 여자가 있다고 생각했어?」
+			PRINTFORMW 앨리스는 몸을 비틀어, %조사처리(CALLNAME:MASTER,"를")% 뿌리쳤다
+		ENDIF
+			CFLAG:7101 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7101 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 읏하아……좋아해, 정말 종하ㅐ……」
+			CFLAG:7101 = 5
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7101 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으읏! 아앙!」
+			PRINTFORMW 상냥하게 괴롭히자, 앨리스는 달콤한 목소리를 울렸다
+			CFLAG:7101 = 4
+		;屈服刻印Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:7101 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「언제나 같은 일의 반복. 진보가 없네」
+			CFLAG:7101 = 3
+		;それ以外
+		ELSEIF MARK:2 <= 1 && (CFLAG:7101 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「……더러운 손으로 만지지 마」
+			CFLAG:7101 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クンニ CFLAG:7102
+;-------------------------------------------------
+IF SELECTCOM == 1
+	;初めて
+	IF CFLAG:7102 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「핫, 으응! 젖어 오고 있어……」
+			PRINTFORMW 「좋아……그대로, 계속해 줘……」
+		;屈服刻印Lv2以上
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「……그래서, 뭘 하는걸까?」
+			PRINTFORMW 앨리스는 미간에 주름을 내면서, %CALLNAME:MASTER%에게 묻는다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 가랑이를 벌려, 비부를 핥아올린다
+			PRINTFORMW 「뭣, 잠, 혀가, 크으!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣! 잠깐 뭘 하는거야! 그만둿!」
+			PRINTFORMW 비부에 얼굴을 가까이 하자, 앨리스는 소리를 질렀다
+		ENDIF
+			CFLAG:7102 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7102 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아읏, 으응! 혀가, 튕겨섯!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 %CALLNAME:MASTER%의 머리를 잡아, 비부에 강하게 눌렀다
+			CFLAG:7102 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7102 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하윽, 읏……너무 세! 으읏!」
+			CFLAG:7102 = 3
+		;それ以外
+		ELSEIF CFLAG:7102 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……읏, 변태!」
+			CFLAG:7102 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナル愛撫(アナルバイブ装着中) CFLAG:7103
+;アナル愛撫(アナルビ―ズ装着中) CFLAG:7104
+;アナル愛撫 CFLAG:7105
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;アナルバイブ装着中
+	IF TEQUIP:25 == 1
+		;初めて
+		IF CFLAG:7103 == 0
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1
+				PRINTFORMW 「히응! 엉덩이, 가, 느껴져어!」
+				PRINTFORMW 앨리스의 표정은, 쾌감을 갈구하는 암컷 그 자체였다
+			;恋慕
+			ELSEIF TALENT:150 == 1
+				PRINTFORMW 「하―앗, 하―앗, 엣, 잠깐! 지금 휘저으면!」
+				PRINTFORMW 「히잇! 으응! 그런, 격렬햇!」
+				PRINTFORMW 바이브를 격렬하게 넣다뺐다 하자, 앨리스는 몸을 뒤로 젖히면서 침을 흘렸다
+			;それ以外
+			ELSE
+				PRINTFORMW 「뭣, 잠깐, 뭘……히잇!?」
+				PRINTFORMW 바이브를 격렬하게 넣다뺐다 하자, 앨리스는 자극때문에 경련하듯이 떨었다
+			ENDIF
+				CFLAG:7103 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7103 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「큿, 핫, 이렇게, 뜨겁게!」
+				PRINTFORMW 「%조사처리(CSTR:90,"가")%, 아닌데, 이렇게!」
+				PRINTFORMW 장난감으로 느껴버린 것을 부정하고 싶은것 같지만, 몸은 정직한것 같다
+				CFLAG:7103 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7103 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「힛, 큿! 크아아!」
+				PRINTFORMW 「안에서, 난폭하게! 힛, 히아아앗!」
+				CFLAG:7103 = 4
+			;A感覚Lv3以上
+			ELSEIF ABL:2 >= 3 && (CFLAG:7103 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「하윽! 읏, 움직엿!」
+				PRINTFORMW 때때로 괴로운듯한 표정을 띄우면서, 앨리스는 숨결을 거칠게 해 갔다
+				CFLAG:7103 = 3
+			;それ以外
+			ELSEIF CFLAG:7103 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「하윽, 읏! 크읏!」
+				PRINTFORMW 몸을 좌우로 비틀면서, 앨리스는 쾌락에서 도망치려 했다
+				CFLAG:7103 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;アナルビ―ズ装着中
+	ELSEIF TEQUIP:25 == 5
+		;初めて
+		IF CFLAG:7104 == 0
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1
+				PRINTFORMW 「힛, 하앗, 안 돼에……♪」
+				PRINTFORMW 「또, 가버려으니까아……♪」
+				PRINTFORMW 앨리스는 흐리멍텅한 표정을 띄우면서, 쾌락을 탐했다
+			;恋慕
+			ELSEIF TALENT:150 == 1
+				PRINTFORMW 「핫, 응핫! 안에서, 스쳐섯!」
+				PRINTFORMW 「아앗! 또, 움직여섯!」
+			;それ以外
+			ELSE
+				PRINTFORMW 「큿……웃, 뭘……! 후아아!?」
+				PRINTFORMW 「뭐, 뭘, 하윽!」
+				PRINTFORMW 재빠르게 장난감을 넣다뺐다 하자, 앨리스는 활같이 몸응 뒤로 젖혔다
+			ENDIF
+				CFLAG:7104 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7104 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하앙! 그렇게 격렬하겟! 앗, 햐앗!」
+				CFLAG:7104 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7104 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 크응! 이거, 버릇이 될지도……」
+				CFLAG:7104 = 4
+			;A感覚Lv3以上
+			ELSEIF ABL:2 >= 3 && (CFLAG:7104 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「힛, 읏……이런짓 해도, 아무것도 변하지 않아」
+				PRINTFORMW 앨리스는 숨을 거칠게 하면서, %CALLNAME:MASTER%에게 단언했다
+				CFLAG:7104 = 3
+			;それ以外
+			ELSEIF CFLAG:7104 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「우읏……빨리, 그만두라구……읏!」
+				CFLAG:7104 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7105 == 0
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1
+				PRINTFORMW 「읏, 아앙♪　그렇게, 휘저으면♪」
+				PRINTFORMW 찔러넣은 손가락을 살짝 굽히자, 앨리스는 야무지지 못하게 입을 벌리고 침을 흘렸다
+			;恋慕
+			ELSEIF TALENT:150 == 1
+				PRINTFORMW 「아, 엉덩이라니, 당신 제정신?」
+				PRINTFORMW 「뭐……당신의 변태취미는 잘 알고 있지만……하아……」
+				PRINTFORMW 앨리스는 가볍게 한숨을 토하고, %조사처리(CALLNAME:MASTER,"를")% 향해서 엉등이를 내밀었다
+				PRINTFORMW 「어쩔 수 없네, 상냥하게 해줘?」
+				PRINTFORMW 살짝 얼굴을 붉히고, 앨리스는 손가락을 받아들였다
+			;それ以外
+			ELSE
+				PRINTFORMW 「엉덩이라니, 당신 제정신!?」
+				PRINTFORMW 과연 믿을 수 없는건지, 앨리스는 소리를 지른다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 주변의 주름을 충분히 어루만지고, 준비를 갖추었다
+				PRINTFORMW 「앗, 그만둬! 그만두라니깟! 히잇!」
+			ENDIF
+				CFLAG:7105 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			LOCAL = PALAM:10 + UP:10
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7105 <= 6 || FLAG:11 == 2)
+				PRINTFORMW 「앙! 좀 더, 좀 더 안쪽까짓!」
+				PRINTFORMW 「범해줫! 내 몸을, 구석구석까지!」
+				CFLAG:7105 = 7
+			;恋慕＋A感覚Lv3以上
+			ELSEIF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:7105 <= 5 || FLAG:11 == 2)
+				PRINTFORMW 「크으! 엉덩이가, 타버릴것 같아!」
+				PRINTFORMW 손가락을 넣은 순간, 앨리스는 몸을 활같이 젖혔다
+				CFLAG:7105 = 6
+			;恋慕＋潤滑Lv2以上
+			ELSEIF TALENT:150 == 1 && LOCAL >= PALAMLV:2 && (CFLAG:7105 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 하앗…%CSTR:90%도, 나도 변태네」
+				PRINTFORMW 「엉덩이로, 이렇게 기분 좋게……아앙! 거기!」
+				CFLAG:7105 = 5
+			;恋慕＋潤滑Lv2未満
+			ELSEIF TALENT:150 == 1 && LOCAL < PALAMLV:2 && (CFLAG:7105 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 손가락을 삼키게 하자, 앨리스의 표정은 일순간 고통에 일그러졌다
+				PRINTFORMW 「아읏! 읏……괜찮아. 뽑지 말아줘, 계속해……」
+				CFLAG:7105 = 4
+			;潤滑Lv2以上＋A感覚Lv3以上
+			ELSEIF LOCAL >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:7105 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「흐읏, 응, 아앗! 핫……」
+				PRINTFORMW 「다, 달라, 느낀게 아냐!」
+				CFLAG:7105 = 3
+			;それ以外
+			ELSEIF CFLAG:7105 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「싫엇, 손가락 굽히면, 크응!」
+				CFLAG:7105 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸愛撫 CFLAG:7106
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;初めて
+	IF CFLAG:7106 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗……가슴, 어쩌려는 걸까?」
+			PRINTFORMW 앨리스는 부끄러워 하면서, %CALLNAME:MASTER%에게 묻는다
+			PRINTFORMW 앨리스의 가슴은 고르게 되있어, 거유나 빈유와는 다른 매력을 가지고 있다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 상냥하게 비벼내리면서, 순수하게 어울린다고 답했다
+		;それ以外
+		ELSE
+			PRINTFORMW 가슴을 어루만지자, 때때로 앨리스의 몸이 튀어오른다
+			PRINTFORMW 「읏……별로 느낀게 아니야」
+			PRINTFORMW 「단지 조금……부끄러울 뿐이야」
+		ENDIF
+			CFLAG:7106 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7106 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앙……그래, 세게……하앙!」
+			CFLAG:7106 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7106 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……끝이, 뜨거……웟」
+			PRINTFORMW 불시에 끝쪽을 괴롭히자, 앨리스는 날카로운 소리를 냈다
+			CFLAG:7106 = 3
+		;それ以外
+		ELSEIF CFLAG:7106 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……저리가」
+			CFLAG:7106 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;指挿入れ(バイブ装着中) CFLAG:7107
+;指挿入れ CFLAG:7108
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+IF SELECTCOM == 4
+	;バイブ装着中
+	IF TEQUIP:20 == 1
+		;初めて
+		IF CFLAG:7107 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「으응! 그렇게, 난폭하게 하면……크응!」
+				PRINTFORMW 진동하는 장난감을 넣다뺐다 하자, 앨리스는 날카로운 목소리를 주변에 울렸다
+			;それ以外
+			ELSE
+				PRINTFORMW 「뭣, 잠깐 그만둿! 후아아!」
+				PRINTFORMW 「힛, 핫, 큿……읏……」
+				PRINTFORMW 장난감을 격렬하게 넣다뺐다 하자, 앨리스의 비명이 주변에 울렸다
+				PRINTFORMW 하지만, 앨리스는 곧 입을 닫아, 그 소리를 억눌렀다
+			ENDIF
+				CFLAG:7107 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1 && (CFLAG:7107 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「힛, 읏……이런 거, 싫……엇」
+				PRINTFORMW 「빨리, %조사처리(CSTR:90,"를")% 넣어……줘」
+				CFLAG:7107 = 5
+			;V感覚Lv3以上
+			ELSEIF ABL:1 >= 3 && (CFLAG:7107 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「핫, 아앗! 읏, 아앙!」
+				PRINTFORMW (안 돼……참을수 없엇……)
+				CFLAG:7107 = 3
+			;それ以外
+			ELSEIF CFLAG:7107 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「큿……빨리, 뽑으라구! 이 변탯!」
+				CFLAG:7107 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7108 == 0
+			;処女
+			IF CFLAG:7609 == 0
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「엣……손가락으로?」
+					PRINTFORMW 「그런……아프게 해주지 않는건 기쁘지만……역시……」
+					PRINTFORMW 앨리스는 슬픈듯한 표정을 지으며, 고개를 숙인다
+					PRINTFORMW 하지만, 단념했는지, 천천히 가랑이를 벌렸다
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 손가락을 조금씩 익숙하게 해, 처녀를 빼앗아 갔다
+				;それ以外
+				ELSE
+					PRINTFORMW 「그, 그만둬! 그곳만은!」
+					PRINTFORMW 드물게 소리를 지르며, 앨리스는 저항을 보인다
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 동작을 일단 중지해, 가짜로 안심하게 했다
+					PRINTFORMW 「엣……넣지 않는거야? 고, 고마……크읏!?」
+					PRINTFORMW 완전히 방심한 순간, %조사처리(CALLNAME:MASTER,"는")% 가장 안쪽을 꿰뚫듯이 손가락을 찔러넣었다
+				ENDIF
+			;それ以外
+			ELSE
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「하앙……%조사처리(CSTR:90,"가")%, 안에서 움직이고 있엇」
+					PRINTFORMW 「느끼는 곳, 으으―응!」
+				;V感覚Lv3以上
+				ELSEIF ABL:1 >= 3
+					PRINTFORMW 「크읏! 읏, 뽑아줘! 빨리!」
+					PRINTFORMW 손가락을 삼키게 하자, 앨리스는 고개를 좌우로 흔들면서 소리를 질렀다
+				;それ以外
+				ELSE
+					PRINTFORMW 「손가락이라니, 그런 잡균투성이인 물건, 누가!」
+					PRINTFORMW 앨리스는 매도를 반복해, %조사처리(CALLNAME:MASTER,"를")% 멀리하려 한다
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스를 제압해, 그 자유를 빼앗았다
+					PRINTFORMW 「꺄! 뭘, 그만둬! 그만두라니까!」
+					PRINTFORMW 「그런 거 넣어버리면, 싫엇, 하윽!」
+					PRINTFORMW 앨리스의 소원을 들어줄 리도 없고, %조사처리(CALLNAME:MASTER,"는")% 조용히 손가락을 찔러넣었다
+				ENDIF
+			ENDIF
+				CFLAG:7108 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1 && (CFLAG:7108 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「앙! 푸슉푸슉 당하면, 또, 느껴!」
+				CFLAG:7108 = 4
+			;V感覚Lv3以上
+			ELSEIF ABL:1 >= 3 && (CFLAG:7108 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「그, 그만둿! 그런 곳!」
+				CFLAG:7108 = 3
+			;それ以外
+			ELSEIF CFLAG:7108 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「우웃, 빨리 뽑으라구, 더러워」
+				CFLAG:7108 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラする CFLAG:7109
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;初めて
+	IF CFLAG:7109 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「엣, 자, 잠깐 더럽다구! 힛!」
+			PRINTFORMW 육봉을 입에 물자, 앨리스의 몸은 조금씩 떨리기 시작했다
+			PRINTFORMW 「앗……핫……뭐야, 이……거!」
+			PRINTFORMW (너무 기분 좋아서, 아무것도 생각할 수 없어……!)
+		;それ以外
+		ELSE
+			PRINTFORMW 「입으로 문다……라니, 당신 쪽이!?」
+			PRINTFORMW 앨리스는 놀라움을 감추지 못하고, 소리를 지른다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 시간을 들여 앨리스에게 접근해, 육봉을 입에 물었다
+		ENDIF
+			CFLAG:7109 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7109 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏……핫! 다음은, 내게 시켜줘, 으응!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 때때로 %CALLNAME:MASTER%의 머리를 쓰다듬으면서, 앨리스는 봉사를 받아들였다
+			CFLAG:7109 = 4
+		;C感覚Lv3以上
+		ELSEIF ABL:0 >= 3 && (CFLAG:7109 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫어어……그런 거, 더러우니까」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 손으로 얼굴를 가려, 행위를 보지 않기로 했다
+			CFLAG:7109 = 3
+		;それ以外
+		ELSEIF CFLAG:7109 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「웃……이런 추잡한 거……」
+			PRINTFORMW 이를 악물며, 앨리스는 굴욕을 견뎠다
+			CFLAG:7109 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;キスする CFLAG:7110
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;初めて
+	IF CFLAG:7110 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응츄……음……츄……하아……」
+			PRINTFORMW 「처음은 좋아하는 사람과 라고 정해져 있는거야」
+			PRINTFORMW 「후훗, 내 처음, 어땠어?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「응후읏……읏……큿!」
+			PRINTFORMW 혀를 집어넣으려 하자, 앨리스는 %CALLNAME:MASTER%의 혀를 씹었다
+			PRINTFORMW 「후응, 좋은 기세네」
+		ENDIF
+			CFLAG:7110 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7110 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「츄……핫, 좀 더……자국이 남을 정도로……」
+			PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 놓지 않고, 잠시 혀를 얽혀왔다
+			CFLAG:7110 = 4
+		;従順Lv2以上
+		ELSEIF ABL:10 >=2 && (CFLAG:7110 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫……앗……」
+			PRINTFORMW 입술이 서로 떨어지자, 아쉬움을 남기듯이 침이 실을 만들었다
+			CFLAG:7110 = 3
+		;それ以外
+		ELSEIF CFLAG:7110 <= 1 || FLAG:11 == 2
+			PRINTFORMW 입맞춤을 나누자, 앨리스는 곧 %CALLNAME:MASTER%에게서 떨어졌다
+			PRINTFORMW 「읏……또 소녀의 입술을 빼앗다니……」
+			CFLAG:7110 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;二穴バイブオナニ― CFLAG:7111
+;バイブオナニ― CFLAG:7112
+;アナルバイブオナニ― CFLAG:7113
+;公開オナニ― CFLAG:7114
+;シャワ―オナニ― CFLAG:7115
+;自慰(処女) CFLAG:7116
+;自慰 CFLAG:7117
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+IF SELECTCOM == 7
+	;二穴バイブオナニ―
+	IF TEQUIP:20 == 1 && TEQUIP:25 == 1
+		;初めて
+		IF CFLAG:7111 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「힛, 핫, 크으! 이것, 격렬햇, 크아앗!」
+				PRINTFORMW 앨리스는 경련하듯이 몸을 떨며, 칠칠치 못하게 침을 흘렸다
+			;それ以外
+			ELSE
+				PRINTFORMW 「히이! 하아앗!」
+				PRINTFORMW (머리가……새하얗게……!)
+			ENDIF
+				CFLAG:7111 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋V感覚Lv3以上＋A感覚Lv3以上
+			IF TALENT:150 == 1 && ABL:1 >= 3 && ABL:2 >= 3 && (CFLAG:7111 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하앗! 앗, 이렇게, 격렬하겟!」
+				PRINTFORMW 「읏, 아앙! 이제, 멈출 수 없엇!」
+				CFLAG:7111 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7111 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「핫, 하우우! 이거, 좋아아!」
+				PRINTFORMW 앨리스는 격렬하게 장난감을 넣다뺐다 하며, %CALLNAME:MASTER%에게 치태를 과시했다
+				CFLAG:7111 = 4
+			;自慰中毒Lv3以上
+			ELSEIF ABL:30 >= 3 && (CFLAG:7111 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「히잇! 손이, 응, 응아앗!」
+				PRINTFORMW (너무 기분 좋아서, 참을 수가……읏!)
+				CFLAG:7111 = 3
+			;それ以外
+			ELSEIF CFLAG:7111 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「하아, 읏하아……너무, 격렬……햇」
+				CFLAG:7111 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;バイブオナニ―
+	ELSEIF TEQUIP:20 == 1
+		;初めて
+		IF CFLAG:7112 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「핫, 읏……이게 %CSTR:90%였다면, 얼마나 기분 좋을까……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「읏, 우우……여성에게, 이런걸……읏」
+				PRINTFORMW 수치로 붉어진 얼굴을 숙이면서, 앨리스는 스스로를 위로했다
+			ENDIF
+				CFLAG:7112 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋V感覚Lv3以上
+			IF TALENT:150 == 1 && ABL:1 >= 3 && (CFLAG:7112 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하앙! 안쪽까지, 좋아아!」
+				PRINTFORMW 앨리스의 흐트러진 모습은, %CALLNAME:MASTER%의 욕정을 한층 더 가속시켰다
+				CFLAG:7112 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7112 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 읏……뒤에서 제대로 안아줘?」
+				CFLAG:7112 = 4
+			;自慰中毒Lv3以上
+			ELSEIF ABL:30 >= 3 && (CFLAG:7112 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「힛, 읏, 하앗!」
+				PRINTFORMW 언제나보다 달콤한 목소리를 울리면서, 앨리스는 %CALLNAME:MASTER%의 앞에서 흐트러졌다
+				CFLAG:7112 = 3
+			;それ以外
+			ELSEIF CFLAG:7112 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「웃……큿……이런 거, 사람 앞에……섯」
+				CFLAG:7112 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;アナルバイブオナニ―
+	ELSEIF TEQUIP:25 == 1
+		;初めて
+		IF CFLAG:7113 == 0
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1
+				PRINTFORMW 「하아앗! 이제, 안 돼에! 멈출 수 없어어!」
+				PRINTFORMW 추잡하게 허리를 흔들면서, 아날의 쾌감을 마음껏 맛보았다
+			;恋慕
+			ELSEIF TALENT:150 == 1 
+				PRINTFORMW 「읏……역시, 진짜 쪽이 낫네」
+				PRINTFORMW 「다음엔 안아주지 않을래?」
+			;それ以外
+			ELSE
+				PRINTFORMW 「우읏……이런 거, 기분 좋을리가……읏!」
+				SIF TEQUIP:41 == 0
+					PRINTFORMW 앨리스의 눈에서는, %CALLNAME:MASTER%에게 대하는 강한 혐오감이 드러나있다
+			ENDIF
+				CFLAG:7113 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;淫尻＋恋慕
+			IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7113 <= 5 || FLAG:11 == 2)
+				PRINTFORMW 「흣, 아앙! %CSTR:90%의 것, 쪽이, 히잇!」
+				PRINTFORMW 바이브가 안을 휘젓자, 앨리스는 몸을 튕겨올렸다
+				CFLAG:7113 = 6
+			;恋慕＋A感覚Lv3以上
+			ELSEIF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:7113 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「큿, 핫! 이거, 버릇이, 으응!」
+				PRINTFORMW 깊숙히 장난감을 삼켜가면서, 앨리스는 스스로를 위로했다
+				CFLAG:7113 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7113 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「아읏, 으응! 안에서, 움직엿!」
+				PRINTFORMW 몸을 뒤로 젖히면서, 앨리스는 민감한 부위를 자극했다
+				CFLAG:7113 = 4
+			;自慰中毒Lv3以上
+			ELSEIF ABL:30 >= 3 && (CFLAG:7113 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「응……핫……하앙♪」
+				PRINTFORMW 저항은 계속되지만, 그 목소리는 어딘가 요염함을 띄고 있다
+				CFLAG:7113 = 3
+			;それ以外
+			ELSEIF CFLAG:7113 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「핫, 읏……이런, 굵은……」
+				PRINTFORMW 이마에 비지땀을 흘리면서, 앨리스는 바이브를 넣다뺐다 했다
+				CFLAG:7113 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;公開オナニ―
+	ELSEIF TEQUIP:50 == 1
+		;初めて
+		IF CFLAG:7114 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「하아……완전히, %조사처리(CSTR:90,"가")% 생각해내는 일에는 매번 놀라게 돼……」
+				PRINTFORMW 「어쩔수 없어, 조금만이야?」
+			;それ以外
+			ELSE
+				PRINTFORMW 「뭣, 할 수 있을리가 없잖아! 그런 거!」
+				PRINTFORMW 카메아 앞에서 자위를 명하자, 앨리스는 그자리에서 소리를 질렀다
+				PRINTFORMW 하지만, 지금의 앨리스에게 거스를 힘은 남아있지 않다
+				PRINTFORMW 「큿……이 외도……」
+				PRINTFORMW 입술을 깨물면서, 앨리스는 비핵에 손가락을 댔다
+			ENDIF
+				CFLAG:7114 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋露出癖Lv3以上
+			IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:7114 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「앗, 응, 크응♪」
+				PRINTFORMW 욕정을 부추기듯이 소리를 내면서, 앨리스는 자위를 과시했다
+				CFLAG:7114 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7114 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「%CSTR:90% 이외에 보여주다니, 내키지 않아」
+				PRINTFORMW 「내 몸을 마음대로 해도 좋은건, %CSTR:90% 뿐이니까……」
+				CFLAG:7114 = 4
+			;自慰中毒Lv3以上
+			ELSEIF ABL:30 >= 3 && (CFLAG:7114 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「안 돼, 안 된다구……읏, 이런 곳에서……」
+				PRINTFORMW 자제하려 하지만, 욕망의 쪽이 상회하고 있는 것 같다
+				CFLAG:7114 = 3
+			;それ以外
+			ELSEIF CFLAG:7114 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「읏……여성을 이렇게까지 상처입혀서, 뭐가 즐거운거야……!」
+				SIF TEQUIP:41 == 0
+					PRINTFORMW 날카로운 시선을 %CALLNAME:MASTER%에게 보내면서, 앨리스는 비밀스런 곳을 괴롭혔다
+				CFLAG:7114 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;シャワ―オナニ―
+	ELSEIF TEQUIP:54 == 1
+		;初めて
+		IF CFLAG:7115 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「아읏, 읏, 하아……」
+				PRINTFORMW 「이런 약한 자극으론 안 된다구우……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「큿……아직도 보고 있는거야……읏」
+				SIF TEQUIP:41 == 0
+					PRINTFORMW 찌르는듯한 시선을 보내면서, 앨리스는 스스로를 위로했다
+			ENDIF
+				CFLAG:7115 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋自慰中毒Lv3以上
+			IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:7115 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「저기, 안아주지 않는거야?」
+				PRINTFORMW 「내 몸, 이제 기다릴 수 없어……」
+				CFLAG:7115 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7115 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「앗, 하아……으응……」
+				PRINTFORMW 앨리스는 황홀한 표정을 지으면서, 스스로를 위로했다
+				CFLAG:7115 = 4
+			;自慰中毒Lv3以上
+			ELSEIF ABL:30 >= 3 && (CFLAG:7115 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 하앗……그렇게, 보지마……」
+				PRINTFORMW 손을 멈추는 일이 불가능한 앨리스는 , 수치심을 느끼면서 스스로을 위로했다
+				CFLAG:7115 = 3
+			;それ以外
+			ELSEIF CFLAG:7115 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「……이 변태……!」
+				CFLAG:7115 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;処女
+		IF CFLAG:7609 == 0
+			;初めて
+			IF CFLAG:7116 == 0
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「읏……하아……너무해」
+					PRINTFORMW 「빨리 넣어줬으면 하는걸 눈치챘으면서, 이런 거 시키다니……」
+					PRINTFORMW 앨리스는 살짝 얼굴을 붉히면서, 비밀스런 곳에 손가락을 문질렀다
+					PRINTFORMW 점차 손의 움직임은 격렬함을 더해, 찔꺽찔꺽 추잡한 음색이 주위에 울려퍼졌다
+					PRINTFORMW 「핫, 하앗! 빨리! 빨리 해줫!」
+					PRINTFORMW 「내 몸을, 빨리 범해줫!」
+				;それ以外
+				ELSE
+					PRINTFORMW 「뭣, 그런 거 가능할 리……읏, 알았다구!」
+					PRINTFORMW 거스르는 일을 할 수 없는 앨리스는 , 천천 비밀스런 곳에 손을 댄다
+					PRINTFORMW 그리고, 익숙해진 손놀림으로 만지작거리기 시작한다
+					PRINTFORMW 「읏, 핫, 하앙!」
+					PRINTFORMW (큿, 지금은 거스를수 없어도, 언젠가 분명……!)
+				ENDIF
+					CFLAG:7116 = 1
+					RETURN 0
+			;二回目以降
+			ELSE
+				;恋慕＋自慰中毒Lv3以上
+				IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:7116 <= 4 || FLAG:11 == 2)
+					PRINTFORMW 「부탁해! 부탁이니까 %조사처리(CSTR:90,"를")% 느끼게 해줫!」
+					CFLAG:7116 = 5
+				;恋慕
+				ELSEIF TALENT:150 == 1 && (CFLAG:7116 <= 3 || FLAG:11 == 2)
+					PRINTFORMW 「……저기, %조사처리(CSTR:90,"는")% 언제가 되면 나를 안아주려는 걸까?」
+					PRINTFORMW 「%조사처리(CSTR:90,"를")%, 이렇게나 생각하고 있는데……」
+					CFLAG:7116 = 4
+				;自慰中毒Lv3以上
+				ELSEIF ABL:30 >= 3 && (CFLAG:7116 <= 2 || FLAG:11 == 2)
+					PRINTFORMW (안 됏, 느껴버……렷!)
+					CFLAG:7116 = 3
+				;それ以外
+				ELSEIF CFLAG:7116 <= 1 || FLAG:11 == 2
+					PRINTFORMW 「뭐가 그렇게 재밌는거야……이 변탯!」
+					CFLAG:7116 = 2
+				ENDIF
+					RETURN 0
+			ENDIF
+		;それ以外
+		ELSE
+			;初めて
+			IF CFLAG:7117 == 0
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「하―앗, 하―앗……최근, 손이 멈추지 않아」
+					PRINTFORMW 「%조사처리(CSTR:90,"를")% 생각하면, 몸의 안쪽이 뜨거워져서……」
+					PRINTFORMW 앨리스는 침같이 애액을 흘리면서, 비밀스런 곳을 괴롭힌다
+					PRINTFORMW 그 표정은 점차 흐리멍텅해져, 얼굴은 붉게 물들어 있다
+					PRINTFORMW 「하아, 하앗……저기, 빨리!」
+					PRINTFORMW 「마음대로 해도 좋으니까, 빨리 안아줫!」
+				;それ以外
+				ELSE
+					PRINTFORMW 앨리스는 익숙해진 손놀림으로 스스로를 위로한다
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 그 사실을 전하자, 전격을 받은것처럼 몸이 뛰어오른다
+					PRINTFORMW 「바, 바보같은 말 하지마!」
+					PRINTFORMW 「당신이 말하지 않았다면, 이런 거 안해!」
+					PRINTFORMW 얼굴을 새빨갛게 하면서, 앨리스는 소리를 질렀다
+				ENDIF
+					CFLAG:7117 = 1
+					RETURN 0
+			;二回目以降
+			ELSE
+				;恋慕＋自慰中毒Lv3以上
+				IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:7117 <= 4 || FLAG:11 == 2)
+					PRINTFORMW 「읏, 하앗! 여기에, 원해!」
+					PRINTFORMW 「%조사처리(CSTR:90,"를")%, 빨리! 빨리 넣어줫!」
+					CFLAG:7117 = 5
+				;恋慕
+				ELSEIF TALENT:150 == 1 && (CFLAG:7117 <= 3 || FLAG:11 == 2)
+					PRINTFORMW 「하읏, 으응!」
+					PRINTFORMW 「기분, 좋아서, 멈출 수 없어!」
+					CFLAG:7117 = 4
+				;自慰中毒Lv3以上
+				ELSEIF ABL:30 >= 3 && (CFLAG:7117 <= 2 || FLAG:11 == 2)
+					PRINTFORMW 「하―앗……하―앗……몸이, 뜨거워서……」
+					PRINTFORMW 자제하려 하지만, 뜨거움을 더하는 몸은 그걸 허락하지 않았다
+					CFLAG:7117 = 3
+				;それ以外
+				ELSEIF CFLAG:7117 <= 1 || FLAG:11 == 2
+					PRINTFORMW 「쭉 쳐다보지 마……변태……」
+					CFLAG:7117 = 2
+				ENDIF
+					RETURN 0
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;何もしない CFLAG:7118
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;初めて
+	IF CFLAG:7118 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아무것도 안하는 거야?」
+			PRINTFORMW 「상관없지만, 조금있다 계속 하자」
+		;それ以外
+		ELSE
+			PRINTFORMW 「아무것도 안해……?」
+			PRINTFORMW 「그런 거 말해도, 또 뭔가 할 생각?」
+		ENDIF
+			CFLAG:7118 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋欲望Lv5以上
+		IF TALENT:150 == 1 && ABL:11 >= 5 && (CFLAG:7118 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 휴식이니까, 이 정도는 괜찮지?」
+			PRINTFORMW 앨리스는 무릎에 %CALLNAME:MASTER%의 머리를 뉘여, 상냥하게 그 머리를 쓰다듬었다
+			CFLAG:7118 = 4
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7118 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「조금 휴식하는거네, 알았어」
+			PRINTFORMW 「하지만, 너무 길게 쉬는건 싫다구? 시간이 없어져 버려」
+			CFLAG:7118 = 3
+		;それ以外
+		ELSEIF CFLAG:7118 <= 1 || FLAG:11 == 2
+			PRINTFORMW (질린걸까?)
+			CFLAG:7118 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ロ―タ― CFLAG:7141
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;初めて
+	IF CFLAG:7141 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「……장난감은 그다지 내키지 않아……」
+			PRINTFORMW 「나중에 %조사처리(CSTR:90,"가")% 상대를 해주는 걸까?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「도구에 의지하다니, 스스로에게 자신이 없다는 증거겠지?」
+			PRINTFORMW 「빨리 풀어주는게? 당신같은 사람에게 따를 생각따위 없어」
+		ENDIF
+			CFLAG:7141 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7141 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으읏! 하아, 하앗……」
+			PRINTFORMW 「거기가, 떨려서……」
+			CFLAG:7141 = 4
+		;C感覚Lv3以上
+		ELSEIF ABL:0 >= 3 && (CFLAG:7141 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아응! 안 됏, 꽉 누르지 마!」
+			PRINTFORMW 입으로는 저항을 보이고 있지만, 장난감이 닿을 때에 그 표정은 황홀하다
+			CFLAG:7141 = 3
+		;それ以外
+		ELSEIF CFLAG:7141 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으응……갓파라도 만들려는 거야?」
+			CFLAG:7141 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;電気按摩 CFLAG:7142
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;初めて
+	IF CFLAG:7142 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「하읏! 핫, 앗, 아아앗!」
+			PRINTFORMW 몸을 솟구치면서, 앨리스는 환희의 표정을 띄웠다
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭐, 뭐야 그건……엣, 마사지 기계?」
+			PRINTFORMW 도시파라고 자칭하고 있었다고 들었지만, 아무래도 사용법을 모르는 것 같다
+			PRINTFORMW %CALLNAME:MASTER%는 앨리스의 몸을 사용하여, 그 사용법을 가르쳤다
+		ENDIF
+			CFLAG:7142 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7142 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「히이, 아아! 의식이, 날아가! 흣, 아아아아앗!」
+			CFLAG:7142 = 4
+		;C感覚Lv3以上
+		ELSEIF ABL:0 >= 3 && (CFLAG:7142 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 크응! 읏, 앗, 으읏」
+			PRINTFORMW (안 됏, 참을 수가……)
+			CFLAG:7142 = 3
+		;それ以外
+		ELSEIF CFLAG:7142 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「웃, 으으―응! 앗, 그만, 히응!」
+			PRINTFORMW 입을 닫지만, 강렬한 자극이 조금씩 그 방볍을 무너뜨려 갔다
+			CFLAG:7142 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;バイブ CFLAG:7143 解除 CFLAG:7144
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 12 && TEQUIP:20 == 1
+	;初めて
+	IF CFLAG:7143 == 0
+		;処女
+		IF CFLAG:7609 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「기다려, 아무리 %CSTR:90%라도, 그건 싫어」
+				PRINTFORMW 「왜냐면……나……그……처음, 아직인걸」
+				PRINTFORMW 앨리스는 새빨개진 얼굴을  숙이면서, %CALLNAME:MASTER%에게 이유를 설명했다
+				PRINTFORMW 그러나, %CALLNAME:MASTER%의 생각이 바뀔 일은 없다
+				PRINTFORMW 앨리스의 손을 꽉 누르고, %조사처리(CALLNAME:MASTER,"는")% 비순에 장난감을 밀어 넣었다
+			;それ以外
+			ELSE
+				PRINTFORMW 「뭣……그건……설마……」
+				PRINTFORMW 흉악한 외견의 바이브를
+				IF TEQUIP:41 == 0
+					PRINTFORMW 보여주자, 앨리스의 몸에 소름이 돋았다
+					PRINTFORMW 이제부터 뭔가 시작되려는 것을, 본능적으로 감지한것 같다
+					PRINTFORMW 「자, 잠깐, 농담은 그만둬!」
+					PRINTFORMW 「그런짓 하면, 용서 안해!」
+					PRINTFORMW 앨리스는 소리를 질러, 가능한 거리를 유지하려고 한다
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 조금씩 추적해, 도주로를 차단한다
+					PRINTFORMW 그리고, 완전히 몰아넣자, %조사처리(CALLNAME:MASTER,"는")% 천천히 장난감을 꽉 눌렀다
+					PRINTFORMW 「뭣……거, 거짓말, 싫, 싫어!」
+				ElSE
+					PRINTFORMW 피부에 꽉 누르자, 앨리스의 몸은 크게 떨렸다
+					PRINTFORMW 「뭐, 뭘, 지금……뭘 할 생각인거야?」
+					PRINTFORMW 보이지 않는 공포로부터 인가, 앨리스의 목소리에 패기는 없었다
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 등 뒤로 조용히 이동해, 바이브를 단숨에 찔러넣었다
+				ENDIF
+			ENDIF
+		;それ以外
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「%조사처리(CSTR:90,"가")% 원한다면, 해도 상관없지만……」
+				PRINTFORMW 「나중에 제대로 %CSTR:90%도 넣어줘」
+			;それ以外
+			ELSE
+				PRINTFORMW 「큿……아팟……」
+				PRINTFORMW 무리하게 바이브를 밀어넣자, 앨리스의 얼굴은 고통에 일그러졌다
+			ENDIF
+		ENDIF
+			CFLAG:7143 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7143 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하아……안까지, 날뛰고 있어어!」
+			CFLAG:7143 = 4
+		;V感覚Lv3以上
+		ELSEIF ABL:1 >= 3 && (CFLAG:7143 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 경련하듯이 허리를 떨며, 입가에선 침이 흘러내린다
+			PRINTFORMW 하지만, 아직 저항할 생각인것 같다
+			PRINTFORMW 「하윽, 느끼고 있지, 않아!」
+			CFLAG:7143 = 3
+		;それ以外
+		ELSEIF CFLAG:7143 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 으응……도구만 잔뜩이네, 당신은」
+			CFLAG:7143 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;初めて
+	IF CFLAG:7144 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「으으―읏! 핫……」
+			PRINTFORMW 바이브를 뽑아내자, 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 향해서 비밀스런 곳을 보였다.
+			PRINTFORMW 「바이브는, 이제 됐어. %조사처리(CSTR:90,"를")%, 넣어줘……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「으응! 하―앗……겨우, 끝났다……」
+			PRINTFORMW 바이브를 뽑아내자, 앨리스는 몇 번이나 어깨로 숨을 쉬었다.
+		ENDIF
+			CFLAG:7144 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7144 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하앗! 읏……넣어, 줄래?」
+			PRINTFORMW 앨리스는 볼을 붉히며, 비밀스런 곳을 보이며 %조사처리(CALLNAME:MASTER,"를")% 요구했다
+			CFLAG:7144 = 4
+		;V感覚Lv3以上
+		ELSEIF ABL:1 >= 3 && (CFLAG:7144 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으응!」
+			PRINTFORMW 기세좋게 뽑아내자, 앨리스는 그 자극으로 약한 절정을 맞이했다
+			CFLAG:7144 = 3
+		;それ以外
+		ELSEIF CFLAG:7144 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아, 하앗……왜그래? 단념한거야?」
+			CFLAG:7144 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルバイブ CFLAG:7145 解除 CFLAG:7146
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 13 && TEQUIP:25 == 1
+	;初めて
+	IF CFLAG:7145 == 0
+		;淫尻＋恋慕
+		IF TALENT:173 == 1 && TALENT:150 == 1
+			PRINTFORMW 「앗……다음은 그거인거네……」
+			PRINTFORMW 「읏……장난감으로 내 몸을 괴롭히는건 상관없지만, 난 %조사처리(CSTR:90,"가")% 가지고 싶어……」
+			PRINTFORMW 「저기, 다음에 할 떄는, %조사처리(CSTR:90,"를")% 넣어줘……」
+		;恋慕
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「바이브를 쓰는거야? 뭔가 조금 느꼈지만……」
+			PRINTFORMW 「엣, 어, 엉덩이에!?」
+			PRINTFORMW 예상하지 못했던건지, 앨리스는 당황한 표정을 띄운다
+			PRINTFORMW 하지만, %CALLNAME:MASTER%의 부탁을 거절하지 못하는 앨리스였다
+			PRINTFORMW 「……조, 조금만이야? 아파지면, 바로 뽑아줘」
+		;それ以外
+		ELSE
+			PRINTFORMW 「엉덩이에 그런 거, 누가 좋아해……」
+			PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 노려보고, 거리를 두려고 한다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스를 제압해, 천천히 장난감을 삼키게 했다
+		ENDIF
+			CFLAG:7145 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;淫尻＋恋慕
+		IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7145 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「크아아아앗! 이것, 좋아아!」
+			PRINTFORMW 앨리스는 환희의 소리를 지르면서, 몸을 크게 뒤로 젖혔다
+			CFLAG:7145 = 6
+		;恋慕＋A感覚Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:7145 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 하아♪　엉덩이로, 느껴버려!」
+			CFLAG:7145 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7145 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이에 넣는거네? 좋아, 와줘……」
+			PRINTFORMW 앨리스는 %CALLNAME:MASTER%에게 엉덩이를 향해, 그 몸에 바이브를 삼켰다
+			CFLAG:7145 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:7145 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……누가, 엉덩이따위로 느낄까봐……」
+			CFLAG:7145 = 3
+		;それ以外
+		ELSEIF  CFLAG:7145 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……빨리 뽑으라구……」
+			PRINTFORMW 앨리스의 표정에서는, 쾌감을 느끼고 있다는 것을 읽어낼 수 없었다
+			CFLAG:7145 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	;初めて
+	IF CFLAG:7146 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「으응, 핫……하아……」
+			PRINTFORMW 「엉덩이를 괴롭힘 당하는 것도, 뭔가 좋을지도……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「핫, 하앗……」
+			PRINTFORMW 억지로 잡아 벌려진 국문은, 잠시동안 계속 떨렸다
+		ENDIF
+			CFLAG:7146 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7146 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 하앙……♪　이거, 뽑을 때도 굉장해……」
+			CFLAG:7146 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:7146 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「힛, 갑자기 뽑지마, 아앙!」
+			CFLAG:7146 = 3
+		;それ以外
+		ELSEIF CFLAG:7146 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 응하아……」
+			PRINTFORMW 「몇 번이고 몇 번이고 엉덩이만. 머리가 이상한거 아냐?」
+			CFLAG:7146 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クリキャップ CFLAG:7147 解除 CFLAG:7148
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 14 && TEQUIP:30 == 1
+	;初めて
+	IF CFLAG:7147 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭐여, 그거……하윽!」
+			PRINTFORMW 「뭐, 뭐야 이것, 떨려섯!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「앗! 큿……응……」
+			PRINTFORMW 「느, 느끼지 않았……어」
+		ENDIF
+			CFLAG:7147 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7147 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「어머, 또 장난감?」
+			PRINTFORMW 「하아……%조사처리(CSTR:90,"는")% 상대해주지 않는걸까?」
+			CFLAG:7147 = 4
+		;C感覚Lv3以上
+		ELSEIF ABL:0 >= 3 && (CFLAG:7147 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 힛, 아앗!」
+			PRINTFORMW (안 됏, 목소리가 나와버려……!)
+			CFLAG:7147 = 3
+		;それ以外
+		ELSEIF CFLAG:7147 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏! 응……소용없다고, 말했잖아?」
+			CFLAG:7147 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 14 && TEQUIP:30 == 0
+	;初めて
+	IF CFLAG:7148 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「핫! 크흣! 이, 이런 모습으로, 갑자기 대면……읏!」
+			PRINTFORMW 「큿, 크아아아앗!」
+			PRINTFORMW 장난감를 떼어낸 순간, 앨리스의 날카로운 목소리가 주위에 울렸다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏! 응! 하아……」
+			PRINTFORMW 「빨리 해방시켜주지 않는걸까……」
+			PRINTFORMW 호흡을 정돈하면서, 앨리스는 %CALLNAME:MASTER%로부터 거리를 두었다
+		ENDIF
+			CFLAG:7148 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7148 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으읏! 하아……」
+			PRINTFORMW 「부탁, 들어주지 않는거야?」
+			CFLAG:7148 = 4
+		;C感覚Lv3以上
+		ELSEIF ABL:0 >= 3 && (CFLAG:7148 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗……머리가 이상해질것 같아……」
+			CFLAG:7148 = 3
+		;それ以外
+		ELSEIF CFLAG:7148 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……읏, 알았겠지?」
+			PRINTFORMW 「내게 그런 저속한짓 따윈 소용없어」
+			CFLAG:7148 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ニプルキャップ CFLAG:7149 解除 CFLAG:7150
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 15 && TEQUIP:35 == 1
+	;初めて
+	IF CFLAG:7149 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「도구라니, 그다지 내키지 않아」
+			PRINTFORMW 「역시, 직접 해주는 쪽이……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……응……이런 거, 소용없어」
+			PRINTFORMW 앨리스는 강한척 하지만, 숨결은 분명하게 변하고 있다
+		ENDIF
+			CFLAG:7149 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7149 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「기분 좋게 해주는건 기쁘지만, 다음엔 %CSTR:90%의 손으로……」
+			CFLAG:7149 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7149 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앗! 크으!」
+			PRINTFORMW (의식이, 날아가!)
+			CFLAG:7149 = 3
+		;それ以外
+		ELSEIF CFLAG:7149 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 크으! 읏……」
+			PRINTFORMW 「이런, 거……!」
+			CFLAG:7149 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 15 && TEQUIP:35 == 0
+	;初めて
+	IF CFLAG:7150 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏, 으응! 핫……하아……」
+			PRINTFORMW 「%조사처리(CSTR:90,"가")%, 해주는 걸까?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏, 해줄 생각이 들었어?」
+		ENDIF
+			CFLAG:7150 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7150 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 도구는 이제 됐으니까, %CSTR:90%의 손으로……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 호소하는 듯한 시선을 %CALLNAME:MASTER%에게 보냈다.
+			CFLAG:7150 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7150 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗……」
+			PRINTFORMW (난처하네. 이런게 계속되면, 몸이……)
+			CFLAG:7150 = 3
+		;それ以外
+		ELSEIF CFLAG:7150 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「기다려, 지금 떼면! 히이!」
+			CFLAG:7150 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;オナホ―ル CFLAG:7151 解除 CFLAG:7152
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 16 && TEQUIP:30 == 2
+	;初めて
+	IF CFLAG:7151 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗, 아앗! 안 됏! 뭐야 이거! 격렬햇!」
+			PRINTFORMW 앨리스는 몸을 활같이 휘며, 날카로운 소리를 질렀다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……이런, 변태같이 보이는 짓으로 느낀다고 생각한걸까?」
+		ENDIF
+			CFLAG:7151 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7151 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿, 아앗……안 돼, 느껴……」
+			CFLAG:7151 = 3
+		;それ以外
+		ELSEIF CFLAG:7151 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 이런걸로, 느낄 리……」
+			PRINTFORMW 앨리스는 견디고 있지만, 그 얼굴은 붉게 물들어 있다
+			CFLAG:7151 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 16 && TEQUIP:30 == 0
+	;初めて
+	IF CFLAG:7152 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「하―앗, 하―앗……굉장하네, 이거……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하아, 하앗……겨우 끝난거네」
+			PRINTFORMW 앨리스는 흐트러진 호흡을 가다듬으면서, %CALLNAME:MASTER%로부터 거리를 두었다
+		ENDIF
+			CFLAG:7152 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7152 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗……머리가, 새하얘질 것 같아……」
+			CFLAG:7152 = 3
+		;それ以外
+		ELSEIF CFLAG:7152 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 크으! 핫……」
+			PRINTFORMW 「이제 그만둬주지 않을래, 이거」
+			CFLAG:7152 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;正常位 CFLAG:7161
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;初めて
+	IF CFLAG:7161 == 0
+		;処女
+		IF CFLAG:7609 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「후훗, 겨우 받아들여 준거네」
+				PRINTFORMW 「처음엔 싫었었지만, 지금은 %조사처리(CSTR:90,"가")%, 너무 좋아……」
+				PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"과")% 입술을 맞추고, 황홀한 표정을 띄웠다
+				PRINTFORMW 「하아……자, 와 줘……. 내 처음, %CSTR:90%에게 주고 싶은거야……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「뭣, 잠깐, 꽉 누르지 마! 엣……넣어……?」
+				PRINTFORMW 「노, 농담아냐! 풀어줘!」
+				PRINTFORMW 앨리스는 저항을 보이고 있지만, %조사처리(CALLNAME:MASTER,"가")% 올라탄 시점에서 도망갈 곳은 없었다
+				PRINTFORMW 「앗, 싫엇, 오지맛! 읏, 아아―앗!」
+			ENDIF
+		;それ以外
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「아핫……♪　굉장해……」
+				PRINTFORMW 앨리스에게 삽입하자, 부드러운 육벽이 %CALLNAME:MASTER%의 육봉을 감쌌다
+			;それ以外
+			ELSE
+				PRINTFORMW 「두고 봐, 절대 후회하게 해줄테니까……」
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 자유를 빼앗아, 천천히 삽입했다
+			ENDIF
+		ENDIF
+			CFLAG:7161 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7161 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응, 읏, 뜨거운게, 안쪽까지!」
+			PRINTFORMW 「앗, 거기! 거기!」
+			CFLAG:7161 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7161 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아앗……안, 굉장해애……」
+			PRINTFORMW 앨리스는 몸을 조금씩 떨며, %CALLNAME:MASTER%의 육봉을 단단히 조였다
+			CFLAG:7161 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7161 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 웃, 앗, 그만, 뽑아줫」
+			CFLAG:7161 = 3
+		;それ以外
+		ELSEIF CFLAG:7161 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……빨리, 뽑으라구……!」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 미간을 찡그리며, 혐오스런 표정으로 %조사처리(CALLNAME:MASTER,"를")% 노려봤다
+			CFLAG:7161 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位 CFLAG:7162
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;初めて
+	IF CFLAG:7162 == 0
+		;処女
+		IF CFLAG:7609 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「좋아, 와줘……」
+				PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 향해서 비밀스런 곳을 보이며, 네 발로 기는 자세가 되었다
+				PRINTFORMW 비순에서는 애액이 방울져 떨어져, 삽입을 이제나 저제나 하고 기다리고 기다렸다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 허리를 잡아, 육봉을 천천히 밀어넣었다
+			;それ以外
+			ELSE
+				PRINTFORMW 「네 발로 엎드렸는데, 대체 뭘 할 생각?」
+				PRINTFORMW 「설마, 동물 흉내를 내라, 따위 말을 할 생각은 아니겠지?」
+				PRINTFORMW 앨리스는 의아한 시선을 %CALLNAME:MASTER%에게 향해, 모습을 엿본다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 등 뒤에 서, 엉덩이에 육봉을 꽉 눌렀다
+				PRINTFORMW 「힛! 잠깐, 갑자기 뭘 하는거야!」
+				PRINTFORMW 「……설마, 거짓말, 싫엇! 그만둬!」
+				PRINTFORMW 지금에서야 겨우 눈치챈것 같아
+				PRINTFORMW 하지만 이미 도망칠 곳은 없다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 허리를 잡아, 욕망을 감은 노장을 찔러 넣었다
+			ENDIF
+		;それ以外
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「뒤에서라니, 얼굴이 안 보여」
+				PRINTFORMW 「그래도 이거, 동물이 한느것 같아서 격렬하게 할 수 있을것 같네」
+			;それ以外
+			ELSE
+				PRINTFORMW 「그런 더러운 거, 누가 좋아한다고……」
+				PRINTFORMW 앨리스의 저항은 계속되어, 스스로 넣도록 말해도 들으려고도 하지 않는다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 허리를 잡아, 억지로 육봉을 밀어 넣었다
+			ENDIF
+		ENDIF
+			CFLAG:7162 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7162 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「앗! 좀 더, 와 줘!」
+			PRINTFORMW 「뜨거운 거, 안쪽까지 원햇! 하앗!」
+			CFLAG:7162 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7162 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으응! 싫엇, 격렬햇, 하아앙!」
+			CFLAG:7162 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7162 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앗, 크으!」
+			PRINTFORMW (빨리, 끝내줘……!)
+			CFLAG:7162 = 3
+		;それ以外
+		ELSEIF CFLAG:7162 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 큿, 으응!」
+			PRINTFORMW 허리를 부딪혀 봐도, 앨리스는 목소리를 필사적으로 억누를 뿐이었다
+			CFLAG:7162 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位 CFLAG:7163
+;-------------------------------------------------
+IF SELECTCOM == 22
+	;初めて
+	IF CFLAG:7163 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「키스하면서, 넣는거네」
+			PRINTFORMW 「좋아, 와 줘……」
+			PRINTFORMW 앨리스는 가슴을 밀착시키면서, 천천히 허리를 내려간다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그걸 지탱하면서, 노장을 격분시켰다
+		;それ以外
+		ELSE
+			PRINTFORMW 「넣는 것 만으로도 불쾌한데, 키스까지 하라니……」
+			PRINTFORMW 「당신은, 상대의 신경을 건드리는게 능숙해보이네」
+		ENDIF
+			CFLAG:7163 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7163 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「츄……읏, 으응……」
+			PRINTFORMW 앨리스는 황홀한 표정으로 입맞춤을 나누며, %조사처리(CALLNAME:MASTER,"를")% 놓지 않으려고 가슴을 밀착시켰다
+			CFLAG:7163 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7163 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 아앗! 동시에는, 반칙! 햐앗!」
+			CFLAG:7163 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7163 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하응, 읏, 으으―응!」
+			PRINTFORMW 입술을 빼앗자, 앨리스의 조임이 강해졌다
+			CFLAG:7163 = 3
+		;それ以外
+		ELSEIF CFLAG:7163 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「몇 번이고 몇 번이고, 질리지도 않네」
+			PRINTFORMW 「하지만 몇 번이라도 말해 주겠어. 당신은, 상대의 신경을 건드리는게 능숙해보이네」
+			CFLAG:7163 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面座位 CFLAG:7164
+;-------------------------------------------------
+IF SELECTCOM == 23
+	;初めて
+	IF CFLAG:7164 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……이렇게 다리를 벌려서……부끄러워」
+			PRINTFORMW 앨리스는 부끄러운 표정을 지으며, 숙인다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 가슴을 비벼내리면서, 상냥하게 찔러올렸다
+		;それ以外
+		ELSE
+			PRINTFORMW 가슴을 비비자, 앨리스는 미간을 찡그렸다
+			PRINTFORMW 「넣으면서 가슴을 만져오다니……」
+			PRINTFORMW 「당신은, 사양이란걸 모르는거야?」
+		ENDIF
+			CFLAG:7164 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7164 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 으응! 가슴도, 아래도, 느껴버렷!」
+			CFLAG:7164 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7164 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앙! 동시에, 당하면!」
+			PRINTFORMW 「힛, 아앙!」
+			CFLAG:7164 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7164 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……읏! 응」
+			PRINTFORMW 앨리스는 얼굴을 새빨갛게 하면서, %CALLNAME:MASTER%의 육봉을 단단히 조였다.
+			CFLAG:7164 = 3
+		;それ以外
+		ELSEIF CFLAG:7164 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「치욕으로 굴복시킬 생각?」
+			PRINTFORMW 「공교롭게 됐네요, 당신의 생각대로는 되지 않아」
+			CFLAG:7164 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位 CFLAG:7165
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;初めて
+	IF CFLAG:7165 == 0
+		;処女
+		IF CFLAG:7609 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「내쪽에서 넣으면 되는거네, 간다」
+				PRINTFORMW 앨리스는 %CALLNAME:MASTER%의 가슴에 손을 짚고, 천천히 허리를 내려간다
+				PRINTFORMW 그리고, 비순에 육봉에 닿자, 작게 몸을 떨었다
+				PRINTFORMW 「읏, 역시 처음은 무서워……」
+				PRINTFORMW 「하지만, %조사처리(CSTR:90,"가")%…… %조사처리(CSTR:90,"가")% 함께라면……으응!」
+				PRINTFORMW 앨리스는 뜻을 정하고, %CALLNAME:MASTER%의 육봉을 삼켜간다
+			;それ以外
+			ELSE
+				PRINTFORMW 「당신은, 최저네」
+				PRINTFORMW 「좋아하지도 않는 상대에게, 기쁘게 처음을 바치는 여자가 있을거라고 생각한 걸까?」
+				PRINTFORMW 「아무리 환상향이라도, 그런 녀석은 없어!」
+				PRINTFORMW 앨리스는 소리소리를 지르며, %조사처리(CALLNAME:MASTER,"를")% 매도한다
+				PRINTFORMW 아무래도 넣은 생각은 없는 것 같다
+				PRINTFORMW 그렇다면, 강제로 빼앗을 수밖에 없을 것이다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 도망치지 못하도록 허리를 잡아, 힘으로 잡아내렸다
+				PRINTFORMW 「뭣, 싫엇, 안 됏! 읏, 우아아아앗!」
+			ENDIF
+		;それ以外
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「으응, 하앙♪　머리가, 새하얘질 것 같아」
+				PRINTFORMW 앨리스는 일심분란하게 허리를 흔들며, 몇 번이나 조임을 강하게 했다
+			;それ以外
+			ELSE
+				PRINTFORMW 「말해 두자고는 생각했지만, 설마 진짜로 할 줄이야……」
+				PRINTFORMW 「……빨리 시작하자. 그리고, 빨리 끝내자구」
+				PRINTFORMW 앨리스는 천천히 허리를 내려, 육봉을 비순으로 감쌌다
+			ENDIF
+		ENDIF
+			CFLAG:7165 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7165 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 아앗! 좋앗! 정말 좋아! 후아아아앗!」
+			CFLAG:7165 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7165 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 하앙! 그렇게, 난폭하게 하지마!」
+			PRINTFORMW 「제대로, 내가 움직일테니깟! 읏, 흣, 으응!」
+			CFLAG:7165 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7165 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……안에서, 커지고 있어……」
+			CFLAG:7165 = 3
+		;それ以外
+		ELSEIF CFLAG:7165 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「봉사……? 그런 생각, 털끝만큼도 없어」
+			CFLAG:7165 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;逆レイプ CFLAG:7166
+;-------------------------------------------------
+IF SELECTCOM == 25
+	;初めて
+	IF CFLAG:7166 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아앗! 굉장햇　좀 더 조여줘! 앙!」
+			PRINTFORMW 「하아, 하앗……이거, 버릇이 될 것같아……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「싫엇, 그렇게, 조이지 말아줘!」
+			PRINTFORMW 육봉을 조여질때마다, 앨리스는 작게 몸을 떨었다
+		ENDIF
+			CFLAG:7166 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7166 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 좋앗! 좀 더, 조여줘!」
+			CFLAG:7166 = 3
+		;それ以外
+		ELSEIF CFLAG:7166 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「앗, 후아아……」
+			PRINTFORMW (움직일 때마다, 몸이, 뜨거워……!)
+			CFLAG:7166 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;助手を犯す(魔理沙が助手) CFLAG:7167
+;助手を犯す CFLAG:7168
+;魔理沙が処女 CFLAG:7004
+;-------------------------------------------------
+IF SELECTCOM == 26
+	;魔理沙が助手
+	IF ASSI > 0 && ASSINO() == 02
+		;初めて
+		IF CFLAG:7167 == 0
+			;魔理沙が処女
+			IF CFLAG:7004 == 1
+				;앨리스に恋慕
+				IF TALENT:150 == 1
+					;魔理沙に恋慕
+					IF TALENT:ASSI:150 == 1
+						PRINTFORMW 「자, 마리사」
+						PRINTFORMW 『으, 응……알고 있다구……』
+						PRINTFORMW 마리사는 %CALLNAME:MASTER%에게 걸쳐, 천천히 허리를 내려 갔다
+						PRINTFORMW 『읏……아앗! 하윽! 아파……읏……』
+						PRINTFORMW 『이걸로 나도……한사람 몫을……』
+					;それ以外
+					ELSE
+						PRINTFORMW 『뭣, 그런 농담은 그만둬!』
+						PRINTFORMW 「어머, 모처럼 빼앗아 주려는 거라구? 감사해」
+						PRINTFORMW 『싫어! 싫어, 그만둬! 싫엇, 아아―앗!』
+					ENDIF
+				;それ以外
+				ELSE
+					;魔理沙に恋慕
+					IF TALENT:ASSI:150 == 1
+						PRINTFORMW 『하아, 하앗…… 됐나, 간다구……』
+						PRINTFORMW 「뭣…… 너 뭘! 아앗!」
+						PRINTFORMW 앨리스가 말 막혀한 다음의 순간, 마리사는 처녀를 %CALLNAME:MASTER%에게 바쳤다.
+					;それ以外
+					ELSE
+						PRINTFORMW 「히잇! 큿, 아아―앗!」
+						PRINTFORMW 『그만둬……이제 그만둬!」
+						PRINTFORMW 「마리사가! 마리사가 죽어버려!』
+					ENDIF
+				ENDIF
+			;それ以外
+			ELSE
+				;앨리스に恋慕
+				IF TALENT:150 == 1
+					;魔理沙に恋慕
+					IF TALENT:ASSI:150 == 1
+						PRINTFORMW 『하아, 하앗……읏, 좀 더……으응!』
+						PRINTFORMW 「뭐야, 그렇게 마리사가 좋다고 말하는거야?」
+						PRINTFORMW 앨리스는 조금 뺨을 부풀리면서, 상황을 지켜보았다
+					;それ以外
+					ELSE
+						PRINTFORMW 「우우……그렇게 과시하지 마」
+					ENDIF
+				;それ以外
+				ELSE
+					;魔理沙に恋慕
+					IF TALENT:ASSI:150 == 1
+						PRINTFORMW 『하아, 하앗……앨리스, 어때……』
+						PRINTFORMW 『주인님이, 나와……읏, 응아앗!』
+					;それ以外
+					ELSE
+						PRINTFORMW 『시, 싫엇! 그런, 우아아!』
+						PRINTFORMW 「마리……사, 읏……」
+					ENDIF
+				ENDIF
+			ENDIF
+				CFLAG:7167 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;앨리스に恋慕
+			IF TALENT:150 == 1
+				;魔理沙に恋慕
+				IF TALENT:ASSI:150 == 1 && (CFLAG:7167 <= 4 || FLAG:11 == 2)
+					PRINTFORMW 『읏, 앗……아아……안쪽에, 와 줘어……』
+					PRINTFORMW 마리사는 황홀한 표정을 지으면서, 쾌감을 탐했다
+					CFLAG:7167 = 5
+				;それ以外
+				ELSEIF CFLAG:7167 <= 3 || FLAG:11 == 2
+					PRINTFORMW 「이제 마리사를 안는건 충분하지?」
+					PRINTFORMW 「빨리 바꿔주지 않을까나?」
+					CFLAG:7167 = 4
+				ENDIF
+			;それ以外
+			ELSE
+				;魔理沙に恋慕
+				IF TALENT:ASSI:150 == 1 && (CFLAG:7167 <= 2 || FLAG:11 == 2)
+					PRINTFORMW 『하아, 하앗……앨리스도, 어때?』
+					PRINTFORMW 「이 감각, 몸이 녹는 것 같아……」
+					CFLAG:7167 = 3
+				;それ以外
+				ELSEIF CFLAG:7167 <= 1 || FLAG:11 == 2
+					PRINTFORMW 「싫엇……이제 싫어……그만……둬」
+					PRINTFORMW 마리사의 비명이 들릴 때마다, 앨리스는 고개를 좌우로 흔들었다
+					CFLAG:7167 = 2
+				ENDIF
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE 
+		;初めて
+		IF CFLAG:7168 == 0
+			;앨리스に恋慕
+			IF TALENT:150 == 1
+				;助手に恋慕
+				IF TALENT:ASSI:150 == 1
+					PRINTFORMW 「난 견학? 하아……」
+					PRINTFORMW 「오늘은 나를 안아주는 날이 아니었던 걸까?」
+				;それ以外
+				ELSE
+					PRINTFORMW 「봐, 싫어하고 있어」
+					PRINTFORMW 「그 쯤에서 끝내고, 다음은 나로……」
+					SIF TEQUIP:40 == 0
+						PRINTFORMW 앨리스는 가랑이를 벌려, 애액으로 젖은 비순을 과시했다
+				ENDIF
+			;それ以外
+			ELSE
+				;助手に恋慕
+				IF TALENT:ASSI:150 == 1
+					PRINTFORMW 환희의 표정을 띄우면서, %조사처리(CALLNAME:ASSI,"는")% 몇 번이나 허리를 부딪혔다
+					PRINTFORMW 「어째서……어째……섯!」
+				;それ以外
+				ELSE
+					PRINTFORMW 「이제……그만둬……」
+					PRINTFORMW 「그 이상 하면, 죽어버려……」
+				ENDIF
+			ENDIF
+				CFLAG:7168 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;앨리스に恋慕
+			IF TALENT:150 == 1
+				;助手に恋慕
+				IF TALENT:ASSI:150 == 1 && (CFLAG:7168 <= 4 || FLAG:11 == 2)
+					PRINTFORMW 「아아……안아주다니, 질투나……」
+					SIF TEQUIP:41 == 0
+						PRINTFORMW 앨리스는 선망의 시선을 보내면서, 두 사람의 교합을 응시했다
+					CFLAG:7168 = 5
+				;それ以外
+				ELSEIF CFLAG:7168 <= 3 || FLAG:11 == 2
+					PRINTFORMW 「응……시간에는 한계가 있어」
+					PRINTFORMW 「빨리 교대해 주지 않을까나?」
+					CFLAG:7168 = 4
+				ENDIF
+			;それ以外
+			ELSE
+				;助手に恋慕
+				IF TALENT:ASSI:150 == 1 && (CFLAG:7168 <= 2 || FLAG:11 == 2)
+					PRINTFORMW 「거짓말, 거짓말이야! 이런걸로, 느끼다니……」
+					PRINTFORMW 앨리스는 행위를 부정하려고 해도, %CALLNAME:ASSI%의 얼굴은 그걸 지워버릴 정도로 황홀해 있다
+					CFLAG:7168 = 3
+				;それ以外
+				ELSEIF CFLAG:7168 <= 1 || FLAG:11 == 2
+					PRINTFORMW 「우……엑……」
+					PRINTFORMW 처참의 극을 달하는 광경을 견디지 못하고, 앨리스는 위액을 토했다
+					CFLAG:7168 = 2
+				ENDIF
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面立位 CFLAG:7169
+;-------------------------------------------------
+IF SELECTCOM == 27
+	;初めて
+	IF CFLAG:7169 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「하아, 하앗……무겁지, 않아?」
+			PRINTFORMW 앨리스는 부끄러운듯이, %CALLNAME:MASTER%에게 묻는다
+			PRINTFORMW 하지만, 앨리스의 몸은 %조사처리(CALLNAME:MASTER,"가")% 생각하고 있는 이상으로 가벼웠다
+			PRINTFORMW 「그래, 고마워」
+			PRINTFORMW 「읏……슬슬, 움직일게」
+		;それ以外
+		ELSE
+			PRINTFORMW 「큿, 읏……너무하네, 도망갈 곳도 없는데 물어오다니……」
+			PRINTFORMW 앨리스는 이를 악물면서, %CALLNAME:MASTER%의 괴롭힘을 계속 참았다
+		ENDIF
+			CFLAG:7169 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7169 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앙! 좋앗! 정말 좋아! 아앙!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 %CALLNAME:MASTER%에게 매달리면서, 질의 조임을 강하게 했다
+			CFLAG:7169 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7169 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앙, 안 됏, 그런 곳!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 밀어 올려보이자, 앨리스는 매달리면서 조임을 강하게 했다
+			CFLAG:7169 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7169 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……큿, 으응!」
+			PRINTFORMW 몸 쪽은 굴복한건지, %조사처리(CALLNAME:MASTER,"가")% 찔러올릴 떄마다 강하게 조여왔다
+			CFLAG:7169 = 3
+		;それ以外
+		ELSEIF CFLAG:7169 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하―앗, 하―앗……빨리……뽑으, 라구……!」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 눈동자를 적시면서, %CALLNAME:MASTER%에게 소리쳤다
+			CFLAG:7169 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面立位 CFLAG:7170
+;-------------------------------------------------
+IF SELECTCOM == 28
+	;初めて
+	IF CFLAG:7170 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏…… %조사처리(CSTR:90,"는")% 이런 체위가 좋은거야?」
+			PRINTFORMW 「그……뭐랄까, 가슴을 만지면서 하는게……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏, 으읏……빨리, 뽑으라굿!」
+			PRINTFORMW 때때로 신음을 내면서, 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 향해서 소리쳤다
+		ENDIF
+			CFLAG:7170 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7170 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아앙……좋아아……」
+			PRINTFORMW 「가슴도 그곳도, 뜨거워져서……」
+			PRINTFORMW 칠칠치 못하게 침을 흘리면서, 앨리스는 쾌감을 탐했다
+			CFLAG:7170 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:7170 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗……빨리, 으응! 안 돼……」
+			PRINTFORMW 앨리스는 거절하는 표정을 지었지만, 질의 조임은 강해질 뿐이었다
+			CFLAG:7170 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7170 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 아앗! 안 됏! 뽑아줘어!」
+			PRINTFORMW 목소리는 크지만, 앨리스의 저항은 한단계 얌전해졌다
+			CFLAG:7170 = 3
+		;それ以外
+		ELSEIF CFLAG:7170 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫엇, 그런곳 비비지 마!」
+			PRINTFORMW 부드러운 가슴을 비벼내리자, 앨리스는 색기있는 목소리를 냈다
+			CFLAG:7170 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;正常位アナル CFLAG:7181
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;初めて
+	IF CFLAG:7181 == 0
+		;淫尻＋恋慕
+		IF TALENT:173 == 1 && TALENT:150 == 1
+			PRINTFORMW 「앗……넣어주는거네……」
+			PRINTFORMW 「고마워, 정말 좋아해……츄……」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 위에 지워지자, 앨리스는 살짝 입을 맞췄다
+		;恋慕
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「아앙! 읏……정말, 그렇게 엉덩이가 좋은거야?」
+			PRINTFORMW 「어쩔 수 없네, 조금만이야?」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 %CALLNAME:MASTER%의 목에 손을 둘러, 안기면서 허리를 흔들기 시작했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏!? 아팟……큿……」
+			PRINTFORMW 「엉덩이에 넣다니, 제정신이 아니야」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 고통에 얼굴을 찡그리면서, %조사처리(CALLNAME:MASTER,"를")% 노려봤다
+		ENDIF
+			CFLAG:7181 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;淫尻＋恋慕
+		IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7181 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아앗, 좋아! 그대로, 안쪽까지!」
+			PRINTFORMW 「%조사처리(CSTR:90,"를")%, 좀 더 안쪽까지 느끼고 싶엇!」
+			CFLAG:7181 = 6
+		;恋慕＋A感覚Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:7181 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응, 거깃! 거기가 좋아!」
+			PRINTFORMW 아날의 쾌감을 깨달은 앨리스는 , 부딪히듯이 허리를 계속 흔들었다
+			CFLAG:7181 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7181 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앗! 엉덩이, 인데, 멈출 수 없어!」
+			PRINTFORMW 앨리스는 칠칠치 못하게 입을 벌리면서, 쾌감을 탐했다
+			CFLAG:7181 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:7181 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「힛, 으읏, 응, 핫!」
+			PRINTFORMW 아날의 조임은 강해져, %CALLNAME:MASTER%의 육봉에 민감한 반응을 나타냈다
+			CFLAG:7181 = 3
+		;それ以外
+		ELSEIF  CFLAG:7181 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 아팟, 빨리, 뽑으라구!」
+			CFLAG:7181 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位アナル CFLAG:7182
+;-------------------------------------------------
+IF SELECTCOM == 31
+	;初めて
+	IF CFLAG:7182 == 0
+		;淫尻＋恋慕
+		IF TALENT:173 == 1 && TALENT:150 == 1
+			PRINTFORMW 「읏……뒤에서 넣는거네?」
+			PRINTFORMW 「좋아, 와줘……%CSTR:90%의 기분이 내킬때까지, 나를 범해줘……」
+		;恋慕
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「읏, 으응! 핫, 으응!」
+			PRINTFORMW 「좀 더, 안쪽까지, 와 줘어!」
+			PRINTFORMW 앨리스는 조임을 강하게 해, 찔러 올릴 때마다 달콤한 목소리를 냈다
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣, 잠깐 기다리라구!」
+			PRINTFORMW 「엉덩이에 넣는다니 농담이 아냐!」
+			PRINTFORMW 앨리스는 소리를 질러, %CALLNAME:MASTER%로부터 거리를 두려고 한다
+			PRINTFORMW 하지만, %CALLNAME:MASTER%에게 허리를 잡혀, 도망칠 수 없었다
+		ENDIF
+			CFLAG:7182 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;淫尻＋恋慕
+		IF TALENT:173 == 1 && TALENT:150 == 1 && (CFLAG:7182 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 아앙! 안쪽, 너무 기분 좋아섯, 불타버릴것 같아!」
+			PRINTFORMW 앨리스는 허리를 흔드는 것을 가속해, 쾌감을 탐했다
+			CFLAG:7182 = 6
+		;恋慕＋A感覚Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:7182 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아♪　좋, 좋앗! 엉덩잇, 좋아아!」
+			PRINTFORMW 「힛, 핫, 하앗!」
+			CFLAG:7182 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7182 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗……뒤? 좋아, 와줘……」
+			PRINTFORMW 「그래도, 앞에도 넣어줘? 읏……」
+			CFLAG:7182 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:7182 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 으응! 싫엇, 응앗!」
+			PRINTFORMW 아날을 느끼고 있는 것에 당황하는 앨리스는 , 부정하듯이 고개를 흔들었다
+			CFLAG:7182 = 3
+		;それ以外
+		ELSEIF  CFLAG:7182 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하윽, 읏, 뽑으라구! 빨리!」
+			CFLAG:7182 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手淫 CFLAG:7191
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;初めて
+	IF CFLAG:7191 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏, 어때? 기분 좋아?」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 올려다 보면서, 앨리스는 상냥하게 봉사했다
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「이런 느낌으로 좋은거지」
+			PRINTFORMW (빨리 끝내주지 않으려나……)
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……미적지근해……」
+			PRINTFORMW 앨리스는 가능한 거리를 벌리면서, %CALLNAME:MASTER%의 육봉을 천천히 훑었다
+		ENDIF
+			CFLAG:7191 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7191 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……안 됏, 손뿐이라니……」
+			PRINTFORMW 「저기, 빨리……, 입이라도, 그곳이라도 좋으니까! 빨리!」
+			CFLAG:7191 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7191 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「어때? 조금 연습해 봤는데……기분 좋아?」
+			CFLAG:7191 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7191 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 이렇게……?」
+			PRINTFORMW 혐오감을 보이면서도, 앨리스는 상냥하게 봉사했다
+			CFLAG:7191 = 3
+		;それ以外
+		ELSEIF CFLAG:7191 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아……뭐, 더러운 손으로 끈적끈적하게 달라붙는 것보단……」
+			PRINTFORMW 앨리스는 혐오감을 보이면서, 때때로 한숨을 내쉬었다
+			CFLAG:7191 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラチオ CFLAG:7192
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;初めて
+	IF CFLAG:7192 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「음……읏, 츄파……」
+			PRINTFORMW 육봉을 사랑하는 모양으로, 앨리스는 정중한 봉사를 계속했다
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「이, 입으로 하라니……」
+			PRINTFORMW 「으읏, 알았다구. 하면 되는거지?」
+			PRINTFORMW 앨리스는 마지못해 육봉을 삼켜, 천천히 봉사했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「으흡! 응, 읍!」
+			PRINTFORMW 앨리스는 괴로운 듯한 소리를 내며, %조사처리(CALLNAME:MASTER,"를")% 떨쳐 내려고 한다
+			PRINTFORMW 복종하는 것에는, 아직 시간이 걸릴것 같다
+		ENDIF
+			CFLAG:7192 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7192 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 으음……츄파……으응」
+			PRINTFORMW 「이 냄새, 견딜 수 없어……」
+			CFLAG:7192 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7192 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응츄……츄……핫……읏……」
+			PRINTFORMW 「기분, 좋아……?」
+			CFLAG:7192 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7192 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그다지 해본 적이 없으니까, 조금 정도는 서툴러도 너그럽게 봐줘?」
+			PRINTFORMW 「흡……읏……읏……」
+			CFLAG:7192 = 3
+		;それ以外
+		ELSEIF CFLAG:7192 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응……응츄……읏……」
+			PRINTFORMW 「웃……기분나빠……」
+			CFLAG:7192 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリ CFLAG:7193
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;初めて
+	IF CFLAG:7193 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗……굉장해……맥박치고 있어……」
+			PRINTFORMW 「후훗, 가슴으로 끼우는게, 그렇게 좋았던 걸까?」
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「읏, 응……잠깐, 꽉  누르지 마……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「가슴으로 끼운다……인가……」
+			PRINTFORMW 「말해 두겠지만, 난 당신의 도구가 아니야」
+		ENDIF
+			CFLAG:7193 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7193 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응……어때? 끼우는거, 기분 좋아……?」
+			PRINTFORMW 부드러운 가슴으로 육봉을 끼운 앨리스는 , 미소지으면서 %CALLNAME:MASTER%에게 물었다
+			CFLAG:7193 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7193 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「봉사하는거네, %조사처리(CSTR:90,"는")% 편하게 있어……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 육봉을 가슴으로 끼워, 올려다보며 봉사를 계속했다
+			CFLAG:7193 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7193 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……샤……」
+			PRINTFORMW 저항도 적어졌지만, 복종하는 것에는 조금 더 걸릴것 같다
+			CFLAG:7193 = 3
+		;それ以外
+		ELSEIF CFLAG:7193 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「내 가슴은, 이런 일을 하기 위해 있는게 아냣!」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 육봉의 건너편의 앨리스의 눈에는 분노밖에 비치지 않았다
+			CFLAG:7193 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;素股 CFLAG:7194
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;初めて
+	IF CFLAG:7194 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗, 읏……넣어주지 않는거야……?」
+			PRINTFORMW 「저기, 빨리……, 너무 애태우지 마……」
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「읏……넣으면, 용서안해……」
+			PRINTFORMW 다짐을 받은 후, 앨리스는 %CALLNAME:MASTER%에게 몸을 허락했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣, 잠깐 뭘 할 생각!」
+			PRINTFORMW 「……엣, 가랑이에 끼워? 그런짓, 누가……」
+			PRINTFORMW 앨리스는 고집부리지만, 안에 넣으려 하자 일변했다
+			PRINTFORMW 「큿……안에 끼우는 정도라면……」
+			PRINTFORMW 입술을 깨물며, 앨리스는 맥박치는 육봉을 가랑이에 끼웠다
+		ENDIF
+			CFLAG:7194 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7194 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「너무하네, 넣지않고 비빌뿐이라니……」
+			PRINTFORMW 「내 이곳은, 벌서 %조사처리(CSTR:90,"를")% 원하는데……」
+			CFLAG:7194 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7194 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「비빌뿐이지만, 읏, 좋을지도……」
+			CFLAG:7194 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7194 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「…조금만, 상냥하게……」
+			PRINTFORMW 「읏, 핫……하앙……」
+			PRINTFORMW 욕정한건지, 앨리스는 숨결이 거칠어져 있다
+			CFLAG:7194 = 3
+		;それ以外
+		ELSEIF CFLAG:7194 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……몇 번이나 비비지 말아줘……!」
+			CFLAG:7194 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ロ―ション CFLAG:7201
+;-------------------------------------------------
+IF SELECTCOM == 60
+	;初めて
+	IF CFLAG:7201 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗……일부러 쓰지 않아도 괜찮아」
+			PRINTFORMW 「%조사처리(CSTR:90,"가")% 상대라면, 금방 젖으니까」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……미끌미끌……」
+			PRINTFORMW 로션을 바르자, 앨리스의 표정은 흐려졌다
+			PRINTFORMW 「빨리 샤워해서, 산뜻해지고 싶어」
+		ENDIF
+			CFLAG:7201 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7201 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「일부러 도구에 의지하지 않아도……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 슬픈듯한 표정으로 %조사처리(CALLNAME:MASTER,"를")% 쳐다봤다
+			CFLAG:7201 = 3
+		;それ以外
+		ELSEIF CFLAG:7201 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 미끌미끌, 빨리 샤워가 하고싶어」
+			CFLAG:7201 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;媚薬 CFLAG:7202
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;初めて
+	IF CFLAG:7202 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……머리가, 띵해……」
+			PRINTFORMW 앨리스는 휘청거리면서, 볼을 홍조시켜 간다.
+			PRINTFORMW 미약의 효과는 절대적인 것 같다.
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏…… 뭐야, 이거……!」
+			PRINTFORMW 즉효성의 미약을 먹이자, 앨리스는 단숨에 볼을 홍조시켰다.
+			PRINTFORMW 「하아, 하앗…… 약, 따위……」
+			PRINTFORMW 평정을 가장하려하는 앨리스였지만, 점차 색기가 묻은 표정을 띠게 됐다.
+		ENDIF
+			CFLAG:7202 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7202 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「빨리……빨리 와줘……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 아련히 %조사처리(CALLNAME:MASTER,"를")% 쳐다보면서, 숨결을 거칠게 해갔다
+			CFLAG:7202 = 3
+		;それ以外
+		ELSEIF CFLAG:7202 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아, 하앗……약, 따위에……!」
+			CFLAG:7202 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;利尿剤 CFLAG:7203
+;-------------------------------------------------
+IF SELECTCOM == 62
+	;初めて
+	IF CFLAG:7203 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……뭔가 먹였네. 미약일까?」
+			PRINTFORMW 「일부러 그런걸……읏!」
+			PRINTFORMW 약의 효과가 온건지, 앨리스는 끈임없이 가랑이를 비볐다
+			PRINTFORMW 그럼, 언제까지 참을 수 있을까? 
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏! 뭘 먹인거야!」
+			PRINTFORMW 알약을 먹고, 앨리스는 경계심을 높인다
+			PRINTFORMW 하지만, 약효가 나오기 시작하자, 그럴 경황이 아닌것 같다
+			PRINTFORMW 「읏, 하아, 읏……뭘, 한거야……읏」
+		ENDIF
+			CFLAG:7203 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋おもらし癖
+		IF TALENT:150 == 1 && TALENT:45 == 1 && (CFLAG:7203 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 안 돼……또, 상스러운 짓을……」
+			CFLAG:7203 = 4
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7203 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……또 그걸 시킬 생각인거야……?」
+			PRINTFORMW 앨리스는 가랑이를 비비면서, %CALLNAME:MASTER%에게 물었다
+			CFLAG:7203 = 3
+		;それ以外
+		ELSEIF CFLAG:7203 < 1 || FLAG:11 == 2
+			PRINTFORMW 「……읏, 또, 이 약……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 가랑이를 비비면서, %조사처리(CALLNAME:MASTER,"를")% 노려봤다
+			CFLAG:7203 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;裸エプロン CFLAG:7221 解除 CFLAG:7222
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 90 && TEQUIP:59 == 1
+	;初めて
+	IF CFLAG:7221 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「그러니까, 이런 느낌으로 어떨까나?」
+			PRINTFORMW 앨리스는 복숭아색의 에이프런을 몸에 두르고, 가볍게 돌아보았다
+			PRINTFORMW 「조금 부끄러운 곳도 있지만……어때? 어울려?」
+		;それ以外
+		ELSE
+			PRINTFORM %조사처리(CALLNAME:MASTER,"가")% 입도록 지시를 하자, 앨리스는 
+			IF TEQUIP:41 == 0
+				PRINTFORMW 이마에 손을 짚었다
+				PRINTFORMW 「당신은, 가끔 알 수 없는 짓을 해」
+				PRINTFORMW 「이런걸 입혀서, 대체 뭐가 즐거운걸까?」
+			ElSE
+				PRINTFORMW 깊은 한숨을 쉬었다
+				PRINTFORMW 「저기 말야, 아무것도 안보이는데 옷을 입으라니 가능할 리 없잖아?」
+				PRINTFORMW 「……엣, 당신이 입혀준다구? 하아……」
+				PRINTFORMW (이런 사람에게, 옷 갈아입히는 인형취급을 당하다니……)
+			ENDIF
+		ENDIF
+			CFLAG:7221 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7221 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%조사처리(CSTR:90,"는")%, 이런 모습을 해 주는게 좋은거야?」
+			PRINTFORMW 「……집 안에서라면, 평소엔 입어줘도 괜찮아」
+			CFLAG:7221 = 3
+		;それ以外
+		ELSEIF CFLAG:7221 <= 1 || FLAG:11 == 2
+			PRINTFORMW (이걸 입으면, 이상한 기분이 돼……)
+			CFLAG:7221 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 90 && TEQUIP:59 == 0
+	;初めて
+	IF CFLAG:7222 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「저기, 다음엔 어쩔거야?」
+			PRINTFORMW 「봉사? 아니면, 넣어주는 거야?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「정말……아까는 입으라더니, 이번엔 벗으라고……」
+			PRINTFORMW 「난 당신의 옷 갈아입히는 인형이 아니야」
+		ENDIF
+			CFLAG:7222 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7222 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「어머, 이제 된거야?」
+			PRINTFORMW 「잠깐 기다려, 지금 정리할게」
+			CFLAG:7222 = 3
+		;それ以外
+		ELSEIF CFLAG:7222 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 벗으라니……당신이 생각하고 있는걸 잘 모르겠어」
+			CFLAG:7222 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ビデオ撮影 CFLAG:7223
+;-------------------------------------------------
+IF SELECTCOM == 100 && TEQUIP:50 == 1
+	;初めて
+	IF CFLAG:7223 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「비디오로 찍어서 어쩌려는거야……?」
+			PRINTFORMW 「그래……파는건가……유감이네……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣, 잠깐 농담이지!?」
+			PRINTFORMW 카메라의 존재를 눈치챈 앨리스는 , 창백해진 표정으로 소리를 지른다
+			PRINTFORMW 아무래도, 카메라가 뭘 하기 위한 것인지 알고 있는 것 같다
+		ENDIF
+			CFLAG:7223 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7223 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「또 비디오……? 그다지 내키지 않아……」
+			PRINTFORMW 「내 몸은, %CSTR:90%만의 것이니까……」
+			CFLAG:7223 = 3
+		;それ以外
+		ELSEIF CFLAG:7223 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……큭」
+			PRINTFORMW 도망칠 곳 없는 앨리스를, %조사처리(CALLNAME:MASTER,"는")% 카메라 앞에 끌어냈다
+			CFLAG:7223 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;羞恥プレイ CFLAG:7224 解除 CFLAG:7225
+;-------------------------------------------------
+IF SELECTCOM == 103 && TEQUIP:56 == 1
+	;初めて
+	IF CFLAG:7224 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「거울은 평소에도 익숙한데, 이런 사용법도 있었네」
+			PRINTFORMW 거울에 비치는 나체를 본 앨리스는 , 살짝 볼을 붉혔다
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「하아, 하앗……몸……이」
+			PRINTFORMW 노출의 쾌감에 눈뜬 앨리스는 , 조건반사하듯이 몸을 뜨겁게 했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「일부러 장소를 바꿨다고 생각했더니, 이론 곳으로 데려 올줄은……」
+			PRINTFORMW 앨리스는 깊은 한숨을 쉬며, 낙담한 표정을 지었다
+		ENDIF
+			CFLAG:7224 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋露出癖Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:7224 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……몸이, 뜨거워서, 참을수가……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 나체를 본 순간, 앨리스의 숨결은 급속하게 거칠어졌다
+			CFLAG:7224 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7224 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, %조사처리(CSTR:90,"와")% 연결되는 곳, 잘 보여」
+			CFLAG:7224 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3 && (CFLAG:7224 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……빨리 끝내줘!」
+			PRINTFORMW 노출의 쾌감을 알게 된 앨리스는 , 뺨을 붉게 물들이며 %CALLNAME:MASTER%에게 졸랐다
+			CFLAG:7224 = 3
+		;それ以外
+		ELSEIF CFLAG:7224 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 여기? 너무 부끄럽게는 하지 말았으면 하는데」
+			CFLAG:7224 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:7225 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「엣, 끝? 그래, 알았어」
+			PRINTFORMW 「기회가 있다면, 또 여기에 오고싶어」
+			PRINTFORMW 「연결된 곳이 보이는 것도, 상당히 좋네」
+		;それ以外
+		ELSE
+			PRINTFORMW 「후우, 겨우 끝이네」
+			PRINTFORMW (언제까지 계속되는걸까……이런 생활……)
+			CFLAG:7225 = 1
+			RETURN 0
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7225 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이제 된거야? 그럼……다음엔 뭘 할거야?」
+			CFLAG:7225 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3 && (CFLAG:7225 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……」
+			PRINTFORMW (뭘까나……겨우 끝났는데, 이런 기분이 되다니……)
+			CFLAG:7225 = 3
+		;それ以外
+		ELSEIF CFLAG:7225 <= 1 || FLAG:11 == 2
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 지시를 내리자, 앨리스는 도망치듯이 방을 뒤로 했다
+			CFLAG:7225 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;野外プレイ CFLAG:7226 解除 CFLAG:7227
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 104 && TEQUIP:52 == 1
+	;初めて
+	IF CFLAG:7226 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「밖이라니, 당신 진심?」
+			PRINTFORMW 믿을 수 없는건지, 앨리스는 %CALLNAME:MASTER%에게 되물었다
+			PRINTFORMW 하지만, %조사처리(CALLNAME:MASTER,"가")% 대답하기 전에, 농담이 아니란걸 눈치챈것 같다
+			PRINTFORMW 「뭐어……당신이니까……. 좋아, 어울려 줄게」
+		;それ以外
+		ELSE
+			PRINTFORMW 「싫엇! 놔 줘!」
+			PRINTFORMW 목줄을 채우는 일에 성공했지만, 앨리스의 저항은 거세다
+			PRINTFORMW 강제로 쇠사슬을 끌어당기면서, %조사처리(CALLNAME:MASTER,"는")% 집 밖으로 끌어냈다
+		ENDIF
+			CFLAG:7226 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋露出癖Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:7226 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 오늘은 누가 있을까?」
+			PRINTFORMW 앨리스는 요염하게 미소지으면서, 목줄을 채웠다
+			CFLAG:7226 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7226 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「보여질지도 모른다고 생각하면, 몸이 느끼기 쉽게 돼……」
+			CFLAG:7226 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3 && (CFLAG:7226 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (뭐야……이 느낌……몸 안이, 뜨거워……)
+			CFLAG:7226 = 3
+		;それ以外
+		ELSEIF CFLAG:7226 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「감기에 걸리지 않도록, 빨리 끝내주지 않을래?」
+			CFLAG:7226 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;初めて
+	IF CFLAG:7227 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「후우……그다지 밖은 좋아하지 않아……」
+			PRINTFORMW 「누군가에게 눈치채인다면, 변태취급 당해버리는걸」
+		;それ以外
+		ELSE
+			PRINTFORMW 「이제 밖은 그만둬!」
+			PRINTFORMW 「누군지도 모르는 상대에게 나체를 보인다니, 이제 싫어!」
+		ENDIF
+			CFLAG:7227 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋露出癖Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:7227 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 이제 충분한거야?」
+			PRINTFORMW 「알았어. 다음은 방 안에서 안아줘」
+			CFLAG:7227 = 4
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7227 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「보여질지도 모르는 상황이라면, 평소와 다른 쾌감이 있을지도 모르겠지만……」
+			PRINTFORMW 「역시, 내키지 않아……」
+			CFLAG:7227 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3 && (CFLAG:7227 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……엣, 끝?」
+			PRINTFORMW 「그, 그래, 알았어. 이제 충분한거네」
+			CFLAG:7227 = 3
+		;それ以外
+		ELSEIF CFLAG:7227 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이 귀축……!」
+			CFLAG:7227 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;放尿 CFLAG:7228
+;-------------------------------------------------
+IF SELECTCOM == 111
+	;初めて
+	IF CFLAG:7228 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아아……나오고 있어어……」
+			PRINTFORMW 앨리스는 귀까지 붉에 물들이면서, 황금수를 분출했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……이런짓 해서, 뭐가 즐거운거야……」
+		ENDIF
+			CFLAG:7228 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋おもらし癖＋野外プレイ
+		IF TALENT:150 == 1 && TALENT:45 == 1 && TEQUIP:52 == 1 && (CFLAG:7228 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「읏! 이런, 곳에서……하앙♪」
+			PRINTFORMW 부끄러운듯한 표정을 짓는 앨리스였지만, 마음 한편에선 행위를 바라고 있던것 같다
+			CFLAG:7228 = 7
+		;恋慕＋おもらし癖
+		ELSEIF TALENT:150 == 1 && TALENT:45 == 1 && (CFLAG:7228 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「읏……안 됏, 멋대로……」
+			PRINTFORMW 수치심을 보이면서, 앨리스는 황금수를 분출했다
+			CFLAG:7228 = 6
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7228 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읏……다음부터는 화상실에 보내줬으면 해」
+			CFLAG:7228 = 5
+		;露出癖Lv5
+		ELSEIF ABL:14 >= 5 && (CFLAG:7228 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「햐, 앗, 아아―앗!」
+			PRINTFORMW 얼굴을 붉게 물들이고 있지만, 앨리스의 표정은 황홀했다
+			CFLAG:7228 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7228 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 아아……나오고 있어……」
+			PRINTFORMW (이제 돌이킬수 없는걸까, 난……)
+			CFLAG:7228 = 3
+		;それ以外
+		ELSEIF CFLAG:7228 < 1 || FLAG:11 == 2
+			PRINTFORMW 「이런짓을 시키다니……」
+			PRINTFORMW 「당신에겐 상대를 배려하는 짓이 불가능한거야?」
+			CFLAG:7228 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;浣腸プレイ CFLAG:7261 解除 CFLAG:7262
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 174 && TEQUIP:25 == 7
+	;初めて
+	IF CFLAG:7261 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「으읏……읏, 핫……」
+			PRINTFORMW 「상당히, 심한짓 하네……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하―앗, 하―앗……이런짓 시켜서, 뭐가 재밌는걸까?」
+			PRINTFORMW 「이런짓을 하고 기뻐하다니, 읏, 당신은 상당한 변태네」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 때때로 괴로운듯한 소리를 내면서, 앨리스의 날카로운 시선으로 %조사처리(CALLNAME:MASTER,"를")% 계속 노려봤다
+		ENDIF
+			CFLAG:7261 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋排泄中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:36 >= 3 && (CFLAG:7261 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……후훗♪」
+			PRINTFORMW 「또, 부끄러운 짓을 시키고 싶은걸까?」
+			CFLAG:7261 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7261 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏……응……또, 이거……」
+			PRINTFORMW 「그다지 내키지가 않네, 이거……」
+			CFLAG:7261 = 4
+		;排泄中毒Lv3以上
+		ELSEIF ABL:36 >= 3 && (CFLAG:7261 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……하아……뭐야, 이거……」
+			PRINTFORMW (싫을 터인데, 몸이 느껴……)
+			CFLAG:7261 = 3
+		;それ以外
+		ELSEIF  CFLAG:7261 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……하아, 하앗……」
+			PRINTFORMW 「배가, 부풀어서……」
+			CFLAG:7261 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 174 && TEQUIP:25 == 0
+	;初めて
+	IF CFLAG:7262 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「힛! 싫엇, 앗! 나왓!」
+			PRINTFORMW 「내용물이, 앗, 나와버려어어어어!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「!? 뭣, 잠깐 그만두라굿!」
+			PRINTFORMW 「지금 빼면! 앗, 아아―앗!」
+		ENDIF
+			CFLAG:7262 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋排泄中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:36 >= 3 && (CFLAG:7262 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「후아아……안에서, 떨려서어……」
+			PRINTFORMW 칠칠맞게 침을 흘리면서, 앨리스는 관장액을 마구 흩뿌렸다
+			CFLAG:7262 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7262 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으응! 아앗! 나왓!」
+			PRINTFORMW 「속이, 나와버려어엇!」
+			CFLAG:7262 = 4
+		;排泄中毒Lv3以上
+		ELSEIF ABL:36 >= 3 && (CFLAG:7262 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗……」
+			PRINTFORMW 관장액을 마구 흩뿌린 앨리스였지만, 그 표정은 어딘가 황홀했다
+			CFLAG:7262 = 3
+		;それ以外
+		ELSEIF  CFLAG:7262 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어어……보지마……」
+			PRINTFORMW 「이런 거 보지마……」
+			CFLAG:7262 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首ロ―タ― CFLAG:7271
+;-------------------------------------------------
+IF SELECTCOM == 190
+	;初めて
+	IF CFLAG:7271 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏, 으응! 끝에서, 떨리고 있엇」
+			PRINTFORMW 앨리스는 몸을 활처럼 휘며, 달콤한 목소리를 냈다
+		;それ以外
+		ELSE
+			PRINTFORMW 「유감이지만, 그런 장난감으론 아무렇지도 않아」
+		ENDIF
+			CFLAG:7271 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7271 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 아앗! 안 됏, 부탁이야!」
+			PRINTFORMW 「그런 거 말고, 직접, 아앙!」
+			CFLAG:7271 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7271 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 으응……안 돼, 몸이……」
+			CFLAG:7271 = 3
+		;それ以外
+		ELSEIF CFLAG:7271 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……질리지도 않네」
+			CFLAG:7271 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;搾乳機 CFLAG:7272 解除 CFLAG:7273
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 191 && TEQUIP:35 == 2
+	;初めて
+	IF CFLAG:7272 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……마셔주지 않는거야?」
+			PRINTFORMW 작게 고개를 갸웃거리며, 앨리스는 %CALLNAME:MASTER%에게 물었다
+		;それ以外
+		ELSE
+			PRINTFORMW 「사람을 가축처럼 취급하는거네, 당신은……」
+			PRINTFORMW 「하아……이상한 사람에게 잡혀버렸네, 정말……」
+		ENDIF
+			CFLAG:7272 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7272 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「모처럼 모유가 나오게 됐는데, %조사처리(CSTR:90,"는")% 마셔주지 않는걸까?」
+			CFLAG:7272 = 4
+		;噴乳中毒Lv3以上
+		ELSEIF ABL:34 >= 3 && (CFLAG:7272 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으응! 그런 거, 붙이지 말아줘」
+			PRINTFORMW 느껴버리는 일을 무서워 한건지, 앨리스의 저항은 커져갔다
+			CFLAG:7272 = 3
+		;それ以外
+		ELSEIF CFLAG:7272 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……당신도 가축취급 당해보면, 내 기분을 잘 알 수 있지 않을까?」
+			CFLAG:7272 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 191 && TEQUIP:35 == 0
+	;初めて
+	IF CFLAG:7273 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「넘쳐! 모유가 넘쳐버렷!」
+			PRINTFORMW 착유기를 떼어내자, 흘러나온 모유가 주변에 흩뿌려졌다
+		;それ以外
+		ELSE
+			PRINTFORMW 「하―앗, 읏……겨우 끝이네」
+			PRINTFORMW 「가능하면 이런짓, 지금걸로 마지막으로 해줬으면 해」
+		ENDIF
+			CFLAG:7273 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7273 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앙♪　겨우, %CSTR:90%의 차례일까?」
+			CFLAG:7273 = 4
+		;噴乳中毒Lv3以上
+		ELSEIF ABL:34 >= 3 && (CFLAG:7273 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿, 아앗! 읏……」
+			PRINTFORMW 떼어내는 자극만으로 느껴버린 앨리스는 , 입술을 강하게 깨물었다
+			CFLAG:7273 = 3
+		;それ以外
+		ELSEIF CFLAG:7273 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아……적당히 해주면 좋을테지만」
+			CFLAG:7273 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸揉み CFLAG:7274
+;-------------------------------------------------
+IF SELECTCOM == 200
+	;初めて
+	IF CFLAG:7274 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏, 응아앗! 거기, 너무 좋아아!」
+			PRINTFORMW 원을 그리듯이 문지르자, 앨리스는 환희의 표정을 지었다
+		;それ以外
+		ELSE
+			PRINTFORMW 「마사지라면, 조금 더 능숙하게 해 줬으면 해」
+		ENDIF
+			CFLAG:7274 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7274 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앙……좋아………계속해줘…」
+			PRINTFORMW 가슴을 문지를 때마다, 앨리스는 달콤한 목소리를 냈다
+			CFLAG:7274 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7274 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 으응! 그렇게……!」
+			PRINTFORMW 앨리스는 입을 닫아, 교성을 참았다
+			CFLAG:7274 = 3
+		;それ以外
+		ELSEIF CFLAG:7274 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……마음대로 만지지 말아줄래?」
+			CFLAG:7274 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首責め CFLAG:7275
+;-------------------------------------------------
+IF SELECTCOM == 201
+	;初めて
+	IF CFLAG:7275 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「햐! 응……끝 쪽만 하지 마……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……조금은 사양이란 걸 모르는거야?」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 %CALLNAME:MASTER%에게서 떨어져, 가슴팍을 가렸다
+		ENDIF
+			CFLAG:7275 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7275 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……몸이, 뜨거워……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 유두를 괴롭히자, 앨리스는 뜨거운 시선을 보냈다
+			CFLAG:7275 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7275 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿……끝 쪽만, 괴롭히고……」
+			PRINTFORMW 쾌감을 참는듯한 앨리스였지만, 유두는 딱딱하게 서있을 뿐이었다
+			CFLAG:7275 = 3
+		;それ以外
+		ELSEIF CFLAG:7275 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「나는 당신의 장난감이 아닌걸, 적당히 해 주지 않을래?」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 모멸의 시선을 보내면서, 토하듯이 말했다
+			CFLAG:7275 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首舐め CFLAG:7276
+;-------------------------------------------------
+IF SELECTCOM == 202
+	;初めて
+	IF CFLAG:7276 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「혀의 까슬까슬한게, 스쳐서……!」
+			PRINTFORMW 혀 끝이 닿을 때마다, 앨리스는 달콤한 목소리를 낸다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 정중하게 혀를 사용해, 타액을 발라갔다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……갓난애같은 짓을 하네」
+		ENDIF
+			CFLAG:7276 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7276 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏……빨아도, 좋아」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 끌어안아, 어르듯이 머리를 쓰다듬었다
+			CFLAG:7276 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7276 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으읏, 소리가……!」
+			CFLAG:7276 = 3
+		;それ以外
+		ELSEIF CFLAG:7276 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이제, 더러운 얼굴을 들이대지 말아줘」
+			CFLAG:7276 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首吸い CFLAG:7277
+;-------------------------------------------------
+IF SELECTCOM == 203
+	;初めて
+	IF CFLAG:7277 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……그런짓 해도, 모유는 안 나온다구?」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 달콤한 목소리를 내면서, %조사처리(CALLNAME:MASTER,"를")% 끌어안았다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……빨리 떨어……졋」
+			PRINTFORMW 혐오감을 드러내면서, 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 밀어냈다
+		ENDIF
+			CFLAG:7277 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7277 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗……빨려서, 느껴버려う……」
+			PRINTFORMW 앨리스는 황홀한 표정을 지으면서, %CALLNAME:MASTER%에게 몸을 바쳤다
+			CFLAG:7277 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7277 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿, 읏……느끼는 일따위……하앙!」
+			PRINTFORMW 불시에 강하게 빨아올리자, 앨리스는 활같이 몸을 휘었다
+			CFLAG:7277 = 3
+		;それ以外
+		ELSEIF CFLAG:7277 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「빨리 떨어져. 당신의 얼굴을 가까이서 보고싶지 않아」
+			CFLAG:7277 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;母乳飲み CFLAG:7278
+;-------------------------------------------------
+IF SELECTCOM == 204
+	;初めて
+	IF CFLAG:7278 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「그렇게 기를 쓰지 않아도 괜찮아」
+			PRINTFORMW 「내 몸은, %CSTR:90%의 것이니까」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏, 싫엇, 그만둿!」
+			PRINTFORMW 혐오감을 드러내면서, 앨리스는 %CALLNAME:MASTER%에게 소리쳤다
+			PRINTFORMW 하지만, %조사처리(CALLNAME:MASTER,"는")% 한층 더 강하게 빨아올려, 앨리스를 몰아세웠다
+		ENDIF
+			CFLAG:7278 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7278 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「어머니가 된다는건, 이런 느낌인 걸까나……」
+			CFLAG:7278 = 4
+		;噴乳中毒Lv3以上
+		ELSEIF ABL:34 >= 3 && (CFLAG:7278 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫엇, 싫어, 그만둬, 그만두라구……」
+			PRINTFORMW 앨리스 의사와는 정반대로, 모유의 기세는 멈추지 않았다
+			CFLAG:7278 = 3
+		;それ以外
+		ELSEIF CFLAG:7278 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「큿……변태에게, 이런걸……」
+			CFLAG:7278 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸自慰 CFLAG:7279
+;-------------------------------------------------
+IF SELECTCOM == 205
+	;初めて
+	IF CFLAG:7279 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「핫……으응……스스로라니, 초조해……」
+			PRINTFORMW 「빨리, 안고 싶어……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「죽 쳐다보지마, 변태……」
+			PRINTFORMW 앨리스는 몸을 비틀며, 숨기듯이 자위를 시작했다
+		ENDIF
+			CFLAG:7279 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7279 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗, 으읏!」
+			PRINTFORMW 「부탁해, 초조하게 하지 마……」
+			CFLAG:7279 = 4
+		;B感覚Lv3以上＋自慰中毒Lv3以上
+		ELSEIF ABL:3 >= 3 && ABL:30 >= 3 && (CFLAG:7279 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 아앙……으응……」
+			PRINTFORMW 앨리스는 달콤한 소리를 내며, 자위에 몰두했다
+			CFLAG:7279 = 3
+		;それ以外
+		ELSEIF CFLAG:7279 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……착각하지 말아줘」
+			PRINTFORMW 「좋아서 할 리가 없잖아」
+			CFLAG:7279 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリフェラ CFLAG:7280
+;-------------------------------------------------
+IF SELECTCOM == 209
+	;初めて
+	IF CFLAG:7280 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……어때?」
+			PRINTFORMW 「그렇게 크지는 않아도, 느껴준다면 기쁘겠지만……」
+			PRINTFORMW 앨리스는 육봉을 가슴으로 끼운채, 그 끝을 혀로 핥았다
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「가슴와 입을 동시에라니, 간단히 말하네」
+			PRINTFORMW 「상당히 어려운걸, 이거」
+			PRINTFORMW 푸념을 늘어놓으면서, 앨리스는 %CALLNAME:MASTER%의 육봉을 삼켰다
+		;それ以外
+		ELSE
+			PRINTFORMW 「우쭐해있으면, 언젠가 큰 코 다칠거라구……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 날카로운 시선을 %CALLNAME:MASTER%에게 향하면서, 앨리스는 기계적으로 봉사했다
+		ENDIF
+			CFLAG:7280 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5以上
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7280 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「으음……츄……후훗」
+			PRINTFORMW 「%CSTR:90%의 이곳, 엄청 딱딱해서……맛있어……」
+			CFLAG:7280 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7280 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아……가슴, 뜨거워……」
+			PRINTFORMW 유듀가 육봉에 닿을 때마다, 앨리스는 황홀한 표정을 지었다
+			CFLAG:7280 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7280 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (읏, 싫어……뜨거워져서……)
+			PRINTFORMW (아냐, 이런 짓으로 느낄리가!)
+			CFLAG:7280 = 3
+		;それ以外
+		ELSEIF CFLAG:7280 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……응……」
+			PRINTFORMW 앨리스의 표정은 굳어서, 느끼는 표정은 볼 수 없었다
+			CFLAG:7280 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;スパンキング CFLAG:7291
+;-------------------------------------------------
+IF SELECTCOM == 220
+	;初めて
+	IF CFLAG:7291 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「하윽! 엣, 어, 어째스? 읏!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「아팟! 여자를 때리다니, 심하지 않아?」
+		ENDIF
+			CFLAG:7291 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7291 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……아픈 쪽으로 느껴버리다니, 나도 상당한 변태네……」
+			PRINTFORMW 「읏……그 변태노예에게, 벌을 주지 않을래?」
+			PRINTFORMW 앨리스는 %CALLNAME:MASTER%に尻を向け, 被虐をねだった
+			CFLAG:7291 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7291 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아윽! 좋, 좋아앗!」
+			PRINTFORMW 「좀 더, 때려줫!」
+			CFLAG:7291 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7291 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아얏……괘, 괜찮아」
+			PRINTFORMW 「%CSTR:90%의 기분이 내킬때까지 계속해줘」
+			CFLAG:7291 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7291 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「히잇! 읏! 으응!」
+			PRINTFORMW (안 됏……몸이, 느껴버렷……)
+			CFLAG:7291 = 3
+		;それ以外
+		ELSEIF CFLAG:7291 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아파……아픔으로 당신에게 굴복하진 않아……」
+			CFLAG:7291 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;鞭 CFLAG:7292
+;-------------------------------------------------
+IF SELECTCOM == 221
+	;初めて
+	IF CFLAG:7292 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 기세좋게 휘두르자, 앨리스는 비명을 지르면서 몸을 뒤로 젖혔다
+			PRINTFORMW 「꺄아아아앗……하아, 하앗……」
+			PRINTFORMW 「괜찮아. 기분이 내킬때까지, 계속해줘……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「크읏! 우우! 읏!」
+			PRINTFORMW 앨리스는 이를 악물며 소리를 죽였지만, 눈물까지 참는 일은 불가능했다
+		ENDIF
+			CFLAG:7292 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7292 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「변태노예에겟, 읏, 벌을! 좀 더, 벌을 내려주세욧!」
+			PRINTFORMW 벌이 되지 않는다고 쓴웃음 지으면서, %조사처리(CALLNAME:MASTER,"는")% 채찍을 기세좋게 휘둘렀다
+			CFLAG:7292 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7292 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「히익! 읏! 부타갷!」
+			PRINTFORMW 「좀 더, 혼내줘엇!」
+			CFLAG:7292 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7292 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……채찍으로 맞아서, 느끼고 있어……」
+			PRINTFORMW 「아플텐데, 몸이, 좀 더 원하고 있어……」
+			CFLAG:7292 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7292 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하윽! 핫……」
+			PRINTFORMW (맞은곳이, 지릿지릿해……)
+			CFLAG:7292 = 3
+		;それ以外
+		ELSEIF CFLAG:7292 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「꺄아아아아……으응!」
+			PRINTFORMW 「그, 그만, 우아앗! 읏, 아앗!」
+			CFLAG:7292 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;針 CFLAG:7293
+;-------------------------------------------------
+IF SELECTCOM == 222
+	;初めて
+	IF CFLAG:7293 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「바, 바늘은, 역시 그건……」
+			PRINTFORMW 기분이 내키지 않는건지, 앨리스의 표정은 흐리다
+			PRINTFORMW 하지만, %조사처리(CALLNAME:MASTER,"는")% 걱정하는 일 없이, 바늘을 민감한 부위에 꽂아간다
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣……바늘이라니, 당신 뭐라는 거야!?」
+			PRINTFORMW 「레이무도 아닌데, 적당히 하면 될리가……히익!」
+		ENDIF
+			CFLAG:7293 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7293 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「히잇! 아윽! 거깃! 좋앗!」
+			PRINTFORMW 반쯤 정신을 놓으면서, 앨리스는 피학의 쾌락에 잠겼다
+			CFLAG:7293 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7293 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「히익! 읏! 꺄아아아아앗!」
+			PRINTFORMW 앨리스는 눈물을 흘리면서, 피학의 쾌락을 맛보았다
+			CFLAG:7293 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7293 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아파……역시 아파……」
+			PRINTFORMW 견디고 있지만, 역시 아픔은 큰 것 같다
+			CFLAG:7293 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7293 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……크읏……」
+			PRINTFORMW (안……됏, 싫을 터인데, 몸이……)
+			CFLAG:7293 = 3
+		;それ以外
+		ELSEIF CFLAG:7293 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그, 그만! 꺄아아아아앗!」
+			PRINTFORMW 가차없이 바늘을 찔러, %조사처리(CALLNAME:MASTER,"는")% 가학의 욕망을 채워갔다
+			CFLAG:7293 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;縄 CFLAG:7294 解除 CFLAG:7295
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 224 && TEQUIP:40 >= 1
+	;初めて
+	IF CFLAG:7294 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앙……묶어서 어쩔생각?」
+			PRINTFORMW 「……방치? 아니면, 능욕일까나?」
+		;それ以外
+		ELSE
+			PRINTFORMW 반항적인 앨리스도, 자유를 빼앗자 얌전해졌다
+			PRINTFORMW 「흥, 어차피 난리쳐도 풀수 없지? 마음대로 하던가?」
+		ENDIF
+			CFLAG:7294 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7294 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「앗……꽉 묶어줘……」
+			PRINTFORMW 「도중에 풀려버리면, 김빠진다구」
+			CFLAG:7294 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7294 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아읏……줄이, 스쳐서……」
+			CFLAG:7294 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7294 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 괜찮아? 봉사 할 수 없다구?」
+			CFLAG:7294 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7294 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하―앗, 하―앗……빨리, 풀어줘」
+			PRINTFORMW 숨결을 거칠게 해, 앨리스는 %CALLNAME:MASTER%에게 졸랐다
+			CFLAG:7294 = 3
+		;それ以外
+		ELSEIF CFLAG:7294 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「큿……또……」
+			CFLAG:7294 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 224 && TEQUIP:40 == 0
+	;初めて
+	IF CFLAG:7295 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응, 조금 찌릿찌릿해」
+			PRINTFORMW 「그래도 괜찮아, 아무것도 아냐. 빨리 계속하자구」
+		;それ以外
+		ELSE
+			PRINTFORMW 「아파……조금만 느슨하게 해 줬으면 해……」
+			PRINTFORMW 적당히 몸을 움직여, 앨리스는 몸에 맞게 조절했다
+		ENDIF
+			CFLAG:7295 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7295 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 이제 됐어?」
+			PRINTFORMW 「그럼, 다음은 내가 움직일 차례네」
+			CFLAG:7295 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7295 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……끝나버린거네」
+			PRINTFORMW 「뭣, 아냐! 딱히 아쉽거나 한게!」
+			CFLAG:7295 = 3
+		;それ以外
+		ELSEIF CFLAG:7295 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아파……정말, 적당히 해 줘」
+			CFLAG:7295 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アイマスク CFLAG:7296 解除 CFLAG:7297
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 225 && TEQUIP:41 == 1
+	;初めて
+	IF CFLAG:7296 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……얼굴이 보이지 않아서, 불안해……」
+			PRINTFORMW 「눈이 보이지 않을 뿐인데, 이렇게나 변하는거였네」
+		;それ以外
+		ELSE
+			PRINTFORMW 「이런 거 씌워서, 대체 뭘 할 생각인거야?」
+			PRINTFORMW 앨리스는 토하듯이 소리친다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 등 뒤로 돌아가, 등에 혀를 대었다
+			PRINTFORMW 「햐아!?」
+			PRINTFORMW 돌연 괴롭힘당한 앨리스는 , 날카로운 소리를 질렀다
+			PRINTFORMW 보이지 않는다는 상황은, 생각했던것 이상으로 효과가 있는 것 같다
+		ENDIF
+			CFLAG:7296 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7296 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……다음은, 어떤 벌을 주는거야?」
+			PRINTFORMW 괴롭힘 당하는걸 상상한 앨리스는 , 그것만으로 몸이 달아올랐다
+			CFLAG:7296 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7296 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 하앗……보이지 않을 뿐인데, 몸이 뜨거워……」
+			CFLAG:7296 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7296 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이것도 나쁘진 않지만……」
+			PRINTFORMW 「역시, %CSTR:90%의 얼굴을 보면서 하는쪽이 좋아」
+			CFLAG:7296 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7296 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아무것도 보이지 않으면, 몸이……」
+			PRINTFORMW 시각이외의 감각이 민감해진건지, 앨리스의 몸은 평소보다 감도가 높아져 있다
+			CFLAG:7296 = 3
+		;それ以外
+		ELSEIF CFLAG:7296 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응……빨리 벗겨 주지 않을래?」
+			CFLAG:7296 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 225 && TEQUIP:41 == 0
+	;初めて
+	IF CFLAG:7297 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……역시 안심돼」
+			PRINTFORMW 「저기, 다음은 뭘 해줄거야?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「웃……현기증이……」
+			PRINTFORMW 앨리스는 눈을 가늘게 뜨면서, %조사처리(CALLNAME:MASTER,"를")% 노려봤다
+		ENDIF
+			CFLAG:7297 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7297 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「다음은, 얼굴을 보면서 안아주는 걸까?」
+			PRINTFORMW 앨리스는 볼을 붉히면서, %조사처리(CALLNAME:MASTER,"를")% 쳐다봤다
+			CFLAG:7297 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7297 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (설마 시각을 차단당한것 만으로 이렇게 변하다니……)
+			CFLAG:7297 = 3
+		;それ以外
+		ELSEIF CFLAG:7297 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아……씌웠다가 벗겼다가」
+			PRINTFORMW 「대체 뭘 생각한 거야?」
+			CFLAG:7297 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ボ―ルギャグ CFLAG:7298 解除 CFLAG:7299
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 226 && TEQUIP:42 == 1
+	;初めて
+	IF CFLAG:7298 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「흐흡……읏……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 입을 다물자, 앨리스는 뜨거운 시선으로 %조사처리(CALLNAME:MASTER,"를")% 쳐다봤다
+		;それ以外
+		ELSE
+			PRINTFORMW (혀를 깨물지 못하게 하려는건가?)
+			PRINTFORMW 앨리스는 %CALLNAME:MASTER%의 의도를 파악하면서, 도구를 몸에 착용했다
+		ENDIF
+			CFLAG:7298 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7298 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「이걸 착용하라는건, 또 벌주려는 걸까?  후훗♪」
+			CFLAG:7298 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7298 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「인간은 굉장한 물건을 만드네」
+			PRINTFORMW 「이런 작은 도구를 착용하는 것 만으로, 이렇게나 몸을 뜨겁게 만들고……」
+			CFLAG:7298 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7298 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「입으로 할 수 없게 되는데도 괜찮은거야?」
+			PRINTFORMW 「……알았어. 하지만, 나중에 시켜줘」
+			CFLAG:7298 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7298 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (읏……또……)
+			PRINTFORMW (이런 작은 도구인데, 몸이 반응해서……!)
+			CFLAG:7298 = 3
+		;それ以外
+		ELSEIF CFLAG:7298 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아, 그만두지 않을래?」
+			PRINTFORMW 「당신이 생각하는 이상으로 괴롭다구, 이거」
+			CFLAG:7298 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 226 && TEQUIP:42 == 0
+	;初めて
+	IF CFLAG:7299 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏……입으로 시켜주는거야?」
+			PRINTFORMW 침으로 범벅이 된 장난감을 떼어내자, 앨리스는 육봉을 쓰다듬었다
+		;それ以外
+		ELSE
+			PRINTFORMW 「콜록, 콜록……큿……」
+		ENDIF
+			CFLAG:7299 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7299 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「제대로 입으로 하는 시간도 가져줘?」
+			CFLAG:7299 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7299 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……뭐가 하고 싶었던 거야?」
+			PRINTFORMW (다행이다……이 정도로 끝내줘서)
+			CFLAG:7299 = 3
+		;それ以外
+		ELSEIF CFLAG:7299 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하―앗, 하―앗……대체 뭐야」
+			PRINTFORMW 앨리스는 호흡을 가다듬으면서, %CALLNAME:MASTER%로부터 거리를 두었다
+			CFLAG:7299 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;イラマチオ CFLAG:7300
+;-------------------------------------------------
+IF SELECTCOM == 230
+	;初めて
+	IF CFLAG:7300 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「삼키면 되는거야? 흐읍!?」
+			PRINTFORMW 앨리스의 입에 육봉 찔러넣어, 격렬하게 범한다
+			PRINTFORMW 괴로운듯한 소리를 내는 앨리스였지만, 열심히 혀를 얽혀왔다
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「읍, 읏! 풉, 핫! 잠깐, 격렬해……크흡!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「크흡, 큽, 읏……읍……」
+			PRINTFORMW (숨이……막……혀!)
+		ENDIF
+			CFLAG:7300 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7300 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「으흡! 읍, 읏! 으응!」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"를")% 거부하는 일 없이, 앨리스는 깊숙히 육봉을 집어삼켰다
+			CFLAG:7300 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7300 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「격렬하게 하고 싶은 기분은 알겠지만……」
+			PRINTFORMW 「조금만, 상냥하게 해 주지 않을래?」
+			CFLAG:7300 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7300 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으흡, 읏, 조금만 상냥하……읍!」
+			CFLAG:7300 = 3
+		;それ以外
+		ELSEIF CFLAG:7300 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읍, 으읍! 풉, 크읍!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 %조사처리(CALLNAME:MASTER,"를")% 멀리하려고 팔을 뻗었지만, 머리를 잡힌 상황에선 가능할리 없었다
+			CFLAG:7300 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フィスト系コマンド CFLAG:7301
+;-------------------------------------------------
+IF SELECTCOM == 231 || SELECTCOM == 232 || SELECTCOM == 233
+	;初めて
+	IF CFLAG:7301 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「……조금만, 상냥하게 해줬으면 해……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「농담이지? 손을 넣는다니, 어쩌려는거야!」
+			PRINTFORMW %CALLNAME:MASTER%의 이야기가 믿기지 않는건지, 앨리스는 소리를 높였다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 직접 몸에 가르쳐 주기로 했다
+		ENDIF
+			CFLAG:7301 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5以上
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:7301 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「히익, 히이! 아, 안쪽이, 벌어져어!」
+			CFLAG:7301 = 6
+		;恋慕＋マゾっ気Lv3以上
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:7301 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「카학, 윽……안쪽에, 닿아……섯!」
+			PRINTFORMW 볼에 눈물을 흘리면서, 앨리스는 소리를 냈다
+			CFLAG:7301 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7301 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이거, 안하면 안 돼?」
+			PRINTFORMW 「너무 하면, 몸이 망가질것 같아서……」
+			CFLAG:7301 = 4
+		;マゾっ気Lv3以上
+		ELSEIF ABL:21 >= 3 && (CFLAG:7301 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「꺄악! 뽑아줫! 빨리 뽑아줘어!」
+			PRINTFORMW 얼굴을 눈물투성이로 하면서, 앨리스는 몇 번이고 애원했다
+			CFLAG:7301 = 3
+		;それ以外
+		ELSEIF CFLAG:7301 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「카학! 핫, 크읏!」
+			PRINTFORMW 앨리스는 눈물을 흘리면서, 신음소리를 주변에 울리게 했다
+			CFLAG:7301 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;二人フェラチオ(魔理沙が助手) CFLAG:7331
+;二人フェラチオ CFLAG:7332
+;-------------------------------------------------
+IF SELECTCOM == 303
+	;魔理沙が助手
+	IF ASSI > 0 && ASSINO() == 02
+		;初めて
+		IF CFLAG:7331 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 『츄파……츄, 핫……』
+				PRINTFORMW 「응……독점하게 하지 않아……낼름……」
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「읏……으응……」
+				PRINTFORMW 『뭐야, 어색한데. 상관없나, 이렇게 하는건가』
+			;それ以外
+			ELSE
+				PRINTFORMW 「잘도 이런걸 핥을 수 있네」
+				PRINTFORMW 『모르는건가, 앨리스는 . 직접 이게 갖고 싶어서 참을 수 없었으니까』
+			ENDIF
+				CFLAG:7331 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7331 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「앙……나랑 마리사로, 기분 좋게……」
+				PRINTFORMW 타액을 바르면서, 앨리스는 몇 번이나 육봉을 뺨에 문질렀다
+				CFLAG:7331 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7331 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「앗……마리사……」
+				PRINTFORMW 『으응……앨리스……』
+				PRINTFORMW 때때로 입맞춤을 나누면서, 두사람은 육봉에 혀를 감았다
+				CFLAG:7331 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7331 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「음……츄……츄팟……」
+				PRINTFORMW 『봐, 하면 돼잖아』
+				CFLAG:7331 = 3
+			;それ以外
+			ELSEIF  CFLAG:7331 <= 1 || FLAG:11 == 2
+				PRINTFORMW 『저, 그렇게 싫으면 안하면 돼잖아?』
+				PRINTFORMW 「나도 그러고 싶다구」
+				CFLAG:7331 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7332 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「음, 낼름……읏……」
+				PRINTFORMW 「어때? 내 쪽이 기분 좋게 되지않아?」
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「읏……기대는 하지마」
+				PRINTFORMW 앨리스는 혐오의 표정을 지으면서, 정중히 봉사했다
+			;それ以外
+			ELSE
+				PRINTFORMW 「……읏, 어째서 그렇게 기쁜듯한 얼굴을 하는거야」
+				PRINTFORMW 「이런 일의, 대체 어디가 좋다는거야?」
+			ENDIF
+				CFLAG:7332 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7332 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「으음, 츄……낼름……하아……」
+				PRINTFORMW 「저기, 독첨은 안됄까?」
+				CFLAG:7332 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7332 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「음……츄……낼름……」
+				PRINTFORMW 앨리스와 %CALLNAME:ASSI%는, 일심불란하게 노장을 핥아갔다
+				CFLAG:7332 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7332 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 읏……낼름……으음……」
+				PRINTFORMW 많이 온순해진 앨리스였지만, 완전히 타락하기엔 조금 시간이 걸릴것 같다
+				CFLAG:7332 = 3
+			;それ以外
+			ELSEIF  CFLAG:7332 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「읏……심한 냄새……」
+				CFLAG:7332 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;二人で素股(魔理沙が助手) CFLAG:7333
+;二人で素股 CFLAG:7334
+;-------------------------------------------------
+IF SELECTCOM == 305
+	;魔理沙が助手
+	IF ASSI > 0 && ASSINO() == 02
+		;初めて
+		IF CFLAG:7333 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 『앨리스, 그렇게 문지르지 말라구……』
+				PRINTFORMW 「그런 거, 말해……도!」
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「하아, 하앗……스쳐서, 아앙!」
+			;それ以外
+			ELSE
+				PRINTFORMW 『읏……앗……빨리, 안에……』
+				PRINTFORMW 마리사는 침을 흘리면서, %조사처리(CALLNAME:MASTER,"를")% 요구했다
+			ENDIF
+				CFLAG:7333 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7333 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하아……아앙……」
+				PRINTFORMW 「문지르지만 말고, 빨리……」
+				CFLAG:7333 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7333 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 『읏, 앨리스……나……』
+				PRINTFORMW 「아읏……좋아, 계속해!」
+				CFLAG:7333 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7333 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「어차피 할거라면, 짧은쪽이 좋지?」
+				PRINTFORMW 「빨리 느끼고, 끝내주지 않을래?」
+				CFLAG:7333 = 3
+			;それ以外
+			ELSEIF  CFLAG:7333 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「읏……이런 추잡한 일, 두번다시 맛보고 싶지 않아」
+				CFLAG:7333 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7334 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「하앙! 이거, 스쳐섯!」
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"과")% 가랑이를 맞비비며, 앨리스는 달콤한 목소리를 냈다
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「읏……어째서, 크응!」
+				PRINTFORMW 육봉을 문지르면서, 앨리스는 달콤한 소리를 냈다
+			;それ以外
+			ELSE
+				PRINTFORMW 「이런짓의 어디가 좋은걸까? 이해하기 힘들어」
+			ENDIF
+				CFLAG:7334 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7334 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 하앗……부탁해, 다음엔 안에 넣어줘……」
+				CFLAG:7334 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7334 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「저기, 빨리……초조하게 하지마……」
+				CFLAG:7334 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7334 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 하앗……싫어, 뜨거워져서……」
+				CFLAG:7334 = 3
+			;それ以外
+			ELSEIF  CFLAG:7334 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「……더러운걸 가까지 하지 말아줘……」
+				CFLAG:7334 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;二人でパイズリ(魔理沙が助手) CFLAG:7335
+;二人でパイズリ CFLAG:7336
+;-------------------------------------------------
+IF SELECTCOM == 306
+	;魔理沙が助手
+	IF ASSI > 0 && ASSINO() == 02
+		;初めて
+		IF CFLAG:7335 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「저기, 어때……? 기분 좋아……?」
+				PRINTFORMW 『우리들, 미마님이나 마계의 녀석들보다 크지도 않고……그……』
+				PRINTFORMW 두사람 모두 부끄러워 하면서, %CALLNAME:MASTER%에게 물어왔다
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 두사람의 머리를 쓰다듬으면서, 장점을 전했다
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「읏……하아……하앗……」
+				PRINTFORMW 가슴이 스칠 때마다, 앨리스는 뜨거운 숨을 토했다
+			;それ以外
+			ELSE
+				PRINTFORMW 『읏, 미마님 정도되면, 기분 좋게 할수 있을까나』
+				PRINTFORMW 마리사는 조금 안좋은 표정을 지으면서, 앨리스와 함께 봉사를 계속했다
+			ENDIF
+				CFLAG:7335 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7335 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「읏……샤……후훗」
+				PRINTFORMW 「우리들의 봉사로, 느껴준거야?」
+				CFLAG:7335 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7335 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 『저기, 앨리스보다 내 쪽이 기분 좋지?』
+				PRINTFORMW 「뭣, 그럴리가! 내 쪽이 능숙하게 할 수 있어!」
+				CFLAG:7335 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7335 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 『윽……앨리스의 가슴이……!』
+				PRINTFORMW 「앗! 마리삿, 그렇게 움직이지 맛!」
+				CFLAG:7335 = 3
+			;それ以外
+			ELSEIF  CFLAG:7335 <= 1 || FLAG:11 == 2
+				PRINTFORMW 『읏……가슴으로, 느끼는건가……?』
+				PRINTFORMW 「느끼지도 않는데 이런걸 시키는거야? 최저네」
+				CFLAG:7335 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7336 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「읏……샤……아응!」
+				PRINTFORMW %CALLNAME:ASSI%의 유두가 닿자, 앨리스는 달콤한 목소리를 냈다
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「읏……알고 있어. 끼우면 되는거지?」
+				PRINTFORMW 기분이 내키지 않아보이지만, 앨리스는 %조사처리(CALLNAME:ASSI,"과")% 함께 봉사를 계속했다
+			;それ以外
+			ELSE
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 명령하자, 앨리스는 깊은 한숨을 쉬었다
+				PRINTFORMW 「하아……내 몸은, 이런걸 하기 위해 있는게 아니라구?」
+			ENDIF
+				CFLAG:7336 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7336 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하아, 하앗……굉장히, 뜨거워서, 불타버릴것 같아……」
+				PRINTFORMW 앨리스는 황홀한 표정을 지으면서, %조사처리(CALLNAME:ASSI,"과")% 함께 봉사를 계속했다
+				CFLAG:7336 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7336 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「읏……핫……나 혼자로는, 만족할 수 없는거야?」
+				CFLAG:7336 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7336 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「이거, 혼자서 하는 것보다, 으응!」
+				CFLAG:7336 = 3
+			;それ以外
+			ELSEIF  CFLAG:7336 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「읏, 으읏, 빨리, 끝내주지 않을래?」
+				CFLAG:7336 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;お風呂場プレイ CFLAG:7351 解除 CFLAG:7352
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 350 && TEQUIP:53 == 1
+	;初めて
+	IF CFLAG:7351 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「목욕이네……그래!」
+			PRINTFORMW 「모처럼 목욕탕에 들어왔고, 등을 밀게 해주지 않을래?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「가끔은 괜찮은 일도 하네, 다시봤어」
+			PRINTFORMW 「……엣, 여기서도 해? 농담이겠지」
+		ENDIF
+			CFLAG:7351 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7351 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「저기, 이번엔 온천에 안 갈래?」
+			PRINTFORMW 「지하라던가, 마계라던가엔, 멋진 곳이 있어」
+			CFLAG:7351 = 3
+		;それ以外
+		ELSEIF CFLAG:7351 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「모처럼 목욕탕에 들어왔고, 이제 그만두지 않을래?」
+			CFLAG:7351 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;初めて
+	IF CFLAG:7352 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「후우……상쾌하네」
+			PRINTFORMW 「자, 이번엔 뭐할래? 설마, 벌써 끝내거나 하진 않을거지?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「후우……」
+			PRINTFORMW 「“아직 계속한다”따위를 말한건가……」
+			PRINTFORMW 앨리스는 불쾌감을 드러내면서, 목욕탕을 뒤로했다
+		ENDIF
+			CFLAG:7352 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7352 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……상쾌하네」
+			PRINTFORMW 「자, 몸이 식지 않도록, 빨리 안아줘……」
+			CFLAG:7352 = 3
+		;それ以外
+		ELSEIF CFLAG:7352 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아……목욕탕이 싫어질것 같아……」
+			CFLAG:7352 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;シャワ― CFLAG:7353 解除 CFLAG:7354
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 351 && TEQUIP:54 == 1
+	;初めて
+	IF CFLAG:7353 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「샤워―? 설마 이런 곳에서 끝낼 생각은 아니겠지?」
+			PRINTFORMW 「모처럼 시간을 가져줬으니까, 좀 더……진하게……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하아……이 때만큼은, 당신을 잊을 수 있는건……」
+		ENDIF
+			CFLAG:7353 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7353 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아……기분 좋아……」
+			PRINTFORMW 앨리스는 황홀한 표정을 지으면서, 물이 방울져 떨어지는 모습을 %CALLNAME:MASTER%의 앞에 드러냈다
+			CFLAG:7353 = 3
+		;それ以外
+		ELSEIF CFLAG:7353 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「계속 이렇게라면, 나도 불만은 없지만……」
+			CFLAG:7353 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 351 && TEQUIP:54 == 0
+	;初めて
+	IF CFLAG:7354 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「후우……상쾌하네」
+			PRINTFORMW 「자, 계속하자구」
+		;それ以外
+		ELSE
+			PRINTFORMW 「조금 씻고 있었어」
+			PRINTFORMW 「하아……또 상대를 하지 않으면 안 된다니……」
+		ENDIF
+			CFLAG:7354 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7354 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……기다렸지. 자, 계속하자」
+			PRINTFORMW 머리카락의 물이 흘러내리는 모습에, %조사처리(CALLNAME:MASTER,"는")% 욕정이 한층 더 고조됨을 느꼈다
+			CFLAG:7354 = 3
+		;それ以外
+		ELSEIF CFLAG:7354 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하아……즐거운 시간은 금방 끝나버리네」
+			PRINTFORMW 앨리스는 깊은 한숨을 쉬고, 샤워를 마쳤다
+			CFLAG:7354 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;泡踊り CFLAG:7355
+;-------------------------------------------------
+IF SELECTCOM == 352
+	;初めて
+	IF CFLAG:7355 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗……어때……? 느껴……?」
+			PRINTFORMW 앨리스는 가슴을 밀착시켜, 유두를 비빈다
+			PRINTFORMW 부드러운 가슴에 의한 봉사는, %CALLNAME:MASTER%에게 평온함을 주었다
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「가슴으로 하면 되는거야? 엣, 몸을 씻어?」
+			PRINTFORMW 「하아……어째서 이런 짓 하지 않으면 안되는걸까……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「……읏, 자신의 몸 정도는, 스스로 씻으라구」
+		ENDIF
+			CFLAG:7355 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7355 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 읏……이런건, 어때?」
+			PRINTFORMW 앨리스는 올려다보면서, %CALLNAME:MASTER%의 몸에 가슴을 밀착시켰다
+			CFLAG:7355 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7355 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……읏, 하아……」
+			PRINTFORMW 「가슴이 스쳐서, 나도, 뜨거워……!」
+			CFLAG:7355 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7355 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 하아……하앗……」
+			PRINTFORMW 봉사의 기쁨을 느끼고 있는건지, 앨리스의 볼은 한차례 붉게 물들어 있다
+			CFLAG:7355 = 3
+		;それ以外
+		ELSEIF CFLAG:7355 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……또……」
+			PRINTFORMW 미간을 찡그리면서, 앨리스는 가슴을 밀착시켰다
+			CFLAG:7355 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;触手召喚 CFLAG:7371 解除 CFLAG:7372
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 500 && TEQUIP:90 == 1
+	;初めて
+	IF CFLAG:7371 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「엣……히이! 싫엇, 잠깐, 그만둬!」
+			PRINTFORMW 사지에 촉수가 휘감기자, 앨리스의 표정은 순식간에 창백해졌다
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣……!」
+			PRINTFORMW 촉수를 불러내자, 앨리스는 문자 그대로 할 말을 잃었다
+			PRINTFORMW 완전히 몸이 경직되 버린건지, 도망치련느 기미도 없다
+			PRINTFORMW 붙잡는 것엔 아무 문제도 없지만, 그러면 재미없다
+			PRINTFORMW 조금 공포를 맛보게 해주도록 하자
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 지시를 내려, 충분한 시간을 들여서 촉수를 휘감게 했다
+		ENDIF
+			CFLAG:7371 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋触手中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:35 >= 3 && (CFLAG:7371 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗……우후후……」
+			PRINTFORMW 「또 엉망진창으로 해주는거네……」
+			CFLAG:7371 = 4
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7371 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「촉수랑이라니, 싫어……」
+			PRINTFORMW 「저기, %조사처리(CSTR:90,"는")% 상대해 주지 않는거야……?」
+			CFLAG:7371 = 3
+		;それ以外
+		ELSEIF CFLAG:7371 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어어어엇!」
+			PRINTFORMW 찢는듯한 앨리스의 비명이, 방 전체에 메아리쳤다
+			CFLAG:7371 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+	;初めて
+	IF CFLAG:7372 == 0
+		;恋慕＋触手中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:35 >= 3
+			PRINTFORMW 「읏……후훗, 이제 된거야?」
+			PRINTFORMW 지친 모습은 있지만, 앨리스의 표정은 어딘가 밝다
+		;恋慕
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 체력을 제법 소모한것 같아서, 앨리스는 녹초가 된 모습으로 침대에 쓰러졌다
+			PRINTFORMW 「하―앗, 하―앗……부탁해, 조금만 쉬게 해줘……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하―앗……아아……싫어어……」
+			PRINTFORMW 촉수와 교합한 앨리스는 , 침대에 쓰러진채 움직이지 않았다
+			PRINTFORMW 조금만 쉴 시간을 주는 편이 좋을것 같다
+		ENDIF
+			CFLAG:7372 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋触手中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:35 >= 3 && (CFLAG:7372 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗……이제 끝인거야……?」
+			CFLAG:7372 = 3
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7372 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗……겨우, 끝났다……」
+			PRINTFORMW 「저기, 다음은 %CSTR:90%의 차례네?」
+			CFLAG:7372 = 2
+		;それ以外
+		ELSEIF CFLAG:7372 < 1 || FLAG:11 == 2
+			PRINTFORMW 「하―앗, 하―앗……」
+			PRINTFORMW 호흡을 가다듬기도 힘든것 같아서, 다른 일을 할 여유는 없는 것 같다
+			CFLAG:7372 = 1
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｇスポット刺激 CFLAG:7391
+;-------------------------------------------------
+IF SELECTCOM == 600
+	;初めて
+	IF CFLAG:7391 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「히이! 앗, 아앗!」
+			PRINTFORMW 껄끔한 부분을 괴롭힌 순간, 앨리스의 목소리는 한층 더 날카로은걸로 바뀌었다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 가학심이 고조됨을 느끼고, 한층 더 강하게, 격렬하게 몰아세웠다
+		;それ以外
+		ELSE
+			PRINTFORMW 껄끔한 부분을 괴롭힌 순간, 앨리스의 표정은 급변했다
+			PRINTFORMW 「카핫!? 힛, 거기, 크응!」
+		ENDIF
+			CFLAG:7391 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7391 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하으읏! 읏, 응아앗!」
+			PRINTFORMW 「조, 좋앗! 거깃, 하아아앗!」
+			CFLAG:7391 = 5
+		;V感覚Lv3以上
+		ELSEIF ABL:1 >= 3 && (CFLAG:7391 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크으, 앗, 아아―앗!」
+			PRINTFORMW 활같이 몸을 젖히며, 앨리스는 날카로운 소리를 질렀다
+			CFLAG:7391 = 3
+		;それ以外
+		ELSEIF CFLAG:7391 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「앗, 으응! 응아앗!」
+			PRINTFORMW (안 됏……목소리를 억제할 수 없어……!)
+			CFLAG:7391 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;シックスナイン CFLAG:7392
+;-------------------------------------------------
+IF SELECTCOM == 602
+	;初めて
+	IF CFLAG:7392 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「으흡……응, 흐응! 읏……」
+			PRINTFORMW 「그렇게 세게 당하면, 집중할 수 없어」
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 
+			PRINTFORMW 「핫, 으응! 그렇게, 세게 하지마……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……빨리, 끝내줘……」
+			PRINTFORMW 앨리스의 부탁도 쓸데없이, 행위는 장시간에 걸쳐서 전개되었다
+		ENDIF
+			CFLAG:7392 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5以上
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7392 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「히잇! 응, 정말……%조사처리(CSTR:90,"는")% 너무 능숙해」
+			PRINTFORMW 비순에서 꿀을 늘어뜨리면서, 앨리스는 %CALLNAME:MASTER%의 육봉을 집어삼켰다
+			CFLAG:7392 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7392 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「사랑을 나눈다는건, 이런 일인거네…」
+			PRINTFORMW 앨리스는 볼을 붉히면서, %CALLNAME:MASTER%의 육봉을 삼켰다
+			CFLAG:7392 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7392 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응츄, 읏……저기, 나만이 할테니까, 당신은 가만히 있으세요」
+			PRINTFORMW 비밀스런 곳을 괴롭힘 당하는 짓이 좋지 않은건지, 앨리스의 표정은 험했다
+			CFLAG:7392 = 3
+		;それ以外
+		ELSEIF CFLAG:7392 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「히잇! 앗, 그, 그만, 크응!」
+			PRINTFORMW 앨리스는 %CALLNAME:MASTER%에게 농락당할 뿐으로, 봉사에 집중할 수 없었다
+			CFLAG:7392 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;指でＶを撫でる CFLAG:7393
+;-------------------------------------------------
+IF SELECTCOM == 605
+	;初めて
+	IF CFLAG:7393 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「햐! 읏……그런 곳, 으응!」
+			PRINTFORMW 앨리스의 얼굴은 한차례 붉게 물들어 간다
+			PRINTFORMW 아무래도 부끄러움으로 꽉 찬것 같다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏, 자, 잠깐, 그런곳 만지지마!」
+			PRINTFORMW 상실의 불안때문인지, 앨리스는 즉석에서 저항을 보였다
+		ENDIF
+			CFLAG:7393 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7393 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……안 됏……손가락같은거 싫어」
+			PRINTFORMW 「빼앗는건 원하지만, 그……%CSTR:90%의 물건으로……」
+			CFLAG:7393 = 3
+		;それ以外
+		ELSEIF CFLAG:7393 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……넣거나 하면, 저주해 주겠어……」
+			PRINTFORMW 앨리스는 분함을 억누르면서, %CALLNAME:MASTER%에게 비밀스런 곳을 보였다
+			CFLAG:7393 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;岩清水 CFLAG:7394
+;-------------------------------------------------
+IF SELECTCOM == 611
+	;初めて
+	IF CFLAG:7394 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「이, 이런 자세로 하는거야?」
+			PRINTFORMW 위에 걸치게 하자, 앨리스는 부끄러운 표정을 지었다
+		;それ以外
+		ELSE
+			PRINTFORMW 「일부러 이런곳에 데리고 왔다고 생각했더니, 이런 짓을 하기 위해서였다니……」
+			PRINTFORMW 「조금, 다른 일에는 머리가 돌아가지 않는거야?」
+		ENDIF
+			CFLAG:7394 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋露出癖Lv3以上＋C感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:0 >= 3 && (CFLAG:7394 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 하읏! 싫엇! 부끄러워!」
+			PRINTFORMW 앨리스는 얼굴을 새빨갛게 물들여, 괴롭혀질때마다 몸을 뒤로 젖혔다
+			CFLAG:7394 = 6
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7394 <= 4 || FLAG:11 == 2)	
+			PRINTFORMW 「하응, 앗, 소리, 으응!」
+			CFLAG:7394 = 5
+		;屈服刻印Lv3＋露出癖Lv3以上＋C感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:0 >= 3 && ABL:14 >= 3 && (CFLAG:7394 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「싫엇, 아앙! 이런, 하앙♪」
+			PRINTFORMW 쾌감에 솔직해 진건지, 앨리스는 달콤한 목소리를 냈다
+			CFLAG:7394 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7394 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으으―응! 안 됏, 부끄러워!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 얼굴을 손으려 가려, 새빨갛게 물든 얼굴을 숨겼다
+			CFLAG:7394 = 3
+		;それ以外
+		ELSEIF CFLAG:7394 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「힛! 읏……느, 느끼지 않았어!」
+			CFLAG:7394 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乱れ牡丹 CFLAG:7395
+;-------------------------------------------------
+IF SELECTCOM == 612
+	;初めて
+	IF CFLAG:7395 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「히잇! 싫엇, 거울에! 읏, 으응!」
+			PRINTFORMW 앨리스는 귀까지 새빨갛게 물들어, 어떡하면 좋을지 알 수 없게 되버린것 같다
+		;それ以外
+		ELSE
+			PRINTFORMW 「싫엇, 잠깐, 그만둬!」
+			PRINTFORMW 거울에 비밀스런 곳을 비추자, 앨리스의 저항은 격렬함을 더했다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 연결된 부분의 모습을 자세하게 전해, 앨리스의 수치심을 부추겼다
+		ENDIF
+			CFLAG:7395 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋露出癖Lv3以上＋V感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:7395 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하앗, 봐 줘……연결되있는 곳, 떨리고 있어……」
+			CFLAG:7395 = 6
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7395 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이거, 굉장해애!」
+			PRINTFORMW 「%CSTR:90%랑 함께인걸 알아서, 느껴버려!」
+			CFLAG:7395 = 5
+		;屈服刻印Lv3＋露出癖Lv3以上＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && ABL:14 >= 3 && (CFLAG:7395 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앗, 당신과, 으응, 연결되서」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 거울을 응시하는 앨리스의 표정은, 어딘지 모르게 기쁜듯 했다
+			CFLAG:7395 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7395 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 그만둬……, 보지마……」
+			SIF TEQUIP:40 == 0 && TEQUIP:41 == 0
+				PRINTFORMW 손으로 얼굴을 가리면서, 앨리스는 연약한 목소리로 %CALLNAME:MASTER%에게 애원했다
+			CFLAG:7395 = 3
+		;それ以外
+		ELSEIF CFLAG:7395 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 싫엇, 그만두라구!」
+			PRINTFORMW 얼굴을 새빨갛게 되면서, 앨리스는 %CALLNAME:MASTER%에게 소리쳤다
+			CFLAG:7395 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗乳房自慰 CFLAG:7396
+;-------------------------------------------------
+IF SELECTCOM == 613
+	;初めて
+	IF CFLAG:7396 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「핫, 읏, 그렇게, 격렬하게라닛」
+			PRINTFORMW 아래에서 찔러올릴 때마다, 앨리스는 달콤한 목소리를 냈다
+			PRINTFORMW 거기게 자위가 추가되자, 한층 감미로운 목소리가 울려퍼졌다
+		;それ以外
+		ELSE
+			PRINTFORMW 「큿……사람의 약점을 이용하다니……」
+			PRINTFORMW 거스를수 없는 분삼을 억누르며, 앨리스는 %CALLNAME:MASTER%의 위에서 스스로를 위로했다
+		ENDIF
+			CFLAG:7396 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7396 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%조사처리(CSTR:90,"는")%, 읏, 좋앗!」
+			PRINTFORMW 「내게, 앗, 시켜줘!」
+			PRINTFORMW 앨리스는 허리를 흔들면서, 능숙하게 스스로를 위로했다
+			CFLAG:7396 = 4
+		;V感覚Lv3以上＋B感覚Lv3以上＋自慰中毒Lv3以上
+		ELSEIF ABL:1 >= 3 && ABL:3 >= 3 && ABL:30 >= 3 && (CFLAG:7396 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그렇게, 일변에! 핫, 아앗!」
+			PRINTFORMW 몸의 움직임을 멈추는게 불가능해, 앨리스는 쾌감의 포로가 되어 갔다
+			CFLAG:7396 = 3
+		;それ以外
+		ELSEIF CFLAG:7396 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런, 하윽, 걸로, 난!」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 눈동자를 적시면서, 앨리스는 허리를 흔들며 자위를 계속했다
+			CFLAG:7396 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位胸愛撫(胸愛撫から派生) CFLAG:7397
+;後背位胸愛撫 CFLAG:7398
+;処女判定 CFLAG:7609
+;-------------------------------------------------
+IF SELECTCOM == 616
+	;胸愛撫から派生
+	IF PREVCOM == 3
+		;初めて
+		IF CFLAG:7397 == 0
+			;処女
+			IF CFLAG:7609 == 0
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「핫, 앗……엣, 이대로? 햐앙」
+					PRINTFORMW 앨리스의 가슴을 비벼내리면서, %조사처리(CALLNAME:MASTER,"는")% 육봉을 비순에 꽉 눌렀다
+					PRINTFORMW 순간 앨리스는 달콤한 목소리를 내며, 유두으 끝을 딱딱하게 했다
+					PRINTFORMW 「핫, 응, 좋아, 와줘……」
+					PRINTFORMW 「안에서도 %조사처리(CSTR:90,"를")%, 느끼게 해줘!」
+				;それ以外
+				ELSE
+					PRINTFORMW 「힛……거, 거짓말이지!? 그만두라굿!」
+					PRINTFORMW 육봉이 비순을 문지르자, 앨리스의 목소리는 뒤집혔다
+					PRINTFORMW 뿌리치려 하는 앨리스였지만, 가슴을 자극당할 때마다 전격이 몸을 앞질러간다
+					PRINTFORMW 체위를 유지하는게 한계였다
+					PRINTFORMW 「하아, 하앗……그만……히익! 읏, 우아앗!」
+				ENDIF
+			;それ以外
+			ELSE
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「앗……가슴도 동시에라니, 욕심쟁이씨네」
+					PRINTFORMW %CALLNAME:MASTER%의 움직임에 맞춰, 앨리스는 음란하게 허리를 계속 흔들었다
+				;それ以外
+				ELSE
+					PRINTFORMW 「큿, 가슴에서 손을 떼라구……이 변탯」
+					PRINTFORMW 앨리스는 괴로운듯한 목소리를  내면서, %조사처리(CALLNAME:MASTER,"를")% 매도한다
+					PRINTFORMW 조금, 자신의 입장을 알려주도록 하자
+					PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 도망갈 수 없도록 허리를 잡으면서, 육봉을 비순에 밀어넣었다
+				ENDIF
+			ENDIF
+				CFLAG:7397 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1 && (CFLAG:7397 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「앙! 거깃, 좋아아!」
+				PRINTFORMW 가슴을 자극하면서 몰아세우자, 앨리스는 한층 더 날카로운 목소리를 냈다
+				CFLAG:7397 = 5
+			;屈服刻印Lv3＋V感覚Lv3以上＋B感覚Lv3以上
+			ELSEIF MARK:2 == 3 && ABL:1 >= 3 && ABL:3 >= 3 && (CFLAG:7397 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「핫, 으응! 몸이 점점, 뜨겁게……!」
+				PRINTFORMW 달콤한 숨결을 토하면서, 앨리스는 음란하게 허리를 계속 흔들었다
+				CFLAG:7397 = 4
+			;屈服刻印Lv3
+			ELSEIF MARK:2 == 3 && (CFLAG:7397 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「앗, 아앗! 안 됏, 빨리……아앙!」
+				PRINTFORMW 가슴과 허리를 자극당해, 앨리스는 등에 땀구슬을 만들었다
+				CFLAG:7397 = 3
+			;それ以外
+			ELSEIF CFLAG:7397 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「아읏! 빨리, 뽑으, 으응!」
+				PRINTFORMW 유두를 가볍게 비틀자, 앨리스의 신음소리가 주위에 울렸다
+				CFLAG:7397 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7398 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「하앗, 앗……으응!」
+				PRINTFORMW 「잠깐, 가슴도 동시에 할 생각?」
+				PRINTFORMW 「하아……%조사처리(CSTR:90,"가")% 생각하는건 예상할 수 없어」
+			;それ以外
+			ELSE
+				PRINTFORMW 「큿, 우웃! 가슴까지, 히응!」
+				PRINTFORMW 찔러올리듯이 허리를 비틀자, 앨리스는 신음소리를 냈다
+			ENDIF
+				CFLAG:7398 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1 && (CFLAG:7398 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하앙♪　좀 더, 해줘……」
+				SIF TEQUIP:40 == 0
+					PRINTFORMW 앨리스는 %CALLNAME:MASTER%의 손을 쥐어, 자신으 가슴에 꽉 누르게 했다
+				CFLAG:7398 = 5
+			;屈服刻印Lv3＋V感覚Lv3以上＋B感覚Lv3以上
+			ELSEIF MARK:2 == 3 && ABL:1 >= 3 && ABL:3 >= 3 && (CFLAG:7398 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「읏, 앗, 아앗!」
+				PRINTFORMW 유두가 딱딱해짐에 따라, 앨리스의 질은 상태가 좋아져 갔다
+				CFLAG:7398 = 4
+			;屈服刻印Lv3
+			ELSEIF MARK:2 == 3 && (CFLAG:7398 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「읏, 아앙! 그만둬, 이제 그만두라니까……」
+				SIF TEQUIP:41 == 0
+					PRINTFORMW 당장이라도 울듯한 표정을 지으면서, 앨리스는 %CALLNAME:MASTER%에게 애원했다
+				CFLAG:7398 = 3
+			;それ以外
+			ELSEIF CFLAG:7398 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「카핫, 싫엇, 잠깐, 그만둿!」
+				CFLAG:7398 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;強制放尿 CFLAG:7399
+;-------------------------------------------------
+IF SELECTCOM == 620
+	;初めて
+	IF CFLAG:7399 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗, 안 됏! 지금 자극당하면!」
+			PRINTFORMW 아주 조금 만진 것만으로 황금수가 방울져 떨어지기 시작한다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 한층 더 자극을 주어, 앨리스의 방볍을 파괴했다
+			PRINTFORMW 「앗, 아아―앗! 제발, 보지 말아줘!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……절대로, 후회하게 해주겠어……」
+			PRINTFORMW 앨리스는 분함을 억누르면서, 황금수를 분출했다
+		ENDIF
+			CFLAG:7399 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋おもらし癖＋野外プレイ
+		IF TALENT:150 == 1 && TALENT:45 == 1 && TEQUIP:52 == 1 && (CFLAG:7399 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 아아……이러언……♪」
+			PRINTFORMW 수치심은 있지만, 쾌감쪽이 큰 것 같다
+			CFLAG:7399 = 7
+		;恋慕＋おもらし癖
+		ELSEIF TALENT:150 == 1 && TALENT:45 == 1 && (CFLAG:7399 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「흣, 아앗! 나왓! 나오고 있어!」
+			CFLAG:7399 = 6
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7399 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읏……아무리 %CSTR:90%의 명령이라지만, 부끄럽네……」
+			CFLAG:7399 = 5
+		;露出癖Lv5
+		ELSEIF ABL:14 >= 5 && (CFLAG:7399 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (싫을터인데, 내 몸은 기뻐하고 있어)
+			PRINTFORMW (부끄러운 모습을 보여서, 느끼고……있어!)
+			CFLAG:7399 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7399 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 아앗! 부탁이야, 보지마!」
+			CFLAG:7399 = 3
+		;それ以外
+		ELSEIF CFLAG:7399 < 1 || FLAG:11 == 2
+			PRINTFORMW 「큿……두고보라구……」
+			CFLAG:7399 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;搾乳 CFLAG:7400
+;-------------------------------------------------
+IF SELECTCOM == 626
+	;初めて
+	IF CFLAG:7400 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 가슴을 비벼내릴 때마다, 앨리스는 달콤한 목소리를 냈다
+			PRINTFORMW 「핫, 앗, 좋아앗!」
+			PRINTFORMW 「뜨거워져서, 앗, 아아―앗!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하아……잘도 이런짓을 생각해냈네」
+		ENDIF
+			CFLAG:7400 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7400 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏……나오고 있어……」
+			PRINTFORMW 「내 가슴이, 나오고 있어어……」
+			CFLAG:7400 = 4
+		;噴乳中毒Lv3以上
+		ELSEIF ABL:34 >= 3 && (CFLAG:7400 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「느끼지……않았어……」
+			PRINTFORMW 앨리스는 숨결을 거칠게 해, 등에 땀을 흘렸다
+			CFLAG:7400 = 3
+		;それ以外
+		ELSEIF CFLAG:7400 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 그렇게 세게 하지마」
+			PRINTFORMW 「꽤 아프니까, 이거……」
+			CFLAG:7400 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首甘噛み CFLAG:7401
+;-------------------------------------------------
+IF SELECTCOM == 627
+	;初めて
+	IF CFLAG:7401 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「싫엇, 깨물면! 햐우웃!」
+			PRINTFORMW 살짝 깨물자, 앨리스는 사랑스러운 목소리를 냈다
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏! 사람의 몸을 마음대로……」
+			PRINTFORMW 앨리스는 신음과 비명이 섞인 목소리를 냈다
+		ENDIF
+			CFLAG:7401 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7401 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으응! 큿……」
+			PRINTFORMW 「깨무는건 반칙이야……바보……」
+			PRINTFORMW 앨리스는 호흡을 가다듬으면서, 쾌감에 물든 얼굴로 미소지었다
+			CFLAG:7401 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:7401 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 앗……아앗!」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 입가를 손으로 가리지만, 그 틈새로 새듯이 소리가 흘러나왔다
+			CFLAG:7401 = 3
+		;それ以外
+		ELSEIF CFLAG:7401 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 크으! 큿……」
+			PRINTFORMW 「이런, 걸로……!」
+			CFLAG:7401 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG関係(X1をキャラ番号に置換)
+;パラメ―タ変動をトリガ―にした口上
+;パラメ―タ変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_14
+;助手が調教した時に口上をスキップする(好みに応じて使う, 行頭の;を消すとスキップするようになる)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ着用時には口上をスキップする(OFFだと口を塞いでるのに喋りまくる)
+SIF TEQUIP:42 == 1
+	RETURN 0
+;睡眠・失神時に口上をスキップする(OFFだと寝言が凄いことに)
+SIF EQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_PALAMCNG_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF NO:ASSI == Y1
+;		CALL LES_MESSAGE_PALAMCNG_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;パラメ―タ変動時のセリフ CFLAG:7601～
+;-------------------------------------------------
+;-------------------------------------------------
+;初めて潤滑がLV2超えた CFLAG:7601
+;-------------------------------------------------
+LOCAL = PALAM:10 + UP:10
+IF LOCAL > PALAMLV:2 && CFLAG:7601 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		;ロ―ションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「읏……도구를 사용하는건 그다지 내키지 않지만, 준비ＯＫ야」
+			PRINTFORMW 「빨리……와 줘……」
+			SIF TEQUIP:40 == 0
+				PRINTFORMW 앨리스는 팔을 뻗어, %조사처리(CALLNAME:MASTER,"를")% 요구했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「준비, 됐어. 자, 와 줘……」
+		ENDIF
+	;それ以外
+	ELSE
+		;ロ―ションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「……도구에만 기대는 당신에게, 난 굴하지 않아」
+		;それ以外
+		ELSE
+			PRINTFORMW 「아, 아냐! 달라!」
+			PRINTFORMW 「이건 젖어있는게 아니라……그……」
+			PRINTFORMW 거기까지 말하고, 앨리스는 숙여버렸다.
+			PRINTFORMW 젖었다는 사실을, 받아들이고 싶지 않은 것 같다.
+		ENDIF
+	ENDIF
+		CFLAG:7601 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて欲情がLV2超えた CFLAG:7602
+;-------------------------------------------------
+LOCAL = PALAM:13 + UP:13
+IF LOCAL > PALAMLV:2 && CFLAG:7602 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「하아, 하앗……저기, 빨리……」
+			PRINTFORMW 「몸이 뜨거워서, 이제 참을 수 없어……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하아, 하앗…… 여자아이를, 너무 기다리게 하면 안 된다구……」
+			PRINTFORMW 앨리스의 볼은 붉은색을 더해, 욕정하고 있는걸 간파할 수 있었다.
+		ENDIF
+	;それ以外
+	ELSE
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「하아, 하앗…… 억지로, 욕정하게 하다니, 읏, 외도가 하는 짓이네……!」
+			PRINTFORMW 앨리스는 호흡을 가다듬으며, %조사처리(CALLNAME:MASTER,"를")% 날카로운 시선으로 노려봤다.
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭣, 아, 아냐! 느끼지 않았어!」
+			PRINTFORMW 앨리스는 당황해서 부정하나, 그 얼굴은 명확하게 붉게 물들어 있다.
+		ENDIF
+	ENDIF
+		CFLAG:7602 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて恥情がLV2超えた CFLAG:7603
+;-------------------------------------------------
+LOCAL = PALAM:15 + UP:15
+IF LOCAL > PALAMLV:2 && CFLAG:7603 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「읏…… 잠깐, 부끄러워……」
+		PRINTFORMW 앨리스는 볼을 붉히면서, %CALLNAME:MASTER%에게 말했다.
+	;それ以外
+	ELSE
+		PRINTFORMW 「읏…… 부끄러워……」
+		PRINTFORMW 앨리스의 얼굴은 귀까지 새빨개졌다.
+	ENDIF
+		CFLAG:7603 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて恐怖がLV2超えた CFLAG:7604
+;-------------------------------------------------
+LOCAL = PALAM:17 + UP:17
+IF LOCAL > PALAMLV:2 && CFLAG:7604 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「그만해……. 이제 그만해……」
+		SIF TEQUIP:41 == 0
+			PRINTFORMW 앨리스는 눈에 눈물을 머금으면서, %CALLNAME:MASTER%에게 애원했다.
+	;それ以外
+	ELSE
+		PRINTFORMW 「힉…… 아, 아무것도 아냐! 아무것도 아냐!」
+		PRINTFORMW 앨리스는 허세를 부리지만, 그 몸은 공포에 떨리고 있다.
+		PRINTFORMW 몸속까지 공포가 깃들었을 것이다.
+	ENDIF
+		CFLAG:7604 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてC절정 CFLAG:7605
+;-------------------------------------------------
+IF NOWEX:0 > 0 && CFLAG:7605 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「핫, 앗, 갓, 가버렷!」
+		PRINTFORMW 「클리로, 가버려어어어!」
+		PRINTFORMW 날카로운 소리를 지르며, 앨리스는 절정을 맞이했다.
+	;それ以外
+	ELSE
+		PRINTFORMW 「싫엇, 그 이상은!」
+		PRINTFORMW 「힛, 앗! 핫, 하아아앗!」
+	ENDIF
+		CFLAG:7605 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてV절정 CFLAG:7606
+;-------------------------------------------------
+IF NOWEX:1 > 0 && CFLAG:7606 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「핫, 하힛, 이제, 한계!」
+		PRINTFORMW 「앗, 가! 가버렷! 앗, 아아아아앗!」
+	;それ以外
+	ELSE
+		PRINTFORMW 「힛, 시, 싫엇! 가고싶지 않앗! 후앗!」
+		PRINTFORMW 「그, 그만! 시, 싫어어어엇! 가버려어어!」
+	ENDIF
+		CFLAG:7606 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてA절정 CFLAG:7607
+;-------------------------------------------------
+IF NOWEX:2 > 0 && CFLAG:7607 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「힛, 하읏, 응, 앗!」
+		PRINTFORMW 「굉장햇, 엉덩이로, 이렇게에! 하아아아아앗!」
+	;それ以外
+	ELSE
+		PRINTFORMW 「뭔가, 와! 와버렷!」
+		PRINTFORMW 「거짓말, 그런, 엉덩이로! 힛, 싫어어엇!」
+	ENDIF
+		CFLAG:7607 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてB절정 CFLAG:7608
+;-------------------------------------------------
+IF NOWEX:3 > 0 && CFLAG:7608 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「하앙, 앗, 갓!」
+		PRINTFORMW 「가슴으로, 가버려엇! 핫, 아아―앗!」
+	;それ以外
+	ELSE
+		PRINTFORMW 「크응! 시, 싫엇!」
+		PRINTFORMW 「가슴으로, 가버렷…… 가버려어어!」
+	ENDIF
+		CFLAG:7608 = 1
+ENDIF
+
+;-------------------------------------------------
+;処女喪失 CFLAG:7609
+;-------------------------------------------------
+LOCAL = UP:20 + UP:21
+IF TFLAG:0 > 0 && CFLAG:7609 == 0
+	;恋慕かつ主人のセックスによる処女喪失
+	IF TALENT:150 == 1 && TFLAG:2
+		;恋慕かつ反発刻印未取得
+		IF LOCAL < 500
+			PRINTFORMW 「읏…… %CSTR:90%에게, 줘 버리는거네」
+			PRINTFORMW 「얼마 전까진 싫어했지만, 지금은 전혀 달라」
+			PRINTFORMW 「정말 좋아해, %조사처리(CSTR:90,"를")%……」
+		;恋慕かつ反発刻印取得
+		ELSE
+			PRINTFORMW 「읏…… 조금만, 상냥하게 해줬으면 했어……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스의 눈에는, 살짝 눈물이 배어있다.
+		ENDIF
+	;指挿入れで処女喪失(反感がかなり少ない)
+	ELSEIF SELECTCOM == 4
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「크응! 핫……」
+			PRINTFORMW 「저기, 이제 손가락은 됐으니까, %조사처리(CSTR:90,"를")% 넣어줘……」
+			PRINTFORMW 상실의 아픔을 억누르면서, 앨리스는 %CALLNAME:MASTER%에게 애원했다
+		;それ以外
+		ELSE
+			PRINTFORMW 「카핫……하―앗……거짓말, 그런……」
+			PRINTFORMW 「앗, 아아……싫엇……싫어어어엇!」
+		ENDIF
+	;それ以外の時に処女喪失
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗……싫어어……이런……이렇게!」
+			PRINTFORMW 앨리스는 볼에는, 눈물의 자국이 겹겹이 생겨있었다
+		;それ以外
+		ELSE
+			PRINTFORMW 「싫어어……처음이, 이렇게……우아아아아앗!」
+		ENDIF
+	ENDIF
+		CFLAG:7609 = 1
+ENDIF
+
+;-------------------------------------------------
+;セックス(Ａ)で射精 CFLAG:7610
+;-------------------------------------------------
+IF TFLAG:9 > 0
+	;初めて
+	IF CFLAG:7610 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗, 아앗! 하아……하앗……배에, 나오고 있어……」
+			PRINTFORMW 「%CSTR:90%의 정액이, 잔뜩……안에……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「시, 싫엇, 뽑아줘! 뽑으라니깟!」
+			PRINTFORMW 사정의 전조를 느낀 앨리스는 , %CALLNAME:MASTER%에게서 도망치려 했다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 허리를 잡아, 한층 더 깊게 육봉을 찔러넣었다
+			PRINTFORMW 「앗, 시, 싫어어엇! 핫……싫어어……」
+		ENDIF
+			CFLAG:7610 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7610 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으읏! 하아……안에 잔뜩, 움직이고 있어……」
+			PRINTFORMW 「저기, 다음은 다른 곳에도……부탁해……」
+			CFLAG:7610 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7610 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 으읏! 읏……」
+			PRINTFORMW 「또, 안에 냈어……」
+			CFLAG:7610 = 3
+		;それ以外
+		ELSEIF CFLAG:7610 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……또 움직이고 있어……」
+			PRINTFORMW 「안에 내는건, 이제 그만둬……」
+			CFLAG:7610 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;セックス(Ｖ)で射精 CFLAG:7611
+;-------------------------------------------------
+IF TFLAG:10 > 0
+	;初めて
+	IF CFLAG:7611 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏, 아아―앗! 핫…… 안에, 싼 거지……?」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 육봉을 뽑아내려고 하자, 앨리스는 천천히 고개를 좌우로 저었다.
+			PRINTFORMW 「아냐, 뽑지 말아줘. 조금만, 느끼고 싶어……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 살짝 눈을 감아, 아직 떨림이 남은 육봉을 상냥하게 감쌌다.
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏, 뜨거, 읏……」
+			PRINTFORMW 「거짓말…… 안에, 싼 거야……?」
+		ENDIF
+			CFLAG:7611 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7611 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 핫…… 잔뜩 나오고 있어……. 안쪽에, 잔뜩……」
+			PRINTFORMW 앨리스는 황홀한 표정을 지으면서, 한층 더 정액을 요구하며 조임을 강하게 했다.
+			CFLAG:7611 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:7611 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 응…… 부탁이야, 안쪽은…… 안쪽만은 제발……」
+			CFLAG:7611 = 3
+		;それ以外
+		ELSEIF CFLAG:7611 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 또, 이런 녀셕에게……!」
+			CFLAG:7611 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;口で射精(フェラ系の場合) CFLAG:7612
+;口で射精 CFLAG:7613
+;-------------------------------------------------
+IF TFLAG:11 > 0
+	;フェラチオ, イラマチオ, 二人フェラチオ, シックスナインの場合
+	IF SELECTCOM == 41 || SELECTCOM == 230 || SELECTCOM == 303 || SELECTCOM == 602
+		;初めて
+		IF CFLAG:7612 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「으흡! 응……꿀꺽……」
+				PRINTFORMW 「한번 더 부탁해도 될까?」
+			;それ以外
+			ELSE
+				PRINTFORMW 「으흡!? 읏, 으으―응! 핫!」
+				PRINTFORMW 「입 안에 내다니, 대체 뭘 생각하고 있는거야!」
+			ENDIF
+				CFLAG:7612 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋精液中毒Lv5
+			IF TALENT:150 == 1 && ABL:31 >= 5 && (CFLAG:7612 <= 5 || FLAG:11 == 2)
+				PRINTFORMW 「츄―……읏……저기, 좀 더……」
+				PRINTFORMW 「조금 더, 원해……」
+				CFLAG:7612 = 6
+			;恋慕＋精液中毒Lv3
+			ELSEIF TALENT:150 == 1 && ABL:31 >= 3 && (CFLAG:7612 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「꿀꺽……읏……목에 휘감겨 와……」
+				PRINTFORMW 목을 울리며, 앨리스는 황홀한 표정을 지었다
+				CFLAG:7612 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7612 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「읏……못 마시겠어……」
+				SIF TEQUIP:40 == 0
+					PRINTFORMW 앨리스는 황홀한 표정을 지은 채, 정액을 흘리지 않도록 손으로 그릇을 만들었다
+				CFLAG:7612 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7612 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「……알고 있어……꿀꺽……」
+				PRINTFORMW 「읏……짜……」
+				CFLAG:7612 = 3
+			;それ以外
+			ELSEIF CFLAG:7612 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「콜록, 콜록! 읏……」
+				PRINTFORMW 앨리스는 몇 번이고 기침해 정액을 토해냈다.
+				CFLAG:7612 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7613 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「읏, 굉장한 양……그렇게 기분 좋았던거야?」
+				PRINTFORMW 「후훗, 좀 더 기분 좋게 해줄게, 와 줘……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「웃……튀기지 마……」
+			ENDIF
+				CFLAG:7613 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕＋奉仕精神Lv5
+			IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7613 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「우후후, 정액이 한가득……」
+				PRINTFORMW 「다음도, 잔뜩 내 줘」
+				CFLAG:7613 = 5
+			;恋慕
+			ELSEIF TALENT:150 == 1 && (CFLAG:7613 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「후훗, 잔뜩 내줬네」
+				PRINTFORMW 「가슴이 그렇게 좋으면, 좋아하는 만큼 해줄게」
+				CFLAG:7613 = 4
+			;奉仕精神Lv3以上
+			ELSEIF ABL:13 >= 3 && (CFLAG:7613 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「읏……얼굴에 묻어버렸어」
+				PRINTFORMW 「내려면, 좀 더 튀지 않게 해줬으면 해」
+				CFLAG:7613 = 3
+			;それ以外
+			ELSEIF CFLAG:7613 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「웃……그러니까 몇 번이나 말했잖아?」
+				PRINTFORMW 앨리스는 얼굴을 찡그려, 불쾌감을 드러냈다.
+				CFLAG:7613 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手で射精 CFLAG:7614
+;-------------------------------------------------
+IF TFLAG:12 > 0
+	;初めて
+	IF CFLAG:7614 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗, 실룩실룩하고 있어」
+			PRINTFORMW 「후훗, 기분 좋았어?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「꺄! 우우……」
+			PRINTFORMW 「갑자기 싸지 말아줘, 손에 묻어버렸어」
+		ENDIF
+			CFLAG:7614 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7614 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 잔뜩 쌌네」
+			PRINTFORMW 「다음은 어떡할래? 입으로 해?」
+			CFLAG:7614 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7614 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아…… 정액이, 잔뜩……」
+			PRINTFORMW 앨리스는 황홀한 표정을 지으면서, 정액을 핥았다.
+			CFLAG:7614 = 4
+		;奉仕精神Lv3
+		ELSEIF ABL:13 >= 3 && (CFLAG:7614 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏…… 알고 있어, 읏……」
+			PRINTFORMW 앨리스는 주저하면서, 정액을 핥았다.
+			CFLAG:7614 = 3
+		;それ以外
+		ELSEIF CFLAG:7614 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏…… 적어도 튀지 않도록 하라구」
+			CFLAG:7614 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;素股で射精 CFLAG:7615
+;-------------------------------------------------
+IF TFLAG:15 > 0
+	;初めて
+	IF CFLAG:7615 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗, 아앗! 하아……」
+			PRINTFORMW 「굉장해……가랑이인데, 정액이 이렇게……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「큿! 우우……가랑이가 끈적끈적해」
+			PRINTFORMW 앨리스는 혐오의 표정을 지으며, 불쾌감을 드러냈다.
+		ENDIF
+			CFLAG:7615 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:7615 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아앗! 하아……잔뜩 나오고 있어……」
+			PRINTFORMW 「저기……다음엔, 안에 내 줘……」
+			CFLAG:7615 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:7615 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏……기분 좋았어?」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 만족한 표정을 짓자, 앨리스는 황홀한 표정을 지었다.
+			CFLAG:7615 = 4
+		;奉仕精神Lv3
+		ELSEIF ABL:13 >= 3 && (CFLAG:7615 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으읏! 뭔가, 안에 싸는 것 같아」
+			CFLAG:7615 = 3
+		;それ以外
+		ELSEIF CFLAG:7615 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으읏! 읏, 안이 아니라고, 싸도 좋을 리 없잖아!」
+			CFLAG:7615 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教対象が射精 CFLAG:7616
+;-------------------------------------------------
+IF TFLAG:30 > 0
+	;初めて
+	IF CFLAG:7616 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭔가, 온닷! 와버려엇!」
+			PRINTFORMW 「히잇, 핫, 앗, 하아아아앗!」
+			PRINTFORMW 육봉이 크게 떨렸다고 생각하자, 정액이 기세좋게 분출했다.
+		;それ以外
+		ELSE
+			PRINTFORMW 「힛, 싫엇, 뭐야!? 아래가, 뜨거워져서!」
+			PRINTFORMW 「앗, 안 됏, 이제 한계! 후아아아아앗!」
+			PRINTFORMW 앨리스의 육봉이 크게 떨렸다고 생각하자, 다음순간 분수같이 정액을 분출했다.
+		ENDIF
+			CFLAG:7616 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7616 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아아……기분 좋아……」
+			PRINTFORMW 황홀한 표정을 지으며, 앨리스는 쾌감의 여운에 잠겼다.
+			CFLAG:7616 = 3
+		;それ以外
+		ELSEIF CFLAG:7616 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런…… 이런 거 거짓말이야……」
+			PRINTFORMW 사정이 믿기지 않는건지, 앨리스는 창백한 얼굴로 고개를 흔들 뿐이었다.
+			CFLAG:7616 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教対象が噴乳 CFLAG:7617
+;-------------------------------------------------
+IF TFLAG:31 > 0
+	;初めて
+	IF CFLAG:7617 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗…… 굉장해, 나오고 있어……」
+			PRINTFORMW 「나도, 어머니가 된 걸까?」
+		;従順Lv4以上
+		ELSEIF ABL:10 >= 4
+			PRINTFORMW (싫을 터인데, 강하게 거절할 수 없어……)
+			PRINTFORMW (나…… 받아들여 버린걸까……)
+		;それ以外
+		ELSE
+			PRINTFORMW 「거짓말…… 거짓말이지?」
+			PRINTFORMW 「어째서, 모유 따위가 나오는거야……」
+			PRINTFORMW 앨리스의 표정은 단숨에 창백해져, 잠시동안 일어서는 일도 할 수 없었다
+		ENDIF
+			CFLAG:7617 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7617 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏…… 이렇게 내면, 아기의 몫이 없어져 버릴까나?」
+			CFLAG:7617 = 4
+		;従順Lv4以上
+		ELSEIF ABL:10 >= 4 && (CFLAG:7617 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「또, 잔뜩……으응!」
+			CFLAG:7617 = 3
+		;それ以外
+		ELSEIF CFLAG:7617 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……이 악마……」
+			SIF TEQUIP:41 == 0
+				PRINTFORMW 앨리스는 눈물지으면서, %조사처리(CALLNAME:MASTER,"를")% 노려봤다
+			CFLAG:7617 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｃ感覚Lv5でＣ절정50以上 CFLAG:7618
+;-------------------------------------------------
+IF ABL:0 >= 5 && EX:0 >= 50 && NOWEX:0 > 0
+	;初めて
+	IF CFLAG:7618 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「하앗! 굉장해, 굉장해앳!」
+			PRINTFORMW 「또, 왓! 앗, 가! 가버려어어어어!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「싫엇, 아앗! 이제, 가고싶다닛!」
+			PRINTFORMW 「히잇, 앗, 싫어! 갓! 또 가버려어!」
+		ENDIF
+			CFLAG:7618 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7618 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「힛, 앗, 아앗!」
+			PRINTFORMW 「또, 갓! %CSTR:90% 앞에서, 가버려―엇!」
+			CFLAG:7618 = 3
+		;それ以外
+		ELSEIF CFLAG:7618 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「갓! 또, 클리로 가버려어어어어!」
+			CFLAG:7618 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ感覚Lv5でＶ절정50以上 CFLAG:7619
+;-------------------------------------------------
+IF ABL:1 >= 5 && EX:1 >= 50 && NOWEX:1 > 0
+	;初めて
+	IF CFLAG:7619 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「힛! 뭣, 안, 이제, 한계!」
+			PRINTFORMW 「앗, 아앗, 또, 갓! 가버려어어어엇!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「이제, 한계, 니깟!」 
+			PRINTFORMW 「앗, 히아아아아! 안 돼에! 또 가버려어어어어!」
+		ENDIF
+			CFLAG:7619 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7619 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아아! 또, 안에서, 뜨거워져서어!」
+			PRINTFORMW 한층 더 날카로운 소리를 지르며, 앨리스는 몇 번째인가의 절정을 맞이했다
+			CFLAG:7619 = 3
+		;それ以外
+		ELSEIF CFLAG:7619 <= 1 || FLAG:11 == 2
+			PRINTFORMW 앨리스는 부자연스러운 경련을 반복해, 입가에서는 침을 늘어뜨렸다
+			PRINTFORMW 「크힛! 읏, 또, 갓! 안에서, 가버려어!」
+			CFLAG:7619 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ感覚Lv5でＡ절정50以上 CFLAG:7620
+;-------------------------------------------------
+IF ABL:2 >= 5 && EX:2 >= 50 && NOWEX:2 > 0
+	;初めて
+	IF CFLAG:7620 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「시, 싫엇! 엉덩이로!」
+			PRINTFORMW 「핫, 아아―앗! 갓! 가버려―엇!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「카핫! 히익! 읏!」
+			PRINTFORMW 「거짓말, 이런, 히아아아아앗!」
+		ENDIF
+			CFLAG:7620 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7620 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 응! 또, 가버렷!」
+			PRINTFORMW 「앗, 아아―앗! 가버려―엇!」
+			CFLAG:7620 = 3
+		;それ以外
+		ELSEIF CFLAG:7620 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫엇, 앗, 아아―앗! 엉덩이로, 가버려―엇!」
+			CFLAG:7620 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｂ感覚Lv5でＢ절정50以上 CFLAG:7621
+;-------------------------------------------------
+IF ABL:3 >= 5 && EX:3 >= 50 && NOWEX:3 > 0
+	;初めて
+	IF CFLAG:7621 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「힛, 읏, 끝이, 저려서……」
+			PRINTFORMW 「또, 갓, 하앗, 아아―앗!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「핫, 싫어! 이제 가고 싶지 않아!」
+			PRINTFORMW 「앗, 앗, 아아―앗!」
+		ENDIF
+			CFLAG:7621 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:7621 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아아! 또, 가슴이, 뜨거워져섯!」
+			PRINTFORMW 「힛, 앗, 또, 튀어버려어어어!」
+			CFLAG:7621 = 3
+		;それ以外
+		ELSEIF CFLAG:7621 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 으응! 또, 와섯! 크으!」
+			PRINTFORMW 「앗, 아아―앗! 또, 가버려어어어!」
+			CFLAG:7621 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG関係(X1をキャラ番号に置換)
+;刻印変動をトリガ―にした口上
+;刻印変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_14
+;助手が調教した時に口上をスキップする(好みに応じて使う, 行頭の;を消すとスキップするようになる)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ着用時には口上をスキップする(OFFだと口を塞いでるのに喋りまくる)
+SIF TEQUIP:42 == 1
+	RETURN 0
+;睡眠・失神時に口上をスキップする(OFFだと寝言が凄いことに)
+SIF EQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF NO:ASSI == Y1
+;		CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;刻印変動のセリフ CFLAG:7691～
+;-------------------------------------------------
+;-------------------------------------------------
+;苦痛刻印Lv3取得 CFLAG:7691
+;-------------------------------------------------
+IF TFLAG:40 == 3 && CFLAG:7691 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「앗……난 노예……%CSTR:90%의 충실한 노예에요」
+	;それ以外
+	ELSE
+		PRINTFORMW 「큿……너무 아픈 짓은 하지마」
+		PRINTFORMW 「다른 거라면, 조금 정도는 해줄테니까……」
+	ENDIF
+		CFLAG:7691 = 1
+ENDIF
+
+;-------------------------------------------------
+;快楽刻印Lv3取得 CFLAG:7692
+;-------------------------------------------------
+IF TFLAG:41 == 3 && CFLAG:7692 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「아앙! 이렇게 기분 좋은거, 이제 참지 않아아!」
+	;それ以外
+	ELSE
+		PRINTFORMW 「거, 거짓말……거짓말이야!」
+		PRINTFORMW 「이런 짓으로, 느낄리가……!」
+	ENDIF
+		CFLAG:7692 = 1
+ENDIF
+
+;-------------------------------------------------
+;屈服刻印Lv3取得 CFLAG:7693
+;-------------------------------------------------
+IF TFLAG:42 == 3 && CFLAG:7693 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「……내 전부는, %CSTR:90%의 것이야……」
+	;それ以外
+	ELSE
+		PRINTFORMW 「앗……아앗……」
+		PRINTFORMW 지금까지 참아왔던 앨리스였지만, 아무래도 한계를 넘어버린것 같다
+		PRINTFORMW 웅크린 앨리스는 몸을 떨며, 눈물을 흘린다
+		PRINTFORMW “이제 도망갈 수 없어”
+		PRINTFORMW 그 사실을, 마음 깊은곳에서 이해한것 같다
+	ENDIF
+		CFLAG:7693 = 1
+ENDIF
+
+;-------------------------------------------------
+;反発刻印Lv3取得 CFLAG:7694
+;-------------------------------------------------
+IF TFLAG:44 == 3 && CFLAG:7694 == 0
+	;恋慕
+	IF TALENT:150 == 1
+		PRINTFORMW 「……조금만, 혼자 있게 해줘」
+	;それ以外
+	ELSE
+		PRINTFORMW 앨리스의 표정은 일변해, 그 얼굴에는 분노의 색이 배어나오고 있었다
+		PRINTFORMW 「……우쭐댄다면, 큰 코 다칠거야」
+		PRINTFORMW 굉장히 낮은 목소리로, 앨리스는 %CALLNAME:MASTER%에게 고했다
+	ENDIF
+		CFLAG:7694 = 1
+ENDIF
+
+;-------------------------------------------------
+;@SELF_KOJO関係
+;イベント口上集
+;-------------------------------------------------
+@SELF_KOJO_K14
+;助手が調教した時に口上をスキップする(好みに応じて使う, 行頭の;を消すとスキップするようになる)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ着用時には口上をスキップする(OFFだと口を塞いでるのに喋りまくる)
+SIF TEQUIP:42
+	RETURN 0
+;睡眠・失神時に口上をスキップする(OFFだと寝言が凄いことに)
+SIF EQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+
+;-------------------------------------------------
+;イベント発生時のセリフ CFLAG:7701～
+;-------------------------------------------------
+;-------------------------------------------------
+;売却
+;-------------------------------------------------
+IF TFLAG:200 == 130
+	;恋慕＋反発刻印Lv3未満
+	IF TALENT:150 == 1 && MARK:9 < 3
+		PRINTFORMW 「엣……지금, 뭐라고……」
+		PRINTFORMW 자신의 귀를 의심하는 앨리스는 , 눈을 크게 뜨고 %CALLNAME:MASTER%에게 물었다
+		PRINTFORMW 하지만, 몇 번 물어봐도, 같은 대답이 돌아올 뿐이었다
+		PRINTFORMW 「시, 싫어! 부탁이야!」
+		PRINTFORMW 「뭐든지 할게! 뭐든지 하는말 들을테니까!」
+		PRINTFORMW 앨리스는 몇 번이나 애원했지만, %CALLNAME:MASTER%의 대답이 변하는 일은 최후까지 없었다
+	;反発刻印Lv3
+	ELSEIF MARK:9 == 3
+		PRINTFORMW 「어머, 괜찮은거야? 내게서 한눈을 팔고」
+		PRINTFORMW 「후훗, 조심하라구」
+		PRINTFORMW 앨리스는 무서울 정도로 미소지으면서, %CALLNAME:MASTER%의 곁을 떠나갔다
+		PRINTFORMW 문득 시선을 떨구자, 단단하게 쥔 손 안에 몇가닥의 머리카락이 비친것 같은 기분이 들었다
+	;淫乱
+	ELSEIF TALENT:170
+		PRINTFORMW 「이런 몸으로 만들고, 이제와서 안녕이라니 너무하네」
+		PRINTFORMW 「제대로 된 상대를 소개해줘?」
+	;それ以外
+	ELSE
+		PRINTFORMW 「큿……반드시 복수할테니까……」
+		PRINTFORMW 쇠사슬에 연결된 앨리스는 , 최후의 저항이라는 듯이 %조사처리(CALLNAME:MASTER,"를")% 노려봤다
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;朝フェラ CFLAG:7701
+;-------------------------------------------------
+IF TFLAG:200 == 140
+	;初めて
+	IF CFLAG:7701 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읏, 으음……핫……」
+			PRINTFORMW 「앗, 일어난거네　좋은아침」
+			PRINTFORMW 앨리스는 육봉을 충분히 핥아올린 후, 겨우 %CALLNAME:MASTER%에게서 떨어졌다
+			PRINTFORMW 갈증을 달랠수 있었기 때문인지, 만족하며 기뻐했다
+			PRINTFORMW 「읏……꿀꺽……잘 먹었습니다」
+			PRINTFORMW 「자, 준비가 다 됐어. 아침식사 하러 가자」
+		;それ以外
+		ELSE
+			PRINTFORMW 「읏……훗……으응……」
+			PRINTFORMW 앨리스는 묵묵히 봉사를 계속한다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 몸을 일으키자, 간신히 떨어졌다
+		ENDIF
+			CFLAG:7701 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 ==1 && (CFLAG:7701 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응츄……츄……츄파……」
+			PRINTFORMW 「미안해. 일어나지 않을것 같아서, 먼저 시작해버렸어」
+			CFLAG:7701 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:7701 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「츄……으음……핫……」
+			PRINTFORMW 「아침부터 이렇게 싸다니, 앞 일이 걱정되네……」
+			CFLAG:7701 = 3
+		;それ以外
+		ELSEIF CFLAG:7701 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏……츄……낼름……」
+			PRINTFORMW 「지금 중에 싸두면, 나중에 쌀 양이 줄어들겠지?」
+			CFLAG:7701 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後セックス CFLAG:7702
+;-------------------------------------------------
+IF TFLAG:200 == 150
+	;初めて
+	IF CFLAG:7702 == 0
+		;淫乱
+		IF TALENT:170 == 1
+			PRINTFORMW 「후앗! 읏, 좀 더, 격렬하겟!」
+			PRINTFORMW 「싫어엇! 좋앗! 안에서, 움직여줘!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하읏, 으응! 좀 더, 움직여줘!」
+			PRINTFORMW 「%조사처리(CSTR:90,"를")% 안에서, 느끼게 해줫!」
+		ENDIF
+			CFLAG:7702 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;淫乱
+		IF TALENT:170 == 1 && (CFLAG:7702 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하앗, 아앗! 거깃, 거기이!」
+			PRINTFORMW 자궁구를 괴롭히자, 앨리스의 목소리는 한층 더 높고 커졌다
+			CFLAG:7702 = 4
+		;V感覚Lv4以上
+		ELSEIF ABL:1 >= 4 && (CFLAG:7702 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앙! 좋앗! 좀 더!」
+			PRINTFORMW %CALLNAME:MASTER%에게 걸친 앨리스는 , 손을 잡으면서 허리를 부딪혔다
+			CFLAG:7702 = 3
+		;それ以外
+		ELSEIF CFLAG:7702 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으응! %조사처리(CSTR:90,"가")%, 들어와서!」
+			CFLAG:7702 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後自慰 CFLAG:7703
+;-------------------------------------------------
+IF TFLAG:200 == 151
+	;初めて
+	IF CFLAG:7703 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「하읏, 응…… 안 됏, 만족할 수 없……엇」
+		;それ以外
+		ELSE
+			PRINTFORMW 「……이런 곳에서 해버리다니……읏」
+			PRINTFORMW 앨리스는 세심하게 주의를 기울이면서, 자신의 비핵을 괴롭힌다
+			PRINTFORMW 「읏, 핫……응……기분, 좋앗……」
+		ENDIF
+			CFLAG:7703 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 ==1 && (CFLAG:7703 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 아앙……안 됏, 몸이 달아올라서……읏」
+			CFLAG:7703 = 4
+		;自慰中毒Lv3以上
+		ELSEIF ABL:30 >= 3 && (CFLAG:7703 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (자제가, 안 돼……엣!)
+			CFLAG:7703 = 3
+		;それ以外
+		ELSEIF CFLAG:7703 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 이런 일이라도, 어떻게 되는 것도 아닌데……읏」
+			CFLAG:7703 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;レズプレイ(魔理沙が助手) CFLAG:7704
+;レズプレイ CFLAG:7705
+;-------------------------------------------------
+IF (TFLAG:200 == 154 || TFLAG:200 == 155)
+	;魔理沙が助手
+	IF ASSI > 0 && ASSINO() == 02
+		;初めて
+		IF CFLAG:7704 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「앗, 마리사아……」
+				PRINTFORMW 마리사를 밀어 넘어뜨린 앨리스는 , 뜨거운 입맞춤을 건넸다
+			;それ以外
+			ELSE
+				PRINTFORMW 「하아, 읏하아……」
+				PRINTFORMW (몸이, 욱신거려……읏, 안 돼……엣!)
+				PRINTFORMW 「마리사, 미안해……읏」
+			ENDIF
+				CFLAG:7704 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 ==1 && (CFLAG:7704 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「저기, 조금만 계속하지 않을래?」
+				PRINTFORMW 『……어쩔 수 없는 녀석이네. 조금만이라구?』
+				CFLAG:7704 = 5
+			;レズ中毒Lv3以上
+			ELSEIF ABL:32 >= 3 && (CFLAG:7704 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「읏……그런 상대와 하는 것 보다, 이쪽 편이 단연 좋아」
+				PRINTFORMW 앨리스는 마리사와 얽히면서, 쾌감에 물들어 갔다
+				CFLAG:7704 = 4
+			;レズっ気Lv3以上
+			ELSEIF ABL:22 >= 3 && (CFLAG:7704 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 『츄……핫……』
+				PRINTFORMW 「앗……마리사와……읏」
+				CFLAG:7704 = 3
+			;それ以外
+			ELSEIF CFLAG:7704 <= 1 || FLAG:11 == 2
+				PRINTFORMW (뭐 하는걸까, 난……)
+				PRINTFORMW (이제 끝났는데, 마리사와 하다니……)
+				CFLAG:7704 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	;それ以外
+	ELSE
+		;初めて
+		IF CFLAG:7705 == 0
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「저기, 조금만 계속하지 않을래?」
+				PRINTFORMW 「당신도, 아직 만족하지 못했지?」
+			;それ以外
+			ELSE
+				PRINTFORMW 「응……조금만……」
+			ENDIF
+				CFLAG:7705 = 1
+				RETURN 0
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 ==1 && (CFLAG:7705 <= 4 || FLAG:11 == 2)
+				PRINTFORMW 「하앗, 앗, 으응!」
+				PRINTFORMW 「이것, 응, 아앙!」
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"가")% 비렬을 괴롭히자, 앨리스는 달콤한 소리를 질렀다
+				CFLAG:7705 = 5
+			;レズ中毒Lv3以上
+			ELSEIF ABL:32 >= 3 && (CFLAG:7705 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「핫, 으읏! 좀 더, 가까이」
+				PRINTFORMW 「으흡, 읏……츄……」
+				CFLAG:7705 = 4
+			;レズっ気Lv3以上
+			ELSEIF ABL:22 >= 3 && (CFLAG:7705 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「앗, 으응! 잠깐, 격렬해, 크응!」
+				CFLAG:7705 = 3
+			;それ以外
+			ELSEIF CFLAG:7705 <= 1 || FLAG:11 == 2
+				PRINTFORMW (괜찮아, 조금만이라면 먹히지는……)
+				CFLAG:7705 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後夜這い CFLAG:7706
+;-------------------------------------------------
+IF TFLAG:200 == 158
+	;初めて
+	IF CFLAG:7706 == 0
+		;V感覚Lv5以上
+		IF ABL:1 >= 5
+			PRINTFORMW 「미안해, 이렇게 밤늦게……」
+			PRINTFORMW 「하지만, 몸이 욱신거려서 안되겠는걸……」
+			PRINTFORMW 앨리스는 천천히 다가가, 치뜬 눈으로 %조사처리(CALLNAME:MASTER,"를")% 쳐다봤다.
+			PRINTFORMW 「부탁이야……. 안아줘……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「으읏, 조금만, 같이 있어줘……」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"를")% 놓지 않도록 다리를 걸어, 앨리스는 허리를 부딪혔다.
+		ENDIF
+			CFLAG:7706 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;V感覚Lv5以上
+		IF ABL:1 >= 5 && (CFLAG:7706 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 으응! 그대로! 안엣!」
+			PRINTFORMW 앨리스는 질을 강하게 조여서, %CALLNAME:MASTER%의 정액을 요구했다.
+			CFLAG:7706 = 3
+		;それ以外
+		ELSEIF CFLAG:7706 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하읏, 그래! 아직이야!」
+			PRINTFORMW 「앗, 앗, 잔뜩, 내줫! 정액을, 안에, 잔뜩!」
+			CFLAG:7706 = 2
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;エンゲ―ジリング使用時
+;-------------------------------------------------
+IF TFLAG:200 == 200
+	PRINTFORMW 「엣…… 이건 반지?」
+	PRINTFORMW 「정말로…… 괜찮은거야? 나로……」
+	PRINTFORMW 앨리스는 당혹감을 보이면서, %CALLNAME:MASTER%에게 묻는다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 주저 없이 승낙했다.
+	PRINTFORMW 「고마워……. 계속, 계속 함께야……」
+	PRINTFORMW 앨리스는 눈을 적시면서, %CALLNAME:MASTER%의 가슴에 뛰어들었다.
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+
+;-------------------------------------------------
+@NAME_CHANGE_14
+;-------------------------------------------------
+	DRAWLINE
+	CFLAG:7003 = 6
+	PRINTFORMW 「저기, 언제까지 당신이라고 불리는 것도 질리지 않아?」
+	PRINTFORMW 「혹시 괜찮다면, 다른 호칭으로 부르는 거…… 어때?」
+	DRAWLINE
+	PRINTL [0] 「지금 그대로가 좋아」
+	PRINTL [1] 「바꾸고 싶어」
+	$INPUT_LOOP_2
+	INPUT
+	SIF RESULT >= 2
+		GOTO INPUT_LOOP_2
+	IF RESULT == 0
+		PRINTFORMW 「어머 그래? 그럼 평소대로 해 둘게」
+		RETURN 1
+	ELSEIF RESULT == 1
+		PRINTFORMW 「알았어. 그럼 뭐라고 부르면 좋을까, 가르쳐주지 않을래?」
+		PRINTL 
+		$INPUT_LOOP_3
+		PRINTL 어떻게 부르게 하겠습니까? 
+		PRINTL ※경칭 따위도 함께 입력해 주세요.
+		$INPUT_LOOP_4
+		INPUTS
+		STRLENS RESULTS
+		IF RESULT > 20
+			PRINTFORML 「우―웅……조금 길지 않아?」
+			GOTO INPUT_LOOP_4
+		ELSEIF RESULT == 0
+			GOTO INPUT_LOOP_4
+		ELSE
+			PRINTFORML 「%RESULTS%」%조사만처리(RESULTS,"로")% 괜찮습니까? 
+			PRINTL [0] 예
+			PRINTL [1] 아니오
+			$INPUT_LOOP_5
+			INPUT
+			SIF RESULT >= 2
+				GOTO INPUT_LOOP_5
+
+			IF RESULT == 0
+				PRINTFORMW 「알았어. 이제부터도 잘 부탁해, %RESULTS%」
+				CSTR:90 = %RESULTS%
+			ELSEIF RESULT == 1
+				GOTO INPUT_LOOP_3
+			ENDIF
+		ENDIF
+			RETURN 1
+	ENDIF
+
+;-------------------------------------------------
+;@단독 엔딩 관계
+;-------------------------------------------------
+@SINGLE_ENDING_K14
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 쇼핑에서 돌아오자, 새로운 찻집이 생겼다는 이야기를 앨리스에게서 들었다
+PRINTFORMW 그 정도는 흥미없는 %조사처리(CALLNAME:MASTER,"였")%지만, 앨리스의 강한 희망도 있고 해서 들르는 계기가 되었다
+PRINTFORMW 　
+PRINTFORMW 「헤에, 제법 멋진 가게잖아」
+PRINTFORMW 가볍게 점내를 둘러보고 나서, 앨리스는 납득의 표정을 지었다
+PRINTFORMW 점내에는 사각테이블이 몇개가 놓여져, 침착한 분위기를 자아낸다
+PRINTFORMW 테라스에도 몇개가 놓여져 있어, 맑은 날에는 밖에서 즐길 수도 있을 것이다
+PRINTFORMW 카운터 안쪽에서는 커피의 향기가 감돌아, 마음이 편해지는 공간을 연출하고 있다
+PRINTFORMW 「그러니까―, 자리는……앗, 마침 딱 비어있네. 앉자」
+PRINTFORMW 운 좋게 빈 창가의 자리에 앉아, 두 사람은 한숨 돌렸다
+PRINTFORMW 　
+PRINTFORMW 「그럼, 뭘 주문할까……」
+PRINTFORMW 메뉴를 보면서, 앨리스는 작게 중얼거린다
+PRINTFORMW 커피나 홍차는 물론이고, 잎에 대해서도 자세하게 쓰여있다
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 대충 훑어봤으나 어떤게 어떤건지 도무지 알 수 없었다
+PRINTFORMW 「……못 정했어? 그럼 이쪽의 홍차 같은 건 어때?」
+PRINTFORMW 고민하는 %조사처리(CALLNAME:MASTER,"를")% 눈치챘는지, 앨리스가 구조선을 보내 주었다
+PRINTFORMW 이대로 메뉴와 눈싸움을 하고 있어도, 정해질 거라곤 생각할 수 없다
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 느긋히 수긍하고, 앨리스가 선택한 홍차를 골랐다
+PRINTFORMW 「그럼, 나도 이걸로」
+PRINTFORMW 「케이네에게 들었지만, 정말로 맛있을 것 같아」
+PRINTFORMW 　
+PRINTFORMW 잠시 있자, 두 사람분의 홍차가 나왔다
+PRINTFORMW 머리가 맑게 개이는 듯한 향기가 코를 간질여, 마음을 진정시킨다
+PRINTFORMW 한 입 머금어 모자, 부드러운 풍미가 입안 가득히 퍼져간다
+PRINTFORMW 「맛있어……」
+PRINTFORMW 앨리스도 납득한 맛인것 같아, 그 얼굴에서는 웃늘 얼굴이 흘러넘치고 있다
+PRINTFORMW 　
+PRINTFORMW 그로부터 잠시, 타애없는 회화가 이어졌다
+PRINTFORMW 그런 중, 화제는 %CALLNAME:MASTER%의 일이 됐다
+PRINTFORMW 「……그렇다고 해도 희한하네. 당신과 이런 식으로 보내는 날이 오다니」
+PRINTFORMW 「얼마 전까지는 “저주해 주겠어” 같은거 생각했었는데……」
+PRINTFORMW 컵을 접시에 내려놓고, 한숨 돌리는 앨리스
+PRINTFORMW 일순간 흐린 표정을 지은 앨리스 였지만, 그 얼굴은 곧 웃는 얼굴로 바뀌었다
+PRINTFORMW 「후훗, 그래도 지금은 달라」
+PRINTFORMW 「앞으로도 의지할게요, 서・방・님♪」
+PRINTFORMW 윙크하고, 앨리스는 다시 홍차를 입에 머금는다
+PRINTFORMW 그 약지에는, 약혼반지가 반짝반짝 빛나고 있었다
+PRINTFORMW 　
+PRINTFORMW 　　　　　　　　―― Ending No.1014 (앨리스 순애 엔딩)
+
+RETURN 0
+
+;-------------------------------------------------
+;@노예 엔딩 관계
+;-------------------------------------------------
+@SLAVE_ENDING_K14
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 빛이 들지 않는 지하실
+PRINTFORMW 희미한 빛, 침대 위에선 1조의 남녀가 교합하고 있다
+PRINTFORMW 　
+PRINTFORMW 앨리스를 뒤에서 묶어, 몸의 자유를 빼앗아 간다
+PRINTFORMW 시야는 아이마스크로 차단해, 은의 쇠사슬을 목줄에 단다
+PRINTFORMW 자위조차 용납되지 않는 앨리스의 몸을, %조사처리(CALLNAME:MASTER,"는")% 가차없이 범하고 있다
+PRINTFORMW 　
+PRINTFORMW 일방적으로 범해진다는 도착적인 쾌락은, 앨리스의 이성을 날려버려간다
+PRINTFORMW 음란한 몸은 모든 자극에 반응해, 엉덩이를 때릴 때에도 질의 조임은 강해져 갔다
+PRINTFORMW 이미 몇 번인가 절정을 맞이한 앨리스는 , 칠칠맞게 침을 흘리면서 쾌감을 탐한다
+PRINTFORMW 교성이 끊임없이 울려퍼져, 정액을 요구하듯이 조임은 강해져 갔다
+PRINTFORMW 　
+PRINTFORMW 잠시후에, 앨리스의 몸은 불규칙적으도 떨리기 시작했다
+PRINTFORMW 말을 할 여유마저 없어져, 절정이 가까운 것은 명확하다
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 후벼내듯이 앨리스를 몰아세워, 절정과 동시에 정액을 해방시켰다
+PRINTFORMW 　
+PRINTFORMW 둔한 사정음이 울려펴져, 앨리스의 몸은 힘없이 붕괴된다
+PRINTFORMW 육봉을 뽑아내자, 흘러나온 정액이 비열에서 늘어져 떨어진다
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 육봉대신에 바이브를 찔러넣어, 정액이 흘러넘치지 않게 마개를 했다
+PRINTFORMW 　
+PRINTFORMW 때때로 %CALLNAME:MASTER%의 이름을 외치면서, 앨리스는 쾌감의 여운에 잠긴다
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 앨리스의 구속을 한 채, 조용히 방을 뒤로했다
+PRINTFORMW 　
+PRINTFORMW 이제는 질을 괴롭히는 물건이 뭐든지 상관없을지도 모른다
+PRINTFORMW 개나 촉수로 시험해봐도, 같은 반응을 보일까? 
+PRINTFORMW 그런걸 생각하면서, %조사처리(CALLNAME:MASTER,"는")% 침실로 발길을 옮겼다
+PRINTFORMW 　
+PRINTFORMW 　　　　　　　　―― Ending No.1014 (앨리스 노예 엔딩)
+
+RETURN 0

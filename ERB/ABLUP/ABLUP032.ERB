@@ -1,0 +1,163 @@
+﻿;=============================================================================
+;레즈 중독
+;=============================================================================
+@ABLUP32
+DRAWLINE
+IF TALENT:120
+	RETURN 0
+ELSEIF ABL:32 >= 5
+	JUMP ABLUP_MAX
+ENDIF
+
+;ＬＶ２이상に上げるときは異常経験必要（素質：[両刀][中毒しやすい]なら無視できる）
+SIF COST32(3)
+	PRINTFORM %EXPNAME:50% {COST32(3)} 이상, 그리고 
+;奉仕精神が必要
+PRINTFORML %ABLNAME:13% {ABL:32 + 1}LV 이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:0%의 구슬×{COST32(0)}, %PALAMNAME:13%의 구슬×{COST32(1)}, %PALAMNAME:14%의 구슬×{COST32(1)}, %EXPNAME:12% {COST32(2)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN32(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN32(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:0 -= COST32(0)
+	JUEL:13 -= COST32(1)
+	JUEL:14 -= COST32(1)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:32 += 1
+PRINTFORMW %ABLNAME:32%의 레벨이 %조사처리(ABL:32,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP32
+SIF ABL:32 >= 5 || TALENT:120
+	RETURN 0
+
+CALLF CALC_COST32, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP32("CHECK")
+
+@COST32(ARG)
+#FUNCTION
+RETURNF CALC_COST32("GET", ARG)
+
+@CALC_COST32(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:32 == 0
+	LOCAL:0 = 10000
+	LOCAL:1 = 3000
+	LOCAL:2 = 1000
+ELSEIF ABL:32 == 1
+	LOCAL:0 = 25000
+	LOCAL:1 = 8000
+	LOCAL:2 = 1500
+ELSEIF ABL:32 == 2
+	LOCAL:0 = 50000
+	LOCAL:1 = 15000
+	LOCAL:2 = 2500
+ELSEIF ABL:32 == 3
+	LOCAL:0 = 100000
+	LOCAL:1 = 30000
+	LOCAL:2 = 5000
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:2 , 2.00
+	ENDIF
+ELSEIF ABL:32 == 4
+	LOCAL:0 = 300000
+	LOCAL:1 = 55000
+	LOCAL:2 = 8000
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:2 , 3.00
+	ENDIF
+ENDIF
+
+;倒錯的
+IF TALENT:80
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 0.75
+ENDIF
+;両刀
+IF TALENT:83
+	TIMES LOCAL:0 , 0.25
+	TIMES LOCAL:1 , 0.25
+	TIMES LOCAL:2 , 0.25
+ENDIF
+;中毒しやすい
+IF TALENT:84
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+;中毒しにくい
+ELSEIF TALENT:85
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ENDIF
+;[中毒扇動]有効
+IF TFLAG:995 == 1
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+ENDIF
+
+;ＬＶ２이상に上げるときは異常経験必要（素質：[両刀][中毒しやすい]なら無視できる）
+SIF ABL:32 >= 2 && TALENT:83 == 0 && TALENT:84 == 0
+	LOCAL:3 = ABL:32 - 1
+
+RETURNF 0
+
+@CAN32(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP32("GET", ARG)
+
+@CAN_ABLUP32(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;異常経験が必要な場合
+SIF EXP:50 < COST32(3)
+	LOCAL:0 |= 2
+
+;奉仕精神が必要
+SIF ABL:13 < ABL:32 + 1
+	LOCAL:0 |= 4
+
+;快Ｃ의 구슬で上げる
+SIF JUEL:0 < COST32(0)
+	LOCAL:0 |= 1
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST32(1)
+	LOCAL:0 |= 1
+;屈服의 구슬で上げる
+SIF JUEL:14 < COST32(1)
+	LOCAL:0 |= 1
+;レズ経験が必要
+SIF EXP:12 < COST32(2)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

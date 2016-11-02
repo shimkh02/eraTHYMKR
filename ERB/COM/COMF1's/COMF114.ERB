@@ -1,0 +1,308 @@
+﻿;=============================================================================
+;털뽑게하기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE114
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:114 > 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;[パイパン]だと不可, 生えそろっていないと無理
+SIF TALENT:65 || (CFLAG:36 && BASE:5 < 250)
+	RETURN 0
+;テキストより[작은 체형]はデフォでツルツル。[소인체형]もそれに準じる
+SIF (TALENT:128 || TALENT:127) && CFLAG:36 == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;縛っているときは無理
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;시체는 안됨
+SIF TALENT:226 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;실행은 어렵지만 성능은 그만큼 알맞은 것은 아니다.
+;어느 쪽인가 하면 취미 방향.
+@COM114
+PRINTL 털뽑게하기
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+TSTR:0 = 털뽑게하기
+CALL TRAIN_MESSAGE_COM114
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+DOWNBASE:0 += 40
+DOWNBASE:1 += 150
+
+LOCAL:1 = 500
+SOURCE:16 = 750
+SOURCE:24 = 500
+SOURCE:10 = 800
+SOURCE:12 = 1000
+SOURCE:31 = 3200
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	SOURCE:20 = 500
+ELSEIF PALAM:10 < PALAMLV:2
+	SOURCE:20 = 220
+ELSEIF PALAM:10 < PALAMLV:3
+	SOURCE:20 = 80
+ELSEIF PALAM:10 < PALAMLV:4
+	SOURCE:20 = 25
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:14 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:14 == 2
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:14 == 3
+	TIMES LOCAL:1 , 1.50
+ELSEIF ABL:14 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 2.60
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.40
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.70
+ELSE
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+SOURCE:24 += LOCAL:1
+SOURCE:18 += LOCAL:1
+SOURCE:12 += LOCAL:1
+
+;작은 몸집 체형, 소인 체형
+SIF TALENT:128 || TALENT:127
+	TIMES SOURCE:12 , 2.50
+
+IF TALENT:65 == 0
+	PRINTL
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [%TALENTNAME:65%]가 되었다. 
+	TALENT:65 = 1
+ENDIF
+;털은 나중에 나 오지 않게 된다
+SIF CFLAG:36 != 1
+	CFLAG:36 = 1
+;반들반들이 된다
+BASE:5 = 0
+
+;음모 입수 이벤트
+SIF FLAG:12 & 8 && (TFLAG:996 & 64) == 0 
+	CALL SWEET_POTATO_PUBLIC_HAIR
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_114
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%에게 자신의 음모를 손으로 뽑도록 명령했지만 거절당했다.
+PRINTW 조금 더 조교가 필요한 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM114
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:PLAYER%에게 명령되어 %조사선택(CALLNAME:TARGET, "는")% 흠칫 흠칫 자신의 음모를 한 올 한 올 손으로 집어 뽑아 내기 시작했다.
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF TALENT:40
+	PRINTW 음모를 뽑아 낼 때 마다 굵은 눈물을 흘리면서 신음하고 있다….
+ELSEIF TALENT:41
+	PRINTW 투덜 투덜 불평하면서, 가능한 한 덜 아프도록 모근을 누르면서, 음모를 차례 차례 뽑아 내고 있다….
+ELSE
+	PRINTW 눈을 단단히 감고 이마에 비지땀을 흘리면서 음모를 뽑아 내고 있다….
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_114, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+;ABL:노출벽
+IF ABL:14
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:14
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:14%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+;ABL:자위 중독
+IF ABL:30
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:30
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:30%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;자제심
+IF TALENT:20
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:20%({LOCAL:99})
+ENDIF
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+;부끄럼없음
+ELSEIF TALENT:36
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:36%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;소인 체형
+IF TALENT:127
+	SIF LOCAL:99
+		RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:127%({LOCAL:99})
+ENDIF
+;작은 몸집 체형
+IF TALENT:128
+	SIF LOCAL:99
+		RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:128%({LOCAL:99})
+ENDIF
+
+;미약
+IF TEQUIP:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ITEMNAME:61%({LOCAL:99})
+ENDIF
+
+TFLAG:241 = 50

@@ -1,0 +1,295 @@
+﻿;=============================================================================
+;반령을 삽입한다 (후)
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE442
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:442 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;一度も반령を삽입(後)をしたことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:21 & 64) == 0
+	RETURN 0
+;조교자가 요우무か요우키でないとダメ
+SIF NO:PLAYER != 19 && NO:PLAYER != 70
+	RETURN 0
+;조교자가 요우무の場合は반령이 調教可能キャラとして存在し, 主人や助手, 조교 대상以外でないとダメ
+IF NO:PLAYER == 19
+	;반령이 현재 조교 가능
+	LOCAL:1 = 0
+	FOR LOCAL, 0, CHARANUM
+		;主人や助手, 조교 대상は除外
+		SIF LOCAL == MASTER || LOCAL == ASSI || LOCAL == TARGET
+			CONTINUE
+		;妊娠していたら除外
+		SIF TALENT:LOCAL:140 == 1
+			CONTINUE
+		;失踪中などこの場にいないなら除外
+		SIF CFLAG:LOCAL:4
+			CONTINUE
+		;反発刻印もしくは恐怖刻印３がある場合は除外(拒絶する)
+		SIF MARK:LOCAL:8 > 2 || MARK:LOCAL:9
+			CONTINUE
+		;반령だったらLOCAL:1に+1
+		SIF NO:LOCAL == 65
+			LOCAL:1 += 1
+	NEXT
+	SIF LOCAL:1 == 0
+		RETURN 0
+;조교자가 요우키の場合は반령(요우키)が調教可能キャラとして存在し, 主人や助手, 조교 대상以外でないとダメ
+ELSEIF NO:PLAYER == 70
+	;반령(요우키)が현재 조교 가능
+	LOCAL:1 = 0
+	FOR LOCAL, 0, CHARANUM
+		;主人や助手, 조교 대상は除外
+		SIF LOCAL == MASTER || LOCAL == ASSI || LOCAL == TARGET
+			CONTINUE
+		;妊娠していたら除外
+		SIF TALENT:LOCAL:140 == 1
+			CONTINUE
+		;失踪中などこの場にいないなら除外
+		SIF CFLAG:LOCAL:4
+			CONTINUE
+		;反発刻印もしくは恐怖刻印３がある場合は除外(拒絶する)
+		SIF MARK:LOCAL:8 > 2 || MARK:LOCAL:9
+			CONTINUE
+		;반령(요우키)だったらLOCAL:1に+1
+		SIF NO:LOCAL == 99
+			LOCAL:1 += 1
+	NEXT
+	SIF LOCAL:1 == 0
+		RETURN 0
+ENDIF
+;소인체형 보유자는, 쌍방이 조교자와 조교 대상이라면 OK
+;그 외의 경우에는 主人か조교자가 금단의 지식 보유자가 아니면 불가
+IF TALENT:127 && TALENT:PLAYER:127 == 0
+	SIF TALENT:PLAYER:56 == 0  && TALENT:MASTER:56 == 0
+		RETURN 0
+ENDIF
+;처녀で, 순종5미만의 ASSI일 경우できない(새드, または망신か복종ならＯＫ)
+IF TALENT:0 == 1 && ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;윤활 부족이고, 순종5미만의 場合できない(새드, または망신か복종ならＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 훈도시 착용 중일 경우에는 양쪽에게 기교4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17 && (ABL:PLAYER:12 < 4 || ABL:12 < 4)
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM442
+PRINTL 반령을 삽입한다(후) 
+TSTR:0 = 반령을 삽입(후)
+CALL TRAIN_MESSAGE_COM442
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 240
+DOWNBASE:1 += 525
+
+SOURCE:31 = 500
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 20
+	SOURCE:22 = 75
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 50
+	SOURCE:22 = 160
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 100
+	SOURCE:22 = 230
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 1700
+	SOURCE:22 = 260
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 2200
+	SOURCE:22 = 420
+ELSE
+	SOURCE:2 = 3500
+	SOURCE:22 = 550
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.05
+	SOURCE:20 = 5000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 0.30
+	SOURCE:20 = 4900
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 0.70
+	SOURCE:20 = 1200
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 = 30
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 2.30
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:2 , 4.20
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 2320
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 900
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 300
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 120
+ELSEIF PALAM:10 >= PALAMLV:4
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:11 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:11 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:11 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:11 , 1.50
+ELSEIF PALAM:13 >= PALAMLV:4
+	TIMES SOURCE:2 , 1.50
+	TIMES SOURCE:11 , 1.80
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:2 , 0.50
+	TIMES SOURCE:11 , 0.60
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:32 , 1.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:32 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:2 , 1.60
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:32 , 0.60
+ELSE
+	TIMES SOURCE:2 , 2.00
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:32 , 0.30
+ENDIF
+
+TCVAR:1 += 2
+IF (CFLAG:21 & 64) == 0
+	TCVAR:50 += 1
+	CFLAG:21 |= 64
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM442
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF PREVCOM != 440 && PREVCOM != 441 && PREVCOM != 442 && PREVCOM != 443 && PREVCOM != 444
+	IF NO:PLAYER == 70 
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령을 불러냈다.
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령을 불러냈다.
+	ENDIF
+ENDIF
+IF TALENT:173 || TALENT:180
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 반령을 %CALLNAME:TARGET%의 애널에 삽입해 완급을 조절하며 넣고 뺐다.
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 이상한 항문에의 쾌감에 곧 순응해, 격렬하게 허덕이기 시작했다.
+	PRINTFORMW %CALLNAME:PLAYER%도 그 모습에 흥분하기 시작했다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 반령을 %CALLNAME:TARGET%의 애널에 삽입해 완급을 조절하며 넣고 뺐다.
+	PRINTFORMW %CALLNAME:TARGET%뿐만이 아니라, %CALLNAME:PLAYER%도 흥분해 버렸다.
+ENDIF

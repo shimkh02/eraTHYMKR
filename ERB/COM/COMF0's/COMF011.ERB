@@ -1,0 +1,169 @@
+﻿;=============================================================================
+;전기안마기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE11
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:11 > 0
+	RETURN 0
+;강력 아이템·커맨드 무효시는 안 됨
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;전기 안마를 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:1 == 0 && NOITEM == 0
+	RETURN 0
+;ASSI의 경우, 기교 3이상이나 새디즘이 아니면 사용할 수 없다.
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 3 && TALENT:ASSI:81 == 0
+		RETURN 0
+ENDIF
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;목욕탕 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우 조교자의 기교 4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM11
+TSTR:7 = 전기안마기
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 1
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 전기안마기
+CALL TRAIN_MESSAGE_COM011
+
+DOWNBASE:0 += 30
+DOWNBASE:1 += 150
+
+SOURCE:12 = 120
+SOURCE:31 = 400
+
+;ABL:Ｃ감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 2000
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 2500
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 3000
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 3300
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 3600
+ELSE
+	SOURCE:0 = 3800
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 1
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:0
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:0 = FLAG:1120
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	PRINTFORML %EXPNAME:12%＋1 
+	EXP:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	PRINTFORML %EXPNAME:13%＋1 
+	EXP:13 += 1
+ENDIF
+IF PLAYER == MASTER
+	PRINTFORML %EXPNAME:41%＋2 
+	EXP:41 += 2
+ENDIF
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM011
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+;애태우기플레이 중
+IF TEQUIP:68
+	SIF EX:20 && EQUIP:14 == 0 && TFLAG:899 > 0
+		PRINT 기대에 가득 찬 눈으로 바라보는 
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:120 || TALENT:121
+		PRINT 페니스에 
+	ELSE
+		PRINT 보지에 
+	ENDIF
+	PRINTFORM 진동하는 %조사선택(TSTR:9, "를")% 갖다 댔다….
+	SIF EQUIP:14
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 작게 신음을 흘리며 경련했다….
+	PRINTW
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:120 || TALENT:121
+		PRINT 다리 사이에 
+	ELSE
+		PRINT 보지에 
+	ENDIF
+	PRINTFORML 진동하는 %조사선택(TSTR:9, "를")% 갖다 댔다….
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF EQUIP:14
+		PRINTW 작게 신음소리를 내며, 몸을 부들부들 떨었다….
+	ELSEIF TFLAG:899 == 0
+		IF TALENT:150 && ABL:0 >= 4
+			IF PALAM:13 <= PALAMLV:3
+				PRINT 기다렸다는 듯이 다리를 벌려선 받아들이려고 하는 듯하다….
+			ELSEIF PALAM:13 <= PALAMLV:5
+				PRINTFORM 쾌락에 침을 흘리면서 몇 번이고 %CALLNAME:PLAYER%의 이름을 부르고 있다….
+			ELSE
+				PRINTFORM %조사선택(CALLNAME:PLAYER, "를")% 끌어안으며 절정의 황홀감에 빠져 있는 듯하다….
+			ENDIF
+		ELSEIF ABL:0 >= 3
+			IF PALAM:13 <= PALAMLV:3
+				PRINT 강한 쾌감에 얼굴을 붉히고 있는 듯하다….
+			ELSEIF PALAM:13 <= PALAMLV:5
+				PRINT 홀린 듯한 표정으로 쾌락을 탐하고 있는 듯하다….
+			ELSE
+				PRINT 당장에라도 절정에 달해버릴 것 같은 모습이다….
+			ENDIF
+		ELSE
+			IF PALAM:13 <= PALAMLV:3
+				PRINT 몹시 간지러운 듯 몸을 꼬고 있다….
+			ELSE
+				PRINT 아무 말도 할 수 없어져버린 듯하다….
+			ENDIF
+		ENDIF
+		PRINTW
+	ENDIF
+ENDIF

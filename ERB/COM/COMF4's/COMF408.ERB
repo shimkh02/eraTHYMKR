@@ -1,0 +1,264 @@
+﻿;=============================================================================
+;거미줄
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE408
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:408 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 ヤマメでないとダメ
+SIF NO:PLAYER != 58
+	RETURN 0
+;縄装着中はダメ
+SIF TEQUIP:40 && TEQUIP:40 < 6
+	RETURN 0
+;蜘蛛の巣に吊るされていたらダメ
+SIF TEQUIP:40 == 7
+	RETURN 0
+;アイマスク装着中はダメ
+SIF TEQUIP:41 && TEQUIP:41 != 2
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;끊어지면(자) 이상한 점액이 전신에 다합니다(애액도 붙는 것은 실을 내고 있는 곳(중)이 야마메의……고 )
+@COM408
+;빙빙 권 상태로 사용하면(자) 거미집에 책으로 된다
+SIF TEQUIP:40 == 6
+	JUMP COM653
+
+PRINTL 거미줄
+TSTR:0 = 거미줄
+CALL TRAIN_MESSAGE_COM408
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 100
+	DOWNBASE:1 += 130
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 80
+	DOWNBASE:1 += 100
+ELSE
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 70
+ENDIF
+
+LOCAL:1 = 250
+LOCAL:2 = 800
+SOURCE:12 = 900
+SOURCE:22 = 500
+SOURCE:31 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES SOURCE:31 , 2.00
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1 , 2.00
+;절벽·빈유라면 수치심이 자극된다
+SIF TALENT:110 || TALENT:111
+	TIMES SOURCE:12 , 3.50
+
+;조교 대상이 리굴이라면 공포 상승
+SIF NO:TARGET == 24
+	TIMES LOCAL:2 , 3.00
+
+SOURCE:25 += LOCAL:2
+SOURCE:20 += LOCAL:1
+SOURCE:12 += LOCAL:1
+SOURCE:22 += LOCAL:1
+SOURCE:31 += LOCAL:1
+SOURCE:19 += LOCAL:1
+SOURCE:17 += LOCAL:1
+SOURCE:18 += LOCAL:1
+
+;줄의 착탈
+TEQUIP:40 = 6
+TEQUIP:41 = 2
+TFLAG:142 = 100
+
+TCVAR:31 += 7
+
+RETURN 1
+
+;-------------------------------------------------
+;거미의 실로 긴박중
+;-------------------------------------------------
+@EQUIP_COM408
+PRINTL <거미줄 결박 중>
+
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 80
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 60
+ELSE
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 50
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 60
+ELSEIF ABL:21 == 1
+	LOCAL = 180
+ELSEIF ABL:21 == 2
+	LOCAL = 300
+ELSEIF ABL:21 == 3
+	LOCAL = 480
+ELSEIF ABL:21 == 4
+	LOCAL = 700
+ELSE
+	LOCAL = 850
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL , 2.00
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+SOURCE:20 += LOCAL
+SOURCE:19 += LOCAL
+SOURCE:12 += LOCAL
+SOURCE:22 += LOCAL
+SOURCE:31 += LOCAL
+SOURCE:17 += LOCAL
+SOURCE:18 += LOCAL
+SOURCE:25 += SOURCE:31
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+
+LOCAL:1 = 1 + RAND:10
+TFLAG:142 -= LOCAL:1
+
+SIF TFLAG:142 <= 0
+	CALL SPIDER_SILK_TEAR
+
+TCVAR:31 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM408
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 실을 토해내 %조사선택(CALLNAME:TARGET, "를")% 결박했다.
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 거미줄에 구속되어 꼼짝달싹 할 수 없게 되었다
+;리굴응
+IF NO:TARGET == 24
+	PRINTL .
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 거미줄에 묶이는 것에 강한 공포를 느껴 하얗게 질려버렸다
+;리굴응의 경우 수치심보다 전술의 공포심 우선으로
+ELSEIF TALENT:110 || TALENT:111
+	PRINTL .
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 가슴 만 노출시켜 묶인 모습에 수치심을 자극 받고 있는 것 같다
+ENDIF
+PRINTW ….
+
+;-------------------------------------------------
+;거미의 실의 파괴 처리
+;-------------------------------------------------
+@SPIDER_SILK_TEAR
+TEQUIP:40 = 0
+TEQUIP:41 = 0
+TFLAG:142 = 0
+FOR LOCAL, 0, 8
+	STAIN:LOCAL |= 1
+	STAIN:LOCAL |= 64
+NEXT
+PRINTFORML %조사선택(CALLNAME:TARGET, "가")% 몇 번이나 발버둥 치고 있는 동안에 거미줄이 끊어져 버렸다.
+PRINTFORML 거미밧줄의 단면에서 끈적한 액체가 배어 나와 %CALLNAME:TARGET%의 전신에 늘러 붙었다.

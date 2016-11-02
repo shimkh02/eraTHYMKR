@@ -1,0 +1,217 @@
+﻿;=============================================================================
+;국사 무쌍의 약목욕탕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE371
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:371 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 2048) == 0
+	RETURN 0
+;조교 대상か조수가 一度も国士無双の薬風呂に入ったことが無い場合, 
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && ( (CFLAG:23 & 16) == 0 || (CFLAG:ASSI:23 & 16) == 0 )
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 13
+	RETURN 1
+;主人か助手のどちらかが調合知識을 갖고 있지 않으면 불가
+IF TALENT:MASTER:55 == 0
+	IF ASSI >= 0
+		SIF TALENT:ASSI:55 == 0
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+ENDIF
+;薬毒耐性だとダメ
+SIF TALENT:44
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이中じゃ無いとダメ
+SIF TEQUIP:53 != 1
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 13
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;도핑 수채 코로 버스
+;잠기거나 마시거나 하면(자) 공격력(조교력)이나 방어력(가이드)이 일시적으로 오릅니다
+@COM371
+PRINTL 국사무쌍의약 욕탕
+TSTR:0 = 국사무쌍의약 욕탕
+CALL TRAIN_MESSAGE_COM371
+
+DOWNBASE:0 += 80
+DOWNBASE:1 += 200
+
+IF TEQUIP:55 == 13
+	TEQUIP:55 = 0
+	RETURN 1
+ENDIF
+
+SOURCE:18 = 250
+SOURCE:19 = 1000
+SOURCE:24 = 150
+SOURCE:26 = 250
+SOURCE:31 = 2500
+
+TEQUIP:55 = 13
+
+;약물 경험
+TCVAR:40 += 3
+
+RETURN 1
+
+;--------------------------------------------------
+;수채 코로 도핑중
+;--------------------------------------------------
+@EQUIP_COM371
+IF TALENT:120 == 0
+	PRINTL <소녀 야고코로쨩 도핑 중>
+ELSE
+	PRINTL <신사 야고코로 씨 도핑 중>
+ENDIF
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 50
+
+TFLAG:160 += 1
+SOURCE:19 += 10 * TFLAG:160
+SOURCE:18 += 15 * TFLAG:160
+SOURCE:24 += 50 * TFLAG:160
+SOURCE:26 += 75 * TFLAG:160
+SOURCE:31 += 25 * TFLAG:160
+
+;약물 경험
+TCVAR:40 += 1
+
+SIF TFLAG:160 >= 30
+	CALL DOPING8556_BURST_SLAVE
+
+RETURN 1
+
+;--------------------------------------------------
+;수채 코로 폭발(노예)
+;--------------------------------------------------
+;폭발의 아레
+;내용은 약효과리셋, 체력 감소나 고통 증가 등
+@DOPING8556_BURST_SLAVE
+DOWNBASE:0 += 50
+DOWNBASE:1 += 100
+
+SOURCE:20 += 5000
+SOURCE:24 += 5000
+SOURCE:31 += 5000
+
+PRINTFORMW <약이 너무 강했는지 %조사선택(CALLNAME:TARGET, "는")% 폭발해 버렸다>
+IF (CFLAG:23 & 16) == 0
+	TCVAR:50 += 1
+	CFLAG:23 |= 16
+ENDIF
+
+TFLAG:160 = 0
+
+;--------------------------------------------------
+;수채 코로 폭발(조수)
+;--------------------------------------------------
+@DOPING8556_BURST_ASSI
+DOWNBASE:ASSI:0 += 50
+
+JUEL:ASSI:12 += 50
+JUEL:ASSI:13 += 50
+JUEL:ASSI:16 += 100
+JUEL:ASSI:17 += 50
+JUEL:ASSI:100 += 75
+
+PRINTFORMW <약이 너무 강했는지 %조사선택(CALLNAME:ASSI, "는")% 폭발해 버렸다>
+PRINTL 순종의 구슬＋50 
+PRINTL 욕정의 구슬＋50 
+PRINTL 고통의 구슬＋100 
+PRINTL 공포의 구슬＋50 
+PRINTL 부정의 구슬＋75 
+
+IF (CFLAG:ASSI:23 & 16) == 0
+	TCVAR:ASSI:50 += 1
+	CFLAG:ASSI:23 |= 16
+ENDIF
+WAIT
+TFLAG:162 = 0
+
+;--------------------------------------------------
+;수채 코로 폭발(주인)
+;--------------------------------------------------
+@DOPING8556_BURST_MASTER
+BASE:MASTER:0 = MAX(BASE:MASTER:0 - 100, 10)
+
+PRINTFORMW <약이 너무 강했는지 %조사선택(CALLNAME:MASTER, "는")% 폭발해 버렸다>
+TFLAG:161 = 0
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM371
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 13
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 정체를 알 수 없는 액체가 들어간 욕조로부터 꺼냈다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 정체를 알 수 없는 액체가 들어간 욕조에 잠기게 했다.
+ENDIF

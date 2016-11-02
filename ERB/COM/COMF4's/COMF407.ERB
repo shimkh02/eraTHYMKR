@@ -1,0 +1,127 @@
+﻿;=============================================================================
+;가시나무 채찍
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE407
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:407 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 유카가 아니면 불가
+SIF NO:PLAYER != 34
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;鞭を参考に作成. ベースは鞭より弱いが조교자의 サドっ気やサド、ドＳの有無で性能は激変
+;ただし消耗はかなり大きい. サド、ドＳは重複あり
+;鞭同様、実際には苦痛があるためもっと体力気力をもっていかれる
+@COM407
+PRINTL 가시나무 채찍
+TSTR:0 = 덩굴채찍
+CALL TRAIN_MESSAGE_COM407
+
+DOWNBASE:0 += 200
+DOWNBASE:1 += 150
+
+SOURCE:31 = 1000
+
+;PALAM:苦痛をみる
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 1000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 1200
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 1500
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 1900
+ELSEIF PALAM:16 < PALAMLV:5
+	SOURCE:20 = 2400
+ELSE
+	SOURCE:20 = 3000
+ENDIF
+
+;プレイヤーのABL:새드끼를 본다
+IF ABL:PLAYER:20 == 0
+	TIMES SOURCE:20 , 1.00
+ELSEIF ABL:PLAYER:20 == 1
+	TIMES SOURCE:20 , 1.20
+ELSEIF ABL:PLAYER:20 == 2
+	SOURCE:23 = 80
+	TIMES SOURCE:20 , 1.40
+ELSEIF ABL:PLAYER:20 == 3
+	SOURCE:23 = 200
+	TIMES SOURCE:20 , 1.60
+ELSEIF ABL:PLAYER:20 == 4
+	SOURCE:23 = 600
+	TIMES SOURCE:20 , 1.80
+ELSE
+	SOURCE:23 = 1000
+	TIMES SOURCE:20 , 2.00
+ENDIF
+
+;プレイヤーがサド
+SIF TALENT:PLAYER:81
+	TIMES SOURCE:20 , 1.20
+;プレイヤーがドＳ
+SIF TALENT:PLAYER:177
+	TIMES SOURCE:20 , 1.20
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+;ＳＭ教育フラグ
+SIF ASSIPLAY
+	TFLAG:55 = 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM407
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;조교자가 サドがドＳ
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 가시나무로 만든 채찍을 크게 휘두르며, 잔학한 미소를 지으며 마음껏 찔러대기 시작했다.
+	PRINTFORML 가시나무의 가시가 %CALLNAME:TARGET%의 피부를 무참히 할퀴고, 빨간 줄이 무수하게 새겨져 갔다.
+	PRINTFORMW 빨간 줄이 늘어날 때 마다 %CALLNAME:PLAYER%의 잔학한 미소가 더욱 더 빛을 더해갔다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 가시나무로 만든 채찍을 크게 휘두르며, 잔학한 미소를 지으며 마음껏 찔러대기 시작했다.
+	PRINTFORMW 가시나무의 가시가 %CALLNAME:TARGET%의 피부를 무참히 할퀴고, 빨간 줄이 무수하게 새겨져 갔다.
+ENDIF

@@ -1,0 +1,162 @@
+﻿;=============================================================================
+;밖에서 보낸다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE346
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:346 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;主人でないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;野外調教커맨드확장が有効な時はダメ(テキストとの整合性が取れないので)
+;SIF FLAG:15 & 256
+;	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외 플레이 중이 아니면 불가
+;SIF TEQUIP:52 == 0
+;	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM346
+PRINTL 밖에서 보낸다
+TSTR:0 = 밖에서 보낸다
+CALL TRAIN_MESSAGE_COM346
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 30
+
+SOURCE:31 = 100
+SOURCE:12 = 120
+
+;봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:11 = 10
+ELSEIF ABL:13 == 1
+	SOURCE:11 = 30
+ELSEIF ABL:13 == 2
+	SOURCE:11 = 80
+ELSEIF ABL:13 == 3
+	SOURCE:11 = 150
+ELSEIF ABL:13 == 4
+	SOURCE:11 = 230
+ELSE
+	SOURCE:11 = 200 + (ABL:13 * 20)
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:12 , 0.80
+	SOURCE:19 = 10
+	SOURCE:18 = 10
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:12 , 1.00
+	SOURCE:19 = 40
+	SOURCE:18 = 60
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:11 , 1.30
+	TIMES SOURCE:12 , 1.20
+	SOURCE:19 = 80
+	SOURCE:18 = 120
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:12 , 1.40
+	SOURCE:19 = 140
+	SOURCE:18 = 240
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:11 , 1.70
+	TIMES SOURCE:12 , 1.50
+	SOURCE:19 = 220
+	SOURCE:18 = 360
+ELSE
+	SOURCE:11 = SOURCE:11 * (ABL:21 * 15 + 125) / 100
+	SOURCE:12 = SOURCE:12 * (ABL:21 * 10 + 120) / 100
+	SOURCE:19 = 100 + (ABL:21 * 20)
+	SOURCE:18 = 150 + (ABL:21 * 35)
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;131011 버젼으로 딸조교 쪽으로 분기되었음. 일단 주석처리함.(다시 수정 필요)
+;--------------------------------------------------
+;@TRAIN_MESSAGE_COM346
+;CALL KOJO_TRAIN_MESSAGE_COM
+;SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+;	RETURN 0
+;
+;PRINTL
+;PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+;IF RAND:4 == 0
+;	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 경치가 좋은 장소에 데려갔다….
+;	IF TALENT:150 && RAND:3 >= 1
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%에게 안긴 채로, 멍하니 있다….
+;	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈앞의 경치에 마음이 사로잡힌 것 같다….
+;	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 아무래도 경치를 즐길 마음이 생기지 않는 것 같다….
+;	ELSE
+;		PRINTFORMW 지금의 %CALLNAME:TARGET%에게는 경치 따윈 눈에 들어오지 않는 것 같다….
+;	ENDIF
+;ELSEIF RAND:3 == 0 && TEQUIP:42 == 0
+;	PRINTFORML 도시락을 꺼냈다….
+;	IF TALENT:150 && RAND:3 >= 1
+;		PRINTFORMW %CALLNAME:TARGET%도 몰래 도시락을 만들어 와, 서로 도시락을 먹여주며 즐겁게 식사를 즐겼다.
+;	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+;		PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% '~아' 라고 말하자, %조사선택(CALLNAME:TARGET, "는")% 얼굴을 새빨갛게 물들이고 흠칫흠칫 입을 열었다….
+;	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 전혀 식욕이 없는 것 같다….
+;	ELSE
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 도시락을 뿌리쳤다….
+;	ENDIF
+;ELSEIF RAND:2 == 0
+;	PRINTFORML %조사선택(CALLNAME:TARGET, "와")% 산책을 했다….
+;	IF TALENT:150 && RAND:3 >= 1
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "와")% 팔짱을 끼고, 인기 있는 곳으로 향했다….
+;	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 알몸으로 외출하는 것에 많이 익숙해진 것 같다….
+;	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자연스럽게 왕래가 적은 곳으로 가려고 한다….
+;	ELSE
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 울 것 같은 얼굴로 저항했다….
+;	ENDIF
+;ELSE
+;	PRINTFORML %조사선택(CALLNAME:TARGET, "와")% 해바라기를 했다….
+;	IF TALENT:150 && RAND:3 >= 1
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 팔을 꼭 껴안고 있다….
+;	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 것 같았지만, 조금 지나니 편안한 표정으로 햇빛을 즐기고 있다….
+;	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 할 수 있는 한 몸을 숨기려 한다….
+;	ELSE
+;		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 어떻게든 틈을 찾아내 도망치려 하고 있다….
+;	ENDIF
+;ENDIF

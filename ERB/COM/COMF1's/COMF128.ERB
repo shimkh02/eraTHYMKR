@@ -1,0 +1,191 @@
+﻿;=============================================================================
+;귀두 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE128
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:128 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_PENIS(TARGET) == 0
+	RETURN 0
+;윤활이 높지 않으면 불가
+SIF PALAM:10 < 2000
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;射精止め中はダメ
+SIF TEQUIP:69
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;이 회한정의 사정 멈춤 효과＋강렬한 C자극이 있다
+@COM128
+PRINTL 귀두집중자극
+TSTR:0 = 귀두 고문
+CALL TRAIN_MESSAGE_COM128
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 120
+
+SOURCE:12 = 600
+SOURCE:14 = 600
+SOURCE:20 = 150
+SOURCE:22 = 250
+SOURCE:31 = 500
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 60
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 180
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 800
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1700
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2700
+ELSE
+	SOURCE:0 = 3800
+ENDIF
+
+;PALAM:C감각을 본다
+IF PALAM:0 < PALAMLV:1
+	SOURCE:20 += 100
+ELSEIF PALAM:0 < PALAMLV:2
+	SOURCE:20 += 110
+ELSEIF PALAM:0 < PALAMLV:3
+	SOURCE:20 += 120
+ELSEIF PALAM:0 < PALAMLV:4
+	SOURCE:20 += 130
+ELSE
+	SOURCE:20 += 140
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:18 = 100
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:18 = 110
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:18 = 120
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:18 = 130
+ELSE
+	SOURCE:18 = 140
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:18 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:18 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:18 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:18 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:18 , 2.00
+ELSE
+	TIMES SOURCE:18 , 3.00
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:15 , 0.50
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:15 , 0.80
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:15 , 1.00
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:15 , 1.50
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:15 , 2.50
+ELSE
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:15 , 4.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES SOURCE:18 , 2.00
+;조교자가 새드, 왕S, 새드끼 3이상
+SIF TALENT:PLAYER:81 || TALENT:PLAYER:177 || ABL:PLAYER:20 > 2
+	TIMES SOURCE:18 , 1.20
+
+;조교자의 손가락⇔노예의 P의 불결이 이동
+STAIN:PLAYER:2 |= STAIN:1
+STAIN:2 |= STAIN:PLAYER:1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 4
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 4
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM128
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;같은 조교자로 게다가, 전의 턴으로부터 계속하고 있는 경우
+IF PREVCOM == 128 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 계속해, %CALLNAME:TARGET%의 귀두를 집요하게 계속 자극했다….
+;조교자의 기교가 2 레벨 이하
+ELSEIF ABL:PLAYER:12 < 3
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 페니스를 한 손으로 잡았다.
+	PRINTFORML 그리고 다른 손을 사용해서 %CALLNAME:TARGET%의 페니스의 끝을
+	PRINTL 빙글빙글 세로로 가로로 자극했다.
+;조교자의 기교가 3 레벨 이상
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 페니스의 귀두를 거꾸로 잡아 회전시키며
+	PRINTL 새끼 손가락과 중지를 교묘하게 사용해, 요도구나 페니스의 측면, 밑부분 등에 자극을 계속 해주었다.
+ENDIF
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 귀두에 전해져 오는 강렬한 자극을 깊이 맛보고 있다….

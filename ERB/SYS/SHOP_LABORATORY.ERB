@@ -1,0 +1,2436 @@
+﻿;ご苦労だった…と言いたいところだが, 君等には消えてもらう.
+;実は今まで調教していた淫乱化名無し妖精の正体は
+;消息不明とされていた, あなただったのだ.
+;君等は何も知らずに主人を売り捌いてきたのだよ.
+;しかしそれは, 私の筋書き通りなのだ…
+;後は君等をcaved!すれば私の計画は完成する.
+;これから私の最強の特別촉수部隊をもって君等をもがすので
+;　よ　ろ　し　く
+;=============================================================================
+;촉수개발・배양시설 처리
+;=============================================================================
+;文字通りここでは촉수の開発や寄生촉수, 촉수幽閉等, 촉수進化拡張パッチにおける処理の大半が行われる.
+;基本的な流れとして, 調教で촉수寄生→SHOPから촉수開発・培養施設に飛ぶ→寄生촉수の摘出でエネルギーを溜めてあれこれやる, 
+;あるいは開発しつくしたなら奴隷に寄生している촉수の栄養を放出させて身体的な強化(弱体化?)を行うことも可能.
+;関数にもよるがA～Eの一文字変数を頻繁に使っている(必要エネルギー, 金, 選択キャラ, フラグ管理等)
+;-----------------------------------------------
+;촉수開発・培養施設のメニュー
+;-----------------------------------------------
+@TENTACLE_LABORATORY
+DRAWLINE
+PRINTFORML 현재의 촉수 에너지({BASE:MASTER:6}τ)
+PRINTFORML 현재 주인이 보유한 %PALAMNAME:198%의 구슬:{JUEL:MASTER:198, 7}
+DRAWLINE
+PRINTL 무엇을 하겠습니까?
+PRINTL  [0] 기생촉수
+SIF SPECIALTENTACLE_CHECK() < 19 || CHARATENTACLE_CHECK() < 17
+	PRINTL  [1] 촉수개발
+SIF BASE:MASTER:6 && FLAG:75 & 2048
+	PRINTL  [2] 촉수연금
+SIF FLAG:75 & 4096 && CHARANUM > 1 && TIME == 1
+	PRINTL  [3] 촉수에 절이기
+SIF FLAG:75 & 32768 && CHARANUM > 1
+	PRINTL  [4] 촉수유폐
+SIF CHARANUM > 1 && FLAG:75 & 131072
+	PRINTL  [5] 촉수양식
+IF ABL:MASTER:98 < 5
+	LOCALS:0 = ×
+	LOCALS:1 = ○
+	CALL ISABLUP198
+	PRINTFORML [98] 촉수사역  %LOCALS:RESULT%
+ENDIF
+SIF CHARANUM > 1
+	PRINTL [99] 촉수 산제물
+PRINTL [100] 그만둔다
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	CALL TENTACLE_LABORATORY_PARASITIC
+ELSEIF RESULT == 1 && (SPECIALTENTACLE_CHECK() < 19 || CHARATENTACLE_CHECK() < 17)
+	CALL TENTACLE_LABORATORY_EVOLUTION
+ELSEIF RESULT == 2 && FLAG:75 & 2048
+	CALL TENTACLE_LABORATORY_ALCHEMY
+ELSEIF RESULT == 3 && FLAG:75 & 4096 && CHARANUM > 1 && TIME == 1
+	CALL TENTACLE_LABORATORY_SPECIALROOM
+	IF RESULT == 1
+		BEGIN TURNEND
+		RETURN 1
+	ENDIF
+ELSEIF RESULT == 4 && FLAG:75 & 32768 && CHARANUM > 1
+	CALL TENTACLE_LABORATORY_PRIVATEROOM
+ELSEIF RESULT == 5 && FLAG:75 & 131072 && CHARANUM > 1
+	;他の機能が未実装なので直接촉수種付に飛ぶように
+	;CALL TENTACLE_LABORATORY_BREED
+	CALL SERVE_TENTACLE_LARVA
+	IF RESULT == 1
+		FLAG:0 = 1
+		BEGIN TURNEND
+		RETURN 1
+	ENDIF
+ELSEIF RESULT == 98 && ABL:MASTER:98 < 5
+	CALL ABLUP198
+ELSEIF RESULT == 99 && CHARANUM > 1
+	CALL TENTACLE_LABORATORY_SACRIFICE
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;-----------------------------------------------
+;寄生촉수に関する扱い
+;-----------------------------------------------
+;体質変化のみ処理が別種なので関数@TENTACLE_LABORATORY_CONSTITUTIONに移動
+;ここで行った体力・気力底上げ処理は調教による体力気力累積上昇分にカウントされない
+;(普通の成長とは別次元という解釈のため)
+@TENTACLE_LABORATORY_PARASITIC
+VARSET LOCAL, 0
+LOCALS:0 = 촉수적출
+LOCALS:1 = 체력강화
+LOCALS:2 = 기력강화
+LOCALS:99 = 촉수처분
+
+DRAWLINE
+PRINTFORML 현재의 촉수 에너지 ({BASE:MASTER:6}τ)
+PRINTL 무엇을 하겠습니까?
+DRAWLINE
+PRINTL  [0] 촉수적출
+SIF FLAG:75 & 1024
+	PRINTL  [ 1] 체력강화
+SIF FLAG:75 & 1024
+	PRINTL  [ 2] 기력강화
+SIF FLAG:75 & 1024
+	PRINTL  [ 3] 체질강화
+PRINTL  [99] 촉수를 처분한다
+PRINTL [100] 돌아가기
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 0
+	LOCAL = 0
+ELSEIF RESULT == 1 && FLAG:75 & 1024
+	LOCAL = 1
+ELSEIF RESULT == 2 && FLAG:75 & 1024
+	LOCAL = 2
+ELSEIF RESULT == 3 && FLAG:75 & 1024
+	LOCAL = 3
+ELSEIF RESULT == 99
+	LOCAL = 99
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP_0
+ENDIF
+$INPUT_LOOP_1
+;表示させるキャラを抽出（LOCAL:2に人数）
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	SIF COUNT == 0
+		CONTINUE
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	SIF TALENT:COUNT:146 == 0
+		CONTINUE
+	SIF (LOCAL == 1 || LOCAL == 2 || LOCAL == 3) && BASE:COUNT:6 == 0
+		CONTINUE
+	SIF LOCAL == 1 && MAXBASE:COUNT:0 >= 5000
+		CONTINUE
+	SIF LOCAL == 2 && MAXBASE:COUNT:1 >= 5000
+		CONTINUE
+	SIF LOCAL == 3 && TALENT:COUNT:162
+		CONTINUE
+	SIF NO:COUNT == 401 && (FLAG:570 & 48) == 0
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+	SIF (LOCAL:2%20) == 1 && LOCAL:2 > 20
+		LOCAL:1 += 1
+REND
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML %LOCALS:LOCAL%를 표시합니다.
+PRINTFORML 누구를 대상으로 하겠습니까? ＜page.{LOCAL:3 + 1}＞
+DRAWLINE
+CALL PARASITIC_LIST_CHARA, LOCAL:3
+DRAWLINE
+PRINTFORMLC \@(LOCAL:3 <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL:3 >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP_2
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL:3 > 0
+	LOCAL:3 -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL:3 < LOCAL:1
+	LOCAL:3 += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_2
+ENDIF
+
+LOCAL:1 = TARGET
+TARGET = RESULT
+PRINTFORM %CALLNAME:TARGET%에 
+IF LOCAL == 0
+	PRINTL 기생 중인 촉수를 적출해 촉수를 성장시키는 에너지로 변환합니다.
+ELSEIF LOCAL == 1
+	PRINTL 기생 중인 촉수의 영양을 모두 방출시켜 체력 최대치를 상승시킵니다.
+ELSEIF LOCAL == 2
+	PRINTL 기생 중인 촉수의 영양을 모두 방출시켜 기력 최대치를 상승시킵니다.
+ELSEIF LOCAL == 3
+	PRINTL 기생 중인 촉수에서 특수한 호르몬을 분비시켜 체질을 강제적으로 변화시킵니다.
+	CALL TENTACLE_LABORATORY_CONSTITUTION
+	TARGET = LOCAL:1
+	RESTART
+ELSEIF LOCAL == 99
+	PRINTL 기생 중인 촉수를 처분합니다.
+ENDIF
+PRINTL 실행하겠습니까?
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+$INPUT_LOOP_3
+INPUT
+IF RESULT == 1
+	TARGET = LOCAL:1
+	GOTO INPUT_LOOP_1
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP_3
+ENDIF
+
+PRINTFORM %CALLNAME:TARGET%에 
+IF LOCAL == 0
+	LOCAL:2 = BASE:6
+	SIF BASE:6 == MAXBASE:6
+		TIMES LOCAL:2 , 1.50
+	PRINTL 기생 중인 촉수를 적출하여 에너지로 변환했습니다.
+	PRINTFORML 촉수 에너지＋{LOCAL:2}τ
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:146%]을 잃었다.
+	BASE:MASTER:6 += LOCAL:2
+	BASE:6 = 0
+	TALENT:146 = 0
+ELSEIF LOCAL == 1 || LOCAL == 2
+	PRINTL 기생 중이던 촉수는 비축해놓은 영양분을 모두 방출했다.
+	LOCAL:2 = BASE:6
+	IF LOCAL:2 < 5
+		LOCAL:3 = 0
+	ELSEIF LOCAL:2 < 10
+		LOCAL:3 = 1
+	ELSEIF LOCAL:2 < 25
+		LOCAL:3 = 2
+	ELSEIF LOCAL:2 < 50
+		LOCAL:3 = 4
+	ELSEIF LOCAL:2 < 100
+		LOCAL:3 = 10
+	ELSEIF LOCAL:2 < 250
+		LOCAL:3 = 20
+	ELSEIF LOCAL:2 < 500
+		LOCAL:3 = 50
+	ELSEIF LOCAL:2 < 1000
+		LOCAL:3 = 75
+	ELSE
+		LOCAL:3 = 100
+	ENDIF
+	;촉수寄生LVが溜められる値の最大値まであった場合, 成長値は増加
+	SIF BASE:6 == MAXBASE:6
+		TIMES LOCAL:3 , 1.50
+	;ベリージュエルを装着していると成長値は減少
+	SIF CFLAG:42 & 4
+		TIMES LOCAL:3 , 0.75
+	IF LOCAL:3 > 0
+		IF LOCAL == 1
+			LOCAL:3 = MAX(LOCAL:3 / 2, 1)
+			MAXBASE:0 += LOCAL:3
+			BASE:0 += LOCAL:3
+			PRINTFORML 영양분이 %CALLNAME:TARGET%의 체내에 돌며 신체를 더 튼튼하게 단련시켰다.
+			PRINTFORMW %CALLNAME:TARGET%：체력증가＋{LOCAL:3}
+		ELSEIF LOCAL == 2
+			LOCAL:3 = MAX(LOCAL:3 / 5, 1)
+			MAXBASE:1 += LOCAL:3
+			BASE:1 += LOCAL:3
+			PRINTFORML 영양분이 %CALLNAME:TARGET%의 체내를 돌며 마음을 더 강인하게 단련시켰다.
+			PRINTFORMW %CALLNAME:TARGET%：기력증가＋{LOCAL:3}
+		ENDIF
+	ELSE
+		PRINTFORMW 유감스럽게도 %조사처리(CALLNAME:TARGET,"를")% 성장시키기엔 영양이 다소 부족한 듯하다…….
+	ENDIF
+	BASE:6 = 0
+ELSEIF LOCAL == 99
+	PRINTL 기생 중인 촉수를 처분합니다.
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:146%]을 잃었다.
+	BASE:6 = 0
+	TALENT:146 = 0
+ENDIF
+DRAWLINE
+TARGET = LOCAL:1
+RESTART
+
+;-----------------------------------------------
+;寄生촉수キャラ選択補助処理
+;-----------------------------------------------
+@PARASITIC_LIST_CHARA, ARG
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+
+	;主人公と助手対象と調教中キャラは排除
+	SIF LOCAL == 0
+		CONTINUE
+	SIF CFLAG:LOCAL:4
+		CONTINUE
+	SIF MARK:LOCAL:98 == 0
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT ●
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	PRINTFORM  기생촉수성장 LV({BASE:LOCAL:6, 4}/{MAXBASE:LOCAL:6, 4})
+	SIF TALENT:LOCAL:145
+		PRINT [회란]
+	PRINTL 
+REND
+
+;-----------------------------------------------
+;体質変化にかかわる処理
+;-----------------------------------------------
+;Dは体質変化に必要な寄生촉수成長LV
+;Eは不死刻印取得に必要な条件, Fはそのために必要な촉수幼生
+@TENTACLE_LABORATORY_CONSTITUTION
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET%의 체질을 어떻게 변화시키겠습니까? (기생촉수성장 LV:{BASE:6})
+DRAWLINE
+LOCAL = 0
+SIF TALENT:113 == 0
+	LOCAL |= 1
+SIF TALENT:110 == 0
+	LOCAL |= 2
+LOCAL:1 = (ABL:MASTER:98 >= 3) ? TENTACLE_SEAL_OF_IMMORTAL() # 0
+IF TALENT:120 == 0 && TALENT:44 == 0
+	SIF TALENT:134 == 0
+		PRINTFORML  [ 0] 모유체질로 바꾼다	(필요 기생촉수성장LV:1200)
+	SIF TALENT:134
+		PRINTFORML  [ 1] 모유체질을 개선		(필요 기생촉수성장LV:1500)
+	SIF LOCAL & 1
+		PRINTFORML  [ 2] 가슴 사이즈를 크게	(필요 기생촉수성장LV: 200)
+	SIF LOCAL & 2
+		PRINTFORML  [ 3] 가슴 사이즈를 작게	(필요 기생촉수성장LV: 200)
+	SIF TALENT:42 == 0
+		PRINTFORML  [ 4] 애액분비량을 증강	(필요 기생촉수성장LV:1000)
+	SIF TALENT:43 == 0
+		PRINTFORML  [ 5] 애액분비량을 저하	(필요 기생촉수성장LV:1000)
+	SIF TALENT:121 == 0
+		PRINTFORML  [ 6] 페니스를 생성한다	(필요 기생촉수성장LV: 500)
+	SIF TALENT:121 && TALENT:44 == 0
+		PRINTFORML  [ 7] 페니스를 소거한다	(필요 기생촉수성장LV: 100)
+ENDIF
+IF (TALENT:120 || TALENT:121) && TALENT:44 == 0
+	SIF TALENT:132 == 0
+		PRINTFORML  [ 8] 조루 체질로 만든다	(필요 기생촉수성장LV: 750)
+	SIF TALENT:133 == 0
+		PRINTFORML  [ 9] 지루 체질로 만든다	(필요 기생촉수성장LV: 750)
+ENDIF
+SIF TALENT:44 == 0 && TALENT:116 == 0
+	PRINTFORML  [10] 동물귀를 단다			(필요 기생촉수성장LV:2000)
+SIF TALENT:44
+	PRINTFORML  [11] 약물내성 제거			(필요 기생촉수성장LV:5000＋α)
+SIF TALENT:44 == 0 && CFLAG:41
+	PRINTFORML  [12] 촉수 씨앗 제거			(필요 기생촉수성장LV: 500)
+IF LOCAL:1 == 3
+	PRINTFORML  [99] 불사각인 LV3 취득		(필요 기생촉수성장LV:7000＋α)
+ELSEIF LOCAL:1 == 2
+	PRINTFORML  [99] 불사각인LV2취득			(필요 기생촉수성장LV:5000＋α)
+ELSEIF LOCAL:1 == 1
+	PRINTFORML  [99] 불사각인LV1취득			(필요 기생촉수성장LV:3000＋α)
+ENDIF
+PRINTL [100] 돌아가기
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && TALENT:120 == 0 && TALENT:44 == 0 && TALENT:134 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"를")% 모유체질로 만듭니다.
+	LOCAL:2 = 1200
+ELSEIF RESULT == 1 && TALENT:120 == 0 && TALENT:44 == 0 && TALENT:134
+	PRINTFORML %CALLNAME:TARGET%의 모유체질을 낫게 합니다.
+	LOCAL:2 = 1500
+ELSEIF RESULT == 2 && TALENT:120 == 0 && TALENT:44 == 0 && LOCAL & 1
+	PRINTFORML %CALLNAME:TARGET%의 가슴 사이즈를 1랭크 크게 합니다.
+	LOCAL:2 = 200
+ELSEIF RESULT == 3 && TALENT:120 == 0 && TALENT:44 == 0 && LOCAL & 2
+	PRINTFORML %CALLNAME:TARGET%의 가슴 사이즈를 1랭크 작게 합니다.
+	LOCAL:2 = 200
+ELSEIF RESULT == 4 && TALENT:120 == 0 && TALENT:44 == 0 && TALENT:42 == 0
+	PRINTFORML %CALLNAME:TARGET%의 애액분비량을 증강시킵니다.
+	LOCAL:2 = 1000
+ELSEIF RESULT == 5 && TALENT:120 == 0 && TALENT:44 == 0 && TALENT:43 == 0
+	PRINTFORML %CALLNAME:TARGET%의 애액분비량을 저하시킵니다.
+	LOCAL:2 = 1000
+ELSEIF RESULT == 6 && TALENT:120 == 0 && TALENT:44 == 0 && TALENT:121 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"를")% 후타나리로 만듭니다.
+	LOCAL:2 = 500
+ELSEIF RESULT == 7 && TALENT:120 == 0 && TALENT:44 == 0 && TALENT:121
+	PRINTFORML %CALLNAME:TARGET%의 후타나리를 소거합니다.
+	LOCAL:2 = 100
+ELSEIF RESULT == 8 && TALENT:44 == 0 && (TALENT:120 || TALENT:121) && TALENT:132 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"를")% 조루 체질로 만듭니다.
+	LOCAL:2 = 750
+ELSEIF RESULT == 9 && TALENT:44 == 0 && (TALENT:120 || TALENT:121) && TALENT:133 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"를")% 지루 체질로 만듭니다.
+	LOCAL:2 = 750
+ELSEIF RESULT == 10 && TALENT:44 == 0 && TALENT:116 == 0
+	PRINTFORML %CALLNAME:TARGET%에게 동물귀가 돋게 합니다.
+	LOCAL:2 = 2000
+ELSEIF RESULT == 11 && TALENT:44
+	PRINTFORML %CALLNAME:TARGET%의 약물에 대한 내성을 저하시킵니다.
+	PRINTL 
+	PRINTFORML ※부작용으로 %CALLNAME:TARGET%의 [기생]・촉수중독・촉수경험을 모두 잃고, 회복능력도 저하됩니다.
+	PRINT 그래도 
+	LOCAL:2 = 5000
+ELSEIF RESULT == 12 && TALENT:44 == 0 && CFLAG:41
+	PRINTFORML %CALLNAME:TARGET%에게 심어뒀던 『씨앗』을 소거합니다.
+	PRINTL 
+	PRINTFORML ※부작용으로 %CALLNAME:TARGET%의 체력도 저하됩니다.
+	PRINT 그래도 
+	LOCAL:2 = 500
+ELSEIF RESULT == 99 && LOCAL:1 == 3
+	PRINTFORML %CALLNAME:TARGET%에게 불멸의 생명을 부여하여, %CALLNAME:MASTER%의 장난감으로서 봉사하게 합니다.
+	PRINTL 
+	PRINTFORML ※실행하기 위해선 %CALLNAME:TARGET%의 아이(촉수) 10마리와 100만 원이 별도로 필요합니다.
+	LOCAL:2 = 7000
+ELSEIF RESULT == 99 && LOCAL:1 == 2
+	PRINTFORML %CALLNAME:TARGET%에게 새겨진 각인의 힘을 강화하여 보다 죽기 어려운 몸으로 변화시킵니다.
+	PRINTL 
+	PRINTFORML ※실행하기 위해선 %CALLNAME:TARGET%의 아이(촉수) 5마리와 50만 원이 별도로 필요합니다.
+	LOCAL:2 = 5000
+ELSEIF RESULT == 99 && LOCAL:1 == 1
+	PRINTFORML %CALLNAME:TARGET%의 체내에 불사의 각인을 새겨넣어, 촉수에 의해 죽는 일이 없는 몸으로 바꿉니다.
+	PRINTL 
+	PRINTFORML ※실행하기 위해선 %CALLNAME:TARGET%의 아이(촉수) 1마리와 10만 원이 별도로 필요합니다.
+	LOCAL:2 = 3000
+ELSE
+	GOTO INPUT_LOOP_0
+ENDIF
+LOCAL:3 = RESULT
+PRINTL 실행하겠습니까?
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	RESTART
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP_1
+ENDIF
+IF BASE:6 < LOCAL:2
+	PRINTW 필요한 기생촉수성장 LV에 도달하지 못했습니다.
+	RESTART
+ELSEIF LOCAL:3 == 99 && LOCAL:1
+	CALL TENTACLE_GAIN_IMMORTAL, LOCAL:1, LOCAL:2
+ELSE
+	BASE:6 -= LOCAL:2
+	PRINTFORML %CALLNAME:TARGET%의 체내에 기생 중이던 촉수는 
+	PRINTW 그 동안 축적했었던 영양분을 사용해 특수한 호르몬을 분비하기 시작했다.
+ENDIF
+SELECTCASE LOCAL:3
+	CASE 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 모유가 나오게 되었다.
+		TALENT:134 = 1
+	CASE 1
+		PRINTFORMW %CALLNAME:TARGET%에게서 모유가 나오지 않게 되었다.
+		TALENT:134 = 0
+	CASE 2
+		IF TALENT:110
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 약간 부풀어 올랐다.
+		TALENT:110 = 0
+		TALENT:111 = 1
+	ELSEIF TALENT:111
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 커졌다.
+		TALENT:111 = 0
+	ELSEIF TALENT:112
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 몸에 어울리지 않을 만큼 커졌다.
+		TALENT:112 = 0
+		TALENT:113 = 1
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 아주 터질 것 같은 크기가 되었다.
+		TALENT:112 = 1
+		ENDIF
+	CASE 3
+		IF TALENT:113
+		PRINTFORMW %CALLNAME:TARGET%의 너무나도 풍만하던 가슴이 한 단계 줄어들었다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 약간이지만 아쉬운 표정을 지었다.
+		TALENT:113 = 0
+		TALENT:112 = 1
+	ELSEIF TALENT:112
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 남들만한 크기로 작아졌다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 다소 쇼크를 받은 듯하다.
+		TALENT:112 = 0
+	ELSEIF TALENT:111
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 극단적으로 줄어들었다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 아연해 하고 있다.
+		TALENT:111 = 0
+		TALENT:110 = 1
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%의 가슴이 작아졌다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 쇼크를 받은 것 같다.
+		TALENT:111 = 1
+		ENDIF
+	CASE 4
+		IF TALENT:43
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 성감대에 주어지는 자극의 감도가 보통으로 돌아왔다.
+		TALENT:43 = 0
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 성감대에 주어지는 자극의 감도가 굉장히 민감해졌다.
+		TALENT:42 = 1
+	ENDIF
+	CASE 5
+		IF TALENT:42
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 성감대에 주어지는 자극의 감도가 보통이 되었다.
+		TALENT:42 = 0
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 성감대에 주어지는 자극에 둔해졌다.
+		TALENT:43 = 1
+	ENDIF
+	CASE 6
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:121%]가 되었다.
+		TALENT:121 = 1
+		CALL CHANGE_FUTA_COMMON, TARGET
+	CASE 7
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:121%]가 아니게 되었다.
+		TALENT:121 = 0
+		CALL CHANGE_FUTA_COMMON, TARGET
+	CASE 8
+		IF TALENT:133
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:133%]를 잃었다.
+			TALENT:133 = 0
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:132%]가 되었다.
+			TALENT:132 = 1
+		ENDIF
+	CASE 9
+		IF TALENT:132
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:132%]를 잃었다.
+			TALENT:132 = 0
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:133%]가 되었다.
+			TALENT:133 = 1
+		ENDIF
+	CASE 10
+		PRINTFORMW %CALLNAME:TARGET%에게 [%TALENTNAME:116%]가 돋았다.
+		TALENT:116 = 1
+	CASE 11
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 독물・약물에 대한 저항력이 저하했다….
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:44%]을 잃었다.
+		PRINTFORML %CALLNAME:TARGET%의 몸은 촉수에 대한 적응 능력이 저하했다….
+		PRINTFORML %CALLNAME:TARGET%에게 기생 중이던 촉수는 힘이 다 해 소멸했다.
+		PRINTFORMW %CALLNAME:TARGET%의 [%EXPNAME:53%]과 [%ABLNAME:35%]은 0으로 돌아왔다.
+		IF TALENT:137
+			PRINTFORMW %CALLNAME:TARGET%의 회복능력이 저하했다.
+			TALENT:137 = 0
+		ELSEIF TALENT:138 == 0
+			PRINTFORMW %CALLNAME:TARGET%의 회복능력이 상당히 저하했다.
+			TALENT:138 = 1
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 피로가 한 번에 몰려왔다.
+			BASE:0 /= 10
+		ENDIF
+		TALENT:44 = 0
+		EXP:53 = 0
+		ABL:35 = 0
+		CFLAG:13 |= 4096
+	CASE 12
+		PRINTFORMW %CALLNAME:TARGET%에게 심어져 있던 『씨앗』은 소멸했다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 피로해졌다.
+		CFLAG:41 = 0
+		BASE:0 /= 2
+ENDSELECT
+PRINTL 
+BASE:0 = MAX(BASE:0, 1)
+DRAWLINE
+RESTART
+
+;-----------------------------------------------
+;촉수開発
+;-----------------------------------------------
+;追加された촉수커맨드の大多数はここで能力を獲得してからでないと実行できない
+;一文字変数の内, LOCAL:1は能力獲得に必要촉수エネルギー, LOCAL:2は必要な金額, 
+;LOCAL:3は何の能力を獲得するのかを判定し, FLAG:75(ビット演算)に加算するための数値.
+@TENTACLE_LABORATORY_EVOLUTION
+VARSET LOCAL, 0
+DRAWLINE
+PRINTL 현재 촉수의 능력:
+CALL SHOW_TENTACLE_ABL
+DRAWLINE
+PRINTFORML 현재의 촉수 에너지:{BASE:MASTER:6}τ　　소지금:{MONEY}원
+PRINTL 어떤 능력을 개발하겠습니까?
+PRINTL (덧붙여 주인의 촉수사역 Lv이 부족해 개발할 수 없는 촉수능력은 표시되지 않습니다)
+DRAWLINE
+TFLAG:0 = 0
+SIF (FLAG:75 & 1) == 0
+	PRINTL  [ 0] 채찍촉수　　　　　　　(100τ/200원)
+SIF (FLAG:75 & 2) == 0
+	PRINTL  [ 1] 바늘촉수　　　　　　　(150τ/350원)
+SIF (FLAG:75 & 4) == 0
+	PRINTL  [ 2] 방전촉수　　　　　　　(500τ/5000원)
+SIF (FLAG:75 & 8) == 0 && ABL:MASTER:98 >= 4
+	PRINTL  [ 3] 최면촉수　　　　　　　(2500τ/2만5000원)
+SIF (FLAG:75 & 16) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [ 4] 극세촉수　　　　　　　(1500τ/5만원)
+SIF (FLAG:75 & 32) == 0 && ABL:MASTER:98 >= 5
+	PRINTL  [ 5] 양분주입촉수　　　　　(3000τ/2만원)
+SIF (FLAG:75 & 64) == 0 && ABL:MASTER:98 >= 2
+	PRINTL  [ 6] 항균촉수　　　　　　　(1200τ/1만원)
+SIF (FLAG:75 & 128) == 0 && ABL:MASTER:98 >= 2
+	PRINTL  [ 7] 고야형 촉수　　　　　  (1800τ/2만원)
+SIF (FLAG:75 & 256) == 0
+	PRINTL  [ 8] 말미잘형 촉수　　　　 (2000τ/2만원)
+SIF (FLAG:75 & 512) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [ 9] 촉수원격정밀제어　　　(1200τ/1만2000원)
+SIF (FLAG:75 & 1024) == 0
+	PRINTL  [10] 특수호르몬분비　　　  (5000τ/5000원)
+SIF (FLAG:75 & 2048) == 0
+	PRINTL  [11] 촉수현자의 돌　　　　 (1만τ/5만원)
+SIF (FLAG:75 & 4096) == 0
+	PRINTL  [12] 촉수징벌용 촉수의 방　(25만τ/10만원)
+SIF (FLAG:75 & 8192) == 0
+	PRINTL  [13] 체내적응력 강화　　　 (4500τ/1300원)
+SIF (FLAG:75 & 16384) == 0
+	PRINTL  [14] 정액방출양 강화　　　 (2만τ/5000원)
+SIF (FLAG:75 & 32768) == 0
+	PRINTL  [15] 정자와 촉수의 방　　　(5만τ/30만원)
+SIF (FLAG:75 & 65536) == 0 && ABL:MASTER:98 >= 2
+	PRINTL  [16] 흡혈촉수　　　　　　　(1200τ/7000원)
+SIF (FLAG:75 & 131072) == 0
+	PRINTL  [17] 보육시설・분만대　　　(75000τ/15만원)
+SIF FLAG:97 & 1 && (FLAG:98 & 1) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [50] SATORI 촉수　　　　　(5만τ/25만원)
+SIF FLAG:97 & 2 && (FLAG:98 & 2) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [51] NITORI 촉수　　　　　(5만τ/25만원)
+SIF FLAG:97 & 4 && (FLAG:98 & 4) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [52] YUYUKO 촉수　　　　 (5만τ/25만원)
+SIF FLAG:97 & 8 && (FLAG:98 & 8) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [53] SUIKA 촉수　　　　　 (5만τ/25만원)
+SIF FLAG:97 & 16 && (FLAG:98 & 16) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [54] ALICE 촉수　　　　　  (5만τ/25만원)
+SIF FLAG:97 & 32 && (FLAG:98 & 32) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [55] HINA 촉수　　　　　　(5만τ/25만원)
+SIF FLAG:97 & 64 && (FLAG:98 & 64) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [56] AYA 촉수　　　　　　  (5만τ/25만원)
+SIF FLAG:97 & 128 && (FLAG:98 & 128) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [57] PARSEE 촉수　　　　　(5만τ/25만원)
+SIF FLAG:97 & 256 && (FLAG:98 & 256) == 0 && ABL:MASTER:98 >= 4
+	PRINTL  [58] MEDICINE 촉수　　　　(5만τ/25만원)
+SIF FLAG:97 & 512 && (FLAG:98 & 512) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [59] PATCHOULI 촉수　　　 (5만τ/25만원)
+SIF FLAG:97 & 1024 && (FLAG:98 & 1024) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [60] BIG-FAIRY 촉수　　　　(5만τ/25만원)
+SIF FLAG:97 & 2048 && (FLAG:98 & 2048) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [61] CIRNO 촉수　　　　　  (5만τ/25만원)
+SIF FLAG:97 & 4096 && (FLAG:98 & 4096) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [62] NAZRIN 촉수　　　　　(5만τ/25만원)
+SIF FLAG:97 & 8192 && (FLAG:98 & 8192) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [63] EIKI 촉수　　　　　　　(5만τ/25만원)
+SIF FLAG:97 & 16384 && (FLAG:98 & 16384) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [64] SHIZUHA 촉수　　　　 (5만τ/25만원)
+SIF FLAG:97 & 32768 && (FLAG:98 & 32768) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [65] MINORIKO 촉수　　　  (5만τ/25만원)
+SIF FLAG:97 & 65536 && (FLAG:98 & 65536) == 0 && ABL:MASTER:98 >= 3
+	PRINTL  [66] SUWAKO 촉수　　　　  (5만τ/25만원)
+IF DITEMTYPE:59:999 == 0 && JUEL:MASTER:198 > 100000 && FLAG:4003 && FLAG:4004 && ABL:MASTER:98 >= 5
+	TFLAG:0 = CHARATENTACLE_CHECK()
+	SIF TFLAG:0 >= 10
+		PRINTL  [99] 현신촉수　　　　　　　(100만τ/100만원)
+ENDIF
+PRINTL [100] 그만둔다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && (FLAG:75 & 1) == 0
+	LOCAL:1 = 100
+	LOCAL:2 = 200
+	LOCAL:3 = 1
+ELSEIF RESULT == 1 && (FLAG:75 & 2) == 0
+	LOCAL:1 = 150
+	LOCAL:2 = 350
+	LOCAL:3 = 2
+ELSEIF RESULT == 2 && (FLAG:75 & 4) == 0
+	LOCAL:1 = 500
+	LOCAL:2 = 5000
+	LOCAL:3 = 4
+ELSEIF RESULT == 3 && (FLAG:75 & 8) == 0 && ABL:MASTER:98 >= 4
+	LOCAL:1 = 2500
+	LOCAL:2 = 25000
+	LOCAL:3 = 8
+ELSEIF RESULT == 4 && (FLAG:75 & 16) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 1500
+	LOCAL:2 = 50000
+	LOCAL:3 = 16
+ELSEIF RESULT == 5 && (FLAG:75 & 32) == 0 && ABL:MASTER:98 >= 5
+	LOCAL:1 = 3000
+	LOCAL:2 = 20000
+	LOCAL:3 = 32
+ELSEIF RESULT == 6 && (FLAG:75 & 64) == 0 && ABL:MASTER:98 >= 2
+	LOCAL:1 = 1200
+	LOCAL:2 = 10000
+	LOCAL:3 = 64
+ELSEIF RESULT == 7 && (FLAG:75 & 128) == 0 && ABL:MASTER:98 >= 2
+	LOCAL:1 = 1800
+	LOCAL:2 = 20000
+	LOCAL:3 = 128
+ELSEIF RESULT == 8 && (FLAG:75 & 256) == 0
+	LOCAL:1 = 2000
+	LOCAL:2 = 20000
+	LOCAL:3 = 256
+ELSEIF RESULT == 9 && (FLAG:75 & 512) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 1200
+	LOCAL:2 = 12000
+	LOCAL:3 = 512
+ELSEIF RESULT == 10 && (FLAG:75 & 1024) == 0
+	LOCAL:1 = 5000
+	LOCAL:2 = 5000
+	LOCAL:3 = 1024
+ELSEIF RESULT == 11 && (FLAG:75 & 2048) == 0
+	LOCAL:1 = 10000
+	LOCAL:2 = 50000
+	LOCAL:3 = 2048
+ELSEIF RESULT == 12 && (FLAG:75 & 4096) == 0
+	LOCAL:1 = 250000
+	LOCAL:2 = 100000
+	LOCAL:3 = 4096
+ELSEIF RESULT == 13 && (FLAG:75 & 8192) == 0
+	LOCAL:1 = 4500
+	LOCAL:2 = 1300
+	LOCAL:3 = 8192
+ELSEIF RESULT == 14 && (FLAG:75 & 16384) == 0
+	LOCAL:1 = 20000
+	LOCAL:2 = 5000
+	LOCAL:3 = 16384
+ELSEIF RESULT == 15 && (FLAG:75 & 32768) == 0
+	LOCAL:1 = 50000
+	LOCAL:2 = 300000
+	LOCAL:3 = 32768
+ELSEIF RESULT == 16 && (FLAG:75 & 65536) == 0 && ABL:MASTER:98 >= 2
+	LOCAL:1 = 1200
+	LOCAL:2 = 7000
+	LOCAL:3 = 65536
+ELSEIF RESULT == 17 && (FLAG:75 & 131072) == 0
+	LOCAL:1 = 75000
+	LOCAL:2 = 150000
+	LOCAL:3 = 131072
+ELSEIF RESULT == 50 && FLAG:97 & 1 && (FLAG:98 & 1) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 1
+ELSEIF RESULT == 51 && FLAG:97 & 2 && (FLAG:98 & 2) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 2
+ELSEIF RESULT == 52 && FLAG:97 & 4 && (FLAG:98 & 4) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 4
+ELSEIF RESULT == 53 && FLAG:97 & 8 && (FLAG:98 & 8) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 8
+ELSEIF RESULT == 54 && FLAG:97 & 16 && (FLAG:98 & 16) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 16
+ELSEIF RESULT == 55 && FLAG:97 & 32 && (FLAG:98 & 32) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 32
+ELSEIF RESULT == 56 && FLAG:97 & 64 && (FLAG:98 & 64) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 64
+ELSEIF RESULT == 57 && FLAG:97 & 128 && (FLAG:98 & 128) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 128
+ELSEIF RESULT == 58 && FLAG:97 & 256 && (FLAG:98 & 256) == 0 && ABL:MASTER:98 >= 4
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 256
+ELSEIF RESULT == 59 && FLAG:97 & 512 && (FLAG:98 & 512) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 512
+ELSEIF RESULT == 60 && FLAG:97 & 1024 && (FLAG:98 & 1024) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 1024
+ELSEIF RESULT == 61 && FLAG:97 & 2048 && (FLAG:98 & 2048) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 2048
+ELSEIF RESULT == 62 && FLAG:97 & 4096 && (FLAG:98 & 4096) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 4096
+ELSEIF RESULT == 63 && FLAG:97 & 8192 && (FLAG:98 & 8192) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 8192
+ELSEIF RESULT == 64 && FLAG:97 & 16384 && (FLAG:98 & 16384) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 16384
+ELSEIF RESULT == 65 && FLAG:97 & 32768 && (FLAG:98 & 32768) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 32768
+ELSEIF RESULT == 66 && FLAG:97 & 65536 && (FLAG:98 & 65536) == 0 && ABL:MASTER:98 >= 3
+	LOCAL:1 = 50000
+	LOCAL:2 = 250000
+	LOCAL:3 = 65536
+ELSEIF RESULT == 99 && DITEMTYPE:59:999 == 0 && JUEL:MASTER:198 > 100000 && FLAG:4003 && FLAG:4004 && TFLAG:0 >= 10 && ABL:MASTER:98 >= 5
+	LOCAL:1 = 1000000
+	LOCAL:2 = 1000000
+	LOCAL:3 = 999
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL = RESULT
+SIF TALENT:MASTER:998
+	LOCAL:1 = 0
+IF BASE:MASTER:6 < LOCAL:1 || MONEY < LOCAL:2
+	IF BASE:MASTER:6 < LOCAL:1 && MONEY < LOCAL:2
+		PRINT 필요한 에너지와 자금이 
+	ELSEIF BASE:MASTER:6 < LOCAL:1
+		PRINT 필요한 에너지가 
+	ELSEIF MONEY < LOCAL:2
+		PRINT 필요한 자금이 
+	ENDIF
+	PRINTW 부족합니다.
+	RESTART
+ENDIF
+BASE:MASTER:6 -= LOCAL:1
+MONEY -= LOCAL:2
+;現し身촉수
+IF LOCAL == 99
+	DITEMTYPE:59:(LOCAL:3) = 1
+;キャラ촉수用
+ELSEIF LOCAL >= 50
+	FLAG:98 |= LOCAL:3
+;通常の촉수能力用
+ELSE
+	FLAG:75 |= LOCAL:3
+ENDIF
+SELECTCASE LOCAL
+	CASE 0
+		PRINTL 촉수는 [채찍촉수]를 얻었다.
+		PRINTW 커맨드＜촉수채찍질＞을 쓸 수 있게 되었습니다.
+	CASE 1
+		PRINTL 촉수는 [바늘촉수]를 얻었다.
+		PRINTW 커맨드＜촉수바늘＞을 쓸 수 있게 되었습니다.
+	CASE 2
+		PRINTL 촉수는 [방전촉수]를 얻었다.
+		PRINTW 커맨드＜촉수방전＞을 쓸 수 있게 되었습니다.
+	CASE 3
+		PRINTL 촉수는 [최면촉수]를 얻었다.
+	PRINTW 커맨드＜촉수최면＞을 쓸 수 있게 되었습니다.
+	CASE 4
+		PRINTL 촉수는 [극세촉수]를 얻었다.
+	PRINTW 커맨드＜촉수유선삽입＞을 쓸 수 있게 되었습니다.
+	CASE 5
+		PRINTL 촉수는 [양분주입촉수]를 얻었다.
+	PRINTW 커맨드＜촉수강제회복＞을 쓸 수 있게 되었습니다.
+	CASE 6
+		PRINTL 촉수는 [항균촉수]를 얻었다.
+	PRINTW 촉수가 요도 조교 관련 커맨드를 쓸 수 있게 되었습니다.
+	CASE 7
+		PRINTL 촉수는 [고야형 촉수]를 얻었다.
+	PRINTW 촉수가 확장 관련 커맨드를 쓸 수 있게 되었습니다.
+	CASE 8
+		PRINTL 촉수는 [말미잘형 촉수]를 얻었다.
+	PRINTW 커맨드＜촉수 간지럽히기＞를 쓸 수 있게 되었습니다.
+	CASE 9
+		PRINTL 촉수는 [원격정밀제어]를 얻었습니다.
+	PRINTW 커맨드＜촉수관통＞을 쓸 수 있게 되었습니다.
+	CASE 10
+		PRINTL 촉수는 [특수 호르몬 분비]를 얻었다.
+	PRINTW 촉수가 약품 관련 커맨드를 쓸 수 있게 되었습니다.
+	CASE 11
+		PRINTL 촉수는 [촉수 현자의 돌]을 얻었습니다.
+	PRINTW ＜촉수연금＞이 해금되었습니다.
+	CASE 12
+		PRINTL  촉수는 [노예징벌용 촉수의 방]을 얻었다.
+	PRINTW ＜촉수에 절이기＞가 해금되었습니다.
+	CASE 13
+		PRINTL 촉수는 [체내적응력강화]를 얻었다.
+	PRINTW 촉수의 기생능력이 강화되었습니다.
+	CASE 14
+		PRINTL 촉수는 [정액방출양 강화]를 얻었다.
+	PRINTW 촉수의 사정능력이 강화되었습니다.
+	CASE 15
+		PRINTL 촉수는 [정자와 촉수의 방]을 얻었다.
+	PRINTW ＜촉수유폐＞가 해금되었습니다.
+	CASE 16
+		PRINTL 촉수는 [흡혈촉수]를 얻었다.
+	PRINTW 커맨드 ＜촉수흡혈＞을 쓸 수 있게 되었습니다.
+	CASE 17
+		PRINTL 촉수는 [촉수보유시설]과 [촉수분만대]를 얻었다.
+	PRINTW ＜촉수양식＞이 해금되었습니다.
+	CASE 50
+		PRINTL 촉수는 [SATORI촉수]를 얻었다.
+	PRINTW 커맨드＜촉수독심고문＞을 쓸 수 있게 되었습니다.
+	CASE 51
+		PRINTL 촉수는 [NITORI촉수]를 얻었다.
+	PRINTW 커맨드＜촉수조개잡이＞를 쓸 수 있게 되었습니다.
+	CASE 52
+		PRINTL 촉수는 [YUYUKO촉수]를 얻었다.
+	PRINTW 커맨드＜촉수유령질경＞을 쓸 수 있게 되었습니다.
+	CASE 53
+		PRINTL 촉수는 [SUIKA촉수]를 얻었다.
+		PRINTW 커맨드＜촉수강제음주＞를 쓸 수 있게 되었습니다.
+	CASE 54
+		PRINTL 촉수는 [ALICE촉수]를 얻었다.
+		PRINTW 커맨드＜촉수정신제어＞를 쓸 수 있게 되었습니다..
+	CASE 55
+		PRINTL 촉수는 [HINA촉수]를 얻었다.
+		PRINTW 커맨드＜촉수액땜＞을 쓸 수 있게 되었습니다.
+	CASE 56
+		PRINTL 촉수는 [AYA촉수]를 얻었다.
+		PRINTW 커맨드＜촉수장내촬영＞을 쓸 수 있게 되었습니다.
+	CASE 57
+		PRINTL 촉수는 [PARSEE촉수]를 얻었다.
+		PRINTW 커맨드＜촉수말고문＞을 쓸 수 있게 되었습니다.
+	CASE 58
+		PRINTL 촉수는 [MEDICINE촉수]를 얻었다.
+		PRINTW 커맨드＜촉수은방울미약＞을 쓸 수 있게 되었습니다.
+	CASE 59
+		PRINTL 촉수는 [PATCHOULI촉수]를 얻었다.
+		PRINTW 커맨드＜촉수관능도서낭독＞을 쓸 수 있게 되었습니다.
+	CASE 60
+		PRINTL 촉수는 [BIG-FAIRY촉수]를 얻었다.
+		PRINTW 커맨드＜촉수요정안마＞를 쓸 수 있게 되었습니다.
+	CASE 61
+		PRINTL 촉수는 [CIRNO촉수]를 얻었다.
+		PRINTW 커맨드＜촉수빙정수음＞을 쓸 수 있게 되었습니다.
+	CASE 62
+		PRINTL 촉수는 [NAZRIN촉수]를 얻었다.
+		PRINTW 커맨드＜촉수음맥탐사＞를 쓸 수 있게 되었습니다.
+	CASE 63
+		PRINTL 촉수는 [EIKI촉수]를 얻었다.
+		PRINTW 커맨드＜촉수최종심판＞을 쓸 수 있게 되었습니다.
+	CASE 64
+		PRINTL 촉수는 [SHIZUHA촉수]를 얻었다.
+		PRINTW 커맨드＜촉수백렬단풍＞을 쓸 수 있게 되었습니다.
+	CASE 65
+		PRINTL 촉수는 [MINORIKO촉수]를 얻었다.
+		PRINTW 커맨드＜촉수풍요음향＞을 쓸 수 있게 되었습니다.
+	CASE 66
+		PRINTL 촉수는 [SUWAKO촉수]를 얻었다.
+		PRINTW 커맨드＜촉수○○○○＞을 쓸 수 있게 되었습니다.
+	CASE 99
+	PRINTL 촉수는 [현신촉수]를 얻었다.
+	PRINTL 촉수는 현신의 힘을 얻었기 때문에, 앞으론 산제물을 준비하지 않더라도 
+	PRINTW 전회차에 한 번 취득한 캐릭터 촉수를 사용할 수 있게 되었습니다.
+ENDSELECT
+DRAWLINE
+RESTART
+
+;-----------------------------------------------
+;촉수錬金
+;-----------------------------------------------
+@TENTACLE_LABORATORY_ALCHEMY
+;元パッチの機能の微妙な移植になる可能性大.
+DRAWLINE
+PRINTL 현재 촉수의 능력:
+CALL SHOW_TENTACLE_ABL
+DRAWLINE
+IF ABL:MASTER:98 == 0
+	LOCAL = 5
+ELSEIF ABL:MASTER:98 == 1
+	LOCAL = 10
+ELSEIF ABL:MASTER:98 == 2
+	LOCAL = 15
+ELSEIF ABL:MASTER:98 == 3
+	LOCAL = 25
+ELSEIF ABL:MASTER:98 == 4
+	LOCAL = 35
+ELSE
+	LOCAL = 50
+ENDIF
+PRINTFORML 촉수가 비축한 에너지를 소비하여 금화를 만들 수 있습니다. (환금비율:1τ당＝{A}원)
+PRINTFORML 현재의 촉수 에너지:{BASE:MASTER:6}τ　　소지금:{MONEY}원
+PRINTFORML 얼마나 에너지를 사용하겠습니까? (1-{BASE:MASTER:6}닢, 무효 수치로 취소)
+DRAWLINE
+PRINTLC [0] 돌아가기
+PRINTLC [1] 1닢
+SIF BASE:MASTER:6 >= 5
+	PRINTLC [5] 5닢
+SIF BASE:MASTER:6 >= 10
+	PRINTLC [10] 10닢
+SIF BASE:MASTER:6 != 1 && BASE:MASTER:6 != 5 && BASE:MASTER:6 != 10
+	PRINTFORMLC [{BASE:MASTER:6}] 가능한 만큼
+INPUT
+IF RESULT > BASE:MASTER:6
+	PRINTW 에너지가 부족합니다.
+	RETURN 0
+ELSEIF RESULT <= 0
+	RETURN 0
+ENDIF
+LOCAL:1 = RESULT
+
+DRAWLINE
+PRINTFORML 연성을 실행한 경우, 합계 {LOCAL * A}원 만큼의 수입을 얻을 수 있습니다.
+PRINTL 연성하겠습니까?
+PRINTL [0] 예
+PRINTL [1] 아니오
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	RETURN 0
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP
+ENDIF
+
+MONEY:1 = LOCAL:1 * LOCAL
+BASE:MASTER:6 -= LOCAL:1
+MONEY += MONEY:1
+PRINTFORML ＜%조사처리(CALLNAME:MASTER,"는")% 촉수연금으로 만들어낸 금화를 팔았다＞
+PRINTFORMW ＜자금이 {MONEY:1}원 늘어났습니다＞
+;--------------------------------------------------
+;촉수錬金で稼いだ最高金額判定処理
+IF MONEY:1 > MONEY:975
+	MONEY:975 = MONEY:1
+	;ハイスコア更新処理
+	SIF MONEY:1 > MONEY:998
+		MONEY:998 = MONEY:1
+ENDIF
+;--------------------------------------------------
+
+;-----------------------------------------------
+;촉수 절이기
+;-----------------------------------------------
+@TENTACLE_LABORATORY_SPECIALROOM
+;躾が悪い奴隷はここに閉じ込めて一晩中延々と촉수の相手をしてもらう……感じになる予定.
+;バランスブレイカーになりかねないのでシチュ用に割り切るか, 何らかのデメリットを付加して行こうと思う.
+;地の文は期待しない方が吉
+;表示させるキャラを抽出(LOCAL:2に人数)
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	SIF COUNT == 0
+		CONTINUE
+;	SIF COUNT == TARGET
+;		CONTINUE
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;弱味, 妄信, 恋慕系, 服従系は除外
+	SIF TALENT:COUNT:39 || TALENT:COUNT:150 || TALENT:COUNT:151 || TALENT:COUNT:152 || TALENT:COUNT:153 || TALENT:COUNT:160 || TALENT:COUNT:161 || TALENT:COUNT:162 || TALENT:COUNT:164
+		CONTINUE
+	;妊娠, 育児中, 抱卵中も除外
+	SIF TALENT:COUNT:140 || TALENT:COUNT:141 || TALENT:COUNT:143
+		CONTINUE
+	;反発刻印Lv0は除外
+	SIF MARK:COUNT:9 == 0
+		CONTINUE
+	;従順か奉仕精神のどちらかがLv3以上なら除外
+	;(反抗的, プライド高い, 抵抗はどちらかが4以上なら除外)
+	IF TALENT:COUNT:11 || TALENT:COUNT:16 || TALENT:COUNT:34
+		SIF ABL:COUNT:10 > 3 || ABL:COUNT:13 > 3
+			CONTINUE
+	ELSE
+		SIF ABL:COUNT:10 > 2 || ABL:COUNT:13 > 2
+			CONTINUE
+	ENDIF
+	;촉수中毒Lv2以上なら除外
+	SIF ABL:COUNT:35 > 1
+		CONTINUE
+	;[養分注入촉수]が無い状態では体力500未満の奴隷を連れ込めない
+	SIF BASE:COUNT:0 < 500 && (FLAG:75 & 32) == 0
+		CONTINUE
+	;体力, 気力の最大値のどちらかが500未満のの場合も奴隷を連れ込めない
+	SIF MAXBASE:COUNT:0 < 500 || MAXBASE:COUNT:1 < 500
+		CONTINUE
+	;楽して快感の否定持ちを堕とそうなんて考えないように
+	SIF TALENT:COUNT:71 && MARK:COUNT:9
+		CONTINUE
+	SIF NO:COUNT == 401 && (FLAG:570 & 48) == 0
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+	SIF (LOCAL:2%20) == 1 && LOCAL:2 > 20
+		LOCAL:1 += 1
+REND
+
+$PRINT_LIST
+DRAWLINE
+PRINTL 반항적인 노예를 지하실에 가둬놓고 하룻밤 내내 촉수의 매력을 단단히 주입시킵니다.
+PRINTFORML 누구를 대상으로 하겠습니까? ＜page.{LOCAL:3+1}＞
+CALL TENTACLE_LIST_CHARA, LOCAL:3
+DRAWLINE
+PRINTFORMLC \@(LOCAL:3 <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL:3 >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL:3 > 0
+	LOCAL:3 -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL:3 < LOCAL:1
+	LOCAL:3 += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+
+LOCAL:98 = TARGET
+TARGET = RESULT
+LOCAL:1 = 5000
+;必要エネルギー減少系
+;欲望
+LOCAL:2 = ABL:11
+LOCAL:1 -= LOCAL:2 * 250
+;大人しい
+SIF TALENT:14
+	LOCAL:1 -= 300
+;プライド低い
+SIF TALENT:17
+	LOCAL:1 -= 1000
+;貞操無頓着
+SIF TALENT:31
+	LOCAL:1 -= 500
+;解放
+SIF TALENT:33
+	LOCAL:1 -= 1000
+;倒錯的
+SIF TALENT:80
+	LOCAL:1 -= 700
+;必要エネルギー増加系
+;従順
+LOCAL:2 = ABL:10
+LOCAL:1 += (3 - LOCAL:2) * 600
+;反抗的
+SIF TALENT:11
+	LOCAL:1 += 1200
+;気丈
+SIF TALENT:12
+	LOCAL:1 += 500
+;生意気
+SIF TALENT:15
+	LOCAL:1 += 2500
+;プライド高い
+SIF TALENT:16
+	LOCAL:1 += 5000
+;保守的
+SIF TALENT:24
+	LOCAL:1 += 3000
+;貞操観念
+SIF TALENT:30
+	LOCAL:1 += 1000
+;抑圧
+SIF TALENT:32
+	LOCAL:1 += 2500
+;抵抗
+SIF TALENT:34
+	LOCAL:1 += 5000
+;屈服刻印
+LOCAL:2 = MARK:2
+LOCAL:1 += (1 + LOCAL:2) * 750
+;倍率変動
+;淫乱
+SIF TALENT:170
+	LOCAL:1 /= 2
+;촉수中毒
+SIF ABL:35
+	LOCAL:1 /= 2
+;一線越えない＋反発刻印Lv3
+IF TALENT:27 && MARK:9 >= 3
+	LOCAL:1 *= 35
+ELSE
+	;一線越えない
+	SIF TALENT:27
+		LOCAL:1 *= 3
+	;反発刻印
+	LOCAL:2 = 2 * MARK:9
+	LOCAL:1 *= MAX(LOCAL:2, 1)
+ENDIF
+LOCAL:1 = MIN(LOCAL:1, 1000)
+;補正用
+TIMES LOCAL:1 , 3.50
+PRINTFORML %CALLNAME:TARGET%에게 하룻밤 동안 촉수의 매력을 가르치겠습니까?
+PRINTFORML 현재의 촉수 에너지:{BASE:MASTER:6}τ　　({LOCAL:1}τ 필요)
+SIF TALENT:0
+	PRINTFORML (※예를 선택하면 %조사처리(CALLNAME:TARGET,"는")% 처녀를 잃게 됩니다)
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+SIF TALENT:MASTER:998
+	LOCAL:1 = 0
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	TARGET = LOCAL:98
+	RESTART
+ELSEIF RESULT == 0
+	IF BASE:MASTER:6 < LOCAL:1
+		PRINTW 촉수 에너지가 부족합니다.
+		TARGET = LOCAL:98
+		RETURN 0
+	ELSE
+		BASE:MASTER:6 -= LOCAL:1
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+;地の文章カット
+IF CFLAG:99 == 1
+	;촉수漬けイベント突き飛ばされた時～촉수に捕まる時の口上用
+	CALL SELF_KOJO, TARGET, 250, LOCAL:1
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	;촉수漬けイベント凌辱中～精神が崩壊したあたりの時の口上用
+	CALL SELF_KOJO, TARGET, 251, LOCAL:1
+	CALL TENTACLE_SPECIALROOM_TRAINING, TARGET
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	;촉수漬けイベント屈服時(懇願しているとき？)の口上用.文字変数の内J,K,Lは使わないように.
+	CALL SELF_KOJO, TARGET, 252, LOCAL:1
+;地の文章表示
+ELSE
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 반항적인 태도를 고치지 않는 %CALLNAME:TARGET%의 버릇을 고치기 위해 
+	PRINTW 방 전체가 촉수로 구성된 지하의 한 방 안에 던져넣었다.
+	;촉수漬けイベント突き飛ばされた時～촉수に捕まる時の口上用
+	CALL SELF_KOJO, TARGET, 250, LOCAL:1
+	PRINTFORMW 두껍고 무거운 철제 문이 닫힌 직후 %CALLNAME:TARGET%의 비명과 그에 이어 문을 세차게 두드리는 소리가 들려왔지만, 그것도 곧 들리지 않게 되었다.
+	PRINTW 지금쯤은 방 안의 촉수들에게 붙잡혀서, 장난감 취급 받고 있을 것이다…….
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	;촉수漬けイベント凌辱中～精神が崩壊したあたりの時の口上用
+	CALL SELF_KOJO, TARGET, 251, LOCAL:1
+	CALL TENTACLE_SPECIALROOM_TRAINING, TARGET
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	PRINTW 　　　　　・
+	PRINTFORML 날 밝을 때쯤 상황을 보러 간 %CALLNAME:MASTER%는, 
+	SIF TALENT:120 == 0
+		PRINT 바기나, 
+	PRINTFORML 아누스, 입, 코, 요도…. 몸에 존재하는 모든 구멍에 촉수가 쑤셔박힌 채로 
+	PRINTFORMW 사지가 구속된 채 천장 부근에 매달려 있는 %CALLNAME:TARGET%의 모습을 볼 수 있었다.
+	IF TALENT:0
+			PRINTL 다리에선 순결했다는 증표가 한 줄기 실을 이루어 바닥에 떨어지고 있었고, 
+		TALENT:0 = 0
+	ENDIF
+	PRINTFORML 전신에는 촉수의 정액이 끈적하게 늘러붙어 하얗고 탄력있던 피부는 모두 엉망이 되었다.
+	PRINTFORMW 힘이 들어가지 않는지 때때로 경련하듯 움찔움찔 움직이는 것 이외에는 미동도 없다.
+	PRINTFORML 잠시 상황을 보고 있었더니 %조사처리(CALLNAME:TARGET,"는")% 느릿한 동작으로 얼굴을 들어올렸다.
+	PRINTFORMW %CALLNAME:MASTER%의 모습을 확인하고는, %조사처리(CALLNAME:TARGET,"는")% 약해빠진 목소리로 이제 저항하지 않겠다고 말했다.
+	;촉수漬けイベント屈服時(懇願しているとき？)の口上用.文字変数の内J,K,Lは使わないように.
+	CALL SELF_KOJO, TARGET, 252, LOCAL:1
+	IF TALENT:MASTER:81 || TALENT:MASTER:177
+		PRINT 그 선언을 듣고, 충분히 지배욕을 채운 
+	ELSE
+		PRINT 복종 선언을 들은 
+	ENDIF
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"를")% 해방하고는 방으로 돌아가라 명령했다.
+	PRINTFORMW 이후부터 %CALLNAME:TARGET%의 조교는 다소나마 편해질 것이다….
+	PRINTL 
+	PRINTW 이번 먹잇감에 만족한 건지, 촉수의 벽은 가볍게 떨면서 닫혀가는 문 너머로 모습을 감추었다…….
+ENDIF
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+LOCAL:2 = 0
+IF TALENT:167 || TALENT:168 ||MARK:9 == 0
+	LOCAL:2 = 0
+ELSEIF MARK:9 > 2 && JUEL:17 > 50000
+	MARK:9 -= 1
+	JUEL:17 -= 50000
+	LOCAL:2 = 1
+ELSEIF MARK:9 > 1 && JUEL:17 > 10000
+	MARK:9 -= 1
+	JUEL:17 -= 10000
+	LOCAL:2 = 1
+ELSEIF MARK:9 > 0 && JUEL:17 > 5000
+	MARK:9 -= 1
+	JUEL:17 -= 5000
+	LOCAL:2 = 1
+ENDIF
+IF LOCAL:2 == 1
+	TFLAG:232 += 1
+	PRINTFORML %CALLNAME:TARGET%의 눈동자에서 반항의 의지가 사라졌다….
+	PRINTFORMW %CALLNAME:TARGET%의 반발각인이 LV{MARK:9}로 떨어졌다.
+	IF TALENT:39 == 0 && TALENT:160 == 0 && TALENT:161 == 0 && TALENT:162 == 0 && TALENT:169 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 이번 체험이 트라우마가 된 모양이다….
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [약점]을 얻었다.
+		TALENT:39 = 1
+		CFLAG:12 |= 1024
+	ENDIF
+ENDIF
+
+LOCAL = TFLAG:230 * (TFLAG:231 + TFLAG:232) * 10
+SIF TALENT:MASTER:998
+	PRINTFORML 스트레스＋{LOCAL}
+
+;ストレス値は100万以上にはならない
+CFLAG:65 = MIN(CFLAG:65 + LOCAL, 999999)
+
+MAXBASE:0 -= MAX(TFLAG:232 * 50, MAXBASE:0 - 700)
+MAXBASE:1 -= MAX(TFLAG:232 * 10, MAXBASE:1 - 500)
+BASE:1 = MIN(BASE:1, MAXBASE:1)
+BASE:0 = 1
+PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 심각하게 지쳤다….
+PRINTFORMW %CALLNAME:TARGET%의 체력과 기력이 격감했다.
+
+TARGET = LOCAL:98
+
+FLAG:0 = 1
+RETURN 1
+
+;-----------------------------------------------
+;촉수幽閉
+;-----------------------------------------------
+@TENTACLE_LABORATORY_PRIVATEROOM
+;上の촉수漬けと効果は似ているがこっちは閉じ込めた奴隷を屈服させるのではく, 
+;屈服した奴隷を촉수達に調教させていくことが目的.Ｊの待機커맨드に割と近いかも.
+;結構強いので体力の最大値が減る, 否定の珠が入るなどのデメリットをつけています.
+;ただし条件や量は촉수漬けよりもかなり軽めにしています.
+;体力が減りきらないうちに部屋から出す, 촉수中毒をつける等である程度回避可能.
+;でもやりすぎると…？
+;表示させるキャラを抽出(LOCAL:2に人数)
+CALLF CLEAR_LIST
+VARSET LOCAL, 0
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	SIF COUNT == MASTER
+		CONTINUE
+;	SIF COUNT == TARGET
+;		CONTINUE
+	;パートナーとなっている助手はダメ
+	SIF CFLAG:COUNT:3 & 4
+		CONTINUE
+	SIF NO:COUNT == 401 && (FLAG:570 & 48) == 0
+		CONTINUE
+	IF CFLAG:COUNT:4 == 4
+		;촉수部屋の中にいる分はOK(部屋に入れた直後は除く)
+		SIF CFLAG:COUNT:39 < 1
+			CONTINUE
+	ELSE
+		;촉수部屋にも自室にも居ないならダメ
+		SIF CFLAG:COUNT:4
+			CONTINUE
+		;従順が3未満だと除外
+		SIF ABL:COUNT:10 < 3
+			CONTINUE
+		;妊娠, 育児中, 抱卵中も除外
+		SIF TALENT:COUNT:140 || TALENT:COUNT:141 || TALENT:COUNT:143
+			CONTINUE
+		;反発刻印を持っていると除外
+		SIF MARK:COUNT:9
+			CONTINUE
+		;体力が全快でないと奴隷を連れ込めない
+		SIF BASE:COUNT:0 < MAXBASE:COUNT:0
+			CONTINUE
+		;[養分注入촉수]が無い状態では体力1000未満の奴隷を連れ込めない
+		SIF BASE:COUNT:0 < 1000 && (FLAG:75 & 32) == 0
+			CONTINUE
+		;体力, 気力の最大値のどちらかが500未満のの場合も奴隷を連れ込めない
+		SIF MAXBASE:COUNT:0 < 500 || MAXBASE:COUNT:1 < 500
+			CONTINUE
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+	SIF (LOCAL:2%20) == 1 && LOCAL:2 > 20
+		LOCAL:1 += 1
+REND
+
+$PRINT_LIST
+DRAWLINE
+PRINTL 노예를 지하실에 가두고, 차분히 시간을 들여서 촉수의 매력을 주입시킵니다.
+PRINTFORML 누구를 대상으로 하겠습니까? ＜page.{LOCAL+1}＞
+CALL TENTACLE_LIST_CHARA, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+LOCAL = RESULT
+IF CFLAG:LOCAL:4 == 4
+	IF CFLAG:LOCAL:39 < 1
+		PRINTFORMW %조사처리(CALLNAME:LOCAL,"는")% 지금 막 유폐시킨 참입니다.
+	ELSE
+		IF CFLAG:LOCAL:41 & 1024
+			;あまりにも長く촉수幽閉を行うと奴隷が取り込まれてしまい, 二度と連れ出せなくなる
+			;ただしあらかじめ使い魔にしておくと予防可能
+			CALL TENTACLE_LABORATORY_PRIVATEROOM_3, LOCAL
+		ELSE
+			CALL TENTACLE_LABORATORY_PRIVATEROOM_2, LOCAL
+		ENDIF
+	ENDIF
+ELSE
+	CALL TENTACLE_LABORATORY_PRIVATEROOM_1, LOCAL
+	RESTART
+ENDIF
+
+@TENTACLE_LABORATORY_PRIVATEROOM_1, ARG
+LOCAL = TARGET
+TARGET = ARG
+LOCAL:1 = 2500
+;必要エネルギー減少系
+;欲望
+IF ABL:11
+	LOCAL:2 = ABL:11
+	LOCAL:1 -= LOCAL:2 * 120
+ENDIF
+;屈服刻印
+IF MARK:2
+	LOCAL:2 = MARK:2
+	LOCAL:1 -= (1 + LOCAL:2) * 75
+ENDIF
+;大人しい
+SIF TALENT:14
+	LOCAL:1 -= 150
+;プライド低い
+SIF TALENT:17
+	LOCAL:1 -= 300
+;貞操無頓着
+SIF TALENT:31
+	LOCAL:1 -= 100
+;解放
+SIF TALENT:33
+	LOCAL:1 -= 300
+;倒錯的
+SIF TALENT:80
+	LOCAL:1 -= 230
+;必要エネルギー増加系
+;従順
+IF ABL:10 < 3
+	LOCAL:2 = ABL:10
+	LOCAL:1 += (3 - LOCAL:2) * 150
+ENDIF
+;反抗的
+SIF TALENT:11
+	LOCAL:1 += 120
+;気丈
+SIF TALENT:12
+	LOCAL:1 += 210
+;生意気
+SIF TALENT:15
+	LOCAL:1 += 120
+;プライド高い
+SIF TALENT:16
+	LOCAL:1 += 500
+;保守的
+SIF TALENT:24
+	LOCAL:1 += 300
+;貞操観念
+SIF TALENT:30
+	LOCAL:1 += 100
+;抑圧
+SIF TALENT:32
+	LOCAL:1 += 250
+;抵抗
+SIF TALENT:34
+	LOCAL:1 += 500
+;倍率変動
+;淫乱
+SIF TALENT:170
+	LOCAL:1 /= 2
+;촉수中毒
+SIF ABL:35
+	LOCAL:1 /= 2
+;一線越えない
+SIF TALENT:27
+	LOCAL:1 *= 3
+LOCAL:1 = MAX(LOCAL:1, 750)
+IF TALENT:120
+	;ＢＬ中毒
+	LOCAL:2 = ABL:33
+ELSE
+	;レズ中毒
+	LOCAL:2 = ABL:32
+ENDIF
+SIF LOCAL:2
+	LOCAL:1 += LOCAL:2 * 50
+;補正用
+TIMES LOCAL:1 , 2.50
+PRINTFORML %CALLNAME:TARGET%에게 시간을 충분히 들여 촉수의 매력을 가르치겠습니까?
+PRINTFORML 현재의 촉수 에너지:{BASE:MASTER:6}τ　　({LOCAL:1}τ 필요)
+SIF TALENT:0
+	PRINTFORML (※예를 선택하면 %조사처리(CALLNAME:TARGET,"는")% 처녀를 잃게 됩니다)
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+SIF TALENT:MASTER:998
+	LOCAL:1 = 0
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	TARGET = LOCAL
+	RETURN 0
+ELSEIF RESULT == 0
+	IF BASE:MASTER:6 < LOCAL:1
+		PRINTW 촉수 에너지가 부족합니다.
+		TARGET = LOCAL
+		RETURN 0
+	ELSE
+		BASE:MASTER:6 -= LOCAL:1
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+;地の文章表示
+IF CFLAG:ARG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에게 촉수의 매력을 더 많이 교육시키기 위해 
+	PRINTW 방 전체가 촉수로 구성된 지하의 한 방 안에 가둬버렸다.
+	PRINTFORMW 두껍고 무거운 철제 문이 굳게 닫히기 직전, %CALLNAME:TARGET%의 절규가 들려온 듯한 느낌이 들었다.
+	PRINTW 한동안 촉수의 매력을 몸에 새기도록 해 볼까….
+ENDIF
+;촉수幽閉イベント口上用.
+CALL SELF_KOJO, TARGET, 253, LOCAL:1
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+CFLAG:39 = 0
+CFLAG:4 = 4
+TARGET = LOCAL
+IF ARG == TARGET
+	TARGET = -1
+	FLAG:996 = -1
+ELSEIF ARG == ASSI
+	ASSI = -1
+ENDIF
+DRAWLINE
+
+@TENTACLE_LABORATORY_PRIVATEROOM_2, ARG
+LOCAL = TARGET
+TARGET = ARG
+;地の文章カット
+IF CFLAG:ARG:99 == 1
+	;촉수幽閉イベント終了時の口上用.文字変数の内のLは使わないように.
+	CALL SELF_KOJO, TARGET, 254
+;地の文章表示
+ELSE
+	PRINTFORML 상황을 보러 온 %CALLNAME:MASTER%는 
+	PRINT 촉수들에게 전신을 
+	SIF CFLAG:39 > 14
+		PRINT 철저하게 
+	PRINTFORMW 농락당한 %CALLNAME:TARGET%의 모습을 볼 수 있었다.
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 전신이 희고 탁한 액체에 더럽혀져 있고, 강한 피로 때문인지 매끈하기 그지없던 피부도 완전히 엉망이 되어 있다.
+	PRINTFORML 코를 찌르는 악취가 감도는 방 안에서 자길 보러 온 주인의 방문을 알아챈건지 %조사처리(CALLNAME:TARGET,"는")% 천천히 얼굴을 들어올렸다.
+	PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 이번 촉수조교가 끝났음을 말했고, 그러자 %조사처리(CALLNAME:TARGET,"는")% 
+	IF ABL:35 < 3
+		PRINTW 겨우 이 지옥이 끝났다는 사실에 안도한 것 같다….
+	ELSEIF ABL:35 < 5
+		PRINTW 안심했다는 표정을 띄우면서도 어딘가 부족함을 느끼는 것 같다….
+	ELSE
+		PRINTW 노골적으로 불만스러운 표정을 띄우고 있었지만, 이번엔 쉬는 게 좋겠다고 스스로 납득한 모양이다.
+	ENDIF
+	;촉수幽閉イベント終了時の口上用.文字変数の内のLは使わないように.
+	CALL SELF_KOJO, TARGET, 254
+	PRINTL 
+	PRINTW 닫혀가는 문 너머로 모습을 감춘 순간, 촉수의 방은 마치 다음 먹잇감을 기다고 있다는 듯 한 번 진동했다…….
+ENDIF
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+IF BASE:0 < 100
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 거의 시체처럼 소모되어 있다….
+ELSEIF BASE:0 < 500
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 심하게 소모되어 있다….
+ELSEIF BASE:0 < 1000
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 꽤나 소모되어 있다….
+ELSE
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 소모되어 있다….
+ENDIF
+PRINTW 잠시 쉬게 하는 편이 좋을지도 모르겠다.
+CFLAG:39 = 0
+CFLAG:4 = 0
+FLAG:0 = 1
+TARGET = LOCAL
+DRAWLINE
+RETURN 1
+
+@TENTACLE_LABORATORY_PRIVATEROOM_3, ARG
+LOCAL = TARGET
+LOCAL:1 = ASSI
+TARGET = ARG
+CALL TENTACLE_ABSORB_EVENT
+LOCAL:2 = TFLAG:233 * MAX(CFLAG:39 / 10, 1)
+LOCAL:3 = TFLAG:234 * 100
+IF TALENT:150 || TALENT:160
+	;지문 커트
+	IF CFLAG:99 == 1
+		;촉수동화 이벤트 대사용
+		CALL SELF_KOJO, TARGET, 256
+	;지문 표시
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 왠지 모르게 가슴이 뛰는 것을 느끼고 있었다….
+		PRINTFORML 두꺼운 철문을 열고 방으로 들어온 %조사처리(CALLNAME:MASTER,"가")% 본 광경은 
+		PRINTL 촉수로 구성된 방 한 가운데 기둥에서 움직일 수 없을 정도로 사지가 꽁꽁 구속되어, 
+		SIF TALENT:120 == 0
+			PRINT 질구, 
+		PRINTFORMW 항문, 요도, 유선만이 아니라 배꼽, 콧구멍, 아예 귓구멍 안에까지 촉수에게 농락당하고 있는 %CALLNAME:TARGET%의 모습이었다…….
+		PRINTL 
+		IF TALENT:TARGET:150 == 0
+			PRINT 주인
+		ELSE
+			PRINT 사랑하는 사람
+		ENDIF
+		PRINTFORM 의 모습을 확인한 %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:MASTER%의 이름을 불러보려고 했지만, 
+		PRINTW 옆에서 튀어나온 촉수에 의해 벌린 입마저 능욕당해 버렸다….
+		PRINTL 얼굴 좌우에서 뻗어나온 촉수들이 번들번들 빛나는 아이마스크를 만들기 시작하던 중, 
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 이게 만날 수 있는 마지막이라는 듯, %CALLNAME:MASTER%에게 시선을 보냈다…….
+		;촉수동화 이벤트 대사용
+		CALL SELF_KOJO, TARGET, 256
+		PRINTW 　　　　　・
+		PRINTW 　　　　　・
+		PRINTW 　　　　　・
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"를")% 완전히 삼켜버린 기둥 앞에 서 있었다.
+		PRINTFORMW 몇 번을 해방하라고 명령을 내려봐도, %조사처리(CALLNAME:TARGET,"는")% 고기기둥 안에 갇힌 채 그대로였다….
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 이제 포기할 수밖에 없는 건가…….
+		PRINTL 
+		PRINTL 닫혀가는 문 너머로 모습을 감춘 그 순간, 
+		PRINTW 촉수는 이번에 손에 넣은 먹잇감에 만족한 것인지, 한 번 크게 떤 것처럼  보였다…….
+	ENDIF
+ELSE
+	;地の文章カット
+	IF CFLAG:99 == 1
+		;촉수동화 이벤트 대사용
+		CALL SELF_KOJO, TARGET, 256
+	;地の文章表示
+	ELSE
+	PRINTFORMW 상태를 보러 와봤지만, 촉수로 꽉 차 있는 방 안에 %CALLNAME:TARGET%의 모습은 확인되지 않았다….
+	PRINTL 그 대신인지 몰라도, 방 한 가운데는 한 명쯤은 손쉽게 넣을 수 있을 크기의 거대한 촉수 집합체가 
+	PRINTW 마치 벌레의 고치 같은 형태를 이루며 자리잡고 있었다…….
+	PRINTFORML 『고치』 안에선 %조사처리(CALLNAME:TARGET,"가")% 끝없이 범해지고 있는 것인지, 
+	PRINTW 그 안에서 때때로 쥐어 짜는 듯한 신음소리 같은 게 나오고 있었다….
+		;촉수동화 이벤트 대사용
+		CALL SELF_KOJO, TARGET, 256
+		PRINTW 　　　　　・
+		PRINTW 　　　　　・
+		PRINTW 　　　　　・
+	PRINTFORMW 몇 번을 %조사처리(CALLNAME:MASTER,"는")% 해방하라고 명령을 내려봤지만, 촉수들은 그걸 전혀 듣지 않았다.
+	PRINTFORMW 아무래도 %조사처리(CALLNAME:TARGET,"를")% 해방하는 건 불가능한 것 같다…….
+	PRINTL 
+	PRINTL 닫혀가는 문 너머로 모습을 감춘 그 순간, 
+	PRINTW 촉수는 이번에 손에 넣은 먹잇감에 만족한 것인지, 한 번 크게 진동한 듯이 보였다…….
+	ENDIF
+ENDIF
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+PRINTW 　　　　　・
+PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 촉수들에게 먹혀버렸습니다―――
+PRINTW ………………
+PRINTW …………
+PRINTW ……
+PRINTFORMW ＜%CALLNAME:TARGET%에게서 에너지를 뽑아냈다＞
+PRINTFORML ＜촉수 에너지＋{LOCAL:2}τ＞
+PRINTFORMW ＜촉수의 구슬＋{LOCAL:3}개(주인)＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 두 번 다시 조교대상으로 선택할 수 없게 되었습니다＞
+PRINTL 
+;촉수中毒Lv3以上で助手可能または[恋慕]・[服従]・[傀儡]・[壊造人格]のいずれかを持った名有りキャラが生贄になった場合, 判定処理へ
+SIF ((ABL:35 >= 3 && CFLAG:1 == 2) || TALENT:150 || TALENT:160 || TALENT:168 || TALENT:169) && (NO:TARGET > 0 && NO:TARGET < 149)
+	CALL CHARACHECK_TENTACLE_SACRIFICE
+DRAWLINE
+;촉수に取り込まれた奴隷の周回ごとの履歴フラグはセット
+;DITEMTYPE:(100+NO:TARGET):10 |= 16384
+DELCHARA ARG
+
+IF LOCAL < 0 || LOCAL == ARG
+	TARGET = -1
+	FLAG:996 = -1
+ELSE
+	TARGET = (LOCAL > ARG) ? (LOCAL - 1) # LOCAL
+ENDIF
+IF LOCAL:1 < 0 || LOCAL:1 == ARG
+	ASSI = -1
+ELSE
+	ASSI = (LOCAL:1 > ARG) ? (LOCAL:1 - 1) # LOCAL:1
+ENDIF
+BASE:MASTER:6 += LOCAL:2
+JUEL:MASTER:198 += LOCAL:3
+FLAG:33 += 1
+FLAG:99 += 1
+RETURN 1
+
+;-----------------------------------------------
+;촉수生贄
+;-----------------------------------------------
+@TENTACLE_LABORATORY_SACRIFICE
+;効果は長時間촉수幽閉したときに出る同化イベントをいきなりやるようなもの.
+;調教による촉수との親和性がまだ低いため手に入るエネルギーは촉수幽閉よりも少なめ.
+;촉수同化イベントと同じく촉수の生贄になったものは二度と解放されることはない＝消滅扱いになるので注意.
+;表示させるキャラを抽出(LOCAL:2に人数)
+CALLF CLEAR_LIST
+VARSET LOCAL, 0
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	SIF COUNT == MASTER
+		CONTINUE
+;	SIF COUNT == TARGET
+;		CONTINUE
+	;パートナーとなっている助手はダメ
+	SIF CFLAG:COUNT:3 & 4
+		CONTINUE
+	;その場に居ないならダメ
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;使い魔不可
+	SIF TALENT:COUNT:164
+		CONTINUE
+	SIF NO:COUNT == 401 && (FLAG:570 & 48) == 0
+		CONTINUE
+	IF TALENT:MASTER:998 == 0
+		;従順が3未満だと除外
+		SIF ABL:COUNT:10 < 3
+			CONTINUE
+		;妊娠, 育児中, 抱卵中も除外
+		SIF TALENT:COUNT:140 || TALENT:COUNT:141 || TALENT:COUNT:143
+			CONTINUE
+		;反発刻印3を持っていると除外
+		SIF MARK:COUNT:9 > 2
+			CONTINUE
+		;体力, 気力の最大値のどちらかが1000未満の場合は奴隷を連れ込めない
+		SIF MAXBASE:COUNT:0 < 1000 || MAXBASE:COUNT:1 < 1000
+			CONTINUE
+		;現在の体力, 気力のどちらかが1000未満の場合も奴隷を連れ込めない
+		SIF BASE:COUNT:0 < 1000 || BASE:COUNT:1 < 1000
+			CONTINUE
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+	SIF (LOCAL:2%20) == 1 && LOCAL:2 > 20
+		LOCAL:1 += 1
+REND
+
+$PRINT_LIST
+DRAWLINE
+PRINTL 에너지와 바꿔 노예를 촉수의 산제물로 바칩니다.
+PRINTFORML 누구를 대상으로 하겠습니까? ＜page.{LOCAL+1}＞
+CALL TENTACLE_LIST_CHARA, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+
+LOCAL = RESULT
+PRINTFORML ※촉수의 산제물로 바쳐버리면 두 번 다시 %조사처리(CALLNAME:LOCAL,"를")% 만날 수 없습니다.
+PRINTL 그래도 실행하겠습니까?
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	RETURN 0
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP_1
+ENDIF
+
+LOCAL:98 = TARGET
+LOCAL:97 = ASSI
+TARGET = LOCAL
+CALL TENTACLE_ABSORB_EVENT
+TFLAG:234 *= 40
+;地の文章カット
+IF CFLAG:99 == 1
+	;촉수 산제물 이벤트 대사용
+	CALL SELF_KOJO, TARGET, 257
+;地の文章表示
+ELSE
+	PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 
+	SIF TALENT:152
+		PRINT 굵은 눈물을 떨구고 있는 
+	SIF TALENT:153
+		PRINT 사랑하는 사람에게 매달리는 
+	SIF TALENT:150
+		PRINT 싫어하고 있는 
+	PRINTFORM %조사처리(CALLNAME:TARGET,"를")% 
+	SIF TALENT:MASTER:81 || TALENT:MASTER:177
+		PRINT 억지로 
+	PRINTW 촉수 배양실에 가둬버렸다.
+	;촉수 산제물 이벤트 대사용
+	CALL SELF_KOJO, TARGET, 257
+ENDIF
+IF RAND:4 == 0
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 이제 평생 촉수의 양식이 될 운명으로…….
+	PRINTW  
+	PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 촉수들의 산제물로 바쳐졌습니다―――
+ELSEIF RAND:3 == 0
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 촉수를 즐겁게 하기 위해서만 존재하는 자가 되리라…….
+	PRINTW  
+	PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 촉수들의 장난감이 되었습니다―――
+ELSEIF RAND:2 == 0
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 두 번 다시 태양빛도, 달빛도 볼 수 없게 되리라…….
+	PRINTW  
+	PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 촉수들의 고치 속으로 빨려들어갔습니다―――
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 도망도 거부도 용납되지 않은 채, 그저 계속해서 능욕만을 당하게 되리라……
+	PRINTW  
+	PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 촉수들에게 철저히 범해졌습니다―――
+ENDIF
+PRINTW ………………
+PRINTW …………
+PRINTW ……
+PRINTFORMW ＜촉수들은 %CALLNAME:TARGET%에게서 에너지를 몽땅 짜냈다＞
+PRINTFORML ＜촉수 에너지＋{TFLAG:233}τ＞
+PRINTFORMW ＜촉수의 구슬＋{TFLAG:234}개(주인)＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 두 번 다시 조교대상으로 선택할 수 없게 되었습니다＞
+PRINTL 
+;촉수中毒Lv3以上で助手可能または[恋慕]・[服従]・[傀儡]・[壊造人格]のいずれかを持った名有りキャラが生贄になった場合, 判定処理へ
+SIF ((ABL:35 >= 3 && CFLAG:1 == 2) || TALENT:150 || TALENT:160 || TALENT:168 || TALENT:169) && (NO:TARGET > 0 && NO:TARGET < 149)
+	CALL CHARACHECK_TENTACLE_SACRIFICE
+DRAWLINE
+;촉수に捧げられた奴隷の周回ごとの履歴フラグはセット
+;DITEMTYPE:(100+NO:TARGET):10 |= 16384
+DELCHARA LOCAL
+
+IF LOCAL:98 < 0 || LOCAL:98 == LOCAL
+	TARGET = -1
+	FLAG:996 = -1
+ELSE
+	TARGET = (LOCAL:98 > LOCAL) ? (LOCAL:98 - 1) # LOCAL:98
+ENDIF
+IF LOCAL:97 < 0 || LOCAL:97 == LOCAL
+	ASSI = -1
+ELSE
+	ASSI = (LOCAL:97 > LOCAL) ? (LOCAL:97 - 1) # LOCAL:97
+ENDIF
+BASE:MASTER:6 += TFLAG:233
+JUEL:MASTER:198 += TFLAG:234
+FLAG:33 += 1
+FLAG:99 += 1
+RETURN 1
+
+;-----------------------------------------------
+;촉수養殖関係
+;-----------------------------------------------
+;촉수進化拡張パッチと妊娠出産パッチを参考に作成
+;奴隷に촉수の種付けして繁殖させ, 蒐集したり調教したりする
+;基本的に種付け→懐卵→時間をおいて産卵→回復を待つ……というサイクルを行う
+;間違っても某悪魔みたいに仲間を呼ぶことはない
+;※なお産んだ촉수を用いる機能は現段階では未実装
+@TENTACLE_LABORATORY_BREED
+DRAWLINE
+PRINTFORML 현재의 촉수 에너지({BASE:MASTER:6}τ)
+PRINTL 무엇을 하겠습니까?
+SIF CHARANUM > 1
+	PRINTL  [0] 촉수수정
+PRINTL [100] 그만둔다
+$INPUT_LOOP
+INPUT
+IF RESULT == 0 && CHARANUM > 1
+	CALL SERVE_TENTACLE_LARVA
+	IF RESULT == 1
+		BEGIN TURNEND
+		RETURN 1
+	ENDIF
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;-----------------------------------------------
+;촉수種付
+;-----------------------------------------------
+;촉수と無理やり交尾させて촉수を孕ませる処理をここで行う
+;(取得する素質は[妊娠]と区別するために[懐卵]と命名)
+;否定の珠も大量に入ります
+;いろんな所から処理・構文を流用
+@SERVE_TENTACLE_LARVA
+;表示させるキャラを抽出(LOCAL:2に人数)
+CALLF CLEAR_LIST
+VARSET LOCAL, 0
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	SIF COUNT == 0
+		CONTINUE
+;	SIF COUNT == TARGET
+;		CONTINUE
+	;その場にいないならダメ
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;処女不可
+	SIF TALENT:COUNT:0
+		CONTINUE
+	;オトコ不可
+	SIF TALENT:COUNT:120
+		CONTINUE
+	;使い魔不可
+	SIF TALENT:COUNT:164
+		CONTINUE
+	;すでに妊娠or懐卵している, あるいは育児中も不可
+	SIF TALENT:COUNT:140 || TALENT:COUNT:141 || TALENT:COUNT:145
+		CONTINUE
+	SIF NO:COUNT == 401 && (FLAG:570 & 48) == 0
+		CONTINUE
+	IF TALENT:MASTER:998 == 0
+		;必要体力, 気力を算出(寄生されているかどうかで分岐)
+		LOCAL:3 = (TALENT:COUNT:146) ? 1500 # 1000
+		;体力, 気力の最大値のどちらかが1000(촉수寄生中の場合は1500)未満の場合は奴隷を連れ込めない
+		SIF MAXBASE:COUNT:0 < LOCAL:3 || MAXBASE:COUNT:1 < LOCAL:3
+			CONTINUE
+		;現在の体力が1000(촉수寄生中の場合は1500)未満の場合も奴隷を連れ込めない
+		SIF BASE:COUNT:0 < LOCAL:3
+			CONTINUE
+		;小柄体型は精液放出量強化必須(妊娠パッチの小柄体型は妊娠しにくいの特性より)
+		SIF TALENT:COUNT:128 && (FLAG:75 & 16384) == 0
+			CONTINUE
+		;小人体型は精液放出量強化と極細촉수両方を取得している必要がある
+		SIF TALENT:COUNT:127 && (FLAG:75 & 16384) == 0 && (FLAG:75 & 16) == 0
+			CONTINUE
+		;薬毒耐性持ちは体内適応力強化必須
+		SIF TALENT:COUNT:44 && (FLAG:75 & 8192) == 0
+			CONTINUE
+		;回復遅いは養分注入촉수必須
+		SIF TALENT:COUNT:138 && (FLAG:75 & 32) == 0
+			CONTINUE
+		;催眠촉수を持っている場合
+		IF FLAG:75 & 8
+			;反発刻印3を持っていると除外
+			SIF MARK:COUNT:9 > 2
+				CONTINUE
+			;従順が2未満だと除外
+			SIF ABL:COUNT:10 < 2
+				CONTINUE
+		;持っていない場合
+		ELSE
+			;反発刻印が1以上でも除外
+			SIF MARK:COUNT:9
+				CONTINUE
+			;従順が4未満だと除外
+			SIF ABL:COUNT:10 < 4
+				CONTINUE
+		ENDIF
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+	SIF (LOCAL:2%20) == 1 && LOCAL:2 > 20
+		LOCAL:1 += 1
+REND
+
+$PRINT_LIST
+DRAWLINE
+PRINTL 에너지를 소비해서 노예에게 촉수의 아이를 배게 합니다.
+PRINTFORML 누구를 대상으로 하겠습니까? ＜page.{LOCAL+1}＞
+CALL TENTACLE_LIST_CHARA, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+
+LOCAL = RESULT
+LOCAL:1 = 500
+;必要エネルギー減少系
+;欲望
+LOCAL:2 = ABL:LOCAL:11
+LOCAL:1 -= LOCAL:2 * 200
+;大人しい
+SIF TALENT:LOCAL:14
+	LOCAL:1 -= 250
+;プライド低い
+SIF TALENT:LOCAL:17
+	LOCAL:1 -= 600
+;貞操無頓着
+SIF TALENT:LOCAL:31
+	LOCAL:1 -= 800
+;解放
+SIF TALENT:LOCAL:33
+	LOCAL:1 -= 1000
+;倒錯的
+SIF TALENT:LOCAL:80
+	LOCAL:1 -= 900
+;必要エネルギー増加系
+;従順
+LOCAL:2 = ABL:LOCAL:10
+LOCAL:1 += (3 - LOCAL:2) * 400
+;反抗的
+SIF TALENT:LOCAL:11
+	LOCAL:1 += 1000
+;気丈
+SIF TALENT:LOCAL:12
+	LOCAL:1 += 600
+;生意気
+SIF TALENT:LOCAL:15
+	LOCAL:1 += 2000
+;プライド高い
+SIF TALENT:LOCAL:16
+	LOCAL:1 += 3000
+;保守的
+SIF TALENT:LOCAL:24
+	LOCAL:1 += 4000
+;貞操観念
+SIF TALENT:LOCAL:30
+	LOCAL:1 += 5000
+;抑圧
+SIF TALENT:LOCAL:32
+	LOCAL:1 += 2000
+;抵抗
+SIF TALENT:LOCAL:34
+	LOCAL:1 += 4000
+;小人体型
+SIF TALENT:LOCAL:127
+	LOCAL:1 += 500
+;小柄体型
+SIF TALENT:LOCAL:128
+	LOCAL:1 += 200
+;薬毒耐性
+SIF TALENT:LOCAL:44
+	LOCAL:1 += 2000
+;回復遅い
+SIF TALENT:LOCAL:138
+	LOCAL:1 += 700
+;屈服刻印
+LOCAL:2 = MARK:LOCAL:2
+LOCAL:1 += (1 + LOCAL:2) * 750
+;倍率変動
+;淫乱
+SIF TALENT:LOCAL:170
+	LOCAL:1 /= 2
+;촉수中毒
+SIF ABL:LOCAL:35
+	LOCAL:1 /= 2
+;一線越えない＋反発刻印Lv3
+IF TALENT:LOCAL:27 && MARK:LOCAL:9 > 3
+	LOCAL:1 *= 35
+ELSE
+	;一線越えない
+	SIF TALENT:LOCAL:27
+		LOCAL:1 *= 3
+	;反発刻印
+	LOCAL:2 = 3*MARK:LOCAL:9
+	SIF LOCAL:2
+		LOCAL:1 *= LOCAL:2
+ENDIF
+;催眠촉수
+SIF FLAG:75 & 8
+	TIMES LOCAL:1 , 0.50
+;極細촉수
+SIF FLAG:75 & 16
+	TIMES LOCAL:1 , 0.75
+;精液放出量強化
+SIF FLAG:75 & 16384
+	TIMES LOCAL:1 , 0.60
+LOCAL:1 = MAX(LOCAL:1, 100)
+;補正用
+LOCAL:1 /= 10
+DRAWLINE
+PRINTFORML ※%CALLNAME:LOCAL%에게 촉수의 유체를 임신하게 합니다.
+PRINTFORML 현재의 촉수 에너지:{BASE:MASTER:6}τ　　({LOCAL:1}τ 필요)
+PRINTL 실행하겠습니까?
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+SIF TALENT:MASTER:998
+	LOCAL:1 = 0
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	RESTART
+ELSEIF RESULT == 0
+	IF BASE:MASTER:6 < LOCAL:1
+		PRINTW 촉수 에너지가 부족합니다.
+		RETURN 0
+	ELSE
+		BASE:MASTER:6 -= LOCAL:1
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+LOCAL:98 = TARGET
+LOCAL:97 = ASSI
+TARGET = LOCAL
+DRAWLINE
+
+CALL TENTACLE_LARVA_IMPREGNATE
+
+;地の文分岐用に設定(調教中は人形愛撫に使用)
+TFLAG:141 = 0
+;地の文の素質変動表示用
+LOCALS:0 = 
+LOCALS:1 = 
+;ストレス加算用
+LOCAL:96 = 0
+IF TALENT:167 || TALENT:168
+	;地の文章表示
+	SIF CFLAG:99 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 태내에 촉수의 아이를 뱄음에도 불구하고, 눈 하나 깜짝하지 않았다…….
+	;촉수懐卵用のイベント口上
+	CALL SELF_KOJO, TARGET, 259, LOCAL:1
+
+ELSEIF ABL:35 > 2
+	;地の文章表示
+	IF CFLAG:99 == 0
+		IF ABL:35 >= 5 && TALENT:146
+			PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 완전히 촉수에 중독된 것인지, 
+			PRINTW 자궁에 이형의 아이를 품게 된 것에 크나큰 열락을 느끼고 있는 모양이다…….
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 촉수의 아이를 배게 된 것을 기쁨으로 느끼는 듯하다…….
+		ENDIF
+	ENDIF
+	;촉수懐卵用のイベント口上
+	CALL SELF_KOJO, TARGET, 259, LOCAL:1
+
+	;プライド高い
+	IF TALENT:16 && ABL:35 >= 5
+		LOCALS:0 = [%TALENTNAME:16%]
+		TALENT:16 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;一線越えない
+	IF TALENT:27
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:27%]
+		TALENT:27 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 64
+	ENDIF
+	;貞操観念
+	IF TALENT:30
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:30%]
+		TALENT:30 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 256
+	ENDIF
+	;抑圧
+	IF TALENT:32
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:32%]
+		TALENT:32 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 1
+	ENDIF
+	;貞操無頓着
+	IF TALENT:31 == 0
+		LOCALS:1 = [%TALENTNAME:31%]
+		TALENT:31 = 1
+		TFLAG:141 |= 2
+	ENDIF
+	;汎用口上用フラグ
+	CFLAG:43 = 0
+ELSEIF EXP:50 < 10 && ABL:35 == 0 && TALENT:161 == 0 && TALENT:162 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	;地の文章表示
+	IF CFLAG:99 == 0
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 유귀 같은 표정을 짓고 있다.
+		PRINTFORMW %CALLNAME:TARGET% 속에서 소중한 무언가가 부서져 버린 모양이다.
+	ENDIF
+
+	;촉수懐卵用のイベント口上
+	CALL SELF_KOJO, TARGET, 259, LOCAL:1
+
+	;反抗的
+	IF TALENT:11
+		LOCALS:0 = [%TALENTNAME:11%]
+		TALENT:11 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 8
+	ENDIF
+	;気丈
+	IF TALENT:12
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:12%]
+		TALENT:12 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;プライド高い
+	IF TALENT:16
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:16%]
+		TALENT:16 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;自制心
+	IF TALENT:20
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:20%]
+		TALENT:20 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;一線越えない
+	IF TALENT:27
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:27%]
+		TALENT:27 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 256
+	ENDIF
+	;貞操無頓着
+	IF TALENT:31
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:31%]
+		TALENT:31 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;抑圧
+	IF TALENT:32
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:32%]
+		TALENT:32 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 1
+	ENDIF
+	;抵抗
+	IF TALENT:34
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:34%]
+		TALENT:34 = 0
+		TFLAG:141 |= 1
+		CFLAG:13 |= 2
+	ENDIF
+	;恥らい
+	IF TALENT:35
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:35%]
+		TALENT:35 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;献身的
+	IF TALENT:63
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:63%]
+		TALENT:63 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;快感に素直
+	IF TALENT:70
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:70%]
+		TALENT:70 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;魅力
+	IF TALENT:90
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:90%]
+		TALENT:90 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;魅惑
+	IF TALENT:91
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:91%]
+		TALENT:91 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;謎の魅力
+	IF TALENT:92
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:92%]
+		TALENT:92 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;鼓舞
+	IF TALENT:95
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:95%]
+		TALENT:95 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;恋慕
+	IF TALENT:150
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:150%]
+		TALENT:150 = 0
+		SIF CFLAG:14 & 1
+			CFLAG:14 -= 1
+		CFLAG:3115 = 0
+		CFLAG:MASTER:98 -= 1
+		SIF TALENT:200 && TALENT:160 == 0 && TALENT:170 == 0
+			FLAG:32 -= 1
+		TFLAG:141 |= 1
+	ENDIF
+	;親愛
+	IF TALENT:152
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:152%]
+		TALENT:152 = 0
+		SIF CFLAG:14 & 4
+			CFLAG:14 -= 4
+		TFLAG:141 |= 1
+	ENDIF
+	;相愛
+	IF TALENT:153
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:153%]
+		TALENT:153 = 0
+		SIF CFLAG:14 & 8
+			CFLAG:14 -= 8
+		CFLAG:3113 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;幼児退行
+	IF TALENT:159
+		LOCALS:0 = %LOCALS:0%[%TALENTNAME:159%]
+		TALENT:159 = 0
+		TFLAG:141 |= 1
+	ENDIF
+	;無関心
+	IF TALENT:21 == 0
+		LOCALS:1 = [%TALENTNAME:21%]
+		TALENT:21 = 1
+		TFLAG:141 |= 2
+		CFLAG:13 |= 4
+	ENDIF
+	;感情乏しい
+	IF TALENT:22 == 0
+		LOCALS:1 = %LOCALS:1%[%TALENTNAME:22%]
+		TALENT:22 = 1
+		TFLAG:141 |= 2
+	ENDIF
+	;狂気
+	IF TALENT:158 == 0
+		LOCALS:1 = %LOCALS:1%[%TALENTNAME:158%]
+		TALENT:158 = 1
+		TFLAG:141 |= 2
+		CFLAG:12 |= 1
+		CFLAG:17 |= 2
+	ENDIF
+	;精神崩壊
+	IF TALENT:167 == 0
+		LOCALS:1 = %LOCALS:1%[%TALENTNAME:167%]
+		TALENT:167 = 1
+		TFLAG:141 |= 2
+		CFLAG:17 |= 4
+	ENDIF
+
+	LOCAL:96 = 10000
+	;汎用口上用フラグ
+	CFLAG:43 = 0
+ELSE
+	;地の文表示
+	SIF CFLAG:99 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 몸에 깃든 촉수를 받아들여야 할지 번민에 빠져있는 모양이다….
+	;촉수懐卵用のイベント口上
+	CALL SELF_KOJO, TARGET, 259, LOCAL:1
+
+	LOCAL:96 = 5000
+ENDIF
+;地の文の素質変動表示
+IF TFLAG:141
+	PRINTFORM %조사처리(CALLNAME:TARGET,"는")% 
+	IF TFLAG:141 & 1
+		PRINTFORM %LOCALS:0%
+		SIF TFLAG:141 & 2
+			PRINTFORMW \@(TFLAG:141 & 2) ? 을(를) 잃고,  # 을(를) 잃었다.\@
+	ENDIF
+	;SIF TFLAG:141 & 2
+	;	PRINTFORMW %LOCALS:1%을(를) 얻었다
+ENDIF
+;ストレス値追加処理
+CFLAG:65 += LOCAL:96
+SIF TALENT:MASTER:998 && LOCAL:96 > 0
+	PRINTFORML 스트레스＋{LOCAL:96}
+;ストレス値は100万以上にはならない
+CFLAG:65 = MIN(CFLAG:65, 999999)
+
+IF (CFLAG:24 & 16) == 0
+	CFLAG:24 |= 16
+	;異常経験
+	CALL COMMON_UP_EXP,TARGET, 50, 1, 1
+ENDIF
+
+MAXBASE:0 -= 500
+BASE:0 = 500
+PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 완전히 체력을 상실한 모양이다……. 쉬게 하는 편이 좋겠다.
+PRINTW  
+
+;調教対象と助手を元に戻す
+TARGET = LOCAL:98
+ASSI = LOCAL:97
+RETURN 1
+
+;-------------------------------------------------
+;촉수研究・培養施設用キャラ一覧表示処理
+;-------------------------------------------------
+@TENTACLE_LIST_CHARA, ARG
+DRAWLINE
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+
+	;主人公と助手対象と調教中キャラは排除
+	SIF LOCAL == 0
+		CONTINUE
+	SIF CFLAG:LOCAL:4 && CFLAG:LOCAL:4 != 4
+		CONTINUE
+	SIF MARK:LOCAL:98 == 0
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF CFLAG:LOCAL:4 == 4
+		PRINT ◆
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT ●
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	SIF TALENT:LOCAL:146
+		PRINT [기생]
+	SIF TALENT:LOCAL:145
+		PRINT [회란]
+	SIF CFLAG:LOCAL:4 == 4
+		PRINTFORM ＜유폐 {CFLAG:LOCAL:39}일째＞
+	PRINTL 
+REND

@@ -1,0 +1,1494 @@
+﻿;=============================================================================
+;경비 시스템 관련 기본함수들. 
+;이벤트 및 유저가 버튼을 눌러서 볼 수 있는 UI 등이 들어있다.
+;토리코모드 사양. 
+;=============================================================================
+
+;--------------------------------------------
+;감금 시스템 이벤트 처리 메인함수.
+@EVENT_KANKIN_MAIN_TORIKOMODE
+;밤이벤트
+IF TIME == 1
+	;구출 이벤트. 시작 후 5일까지는 찾아오지 않음.
+	SIF DAY > 5
+		CALL EVENT_KANKIN_RESCUE_TORIKOMODE
+
+	;탈출 이벤트
+	CALL EVENT_KANKIN_ESCAPE_TORIKOMODE
+
+	;경비원 이벤트. (체력회복, 경치획득 등)
+	CALL EVENT_TURNEND_GUARDSMAN_TORIKOMODE
+
+;낮이벤트.
+ELSE
+	;수색 이벤트 처리. 낮에만
+	CALL EVENT_KANKIN_SEARCH_TORIKOMODE
+
+	;구속구 효과 이벤트 (구속구에 따른 경험획득, 체력하락 등등)
+	CALL EVENT_RESTRICTION_TORIKOMODE
+ENDIF
+
+
+;--------------------------------------------
+;탈출 이벤트메인
+@EVENT_KANKIN_ESCAPE_TORIKOMODE
+;반복자
+LOCAL:99 = 0
+;탈출 성공실패
+LOCAL:1 = 0
+;어느 단계에서 걸릴지 생성
+LOCAL:2 = RAND:3
+;탈출 진행단계를 표시. 0 실패 1 계속진행
+LOCAL:3 = 0
+;
+;탈출할 캐릭터가 있는지 체크.
+DO
+	;디버그
+	;PRINTFORML 1.(LOCAL:99) = {(LOCAL:99)}
+	;주인은 제외. 실종중인 노예, 창관노예, 꽃밭노예도 제외
+	IF (LOCAL:99) == 0  || CFLAG:(LOCAL:99):4 == 1 || CFLAG:(LOCAL:99):4 == 1024 || CFLAG:(LOCAL:99):4 == 2048 || CFLAG:(LOCAL:99):4 == 4096
+		;
+	ELSE
+		;탈출확률계산
+		;디버그
+		;PRINTL
+		;PRINTFORML #%CALLNAME:(LOCAL:99)%의 탈출여부를 체크하기 시작합니다.
+		CALL CHECK_ESCAPE_TRYORNOT_TORIKOMODE, (LOCAL:99)
+
+		;탈출시도 한다면
+		IF RESULT==1
+			DRAWLINE
+			PRINTL
+			PRINTL
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW <야심한 밤. %조사처리(CALLNAME:(LOCAL:99),"는")% 탈출을 시도했다.>
+			RESETCOLOR
+			;구속 풀기 시도
+			CALL PREPARE_ESCAPE_TORIKOMODE, (LOCAL:99)
+			;구속을 풀고 탈출시작!
+			IF RESULT ==1
+				;탈출속행
+				LOCAL:3 =1
+				;탈출이 성공할지 실패할지 체크 (결과는 이미 정해져 있다)
+				CALL CHECK_ESCAPE_DETECTORNOT_TORIKOMODE, (LOCAL:99)
+				;저장
+				LOCAL:1 = RESULT
+				;PHASE1. 복도
+				IF LOCAL:3 ==1
+					PRINTFORMW 빛이라고는 없는 복도를 감각에 의지한 채로, 한발 한발 내디뎌갔다….
+					PRINTFORMW ............
+					PRINTFORMW ......
+					PRINTFORMW .
+					;1단계에서 걸림
+					IF LOCAL:2 == 0 && LOCAL:1 == 0 && LOCAL:3 == 1
+						LOCAL:3 == 0
+					;안 걸렸음
+					ELSE
+						PRINTFORMW 다행히도 길을 찾아낼 수 있었다.
+					ENDIF
+				ENDIF
+				PRINTW
+				;PHASE2. 경비실
+				IF LOCAL:3 ==1
+					PRINTFORMW 다음은 경비실을 지나야 한다. 경비실에는 아무도 없길 바랄 뿐이다….
+					PRINTFORMW ............
+					PRINTFORMW ......
+					PRINTFORMW .
+					;2단계에서 걸림
+					IF LOCAL:2 == 1 && LOCAL:1 == 0 && LOCAL:3 == 1
+						LOCAL:3 == 0
+					;안 걸렸음
+					ELSE
+						PRINTFORMW #드르렁…… 쿨쿨…#
+						PRINTFORMW 경비실에서는 별 다른 움직임이 없다. 다들 자고 있는 것 같다.
+					ENDIF
+				ENDIF
+				PRINTW
+				;PHASE3. 경비실
+				IF LOCAL:3 ==1
+					PRINTFORMW 이제 이 앞의 문만 열면 자유의 몸이 된다.
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 두근거리는 심장을 가라앉히기 위해 심호흡을 하고, 조심스레 문을 열기 시작했다….
+					PRINTFORMW ............
+					PRINTFORMW ......
+					PRINTFORMW .
+					;3단계에서 걸림
+					IF LOCAL:2 == 2 && LOCAL:1 == 0 && LOCAL:3 == 1
+						LOCAL:3 == 0
+					;안 걸렸음
+					ELSE
+						PRINTFORMW #삐걱#…
+						PRINTFORMW …성공이다!
+					ENDIF
+				ENDIF
+				PRINTW
+				;탈출성공, 탈출처리.
+				;성공했다!
+				IF LOCAL:3 == 1
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 누가 쫓아오지 않는지 주위를 확인한 후, 서둘러 조교관을 벗어났다.
+					CALL SETCOLOR_TORIKOMODE, "RED", 3
+					PRINTFORMW <!!%조사처리(CALLNAME:(LOCAL:99),"가")% 탈출했습니다!!>
+					RESETCOLOR
+					;실종상태 부여
+					CFLAG:(LOCAL:99):4 = 1
+					;실종포인트 부여
+					CALL CALC_MISSINGPOWER_TORIKOMODE, (LOCAL:99)
+				;실패했다!
+				ELSE
+					;복도에서 걸릴 경우
+					IF LOCAL:2 == 0
+						;경비원 있을 때(아무 임무나)
+						IF  0 < FLAG:5051+FLAG:5052+FLAG:5053+FLAG:5054+FLAG:5055+FLAG:5056+FLAG:5057+FLAG:5058+FLAG:5059
+							PRINTFORMW "길이라도 잃었나?"
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW 경비원에게 들켜버렸다!
+							RESETCOLOR
+							PRINTFORMW "아니면, 봉사라도 좀 해주려고?"
+							PRINTFORMW %CALLNAME:(LOCAL:99)%의 얼굴이 새파랗게 질려간다….
+							PRINTFORMW "허튼 수작 부리지 말고, 어서 들어가!"
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 경비원의 험한 손에 이끌려, 다시 방으로 들어갈 수 밖에 없었다.
+						;경비원이 없어서 아나타가 나설 때
+						ELSE
+							PRINTFORMW 막 복도를 나가려는 순간…
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW %CALLNAME:MASTER%에게 들켜버렸다!
+							RESETCOLOR
+							PRINTFORMW %CALLNAME:(LOCAL:99)%의 얼굴이 새파랗게 질려간다...
+							PRINTFORMW ................
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% %CALLNAME:MASTER%의 손에 이끌려, 다시 방으로 들어갈 수 밖에 없었다.
+						ENDIF
+					;경비실에서 걸릴 경우
+					ELSEIF LOCAL:2 == 1
+						;경비대장이 있을 경우
+						;경비원 있을 때(아무 임무나)
+						IF  0 < FLAG:5051+FLAG:5052+FLAG:5053+FLAG:5054+FLAG:5055+FLAG:5056+FLAG:5057+FLAG:5058+FLAG:5059
+							PRINTFORMW #드르렁… 쿨쿨…#
+							PRINTFORMW 다들 자고 있는 것 같다. 이 틈에…
+							PRINTFORMW #바스락#
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW "응?! 거기 누구냐!!"
+							PRINTFORMW 경비원에게 들켜버렸다!
+							RESETCOLOR
+							PRINTFORMW "어딜 도망가려고!"
+							PRINTFORMW %CALLNAME:(LOCAL:99)%의 양 팔이 경비원에게 붙잡혔다.
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 필사적으로 바둥댔다….
+							PRINTFORMW "제길, 바둥대지 말라고! 아니면 지금 당장 먹어줄까?"
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 경비원에게 범해지지 않을까 공포에 질렸다.
+							PRINTFORMW 결국 경비원의 손에 질질 끌려가 방에 처박혔다.
+						;경비원이 없어서 아나타가 나설 때
+						ELSE
+							PRINTFORMW #드르렁… 쿨쿨…#
+							PRINTFORMW 다들 자고 있는 것 같다. 이 틈에…
+							PRINTFORMW #바스락#
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW %CALLNAME:MASTER%에게 들켜버렸다!
+							RESETCOLOR
+							PRINTFORMW %CALLNAME:(LOCAL:99)%의 양 팔이 %CALLNAME:MASTER%에게 붙잡혔다.
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 필사적으로 바둥댔다.
+							PRINTFORMW .........................
+							PRINTFORMW 발악도 잠시, 도망칠 수 없다는 걸 깨달은 %조사처리(CALLNAME:(LOCAL:99),"는")% %CALLNAME:MASTER%의 손에 이끌려, 방으로 돌아갈 수 밖에 없었다.
+						ENDIF
+					;문에서 걸릴 경우
+					ELSEIF LOCAL:2 == 2
+						;경비대장 있을 때
+						;경비원 있을 때
+						IF  0 < FLAG:5051+FLAG:5052+FLAG:5053+FLAG:5054+FLAG:5055+FLAG:5056+FLAG:5057+FLAG:5058+FLAG:5059
+							PRINTFORMW #삐거억…#
+							PRINTFORMW 문을 열었다!
+							PRINTFORMW "거기까지다."
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW 경비원에게 들켜버렸다!
+							RESETCOLOR
+							PRINTFORMW "대단한데? 여기까지 오다니."
+							PRINTFORMW %CALLNAME:(LOCAL:99)%의 머리채가 경비원에게 붙잡혔다.
+							PRINTFORMW "가까이서 보니 생각보다 귀여운데? 어때, 지금 나랑 한번 할까?"
+							PRINTFORMW "그럼 못본 척 할 수도 있는데 말이지~ㅋ"
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 얼굴을 숙이고 부들부들 떨고 있다.
+							PRINTFORMW "헷, 농담인데 진짜로 벗을 셈인가보네?"
+							PRINTFORMW "그랬다가는 %CALLNAME:MASTER%에게 무슨 짓을 당할지 모른다고. 너도 알잖아?"
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 일말의 희망이 사라지자, 경비원의 다리에 매달렸다.
+							PRINTFORMW "어허! 쓸데없는 짓 하지 말라고!"
+							PRINTFORMW ..................................
+							PRINTFORMW 결국 경비원의 손에 질질 끌려, 방에 돌아갈 수 밖에 없었다.
+						;경비원이 없어서 아나타가 나설 때
+						ELSE
+							PRINTFORMW #삐거억...#
+							PRINTFORMW 문을 열었다!
+							PRINTFORMW 그리고 그곳에는……
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 서 있었다!
+							RESETCOLOR
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 얼굴이 하얗게 질린채로, 필사적으로 뛰어 달아나려 했다.
+							PRINTFORMW 그러나 %CALLNAME:(LOCAL:99)%의 머리채가 %CALLNAME:MASTER%에게 붙잡혔다.
+							PRINTFORMW ..................................
+							PRINTFORMW 결국 %CALLNAME:MASTER%의 손에 끌려, 방에 돌아갈 수 밖에 없었다.
+						ENDIF
+					ENDIF
+					;잡히면 다시 구속당한다
+					PRINTFORMW 그리고, 이전보다 더욱 강하게 구속당했다….
+					;잠그고, 묶고, 벗긴다.
+					CFLAG:(LOCAL:99):4010 += 1
+					SIF ITEM:29 == 1
+						CFLAG:(LOCAL:99):4010 += 2
+					CFLAG:(LOCAL:99):4010 += 4
+					;꿈도 희망도 없이 실패했다.
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+					PRINTFORMW <%조사처리(CALLNAME:(LOCAL:99),"는")% 탈출에 실패했다….>
+					PRINTL
+					RESETCOLOR
+					;결과처리
+					JUEL:(LOCAL:99):14 += 500
+					JUEL:(LOCAL:99):17 += 300
+					BASE:(LOCAL:99):0 -= 300
+					BASE:(LOCAL:99):1 -= 200
+					CFLAG:(LOCAL:99):65 += 100
+					PRINTFORML 굴복의 구슬 + 500
+					PRINTFORML 공포의 구슬 + 300
+					PRINTFORML 체력 - 300
+					PRINTFORML 기력 - 200
+					PRINTFORML 스트레스 + 100
+					WAIT
+				ENDIF
+			ELSE
+			ENDIF
+		ENDIF
+	ENDIF
+	LOCAL:99 += 1
+LOOP LOCAL:99  < CHARANUM
+
+
+
+;--------------------------------------------
+;구출이벤트 메인
+@EVENT_KANKIN_RESCUE_TORIKOMODE
+;구출포인트
+LOCAL:0 = 0
+;카운터
+LOCAL:99 =0
+DO
+	;주인공 제외
+	IF LOCAL:99 == 0
+		;
+	;실종중 캐릭터도 제외
+	ELSEIF CFLAG:(LOCAL:99):4 == 1
+		;
+	ELSE
+		;구출포인트의 일일 상승량.  초기치5. 인구수에 따라 감소. 난이도에 따라 증가.
+		;이 밸런스로 볼때, 대략 10일차가 되면 침입이 시작될 것. 인구수가 많으면 구출이 잘 일어나지 않으므로, 홍보(소문)을 내야한다...
+		LOCAL:0 = 3 - (CHARANUM-2) + FLAG:3/2
+		;그러나 최소 1점은 상승한다.
+		LOCAL:0 = LIMIT(LOCAL:0,1,99)
+		;구출 포인트 증가.
+		CFLAG:(LOCAL:99):4012 += LOCAL:0
+		;구출력 캐스팅.
+		CFLAG:(LOCAL:99):4012 = LIMIT(CFLAG:(LOCAL:99):4012, 1, 99)
+		;구출포인트 판정. 100을 굴려서 구출 포인트보다 작으면 구출 발생한다. (단, 무명캐릭터는 구하러 오지 않는다)
+		IF CFLAG:(LOCAL:99):4012 > RAND:100 && NO:(LOCAL:99) <= 148
+			;디버그
+			;PRINTFORML %CALLNAME:(LOCAL:99)% 는 구출받습니다.
+			;구출 포인트 초기화.
+			CFLAG:(LOCAL:99):4012 = 0
+			;구출 캐릭터를 선정
+			CALL SELECT_CHARA_RESCUE_TORIKOMODE, (NO:(LOCAL:99))
+			SIF RESULT:1 > 0
+				;구출 이벤트 발생.
+				CALL EVENT_RESCUE_TORIKOMODE, RESULT:1, LOCAL:99
+		ENDIF
+		;디버그
+		;PRINTFORML %CALLNAME:(LOCAL:99)%의 구출확률은{CFLAG:(LOCAL:99):4012}퍼센트.
+	ENDIF
+	LOCAL:99++
+LOOP LOCAL:99 < CHARANUM
+
+;--------------------------------------------
+;수색이벤트 메인
+@EVENT_KANKIN_SEARCH_TORIKOMODE
+;카운터용
+LOCAL:99 =0
+;캐릭터 번호 저장용
+LOCAL:0 = 0
+;탈출노예 있나 저장용
+LOCAL:1 = 0
+;수색성공률 저장용
+LOCAL:2 = 0
+;수색결과 저장용. 1 성공 0 실패
+LOCAL:3 = 0
+;선택노예 번호 저장용.
+LOCAL:4 = 0
+;경비력 계산, 플래그 저장. (혹시 모르니 한번 해 줌)
+CALL CALC_SECURITY_POWER_TORIKOMODE
+
+;탈출한 노예가 1명이라도 있는지 체크한다.
+LOCAL:99 = 0
+DO 
+	LOCAL:0 = (LOCAL:99)
+	SIF CFLAG:(LOCAL:0):4 == 1
+	LOCAL:1 ++
+	LOCAl:99 ++
+LOOP LOCAL:99 < CHARANUM
+
+;수색력이 있으면 진행
+IF FLAG:5043 > 0
+
+	CUSTOMDRAWLINE =
+	PRINTFORM 수색대가 출동준비를 마쳤다. 
+	WAIT
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+	PRINTFORM (총 수색력 = {FLAG:5043}♏)
+	RESETCOLOR
+	PRINTL
+	PRINTL
+	;수색대 출력
+	PRINTFORML [수색대]
+	LOCAL:99 = 0
+	DO 
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
+		;수색대가 있으면 출력한다.
+		SIF  RESULT:6 == 2
+			CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
+		LOCAl:99 ++
+	LOOP LOCAL:99 < 10
+	$SELECT_LIST
+	PRINTL
+	PRINTFORML "%CALLNAME:MASTER% 님. 수색대에 명령을!"
+	;수색을 할지 소문을 낼지 선택한다.
+	SIF LOCAL:1 > 0
+		PRINTL [0] 수색한다.
+	PRINTL [1] 소문을 낸다.
+	PRINTL [100] 아무것도 하지 않는다.
+	INPUT
+	IF RESULT == 0 && LOCAL:1 > 0
+		DRAWLINE
+		PRINTFORML ※탈주한 노예들※
+		;탈주한 노예를 돌아가며 출력한다.
+		LOCAL:99 = 0
+		DO 
+			LOCAL:0 = (LOCAL:99)
+			IF CFLAG:(LOCAL:0):4 == 1
+				;디버그
+				;PRINTFORML %CALLNAME:(LOCAL:0)%가 탈주중.
+				;수색 성공률 계산
+				CALL CALC_SEARCH_TORIKOMODE, LOCAL:0
+				LOCAL:2 = RESULT
+				;노예 정보 출력
+				PRINTFORM [{LOCAL:0}] %CALLNAME:(LOCAL:0), 8, LEFT% 
+				PRINTFORM 수색 성공률:
+				IF LOCAL:2 > 30
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+				ELSEIF LOCAL:2 > 15
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+				ELSE
+					CALL SETCOLOR_TORIKOMODE, "RED", 2
+				ENDIF
+				PRINTFORM {LOCAL:2}
+				RESETCOLOR
+				PRINTFORML %UNICODE(0x0025)%
+			ENDIF
+			LOCAl:99 ++
+		LOOP LOCAL:99 < CHARANUM
+		;포기하기 출력
+		PRINTFORML [100] 수색 취소
+		DRAWLINE
+		PRINTL 어떤 노예를 잡아오게 할까?
+		PRINTL
+		INPUT
+		;범위 밖이면 돌아간다
+		IF RESULT > CHARANUM || RESULT == 100  || RESULT <= 0 
+			GOTO SELECT_LIST
+		;탈주중인 노예라면, 수색 시작한다.
+		ELSEIF CFLAG:RESULT:4 == 1
+			;노예 번호 저장
+			LOCAL:4 = RESULT
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+			PRINTFORMW 수색대는 %조사처리(CALLNAME:(LOCAL:4 ),"를")% 찾기 위해 떠났다!
+			RESETCOLOR
+			;수색 성공 체크
+			PRINTW ..................................
+			PRINTW .................
+			PRINTW .........
+			;수색 성공계산. 1 성공 0 실패. (기본치 0)
+			SIF  RAND:(CFLAG:(LOCAL:4 ):4011) <= RAND:(FLAG:5043)
+				LOCAL:3 = 1
+			SELECTCASE RAND:2
+			;숲을 수색한다.
+			CASE 0
+				PRINTFORMW 수색대는 조교관 주위의 숲을 계속해 수색했다….
+				PRINTW ..................................
+				PRINTFORMW #바스락#
+				PRINTFORMW 뭔가 움직이는 소리가 들렸다!
+				PRINTFORMW 그것은……
+				PRINTL
+				SELECTCASE RAND:10
+				;노예를 만났다.
+				CASE 0 TO 3
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"였")%다!
+					RESETCOLOR
+					PRINTFORMW 수색대는 들키지 않게 조심해 접근했다….
+					IF RAND:100 > 50
+						PRINTFORMW 그리고 그물을 던졌다.
+						IF LOCAL:3  == 1
+							PRINTFORMW 그물이 %조사처리(CALLNAME:(LOCAL:4),"를")% 붙잡았다!
+						ELSE
+							PRINTFORMW 그러나 그물이 빗나갔다….
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"는")% 이 틈을 놓치지 않고 재빨리 도망쳤다….
+						ENDIF
+					ELSE
+						PRINTFORMW 그리고 수면제가 묻은 바람총을 쐈다.
+						IF LOCAL:3  == 1
+							PRINTFORMW 바늘이 명중했다!
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"는")% 잠시 갸웃하더니, 곧 잠에 취에 쓰러졌다.
+						ELSE
+							PRINTFORMW 그러나 바늘은 허무하게 빗나가고 말았다.
+							PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"는")% 깜짝 놀라 달리기 시작했다.
+						ENDIF
+					ENDIF
+				;노루를 만났다
+				CASE 4 TO 6
+					PRINTFORMW 한 마리의 노루였다.
+					PRINTFORMW 수색대는 허탈한 마음으로 돌아올 수 밖에 없었다.
+					PRINTW ..................................
+					IF LOCAL:3 == 1
+						PRINTW 돌아오는 길에, 누군가 얼굴을 가리고 지나가는 것을 발견했다.
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"였")%다!
+						RESETCOLOR
+						PRINTFORMW 수색대는 재빨리 뛰어가 %조사처리(CALLNAME:(LOCAL:4 ),"를")% 붙잡았다!
+					ENDIF
+				;곰을 만났다
+				CASE 7 TO 8
+					PRINTFORMW #크아앙!#
+					PRINTFORMW 큰 곰이 나타났다!
+					IF RAND:100 > 50
+						PRINTFORMW 수색대는 곰을 때려잡았다! 그리고 그 고기를 맛있게 구워먹었다!
+					ELSE
+						PRINTFORMW 수색대는 꽁지가 빠져라 도망갔다….
+					ENDIF
+					PRINTW ..................................
+					IF LOCAL:3 == 1
+						PRINTW 돌아오는 길에, 누군가 얼굴을 가리고 지나가는 것을 발견했다.
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"였")%다!
+						RESETCOLOR
+						PRINTFORMW 수색대는 재빨리 뛰어가 %조사처리(CALLNAME:(LOCAL:4),"를")% 붙잡았다!
+					ENDIF
+				;준을 만났다
+				CASE 9
+					PRINTFORMW 술에 취해서 정신을 잃은 JUN神이었다!
+					PRINTFORMW 수색대는 JUN神을 등에 업고, 주위의 마을까지 바래다 주었다.
+					PRINTFORMW 아마 이번 일로 다음 작품에는 주인공으로 등장하지 않을까 기대하면서,
+					PRINTFORMW 수색대는 신비한 경험을 했다며 즐거워 하며 돌아왔다.
+					PRINTW ..................................
+					IF LOCAL:3 == 1
+						PRINTW 돌아오는 길에, 누군가 황급히 뛰어가는 걸 발견했다.
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+						PRINTFORMW 그것은, 지저분한 옷으로 겨우 몸을 가리고 있는 %조사처리(CALLNAME:(LOCAL:4),"였")%다!
+						RESETCOLOR
+						PRINTFORMW 수색대는 전력으로 뛰어가 %조사처리(CALLNAME:(LOCAL:4),"를")% 붙잡았다!
+					ENDIF
+				ENDSELECT
+			;마을에서 수색한다.
+			CASE 1
+				PRINTFORMW 수색대는 마을로 내려가 탐문을 했다.
+				PRINTFORMW 그러던 중, %CALLNAME:(LOCAL:4)%의 모습을 봤다는 사람을 발견했다.
+				PRINTFORMW 그 사람과 같이 가 봤더니, 그 곳에는….
+				PRINTL
+				SELECTCASE RAND:2
+				;모닥불을 발견
+				CASE 0
+					IF LOCAL:3 == 1
+					;발견
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"가")% 있었다!
+						RESETCOLOR
+						PRINTFORMW 수색대는 황급히 달려갔다.
+						IF RAND:100 > 50
+							PRINTFORMW 그리고 그물을 던졌다.
+							IF LOCAL:3 == 1
+								PRINTFORMW 그물이 %조사처리(CALLNAME:(LOCAL:4),"를")% 붙잡았다!
+							ELSE
+								PRINTFORMW 그러나 그물이 빗나갔다...
+								PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"는")% 이 틈을 놓치지 않고 재빨리 도망쳤다….
+							ENDIF
+						ELSE
+							PRINTFORMW 수색대를 눈치챈 %조사처리(CALLNAME:(LOCAL:4),"는")% 황급히 도망치기 시작했다.
+							IF LOCAL:3 == 1
+								PRINTFORMW 그러나, 돌부리에 걸려 넘어지고 말았다!
+								PRINTFORMW %조사처리(CALLNAME:(LOCAL:4),"는")% 희망을 잃은 표정으로 수색대의 손에 끌려올 수 밖에 없었다….
+							ELSE
+								PRINTFORMW 이 주위의 지리에 익숙한 것인지, 순식간에 숲 속으로 사라져 버렸다.
+								PRINTFORMW 수색대는 빈 손으로 돌아올 수 밖에 없었다….
+							ENDIF
+						ENDIF
+					ELSE
+						PRINTFORMW 떠난 지 몇 시간은 됐는지, 다 타버린 재만 남은 모닥불이 있었다….
+						PRINTFORMW 수색대는 빈 손으로 돌아올 수 밖에 없었다….
+					ENDIF
+				;창관을 발견
+				CASE 1
+					PRINTFORMW 어떤 이름 없는 창관이 있었다.
+					PRINTFORMW 설마 여기에…? 수색대는 미심쩍어 하며 창관의 안으로 들어갔다...
+					IF LOCAL:3 == 1
+					;발견
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:4 ),"가")% 있었다!
+						RESETCOLOR
+						PRINTFORMW 수색대는 황급히 달려갔다.
+						IF RAND:100 > 50
+							PRINTFORMW 그리고 마취성분이 든 침을 던졌다.
+							IF LOCAL:3 == 1
+								PRINTFORMW 침이 %CALLNAME:(LOCAL:4 )%의 몸에 꽂혔다!
+							ELSE
+								PRINTFORMW 그러나 침이 빗나갔다….
+								PRINTFORMW %조사처리(CALLNAME:(LOCAL:4 ),"는")% 이 틈을 놓치지 않고 재빨리 창관의 밖으로 도망쳤다….
+							ENDIF
+						ELSE
+							PRINTFORMW 수색대를 눈치챈 %조사처리(CALLNAME:(LOCAL:4 ),"는")% 황급히 도망치려 했다.
+							IF LOCAL:3 == 1
+								PRINTFORMW 그러나, 문턱에 걸려 넘어지고 말았다!
+								PRINTFORMW %조사처리(CALLNAME:(LOCAL:4 ),"는")% 희망을 잃은 표정으로 수색대의 손에 끌려올 수 밖에 없었다….
+							ELSE
+								PRINTFORMW 창관의 구조에 익숙한 것읹, 코너를 돌았다고 생각한 순간, 사라져 버렸다.
+								PRINTFORMW 수색대는 한참을 더 수색 해 봤지만, 결국 빈 손으로 돌아올 수 밖에 없었다….
+							ENDIF
+						ENDIF
+					ELSEIF RAND:100 > 50
+						PRINTFORMW 아무도 없고, 사방에서 강도들이 달려들었다.
+						IF RAND:100 > 50
+							PRINTFORMW 수색대는 기겁하여 도망칠 수 밖에 없었다.
+						ELSE
+							PRINTFORMW 수색대는 그 동안 갈고 닦은 실력으로 강도들을 다 때려잡았다!
+							PRINTFORMW 그러나 어디에도 %CALLNAME:(LOCAL:4 )%의 모습은 보이지 않는다….
+						ENDIF
+						PRINTFORMW 지쳐버린 수색대는 돌아올 수 밖에 없었다….
+					ELSE
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:4 ),"과")% 비슷하게 생긴 요괴가 수색대를 유혹하고 있었다….
+						IF RAND:100 > 50
+							PRINTFORMW 수색대는 욕망이 치밀어 오르는 걸 느꼈지만, 임무 중이라 아쉬운 마음으로 거절해야만 했다.
+						ELSE
+							PRINTFORMW 수색대는 욕망을 참지 못하고, 한 참 동안이나 욕정을 채웠다.
+							PRINTFORMW 이윽고, 완전히 녹초가 되 버린 수색대는 임무를 기억해냈다.
+						ENDIF
+						PRINTFORMW 수색대는 빈 손으로 돌아올 수 밖에 없었다….
+					ENDIF
+				ENDSELECT
+			ENDSELECT
+			;결과 출력, 처리
+			;잡았다!
+			IF LOCAL:3 == 1
+				PRINTFORMW %조사처리(CALLNAME:(LOCAL:4 ),"를")% 붙잡는데 성공했다!
+				PRINTFORMW ..............................
+				PRINTFORMW .................
+				PRINTFORMW ....
+				;노예가 돌아온다
+				CFLAG:(LOCAL:4 ):4 =0
+				CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+				PRINTFORMW <%조사처리(CALLNAME:(LOCAL:4 ),"가")% 잡혀 왔습니다.>
+				RESETCOLOR
+				PRINTFORMW %조사처리(CALLNAME:(LOCAL:4 ),"는")% 슬픈 표정으로 아무 말도 하지 않고, 방 안에 처박혀 있다….
+				PRINTL
+				;노예의 수치 변동. 현재의 실종력을 기반으로 계산한다
+				;굴복의 구슬
+				JUEL:(LOCAL:4 ):14 += CFLAG:(LOCAL:4 ):4011*2
+				PRINTFORML 굴복의 구슬 + {CFLAG:(LOCAL:4 ):4011*2}
+				;순종의 구슬
+				JUEL:(LOCAL:4 ):12 += CFLAG:(LOCAL:4 ):4011*1
+				PRINTFORML 순종의 구슬 + {CFLAG:(LOCAL:4 ):4011*1}
+				;고통의 구슬
+				JUEL:(LOCAL:4 ):16 += CFLAG:(LOCAL:4 ):4011*1
+				PRINTFORML 고통의 구슬 + {CFLAG:(LOCAL:4 ):4011*1}
+				;스트레스
+				CFLAG:(LOCAL:4 ):65 += CFLAG:(LOCAL:4 ):4011
+				PRINTFORML 스트레스 + {CFLAG:(LOCAL:4 ):4011}
+				;체력 캐스팅. 1/3
+				BASE:(LOCAL:4 ):0 = MAXBASE:(LOCAL:4 ):0 * 100 / 3
+				;기력 캐스팅. 1/3
+				BASE:(LOCAL:4 ):1 = MAXBASE:(LOCAL:4 ):1 * 100 / 3
+				PRINTL
+			;못 잡았다!
+			ELSE
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				PRINTFORMW <수색은 실패했다.>
+				RESETCOLOR
+				PRINTL
+			ENDIF
+		ELSE
+			GOTO SELECT_LIST
+		ENDIF
+	ELSEIF RESULT == 1
+		$SELECT_RUMOR
+		PRINTFORML 누구에 대한 소문을 낼까? (구출자 침입 확률 상승. 무명 캐릭터는 불가)
+		LOCAL:99 =0
+		DO
+			;주인, 탈주중 노예, 무명 캐릭터 제외
+			IF LOCAL:99 ==0 || CFLAG:(LOCAL:99):4 ==1 || NO:(LOCAL:99) > 148
+				;
+			ELSE
+				PRINTFORM [{LOCAL:99}] %CALLNAME:(LOCAL:99)% (구출자 침입 확률 : 
+				IF CFLAG:(LOCAL:99):4012 > 30
+					CALL SETCOLOR_TORIKOMODE, "RED", 2
+				ELSEIF CFLAG:(LOCAL:99):4012 > 15
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+				ELSE
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+				ENDIF
+				PRINTFORM {CFLAG:(LOCAL:99):4012}
+				RESETCOLOR
+				PRINTFORML 퍼센트)
+			ENDIF
+			LOCAL:99++
+		LOOP LOCAL:99 < CHARANUM
+		PRINTL [999] 그만둔다
+		INPUT
+		;범위밖이거나 무명캐릭터는 제외.
+		IF RESULT == 999 || RESULT > CHARANUM || RESULT <=0 || NO:RESULT > 148
+			GOTO SELECT_LIST
+		ELSEIF RESULT !=0 || CFLAG:RESULT:4 !=1
+			;선택노예번호 저장
+			LOCAL:4 = RESULT
+			PRINTFORMW 수색대는 %CALLNAME:(LOCAL:4)%에 대한 소문을 내었다….
+			;구출력 증가. 수색력에 따라 달라짐. 수색력의 10%증가.
+			CFLAG:(LOCAL:4):4012 += FLAG:5043/10
+			;구출력 캐스팅.
+			CFLAG:(LOCAL:4):4012 = LIMIT(CFLAG:(LOCAL:4):4012, 1, 99)
+			PRINTFORMW 소문이 퍼져, %조사처리(CALLNAME:(LOCAL:4),"를")% 구출하겠다는 사람들이 늘고 있다….
+			PRINTFORM <구출자 침입 확률이 
+			IF CFLAG:(LOCAL:4):4012 > 30
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+			ELSEIF CFLAG:(LOCAL:4):4012 > 15
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+			ELSE
+				CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+			ENDIF
+			PRINTFORM {CFLAG:(LOCAL:4):4012}
+			RESETCOLOR
+			PRINTFORMW 퍼센트가 되었습니다>
+		ELSE	
+			GOTO SELECT_RUMOR
+		ENDIF
+	ELSEIF RESULT == 100
+		PRINTW 오늘은 그만 두자….
+		RETURN 0
+	ELSE
+		GOTO SELECT_LIST
+	ENDIF
+ENDIF
+
+
+
+;--------------------------------------------------
+;노예 복귀 이벤트 및 처리 (원본 YM을 수정해서 사용)
+;실종포인트가 일정량 이하면 자동복귀. 그렇지 않다면 실종포인트를 일정량 줄인다.
+@EVENT_COMEBACK_TORIKOMODE
+LOCAL:99 =0
+DO 
+	IF CFLAG:(LOCAL:99):4011 < 100 && CFLAG:(LOCAL:99):4 == 1
+		;복귀한다.
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		PRINTFORMW 아침에 눈을 뜨니, 며칠 전 탈주했던 %조사처리(CALLNAME:(LOCAL:99),"가")% 문 앞에 서 있었다.
+		RESETCOLOR
+		PRINTFORMW %조사처리(CALLNAME:(LOCAL:99),"는")% 피와 진흙 투성이인 너덜너덜한 모습이었다.
+		PRINTFORMW 끝 없는 도망에 지쳐버린 것이겠지….
+		PRINTFORMW 「………….」
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORMW <%조사처리(CALLNAME:(LOCAL:99 ),"가")% 돌아 왔습니다.>
+		RESETCOLOR
+		PRINTL
+		;실종 플래그 삭제
+		CFLAG:(LOCAL:99):4 = 0
+		;질투치 증가
+		CFLAG:(LOCAL:99):30 += 30
+		;노예의 수치 변동. 일정량을 입력한다.
+		;굴복의 구슬
+		JUEL:(LOCAL:99):14 += 1500
+		PRINTFORML 굴복의 구슬 + 1500
+		;순종의 구슬
+		JUEL:(LOCAL:99):12 += 500
+		PRINTFORML 순종의 구슬 + 500
+		;고통의 구슬
+		JUEL:(LOCAL:99):16 += 800
+		PRINTFORML 고통의 구슬 + 800
+		;스트레스
+		CFLAG:(LOCAL:99):65 += 150
+		PRINTFORML 스트레스 + 150
+		;체력 캐스팅. 1/3
+		BASE:(LOCAL:99):0 = MAXBASE:(LOCAL:99):0 * 100 / 3
+		;기력 캐스팅. 1/3
+		BASE:(LOCAL:99):1 = MAXBASE:(LOCAL:99):1 * 100 / 3
+		PRINTL
+	ELSE
+		;실종치를 일정량 감소시킨다.
+		CFLAG:(LOCAL:99):4011 -= RAND:50
+		;실종치 보정
+		CFLAG:(LOCAL:99):4011 = LIMIT(CFLAG:(LOCAL:99):4011, 1, 9999)
+	ENDIF
+	;디버그
+	;PRINTFORML %CALLNAME:(LOCAL:99 )%의 실종포인트 ={CFLAG:(LOCAL:99):4011}
+	LOCAL:99 ++
+LOOP LOCAL:99 < CHARANUM
+
+
+
+;--------------------------------------------
+;보유중인 노예들의 구속상태를 표시
+@LIST_RESTRICTION_TORIKOMODE
+$SELECT_SLAVE
+CUSTOMDRAWLINE =
+PRINTFORML %UNICODE(0x222F)%노예들의 구속상황%UNICODE(0x222F)%
+PRINTL
+;노예번호 저장용
+LOCAL:1 = 0
+;타겟 대피용
+LOCAL:2 = 0
+;탈출시도확률 저장용
+LOCAL:3 = 0
+;반복자용
+LOCAL:99 = 0
+DO
+	;주인제외
+	IF LOCAL:99 == 0
+		;
+	;실종중 노예는 제외
+	ELSEIF CFLAG:(LOCAL:99):4 == 1
+		;
+	ELSE
+		;번호
+		PRINTFORM [{LOCAL:99}] 
+		;이름
+		;만약 스케쥴이 있다면 검은 색을 입힐 것.
+		SIF CFLAG:(LOCAL:99):4 > 1
+			CALL SETCOLOR_TORIKOMODE, "BLACK", 2
+		PRINTFORML %CALLNAME:(LOCAL:99), 10, LEFT% 
+		RESETCOLOR
+		;구속상태
+		PRINTFORM     탈출시도:
+		CALL CALC_ESCAPE_PERCENT_TORIKOMODE, LOCAL:99
+		LOCAL:3 = RESULT
+		IF LOCAL:3 > 30
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+		ELSEIF LOCAL:3 > 15
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		ELSE
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		ENDIF
+		PRINTFORM {LOCAL:3, 2, RIGHT}
+		RESETCOLOR
+		PRINTFORM %UNICODE(0x0025)% 
+		;구속상태 표시. 
+		PRINTFORM %UNICODE(0x222E)%구속:
+		CALL ARRANGE_RESTRICTION_TORIKOMODE, LOCAL:99
+		;디버그
+		;PRINTFORML LOCAL:99 ={LOCAL:99}, CFLAG:(LOCAL:99):4010 = {CFLAG:(LOCAL:99):4010}
+		PRINTL
+		DRAWLINE
+		;CUSTOMDRAWLINE ･
+		;CUSTOMDRAWLINE ∼
+
+	ENDIF
+	LOCAL:99 ++
+LOOP LOCAL:99 < CHARANUM
+PRINTL [999] 돌아간다
+PRINTL
+INPUT
+;노예번호 저장
+LOCAL:1 = RESULT
+;스케쥴이 있는 노예는 변경불가
+IF RESULT < CHARANUM &&  RESULT >0 && CFLAG:RESULT:4 > 1
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORMW %조사처리(CALLNAME:(LOCAL:1),"는")% 지금 바쁘다…. (스케쥴을 없음으로 바꿔 주세요)
+	RESETCOLOR
+	GOTO SELECT_SLAVE
+;노예 구속상태 변경. 실종자가 아니어야 함
+ELSEIF RESULT < CHARANUM &&  RESULT >0 && CFLAG:RESULT:4 != 1
+	$SELECT_LIST
+	CUSTOMDRAWLINE ･
+	PRINTFORML %조사처리(CALLNAME:(LOCAL:1),"를")% 어떻게 할까?
+	;이름
+	;PRINTFORM %CALLNAME:(LOCAL:1), 7, LEFT% 
+	;구속상태
+	PRINTFORM 탈출시도:
+	CALL CALC_ESCAPE_PERCENT_TORIKOMODE, LOCAL:1
+	LOCAL:3 = RESULT
+	IF LOCAL:3 > 30
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+	ELSEIF LOCAL:3 > 15
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+	ENDIF
+	PRINTFORM {LOCAL:3, 2, RIGHT}
+	RESETCOLOR
+	PRINTFORM %UNICODE(0x0025)% 
+	;구속상태 표시. 
+	PRINTFORM %UNICODE(0x222E)%구속:
+	CALL ARRANGE_RESTRICTION_TORIKOMODE, LOCAL:1
+	PRINTL
+	CUSTOMDRAWLINE ･
+
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&1)? ○ # × \@ [0] 문을 \@ (CFLAG:(LOCAL:1):4010&1)? 연다 # 잠근다 : 탈출확률 감소. 각종 이벤트 등장불가, 감금효과 \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&2)? ○ # × \@ [1] 밧줄을 \@ (CFLAG:(LOCAL:1):4010&2)? 푼다 # 묶는다 : 탈출확률 감소. 자해불가. 긴박효과 \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&4)? ○ # × \@ [2] 옷을 \@ (CFLAG:(LOCAL:1):4010&4)? 입힌다 # 벗긴다 : 탈출확률 감소. 수치효과. \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&8)? ○ # × \@ [3] 볼재갈을 \@ (CFLAG:(LOCAL:1):4010&8)? 푼다 # 끼운다 : 탈출확률 감소. 구출확률 감소. \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&16)? ○ # × \@ [4] 아이마스크를 \@ (CFLAG:(LOCAL:1):4010&16)? 푼다 # 씌운다 : 탈출확률 감소. 공포효과 \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&32)? ○ # × \@ [5] 로터를 \@ (CFLAG:(LOCAL:1):4010&32)? 푼다 # 끼운다 : V조교효과. \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&64)? ○ # × \@ [6] 애널비즈를 \@ (CFLAG:(LOCAL:1):4010&64)? 뺀다 # 끼운다 : A조교효과. \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&128)? ○ # × \@ [7] 클리캡을 \@ (CFLAG:(LOCAL:1):4010&128)? 뗀다 # 단다 : C조교효과. \@
+	PRINTFORML \@ (CFLAG:(LOCAL:1):4010&256)? ○ # × \@ [8] 니플캡을 \@ (CFLAG:(LOCAL:1):4010&256)? 뗀다 # 단다 : B조교효과. \@
+	PRINTFORML [99] 모든 구속구를 해제한다.
+	PRINTFORML [100] 그만둔다
+	INPUT
+	;문을 잠근다.
+	IF RESULT == 0
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		IF CFLAG:(LOCAL:1):4010&1
+			PRINTFORMW %CALLNAME:(LOCAL:1)%의 방 문을 열어두었다.
+			CFLAG:(LOCAL:1):4010 ^= 1
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:(LOCAL:1),"를")% 방에 집어넣고, 단단히 자물쇠를 채웠다.
+			CFLAG:(LOCAL:1):4010 ^= 1
+		ENDIF
+		RESETCOLOR
+	;밧줄구속. 밧줄이 필요하다.
+	ELSEIF RESULT == 1
+		IF ITEM:29 == 1
+			;지시문 출력
+			CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 224
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&2
+				CFLAG:(LOCAL:1):4010 -= 2
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 2
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 224
+		ELSE
+			PRINTFORMW 밧줄이 없다...
+		ENDIF
+	;옷
+	ELSEIF RESULT == 2
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		IF CFLAG:(LOCAL:1):4010&4
+			PRINTFORMW %CALLNAME:(LOCAL:1)%에게 옷을 입혔다.
+			CFLAG:(LOCAL:1):4010 -= 4
+		ELSE
+			PRINTFORMW %CALLNAME:(LOCAL:1)%의 옷을 벗겨서 알몸으로 만들었다.
+			CFLAG:(LOCAL:1):4010 ^= 4
+		ENDIF
+		RESETCOLOR
+	
+	;볼재갈
+	ELSEIF RESULT == 3
+		IF ITEM:31 == 1
+			;지시문 출력
+			CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 226
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&8
+				CFLAG:(LOCAL:1):4010 -= 8
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 8
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 226
+		ELSE
+			PRINTFORMW 볼재갈이 없다….
+		ENDIF
+	;아이마스크
+	ELSEIF RESULT == 4
+		IF ITEM:30 == 1
+			;지시문 출력
+			CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 225
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&16
+				CFLAG:(LOCAL:1):4010 -= 16
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 16
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 225
+		ELSE
+			PRINTFORMW 아이마스크가 없다….
+		ENDIF
+	;V로터삽입. 남자일경우 페니스 로터 자극이 됨.
+	ELSEIF RESULT == 5
+		IF ITEM:0 == 1
+			;지시문 출력
+			IF TALENT:(LOCAL:1):120
+				CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 132
+			ELSE
+				CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 151
+			ENDIF
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&32
+				CFLAG:(LOCAL:1):4010 -= 32
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 32
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 10
+		ELSE
+			PRINTFORMW 로터가 없다….
+		ENDIF
+	;애널비즈
+	ELSEIF RESULT == 6
+		IF ITEM:11 == 1
+			;지시문 출력
+			CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 172
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&64
+				CFLAG:(LOCAL:1):4010 -= 64
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 64
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 172
+		ELSE
+			PRINTFORMW 애널 비즈가 필요하다….
+		ENDIF
+	;클리캡
+	ELSEIF RESULT == 7
+		IF TALENT:(LOCAL:1):120 && ITEM:15 == 1
+			PRINTFORMW 남자에겐 클리캡을 달 수가 없다….
+		ELSEIF ITEM:15 == 1
+			;지시문 출력
+			CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 14
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&128
+				CFLAG:(LOCAL:1):4010 -= 128
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 128
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 14
+		ELSE
+			PRINTFORMW 클리캡이 필요하다….
+		ENDIF
+	;니플캡
+	ELSEIF RESULT == 8
+		;남자면 안됨.
+		IF TALENT:(LOCAL:1):120 && ITEM:20 == 1
+			PRINTFORMW 남자에겐 유두캡을 달 수가 없다….
+		ELSEIF ITEM:20 == 1
+			;지시문 출력
+			CALL MESSAGE_JUSTSAY_TORIKOMODE, LOCAL:1, 15
+			;있으면 끄고 없으면 켜고
+			IF CFLAG:(LOCAL:1):4010&256
+				CFLAG:(LOCAL:1):4010 -= 256
+			ELSE
+				CFLAG:(LOCAL:1):4010 ^= 256
+			ENDIF
+			;구상 출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, LOCAL:1, 15
+		ELSE
+			PRINTFORMW 유두캡이 없다….
+		ENDIF
+	ELSEIF RESULT == 99
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		PRINTFORMW %CALLNAME:(LOCAL:1)%의 구속을 해제했다….
+		RESETCOLOR
+		CFLAG:(LOCAL:1):4010 = 0
+	ELSEIF RESULT == 100
+		GOTO SELECT_SLAVE
+	ELSE
+	ENDIF
+	GOTO SELECT_LIST
+ELSEIF RESULT == 999
+	RETURN 0
+ELSE
+	GOTO SELECT_SLAVE
+ENDIF
+
+;---------------------------------------------
+;노예들의 구속상태에 따른 이벤트 처리.
+;현재는 수치변경 정도만 있다.
+@EVENT_RESTRICTION_TORIKOMODE
+DRAWLINE
+PRINTFORML %UNICODE(0x222F)%구속효과 발동%UNICODE(0x222F)%
+;반복자용
+LOCAL:99 = 0
+DO
+	;주인제외
+	IF LOCAL:99 == 0
+		;
+	;실종중 노예는 제외
+	ELSEIF CFLAG:(LOCAL:99):4 == 1
+		;
+	ELSE
+		;구속구 효과를 출력한다.
+		CALL EFFECT_BY_RESTRICTION_TORIKOMODE, (LOCAL:99), 1
+	ENDIF
+	LOCAL:99 ++
+LOOP LOCAL:99 < CHARANUM
+DRAWLINE
+
+;-----------------------------------------
+;경비원 일일종료 이벤트. 
+;체력회복, 경험치 획득. 
+;경비 시스템의 가장 마지막에 불려진다.
+;-----------------------------------------
+@EVENT_TURNEND_GUARDSMAN_TORIKOMODE
+;카운터
+LOCAL:99 = 0
+;경험치
+LOCAL:0 = 2500+ RAND:1500
+;체력 회복량
+LOCAL:1 = 0
+;총 지불된 봉급
+LOCAL:2 = 0
+;
+DRAWLINE
+PRINTFORML #경비원 봉급 지불
+DO
+	;존재하는 경비원에 대해서 처리.
+	IF FLAG:(LOCAL:99+5051) > 0
+		;경험치 획득 > 레벨업. 일일 경험치는 임무에 관계없이 모두에게 준다. 2500~3500 정도 줌. (3일에 1렙업 정도 하도록)
+		CALL GETEXP_GUARDSMAN_TORIKOMODE, LOCAL:99+5051, LOCAL:0
+		;체력 상승 처리. 최대체력을 받아서, 체력을 회복한다. 10%+50 회복한다.
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:99+5051)
+		LOCAL:1 = RESULT:4 + (RESULT:7)/10 +50
+		;회복 후 체력이 최대 체력을 넘으면, 최대체력이 된다.
+		SIF LOCAL:1 > RESULT:7
+			LOCAL:1 = RESULT:7
+		;현재 체력 삭제
+		FLAG:(LOCAL:99+5051) -= RESULT:4*100000
+		;변경된 체력 추가.
+		FLAG:(LOCAL:99+5051) += LOCAL:1 *100000
+		;봉급 지불. 만약 봉급이 지불되지 못하면 때려친다.
+		CALL PAY_GUARDSMAN_TORIKOMODE, LOCAL:99+5051
+		LOCAL:2 += RESULT
+	ENDIF
+	LOCAL:99++
+LOOP LOCAL:99 < 10
+
+;총 지불된 봉급을 출력한다.
+IF LOCAL:2 > 0
+	PRINTFORM 경비원의 봉급으로 
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+	PRINTFORM {LOCAL:2 }
+	RESETCOLOR
+	PRINTFORMW 원이 들었습니다. (잔고:{MONEY}원)
+	PRINTL
+	DRAWLINE
+ENDIF
+
+;-----------------------------------
+;모드를 처음으로 켰을 때, 공짜로 경비원을 지급한다.
+@INIT_GUARDSMAN_TORIKOMODE
+;감시
+CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 1
+FLAG:5051 = RESULT
+;전투
+CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 2
+FLAG:5052 = RESULT
+;수색
+CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 3
+FLAG:5053 = RESULT
+;플래그 수정.
+FLAG:5004 = 1
+PRINTW ...경비 시스템을 시작합니다...
+CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+PRINTW <초기 경비원이 배치 되었습니다>
+RESETCOLOR
+
+
+;-----------------------------------------
+;보유 경비원 관리
+;경비원을 고용하고 무기를 들려주고...등등...
+;경비대장을 임명하는 것도 여기서.
+;----------------------------------------
+@LIST_GUARDSMAN_TORIKOMODE
+;위치 저장
+LOCAL:0 = 0
+;무기 구매시 구매번호 저장
+LOCAL:1 =0
+;리스트 출력 카운터
+LOCAL:2 = 0
+;무기 선택용 카운터
+LOCAL:3 = 0
+;경비원 가격 계산용 변수
+;요정
+LOCAL:4 = 0
+;인간
+LOCAL:5 = 0
+;오니
+LOCAL:6 = 0
+;봉급총액
+LOCAL:7 = 0
+;경비대장 등록번호
+LOCAL:8 = 0
+;(경비대장)노예의 전투력
+LOCAL:9 = 0
+;
+$SELECT_GUARDSMAN
+;경비대장 추출.
+LOCAL:8 = FINDCHARA(CFLAG:4013, 2 )
+;봉급 총액 리셋
+LOCAL:7 = 0
+;경비원의 고용가격 계산.
+CALL CALC_HOWMANY_GUARDSMAN_TORIKOMODE
+LOCAL:4 = 100 + RESULT*15000/100
+LOCAL:5 = 150 + RESULT*20000/100
+LOCAL:6 = 200 + RESULT*30000/100
+;.......................................................
+CUSTOMDRAWLINE =
+PRINTFORML ※경비원※
+;경비리스트 출력
+LOCAL:2 = 0
+DO 
+	;카운터 증가. 1부터 사용한다. 
+	LOCAL:2 += 1
+	PRINTFORM [{LOCAL:2}] 
+	;정보가 없으면 패스.
+	IF FLAG:(5050 + LOCAL:2) == 0
+		PRINTL - - - - - - - - - - 미 고용 - - - - - - - - - - - - 
+	;정보가 있으면 출력한다.
+	ELSE
+		;경비원 정보 출력
+		CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5050 + LOCAL:2)
+		;경비원 정보 획득 - 봉급계산용
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5050 + LOCAL:2)
+		;봉급 추가
+		LOCAL:7 += RESULT:11
+	ENDIF
+	DRAWLINE
+LOOP LOCAL:2 < 9
+;경비대장 표시
+PRINTFORML ♆경비대장♆
+PRINTFORM [99] 
+;경비대장이 있다
+IF LOCAL:8 > 0
+	CALL PRINT_GUARDSMAN_CAPTAIN, LOCAL:8,
+;없다.
+ELSE
+	PRINTL - - - - - - - - - - 미 임명 - - - - - - - - - - - - 
+ENDIF
+DRAWLINE
+;리스트 출력 종료
+;돌아가기 출력
+PRINTL [100] 돌아간다.
+PRINTL
+;경비력 계산.출력
+PRINTFORM #경비력 = 
+CALL CALC_SECURITY_POWER_TORIKOMODE
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+PRINTFORM ♎감시대:{FLAG:5041} 
+CALL SETCOLOR_TORIKOMODE, "RED", 2
+PRINTFORM ♆전투대:{FLAG:5042} 
+CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+PRINTFORM ♏수색대:{FLAG:5043} 
+RESETCOLOR
+PRINTL
+;봉급 출력
+PRINTFORM #일당 = {LOCAL:7}원 (잔액:{MONEY}원)
+PRINTL
+PRINTL
+PRINTL 관리할 경비원을 선택해 주세요.
+INPUT
+;경비원 관리.
+IF RESULT <10 && RESULT != 0
+	;선택한 경비원 위치를 저장한다.
+	LOCAL:0 = 5050 + RESULT
+	$SELECT_MANAGE_GUARSMAN
+	PRINTL 어떻게 할까?
+	PRINTFORML [0] 새로운 경비를 고용한다. (기존의 경비는 해고됩니다)
+	;이미 경비가 있을때만 출력.
+	IF FLAG:(LOCAL:0) != 0
+		PRINTFORML [1] 무기 변경
+		PRINTFORML [2] 임무 변경
+		PRINTFORML [3] 해고!
+	ENDIF
+	PRINTFORML [100] 돌아간다
+	PRINTL
+	INPUT
+	IF RESULT == 0
+		$BUY_GUARDMAN
+		PRINTL 어떤 경비를 고용할까?
+		PRINTFORML [0] 요정. 감시력과 수색력이 높지만 전투는 무리. 고용비:{LOCAL:4}원
+		PRINTFORML [1] 인간. 표준적인 능력치. 감시역으로 쓰기 좋다. 고용비:{LOCAL:5}원
+		PRINTFORML [2] 오니. 전투에 특화. 그 외에는 영…. 고용비:{LOCAL:6}원
+		PRINTFORML [100] 고용하지 않는다.
+		PRINTL
+		INPUT
+		;요정 고용
+		IF RESULT == 0
+			IF MONEY < LOCAL:4
+				PRINTL 돈이 모자란다.
+				GOTO SELECT_MANAGE_GUARSMAN
+			ELSEIF FLAG:(LOCAL:0) > 0
+				PRINTL 기존의 경비를 해고합니까?
+				PRINTFORML [0] 해고다!
+				PRINTFORML [1] 해고라니 너무 불쌍하잖아….
+				PRINTL
+				INPUT
+				IF RESULT == 0
+					CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 1
+					FLAG:(LOCAL:0) = RESULT
+					MONEY -= LOCAL:4
+					PRINTFORML 요정 경비원을 고용했다. (잔액:{MONEY}원)
+					CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+					WAIT
+					DRAWLINE
+					GOTO SELECT_GUARDSMAN
+				ELSE
+					GOTO SELECT_MANAGE_GUARSMAN
+				ENDIF
+			ELSE
+				CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 1
+				FLAG:(LOCAL:0) = RESULT
+				MONEY -= LOCAL:4
+				PRINTFORML 요정 경비원을 고용했다. (잔액:{MONEY}원)
+				CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+				WAIT
+				DRAWLINE
+				GOTO SELECT_GUARDSMAN
+			ENDIF
+		;인간 고용
+		ELSEIF RESULT == 1
+			IF MONEY < LOCAL:5
+				PRINTL 돈이 모자란다.
+				GOTO SELECT_MANAGE_GUARSMAN
+			ELSEIF FLAG:(LOCAL:0) > 0
+				PRINTL 기존의 경비를 해고합니까?
+				PRINTFORML [0] 해고다!
+				PRINTFORML [1] 해고라니 너무 불쌍하잖아….
+				INPUT
+				IF RESULT == 0
+					CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 2
+					DRAWLINE
+					FLAG:(LOCAL:0) = RESULT
+					MONEY -= LOCAL:5
+					PRINTFORML 인간 경비원을 고용했다. (잔액:{MONEY}원)
+					CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+					WAIT
+					GOTO SELECT_GUARDSMAN
+				ELSE
+					GOTO SELECT_MANAGE_GUARSMAN
+				ENDIF
+			ELSE
+				CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 2
+				FLAG:(LOCAL:0) = RESULT
+				MONEY -= LOCAL:5
+				PRINTFORML 인간 경비원을 고용했다. (잔액:{MONEY}원)
+				CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+				WAIT
+				DRAWLINE
+				GOTO SELECT_GUARDSMAN
+			ENDIF
+		;오니 고용
+		ELSEIF RESULT == 2
+			IF MONEY < LOCAL:6
+				PRINTL 돈이 모자란다.
+				GOTO SELECT_MANAGE_GUARSMAN
+			ELSEIF FLAG:(LOCAL:0) > 0
+				PRINTL 기존의 경비를 해고합니까?
+				PRINTFORML [0] 해고다!
+				PRINTFORML [1] 해고라니 너무 불쌍하잖아….
+				PRINTL
+				INPUT
+				IF RESULT == 0
+					CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 3
+					FLAG:(LOCAL:0) = RESULT
+					MONEY -= LOCAL:6
+					PRINTFORML 오니 경비원을 고용했다. (잔액:{MONEY}원)
+					CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+					WAIT
+					DRAWLINE
+					GOTO SELECT_GUARDSMAN
+				ELSE
+					GOTO SELECT_MANAGE_GUARSMAN
+				ENDIF
+			ELSE
+				CALL GENERATE_DATA_GUARDSMAN_TORIKOMODE, 3
+				FLAG:(LOCAL:0) = RESULT
+				MONEY -= LOCAL:6
+				PRINTFORML 오니 경비원을 고용했다. (잔액:{MONEY}원)
+				CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+				WAIT
+				DRAWLINE
+				GOTO SELECT_GUARDSMAN
+			ENDIF
+		;구매하지 않는다
+		ELSEIF RESULT == 100
+			GOTO SELECT_GUARDSMAN
+		;그 외.
+		ELSE
+			GOTO BUY_GUARDMAN
+		ENDIF
+	;무기변경(구매)
+	ELSEIF RESULT == 1 && FLAG:(LOCAL:0) > 0
+		$BUY_WEAPONE
+		PRINTL 어떤 무기로 바꿀까? (이전의 무기는 사라집니다)
+			LOCAL:3 = 0
+			DO
+				;번호
+				PRINTFORM [{LOCAL:3 +1,2,RIGHT}]
+				;무기정보 출력
+				CALL PRINT_DATA_WEAPON_TORIKOMODE, (LOCAL:3 +1)
+				;카운터업
+				LOCAL:3 += 1
+			LOOP LOCAL:3 < 20
+			PRINTL [999] 돌아간다
+		PRINTL
+		INPUT
+		IF RESULT > 0  && RESULT < 21
+			;선택무기번호 저장
+			LOCAL:1 = RESULT
+			CALL DATA_WEAPON_GUARDSMAN_TORIKOMODE, (LOCAL:1)
+			CALL SETCOLOR_TORIKOMODE, "JADE", 3
+			PRINTFORM %RESULTS:1%
+			RESETCOLOR
+			PRINTFORML %조사만처리(RESULTS:1,"를")% 구매합니까? ({RESULT:3}원)
+			PRINTL [0] 응
+			PRINTL [1] 아니
+			INPUT
+			IF RESULT == 0
+				IF MONEY > RESULT:3
+					;돈 차감
+					MONEY -= RESULT:3 
+					PRINTFORMW %조사처리(RESULTS:1,"를")% 구매했습니다. (잔액:{MONEY}원)
+					;무기 삭제
+					FLAG:(LOCAL:0) -= (FLAG:(LOCAL:0)%100000000000) / 1000000000  * 1000000000
+					;새로운 무기를 장착한다.
+					FLAG:(LOCAL:0) += LOCAL:1*1000000000
+					;결과를 보여준다.
+					CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+					WAIT
+				ELSE
+					PRINTL 돈이 부족합니다.
+				ENDIF
+			ELSE
+				GOTO BUY_WEAPONE
+			ENDIF
+		ELSEIF RESULT == 999
+			GOTO SELECT_GUARDSMAN
+		ELSE
+			GOTO BUY_WEAPONE
+		ENDIF
+		GOTO SELECT_GUARDSMAN
+	;임무부여
+	ELSEIF RESULT == 2 && FLAG:(LOCAL:0) > 0
+		;임무 체크
+		$LIST_SET_JOB
+		CALL DATA_JOB_GUARDSMAN_TORIKOMODE, (FLAG:(LOCAL:0)%10)
+		PRINTFORML 현재의 임무는 [%RESULTS%]%조사만처리(RESULTS,"이")%다.
+		;경비력 계산, 출력
+		PRINTL 임무를 변경할까?
+		PRINTFORML [0] 감시 : 노예의 탈주를 막고, 침입자를 감지 해 냅니다.
+		PRINTFORML [1] 전투 : 노예의 탈주와 침입을 감지해냈다면 싸워서 포획합니다.
+		PRINTFORML [2] 수색 : 탈주한 노예를 잡아들이거나, 소문을 내서 구출자가 오게 합니다.
+		INPUT
+		IF RESULT < 3 && RESULT >=0
+			;임무삭제
+			FLAG:(LOCAL:0) -= (FLAG:(LOCAL:0))%10
+			;임무설정
+			FLAG:(LOCAL:0) += RESULT
+			CALL DATA_JOB_GUARDSMAN_TORIKOMODE, RESULT
+			PRINTFORML 임무가 [%RESULTS%]%조사만처리(RESULTS,"로")% 변경되었습니다.
+		ELSE
+			GOTO LIST_SET_JOB
+		ENDIF	
+		GOTO SELECT_GUARDSMAN
+	;해고!
+	ELSEIF RESULT == 3 && FLAG:(LOCAL:0) > 0
+		$SELECT_FIRE
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE,  FLAG:(LOCAL:0)
+		PRINTFORML %조사처리(RESULTS:0,"를")% 정말로 해고합니까?
+		PRINTFORML [0] 요즘 실업률도 높은데 해고하면 어찌 먹고 살겠어….
+		PRINTFORML [1] 무능한 놈은 꺼져!
+		INPUT
+		IF RESULT == 0
+			CALL CALC_DATA_GUARDSMAN_TORIKOMODE,  FLAG:(LOCAL:0)
+			PRINTFORMW "충성! 앞으로도 목숨 바쳐 열심히 일하겠습니다!"
+			PRINTFORMW %조사처리(RESULTS:0,"는")% 충성을 다짐했다….
+		ELSEIF RESULT == 1
+			CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:0)
+			PRINTFORMW "하아…. 이번 달 분유값은 또 어떻게 하나…. 그 동안 고마웠습니다."
+			PRINTFORMW %조사처리(RESULTS:0,"는")% 저무는 석양 너머로 터덜터덜 걸어가…. 사라졌다.
+			PRINTFORMW 그가 떠난 자리엔 눈물로 얼룩 진 손수건만이 쓸쓸히 남아있었다….
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW <%조사처리(RESULTS:0,"는")% 해고 당했다!>
+			RESETCOLOR
+			FLAG:(LOCAL:0) = 0
+		ELSE
+			GOTO SELECT_FIRE
+		ENDIF
+		GOTO SELECT_GUARDSMAN
+	ELSE
+		GOTO SELECT_GUARDSMAN
+	ENDIF
+;경비대장 관리
+ELSEIF RESULT == 99
+	$SELECT_GUARDSMAN_CAPTAIN
+	PRINTL [0] 경비대장을 임명한다
+	SIF LOCAL:8 > 0
+		PRINTL [1] 경비대장을 해임한다
+	PRINTL [999] 돌아간다
+	PRINTL
+	INPUT
+	;임명한다.
+	IF RESULT == 0
+		$LOOP_DESIGNATION_GUARDSMAN_CAPTAIN
+		PRINTL
+		PRINTL 누구를 경비대장으로 임명할까?
+		;캐릭터 리스트 출력
+		LOCAL:99 = 0
+		DO
+			IF LOCAL:99 == 0
+				;주인은 패스
+			;노예 리스트
+			ELSE
+				;번호, 이름
+				PRINTFORM [{LOCAL:99}] %CALLNAME:(LOCAL:99)% 
+				;체력표시
+				CALL LIFE_BAR_TORIKOMODE , LOCAL:99
+				;기력표시
+				CALL VITALITY_BAR_TORIKOMODE, LOCAL:99
+				;전투력 표시
+				CALL CALC_ATTACKPOWER_GUARDSMAN_SLAVE, LOCAL:99 ,1
+				PRINTFORM ♆전투력:{RESULT} 
+				;경비대장 임명여부
+				IF CFLAG:(LOCAL:99):4013 == 2
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+					PRINTFORM <경비대장 임무중>
+					RESETCOLOR
+				ELSEIF (TALENT:(LOCAL:99):150 || TALENT:(LOCAL:99):160 || TALENT:(LOCAL:99):170)
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+					PRINTFORM <임명가능>
+					RESETCOLOR
+				ELSE
+					PRINTFORM <임명불가>
+				ENDIF
+				PRINTL
+			ENDIF
+			LOCAL:99++
+		LOOP LOCAL:99 < CHARANUM
+		PRINTL [100]돌아간다
+		PRINTL
+		INPUT
+		IF RESULT < CHARANUM && RESULT !=0 && (TALENT:RESULT:150 || TALENT:RESULT:160 || TALENT:RESULT:170)
+			PRINTFORMW <%조사처리(CALLNAME:RESULT,"를")% 경비대장으로 임명했다.>
+			CFLAG:RESULT:4013 = 2
+		ELSEIF RESULT < CHARANUM
+			PRINTFORMW <%조사처리(CALLNAME:RESULT,"는")% 함락 상태가 아니므로 경비대장에 임명할 수 없습니다.>
+			GOTO LOOP_DESIGNATION_GUARDSMAN_CAPTAIN
+		ELSEIF RESULT == 100
+			GOTO SELECT_GUARDSMAN
+		ELSE 
+			GOTO LOOP_DESIGNATION_GUARDSMAN_CAPTAIN
+		ENDIF
+	;해임한다
+	ELSEIF RESULT == 1 && LOCAL:8 > 0
+		CFLAG:(LOCAL:8):4013 = 0
+		PRINTFORMW <%조사처리(CALLNAME:(LOCAL:8),"를")% 경비대장에서 해임했다.>
+	ELSEIF RESULT == 999
+		GOTO SELECT_GUARDSMAN
+	ELSE
+		GOTO SELECT_GUARDSMAN_CAPTAIN
+	ENDIF
+	;관리 메인으로 돌아간다.
+	GOTO SELECT_GUARDSMAN
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO SELECT_GUARDSMAN
+ENDIF

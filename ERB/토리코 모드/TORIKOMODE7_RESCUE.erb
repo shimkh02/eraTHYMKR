@@ -1,0 +1,1951 @@
+﻿;===========================================
+;경비시스템 - 구출시스템관련 함수들.
+;또한, 시리즈별 노예 구매 제한 함수도 여기 들어있다.
+;--------------------------------------------
+
+;-----------------------------------------------
+;구출 캐릭터 선택 함수
+;ARG : 피 구출자 캐러번호
+;기본적으로 유명 캐릭터만 구하러 온다. 
+;무명 캐릭터는 처리가 어려우니 구출에 포함하지 않는다. (추 후 포함될 수 있다)
+;일단 같은 시리즈, 친한친구가 먼저 온다. 꼭 와야 하는 타이밍인데 안 오면 아무라도 올 지도...
+;무명캐릭터를 가지고 있을 시, 아무도 구하러 오지 않는다. (131009 수정)
+;-----------------------------------------------
+@SELECT_CHARA_RESCUE_TORIKOMODE,ARG
+
+;카운터
+LOCAL:99 = 0
+;구출자 캐릭터번호저장
+LOCAL:0 = 0
+;구출력 계산용
+LOCAL:1 = 0
+;구출자의 시리즈
+LOCAL:2 = 0
+;피구출자의 시리즈
+LOCAL:3 = 0
+;구출하러 갈지 초기화
+RESULT:1 = 0
+
+;일반모드의 아이템 가격을 세팅한다. 판매 판정용으로 1회 실행함.
+;일반모드에서 구매할 수 있다 = 구출모드에서 구출하러 올 수 있다 라는 개념.
+CALL CHARA_BUY_PRICE
+
+LOCAL:99 = 0
+DO
+	;유명 캐릭터 중 1명을 뽑는다. 아나타는 제외. (1~299번 캐릭터 검색)
+	LOCAL:0 = RAND:147+1
+	;디버그
+	;PRINTFORML %ITEMNAME:(LOCAL:0+100)%이 %ITEMNAME:(ARG+100)%를 구출할지 체크합니다.
+	;가지고 있는 캐릭터 제외
+	IF GETCHARA(LOCAL:0) >=0
+		;디버그
+		;PRINTL 이미 보유중인 캐릭터입니다.
+	;판매하지 않는 캐릭터 제외. (포획 후 판매, 해방으로 다시 쳐들어 오지 않도록 함)
+	ELSEIF ITEMSALES:(LOCAL:0+100) == 0
+		;디버그
+		;PRINTL 일반모드에서 구매할 수 없는 캐릭터이므로, 구출하러 오지 않습니다.
+	ELSE
+		
+		;상성을 본다. (이것이 기본치가 된다)
+		LOCAL:1 = CSVRELATION(LOCAL:0,ARG, 0)
+		SIF LOCAL:1 == 0
+			LOCAL:1 = 100
+		;디버그
+		;PRINTFORML %ITEMNAME:(LOCAL:0+100)%이 %ITEMNAME:(ARG+100)%를 생각하는 정도...{LOCAL:1}상성
+		
+		;시리즈를 보정한다.
+		CALL CALC_CHARA_SERIES_TORIKOMODE, (LOCAL:0+100)
+		LOCAL:2 = RESULT:1
+		CALL CALC_CHARA_SERIES_TORIKOMODE, (ARG+100)
+		LOCAL:3 = RESULT:1
+		;디버그
+		;PRINTFORML LOCAL:2={LOCAL:2} LOCAL:3={LOCAL:3}
+		IF LOCAL:2 == LOCAL:3 && LOCAL:2 != 0
+			;디버그
+			LOCAL:1 += 50
+			;PRINTFORML 두 명은 같은 시리즈에 출연하였으므로, 보정치를 줍니다. 현재 구출력 = {LOCAL:1}
+		ENDIF
+		
+		;구출판정을 한다.
+		;300회 까지는 판정치가 높다
+		IF LOCAL:99 < 300
+			IF LOCAL:1 > 150
+				RESULT:1 = LOCAL:0
+				;디버그
+				;PRINTFORML %ITEMNAME:(ARG+100)% 기다려!  %ITEMNAME:(RESULT:1+100)%이 구하러 간다!!
+			ELSE
+				RESULT:1 = 0
+			ENDIF
+		;그 후는 판정치가 낮다.
+		ELSE
+			IF LOCAL:1 > 100
+				RESULT:1 = LOCAL:0
+				;디버그
+				;PRINTFORML %ITEMNAME:(ARG+100)% 기다려!  %ITEMNAME:(RESULT:1+100)%이 구하러 간다!!
+			ELSE
+				RESULT:1 = 0
+			ENDIF
+		ENDIF
+
+	ENDIF
+	LOCAL:99 ++
+LOOP LOCAL:99 < 400 && RESULT:1 == 0
+
+RETURN RESULT:1
+
+;-----------------------------------------------
+;포획의 결과처리
+;포획성공시 ITEMSALES:COUNT == 0 처리가 되어, 매각 후에도 구출하러 오지 않게 된다.
+;무명 캐릭터는 처리가 어려우니 구출에 포함하지 않는다. (추 후 포함될 수 있다)
+;-----------------------------------------------
+
+
+;-----------------------------------------
+;구출 이벤트 실행.
+;ARG = 구출자캐러번호 ARG:1 =피 구출자등록번호 (각각 다른 형식임에 주의)
+@EVENT_RESCUE_TORIKOMODE, ARG, ARG:1
+;타겟 대피
+LOCAL:999 == TARGET
+;구출 진행 상황 저장. 0.중단. 1. 속행중.
+LOCAL:0 == 1
+;피 구출자가 있는지 체크. 1. 같이행동중. 0. 단독행동중
+LOCAL:2 == 0
+;전투결과 처리용
+LOCAL:3 = 0
+;경비대장 추출.
+LOCAL:8 = FINDCHARA(CFLAG:4013, 2 )
+;구출캐릭터 임시 추가
+ADDCHARA ARG
+;타겟변경
+TARGET = CHARANUM-1
+
+;PHASE0. 구출 시작
+CALL SETCOLOR_TORIKOMODE, "RED", 2
+PRINTFORMW <%조사처리(CALLNAME:TARGET,"가")% %조사처리(CALLNAME:(ARG:1),"를")% 구하러 침입했다!>
+RESETCOLOR
+PRINTW ..................
+PRINTW .........
+PRINTW ....
+;.................................................
+;PHASE1.잠입
+;.................................................
+;탈출력을 체크해서 잠입성공 실패를 계산한다. 단, 감시원이 1명도 없으면 걍 넘어감.
+CALL CHECK_ESCAPE_DETECTORNOT_TORIKOMODE
+;들켰다. OR 경비대장=타겟일 경우 무조건 들킴.
+IF RESULT == 0 && FLAG:5041 > 0 || ARG:1 == LOCAL:8 
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 들켜버렸다!>
+	RESETCOLOR
+	;전투력 계산
+	CALL CALC_SECURITY_POWER_TORIKOMODE
+	;전투력이 있으면, 전투 페이즈로.
+	IF FLAG:5042 >0
+		PRINTFORMW <전투시작!>
+		CALL BATTLE_RESCUE_TORIKOMODE, TARGET, ARG:1
+		LOCAL:3 = RESULT:1
+		;승리
+		IF LOCAL:3 == 1
+			;속행
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 경비원들을 쓰러뜨렸다!
+			LOCAL:0 = 1
+		;경비원들이 도망갔다.
+		ELSEIF LOCAL:3 == 6
+			;속행
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 도망간 경비원들을 한심한 눈으로 쳐다봤다….
+			LOCAL:0 = 1
+		;무승부
+		ELSEIF LOCAL:3 == 2
+			;포기하고 탈출한다.
+			PRINTFORMW 계속된 전투에 경비원도 %CALLNAME:TARGET,%도 모두 지쳐버렸다.
+			PRINTFORMW 상황이 좋지 않다고 판단한 %조사처리(CALLNAME:TARGET,"는")% 다음 기회를 기약하기로 했다.
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+			PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 조교관을 빠져나갔다>
+			RESETCOLOR
+			LOCAL:0 = 0
+		;패배. 레절트 3,4,5
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 경비원들에게 쓰러졌다!
+			;포획으로 돈 획득
+			PRINTL
+			CALL GET_MONEY_BY_CAPTURE_TORIKOMODE, TARGET, LOCAL:3
+			PRINTL
+			;인원수가 넘으면 포확할 수 없다.
+			IF CALC_SLAVE_CAPACITY() - CHARANUM <= 0 
+				PRINTFORMW 그러나 더 이상 노예를 가둘 공간이 없다….
+				PRINTFORMW 아쉽지만 %조사처리(CALLNAME:TARGET,"를")% 풀어줄 수 밖에 없었다….
+				;임시캐러 삭제
+				DELCHARA CHARANUM - 1
+				;타겟 복귀
+				TARGET = LOCAL:999
+				RETURN 0	
+			;기절포획
+			ELSEIF LOCAL:3 == 3
+				CALL CAPTURE_CHARA_TORIKOMODE, TARGET, 1
+				;종료 드로라인
+				DRAWLINE
+				;강제 종료
+				RETURN 0
+			;전투포획
+			ELSEIF LOCAL:3 == 4
+				CALL CAPTURE_CHARA_TORIKOMODE, TARGET, 2
+				;종료 드로라인
+				DRAWLINE
+				;강제 종료
+				RETURN 0
+			;윤간포획
+			ELSEIF LOCAL:3 == 5
+				CALL CAPTURE_CHARA_TORIKOMODE, TARGET, 3
+				;종료 드로라인
+				DRAWLINE
+				;강제 종료
+				RETURN 0
+			ENDIF
+		ENDIF
+	;전투원이 없다.
+	ELSE
+		PRINTFORMW 그러나, 전투원 없이 감시병 만으로 %조사처리(CALLNAME:TARGET,"를")% 막는 것은 역부족 이었다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 감시병을 따돌리고, 재빨리 안으로 뛰어 들어갔다.
+		;속행
+		LOCAL:0 = 1
+	ENDIF
+;들키지 않았다.
+ELSE
+	;감시병이 있다.
+	IF  FLAG:5041 > 0
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 삼엄한 감시를 뚫고 은밀히 침입하는 데 성공했다.>
+		RESETCOLOR
+	;감시병이 없다.
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 감시병이 없다는 걸 눈치채고, 유유히 걸어 들어왔다.>
+		RESETCOLOR
+	ENDIF
+ENDIF
+PRINTW ..................
+PRINTW .........
+PRINTW ....
+;.................................................
+;PHASE2.구출
+;.................................................
+;구출체크 페이즈. 당연하지만, 구출속행 중에만 체크한다.
+IF LOCAL:0 == 1
+	CALL CHECK_RESCUE_SUCCESS_TORIKOMODE, (ARG:1)
+	;디버그
+	;PRINTFORML {RESULT:1}
+	;구출에 성공했다.
+	IF RESULT:1 == 0
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구출 하는데 실패했다.>
+		RESETCOLOR
+		;속행
+		LOCAL:0 == 1
+	;배신당한
+	ELSEIF RESULT:1 == 2
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% %CALLNAME:(ARG:1)%에게 배신당해 포획당했다.>
+		RESETCOLOR
+		;중단
+		LOCAL:0 == 0
+		;임시캐러 삭제
+		DELCHARA CHARANUM - 1
+		;캐릭터 추가
+		CALL CHARA_INIT_RESCUE, ARG
+		;종료
+		RETURN 0
+
+	;구출성공
+	ELSEIF RESULT:1 == 1
+		LOCAL:2 == 1
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구출하는데 성공했다.>
+		RESETCOLOR
+		;속행
+		LOCAL:0 == 1
+		;동반자가 있다.
+		LOCAL:2 == 1
+	ELSE
+		PRINTFORMW 에러발생. @EVENT_RESCUE_TORIKOMODE
+	ENDIF
+ENDIF
+PRINTW 이제 여기서 나가기만 하면 된다.
+PRINTW ..................
+PRINTW .........
+PRINTW ....
+;.................................................
+;PHASE3.탈출
+;.................................................
+;구출 속행중인가?
+IF LOCAL:0 == 1
+	;탈출력을 체크해서 잠입탈출성공 실패를 계산한다. 단, 감시원이 1명도 없으면 걍 넘어감
+	CALL CHECK_ESCAPE_DETECTORNOT_TORIKOMODE
+	;들켰다.
+	IF RESULT == 0 && FLAG:5041 > 0 
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 들켜버렸다!>
+		RESETCOLOR
+		;전투력 계산
+		CALL CALC_SECURITY_POWER_TORIKOMODE
+		;전투력이 있으면, 전투 페이즈로.
+		IF FLAG:5042 >0
+			PRINTFORMW <전투시작!>
+			CALL BATTLE_RESCUE_TORIKOMODE, TARGET, (ARG:1)
+			LOCAL:3 = RESULT
+			;디버그
+			;PRINTFORML 전투결과는 {LOCAL:3}
+			;승리
+			IF LOCAL:3 == 1
+				;속행
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 경비원들을 쓰러뜨렸다!
+				LOCAL:0 = 1
+			;경비원들이 도망갔다.
+			ELSEIF LOCAL:3 == 6
+				;속행
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 도망간 경비원들을 한심한 눈으로 쳐다봤다….
+				LOCAL:0 = 1
+			;무승부
+			ELSEIF LOCAL:3 == 2
+				;포기하고 탈출한다.
+				PRINTFORMW 계속된 전투에 경비원도 %CALLNAME:TARGET,%도 모두 지쳐버렸다.
+				PRINTFORMW 상황이 좋지 않다고 판단한 %조사처리(CALLNAME:TARGET,"는")% 다음 기회를 기약하기로 했다.
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+				PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 조교관을 빠져나갔다>
+				RESETCOLOR
+				LOCAL:0 = 0
+			;패배. 레절트 3,4,5
+			ELSE
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 경비원들에게 쓰러졌다!
+				;포획으로 돈 획득
+				PRINTL
+				CALL GET_MONEY_BY_CAPTURE_TORIKOMODE, TARGET, LOCAL:3
+				PRINTL
+				;인원수가 넘으면 포확할 수 없다.
+				IF CALC_SLAVE_CAPACITY() - CHARANUM <= 0 
+					PRINTFORMW 그러나 더 이상 노예를 가둘 공간이 없다….
+					PRINTFORMW 아쉽지만 %조사처리(CALLNAME:TARGET,"를")% 풀어줄 수 밖에 없었다….
+					;임시캐러 삭제
+					DELCHARA CHARANUM - 1
+					;타겟 복귀
+					TARGET = LOCAL:999
+					RETURN 0	
+				;기절포획
+				ELSEIF LOCAL:3 == 3
+					CALL CAPTURE_CHARA_TORIKOMODE, TARGET, 1
+					;종료 드로라인
+					DRAWLINE
+					;강제 종료
+					RETURN 0
+				;전투포획
+				ELSEIF LOCAL:3 == 4
+					CALL CAPTURE_CHARA_TORIKOMODE, TARGET, 2
+					;종료 드로라인
+					DRAWLINE
+					;강제 종료
+					RETURN 0
+				;윤간포획
+				ELSEIF LOCAL:3 == 5
+					CALL CAPTURE_CHARA_TORIKOMODE, TARGET, 3
+					;종료 드로라인
+					DRAWLINE
+					;강제 종료
+					RETURN 0
+				ENDIF
+			ENDIF
+		;전투원이 없다.
+		ELSE
+			PRINTFORMW 그러나, 전투원 없이 감시병 만으로 %조사처리(CALLNAME:TARGET,"를")% 막는 것은 역부족 이었다.
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 감시병을 따돌리고, 재빨리 탈출했다.
+			;속행
+			LOCAL:0 = 1
+		ENDIF
+	;들키지 않았다.
+	ELSE
+		;감시병이 있다.
+		IF  FLAG:5041 > 0
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 감시망을 피해 조교관을 빠져나오는데 성공했다.>
+			RESETCOLOR
+		;감시병이 없다.
+		ELSE
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 아무도 감시하지 않는 조교관을 유유히 걸어나왔다>
+			RESETCOLOR
+		ENDIF
+	ENDIF
+ENDIF
+
+;.................................................
+;PHASE4. 결과처리
+;.................................................
+;속행중인가?
+IF LOCAL:0 == 1
+	;노예를 들고 왔는가?
+	IF LOCAL:2 == 1
+		;노예를 들고 튄다.
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"가")% %조사처리(CALLNAME:(ARG:1),"를")% 데리고 탈출했다!>
+		RESETCOLOR
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:(ARG:1),"가")% 실종되었습니다!>
+		RESETCOLOR
+		;실종된다.
+		CFLAG:(ARG:1):4 =1
+		;실종포인트 계산, 저장
+		CALL CALC_MISSINGPOWER_TORIKOMODE, (ARG:1)
+	ELSE
+		PRINTFORMW <%조사처리(CALLNAME:TARGET,"는")% 탈출했다!>
+	ENDIF
+ENDIF
+
+;임시캐러 삭제
+DELCHARA CHARANUM - 1
+;타겟 복귀
+TARGET = LOCAL:999
+;만약 원타겟을 들고 튀었다면, 타겟없음이 된다.
+SIF TARGET == ARG:1
+	TARGET == -1
+;종료 드로라인
+DRAWLINE
+
+
+;-------------------------------------------
+;같힌 노예의 구속구를 찾아내고, 벗기고, 델고가기를 시도한다.
+;결과.  0:구출 실패. 1.구속해제델고가기성공 2.배신당했다.
+@CHECK_RESCUE_SUCCESS_TORIKOMODE, ARG, ARG:1
+;구출시도상황. 1속행 0포기
+LOCAL:0 = 1 
+;구출결과. 0.실패 1.성공 2.배신당한
+LOCAL:1 = 1
+PRINTL
+PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 어두운 조교관 속에서, 한참이나 %조사처리(CALLNAME:ARG,"를")% 찾아 헤맸다….
+PRINTFORMW ..................
+;PHASE1. 발견할 것인가? . 기본확률 95%, 볼개그 장착시 85%
+IF RAND:100 > 5 +(CFLAG:ARG:4010 & 2)*10
+	PRINTFORMW %조사처리(CALLNAME:ARG,"를")% 찾아냈다!
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+	PRINTFORMW 「%CALLNAME:ARG%! %CALLNAME:ARG%~!」
+	RESETCOLOR
+	PRINTFORMW 몇 번이고 %조사처리(CALLNAME:ARG,"를")% 불러봤으나, 어디에서도 %CALLNAME:ARG%의 목소리를 들을 수 없었다.
+	LOCAL:0 = 0
+	LOCAL:1 = 0
+ENDIF
+
+;PHASE2. 해후
+;함락 상태이며 공간이 있으면, 확률적으로 노예가 배신. 구출자를 포획한다.
+IF LOCAL:0 == 1 && (TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170) 
+	;20% 확률로 배신한다. 
+	IF  RAND:100 > 80 && CALC_SLAVE_CAPACITY() - CHARANUM > 0 
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「%CALLNAME:TARGET%…」
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「조금만 기다려, 곧 나가게 해 줄 테니까!」
+		RESETCOLOR
+		PRINTFORMW  그런데 그 순간,  
+		PRINTFORMW  #퓻#
+		PRINTFORMW  %CALLNAME:TARGET%의 목에 따끔한 느낌이 느껴졌다.
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「%CALLNAME:ARG%. 이건 대체…」
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「후후…. 이제 주인님과 %CALLNAME:TARGET%…. 셋이서 행복 해지는거야…」
+		RESETCOLOR
+		PRINTFORMW  #탁탁탁#
+		PRINTFORMW  …발자국 소리가 들려온다….
+		PRINTFORMW  …미소짓는 %CALLNAME:ARG%의 얼굴을 보며, %CALLNAME:TARGET%의 의식이 점점 멀어져 갔다….
+		PRINTFORMW  .............................
+		PRINTFORMW  .............
+		PRINTFORMW  ....
+		;결과:배신당한
+		LOCAL:0 = 0
+		LOCAL:1 = 2
+	;배신은 하지 않으나. 따라가진 않는다.
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「%CALLNAME:TARGET%…」
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「조금만 기다려, 곧 나가게 해 줄 테니까!」
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「…………」
+		RESETCOLOR
+		PRINTFORMW  열심히 잠긴 문과 구속구를 벗기려는 %조사처리(CALLNAME:TARGET,"를")%, %조사처리(CALLNAME:ARG,"는")% 쓸쓸한 눈으로 보고 있다….
+		PRINTFORMW  #삐익-! 삐익-!#
+		PRINTFORMW  갑자기 시끄러운 사이렌 소리가 들린다.
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「%CALLNAME:ARG%?!」
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「미안…. 나 이제 아무데도 갈 수 없는 몸이 되버렸으니까…」
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「뭐? 그게 무슨 소리야!」
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「어서, 경비들이 오기 전에…」
+		RESETCOLOR
+		PRINTFORMW  #탁탁탁#
+		PRINTFORMW  발자국 소리가 점점 가까이 오고 있다.
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「큭…!」
+		PRINTFORMW 「%CALLNAME:ARG%! 꼭 다시 올 테니까! 조금만 기다려!」
+		CALL SETCOLOR_TORIKOMODE, "PINK", 1
+		PRINTFORMW 「…………」
+		RESETCOLOR
+		PRINTFORMW  %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:ARG,"를")% 이해할 수 없었지만, 다음을 기약할 수 밖에 없었다….
+		LOCAL:0 = 0
+		LOCAL:1 = 0
+	ENDIF
+ELSEIF LOCAL:0 == 1
+	PRINTFORML 
+	TRYCCALLFORM RESCUE_EVENT_K{NO:ARG}, ARG, TARGET
+	CATCH
+		TRYCALL RESCUE_EVENT_KX, ARG, TARGET
+	ENDCATCH
+ENDIF
+
+;PHASE3. 구속해제
+;철문해제
+IF (CFLAG:ARG:4010 & 1) &&LOCAL:0 == 1
+	IF RAND:100 > 10
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 여러 번 시도한 끝에, 자물쇠를 열어냈다.
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「큭…!」
+		RESETCOLOR
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 잠긴 문을 어떻게든 열어보려 했으나, 굳게 닫힌 문은 움직일 생각을 하지 않는다….
+		PRINTFORMW  #탁탁탁#
+		PRINTFORMW  멀리서 발자국 소리가 점점 가까이 오고 있다.
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「%CALLNAME:ARG%! 꼭 다시 올 테니까! 조금만 기다려!」
+		RESETCOLOR
+		PRINTFORMW  %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:ARG,"를")% 뒤로한 채, 몸을 피할 수 밖에 없었다….
+		LOCAL:0 = 0
+		LOCAL:1 = 0
+	ENDIF
+ENDIF
+;밧줄해제
+IF (CFLAG:ARG:4010 & 2) &&LOCAL:0 == 1
+	IF RAND:100 > 10
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:ARG,"를")% 묶고있는 밧줄의 느슨한 부분을 찾아 풀어냈다.
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「칫…. 밧줄 따위가…」
+		RESETCOLOR
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:ARG,"를")% 묶고있는 밧줄을 풀려고 했지만, 너무 꽉 묶여있다.
+		PRINTFORMW  #탁탁탁#
+		PRINTFORMW  멀리서 발자국 소리가 점점 가까이 오고 있다.
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORMW 「%CALLNAME:ARG%! 꼭 다시 올 테니까! 조금만 기다려!」
+		RESETCOLOR
+		PRINTFORMW  %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:ARG,"를")% 뒤로한 채, 몸을 피할 수 밖에 없었다….
+		LOCAL:0 = 0
+		LOCAL:1 = 0
+	ENDIF
+ENDIF
+;알몸해제. 무조건 성공
+IF (CFLAG:ARG:4010 & 8) &&LOCAL:0 == 1
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 외투를 벗어 %CALLNAME:ARG%의 알몸을 감쌌다.
+ENDIF
+;기타 구속구 해제
+SIF LOCAL:0 == 1
+	PRINTFORMW 그리고 %CALLNAME:ARG%의 몸을 구속하던 것들을 전부 떼어냈다.
+CFLAG:ARG:4010 = 0
+
+;결과반환
+;디버그
+;PRINTFORML {LOCAL:1} 
+RESULT:1 = LOCAL:1
+RETURN RESULT:1
+
+;-------------------------------------------
+;전투(구출시) 처리
+;ARG = 구출자. (보통 TARGET이지만, 일단 이렇게 해서 유연하게 제작해둠)
+;ARG:1 = 피구출자
+;RESULT:1 =  1전멸 2무승부 3기절승리 4전투승리 5윤간승리 6경비원이 도망갔다!
+;-------------------------------------------
+@BATTLE_RESCUE_TORIKOMODE, ARG, ARG:1
+;전투 턴
+LOCAL:0 = 0
+;작전정보
+LOCAL:1 = 0
+;타겟 선정용 랜덤치
+LOCAL:2 = 0
+;구출자가 실제로 준 대미지
+LOCAL:3 = 0
+;경비원이 준 대미지
+LOCAL:4 = 0
+;두들겨 맞은 경비원의 현재 체력
+LOCAL:5 = 0
+;구출자의 공격력
+LOCAL:6 = 0
+;이번 턴의 행동 (1. 싸운다 2. 방어한다. 999.도망간다)
+LOCAL:7 = 0
+;침입자의 공격패턴 (0.일반공격. 1.필살기)
+LOCAL:8 = 0
+;침입자가 노예를 생각하는 상성
+LOCAL:9 = RELATION:ARG:(NO:(ARG:1))
+;침입자의 캐러번호
+LOCAL:10 = NO:ARG
+;침입자의 체력%상태
+LOCAL:11 = 0
+;침입자의 기력%상태
+LOCAL:12 = 0
+;경비대장의 캐릭터 번호 저장
+LOCAL:13 = FINDCHARA(CFLAG:4013, 2)
+;침입자의 버프 상태
+LOCALS:0 = 
+;침입자가 때릴 캐릭터의 대표명. 만약 경비대장이 있으면 경비대장명이, 아니면 그냥 '경비원' 이 된다.
+LOCALS:1 = ""
+
+SIF LOCAL:9 == 0
+	LOCAL:9 = 100
+
+;루프 카운터
+LOCAL:99 = 0
+;...........................................................................................
+;침입자가 때릴 캐릭터의 이름을 저장한다.
+IF LOCAL:13 > 0
+	LOCALS:1 = %CALLNAME:(LOCAL:13)%
+ELSE
+	LOCALS:1 = "경비원"
+ENDIF
+;...........................................................................................
+;침입자 정보 세팅.
+;배틀크라이. 진입
+CALL BATTLECRY_TORIKOMODE, (NO:ARG), 1, LOCALS:1
+;....................................................................................
+;2회 이상 싸울 때를 위한 처리. 이렇게 하지 않으면 싸울 때 마다 체력이 늘어나버림.
+;현재의 체력, 기력 %를 저장한다. (여러번 싸우고 있을때를 위해)
+LOCAL:11 = BASE:ARG:0 *100 /MAXBASE:ARG:0
+LOCAL:12 = BASE:ARG:1 *100 /MAXBASE:ARG:1
+;체력, 기력을 SCV로 맞춤.
+DELCHARA CHARANUM-1
+ADDCHARA (LOCAL:10)
+TARGET = CHARANUM-1
+;체력, 기력 %를 적용한다.
+BASE:ARG:0 = BASE:ARG:0*LOCAL:11/100
+BASE:ARG:1 = BASE:ARG:1*LOCAL:12/100
+;....................................................................................
+;난이도 보정. 난이도 1당 1.3배씩 체력이 오른다. 이지에서는 변화없음.
+;기력(공격력)은 난이도에 따른 보정은 없다.
+MAXBASE:ARG:0 += MAXBASE:ARG:0 *(FLAG:3 -1)*30/100
+BASE:ARG:0 += BASE:ARG:0 *(FLAG:3 -1)*30/100
+
+;주차보정. 2회차부터 주차당 체력 기력이 5% 씩 세진다.
+MAXBASE:ARG:0 += MAXBASE:ARG:0 * (FLAG:6-1)*10/100
+BASE:ARG:0 += BASE:ARG:0 * (FLAG:6-1)*10/100
+MAXBASE:ARG:1 += MAXBASE:ARG:1 * (FLAG:6-1)*10/100
+BASE:ARG:1 += BASE:ARG:1 * (FLAG:6-1)*10/100
+
+;상성보정. 만약 타겟 = 경비대장일 경우. 역보정이 걸린다.
+IF ARG:1 == LOCAL:13 
+	IF LOCAL:9 >= 300
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+		FONTBOLD
+		PRINTFORMW !!!%조사처리(CALLNAME:ARG,"는")% 말도 안 되는 상황에 아무 말도 못하고 굳어져 버렸다…!
+		LOCALS:0 = 대혼란 
+		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG% (공격력 대하락)
+		FONTREGULAR
+		RESETCOLOR
+	ELSEIF LOCAL:9 >= 200
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+		PRINTFORMW !!%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 공격할 수 없다는 걸 깨닫고 약해졌다….
+		LOCALS:0 = 혼란 
+		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG% (공격력 대하락)
+		RESETCOLOR
+	ELSEIF LOCAL:9 > 100
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 1
+		PRINTFORMW !%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구출하러 왔는데 어째서… 라며 혼란스러워 하고 있다.
+		LOCALS:0 = 당황 
+		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%	(공격력 하락)
+		RESETCOLOR
+	ENDIF
+	;능력치 변화. 상성에 따른 체력상승은 무효가 되고, 상성 100당 공격력이 33% 씩 깎여나간다.
+	;MAXBASE:ARG:0 += MAXBASE:ARG:0 * (LOCAL:9-100) /100
+	;BASE:ARG:0 += BASE:ARG:0 * (LOCAL:9-100) /100
+	MAXBASE:ARG:1 -= MAXBASE:ARG:1 * (LOCAL:9-100) /300
+	BASE:ARG:1 -= BASE:ARG:1 * (LOCAL:9-100) /300
+;상성보정. 
+ELSEIF LOCAL:9 > 100
+	IF LOCAL:9 >= 300
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+		FONTBOLD
+		PRINTFORMW !!!%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 반드시 구해내고야 말겠다는 각오로 숨은 힘을 해방시켰다!!!
+		LOCALS:0 = 超 
+		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%
+		FONTREGULAR
+		RESETCOLOR
+	ELSEIF LOCAL:9 >= 200
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+		PRINTFORMW !!%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구하겠다는 마음에 리미터가 해제되었다!!!
+		LOCALS:0 = 슈퍼 
+		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%
+		RESETCOLOR
+	ELSEIF LOCAL:9 > 100
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 1
+		PRINTFORMW !%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구하겠다는 마음에 능력치가 상승했다!
+		LOCALS:0 = 분노 
+		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%	
+		RESETCOLOR
+	ENDIF
+	;능력치 변화. 상성이 100을 넘으면, 상성200일때 체력은 2배. 공격력은 1.33배로 강해진다.
+	MAXBASE:ARG:0 += MAXBASE:ARG:0 * (LOCAL:9-100) /100
+	BASE:ARG:0 += BASE:ARG:0 * (LOCAL:9-100) /100
+	MAXBASE:ARG:1 += MAXBASE:ARG:1 * (LOCAL:9-100) /300
+	BASE:ARG:1 += BASE:ARG:1 * (LOCAL:9-100) /300
+ENDIF
+;날짜보정. 침입한 날짜에 따라 점점 세짐. 1%씩 세진다. 최대 100일까지만 추가됨.
+IF DAY <= 100
+	MAXBASE:ARG:0 += MAXBASE:ARG:0 * DAY / 100
+	BASE:ARG:0 += BASE:ARG:0 * DAY / 100
+	MAXBASE:ARG:1 += MAXBASE:ARG:1 * DAY / 100
+	BASE:ARG:1 += BASE:ARG:1 * DAY / 100
+ENDIF
+
+;...........................................................................................
+;전투턴
+LOCAL:0 = 0
+DO
+	;경비대장 체크 (이 전 턴에 뻗었을 수도 있으니까)
+	LOCAL:13 = FINDCHARA(CFLAG:4013, 2)
+	DRAWLINE
+	;턴 정보 표시
+	PRINTFORML <{LOCAL:0+1}/5 턴>
+	DRAWLINE
+	;구출자 상태 출력
+	;이름출력.
+	PRINTFORM 침입자 : 
+	IF LOCAL:9 > 100
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 1
+	ELSEIF LOCAL:9 > 200
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+	ELSEIF LOCAL:9 >= 300
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+		FONTBOLD
+	ELSE
+	ENDIF
+	PRINTFORML %LOCALS:0%%CALLNAME:ARG%
+	FONTREGULAR
+	RESETCOLOR
+	;목표 출력
+	PRINTFORM 목표 : %CALLNAME:(ARG:1)%의 구출.
+	PRINTFORM  <상성:
+	IF LOCAL:9 == 100
+		PRINTFORM {LOCAL:9}
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORM {LOCAL:9}
+		RESETCOLOR
+	ENDIF
+	PRINTL 퍼센트>
+	;체력
+	PRINTFORM ♡체력:({BASE:ARG:0}/{MAXBASE:ARG:0})
+	CALL PRINT_COLORBAR(BASE:ARG:0, MAXBASE:ARG:0, MAXBASE:ARG:0/40, BARCOLORSET("黄"), BARCOLORSET("赤"))
+	PRINTL
+	;기력
+	;PRINTFORM ☆기력:({BASE:ARG:1}/{MAXBASE:ARG:1})
+	;CALL PRINT_COLORBAR(BASE:ARG:1, MAXBASE:ARG:1, MAXBASE:ARG:1/40, BARCOLORSET("黄"), BARCOLORSET("赤"))
+	;PRINTL
+	;공격력계산
+	LOCAL:6 = (MAXBASE:ARG:1 * 10/100)
+	PRINTFORM ☆공격력:{LOCAL:6}
+	PRINTL
+
+	DRAWLINE
+	FONTBOLD
+	PRINT [전투대]
+	FONTREGULAR
+	PRINT  <작전:
+	IF LOCAL:1 == 0
+		PRINT 없음
+	ELSEIF LOCAL:1 == 1
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINT 기절시켜!
+		RESETCOLOR
+	ELSEIF LOCAL:1 == 2
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		PRINT 때려잡아!!
+		RESETCOLOR
+	ELSEIF LOCAL:1 == 3
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINT 윤간한다!!!
+		RESETCOLOR
+	ENDIF
+	PRINT > 
+	PRINT ♆전투력:
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+	IF LOCAL:1 > 0
+		PRINTFORM { FLAG:5042 + (FLAG:5042*(LOCAL:1-2)*25/100) }
+	ELSE
+		PRINTFORM {FLAG:5042}
+	ENDIF
+	IF LOCAL:1 == 1
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINT (-25 퍼센트)
+		RESETCOLOR
+	ELSEIF LOCAL:1 == 3
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINT (+25 퍼센트)
+		RESETCOLOR
+	ENDIF
+	RESETCOLOR
+	PRINTL
+	DRAWLINE
+	;경비대장 출력
+	IF LOCAL:13 > 0
+		PRINTL ♆경비대장♆
+		CALL PRINT_GUARDSMAN_CAPTAIN, LOCAL:13, ARG
+		DRAWLINE
+	ENDIF
+	LOCAL:99 = 0
+	DO 
+		;전투대가 있으면 출력한다.
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
+		IF  RESULT:6 == 1
+			CALL PRINT_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
+			DRAWLINE
+		ENDIF
+		LOCAl:99 ++
+	LOOP LOCAL:99 < 10
+	;작전지정! (첫 턴에만)
+	IF LOCAL:0 == 0
+		$SELECT_LIST
+		PRINTFORML "%CALLNAME:MASTER% 님. 명령을 내려주십시오!"
+		PRINTFORML [1] 기절시켜! : 돈 획득大, 공격대 전투력 하락↓. 포획시 깨끗한 상태의 노예 획득 가능.
+		PRINTFORML [2] 때려잡아!! : 돈 획득中, 포획시 노예의 고통각인1, 반발각인1,  스트레스↑
+		PRINTFORML [3] 윤간한다!!! : 돈 획득小, 공격대 전투력 상승↑. 포획시 윤간, 반발각인1~2, 스트레스↑↑, 이상경험
+		PRINTFORML [999] 도망쳐라!!!! : 침입자를 무시하고 도망칩니다.
+		INPUT
+		IF RESULT == 1
+			LOCAL:1 = 1
+			;공격대 전투력 하락
+			PRINTFORMW <작전 : 기절시켜!> 를 명령했다!
+			PRINTFORMW 경비원들은 투덜투덜 거렸다….
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW 경비원들의 전투력이 떨어졌다…. {FLAG:5042} → { FLAG:5042 + (FLAG:5042*(LOCAL:1-2)*25/100) }
+			PRINTFORM 
+			RESETCOLOR
+		ELSEIF RESULT == 2
+			LOCAL:1 = 2
+			PRINTFORMW <작전 : 때려잡아!!> 를 명령했다!
+			PRINTFORMW 경비원들은 함성을 지르며, 전투를 준비했다.
+		ELSEIF RESULT == 3
+			LOCAL:1 = 3
+			PRINTFORMW <작전 : 윤간한다!!!> 를 명령했다!
+			PRINTFORMW 경비원들은 환호성을 지르며, 성욕에 사로잡혀 눈을 번뜩이기 시작했다!!
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+			PRINTFORMW 경비원들의 전투력이 올랐다! …{FLAG:5042} → { FLAG:5042 + (FLAG:5042*(LOCAL:1-2)*25/100) }
+			RESETCOLOR
+		ELSEIF RESULT == 999
+			LOCAL:1 = 999
+			PRINTFORMW 도망쳐라!!!
+			PRINTFORMW "히이이익――!!"
+			PRINTFORMW 경비원들은 공포에 사로잡혀, 사방 팔방으로 흩어졌다.
+			PRINTFORMW 경비원들은 도망갔다!
+			RESULT:1 = 6
+			RETURN RESULT:1
+			RETURN 0
+		ELSE
+			GOTO SELECT_LIST
+		ENDIF
+		;첫 턴의 작전은 '싸워라' 가 된다.
+		LOCAL:7 = 1
+	;작전지정! (두번째 턴 부터)
+	ELSE
+		$SELECT_LIST2
+		PRINTFORML "%CALLNAME:MASTER% 님. 명령을 내려주십시오!"
+		PRINTFORML [1] 싸워라! : 계속 싸웁니다.
+		PRINTFORML [2] 방어해라! : 방어를 해서 경비원이 받는 피해를 줄입니다. 공격은 하지 않음.
+		PRINTFORML [999] 도망쳐라!!!! : 침입자를 무시하고 도망갑니다.
+		INPUT
+		IF  RESULT == 1
+			LOCAL:7 = 1
+		ELSEIF  RESULT == 2
+			PRINTFORMW 방어해라!
+			PRINTFORMW 경비원들은 방어를 하며 시간을 끌기 시작했다….
+			LOCAL:7 = 2
+		ELSEIF RESULT == 999
+			LOCAL:1 = 999
+			PRINTFORMW 도망쳐라!!!
+			PRINTFORMW "히이이익――!!"
+			PRINTFORMW 경비원들은 공포에 사로잡혀, 사방 팔방으로 흩어졌다.
+			PRINTFORMW 경비원들은 도망갔다!
+			RESULT:1 = 6
+			RETURN RESULT:1
+			RETURN 0
+		ELSE
+			GOTO SELECT_LIST2
+		ENDIF
+	ENDIF
+	;전투시작
+	;PHASE1:구출자 턴. 아직까지 공격패턴은 단순하다. 그냥 때릴 뿐. 가끔 필살기 나가나?
+	LOCAL:99 =0
+	DO
+		;타겟 지정. 0~9까지의 경비대를 때린다. 만약 경비대장이 있으면 11을 돌려서 10이 나오면 경비대장을 때림.
+		IF LOCAL:13  == -1
+			LOCAL:2 = RAND:10
+		ELSE
+			LOCAL:2 = RAND:11
+		ENDIF
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:2)
+		;타겟이 살아있는 [전투원] 이라면
+		IF RESULT:6 == 1
+			;두들겨 맞을 경비원의 이름을 저장한다. (배틀크라이용)
+			LOCALS:1 = %RESULTS:0%
+			;두들겨 맞을 경비원의 현재 체력을 받아온다.
+			LOCAL:5 = RESULT:4
+			;노예가 공격실행
+			CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, LOCALS:1
+			;대미지를 저장.
+			LOCAL:3 = RESULT
+			;경비원들이 방어중이면 대미지는 40~60%로 줄어든다.
+			SIF LOCAL:7 == 2
+				LOCAL:3 = LOCAL:3*(RAND:20+40)/100
+			PRINTFORM %RESULTS:0%에게 {LOCAL:3}
+			FONTREGULAR
+			PRINTFORMW 대미지!!
+			RESETCOLOR
+			;경비원 체력감소.
+			LOCAL:5 -= LOCAL:3
+			;경비원이 죽었다
+			IF LOCAL:5 <= 0
+				;경비원 배틀크라이 출력
+				CALL BATTLECRY_GUARDSMAN_TORIKOMODE, RESULTS:0, 4
+				CALL SETCOLOR_TORIKOMODE, "RED", 3
+				FONTBOLD
+				PRINTFORMW  !!%조사처리(RESULTS:0,"는")% 쓰러졌다!
+				FONTREGULAR
+				RESETCOLOR
+				;배틀크라이
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 4, LOCALS:1
+				;경비원 삭제
+				FLAG:(5051+LOCAL:2) = 0
+			;살았다.
+			ELSE
+				CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:2)
+				;체력감소.
+				FLAG:(5051+LOCAL:2) += - (RESULT:4*100000) + (LOCAL:5*100000)
+				;경비원 경험치 획득. 랜덤 1500 +2000을 획득한다.
+				CALL GETEXP_GUARDSMAN_TORIKOMODE, (5051+LOCAL:2), (2000+RAND:1500)
+			ENDIF
+			;그만 돌린다.
+			LOCAL:99 ++
+		;경비대장을 친다면
+		ELSEIF LOCAL:2 == 10
+		;두들겨 맞을 경비대장의 현재 체력을 받아온다.
+			LOCAL:5 = BASE:(LOCAL:13):0
+			;침입자가 공격실행
+			CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, CALLNAME:(LOCAL:13)
+			;대미지를 저장.
+			LOCAL:3 = RESULT
+			;작전이 방어중이면 대미지는 40~60%로 줄어든다.
+			SIF LOCAL:7 == 2
+				LOCAL:3 = LOCAL:3*(RAND:20+40)/100
+			PRINTFORM %CALLNAME:(LOCAL:13)%에게 {LOCAL:3}
+			FONTREGULAR
+			PRINTFORMW 대미지!!
+			RESETCOLOR
+			;경비대장 체력감소.
+			BASE:(LOCAL:13):0 -= LOCAL:3
+			BASE:(LOCAL:13):0 = MAX(BASE:(LOCAL:13):0, 50)
+			;경비대장이 빈사
+			IF BASE:(LOCAL:13):0 == 50
+				;경비대장 배틀크라이 출력.쓰러짐.
+				CALL BATTLECRY_GUARDSMAN_TORIKOMODE, NO:(LOCAL:13), 6
+				;쓰러지기
+				CALL SETCOLOR_TORIKOMODE, "RED", 3
+				FONTBOLD
+				PRINTFORMW !!%조사처리(CALLNAME:(LOCAL:13),"는")% 쓰러졌다!!
+				FONTREGULAR
+				RESETCOLOR
+				PRINTFORMW (%조사처리(CALLNAME:(LOCAL:13),"는")% 퇴각했습니다)
+				;경비대장 해임
+				PRINTFORMW (%조사처리(CALLNAME:(LOCAL:13),"는")% 경비대장에서 해임 되었습니다)
+				CFLAG:(LOCAL:13):4013 = 0
+				;경비대장 정보 갱신.
+				LOCAL:13 = FINDCHARA(CFLAG:4013, 2)
+			;경비대장이 살았다.
+			ELSE
+				;경비대장 피격 배틀크라이. 100%확률로 발동함
+				CALL BATTLECRY_TORIKOMODE, NO:(LOCAL:13), 3, CALLNAME:ARG
+			ENDIF
+			;그만 돌린다.
+			LOCAL:99 ++
+		ELSE
+			;한바퀴 더 돌린다.
+		ENDIF
+	LOOP LOCAL:99 == 0
+	;PHASE2 :경비원 전멸체크.
+	;전멸체크. 만약 전투력 = 0이며 경비대장이 없다면, 결과를 생성해내고 종료한다.
+	CALL CALC_SECURITY_POWER_TORIKOMODE
+	;전투종료.전멸
+	IF FLAG:5042 <= 0 && LOCAL:13 == -1
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		FONTBOLD
+		PRINTFORML !!!경비대가 전멸했다!!!
+		FONTREGULAR
+		RESETCOLOR
+		;배틀크라이. 승리
+		;CALL BATTLECRY_TORIKOMODE, (NO:ARG), 8, CALLNAME:(LOCAL:13)
+		CALL BATTLECRY_TORIKOMODE, (NO:ARG), 8
+		RESULT:1 = 1
+		RETURN RESULT:1
+		RETURN 0
+	ENDIF
+	;PHASE3 : 경비원들이 침입자를 때린다.
+	IF LOCAL:7 == 1
+		;경비원 공격 턴
+		LOCAL:99 =0
+		DO
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
+		;살아있는 전투원 이라면
+		IF RESULT:6 == 1
+			;일반공격. 공격력은 작전에 따라 변동. +-25%. 그리고 랜덤으로 한번 더 +-25%
+			;공격자의 이름을 저장. 
+			LOCALS:1 = %RESULTS:0%
+			;대미지를 저장.
+			LOCAL:3 = RESULT
+			;작전에 따른변동
+			LOCAL:4 = RESULT:19 + RESULT:19*(LOCAL:1-1)*(25-RAND:50)/100
+			;랜덤변동
+			LOCAL:4 = LOCAL:4* (RAND:50 + 75) /100
+			;공격멘트.
+			PRINTFORM %조사처리(RESULTS:0,"는")% %조사처리(RESULTS:4,"로")% 
+			;무기에 따른 공격묘사를 불러온다.
+			CALL DATA_WEAPON_GUARDSMAN_TORIKOMODE, RESULT:3
+			PRINTFORM %RESULTS:3% 
+			;대미지를 준다.
+			PRINTFORM %CALLNAME:ARG%에게 
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+			FONTBOLD
+			PRINTFORM {LOCAL:4}
+			FONTREGULAR
+			RESETCOLOR
+			PRINTFORMW 대미지!
+			;피격 배틀크라이. 단, 30%확률로만 발동함
+			SIF RAND:100 > 70
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, LOCALS:1
+			;빈사 배틀크라이.
+			SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, LOCALS:1
+			;경비원 경험치 획득. 랜덤 1500 +2000을 획득한다.
+			CALL GETEXP_GUARDSMAN_TORIKOMODE, 5051+LOCAL:99, (2000+RAND:1500)
+			;구출자 체력감소.
+			BASE:ARG:0 -= LOCAL:4
+			;구출자가 쓰러졌다.
+			IF BASE:ARG:0 <= 2
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+				FONTBOLD
+				PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
+				FONTREGULAR
+				RESETCOLOR
+				;배틀크라이.패배
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, LOCALS:1
+				;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
+				IF LOCAL:1 == 1
+					RESULT:1 = 3
+				ELSEIF LOCAL:1 == 2
+					RESULT:1 = 4
+				ELSEIF LOCAL:1 == 3
+					RESULT:1 = 5
+				ENDIF
+				RETURN RESULT:1
+				RETURN 0
+			ENDIF
+		ENDIF
+		LOCAL:99++
+		LOOP LOCAL:99 <10
+
+		;경비대장 공격 턴
+		IF LOCAL:13 > 0
+			;공격력 계산
+			CALL CALC_ATTACKPOWER_GUARDSMAN_SLAVE, LOCAL:13, 1
+			;공격패턴 선택
+			CALL ATTACK_SLAVE_TORIKOMODE, LOCAL:13, RESULT, CALLNAME:ARG
+			LOCAL:4 = RESULT
+			;경비대장은 작전에 따른 변동이 없다.
+			;침입자에게 대미지를 준다.
+			PRINTFORM %CALLNAME:ARG%에게 
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+			FONTBOLD
+			PRINTFORM {LOCAL:4}
+			FONTREGULAR
+			RESETCOLOR
+			PRINTFORMW 대미지!
+			;피격 배틀크라이. 단, 30%확률로만 발동함
+			SIF RAND:100 > 70
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, CALLNAME:(LOCAL:13)
+			;빈사 배틀크라이.
+			SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, CALLNAME:(LOCAL:13)
+			;구출자 체력감소.
+			BASE:ARG:0 -= LOCAL:4
+			;구출자가 쓰러졌다.
+			IF BASE:ARG:0 <= 2
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+				FONTBOLD
+				PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
+				FONTREGULAR
+				RESETCOLOR
+				;배틀크라이.패배
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, CALLNAME:(LOCAL:13)
+				;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
+				IF LOCAL:1 == 1
+					RESULT:1 = 3
+				ELSEIF LOCAL:1 == 2
+					RESULT:1 = 4
+				ELSEIF LOCAL:1 == 3
+					RESULT:1 = 5
+				ENDIF
+				RETURN RESULT:1
+				RETURN 0
+			ENDIF
+		ENDIF
+	ENDIF
+
+	;턴 증가
+	LOCAL:0 ++
+
+LOOP LOCAL:0 < 5
+;전투종료.무승부
+RESULT:1 = 2
+RETURN RESULT:1
+RETURN 0
+
+
+;----------------------------------------
+;노예 포획시 캐릭터 등록 및 구상 출력
+;ARG :  = 윤간 대상의 등록번호.
+;ARG:1 = 포획방법
+@CAPTURE_CHARA_TORIKOMODE, ARG, ARG:1
+;캐릭터 번호 저장
+LOCAL:0 = NO:ARG
+;주인 조교 경험 체크용
+LOCAL:1 = 0
+;조수번호 대피
+LOCAL:2 = ASSI
+;경비대장 추출.
+LOCAL:3 = FINDCHARA(CFLAG:4013, 2 )
+;
+;임시캐러 삭제
+DELCHARA CHARANUM-1
+;캐러 추가 (이 후, 자동으로 타겟으로 잡히게 된다)
+CALL CHARA_INIT_RESCUE, LOCAL:0
+;기절로 잡혔다.
+IF ARG:1 == 1
+	PRINTFORMW "휴우……."
+	PRINTFORMW 경비원들은 상처를 내지 않고 잡느라 진땀을 뺐다.
+	PRINTFORMW 기절한 %조사선택(CALLNAME:TARGET, "는")% 경비원들에게 이끌려, 조교실로 끌려갔다.
+	PRINTFORMW 그리고 조교실에 눕혀두었다.
+	PRINTFORMW 그럼, 앞으로 어떻게 요리 해 줄까….
+	PRINTL
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORML 스트레스+50
+	CFLAG:65 += 50
+	RESETCOLOR
+;때려잡음
+ELSEIF ARG:1 == 2
+	PRINTFORMW 흠씬 두들겨 맞은 %조사선택(CALLNAME:TARGET, "는")% 경비원들에게 이끌려, 조교실로 끌려갔다.
+	PRINTFORMW 그리고 조교실에 처박혔다….
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORML 고통각인 LV1 획득
+	MARK:0 = 0
+	PRINTFORML 반발각인 LV1를 획득
+	MARK:9 = 1
+	PRINTFORML 스트레스+200
+	CFLAG:65 += 200
+	RESETCOLOR
+	;체력기력캐스팅.
+	BASE:0 = MAXBASE:0*60/100
+	BASE:1 = MAXBASE:1*60/100
+;윤간으로 획득
+ELSEIF ARG:1 == 3
+	;주인 이름 대피용
+	LOCALS = %CALLNAME:MASTER%
+	;주인 조교 경험 체크용
+	LOCAL:1 = 0
+	;캐릭터 번호 저장
+	LOCAL:0 = (NO:ARG)
+	PRINTFORMW 경비원들은 쓰러진 %조사선택(CALLNAME:TARGET, "를")% 질질 끌고, 다시는 나오지 못할 방으로 끌고갔다….
+	PRINTFORMW ..............................
+	PRINTFORMW ................
+	;남캐면 윤간연출 X
+	IF TALENT:TARGET:120 == 1
+		;
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 정신을 차린 것 같다.
+		;첫 만남 구상 출력.
+		PRINTFORMW 이런. 경비원들이 성욕에 사로잡혀 콧김을 내뿜고 있다.
+		PRINTFORMW …슬슬 시작해 볼까….
+		PRINTFORMW ..............................
+		PRINTFORMW 경비원들은 불안한 표정을 띠고 있는 %조사선택(CALLNAME:TARGET, "를")% 둘러싸고,
+		PRINTFORMW %CALLNAME:TARGET%의 허벅지를 움켜 쥐어 비부를 드러내도록 다리를 M자로 벌렸다. 
+
+		IF TALENT:0 == 1
+			;처녀받기 선택지 출력
+			$SELECT_LIST
+			PRINTFORML %CALLNAME:TARGET%의 처녀를 어떻게 할까?
+			PRINTFORML [0] 물론 내가 받는다.
+			PRINTFORML [1] 그딴 것에 의미는 없다.
+			;경비대장이 있고, 후타나리거나 남자라면
+			;디버그
+			;PRINTFORML LOCAL:3={LOCAL:3}, TALENT:(LOCAL:3):120={TALENT:(LOCAL:3):120}, TALENT:(LOCAL:3):121={TALENT:(LOCAL:3):121} %CALLNAME:(LOCAL:3)%
+			SIF LOCAL:3 > 0  && (TALENT:(LOCAL:3):120 ||TALENT:(LOCAL:3):121 )
+				PRINTFORML [2] %CALLNAME:(LOCAL:3)%에게 준다.
+			INPUT
+			IF RESULT == 0
+				;
+			ELSEIF RESULT == 1
+				;주인 이름을 경비원으로 고친다.
+				CALLNAME:MASTER = 경비원
+				LOCAL:1 = 1
+			ELSEIF RESULT == 2  && (TALENT:(LOCAL:3):120 ||TALENT:(LOCAL:3):121 )
+				;조수등록
+				ASSI = LOCAL:3
+				;조수플레이 켬
+				ASSIPLAY == 1
+				;주인 이름을 조수로 고친다.
+				CALLNAME:MASTER = %CALLNAME:(LOCAL:3)%
+			ELSE
+				GOTO SELECT_LIST
+			ENDIF
+		ENDIF
+		;V삽입
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 주저앉아 젖어있는 비부에 다가가, 
+		IF TALENT:0 == 1
+			PRINTFORMW 애원하는 %조사선택(CALLNAME:TARGET, "를")% 무시하고 순결을 찢어내어, 
+			PRINTFORMW 처음으로 이물질을 받아들인 피에 젖은 보지를 가차 없이 페니스로 유린했다. 
+			TALENT:0 = 0
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW <처녀상실>
+			RESETCOLOR
+			;처녀상실 구상출력
+			TFLAG:0 = 1
+			TFLAG:2 = 1
+			CALL SETCOLOR_TORIKOMODE, "PINK", 2
+			TRYCALLFORM KOJO_MESSAGE_PALAMCNG_{LOCAL:0}
+			RESETCOLOR
+			TFLAG:0 = 0
+			TFLAG:2 = 0
+		ELSE
+			PRINTFORMW 보지의 한계까지 페니스를 삽입, 질벽의 위를 긁듯이 그라인드 시켰다.
+		ENDIF
+
+		;V섹스 구상출력
+		CALL KOJO_JUSTSAY_TORIKOMODE, TARGET, 20
+		PRINTFORMW 그리고 마음껏 사정했다.
+		;V사정
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		PRINTFORMW <%CALLNAME:MASTER%사정>
+		RESETCOLOR
+		;V사정 플래그를 세운다
+		TFLAG:10 = 1
+		;V사정 구상 출력
+		CALL SETCOLOR_TORIKOMODE, "PINK", 2
+		TRYCALLFORM KOJO_MESSAGE_PALAMCNG_{LOCAL:0}
+		RESETCOLOR
+		;끔
+		TFLAG:10 = 0
+		;조수 플레이 종료
+		ASSIPLAY = 0
+		ASSI = LOCAL:2
+
+		;주인 이름 변경
+		CALLNAME:MASTER = 경비원
+		;삽입
+		PRINTFORMW 경비원은 %CALLNAME:TARGET%의 애널에 페니스를 쑤셔넣었다.
+		;애널섹스
+		CALL KOJO_JUSTSAY_TORIKOMODE, TARGET, 31
+		PRINTFORMW 그리고 신음하는 %CALLNAME:TARGET%의 엉덩이를 후려쳐댔다.
+		;스팽킹
+		CALL KOJO_JUSTSAY_TORIKOMODE, TARGET, 220
+		PRINTFORMW 경비원은 잠시 허리를 떨더니, %CALLNAME:TARGET%의 애널 깊이 사정했다.
+		;애널섹스 사정용 플래그세움
+		TFLAG:9  = 1
+		CALL SETCOLOR_TORIKOMODE, "PINK", 2
+		TRYCALLFORM KOJO_MESSAGE_PALAMCNG_{LOCAL:0}
+		RESETCOLOR
+		;끔
+		TFLAG:9 = 0
+
+		;유두 괴롭히기
+		PRINTFORMW 다른 경비원은 %CALLNAME:TARGET%의 옆에서 약간 구부정하게 앉아, 한쪽의 유두를 입으로 빨고 
+		PRINTFORMW 혀끝으로 튕기거나 살짝 물거나 하면서, 다른 한쪽의 유두를 손가락 끝으로 집고, 튕기고, 비틀었다. 
+		SELECTCOM = 201
+		FLAG:11 = 2
+		CALL KOJO_JUSTSAY_TORIKOMODE, TARGET, 230
+		SELECTCOM = 0
+
+		;이마라치오
+		PRINTFORMW 그리고 다른 경비원은, 한 손으로 %CALLNAME:TARGET%의 턱을 들어 올리고 
+		PRINTFORMW 여러 가지로 괴롭혀져서 헤 벌려진 입을 페니스로 틀어막았다.
+		;이마라치오구상
+		CALL KOJO_JUSTSAY_TORIKOMODE, TARGET, 230
+		;입에사정
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		PRINTFORMW <경비원사정>
+		RESETCOLOR
+		;입에 사정구상 출력
+		TFLAG:11 = 2
+		SELECTCOM = 230
+		CALL SETCOLOR_TORIKOMODE, "PINK", 2
+		TRYCALLFORM KOJO_MESSAGE_PALAMCNG_{LOCAL:0}
+		RESETCOLOR
+		TFLAG:11 = 0
+		;끝
+		PRINTFORMW ............................
+		PRINTFORMW 당신은 이 정도면 됐다고 생각하고 %조사선택(CALLNAME:TARGET, "를")% 뒤로한 채 방을 나섰다.
+		PRINTFORMW 그리고 경비원들에게 마음대로 해도 좋다고 했다….
+		PRINTFORMW "우오오오옷~!"
+		PRINTFORMW 경비원들은 앞다투어 %CALLNAME:TARGET%에게 덮쳐들었다.
+		PRINTFORMW ............................
+		PRINTFORMW 윤간은 밤 새도록 계속됐다….
+		;주인이름 되돌리기
+		CALLNAME:MASTER = %LOCALS%
+	ENDIF
+
+	PRINTL
+	;능력치 변동. 윤간.
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	;반발각인1OR2
+	IF RAND:100 > 50
+		PRINTFORML 반발각인 LV2를 획득
+		MARK:9 = 2
+	ELSE
+		PRINTFORML 반발각인 LV1을 획득
+		MARK:9 = 1
+	ENDIF
+	IF RAND:100 > 50
+		PRINTFORML 이상경험 +2
+		EXP:50 += 2
+	ELSE
+		PRINTFORML 이상경험 +1
+		EXP:50 += 1
+	ENDIF
+	PRINTFORML 스트레스 +500
+	CFLAG:65 += 500
+	PRINTL
+	RESETCOLOR
+
+	;경험처리
+	;남캐는 V경험 없다.
+	IF TALENT:120 == 1
+		;
+	ELSE
+		PRINTFORML V경험 +10
+		EXP:0 += 10
+	ENDIF
+	PRINTFORML A경험 +10
+	EXP:1 += 10
+	PRINTFORML 펠라경험 +10
+	EXP:22 += 10
+	PRINTFORML 정액경험 +20
+	EXP:4 += 20
+	PRINTFORML 피윤간경험 +1
+	EXP:82 += 1
+	PRINTFORML 주인조교경험 +1
+	EXP:98 += 1
+	;체력기력캐스팅.
+	BASE:0 = MAXBASE:0*30/100
+	BASE:1 = MAXBASE:1*30/100
+ENDIF
+WAIT
+
+;----------------------------------------
+;노예 포획시 들어오는 돈을 계산.
+;캐릭터를 지우기 전에, 해당 캐릭터의 기력, 체력을 기반으로
+;작전을 보정해서 증가시킨다.
+;따라서, 전투중 버프를 받은 능력치를 받아와야 하므로,
+;포획한 캐릭터가 도망가기 전에 실행할 것. 
+;또한, 난이도 보정이 있다.
+;ARG = 캐릭터 등록번호
+;ARG:1 = 전투결과 .3기절 4.때려잡아 5.윤간
+@CALC_MONEY_BY_CAPTURE_TORIKOMODE, ARG, ARG:1
+;증가시킬 돈
+LOCAL:0 = 0
+;최대체력획득
+LOCAL:1 = MAXBASE:ARG:0
+;최대기력획득
+LOCAL:2 = MAXBASE:ARG:1
+;..........................................................
+;돈 = (기력 + 체력) *5
+LOCAL:0 = (LOCAL:1+LOCAL:2) *5
+;작전에 따른 보정
+IF ARG:1 == 3
+	TIMES LOCAL:0, 2.0
+ELSEIF ARG:1 == 4
+	TIMES LOCAL:0, 1.0
+ELSEIF ARG:1 == 5
+	TIMES LOCAL:0, 0.5
+ENDIF
+;난이도에 따른 보정. 난이도가 1오를 때 마다, 들어오는 돈은 분모분 줄어든다. 2/1, 2/2, 2/3, 2/4, 2/5....
+LOCAL:0 = LOCAL:0 *200/(FLAG:3*100)
+;반환
+RESULT = LOCAL:0
+RETURN RESULT
+
+
+;----------------------------------------
+;노예 포획시 들어오는 돈을 출력, 처리
+;ARG:1 = 작전번호 .1기절 2.때려잡아 3.윤간
+@GET_MONEY_BY_CAPTURE_TORIKOMODE, ARG, ARG:1
+CALL CALC_MONEY_BY_CAPTURE_TORIKOMODE, ARG, ARG:1
+;증가시킬 돈
+LOCAL:0 = RESULT
+;..........................................................
+;출력.
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+PRINTFORM <%조사처리(CALLNAME:ARG,"가")% 입고 있던 옷들과 소지품을 팔아, 
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+PRINTFORM {LOCAL:0}
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+PRINTFORM 원을 획득했다. (잔고:{MONEY}→{MONEY+LOCAL:0} / 
+PRINTFORM 난이도:
+CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+CALL PRINT_DIFFIICULT_TORIKOMODE
+PRINTFORM %RESULTS:0%
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+PRINTFORM )>
+RESETCOLOR
+PRINTL
+;돈 증가
+MONEY += LOCAL:0
+
+;-------------------------------------------
+;노예(경비대장)의 공격패턴과 대미지 계산
+;ARG = 캐러등록번호
+;ARG:1 = 공격력
+;ARGS = 공격대상의 이름. 배틀크라이 용.
+@ATTACK_SLAVE_TORIKOMODE, ARG, ARG:1, ARGS
+LOCAL:0 = 0 ;공격패턴
+LOCAL:1 = 0 ;대미지
+;
+;필살기 20% 확률로 발동한다.
+IF RAND:100 > 80
+	;스펠카드. 공격력의 1.8~2.2배
+	LOCAL:0  = 1
+	LOCAL:1 = ARG:1 * (RAND:40 + 180) /100
+;일반공격
+ELSE
+	;일반공격. 0.75~1.25배
+	LOCAL:0  = 0
+	LOCAL:1 = ARG:1 * (RAND:50 + 75) /100
+ENDIF
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+PRINTFORM %조사처리(CALLNAME:ARG,"는")% 
+RESETCOLOR
+;필살기
+IF LOCAL:0 == 1
+	;배경 번쩍이기 이펙트
+	SETBGCOLOR 255,255,255
+	SETBGCOLOR 230,230,230
+	RESETBGCOLOR
+	CALL SETCOLOR_TORIKOMODE, "PURPLE", 5
+	FONTBOLD
+	PRINTFORM 스펠카드
+	FONTREGULAR
+	RESETCOLOR
+;강공격
+ELSEIF LOCAL:0  == 0 && LOCAL:1  > ARG:1
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+	PRINTFORM 강탄막
+	RESETCOLOR
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+	PRINTFORM 탄막
+	RESETCOLOR
+ENDIF
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+PRINTFORML 을(를) 쐈다! 
+FONTBOLD
+;공격멘트
+IF LOCAL:0  == 1
+	CALL BATTLECRY_TORIKOMODE, (NO:ARG), 7, ARGS
+ELSE
+	CALL BATTLECRY_TORIKOMODE, (NO:ARG), 2, ARGS
+ENDIF
+
+;대미지를 반환한다.
+RESULT = LOCAL:1
+RETURN RESULT
+
+
+
+
+;-----------------------------------------------
+;노예 구매시 가격설정. 시리즈 구매 막기
+;토리코모드 - 구출 시스템을 제작하기 위해 원본을 참고하여 개조하였다.
+;특정 시리즈의 노예를 1인이라도 구매하면, 해당 시리즈의 노예를 구매할 수 없게 되는 사악한 시스템이다.
+;누군가는 구출하러 누가 와야 하니 어쩔 수 없잖아...
+;-----------------------------------------------
+;ITEMSALES:100～に各奴隷の値段を格納するが、購入不可であるならば0になる
+@CHARA_BUY_PRICE_TORIKOMODE
+;アイテム・奴隷陳列フラグの削除
+VARSET ITEMSALES, 0
+;ITEMSALES:n に値段格納
+FOR COUNT, 100, 600
+	ITEMSALES:COUNT = ITEMPRICE:COUNT
+	;IRCキャラは通常購入不可能(YASAIモード以外で主人が[地獄の勲章]持ちのときは購入可能)
+	;なお、YASAIモードの場合のこの辺のキャラは専用コマンドと処理で購入する.
+	SIF COUNT > 500 && (TALENT:MASTER:831 || TALENT:MASTER:834 == 0)
+		ITEMSALES:COUNT = 0
+NEXT
+;あなたと子供カット
+ITEMSALES:100 = 0
+ITEMSALES:248 = 0
+ITEMSALES:249 = 0
+;Ｓパッチ追加分.どこかの誰かカット
+ITEMSALES:246 = 0
+ITEMSALES:500 = 0
+;半霊・上海人形・蓬莱人形・大江戸人形・ゴリアテ人形・半霊(忌)カット
+ITEMSALES:165 = 0
+ITEMSALES:166 = 0
+ITEMSALES:167 = 0
+ITEMSALES:196 = 0
+ITEMSALES:197 = 0
+ITEMSALES:199 = 0
+;ビビットを購入するには紳士的な触手のONと進化の秘法を所持することが必要である.
+SIF (FLAG:15 & 4096) == 0 || (ITEM:59 == 0 && NOITEM == 0)
+	ITEMSALES:236 = 0
+
+;パチュリーがいたら(主人が[地獄の勲章]持ちのみ)
+IF GETCHARA(8) >= 0 && TALENT:MASTER:834
+	ITEMSALES:523 = ITEMPRICE:523
+	ITEMSALES:524 = ITEMPRICE:524
+	ITEMSALES:525 = ITEMPRICE:525
+	ITEMSALES:526 = ITEMPRICE:526
+	ITEMSALES:527 = ITEMPRICE:527
+	ITEMSALES:528 = ITEMPRICE:528
+	ITEMSALES:529 = ITEMPRICE:529
+ENDIF
+;アリスがいたら
+IF GETCHARA(14) >= 0
+	ITEMSALES:166 = ITEMPRICE:166
+	ITEMSALES:167 = ITEMPRICE:167
+	ITEMSALES:196 = ITEMPRICE:196
+	ITEMSALES:197 = ITEMPRICE:197
+ENDIF
+;妖夢がいたら
+SIF GETCHARA(19) >= 0
+	ITEMSALES:165 = ITEMPRICE:165
+;妖忌がいたら
+SIF GETCHARA(70) >= 0
+	ITEMSALES:199 = ITEMPRICE:199
+
+;캐릭터 재 구매 방지
+FOR COUNT, 100, 600
+	;キャラカードを所持していてかつ、汎用キャラでは無い場合値段を0に
+	SIF ITEM:COUNT == 1 && (COUNT < 248 || COUNT >= 300)
+		ITEMSALES:COUNT = 0
+	;ある条件を満たしている場合、キャラの値段が倍に(YASAIモード限定)
+	SIF NO:MASTER == 400 && FLAG:570 & 2
+		ITEMSALES:COUNT *= 2
+NEXT
+
+;시리즈 구매 막기 파트.
+;홍마향
+IF GETCHARA(1) >=0 || GETCHARA(2) >=0 || GETCHARA(3) >=0 || GETCHARA(4) >=0 || GETCHARA(5) >=0 || GETCHARA(6) >=0 || GETCHARA(7) >=0 || GETCHARA(8) >=0 || GETCHARA(9) >=0 || GETCHARA(10) >=0 || GETCHARA(11)>=0 
+	ITEMSALES:101 = 0
+	ITEMSALES:102 = 0
+	ITEMSALES:103 = 0
+	ITEMSALES:104 = 0
+	ITEMSALES:105 = 0
+	ITEMSALES:106 = 0
+	ITEMSALES:107 = 0
+	ITEMSALES:108 = 0
+	ITEMSALES:109 = 0
+	ITEMSALES:110 = 0
+	ITEMSALES:111 = 0
+ENDIF
+;요요몽
+IF GETCHARA(12) >=0 || GETCHARA(13) >=0 || GETCHARA(14) >=0 || GETCHARA(15) >=0 || GETCHARA(16) >=0 || GETCHARA(17) >=0 || GETCHARA(18) >=0 || GETCHARA(19) >=0 || GETCHARA(20) >=0 || GETCHARA(21) >=0 || GETCHARA(22)>=0 
+	ITEMSALES:112 = 0
+	ITEMSALES:113 = 0
+	ITEMSALES:114 = 0
+	ITEMSALES:115 = 0
+	ITEMSALES:116 = 0
+	ITEMSALES:117 = 0
+	ITEMSALES:118 = 0
+	ITEMSALES:119 = 0
+	ITEMSALES:120 = 0
+	ITEMSALES:121 = 0
+	ITEMSALES:122 = 0
+ENDIF
+;영야초
+IF GETCHARA(24) >=0 || GETCHARA(25) >=0 || GETCHARA(26) >=0 || GETCHARA(27) >=0 || GETCHARA(28) >=0 || GETCHARA(29) >=0 || GETCHARA(30) >=0 || GETCHARA(31) >=0 
+	ITEMSALES:124 = 0
+	ITEMSALES:125 = 0
+	ITEMSALES:126 = 0
+	ITEMSALES:127 = 0
+	ITEMSALES:128 = 0
+	ITEMSALES:129 = 0
+	ITEMSALES:130 = 0
+	ITEMSALES:131 = 0
+ENDIF
+;풍신록
+IF GETCHARA(32) >=0 || GETCHARA(37) >=0 || GETCHARA(38) >=0 || GETCHARA(39) >=0 || GETCHARA(40) >=0 || GETCHARA(41) >=0 || GETCHARA(42) >=0 || GETCHARA(43) >=0 || GETCHARA(44) >=0 || GETCHARA(79)>=0 
+	ITEMSALES:132 = 0
+	ITEMSALES:137 = 0
+	ITEMSALES:138 = 0
+	ITEMSALES:139 = 0
+	ITEMSALES:140 = 0
+	ITEMSALES:141 = 0
+	ITEMSALES:142 = 0
+	ITEMSALES:143 = 0
+	ITEMSALES:144 = 0
+	ITEMSALES:179 = 0
+ENDIF
+;화영총
+IF GETCHARA(33) >=0 || GETCHARA(34) >=0 || GETCHARA(35) >=0 || GETCHARA(36)>=0 
+	ITEMSALES:133 = 0
+	ITEMSALES:134 = 0
+	ITEMSALES:135 = 0
+	ITEMSALES:136 = 0
+ENDIF
+;삼월정
+IF GETCHARA(45) >=0 || GETCHARA(46) >=0 || GETCHARA(47) >=0 || GETCHARA(56)>=0 
+	ITEMSALES:145 = 0
+	ITEMSALES:146 = 0
+	ITEMSALES:147 = 0
+	ITEMSALES:156 = 0
+ENDIF
+;비봉클럽
+IF GETCHARA(49) >=0 || GETCHARA(50)>=0 
+	ITEMSALES:149 = 0
+	ITEMSALES:150 = 0
+ENDIF
+;비상천
+IF GETCHARA(51) >=0 || GETCHARA(52)>=0 
+	ITEMSALES:151 = 0
+	ITEMSALES:152 = 0
+ENDIF
+;맹월초
+IF GETCHARA(53) >=0 || GETCHARA(54) >=0 || GETCHARA(55)>=0 
+	ITEMSALES:153 = 0
+	ITEMSALES:154 = 0
+	ITEMSALES:155 = 0
+ENDIF
+;지령전
+IF GETCHARA(57) >=0 || GETCHARA(58) >=0 || GETCHARA(59) >=0 || GETCHARA(60) >=0 || GETCHARA(61) >=0 || GETCHARA(62) >=0 || GETCHARA(63) >=0 || GETCHARA(64)>=0
+	ITEMSALES:157 = 0
+	ITEMSALES:158 = 0
+	ITEMSALES:159 = 0
+	ITEMSALES:160 = 0
+	ITEMSALES:161 = 0
+	ITEMSALES:162 = 0
+	ITEMSALES:163 = 0
+	ITEMSALES:164 = 0
+ENDIF
+;성련선
+IF GETCHARA(71) >=0 || GETCHARA(72) >=0 || GETCHARA(73) >=0 || GETCHARA(74) >=0 || GETCHARA(75) >=0 || GETCHARA(76) >=0 || GETCHARA(77) >=0 || GETCHARA(78)>=0
+	ITEMSALES:171 = 0
+	ITEMSALES:172 = 0
+	ITEMSALES:173 = 0
+	ITEMSALES:174 = 0
+	ITEMSALES:175 = 0
+	ITEMSALES:176 = 0
+	ITEMSALES:177 = 0
+	ITEMSALES:178 = 0
+ENDIF
+;신령묘
+IF GETCHARA(81) >=0 || GETCHARA(82) >=0 || GETCHARA(83) >=0 || GETCHARA(84) >=0 || GETCHARA(85) >=0 || GETCHARA(86) >=0 || GETCHARA(87)>=0
+	ITEMSALES:181 = 0
+	ITEMSALES:182 = 0
+	ITEMSALES:183 = 0
+	ITEMSALES:184 = 0
+	ITEMSALES:185 = 0
+	ITEMSALES:186 = 0
+	ITEMSALES:187 = 0
+ENDIF
+;휘침성
+;IF GETCHARA(220) >=0 || GETCHARA(221) >=0 || GETCHARA(222) >=0 || GETCHARA(223) >=0 || GETCHARA(224) >=0 || GETCHARA(225) >=0 || GETCHARA(226)>=0 || GETCHARA(227)>=0
+;	ITEMSALES:320 = 0
+;	ITEMSALES:321 = 0
+;	ITEMSALES:322 = 0
+;	ITEMSALES:323 = 0
+;	ITEMSALES:324 = 0
+;	ITEMSALES:325 = 0
+;	ITEMSALES:326 = 0
+;	ITEMSALES:327 = 0
+;ENDIF
+
+
+;-----------------------------------------------
+;노예의 시리즈별 칼라 표시
+;노예 구매시 특정 시리즈를 칼라로 표시한다
+;-----------------------------------------------
+@CHARA_BUY_COLOR_TORIKOMODE, ARG
+;홍마향
+SIF ARG == 101 || ARG == 102 || ARG == 103 || ARG == 104 || ARG == 105 || ARG == 106 || ARG == 107 || ARG == 108 || ARG == 109 || ARG == 110 || ARG == 111 
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+;요요몽
+SIF ARG == 112 || ARG == 113 || ARG == 114 || ARG == 115 || ARG == 116 || ARG == 117 || ARG == 118 || ARG == 119 || ARG == 120 || ARG == 121 || ARG == 122
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+;영야초
+SIF ARG == 124 || ARG == 125 || ARG == 126 || ARG == 127 || ARG == 128 || ARG == 129 || ARG == 130 || ARG == 131 
+	CALL SETCOLOR_TORIKOMODE, "PURPLE", 3
+;풍신록
+SIF ARG == 132 || ARG == 137 || ARG == 138 || ARG == 139 || ARG == 140 || ARG == 141 || ARG == 142 || ARG == 143 || ARG == 144 || ARG == 179
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+;화영총
+SIF ARG == 133 || ARG == 134 || ARG == 135 || ARG == 136
+	CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;삼월정
+SIF ARG == 145 || ARG == 146 || ARG == 147 || ARG == 156
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+;비봉클럽
+SIF ARG == 149 || ARG == 150
+	CALL SETCOLOR_TORIKOMODE, "BLACK", 1
+;비상천
+SIF ARG == 151 || ARG == 152
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+;맹월초
+SIF ARG == 153 || ARG == 154 || ARG == 155
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+;지령전
+SIF ARG == 157 || ARG == 158 || ARG == 159 || ARG == 160 || ARG == 161 || ARG == 162 || ARG == 163 || ARG == 164
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+;성련선
+SIF ARG == 171 || ARG == 172 || ARG == 173 || ARG == 174 || ARG == 175 || ARG == 176 || ARG == 177 || ARG == 178
+	CALL SETCOLOR_TORIKOMODE, "SEA", 4
+;신령묘
+SIF ARG == 181 || ARG == 182 || ARG == 183 || ARG == 184 || ARG == 185 || ARG == 186 || ARG == 187
+	CALL SETCOLOR_TORIKOMODE, "PINK", 3
+;휘침성
+;SIF ARG == 320 || ARG == 321 || ARG == 322 || ARG == 323 || ARG == 324 || ARG == 325 || ARG == 326 || ARG == 327
+;	CALL SETCOLOR_TORIKOMODE, "PURPLE", 2
+
+;-----------------------------------------------
+;노예구매시 시리즈별 리스트 출력해서 구매할 수 없다는 걸 알린다.
+;ARG = 구매하려는 노예 번호
+;-----------------------------------------------
+@PRINT_LIST_SERIES_CANTBUY_TORIKOMODE, ARG
+;홍마향
+IF ARG == 101 || ARG == 102 || ARG == 103 || ARG == 104 || ARG == 105 || ARG == 106 || ARG == 107 || ARG == 108 || ARG == 109 || ARG == 110 || ARG == 111 
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINTL 홍마향 캐릭터:[레이무, 마리사, 루미아, 대요정, 치르노, 메이링, 소악마, 파츄리, 사쿠야, 레밀리아, 플랑드르]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;요요몽
+IF ARG == 112 || ARG == 113 || ARG == 114 || ARG == 115 || ARG == 116 || ARG == 117 || ARG == 118 || ARG == 119 || ARG == 120 || ARG == 121 || ARG == 122
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+	PRINTL 요요몽 캐릭터:[레티, 첸, 앨리스, 릴리, 리리카, 메를랑, 루나사, 요우무, 유유코, 란, 유카리]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+	PRINTL
+ENDIF
+;영야초
+IF ARG == 124 || ARG == 125 || ARG == 126 || ARG == 127 || ARG == 128 || ARG == 129 || ARG == 130 || ARG == 131
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "PURPLE", 3
+	PRINTL 영야초 캐릭터:[리글, 미스티아, 케이네, 테위, 레이센, 에이린 ,카구야, 모코우]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;풍신록
+IF ARG == 132 || ARG == 137 || ARG == 138 || ARG == 139 || ARG == 140 || ARG == 141 || ARG == 142 || ARG == 143 || ARG == 144 || ARG == 179
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+	PRINTL 풍신록 캐릭터:[아야, 시즈하, 미노리코, 히나, 니토리, 모미지, 사나에, 카나코,스와코, 하타테]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;화영총
+IF ARG == 133 || ARG == 134 || ARG == 135 || ARG == 136
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "PINK", 2
+	PRINTL 화영총 캐릭터:[메디슨, 유카, 코마치, 시키]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;삼월정
+IF ARG == 145 || ARG == 146 || ARG == 147 || ARG == 156
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINTL 삼월정 캐릭터:[서니, 루나, 스타, 릴리 블랙]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;비봉 클럽
+IF ARG == 149 || ARG == 150
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "BLACK", 1
+	PRINTL 비봉 클럽 캐릭터:[렌코, 메리]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;비상천
+IF ARG == 151 || ARG == 152
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+	PRINTL 비상천 캐릭터:[이쿠, 텐시]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;맹월초
+IF ARG == 153 || ARG == 154 || ARG == 155
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+	PRINTL 맹월초 캐릭터:[토요히메, 요리히메, 레이센mk2]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;지령전
+IF ARG == 157 || ARG == 158 || ARG == 159 || ARG == 160 || ARG == 161 || ARG == 162 || ARG == 163 || ARG == 164
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+	PRINTL 지령전 캐릭터:[키스메, 야마메, 파르시, 유우기, 사토리, 오린, 오쿠, 코이시]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;성련선
+IF ARG == 171 || ARG == 172 || ARG == 173 || ARG == 174 || ARG == 175 || ARG == 176 || ARG == 177 || ARG == 178
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "SEA", 4
+	PRINTL 성련선 캐릭터:[나즈린, 코가사, 이치린, 운잔, 무라사, 쇼우, 뱌쿠렌, 누에]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;신령묘
+IF ARG == 181 || ARG == 182 || ARG == 183 || ARG == 184 || ARG == 185 || ARG == 186 || ARG == 187
+	PRINTL ※주의! 이 노예를 구매하면 
+	CALL SETCOLOR_TORIKOMODE, "PINK", 3
+	PRINTL 신령묘 캐릭터:[쿄코, 요시카, 세이가, 토지코, 후토, 미코, 마미조]
+	RESETCOLOR
+	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+ENDIF
+;휘침성
+;IF ARG == 320 || ARG == 321 || ARG == 322 || ARG == 323 || ARG == 324 || ARG == 325 || ARG == 326 || ARG == 327
+;	PRINTL ※주의! 이 노예를 구매하면 
+;	CALL SETCOLOR_TORIKOMODE, "PURPLE", 2
+;	PRINTL 휘침성 캐릭터:[와카사기히메, 카게로, 벤벤, 야츠하시, 세이자, 신묘마루, 라이코]
+;	RESETCOLOR
+;	PRINTL 들을 구매할 수 없게 됩니다. (대신 구출하러 올 때 포획할 수 있게 됩니다)
+;ENDIF
+
+
+;-----------------------------------------------
+;노예의 시리즈 계산용 함수
+;캐릭터 번호를 넣으면 시리즈를 판별해서 돌려준다.
+;-----------------------------------------------
+@CALC_CHARA_SERIES_TORIKOMODE, ARG
+;홍마향
+SIF ARG == 101 || ARG == 102 || ARG == 103 || ARG == 104 || ARG == 105 || ARG == 106 || ARG == 107 || ARG == 108 || ARG == 109 || ARG == 110 || ARG == 111 
+	RESULT:1 = 1
+;요요몽
+SIF ARG == 112 || ARG == 113 || ARG == 114 || ARG == 115 || ARG == 116 || ARG == 117 || ARG == 118 || ARG == 119 || ARG == 120 || ARG == 121 || ARG == 122
+	RESULT:1 = 2
+;영야초
+SIF ARG == 124 || ARG == 125 || ARG == 126 || ARG == 127 || ARG == 128 || ARG == 129 || ARG == 130 || ARG == 131 
+	RESULT:1 = 3
+;풍신록
+SIF ARG == 132 || ARG == 137 || ARG == 138 || ARG == 139 || ARG == 140 || ARG == 141 || ARG == 142 || ARG == 143 || ARG == 144 || ARG == 179
+	RESULT:1 = 4
+;화영총
+SIF ARG == 133 || ARG == 134 || ARG == 135 || ARG == 136
+	RESULT:1 = 5
+;삼월정
+SIF ARG == 145 || ARG == 146 || ARG == 147 || ARG == 156
+	RESULT:1 = 6
+;비봉클럽
+SIF ARG == 149 || ARG == 150
+	RESULT:1 = 7
+;비상천
+SIF ARG == 151 || ARG == 152
+	RESULT:1 = 8
+;맹월초
+SIF ARG == 153 || ARG == 154 || ARG == 155
+	RESULT:1 = 9
+;지령전
+SIF ARG == 157 || ARG == 158 || ARG == 159 || ARG == 160 || ARG == 161 || ARG == 162 || ARG == 163 || ARG == 164
+	RESULT:1 = 10
+;성련선
+SIF ARG == 171 || ARG == 172 || ARG == 173 || ARG == 174 || ARG == 175 || ARG == 176 || ARG == 177 || ARG == 178
+	RESULT:1 = 11
+;신령묘
+SIF ARG == 181 || ARG == 182 || ARG == 183 || ARG == 184 || ARG == 185 || ARG == 186 || ARG == 187
+	RESULT:1 = 12
+;휘침성
+;SIF ARG == 320 || ARG == 321 || ARG == 322 || ARG == 323 || ARG == 324 || ARG == 325 || ARG == 326 || ARG == 327
+;	RESULT:1 = 13
+
+RETURN RESULT:1
+
+;-----------------------------------------------
+;구출 모드용 캐릭터 초기화 처리
+;-----------------------------------------------
+@CHARA_INIT_RESCUE, ARG
+;캐릭터 추가 및 초기 설정의 처리로
+CALL CHARA_STATE_BASIC, ARG
+;구입 인원수 추가
+FLAG:39 += 1
+;입수 방법의 기록
+CSTR:3  = %CALLNAME:MASTER%의 조교관에 침입했다가 붙잡혔다.
+;구입된 날을 기록
+CFLAG:3111 = DAY
+
+;구입 가능한 노예의 인원수 산출
+LOCAL = CALC_SLAVE_CAPACITY() - CHARANUM
+IF ARG == 8 && FLAG:570 & 1 && LOCAL > 0
+	CALL ROYALFLARE, LOCAL
+	PRINTW  
+ELSEIF ARG == 8 && TALENT:MASTER:834
+	PRINTFORML ＜파츄리를 포획한 덕에, 파츄리의 Spell Card를 구입할 수 있게 되었습니다.＞
+	PRINTFORMW ＜이후 파츄리의 Spell Card가 침입할지도 모릅니다.＞
+ELSEIF ARG == 14
+	PRINTFORML ＜앨리스를 포획한 덕에, 상하이 · 호라이 · 골리아테 인형을 살 수 있게 되었습니다＞
+	PRINTFORMW ＜이후 앨리스의 인형들이 침입할지도 모릅니다.＞
+ELSEIF (LOCAL:3) == 19
+	PRINTFORML ＜요우무를 포획한 덕에, 요우무의 반령을 살 수 있게 되었습니다＞
+	PRINTFORMW ＜이후 요우무의 반령이 침입할지도 모릅니다.＞
+ELSEIF (LOCAL:3) == 70
+	PRINTFORML ＜요우키를 포획한 덕에, 요우키의 반령을 살 수 있게 되었습니다＞
+	PRINTFORMW ＜이후 요우키의 반령이 침입할지도 모릅니다.＞
+ELSE
+	PRINTW  
+ENDIF
+TFLAG:201 = 0
+;다음 처리에서 TFLAG:208에 1이 들어가 있으면 ＥＸ화 선택 처리가 회피된다
+TFLAG:208 = 0
+;구입한 캐릭터의 대사에서의 특수 초기 설정 처리용 명령 호출
+CALL SET_CHARA_KOJO_EXTRA, TARGET
+;구입된 직후의 이벤트 대사 호출
+CALL SELF_KOJO, TARGET, 198
+
+;처음부터 EX(SP) 캐릭터를 구입할 수 있는 경우 있음.
+IF (ARG == 2 || ARG == 14 || ARG == 129) && TFLAG:208 == 0
+	;마리사의 경우
+	IF ARG == 2
+		PRINTFORML 처음부터 「구작 마리사」화 할 수 있다.
+		PRINTL [0] 구작 마리사화 한다
+	;앨리스의 경우
+	ELSEIF ARG == 14
+		PRINTFORML 처음부터「꼬마 앨리스」화 할 수 있다.
+		PRINTL [0] 꼬마 앨리스화 한다
+	;히라노의 경우
+	ELSEIF ARG == 129
+		PRINTFORML 처음부터「히라노(신 Ver.)」화 할 수 있다.
+		PRINTL [0] 히라노(신 Ver.)화 한다
+	ENDIF
+	PRINTFORML [1] %조사처리(ITEMNAME:(100+ARG),"는")% 유지한다.
+
+	DRAWLINE
+	$INPUT_LOOP
+	INPUT
+	IF RESULT != 0 && RESULT != 1
+		GOTO INPUT_LOOP
+	ELSEIF RESULT == 0
+		TFLAG:225 = 1
+		CALL EX_EVENT, TARGET
+		TFLAG:225 = 0
+	ENDIF
+ENDIF
+TFLAG:208 = 0
+
+FLAG:996 = -1
+IF TARGET >= 0
+	RESULT = -1
+	TRYCALLFORM TRY_{NO}
+	FLAG:996 = RESULT
+ENDIF
+
+

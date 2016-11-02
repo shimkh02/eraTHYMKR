@@ -1,0 +1,209 @@
+﻿;=============================================================================
+;거미집
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE653
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM653
+PRINTL 거미집
+TSTR:0 = 거미집
+SELECTCOM = 653
+CALL TRAIN_MESSAGE_COM653
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 120
+	DOWNBASE:1 += 150
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 100
+	DOWNBASE:1 += 120
+ELSE
+	DOWNBASE:0 += 80
+	DOWNBASE:1 += 90
+ENDIF
+
+LOCAL:1 = 400
+LOCAL:2 = 1200
+SOURCE:12 = 900
+SOURCE:22 = 500
+SOURCE:31 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES SOURCE:31 , 2.00
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1 , 2.00
+;절벽·빈유라면 수치심이 자극된다
+SIF TALENT:110 || TALENT:111
+	TIMES SOURCE:12 , 3.50
+
+;조교 대상이 리굴이라면 공포 상승
+SIF NO:TARGET == 24
+	TIMES LOCAL:2 , 3.00
+
+SOURCE:20 += LOCAL:1
+SOURCE:19 += LOCAL:1
+SOURCE:12 += LOCAL:1
+SOURCE:22 += LOCAL:1
+SOURCE:31 += LOCAL:1
+SOURCE:17 += LOCAL:1
+SOURCE:23 += LOCAL:1+LOCAL:2
+
+;줄의 착탈
+TEQUIP:40 = 7
+TEQUIP:41 = 2
+TFLAG:142 += 200
+TCVAR:31 += 10
+
+RETURN 1
+
+;-------------------------------------------------
+;거미집에서 구속중
+;-------------------------------------------------
+@EQUIP_COM653
+PRINTL <거미집에서 구속 중>
+
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 80
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 60
+ELSE
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 50
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 50
+ELSEIF ABL:21 == 1
+	LOCAL = 150
+ELSEIF ABL:21 == 2
+	LOCAL = 300
+ELSEIF ABL:21 == 3
+	LOCAL = 500
+ELSEIF ABL:21 == 4
+	LOCAL = 750
+ELSE
+	LOCAL = 1000
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL , 2.00
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+SOURCE:20 += LOCAL
+SOURCE:19 += LOCAL
+SOURCE:12 += LOCAL
+SOURCE:22 += LOCAL
+SOURCE:31 += LOCAL
+SOURCE:17 += LOCAL
+SOURCE:23 += LOCAL
+SOURCE:25 += SOURCE:31
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+
+LOCAL:1 = 1 + RAND:20
+TFLAG:142 -= LOCAL:1
+
+SIF TFLAG:142 <= 0
+	CALL SPIDER_SILK_TEAR
+
+TCVAR:31 += 5
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM653
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 손끝에서 실을 자아내 거미집을 치고,
+PRINTFORML 움직이지 못하는 %조사선택(CALLNAME:TARGET, "를")% 매달았다.
+;리굴응
+IF NO:TARGET == 24
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 거미줄에 달라붙어 옴짝달싹 할 수 없게 되었다.
+	PRINTFORMW 그리고 %CALLNAME:PLAYER%의 모습에 강한 공포를 느껴, 얼굴이 하얗게 질려간다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거미줄에 실에 달라붙어 옴짝달싹 할 수 없게 되었다.
+ENDIF

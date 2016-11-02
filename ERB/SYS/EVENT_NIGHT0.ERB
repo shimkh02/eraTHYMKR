@@ -1,0 +1,1249 @@
+﻿;=============================================================================
+;밤 이벤트 확장 패치 처리
+;=============================================================================
+;夜イベント拡張パッチ （これはランダム夜這いパッチに他人が勝手に改修を加えたものです）
+;元パッチの作者様は深い感謝と尊敬の意を. (by やぁふぁの人 :2009年4月中旬）
+;※よりによってプログラム囓った程度の人間が手を加えましたので, 汚いですご容赦ください……
+
+;コンセプト;朝イベントの対を目指して作ったもの. 
+;ランダムで奴隷が主人の下へやってくるという形. 夜這い
+;たくさん奴隷がいると, シチュ的に楽しめると思う
+
+;6/18 貞操帯装備中の処理を勝手に追加させていただきました
+;6月下旬 処理の追加させていただきましたm(_ _)m　(やぁふぁ)
+
+;2009/10/04 襲撃SMプレイ追加　By HEROHERO
+;-----------------------------------------------
+;밤 이벤트 판정
+;-----------------------------------------------
+@NIGHT_ATTACK
+;필요 플래그의 클리어
+CALLF CLEAR_AGG
+CALLF CLEAR_CHARA_STOCK
+CALLF CLEAR_NIGHT_KOJO
+VARSET LOCAL, 0
+
+;TARGET과 ASSI를 퇴피
+TFLAG:210 = TARGET
+TFLAG:211 = ASSI
+
+;소지 캐릭터 전원에게 발동 체크
+LOCAL:20 = 0
+
+;기초치 10부터 판정 개시
+LOCAL:21 = 10
+
+;주인에 따른 판정치 보너스 계산
+;謎の魅力
+SIF TALENT:MASTER:92
+	LOCAL:21 += 10
+;魅力
+SIF TALENT:MASTER:90
+	LOCAL:21 += 5
+;人気
+SIF TALENT:MASTER:94
+	LOCAL:21 += 5
+
+;노예의 랜덤 판정 있음이라면 위의 처리, 없음이라면 아래의 처리. 없음이라면 조금 판정이 엄격해짐
+IF FLAG:12 & 512
+	LOCAL:20 = NIGHT_CHECK2(LOCAL:21)
+	LOCAL:21 = RAND:100
+ELSE
+	SIF TARGET == -1
+		RETURN 0
+	CALL NIGHT_CHECK
+	LOCAL:20 = 0
+	IF RESULT > RAND:60
+		IF RESULT >= 18
+			LOCAL:20 = 1
+			TFLAG:400 = TARGET
+			LOCAL:21 = RAND:110
+		ENDIF
+	ENDIF
+ENDIF
+
+;8%의 확률로 강제적으로 아무도 오지 않음. 랜덤 요소가 없으면 아주 좀만 더 페널티 = 약 3/4의 확률이 된다
+SIF LOCAL:21 >= 92
+	RETURN 0
+;전원 체크해 실행자 0명이라면 종료
+SIF LOCAL:20 == 0
+	RETURN 0
+
+;사용하는 변수를 0으로 해둠
+;난교 시추에이션용
+LOCAL:1 = 0
+;난교 확률용
+LOCAL:2 = 0
+
+;실행자가 2명 이상이라면, 그 중에서 4명 추출
+IF LOCAL:20 >= 2
+	;제일 아래의 변수, 즉 GETCHARA_G(0)가 메인 타겟이 된다
+	REPEAT 4
+		TARGET = TFLAG:(RAND:(LOCAL:20)+400)
+		LOCAL:(13 - COUNT) = TARGET
+		CALLF SET_CHARA_G(3 - COUNT, TARGET)
+		;플랑드르가 ２명 이상 있어도 플래그가 된다. 하지만 GETCHARA_G(0)가 플랑이 아니면 안 됨
+		SIF NO:(LOCAL:(13 - COUNT)) == 11
+			LOCAL:1 += 1
+		;PRINTFORML %CALLNAME:TARGET%
+	REND
+	SIF NO:(LOCAL:10) != 11
+		LOCAL:1 = 0
+	IF (TALENT:(LOCAL:10):120 || TALENT:(LOCAL:10):121) && MARK:(LOCAL:10):9 == 3 && TALENT:MASTER:120 == 0
+	
+	ELSEIF TALENT:(LOCAL:10):150 == 0 && TALENT:(LOCAL:10):170 == 0
+		LOCAL:1 = 0
+	ENDIF
+	;한 명밖에 포함되지 않았으면 소거
+	SIF LOCAL:1 == 1
+		LOCAL:1 = 0
+	SIF LOCAL:1 >= 2
+		LOCAL:2 = ((TALENT:(LOCAL:10):120 || TALENT:(LOCAL:10):121) && MARK:(LOCAL:10):9 == 3 && TALENT:MASTER:120 == 0) ? 7 # RAND:3
+	;전원 연모거나 음란으로 난교 플래그
+	IF (TALENT:(LOCAL:10):150 || TALENT:(LOCAL:10):170) && (TALENT:(LOCAL:11):150 || TALENT:(LOCAL:11):170) && (TALENT:(LOCAL:12):150 || TALENT:(LOCAL:12):170) && (TALENT:(LOCAL:13):150 || TALENT:(LOCAL:13):170)
+		;전원 다르다면 보통의 난교 판정. 플랑드르 난교와의 분기를 실행한다
+		;LOCAL:2は乱交の確率判定を行っています. 奴隷が11人以上いる場合は6分の1に. 10人以下なら3分の1の確率で発生
+		;いっぱい乱交したいから確率弄った
+		IF NOSAMES(LOCAL:10, LOCAL:11, LOCAL:12, LOCAL:13)
+			;主人を含む(?)全員が貞操帯装備していたらダメ
+			IF (CFLAG:MASTER:42 & 2) == 0 || (CFLAG:(LOCAL:10):42 & 2) == 0 || (CFLAG:(LOCAL:11):42 & 2) == 0 || (CFLAG:(LOCAL:12):42 & 2) == 0 || (CFLAG:(LOCAL:13):42 & 2) == 0
+				LOCAL:1 = 1
+				LOCAL:2 = 1
+				SIF LOCAL:20 >= 11
+					LOCAL:2 = RAND:3
+			ENDIF
+		ENDIF
+	;全員棒付きでフラグ. 横に長くなるので何段かに分けて判定. 棒いらなくなった
+	;二段目. 全員反発3かどうか且つ女主人かどうか　男でも関係無しになった
+	ELSEIF MARK:(LOCAL:10):9 == 3 && MARK:(LOCAL:11):9 == 3 && MARK:(LOCAL:12):9 == 3 && MARK:(LOCAL:13):9 == 3
+		;全員違ったらその時点で襲撃確定
+		IF NOSAMES(LOCAL:10, LOCAL:11, LOCAL:12, LOCAL:13)
+			LOCAL:1 = 1
+			LOCAL:2 = 7
+		ENDIF
+	;もしメインのGが棒つき反発奴隷で, 4人の中に一人だけ, 反発刻印を持たない処女か恋慕な女奴隷がいた場合……. 
+	;恋慕の男相手でも集団で暴行する. つまり性別関係無くなった
+	ELSEIF MARK:(LOCAL:10):9 == 3
+		;全員違わないとダメ
+		IF LOCAL:10 != LOCAL:11 && LOCAL:10 != LOCAL:12 && LOCAL:10 != LOCAL:13 && LOCAL:11 != LOCAL:12 && LOCAL:11 != LOCAL:13 && LOCAL:12 != LOCAL:13
+			IF ((TALENT:(LOCAL:11):0 > 0 || TALENT:(LOCAL:11):150) && MARK:(LOCAL:11):9 == 0) && MARK:(LOCAL:12):9 == 3 && MARK:(LOCAL:13):9 == 3
+				LOCAL:1 = 1
+				LOCAL:2 = 8
+			ELSEIF ((TALENT:(LOCAL:12):0 > 0 || TALENT:(LOCAL:12):150) && MARK:(LOCAL:12):9 == 0) && MARK:(LOCAL:13):9 == 3 && MARK:(LOCAL:11):9 == 3
+				LOCAL:1 = 1
+				LOCAL:2 = 8
+				;輪姦対象をLOCAL:11にする
+				SWAP LOCAL:12, LOCAL:11
+				CALLF SET_CHARA_G(1, LOCAL:11)
+				CALLF SET_CHARA_G(2, LOCAL:12)
+				TARGET = LOCAL:10
+			ELSEIF ((TALENT:(LOCAL:13):0 > 0 || TALENT:(LOCAL:13):150) && MARK:(LOCAL:13):9 == 0) && MARK:(LOCAL:11):9 == 3 && MARK:(LOCAL:12):9 == 3
+				LOCAL:1 = 1
+				LOCAL:2 = 8
+				;輪姦対象をLOCAL:11にする
+				SWAP LOCAL:13, LOCAL:11
+				CALLF SET_CHARA_G(1, LOCAL:11)
+				CALLF SET_CHARA_G(3, LOCAL:13)
+				TARGET = LOCAL:10
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF LOCAL:20 == 1
+	TARGET = TFLAG:400
+	LOCAL:10 = TARGET
+	CALLF SET_CHARA_G(0, TARGET)
+	;플랑드르 난교 분기
+	IF NO:(LOCAL:10) == 11 && RAND:2 == 0
+		LOCAL:1 = 2
+		LOCAL:11 = LOCAL:10
+		LOCAL:12 = LOCAL:10
+		LOCAL:13 = LOCAL:10
+		IF TALENT:(LOCAL:10):150 || TALENT:(LOCAL:10):170
+			LOCAL:2 = RAND:5
+		ELSEIF (TALENT:(LOCAL:10):120 || TALENT:(LOCAL:10):121) && MARK:(LOCAL:10):9 == 3 && TALENT:MASTER:120 == 0
+			LOCAL:2 = 7
+		ENDIF
+	ENDIF
+ENDIF
+
+;RETURN 0対策としてここで夜這いの奴隷を記録してしまう. ランダム機能が有りの場合のみ
+;同フォルダ内の「朝に起こるイベント」処理の前に, ここに記録した奴隷をTARGETに戻す
+SIF FLAG:12 & 256
+	TFLAG:212 = TARGET
+
+;もし実効値が0になってしまっている場合は強制終了
+SIF GET_AGG(TARGET) == 0
+	RETURN 0
+
+;この数値でメインターゲットの積極値がわかる
+SIF TALENT:MASTER:998
+	PRINTFORML %CALLNAME:TARGET%의 적극성：{GET_AGG(TARGET)}
+
+;幼稚か幼児, 幼児退行＋恋慕なら, (100-欲望LV*15)%でただの添い寝
+LOCAL:25 = ((TALENT:130 || TALENT:131 || TALENT:159) && TALENT:150 && (100-(15*ABL:11) > RAND:100)) ? 2 # 0
+
+;相性検索. 相性100以上のキャラと３Ｐ
+;ぱるプレの骨組みを流用させていただきました. 多謝！
+;検索
+REPEAT CHARANUM
+	;対象が主人ならスキップ
+	SIF COUNT == MASTER
+		CONTINUE
+	;対象がその場にいないならスキップ
+	SIF CFLAG:COUNT:4
+		CONTINUE
+;	;対象の部屋に施錠されているならスキップ（巡回施錠追加）
+;	SIF CFLAG:COUNT:3050
+;		CONTINUE
+	;対象が眠っているならスキップ
+	SIF EQUIP:COUNT:14
+		CONTINUE
+	;調教した事がないもしくは好感度が0のキャラはスキップ
+	SIF CFLAG:COUNT:1610 == 0 || CFLAG:COUNT:2 == 0
+		CONTINUE
+	;抱卵中は夜這いどころではない！
+	SIF TALENT:COUNT:143
+		CONTINUE
+	;酔っ払い, 気力切れ, 体力少ない, ストレス過多なのはスキップ
+	SIF BASE:COUNT:8 > MAXBASE:COUNT:8 || BASE:COUNT:0 < 500 || BASE:COUNT:1 < 1 || CFLAG:COUNT:65 >= PALAMLV:3
+		CONTINUE
+	;反発刻印持ち排除システム発動
+	SIF MARK:COUNT:9 && FLAG:12 & 1024 && FLAG:3 < 4
+		CONTINUE
+
+	;101以上の相性の奴隷を保存 ※TARGETとMが同一キャラにならないようにTARGETと登録順番号が同じならはじく
+	IF RELATION:TARGET:(NO:COUNT) > 100 && TARGET != COUNT
+		;一人目は強制的に記録
+		IF LOCAL:22 == 0
+			CALLF SET_CHARA_M(COUNT)
+			LOCAL:15 = COUNT
+		ELSE
+			;二人目からは３分の１の確率で保存
+			IF RAND:3 == 0
+				CALLF SET_CHARA_M(COUNT)
+				LOCAL:15 = COUNT
+			ENDIF
+		ENDIF
+		LOCAL:22 += 1
+	ENDIF
+REND
+
+;욕정계 각종 참고 수치
+LOCAL:5 = MAX(RAND:(MAX(ABL:11, 1)), 2) + (TALENT:170 > 0)*2
+;정애계 각종 참고 수치
+LOCAL:6 = MAX(RAND:(MAX(ABL:10, 1)), 2) + (TALENT:150 > 0)*2
+
+DRAWLINE
+
+RESULT = 0
+
+;都合のいいときだけこき使われてストレス貯める助手さんが余りにも不憫なので何かイベントを足そうかと. 
+;条件. 助手が居る+助手が主人でない(謎) 助手が反発3ならスルー, なお, 必ず呼び止めるのもうざいので確率50%
+SIF ASSI >= 0 && ASSI != MASTER && MARK:ASSI:9 < 3 && RAND:2 == 0
+	CALL NIGHT_ASSI1, LOCAL:10
+	
+;助手を呼び止めていた場合, 最優先で助手と過す. …輪姦されなければ. 
+IF RESULT == 1
+	IF LOCAL:2 == 7 && LOCAL:1 == 1
+		REPEAT 4
+			TARGET = LOCAL:(10 + COUNT)
+			SIF (TALENT:120 || TALENT:121) && !(CFLAG:42 & 2)
+				LOCAL:2  += 1
+		REND
+	ENDIF
+	IF LOCAL:2 == 11
+		CALL NIGHT_ASSI_SEX_LUNA, LOCAL:10, LOCAL:11, LOCAL:12, LOCAL:13
+	ELSE
+		CALL NIGHT_ASSI2, LOCAL:10
+	ENDIF
+;恨みを持った棒付き奴隷が女調教主をレイプしにくる
+;反発LV3と禁断と調合知識があったら, 穴を作ってでも犯しに来る
+;更に棒が付いてなくとも触手操作か禁断の知識持ち反発3奴隷が, 女調教主を(ry
+;両方持ってるキャラが少ないので, 調合か禁断のどちらかがあれば性転換
+;主人公の性別は関係無くなりました. 条件に当てはまるものが無いときは平和な夜が過ぎるだけ
+;貞操帯処理を統合して, もはや性別など関係無くなった
+;各文章量増加に伴い飛ばす箇所を変更する
+;ここでは相性判定相手は既に用無しなのでこれを被害者の判定に用いる
+ELSEIF MARK:9 == 3
+	;奴隷が対象となる場合. 以下
+	;・集団乱交判定
+	;・確率1/2で処女か親しい奴隷
+	IF LOCAL:2 == 8 || (RAND:2 == 0 && LOCAL:11 > 0 && (TALENT:(LOCAL:11):0 > 0 || TALENT:(LOCAL:11):150) && MARK:(LOCAL:11):9 == 0)
+		CALLF SET_CHARA_M(LOCAL:11)
+		LOCAL:15 = LOCAL:11
+	;それ以外なら対象は主人
+	ELSE
+		CALLF SET_CHARA_M(MASTER)
+		LOCAL:15 = MASTER
+	ENDIF
+	CALL NIGHT_HANTEI_EX, LOCAL:15, LOCAL:10, LOCAL:1, LOCAL:2, LOCAL:5
+;可能な限り男女の区別なく夜這いが発生するようにしようかと. 誰得だが. 
+ELSE
+	LOCAL:16 = RAND:8
+	;結構増えたし, わざわざ睡眠確率増やさなくてもいいよね？
+	;寝てしまった主人（4分の1の確率で寝てしまう）
+	IF LOCAL:16 < 2
+		CALL NIGHT_EVENT_1, LOCAL:5, LOCAL:6, LOCAL:25, LOCAL:20
+	;幼稚キャラによる甘えん坊添い寝（恋慕必須）
+	ELSEIF LOCAL:25 == 2
+		CALL NIGHT_EVENT_2, LOCAL:6
+	;嫁との一夜（相愛持ち専用）
+	ELSEIF TALENT:153 && LOCAL:16 > 4
+		CALL NIGHT_EVENT_3, LOCAL:6, LOCAL:5
+	;乱交（乱交フラグの有無. 夜這い数10人以上で確率が減る. ランダム機能ON状態でないと機能しない）
+	;誰かが貞操帯ある場合はJ条件で弾いた. フラン乱交の場合は此処で弾く
+	ELSEIF LOCAL:2 == 1 && (LOCAL:1 == 1 || (LOCAL:1 == 2 && (CFLAG:42 & 2) == 0 && (CFLAG:MASTER:42 & 2) == 0))
+		CALL NIGHT_HANTEI_M, LOCAL:5, LOCAL:6, LOCAL:1, LOCAL:2
+	;３Ｐ女女（誰かを連れてきた場合３Ｐ. ターゲットの奴隷が恋慕もしくは淫乱, レズっ気1以上もしくは両刀必須）
+	ELSEIF LOCAL:15 > 0 && LOCAL:22 > 0 && RAND:4 == 0 && (TALENT:150 || TALENT:170) && (ABL:22 >= 1 || TALENT:83 == 1) && TALENT:120 == 0 && TALENT:(LOCAL:15):120 == 0 && (CFLAG:MASTER:42 & 2) == 0 && (CFLAG:42 & 2) == 0 && (CFLAG:(LOCAL:15):42 & 2) == 0
+		CALL NIGHT_HANTEI_M, LOCAL:5, LOCAL:6, LOCAL:1, LOCAL:2
+	;３Ｐ男男
+	ELSEIF LOCAL:15 > 0 && LOCAL:22 > 0 && RAND:4 == 0 && (TALENT:150 || TALENT:170) && (ABL:23 >= 1 || TALENT:83 == 1) && TALENT:120 && TALENT:(LOCAL:15):120 && (CFLAG:MASTER:42 & 2) == 0 && (CFLAG:42 & 2) == 0 && (CFLAG:(LOCAL:15):42 & 2) == 0
+		CALL NIGHT_HANTEI_M, LOCAL:5, LOCAL:6, LOCAL:1, LOCAL:2
+	;３Ｐ異性
+	ELSEIF LOCAL:15 > 0 && LOCAL:22 > 0 && RAND:4 == 0 && (TALENT:150 || TALENT:170) && ((TALENT:120 && TALENT:(LOCAL:15):120 == 0) || (TALENT:120 == 0 && TALENT:(LOCAL:15):120)) && (CFLAG:MASTER:42 & 2) == 0 && (CFLAG:42 & 2) == 0 && (CFLAG:(LOCAL:15):42 & 2) == 0
+		CALL NIGHT_HANTEI_M, LOCAL:5, LOCAL:6, LOCAL:1, LOCAL:2
+	;奉仕精神Lv4以上, 触手中毒Lv1以上の禁断or触手操作術持ちの奴隷が触手で一緒に楽しみに来る. 
+	;但し, 紳士的触手を解放しており, 主人が貞操帯をしていない場合のみ. 
+	ELSEIF RAND:5 == 0 && ABL:13 > 3 && ABL:35 > 0 && (TALENT:56 || TALENT:149) && (CFLAG:MASTER:42 & 2) == 0 && FLAG:15 & 4096
+		CALL NIGHT_HANTEI_SHOKUSHU
+	;禁断, 触手操作を持っていなくても, 仲の良いMが禁断持ちの場合, 低確率で教えて貰ってくる. 
+	ELSEIF LOCAL:22 > 0 && TALENT:(LOCAL:15):56 && RAND:20 == 0 && ABL:13 > 3 && ABL:35 > 0 && (TALENT:56 == 0 || TALENT:149 == 0) && (CFLAG:MASTER:42 & 2) == 0 && FLAG:15 & 4096
+		CALL NIGHT_HANTEI_SHOKUSHU
+	;SM系に必要なABLを3→2に. 
+	;マゾな奴隷が主人に叩かれにくる. もしくは仲の良い奴隷に叩かれに行く
+	ELSEIF RAND:5 == 0 && (ABL:21 >= 2 || TALENT:82 || TALENT:178)
+		CALL NIGHT_HANTEI_SM, LOCAL:22, 1
+		;主人が関係しており, ビデオカメラがあると盗撮される(サドのときにこれをしないのはイベントの都合で）
+		SIF RAND:4 == 0 && LOCAL:15 == MASTER && LOCAL:11 != LOCAL:10 && LOCAL:20 >= 2 && ((ITEM:50 && ITEM:75) || NOITEM)
+			CALL NIGHT_TOUSATSU, LOCAL:10, LOCAL:11
+	;サドな奴隷が, 仲の良い奴隷かMな主人を叩きに行く
+	ELSEIF RAND:4 == 0 && (ABL:20 >= 2 || TALENT:177 || TALENT:81) && (ITEM:32 || NOITEM) && ((ABL:MASTER:21 >= 2 || TALENT:MASTER:82 || TALENT:MASTER:178) || LOCAL:22 > 0)
+		CALL NIGHT_HANTEI_SM, LOCAL:22, 2
+	ELSEIF (CFLAG:42 & 2) == 0
+		IF LOCAL:22 > 0 && RAND:3 == 0 && (CFLAG:(LOCAL:15):42 & 2) == 0
+			;仲の良い奴隷と一緒に過す(旧襲撃系を含む
+			SIF NIGHT_HANTEI_HABU1(LOCAL:15, LOCAL:10)
+				CALL NIGHT_HANTEI_HABU2, LOCAL:15, LOCAL:10, LOCAL:5, LOCAL:6
+		;통상의 요바이 처리
+		ELSE
+			CALL NIGHT_EVENT_4, LOCAL:5, LOCAL:6
+			;ビデオカメラがあると盗撮される
+			IF RAND:4 == 0 && LOCAL:20 >= 2 && LOCAL:11 != LOCAL:10 && ((ITEM:50 && ITEM:75) || NOITEM)
+				CALL NIGHT_TOUSATSU, LOCAL:10, LOCAL:11
+			;2分の一, 複数の奴隷だと覗き見オナニー
+			ELSEIF RAND:2 == 0 && LOCAL:20 >= 2 && LOCAL:11 != LOCAL:10 && EXP:(LOCAL:11):10 >= 1
+				CALL NIGHT_EVENT_10, LOCAL:10, LOCAL:11, LOCAL:12, LOCAL:5, LOCAL:6, LOCAL:20
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+;한 번 노예의 존재를 원래 값으로 되돌린다.
+TARGET = TFLAG:210
+WAIT
+DRAWLINE
+;여기서 요바이는 종료
+RETURN 0
+
+;=====================================================
+;
+;노예가 하는 선의의 촉수간
+;
+;=====================================================
+;-----------------------------------------------
+;행동 판정
+;----------------------------------------------
+@NIGHT_HANTEI_SHOKUSHU
+;서문(지문 컷)
+IF CFLAG:99 == 0
+	PRINTFORML 그날 밤, 갑자기 %조사처리(CALLNAME:TARGET,"가")% %CALLNAME:MASTER%의 방을 찾아왔다. 
+	IF TALENT:56 == 0 && TALENT:149 == 0
+		TALENT:56 = 1
+		PRINTFORML %조사처리(CALLNAME:TARGET,"가")% 말하는 바로는, %조사처리(CALLNAME:MASTER,"가")% 기분 좋게 하려고 나름대로 여러가지 연구를 했다나보다. 
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:TARGET,"가")% 말하는 바로는, 오늘은 %조사처리(CALLNAME:MASTER,"를")% 기분 좋게 해주려고 여러가지로 봉사하고 싶다나보다. 
+	ENDIF
+ENDIF
+
+;촉수 폭주 판정 LOCAL
+;基本値は技巧LV＋触手使役LV(奴隷の触手使役LVは通常は0)
+LOCAL = ABL:12 + ABL:98
+;触手操作術を持つ場合+3
+SIF TALENT:149
+	LOCAL += 3
+
+;50％の確率でRAND:10以下なら暴走. 
+LOCAL = (RAND:2 == 0 && RAND:10 > LOCAL) ? 0 # 1
+
+;CONFIG에서 랜덤성을 배제했더라면 선택 가능함.
+IF FLAG:14 & 8
+;선택에 따른 분기를 실행한다.
+	PRINTL 자, 그럼 어떻게 할까?
+	PRINTFORML [0] \@(LOCAL) ? %CALLNAME:TARGET%에게 기분 좋게 봉사를 받자 # 불길한 예감이 들지만 모처럼이니까…\@
+	PRINTL [1] 오늘은 별 생각 없으니 돌아가라 한다
+	$INPUT_LOOP
+	INPUT
+ELSE
+	RESULT = (((RAND:10 < (3-TALENT:MASTER:56)) && LOCAL == 0) || (RAND:10 < 6 && LOCAL == 1)) ? 0 # 1
+ENDIF
+IF RESULT == 0
+	CALL NIGHT_SHOKUSHU_SOFT, LOCAL
+ELSEIF RESULT == 1
+	PRINTFORMW 아무리 생각해도 불길한 예감이 든다...
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에게 오늘은 됐다고 말했다.
+	PRINTFORMW 그러자, %조사처리(CALLNAME:TARGET,"는")% 어딘가 불만스러운 듯 한숨을 내쉬고 돌아갔다…. 
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;=====================================================
+;
+;조교주가 빠졌을 경우의 밤 행동
+;
+;=====================================================
+;-----------------------------------------------
+;행동 판정
+;----------------------------------------------
+@NIGHT_HANTEI_HABU1(ARG, ARG:1)
+#FUNCTION
+;最初にただ一緒に過すか, エロイ事するか. 
+REPEAT 2
+	TARGET = (COUNT == 0) ? ARG # ARG:1
+	LOCAL = 9
+	;恋慕持ちは性行為しにくい. 
+	SIF TALENT:150
+		LOCAL -= 1
+	;淫乱持ちは性行為しやすい. 
+	SIF TALENT:170
+		LOCAL += 1
+	;同性の場合
+	IF TALENT:(ARG:1):120 && TALENT:ARG:120
+		SIF (ABL:23 >= 3 || TALENT:83 == 1)
+			LOCAL += 1
+	ELSEIF TALENT:(ARG:1):120 == 0 && TALENT:ARG:120 == 0
+		SIF (ABL:22 >= 3 || TALENT:83 == 1)
+			LOCAL += 1
+	;異性の場合
+	ELSE
+		;相性良いなら性行為しやすい
+		SIF RELATION:(ARG:1):(NO:ARG) >= 110 && RELATION:ARG:(NO:(ARG:1)) >= 110
+			LOCAL += 1
+		;貞操観念持ちは性行為しにくい
+		SIF TALENT:30
+			LOCAL -= 1
+		;貞操無頓着なら性行為しやすい
+		SIF TALENT:31
+			LOCAL += 1
+	ENDIF
+	;親愛持ちは性行為しにくい. 
+	SIF TALENT:152
+		LOCAL -= 1
+	SIF COUNT == 0
+		LOCAL:1 = LOCAL
+REND
+
+RETURNF (LOCAL > 9 && LOCAL:1 > 9)
+
+@NIGHT_HANTEI_HABU2, ARG, ARG:1, ARG:2, ARG:3
+IF TALENT:(ARG:1):120 && TALENT:ARG:120
+	CALL NIGHT_EVENT_12, ARG, ARG:2, ARG:3
+ELSEIF TALENT:(ARG:1):120 == 0 && TALENT:ARG:120 == 0
+	CALL NIGHT_EVENT_8, ARG, ARG:1, ARG:2, ARG:3
+ELSE
+	CALL NIGHT_SEX_9, ARG, ARG:1
+ENDIF
+
+;=====================================================
+;
+;SM 행위에 따른 밤 행동
+;
+;=====================================================
+;-----------------------------------------------
+;행동 판정
+;----------------------------------------------
+@NIGHT_HANTEI_SM, ARG, ARG:1
+;叩かれたい奴隷の場合
+IF ARG:1 == 1
+	;仲の良い奴隷が居る場合
+	IF ARG > 0
+		;サド具合を比べる. より気持ち良くしてくれる方へ行こうとする. 
+		LOCAL:1 = 0
+		REPEAT 2
+			LOCAL:3 = (COUNT == 0) ? MASTER # GET_CHARA_M()
+			LOCAL = 0
+			;サドッ気加算
+			LOCAL += ABL:(LOCAL:3):20
+			;サド持ちなら+3
+			SIF TALENT:(LOCAL:3):81
+				LOCAL += 3
+			;どS持ちなら+5
+			SIF TALENT:(LOCAL:3):177
+				LOCAL += 5
+			;技巧による補正
+			LOCAL *= ABL:(LOCAL:3):12
+			;一回目ならLOCAL:1に保存
+			SIF COUNT == 0
+				LOCAL:1 = LOCAL
+		REND
+		IF LOCAL:1 > LOCAL
+			CALLF SET_CHARA_M(MASTER)
+		ELSEIF RAND:2 == 0 && LOCAL:1 == LOCAL
+			CALLF SET_CHARA_M(MASTER)
+		ENDIF
+	ELSE
+		CALLF SET_CHARA_M(MASTER)
+	ENDIF
+	CALL NIGHT_EVENT_SM_M, GET_CHARA_M()
+;叩きたい奴隷の場合
+ELSE
+	;叩ければなんでもいい. 
+	;仲の良い奴隷が居て主がマゾ
+	IF ARG > 0 && (ABL:MASTER:21 >= 2 || TALENT:MASTER:82 || TALENT:MASTER:178)
+		SIF RAND:2 == 0
+			CALLF SET_CHARA_M(MASTER)
+	;仲の良い奴隷が居らず主がマゾ
+	ELSEIF ABL:MASTER:21 >= 2 || TALENT:MASTER:82 || TALENT:MASTER:178
+		CALLF SET_CHARA_M(MASTER)
+	ENDIF
+	CALL NIGHT_EVENT_SM_S, GET_CHARA_M()
+ENDIF
+
+;=====================================================
+;
+;여러 명이서 행하는 성행위에 대해서(난교, 연회)
+;
+;=====================================================
+;-----------------------------------------------
+;행동 판정
+;----------------------------------------------
+;ARG：구 E　ARG:1：구 F:7　ARG:2：구 R:1, ARG:3：구R:2
+@NIGHT_HANTEI_M, ARG, ARG:1, ARG:2, ARG:3
+;일단 플랑 난교는 그쪽으로 날림
+IF ARG:2 == 2
+	CALL NIGHT_RANKOU_FLAN, ARG, ARG:2
+	RETURN 0
+ENDIF
+
+;서문.
+;난교와 ３Ｐ에서 오려왔다
+;지문 컷
+IF CFLAG:99 == 0
+	IF ARG:3 == 1 
+		PRINTFORMW 그날 밤, 돌연히 %조사처리(CALLNAME:(GET_CHARA_G(0)),"와")% %조사처리(CALLNAME:(GET_CHARA_G(1)),"와")% %조사처리(CALLNAME:(GET_CHARA_G(2)),"와")% %조사처리(CALLNAME:(GET_CHARA_G(3)),"가")% 방에 찾아왔다.
+	ELSE
+		PRINTFORM 밤 늦게 누가 노크를 해 열어보니, 거기에는 
+		PRINTDATAW
+			DATAFORM %조사처리(CALLNAME:(GET_CHARA_M()),"와")% %조사처리(CALLNAME:TARGET,"가")% 있었다.
+			DATAFORM %조사처리(CALLNAME:TARGET,"과")% %조사처리(CALLNAME:(GET_CHARA_M()),"가")% 있었다.
+		ENDDATA
+	ENDIF
+	PRINTL 
+ENDIF
+
+;選択による宴会と乱交への分岐を行う. 
+PRINTL 그럼 어떻게 할까. 모처럼 이렇게 와줬는데……
+;CONFIG에서 랜덤성을 배제했더라면 선택 가능함.
+IF FLAG:14 & 8
+	PRINTFORML [0] \@(ARG:3 == 1) ? 난교한다 # 침대로 이끈다\@
+	;鬼殺しを除いて, 酒が10本以上ないと宴会できない. 
+	SIF  ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 > 9
+		PRINTL [1] 연회한다
+	$INPUT_LOOP
+	INPUT
+ELSE
+	RESULT = ((RAND:10 < (2+TALENT:214+TALENT:221)) && ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 > 9) ? 1 # 0
+ENDIF
+
+IF RESULT == 1 && (ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 > 9)
+	CALL NIGHT_ENKAI, ARG:3
+ELSEIF RESULT == 0
+	IF ARG:3 == 1
+		CALL NIGHT_RANKOU, ARG:2
+	ELSE
+		CALL NIGHT_3P, ARG, ARG:1, GET_CHARA_M(), GET_CHARA_G(0)
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+PRINTL 
+
+;=====================================================
+;
+;조수와의 밤 이벤트
+;
+;=====================================================
+;-----------------------------------------------
+;서장?
+;----------------------------------------------
+@NIGHT_ASSI1, ARG
+;지문 컷
+IF CFLAG:99 == 0
+	PRINT 그날의 조교를 끝낸 뒤, 
+	;요리기능 판정. 기능이 높은 쪽이 식사를 만든다
+	PRINTFORM \@(ABL:MASTER:70 > ABL:ASSI:70 || (RAND:2 == 0 && ABL:MASTER:70 == ABL:ASSI:70)) ? %조사처리(CALLNAME:MASTER,"가")% # %조사처리(CALLNAME:ASSI,"가")%\@
+	PRINTL  만든 저녁을 먹고 잠시 쉬고 있자
+ENDIF
+
+TARGET = ASSI
+;노예의 적극성 체크
+CALL NIGHT_CHECK
+;ここではどんなに確率高くても70%に押さえておく
+LOCAL = MIN(RESULT, 70)
+;助手が部屋を辞するときのイベント口上呼び出し
+CALL SELF_KOJO, TARGET, 460, LOCAL
+TARGET = ARG
+;지문 컷
+SIF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 인사를 하고, %CALLNAME:MASTER%의 방을 떠나려 했다. 
+
+;CONFIG에서 랜덤성을 배제했더라면 선택 가능함.
+IF FLAG:14 & 8
+	PRINTL 
+PRINTL [0] 불러세운다.
+PRINTL [1] 배웅한다.
+	$INPUT_LOOP
+	INPUT
+ELSE
+	LOCAL:1 = RAND:100
+	RESULT = (LOCAL:1 < LOCAL) ? 0 # 1
+ENDIF
+
+IF RESULT == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"가")%, 나가려고 하는 %조사처리(CALLNAME:ASSI,"를")% 불러세우자
+	IF LOCAL > 90
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 어째선지 빰을 상기시키며 %CALLNAME:MASTER%의 곁으로 달려왔다.
+	ELSEIF LOCAL < 50
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 경계하는 듯한 모습으로 %CALLNAME:MASTER%의 표정을 살폈다.
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 무언가를 기대하는 듯한 눈동자로 응시해왔다.
+	ENDIF
+ELSEIF RESULT == 1
+	PRINTFORML %조사처리(CALLNAME:MASTER,"가")%, 나가려고 하는 %CALLNAME:ASSI%에게 위로의 말을 건네며 배웅하자
+	IF LOCAL > 90
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 아쉬운듯이 방을 나갔다….
+	ELSEIF LOCAL < 50
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 인사를 하고는 방을 나갔다….
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 무언가 유감스러운 듯 방을 나갔다….
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+PRINTFORML 
+
+RETURN (1 - RESULT)
+
+;-----------------------------------------------
+;행동 선택
+;----------------------------------------------
+@NIGHT_ASSI2, ARG
+;助手の性向により選択肢の有無が増える
+;マゾ→鞭打ち, サド→主人が鞭打ちされる, 淫乱→夜の里へ繰り出す
+CALLF SET_CHARA_M(MASTER)
+TARGET = ASSI
+
+PRINTL 자아 어떻게 할까. 
+;CONFIG에서 랜덤성을 배제했더라면 선택 가능함.
+IF FLAG:14 & 8
+	IF TALENT:ASSI:150
+		PRINTL [0] 새러데잇 나이트 피버!
+	ELSEIF GET_AGG(TARGET) > 90
+		PRINTL [0] 봉사받는다.
+	ELSEIF GET_AGG(TARGET) < 50
+		PRINTL [0] 욕정을 뿜어낸다
+	ELSE
+		PRINTL [0] 하룻밤을 보낸다.
+	ENDIF
+	SIF  ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 > 1
+		PRINTL [1] 술을 마신다
+	SIF (ABL:20 > 1 || TALENT:81 || TALENT:177) && ITEM:32 || NOITEM
+		PRINTL [2] 채찍질을 시킨다.
+	SIF ABL:21 > 1 || TALENT:82 || TALENT:178
+		PRINTFORML [3] \@(ITEM:32 || NOITEM) ? 채찍질 한다. # 스팽킹\@
+	SIF TALENT:170 && (TALENT:120 || (TALENT:0 == 0 && EXP:0 > 0)) && (TALENT:MASTER:120 || (TALENT:MASTER:0 == 0 && EXP:MASTER:0 > 0))
+		PRINTL [9] 마을에 즐기러 간다.
+	$INPUT_LOOP
+	INPUT
+ELSE
+	IF RAND:10 < 2 &&((ABL:20 > 1 || TALENT:81 || TALENT:177) && ITEM:32 || NOITEM)
+		RESULT = 2
+	ELSEIF RAND:10 < 2 && (ABL:21 > 1 || TALENT:82 || TALENT:178)
+		RESULT = 3
+	ELSEIF (RAND:10 < (2+TALENT:214+TALENT:221)) && (ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 > 1) 
+		RESULT = 1
+	ELSEIF RAND:10 < 2 && TALENT:170 && (TALENT:120 || (TALENT:0 == 0 && EXP:0 > 0)) && (TALENT:MASTER:120 || (TALENT:MASTER:0 == 0 && EXP:MASTER:0 > 0))
+		RESULT = 9
+	ELSE
+		RESULT = 0
+	ENDIF
+ENDIF
+IF RESULT == 0
+	CALL NIGHT_ASSI_SEX, ARG
+ELSEIF RESULT == 1 && (ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 > 1)
+	CALL NIGHT_ASSI_SAKE
+ELSEIF RESULT == 2 && ((ABL:20 > 1 || TALENT:81 || TALENT:177) && ITEM:32 || NOITEM)
+	CALL NIGHT_ASSI_SM_S
+ELSEIF RESULT == 3 && (ABL:21 > 1 || TALENT:82 || TALENT:178)
+	CALL NIGHT_ASSI_SM_M
+ELSEIF RESULT == 9 && (TALENT:170 && (TALENT:120 || (TALENT:0 == 0 && EXP:0 > 0)) && (TALENT:MASTER:120 || (TALENT:MASTER:0 == 0 && EXP:MASTER:0 > 0)))
+	CALL NIGHT_ASSI_SEX_PH
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;사후 처리
+TARGET = ASSI
+
+;相愛or親愛の場合ストレスが0になる. 直後に日を跨ぐから又増えるけど. 
+;相愛とか親愛付いてるのは, もう育てる必要なかったりエンディング後だったり. なのでバランスには影響ないはず. 
+IF RESULT == 0 && (TALENT:ASSI:152 || TALENT:ASSI:153)
+	CFLAG:ASSI:65 = 0
+;恋慕ならストレスが半分になる. 
+ELSEIF RESULT == 0 && TALENT:ASSI:150
+	CFLAG:ASSI:65 = CFLAG:ASSI:65/2
+;乗り気じゃなかった場合. ストレスが倍になる. 
+;既に助手可の状態で, このケースがあるのかは不明
+ELSEIF RESULT == 0 && GET_AGG(TARGET) < 50
+	CFLAG:ASSI:65 = 2*CFLAG:ASSI:65
+;どれでもなければストレスそのまま. 
+ENDIF
+
+;=====================================================
+;
+;여기서부터 반발 노예의 턴
+;
+;=====================================================
+;-----------------------------------------------
+;반발 노예가 하는, 행동 판정
+;----------------------------------------------
+;ARG:0：습격 받는 캐릭터
+;ARG:1：습격하는 캐릭터
+;ARG:2：윤간의 제어 플래그
+;ARG:3：폭행이 단독인가 복수범인가의 분기
+;ARG:4：윤간의 구슬 처리용
+@NIGHT_HANTEI_EX, ARG, ARG:1, ARG:2, ARG:3, ARG:4
+;분기 판정은 LOCAL
+LOCAL = 0
+
+;네토라레 판정.
+;被害者が奴隷で襲撃者との相性が良い場合or襲撃者の技巧が主人よりも高い場合
+;さらにARGから見た好感がARG:1>=マスター. 
+;
+SIF ARG != MASTER && (RELATION:ARG:(NO:(ARG:1)) >= 150 || (ABL:(ARG:1):12 > ABL:MASTER:12)) && RELATION:ARG:(NO:(ARG:1)) >= RELATION:ARG:(NO:MASTER)
+	LOCAL += 8
+;どちらも貞操帯を付けていない
+SIF (CFLAG:ARG:42 & 2) == 0 && (CFLAG:(ARG:1):42 & 2) == 0
+	LOCAL += 4
+;被害者に棒があり, 襲撃者に穴があり非処女
+SIF (TALENT:ARG:120 || TALENT:ARG:121) && (TALENT:(ARG:1):120 == 0 && TALENT:(ARG:1):0 == 0)
+	LOCAL += 2
+;襲撃者に棒があるか禁断or調合持ちで, 被害者に穴があり非処女
+SIF ((TALENT:(ARG:1):120 || TALENT:(ARG:1):121) || (TALENT:(ARG:1):55 || TALENT:(ARG:1):56)) && (TALENT:ARG:120 == 0 && TALENT:ARG:0 == 0)
+	LOCAL += 1
+
+;NTRはまんま寝取られ. Mは棒付きを寝取る. Fなら棒なしを寝取る
+IF LOCAL > 13
+	CALL NIGHT_NTR_M, ARG, ARG:1
+ELSEIF LOCAL > 12
+	CALL NIGHT_NTR_F, ARG, ARG:1
+ENDIF
+
+LOCAL = 0
+
+;ARG:3が6より上なら輪姦or集団暴行. ARG:3はこの時点では7か8か0しかない
+IF ARG:3 > 6
+	;条件を文短縮の為, 奴隷が被害者の場合G:1にGを置いておく. 
+	SIF ARG != MASTER
+		CALLF SET_CHARA_G(1, ARG:1)
+	;Mは女性か
+	SIF TALENT:ARG:120 == 0
+		LOCAL += 1
+	;襲撃者は全員棒つきか
+	SIF (TALENT:(ARG:1):120 || TALENT:(ARG:1):121) && (TALENT:(GET_CHARA_G(1)):120 || TALENT:(GET_CHARA_G(1)):121) && (TALENT:(GET_CHARA_G(2)):120 || TALENT:(GET_CHARA_G(2)):121) && (TALENT:(GET_CHARA_G(3)):120 || TALENT:(GET_CHARA_G(3)):121)
+		LOCAL += 1
+	;関係者は全員貞操帯をつけていないか？
+	SIF (CFLAG:ARG:42 & 2) == 0 && (CFLAG:(ARG:1):42 & 2) == 0 && (CFLAG:(GET_CHARA_G(1)):42 & 2) == 0 && (CFLAG:(GET_CHARA_G(2)):42 & 2) == 0 && (CFLAG:(GET_CHARA_G(3)):42 & 2) == 0
+		LOCAL += 1
+	
+	;LOCAL=3で輪姦, それ以外で暴行
+	IF LOCAL == 3
+		CALL NIGHT_RINKAN, ARG, ARG:1, GET_CHARA_G(1), GET_CHARA_G(2), GET_CHARA_G(3), ARG:4, ARG:2
+	ELSE
+		CALL NIGHT_BOUKOU, ARG, ARG:1, GET_CHARA_G(1), GET_CHARA_G(2), GET_CHARA_G(3), ARG:3
+	ENDIF
+ELSE
+	;禁断or触手持ちで, 相手が貞操帯を付けていない女なら触手陵辱(紳士的な触手がOFFならだめ）
+	IF RAND:2 == 0 && (TALENT:56 || TALENT:149) && (TALENT:ARG:120 == 0 && (CFLAG:ARG:42 & 2) == 0) && FLAG:15 & 4096
+		CALL NIGHT_SHOKUSHU, ARG, ARG:1
+	;それ以外の場合
+	ELSE
+		;襲撃者が貞操帯をつけてない
+		SIF (CFLAG:(ARG:1):42 & 2) == 0
+			LOCAL += 3
+		;対象が女
+		SIF TALENT:ARG:120 == 0
+			LOCAL += 1
+		;襲撃者が棒を持っている
+		SIF (TALENT:(ARG:1):120 || TALENT:(ARG:1):121)
+			LOCAL += 1
+		;対象が主人で, 襲撃者が調合or禁断持ちだ
+		SIF ARG == MASTER && (TALENT:(ARG:1):55 || TALENT:(ARG:1):56)
+			LOCAL += 2
+		;対象が男奴隷である. もしくは男主人だが, 禁断も調合も無い
+		SIF TALENT:ARG:120 && (ARG != MASTER || (TALENT:(ARG:1):55 == 0 && TALENT:(ARG:1):56 == 0))
+			LOCAL = 0
+		;対象が男奴隷で, 襲撃者に穴があり処女ではなく貞操帯を装備していない
+		SIF (TALENT:ARG:120 && ARG != MASTER) && (TALENT:(ARG:1):0 == 0 && TALENT:(ARG:1):120 == 0 && (CFLAG:(ARG:1):42 & 2) == 0)
+			LOCAL = -1
+		;対象が貞操帯をつけている
+		SIF (CFLAG:ARG:42 & 2)
+			LOCAL = 0
+		
+		;N은 normal, S는 sleep
+		;決して男が女に比べ, 節操無しというわけではないが. 
+		;でも画面の前の皆なら, 例え『あなた』への報復の為でも, 美人が腰振ってくれたら堕ちちゃうよね？
+		IF RAND:3 == 0 && LOCAL > 4
+			CALL NIGHT_GOUKAN_S, ARG, ARG:1, ARG:4
+		ELSEIF RAND:2 == 0 && LOCAL > 0
+			CALL NIGHT_GOUKAN_N, ARG, ARG:1
+		ELSEIF RAND:2 == 0 && LOCAL < 0
+			CALL NIGHT_NTR_M, ARG, ARG:1
+		ELSE
+			CALL NIGHT_BOUKOU, ARG, ARG:1, GET_CHARA_G(1), GET_CHARA_G(2), GET_CHARA_G(3), ARG:3
+		ENDIF
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;적극성 체크 함수. 랜덤 검색하지 않을 경우에는 아래가 아니라 이쪽의 함수를 사용합니다
+@NIGHT_CHECK
+LOCAL = 20
+;恋慕
+SIF TALENT:150
+	LOCAL += 10
+;淫乱
+SIF TALENT:170
+	LOCAL += 10
+;従順
+	LOCAL += (ABL:10*ABL:10)
+;従順3以上でボーナス
+SIF ABL:10 >= 3
+	LOCAL += 15
+;従順4以上でボーナス
+SIF ABL:10 >= 4
+	LOCAL += 5
+;従順5以上でボーナス
+SIF ABL:10 >= 5
+	LOCAL += 10
+;欲望
+	LOCAL += (ABL:11*ABL:11)
+;欲望3以上でボーナス
+SIF ABL:11 >= 3
+	LOCAL += 15
+;欲望4以上でボーナス
+SIF ABL:11 >= 4
+	LOCAL += 10
+;欲望5以上でボーナス
+SIF ABL:11 >= 5
+	LOCAL += 15
+;臆病
+SIF TALENT:10
+	TIMES LOCAL , 0.85
+;反抗的
+SIF TALENT:11
+	TIMES LOCAL , 0.85
+;素直
+SIF TALENT:13
+	TIMES LOCAL , 1.20
+;大人しい
+SIF TALENT:14
+	TIMES LOCAL , 0.85
+;感情乏しい
+SIF TALENT:22
+	TIMES LOCAL , 0.70
+;好奇心
+SIF TALENT:23
+	TIMES LOCAL , 1.30
+;保守的
+SIF TALENT:24
+	TIMES LOCAL , 0.85
+;楽観的
+SIF TALENT:25
+	TIMES LOCAL , 1.35
+;一線超えない
+SIF TALENT:27
+	TIMES LOCAL , 0.85
+;抑圧
+SIF TALENT:32
+	TIMES LOCAL , 0.75
+;解放
+SIF TALENT:33
+	TIMES LOCAL , 1.35
+;恥じらい
+IF TALENT:35
+	TIMES LOCAL , 0.90
+;恥薄い
+ELSEIF TALENT:36
+	TIMES LOCAL , 1.25
+ENDIF
+;快感に素直
+IF TALENT:70
+	TIMES LOCAL , 1.25
+;快感の否定
+ELSEIF TALENT:71
+	TIMES LOCAL , 0.60
+ENDIF
+;恋慕
+SIF TALENT:150
+	TIMES LOCAL , 1.30
+;淫乱
+SIF TALENT:170
+	TIMES LOCAL , 2.00
+;男嫌い(主人がオトコの場合のみ)
+IF TALENT:37 && TALENT:MASTER:120
+	TIMES LOCAL , 0.75
+;女嫌い(主人がオトコじゃないの場合のみ)
+ELSEIF TALENT:38 && TALENT:MASTER:120 == 0
+	TIMES LOCAL , 0.75
+ENDIF
+;反発刻印2以上
+SIF MARK:9 >= 2
+	TIMES LOCAL , 0.50
+;恐怖刻印3以上
+SIF MARK:8 >= 3
+	TIMES LOCAL , 0.65
+;相性
+SIF RELATION:(NO:MASTER) != 0
+	LOCAL = (LOCAL*RELATION:(NO:MASTER))/100
+
+;対象が欲望LV3未満, 従順LV0だとダメ
+SIF ABL:11 < 3 || ABL:10 < 1
+	LOCAL = 0
+;反発刻印3で奴隷に棒有り, 主人に穴有りで襲いに来る(誰得
+;棒が無くても触手操作or禁断の知識持ちの反発3で女主人公なら襲いに来る
+;反発3有れば徘徊する
+SIF MARK:9 == 3
+	LOCAL = 99
+;調教した事がないもしくは好感度が0のキャラはダメ(反発あっても許さない)
+SIF CFLAG:1610 == 0 || CFLAG:2 == 0
+	LOCAL = 0
+;その場にいないor眠っていてもダメ(反発あっても許さない)
+SIF CFLAG:4 || EQUIP:14
+	LOCAL = 0
+;抱卵中は夜這いどころではない！(妊娠や懐卵などとは意味合いが違う！)
+SIF TALENT:143
+	LOCAL = 0
+;体力が切れ掛かっているとき, 気力切れのとき, 酔っ払っているとき, ストレスが大きいときはは夜這いせずに休む
+SIF BASE:8 > MAXBASE:8 || BASE:0 < 500 || BASE:1 < 1 || CFLAG:65 >= PALAMLV:3
+	LOCAL = 0
+
+;反発刻印持ち排除システム発動
+SIF MARK:9 && FLAG:12 & 1024 && FLAG:3 < 4
+	LOCAL = 0
+
+CALLF SET_AGG(TARGET, LOCAL)
+
+RETURN LOCAL
+
+;こちらは全奴隷を見て, その奴隷がどのくらい夜這いに来やすいか見る関数です
+@NIGHT_CHECK2, ARG
+#FUNCTION
+LOCAL:10 = 0
+REPEAT CHARANUM
+	;実行者が100人に達したらREPEAT脱出
+	SIF LOCAL:10 >= 250
+		BREAK
+	;対象が主人ならスキップ
+	SIF COUNT == MASTER
+		CONTINUE
+	;対象がその場にいないならスキップ
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;調教した事がないもしくは好感度が0のキャラはスキップ
+	SIF CFLAG:COUNT:1610 == 0 || CFLAG:COUNT:2 == 0
+		CONTINUE
+	;対象が眠っているならスキップ
+	SIF EQUIP:COUNT:14
+		CONTINUE
+	;対象が抱卵中ならスキップ
+	SIF TALENT:COUNT:143
+		CONTINUE
+	;対象の体力が切れ掛かっているとき, 気力切れのとき, 酔っ払っているとき, ストレスが大きいときはスキップ
+	SIF BASE:COUNT:8 > MAXBASE:COUNT:8 || BASE:COUNT:0 < 500 || BASE:COUNT:1 < 1 || CFLAG:COUNT:65 >= PALAMLV:3
+		CONTINUE
+	;対象が欲望LV3未満, 従順LV0だとダメ
+	;反発刻印3で奴隷に棒有り犯しに来る(誰得
+	;棒が無くても触手操作or禁断の知識持ちの反発3で女主人公なら襲いに来る
+	;遂に反発3だけでも不穏な事を考えて徘徊するようになった
+	;IF MARK:COUNT:9 == 3
+		
+	SIF ABL:COUNT:11 < 3 || ABL:COUNT:10 < 1 
+		CONTINUE
+
+	;発動判定値計算
+	LOCAL = ARG
+	;従順
+	LOCAL += (ABL:COUNT:10*ABL:COUNT:10)
+	;欲望
+	LOCAL += (ABL:COUNT:11*ABL:COUNT:11)
+	;従順3以上でボーナス
+	SIF ABL:COUNT:10 >= 3
+		LOCAL += 10
+	;欲望3以上でボーナス
+	SIF ABL:COUNT:11 >= 3
+		LOCAL += 10
+	;欲望5LVで更にボーナス
+	SIF ABL:COUNT:11 >= 5
+		LOCAL += 15
+	;反発刻印2以上の時
+	SIF MARK:COUNT:9 >= 2
+		TIMES LOCAL , 0.50
+	;恐怖刻印3以上の時
+	SIF MARK:COUNT:8 >= 3
+		TIMES LOCAL , 0.65
+	;臆病
+	SIF TALENT:COUNT:10
+		TIMES LOCAL , 0.85
+	;反抗的
+	SIF TALENT:COUNT:11
+		TIMES LOCAL , 0.80
+	;素直
+	SIF TALENT:COUNT:13
+		TIMES LOCAL , 1.15
+	;大人しい
+	SIF TALENT:COUNT:14
+		TIMES LOCAL , 0.90
+	;感情乏しい
+	SIF TALENT:COUNT:22
+		TIMES LOCAL , 0.60
+	;好奇心
+	SIF TALENT:COUNT:23
+		TIMES LOCAL , 1.10
+	;保守的
+	SIF TALENT:COUNT:24
+		TIMES LOCAL , 0.90
+	;一線超えない
+	SIF TALENT:COUNT:27
+		TIMES LOCAL , 0.90
+	;抑圧
+	SIF TALENT:COUNT:32
+		TIMES LOCAL , 0.75
+	;解放
+	SIF TALENT:COUNT:33
+		TIMES LOCAL , 1.10
+	;抵抗
+	SIF TALENT:COUNT:34
+		TIMES LOCAL , 0.80
+	;恥じらい
+	IF TALENT:COUNT:35
+		TIMES LOCAL , 0.85
+	;恥薄い
+	ELSEIF TALENT:COUNT:36
+		TIMES LOCAL , 1.10
+	ENDIF
+	;快感に素直
+	IF TALENT:COUNT:70
+		TIMES LOCAL , 1.20
+	;快感の否定
+	ELSEIF TALENT:COUNT:71
+		TIMES LOCAL , 0.60
+	ENDIF
+	;恋慕
+	SIF TALENT:COUNT:150
+		TIMES LOCAL , 1.15
+	;淫乱
+	SIF TALENT:COUNT:170
+		TIMES LOCAL , 1.40
+	;男嫌い(主人がオトコの場合のみ)
+	IF TALENT:COUNT:37 && TALENT:MASTER:120
+		TIMES LOCAL , 0.70
+	;女嫌い(主人がオトコじゃない場合のみ)
+	ELSEIF TALENT:COUNT:38 && TALENT:MASTER:120 == 0
+		TIMES LOCAL , 0.70
+	ENDIF
+	;相性
+	SIF RELATION:COUNT:(NO:MASTER) != 0
+		LOCAL = (LOCAL*RELATION:COUNT:(NO:MASTER))/100
+	;反発刻印3で奴隷に棒有り, 主人に穴有りでやるき満々(誰得
+	;遂に主人が男でも関係なくなった. 
+	;棒が無くても触手操作or禁断の知識持ちの反発3で女主人公なら襲いに来る
+	;遂に反発だけで良くなった. 
+	SIF MARK:COUNT:9 == 3
+		LOCAL = 90
+
+	;どれだけ高くなっても, その人が行動を起こす可能性は90%
+	LOCAL = MIN(LOCAL, 90)
+
+	;この処理があると, どのキャラがどれくらいの確率なのか見ることができます
+	SIF TALENT:MASTER:998
+		PRINTFORML %조사처리(CALLNAME:COUNT,"가")% 행동을 일으킬 확률：{LOCAL}％
+
+	;反発刻印持ち排除システム発動
+	SIF MARK:COUNT:9 && FLAG:12 & 1024 && FLAG:3 < 4
+		LOCAL = 0
+
+	CALLF SET_AGG(COUNT, LOCAL)
+
+	;실행 판정
+	IF LOCAL > RAND:100
+		TFLAG:(400+LOCAL:10) = COUNT
+		LOCAL:10 += 1
+	ENDIF
+REND
+
+RETURNF LOCAL:10
+
+;-------------------------------------------------
+;여성화
+;-------------------------------------------------
+@SHIFT_TO_F, ARG
+;이미 여성이라면 꺼져
+SIF !TALENT:ARG:120
+	RETURN 0
+;무지개 사탕에서 유용
+IF CFLAG:ARG:4995 == 0
+	CFLAG:ARG:4995 = 1
+	;男が初めてTSしたら処女に決まってんだろJK
+	CFLAG:ARG:4996 = 1
+	;元が男の場合は胸のサイズをランダムで決定
+	;ただし, 小柄・小人体系はそこから1サイズ小さく, 巨躯は1サイズ大きくする
+	LOCAL:1 = RAND:100
+	IF LOCAL:1 < 5
+		CFLAG:ARG:4997 = 0
+	ELSEIF LOCAL:1 < 25
+		CFLAG:ARG:4997 = 1
+	ELSEIF LOCAL:1 > 95 - (TALENT:ARG:129 * 20 + (TALENT:ARG:127  + TALENT:ARG:128) * 5)
+		CFLAG:ARG:4997 = 4
+	ELSEIF LOCAL:1 > 75
+		CFLAG:ARG:4997 = 3
+	ELSE
+		CFLAG:ARG:4997 = 2
+	ENDIF
+	CFLAG:ARG:4997 += (TALENT:ARG:129 - TALENT:ARG:128 - TALENT:ARG:127)
+	IF CFLAG:ARG:4997 < 0
+		CFLAG:ARG:4997 = 0
+	ELSEIF CFLAG:ARG:4997 > 4
+		CFLAG:ARG:4997 = 4
+	ENDIF
+ENDIF
+TALENT:ARG:0 = CFLAG:ARG:4996
+TALENT:ARG:120 = 0
+TALENT:ARG:121 = CFLAG:ARG:4998
+;[早漏], [遅漏]関係の保存
+CALL CHANGE_SORO_COMMON, ARG
+IF TALENT:ARG:121
+	MAXBASE:ARG:2 = CALC_GAUGE2_COMMON(ARG)
+ELSE
+	MAXBASE:ARG:2 = 0
+ENDIF
+TALENT:ARG:134 = CFLAG:ARG:4999
+SIF TALENT:ARG:134
+	CALL CALC_GAUGE3_SLAVE, ARG, 1
+IF CFLAG:ARG:4997 == 0
+	TALENT:ARG:110 = 1
+ELSEIF CFLAG:ARG:4997 == 1
+	TALENT:ARG:111 = 1
+ELSEIF CFLAG:ARG:4997 == 3
+	TALENT:ARG:112 = 1
+ELSEIF CFLAG:ARG:4997 == 4
+	TALENT:ARG:113 = 1
+ENDIF
+;40약물경험
+CALL COMMON_UP_EXP, ARG, 40, 1, 2
+IF (CFLAG:ARG:20 & 512) == 0
+	;50이상경험
+	CALL COMMON_UP_EXP, ARG, 50, 1, 2
+	CFLAG:ARG:20 |= 512
+ENDIF
+
+;적극성 보관용 범용 세터 게터
+@GET_AGG(ARG)
+#FUNCTION
+RETURNF AGGRESSIVE("GET", ARG)
+
+@SET_AGG(ARG, ARG:1)
+#FUNCTION
+RETURNF AGGRESSIVE("SET", ARG, ARG:1)
+
+@CLEAR_AGG
+#FUNCTION
+RETURNF AGGRESSIVE("CLEAR")
+
+@AGGRESSIVE(ARGS, ARG, ARG:1)
+#FUNCTION
+IF ARGS == "GET"
+	RETURNF LOCAL:ARG
+ELSEIF ARGS == "SET"
+	LOCAL:ARG = ARG:1
+	RETURNF LOCAL:ARG
+ELSEIF ARGS == "CLEAR"
+	VARSET LOCAL, 0
+	RETURNF 0
+ENDIF
+RETURNF 0
+
+;밤 이벤트 대상 캐릭터 보존용 세터 게터
+@GET_CHARA_M
+#FUNCTION
+RETURNF CHARA_STOCK("GET", "M")
+
+@GET_CHARA_G(ARG)
+#FUNCTION
+RETURNF CHARA_STOCK("GET", "G", ARG)
+
+@SET_CHARA_M(ARG)
+#FUNCTION
+RETURNF CHARA_STOCK("SET", "M", ARG)
+
+@SET_CHARA_G(ARG, ARG:1)
+#FUNCTION
+RETURNF CHARA_STOCK("SET", "G", ARG, ARG:1)
+
+@CLEAR_CHARA_STOCK
+#FUNCTION
+RETURNF CHARA_STOCK("CLEAR")
+
+@CHARA_STOCK(ARGS, ARGS:1, ARG, ARG:1)
+#FUNCTION
+IF ARGS == "GET"
+	RETURNF (ARGS:1 == "M") ? LOCAL:10 # LOCAL:ARG
+ELSEIF ARGS == "SET"
+	IF ARGS:1 == "M"
+		LOCAL:10 = ARG
+		RETURNF ARG
+	ELSE
+		LOCAL:ARG = ARG:1
+		RETURNF ARG:1
+	ENDIF
+ELSEIF ARGS == "CLEAR"
+	VARSET LOCAL, 0
+	RETURNF 0
+ENDIF
+RETURNF 0
+
+;대사용 플래그 보존
+@GET_NIGHT_KOJO(ARG)
+#FUNCTION
+RETURNF NIGHT_KOJO("GET", ARG)
+
+@SET_NIGHT_KOJO(ARG, ARG:1)
+#FUNCTION
+RETURNF NIGHT_KOJO("SET", ARG, ARG:1)
+
+@CLEAR_NIGHT_KOJO()
+#FUNCTION
+RETURNF NIGHT_KOJO("CLEAR")
+
+@NIGHT_KOJO(ARGS, ARG, ARG:1)
+#FUNCTION
+IF ARGS == "GET"
+	RETURNF LOCAL:ARG
+ELSEIF ARGS == "SET"
+	LOCAL:ARG = ARG:1
+	RETURNF ARG:1
+ELSEIF ARGS == "CLEAR"
+	VARSET LOCAL, 0
+	RETURNF 0
+ENDIF
+RETURNF 0

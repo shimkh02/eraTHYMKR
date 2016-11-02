@@ -1,0 +1,457 @@
+﻿;=============================================================================
+;정액 목욕탕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE366
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:366 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 64) == 0
+	RETURN 0
+;一度も精液風呂に入ったことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:23 & 8) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 8
+	RETURN 1
+;主人か助手のどちらかが금단의 지식을 갖고 있지 않으면 불가
+IF ASSI >= 0
+	SIF TALENT:MASTER:56 == 0 && TALENT:ASSI:56 == 0
+		RETURN 0
+ELSE
+	SIF TALENT:MASTER:56 == 0
+		RETURN 0
+ENDIF
+;조교자가 촉수사역술을 갖고 있지 않으면 불가
+SIF TALENT:PLAYER:149 == 0
+	RETURN 0
+;対象が汚臭敏感を持っているかつ精液中毒がLv0일 때 はダメ
+SIF TALENT:62 && ABL:31 == 0
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 8
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;노예를 촉수의 정액에 충분히 담그는 커맨드. 불쾌의 상승률이 매우 높다.
+;아무리 금단의 지식 소유라고 해도, 유석에 인 형캐릭터의 것에서는 비너무 현실적이고라고 생각했으므로
+;정액은 촉수의 것을 준비. 그 때문에 촉수 중독도 어느 정도 소스 계산에 관여.
+@COM366
+PRINTL 정액 목욕탕
+TSTR:0 = 정액 목욕탕
+CALL TRAIN_MESSAGE_COM366
+
+IF TEQUIP:55 == 8
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 150
+	TEQUIP:55 = 0
+	;조교자의 손에 정액이 붙는다
+	STAIN:PLAYER:1 |= 4
+	RETURN 1
+ENDIF
+
+LOCAL:1 = 300
+;ABL:정액 중독을 본다
+IF ABL:31 == 0
+	TIMES LOCAL:1 , 2.00
+ELSEIF ABL:31 == 1
+	TIMES LOCAL:1 , 1.50
+ELSEIF ABL:31 == 2
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:31 == 3
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:31 == 4
+	TIMES LOCAL:1 , 0.75
+ELSE
+	TIMES LOCAL:1 , 0.66
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.95
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 0.85
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.75
+ENDIF
+
+;악취 둔감, 민감, 더러운 무시
+IF TALENT:61 && TALENT:64 == 0
+	TIMES LOCAL:1 , 0.75
+ELSEIF TALENT:62 && TALENT:64 == 0
+	TIMES LOCAL:1 , 1.50
+ENDIF
+
+DOWNBASE:0 += 25 + LOCAL:1 /10
+DOWNBASE:1 += LOCAL:1
+
+SOURCE:24 = 1000
+SOURCE:30 = 4000
+SOURCE:22 = 750
+SOURCE:31 = 2500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:24 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:24 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:24 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:24 , 1.10
+ELSE
+	TIMES SOURCE:24 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:22 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:22 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:22 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:22 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:22 , 1.20
+ELSE
+	TIMES SOURCE:22 , 1.30
+ENDIF
+
+;ABL:정액 중독을 본다
+IF ABL:31 == 0
+	TIMES SOURCE:24 , 0.70
+	TIMES SOURCE:30 , 4.50
+	TIMES SOURCE:22 , 0.50
+	TIMES SOURCE:31 , 2.50
+ELSEIF ABL:31 == 1
+	TIMES SOURCE:24 , 0.80
+	TIMES SOURCE:30 , 2.30
+	TIMES SOURCE:22 , 0.75
+	TIMES SOURCE:31 , 1.75
+ELSEIF ABL:31 == 2
+	TIMES SOURCE:24 , 0.90
+	TIMES SOURCE:30 , 1.10
+	TIMES SOURCE:22 , 1.00
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:31 == 3
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:22 , 1.10
+	TIMES SOURCE:31 , 0.50
+ELSEIF ABL:31 == 4
+	TIMES SOURCE:24 , 1.20
+	TIMES SOURCE:30 , 0.60
+	TIMES SOURCE:22 , 1.30
+	TIMES SOURCE:31 , 0.25
+ELSE
+	TIMES SOURCE:24 , 1.40
+	TIMES SOURCE:30 , 0.20
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 0.10
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES SOURCE:24 , 0.70
+	TIMES SOURCE:30 , 4.50
+	TIMES SOURCE:22 , 0.50
+	TIMES SOURCE:31 , 2.50
+ELSEIF ABL:35 == 1
+	TIMES SOURCE:24 , 0.80
+	TIMES SOURCE:30 , 2.30
+	TIMES SOURCE:22 , 0.75
+	TIMES SOURCE:31 , 1.75
+ELSEIF ABL:35 == 2
+	TIMES SOURCE:24 , 0.90
+	TIMES SOURCE:30 , 1.10
+	TIMES SOURCE:22 , 1.00
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:35 == 3
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:22 , 1.10
+	TIMES SOURCE:31 , 0.50
+ELSEIF ABL:35 == 4
+	TIMES SOURCE:24 , 1.20
+	TIMES SOURCE:30 , 0.60
+	TIMES SOURCE:22 , 1.30
+	TIMES SOURCE:31 , 0.25
+ELSE
+	TIMES SOURCE:24 , 1.40
+	TIMES SOURCE:30 , 0.20
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 0.10
+ENDIF
+
+;악취 둔감, 민감, 더러운 무시
+IF TALENT:61 && TALENT:64 == 0
+	TIMES SOURCE:24 , 1.20
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:22 , 1.10
+	TIMES SOURCE:31 , 0.75
+ELSEIF TALENT:62 && TALENT:64 == 0
+	TIMES SOURCE:24 , 0.70
+	TIMES SOURCE:30 , 2.50
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 1.80
+ENDIF
+
+;파이 빵
+IF TALENT:65
+	TIMES SOURCE:24 , 1.30
+	TIMES SOURCE:22 , 1.30
+ENDIF
+
+TCVAR:4 += 2
+IF (CFLAG:23 & 8) == 0
+	TCVAR:50 += 1
+	CFLAG:23 |= 8
+ENDIF
+
+;정액을 마신 플래그
+TFLAG:3 = 1
+;정액 목욕탕 입욕
+TEQUIP:55 = 8
+RETURN 1
+
+;--------------------------------------------------
+;정액 목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM366
+PRINTL <정액 목욕탕 입욕 중>
+
+LOCAL = 250
+LOCAL:1 = 1000
+LOCAL:2 = 200
+LOCAL:3 = 800
+LOCAL:4 = 100
+
+;ABL:정액 중독을 본다
+IF ABL:31 == 0
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 4.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 2.50
+	TIMES LOCAL:4 , 2.00
+ELSEIF ABL:31 == 1
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 2.30
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 1.75
+	TIMES LOCAL:4 , 1.50
+ELSEIF ABL:31 == 2
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 1.00
+	TIMES LOCAL:3 , 1.00
+	TIMES LOCAL:4 , 1.00
+ELSEIF ABL:31 == 3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 1.10
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.80
+ELSEIF ABL:31 == 4
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 1.30
+	TIMES LOCAL:3 , 0.25
+	TIMES LOCAL:4 , 0.75
+ELSE
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.20
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 0.10
+	TIMES LOCAL:4 , 0.66
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 4.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 2.50
+	TIMES LOCAL:4 , 1.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 2.30
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 1.75
+	TIMES LOCAL:4 , 0.95
+ELSEIF ABL:35 == 2
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 1.00
+	TIMES LOCAL:3 , 1.00
+	TIMES LOCAL:4 , 0.90
+ELSEIF ABL:35 == 3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 1.10
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.85
+ELSEIF ABL:35 == 4
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 1.30
+	TIMES LOCAL:3 , 0.25
+	TIMES LOCAL:4 , 0.80
+ELSE
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.20
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 0.10
+	TIMES LOCAL:4 , 0.75
+ENDIF
+
+;악취 둔감, 민감, 더러운 무시
+IF TALENT:61 && TALENT:64 == 0
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 1.10
+	TIMES LOCAL:3 , 0.75
+	TIMES LOCAL:4 , 0.75
+ELSEIF TALENT:62 && TALENT:64 == 0
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 2.50
+	TIMES LOCAL:2 , 0.60
+	TIMES LOCAL:3 , 1.80
+	TIMES LOCAL:4 , 1.50
+ENDIF
+
+;파이 빵
+IF TALENT:65
+	TIMES LOCAL , 1.30
+	TIMES LOCAL:2 , 1.30
+ENDIF
+
+DOWNBASE:0 += 5 + LOCAL:4 /15
+DOWNBASE:1 += LOCAL:4
+
+SOURCE:24 += LOCAL
+SOURCE:30 += LOCAL:1
+SOURCE:22 += LOCAL:2
+SOURCE:31 += LOCAL:3
+
+;노예는 전신 정액 투성이가 된다
+STAIN:0 |= 4
+STAIN:1 |= 4
+STAIN:2 |= 4
+STAIN:3 |= 4
+STAIN:4 |= 4
+STAIN:5 |= 4
+STAIN:6 |= 4
+STAIN:7 |= 4
+
+TCVAR:4 += 1 
+
+;정액을 마신 플래그
+TFLAG:3 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM366
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 8
+	PRINTFORMW 정액 투성이가 된 %조사선택(CALLNAME:TARGET, "를")% 목욕탕에서 꺼냈다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 촉수의 정액으로 채워진 목욕탕으로 떨어뜨렸다. 
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	SIF TEQUIP:44 == 1
+		PRINTL 흉하게 쳐들려 진 코를 벌름거리며,
+	IF ABL:31 == 0
+		PRINTL 빠졌을 때 조금 삼켜 버렸는지, 불쾌한 표정으로
+		PRINTL 무엇인가를 토하고 있다….
+	ELSEIF ABL:31 == 1
+		PRINTL 비릿한 정액의 악취에 눈썹을 팔자로 하고 찡그리고 있다….
+	ELSEIF ABL:31 == 2
+		PRINTL 정액의 맛과 냄새에 익숙해져 버린 것에 당황했는지, 어딘가 납득이 가지 않는 표정을 짓고 있다….
+	ELSEIF ABL:31 == 3
+		PRINTL 그다지 혐오감을 느끼지 않게 되었는지, 조금 정액의 냄새를 즐기고 있는 것 같다….
+	ELSEIF ABL:31 == 4
+		PRINTL 정액의 냄새를 맡는 것 만으로는 만족할 수 없다는 듯이, 적극적으로 마시고 있다….
+	ELSE
+		PRINTL 비릿한 정액의 냄새를 마음껏 즐기고 있다.
+		IF TEQUIP:42 == 1
+			PRINTFORML 그 뿐만 아니라 %조사선택(CALLNAME:TARGET, "는")% 볼 개그 너머로 정액을 마시려 한다….
+		ELSEIF TEQUIP:42 == 3
+			PRINTFORML 그 뿐만 아니라 %조사선택(CALLNAME:TARGET, "는")% 강제 개구기 너머로 정액을 마시려 한다….
+		ELSE
+			IF TEQUIP:40
+				PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 손으로 정액을 건져 올리려 했으나 잘 되지 않는다.
+				PRINTFORML 그러던 %조사선택(CALLNAME:TARGET, "는")%, 필사적으로 혀를 내밀어, 빨아 먹으려고 기를 쓰기 시작했다….
+			ELSE
+				PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 공허한 미소를 지으며 손으로 백탁액을 퍼 올려
+				PRINTL 꿀꺽꿀꺽 소리를 내며 들이키고 있다….
+			ENDIF
+		ENDIF
+	ENDIF
+	PRINTW
+ENDIF

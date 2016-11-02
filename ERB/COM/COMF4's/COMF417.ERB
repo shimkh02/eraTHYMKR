@@ -1,0 +1,343 @@
+﻿;=============================================================================
+;붓 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE417
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:417 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 阿求かコンガラじゃないとダメ
+SIF NO:PLAYER != 48 && NO:PLAYER != 125
+	RETURN 0
+;기교2이상이 아니면 쓸 수 없다
+SIF ABL:PLAYER:12 < 2
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM417
+PRINTL 붓 고문
+TSTR:0 = 붓고문
+;말용으로 TFLAG:201을 사용. (0=배꼽붓 꾸짖어 1=페니스/클리토리스붓 꾸짖어 2=버스트붓 꾸짖어 3=애널붓고문)
+TFLAG:201 = 0
+
+IF FLAG:14 & 8
+	PRINTL 어디를 괴롭혀줄까?
+	PRINTL [0] - 배꼽
+	IF TALENT:120 || TALENT:121
+		PRINTL [1] - 페니스
+	ELSE
+		PRINTL [1] - 클리토리스
+	ENDIF
+	PRINTL [2] - 바스트
+	PRINTL [3] - 애널
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		LOCAL:2 = 0
+	ELSEIF RESULT == 1
+		LOCAL:2 = 1
+	ELSEIF RESULT == 2
+		LOCAL:2 = 3
+	ELSEIF RESULT == 3
+		LOCAL:2 = 5
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ELSE
+	LOCAL:2 = RAND:7
+ENDIF
+;말용
+IF LOCAL:2 == 0
+	TFLAG:201 = 0
+ELSEIF LOCAL:2 == 1 || LOCAL:2 == 2
+	TFLAG:201 = 1
+ELSEIF LOCAL:2 == 3 || LOCAL:2 == 4
+	TFLAG:201 = 2
+ELSE
+	TFLAG:201 = 3
+ENDIF
+
+CALL TRAIN_MESSAGE_COM417
+
+DOWNBASE:0 += 40
+DOWNBASE:1 += 60
+
+SOURCE:15 = 120
+SOURCE:12 = 200
+SOURCE:22 = 200
+SOURCE:31 = 100
+
+IF LOCAL:2 == 0
+	;붓배꼽 고문
+	LOCAL:1 = 500
+	;MARK:반발 각인을 본다
+	IF MARK:9 < 2
+		TIMES LOCAL:1, 1.25
+	ELSEIF MARK:9 == 2
+		TIMES LOCAL:1, 1.00
+	ELSE
+		TIMES LOCAL:1, 0.75
+	ENDIF
+
+	;MARK:굴복 각인을 본다
+	IF MARK:2 > 2
+		TIMES LOCAL:1, 1.25
+	ELSEIF MARK:2 == 2
+		TIMES LOCAL:1, 1.00
+	ELSEIF MARK:2 == 1
+		TIMES LOCAL:1, 0.75
+	ELSE
+		TIMES LOCAL:1, 0.50
+	ENDIF
+
+	;MARK:쾌락 각인을 본다
+	IF MARK:1 > 2
+		TIMES LOCAL:1, 1.50
+	ELSEIF MARK:1 == 2
+		TIMES LOCAL:1, 1.25
+	ELSEIF MARK:1 == 1
+		TIMES LOCAL:1, 1.00
+	ELSE
+		TIMES LOCAL:1, 0.75
+	ENDIF
+
+	;MARK:고통 각인을 본다
+	IF MARK:0 > 2
+		TIMES LOCAL:1, 1.30
+	ELSEIF MARK:0 == 2
+		TIMES LOCAL:1, 1.00
+	ELSEIF MARK:0 == 1
+		TIMES LOCAL:1, 0.70
+	ELSE
+		TIMES LOCAL:1, 0.30
+	ENDIF
+
+	;ABL:마조끼를 본다
+	IF ABL:21 == 0
+		TIMES LOCAL:1, 0.50
+		SOURCE:24 = 40
+	ELSEIF ABL:21 == 1
+		TIMES LOCAL:1, 0.75
+		SOURCE:24 = 80
+	ELSEIF ABL:21 == 2
+		TIMES LOCAL:1, 1.00
+		SOURCE:24 = 160
+	ELSEIF ABL:21 == 3
+		TIMES LOCAL:1, 1.20
+		SOURCE:24 = 320
+	ELSEIF ABL:21 == 4
+		TIMES LOCAL:1, 1.50
+		SOURCE:24 = 650
+	ELSE
+		TIMES LOCAL:1, 2.00
+		SOURCE:24 = 1500
+	ENDIF
+
+	;프라이드 높다
+	IF TALENT:16
+		TIMES LOCAL:1, 0.75
+	;프라이드 낮다
+	ELSEIF TALENT:17
+		TIMES LOCAL:1, 1.50
+	ENDIF
+	;자제심
+	SIF TALENT:20
+		TIMES LOCAL:1, 0.50
+	;저항
+	SIF TALENT:34
+		TIMES LOCAL:1, 0.75
+	;약점
+	SIF TALENT:39
+		TIMES LOCAL:1, 2.00
+	;도착적
+	SIF TALENT:80
+		TIMES LOCAL:1, 2.00
+	;중독 하기 쉽다
+	SIF TALENT:84
+		TIMES LOCAL:1, 1.50
+
+	IF LOCAL:1 > 0
+		FOR COUNT, 20, 23
+			IF PALAM:COUNT
+				PRINTFORML %CALLNAME:TARGET%의 %조사처리(PALAMNAME:COUNT, "가")% 하락했다.
+				PALAM:COUNT = MAX(PALAM:COUNT - LOCAL:1, 0)
+			ENDIF
+		NEXT
+	ENDIF
+ELSEIF LOCAL:2 == 1 || LOCAL:2 == 2
+	;붓클리 고문
+	;ABL:C감각을 본다
+	IF ABL:0 == 0
+		SOURCE:0 = 50
+		SOURCE:11 = 50
+	ELSEIF ABL:0 == 1
+		SOURCE:0 = 100
+		SOURCE:11 = 100
+	ELSEIF ABL:0 == 2
+		SOURCE:0 = 500
+		SOURCE:11 = 150
+	ELSEIF ABL:0 == 3
+		SOURCE:0 = 1500
+		SOURCE:11 = 250
+	ELSEIF ABL:0 == 4
+		SOURCE:0 = 2500
+		SOURCE:11 = 400
+	ELSE
+		SOURCE:0 = 3000
+		SOURCE:11 = 600
+	ENDIF
+
+	;C민감
+	IF TALENT:100
+		TIMES SOURCE:0, 1.50
+	;C둔감
+	ELSEIF TALENT:101
+		TIMES SOURCE:0, 0.75
+	ENDIF
+	;음핵/음경
+	SIF TALENT:171
+		TIMES SOURCE:0, 2.00
+ELSEIF LOCAL:2 == 3 || LOCAL:2 == 4
+	;붓버스트 고문
+	;ABL:B감각을 본다
+	IF ABL:3 == 0
+		SOURCE:11 = 50
+		SOURCE:3 = 50
+	ELSEIF ABL:3 == 1
+		SOURCE:11 = 100
+		SOURCE:3 = 100
+	ELSEIF ABL:3 == 2
+		SOURCE:11 = 150
+		SOURCE:3 = 200
+	ELSEIF ABL:3 == 3
+		SOURCE:11 = 250
+		SOURCE:3 = 600
+	ELSEIF ABL:3 == 4
+		SOURCE:11 = 400
+		SOURCE:3 = 1500
+	ELSE
+		SOURCE:11 = 600
+		SOURCE:3 = 2100
+	ENDIF
+
+	;B민감
+	IF TALENT:106
+		TIMES SOURCE:3, 1.50
+	;B둔감
+	ELSEIF TALENT:107
+		TIMES SOURCE:3, 0.75
+	ENDIF
+	;절벽
+	IF TALENT:110
+		TIMES SOURCE:3, 2.00
+	;빈유
+	ELSEIF TALENT:111
+		TIMES SOURCE:3, 1.50
+	;큰 가슴
+	ELSEIF TALENT:112
+		TIMES SOURCE:3, 0.75
+	;폭유
+	ELSEIF TALENT:113
+		TIMES SOURCE:3, 0.50
+	ENDIF
+	;음유
+	SIF TALENT:174
+		TIMES SOURCE:3, 2.00
+ELSE
+	;붓애널 고문
+	;ABL:A감각을 본다
+	IF ABL:2 == 0
+		SOURCE:2 = 20
+		LOCAL:1 = 150
+	ELSEIF ABL:2 == 1
+		SOURCE:2 = 80
+		LOCAL:1 = 250
+	ELSEIF ABL:2 == 2
+		SOURCE:2 = 240
+		LOCAL:1 = 400
+	ELSEIF ABL:2 == 3
+		SOURCE:2 = 500
+		LOCAL:1 = 650
+	ELSEIF ABL:2 == 4
+		SOURCE:2 = 1400
+		LOCAL:1 = 1000
+	ELSE
+		SOURCE:2 = 2100
+		LOCAL:1 = 1500
+	ENDIF
+
+	;A민감
+	IF TALENT:104
+		TIMES SOURCE:2, 1.50
+	;A둔감
+	ELSEIF TALENT:105
+		TIMES SOURCE:2, 0.75
+	ENDIF
+	;음고
+	SIF TALENT:173
+		TIMES SOURCE:2, 2.00
+
+	SOURCE:22 += LOCAL:1
+	SOURCE:31 += LOCAL:1 /2
+
+	TCVAR:1 += 1
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM417
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TFLAG:201 == 0
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 품에서 붓을 꺼내,
+	PRINTFORMW %CALLNAME:TARGET%의 배꼽을 털끝으로 어루만지기 시작했다.
+ELSEIF TFLAG:201 == 1
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 품에서 붓을 꺼내,
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:120 || TALENT:121
+		PRINTW 음경을 붓끝으로 훑어 내기 시작했다.
+	ELSE
+		PRINTW 음핵을 털끝으로 찌르기 시작했다.
+	ENDIF
+ELSEIF TFLAG:201 == 2
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 품에서 붓을 꺼내,
+	PRINTFORMW %CALLNAME:TARGET%의 유선에 붓끝을 열심히 문지르기 시작했다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 품에서 붓을 꺼내,
+	PRINTFORMW 초조할 정도로 천천히 붓끝으로 %CALLNAME:TARGET%의 항문을 더듬었다.
+ENDIF

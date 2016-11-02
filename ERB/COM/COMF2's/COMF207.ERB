@@ -1,0 +1,240 @@
+﻿;=============================================================================
+;젖퍽
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE207
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:207 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;조교자에게 페니스가 없으면 불가
+SIF EXIST_BAR(PLAYER) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;조수가 훈도시 착용 중일 경우에는 불가
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;훈도시와 알몸 와이셔츠 외의 코스프레 중에는 안 됨
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 11 && TEQUIP:59 != 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM207
+PRINTL 젖퍽
+TSTR:0 = 젖퍽
+CALL TRAIN_MESSAGE_COM207
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 1350
+ELSEIF ABL:12 == 1
+	LOCAL = 1890
+ELSEIF ABL:12 == 2
+	LOCAL = 2610
+ELSEIF ABL:12 == 3
+	LOCAL = 3600
+ELSEIF ABL:12 == 4
+	LOCAL = 4500
+ELSE
+	LOCAL = 5400
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_3(TARGET, LOCAL)
+;조교 대상의 버스트 사이즈를 본다
+IF TALENT:110
+	TIMES LOCAL , 0.75
+ELSEIF TALENT:111
+	TIMES LOCAL , 0.90
+ELSEIF TALENT:112
+	TIMES LOCAL , 1.20
+ELSEIF TALENT:113
+	TIMES LOCAL , 1.35
+ENDIF
+
+;ABL:조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 60
+DOWNBASE:1 += 100
+
+SOURCE:30 = 1000
+SOURCE:12 = 200
+SOURCE:31 = 500
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 10
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 40
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 300
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 800
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1700
+ELSE
+	SOURCE:3 = 2500
+ENDIF
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 250
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 400
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 800
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 1050
+ELSE
+	SOURCE:20 = 1200
+ENDIF
+
+;모유 체질 때는, ABL:분유중독을 본다
+IF TALENT:134
+	IF ABL:34 == 0
+		LOCAL:1 += 0
+		TIMES SOURCE:3 , 1.00
+		TIMES SOURCE:31, 1.00
+	ELSEIF ABL:34 == 1
+		LOCAL:1 += 50
+		TIMES SOURCE:3 , 1.05
+		TIMES SOURCE:31, 1.10
+	ELSEIF ABL:34 == 2
+		LOCAL:1 += 200
+		TIMES SOURCE:3 , 1.10
+		TIMES SOURCE:31, 1.20
+	ELSEIF ABL:34 == 3
+		LOCAL:1 += 600
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:31, 1.30
+	ELSEIF ABL:34 == 4
+		LOCAL:1 += 1200
+		TIMES SOURCE:3 , 1.25
+		TIMES SOURCE:31, 1.80
+	ELSE
+		LOCAL:1 += 2000
+		TIMES SOURCE:3 , 1.50
+		TIMES SOURCE:31, 2.50
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+IF TFLAG:91
+;사정하고 있다
+	TIMES SOURCE:15 , 3.00
+
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 = 0
+		TIMES SOURCE:16 , 1.25
+	ELSEIF ABL:31 == 1
+		SOURCE:24 = 300
+		TIMES SOURCE:16 , 1.75
+	ELSEIF ABL:31 == 2
+		SOURCE:24 = 1000
+		TIMES SOURCE:16 , 3.00
+	ELSEIF ABL:31 == 3
+		SOURCE:24 = 2300
+		TIMES SOURCE:16 , 5.00
+	ELSEIF ABL:31 == 4
+		SOURCE:24 = 4800
+		TIMES SOURCE:16 , 7.50
+	ELSE
+		SOURCE:24 = 8000
+		TIMES SOURCE:16 , 10.00
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 21
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+SOURCE:24 += LOCAL:1
+
+;노예의 입⇔조교자의 P의 불결이 이동
+STAIN:0 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:0
+
+;노예의 B⇔조교자의 P의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:5
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM207
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+IF TALENT:111
+	PRINT 납작한 가슴의 희미하게 부푼 곳에 비비듯이 
+ELSEIF TALENT:110
+	PRINT 거의 평평한 가슴에 대고 돌리듯이 
+ELSEIF TALENT:112
+	PRINT 풍만한 가슴에 파묻고 찌르듯이 
+ELSEIF TALENT:113
+	PRINT 터질 듯이 풍만한 가슴에 끼우고 파묻듯이 
+ELSE
+	PRINT 가슴으로 
+ENDIF
+PRINTW 강제로 페니스를 훑었다….

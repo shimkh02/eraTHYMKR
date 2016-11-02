@@ -1,0 +1,176 @@
+﻿;=============================================================================
+;채혈 주사
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE88
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:88 > 0
+	RETURN 0
+;강력 아이템·커맨드 무효시는 안 됨
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;주사계 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 64) == 0
+	RETURN 0
+;기계, 인형이라면 안 됨
+SIF TALENT:206 || TALENT:208
+	RETURN 0
+;기교 3 이하의 ASSI의 경우 주사할 수 없다(바늘 다루기라면 OK)
+IF ASSIPLAY
+	SIF ABL:ASSI:12 <= 3 && TALENT:ASSI:53 == 0
+		RETURN 0
+ENDIF
+;주사 세트를 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:53 == 0 && NOITEM == 0
+	RETURN 0
+;아양 약효과발휘 중에는 불가
+SIF TEQUIP:11
+	RETURN 0
+;이뇨제 효과 발휘 중에는 불가
+SIF TEQUIP:12
+	RETURN 0
+;현자의 피 효과 발휘 중에는 불가
+SIF TEQUIP:13
+	RETURN 0
+;수면제 효과 발휘 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;배란유도제 효과 발휘 중에는 불가
+SIF TEQUIP:16
+	RETURN 0
+;긴급 피임 약 효과 발휘 중에는 불가
+SIF TEQUIP:17
+	RETURN 0
+;은방울꽃의 독 효과 발휘 중에는 불가
+SIF TEQUIP:18
+	RETURN 0
+;곤충 채집 세트의 약 효과 발휘 중에는 불가
+SIF TEQUIP:19
+	RETURN 0
+;촉수 강제 회복 효과 발휘 중에는 불가
+SIF TEQUIP:91
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM88
+PRINTL 채혈 주사
+TSTR:0 = 채혈 주사
+CALL TRAIN_MESSAGE_COM088
+
+DOWNBASE:0 += 80
+DOWNBASE:1 += 100
+
+SOURCE:31 = 2000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 2000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 2300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 2600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 2850
+ELSE
+	SOURCE:20 = 3000
+ENDIF
+
+;EXP:흡혈 경험을 본다
+IF EXP:54 < EXPLV:1
+	TIMES SOURCE:31 , 2.00
+ELSEIF EXP:54 < EXPLV:2
+	TIMES SOURCE:31 , 1.00
+ELSEIF EXP:54 < EXPLV:3
+	TIMES SOURCE:31 , 0.35
+ELSE
+	TIMES SOURCE:31 , 0.00
+ENDIF
+
+;ABL:조교자의 기교를 본다
+IF ABL:PLAYER:12 < 1
+	TIMES SOURCE:20 , 2.00
+ELSEIF ABL:PLAYER:12 < 2
+	TIMES SOURCE:20 , 1.75
+ELSEIF ABL:PLAYER:12 < 3
+	TIMES SOURCE:20 , 1.50
+ELSEIF ABL:PLAYER:12 < 4
+	TIMES SOURCE:20 , 1.25
+ELSEIF ABL:PLAYER:12 < 5
+	TIMES SOURCE:20 , 1.00
+ELSE
+	TIMES SOURCE:20 , 0.75
+ENDIF
+
+;조교자에게 바늘 다루기
+SIF TALENT:PLAYER:53
+	TIMES SOURCE:20 , 0.90
+;조교자에게 유치
+SIF TALENT:PLAYER:131
+	TIMES SOURCE:20 , 1.20
+
+;기장
+SIF TALENT:12
+	TIMES SOURCE:20 , 0.90
+;아픔에 약하다
+IF TALENT:40
+	TIMES SOURCE:20 , 1.20
+;아픔에 강하다
+ELSEIF TALENT:41
+	TIMES SOURCE:20 , 0.90
+ENDIF
+;유아, 유치
+IF TALENT:130 || TALENT:131
+	TIMES SOURCE:20 , 1.20
+	;연모 없으면 한층 더…
+	SIF TALENT:150 == 0
+		SOURCE:32 = 200
+ENDIF
+
+;레이센이나 에이린에 의한 사용
+SIF NO:PLAYER == 28
+	TIMES SOURCE:20 , 0.70
+SIF NO:PLAYER == 29
+	TIMES SOURCE:20 , 0.50
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+TCVAR:54 += 1
+
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+
+;혈액 채취 처리
+SIF FLAG:12 & 8
+	CALL SWEET_POTATO_RED_BLOOD
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM088
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %CALLNAME:TARGET%의 팔에 주사를 놓고, 피를 뽑았다….

@@ -1,0 +1,261 @@
+﻿;=============================================================================
+;인탱글
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE406
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:406 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 유카가 아니면 불가
+SIF NO:PLAYER != 34
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:40 == 5
+	RETURN 1
+;조교자의 기교가 3無いとできない
+SIF ABL:PLAYER:12 < 3
+	RETURN 0
+;縄で緊縛中, 거미줄でグルグル巻きはダメ
+SIF TEQUIP:40 && TEQUIP:40 != 5
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM406
+PRINTL 인탱글
+TSTR:0 = 인탱글
+CALL TRAIN_MESSAGE_COM406
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+
+;緊縛経験が高いと消費減少
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 100
+	DOWNBASE:1 += 150
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 80
+	DOWNBASE:1 += 120
+ELSE
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 90
+ENDIF
+
+LOCAL:1 = 250
+LOCAL:2 = 0
+SOURCE:12 = 800
+SOURCE:22 = 500
+SOURCE:31 = 500
+
+;PALAM:苦痛をみる
+IF PALAM:16 < PALAMLV:1
+	LOCAL:2 = 1500
+ELSEIF PALAM:16 < PALAMLV:2
+	LOCAL:2 = 2000
+ELSEIF PALAM:16 < PALAMLV:3
+	LOCAL:2 = 2500
+ELSEIF PALAM:16 < PALAMLV:4
+	LOCAL:2 = 3000
+ELSE
+	LOCAL:2 = 4000
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+	TIMES LOCAL:2 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+	TIMES LOCAL:2 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+	TIMES LOCAL:2 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+	TIMES LOCAL:2 , 3.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1 , 2.00
+
+;アイマスク装着または暗闇展開時は効果上昇
+SIF TEQUIP:41
+	TIMES LOCAL:1 , 2.00
+;ボールギャグ装着時は効果上昇
+SIF TEQUIP:42
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:20 += LOCAL:1 + LOCAL:2
+SOURCE:12 += LOCAL:1
+SOURCE:22 += LOCAL:1
+SOURCE:31 += LOCAL:1
+
+TCVAR:31 += 4
+
+;縄の着脱
+IF TEQUIP:40 == 5
+	TEQUIP:40 = 0
+ELSE
+	TEQUIP:40 = 5
+	;ＳＭ教育経験フラグ
+	SIF ASSIPLAY
+		TFLAG:55 = 2
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;荊で緊縛中
+;--------------------------------------------------
+@EQUIP_COM406
+PRINTL <가시줄기 결박 중>
+
+;緊縛経験が高いと消費減少
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 100
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 80
+ELSE
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 60
+ENDIF
+
+;PALAM:苦痛をみる
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 += 60
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 += 120
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 += 180
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 += 240
+ELSE
+	SOURCE:20 += 300
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 60
+ELSEIF ABL:21 == 1
+	LOCAL = 180
+ELSEIF ABL:21 == 2
+	LOCAL = 300
+ELSEIF ABL:21 == 3
+	LOCAL = 480
+ELSEIF ABL:21 == 4
+	LOCAL = 700
+ELSE
+	LOCAL = 850
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL , 2.00
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+SOURCE:20 += LOCAL
+SOURCE:12 += LOCAL
+SOURCE:22 += LOCAL
+SOURCE:31 += LOCAL
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+
+TCVAR:31 += 3
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM406
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:40 == 5
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 묶었던 나무줄기는 순식간에 시들었다.
+ELSE
+	PRINT 갑자기 마루에서 튀어나온 나무줄기가 
+	SIF TALENT:128
+		PRINT 가녀린 
+	PRINTFORML %CALLNAME:TARGET%의 몸을 자비 없이 묶고 조였다.
+	PRINTL
+	PRINTFORML %CALLNAME:TARGET%의 희고 아름다운 피부에 박힌 나무줄기에서 나오는 붉은 피는,
+	PRINTW 가시나무의 색과 함께 수상한 콘트라스트를 만들고 있다….
+ENDIF

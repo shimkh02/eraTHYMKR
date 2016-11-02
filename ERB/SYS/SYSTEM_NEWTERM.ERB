@@ -1,0 +1,1411 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;강하게 뉴 게임 관련
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;강하게 뉴 게임의 처리는 여기서 실행
+;인계되는 건 일부 주인의 소질(주차 플레이 및 엔딩의 조건에 따라 획득하는 소질도) ·가장 호감도가 높은 조수(단 호감도는 크게 저하) · 
+;개발한 촉수의 능력 · 수집품 · 함락시킨(연모 or 음란을 붙인) 인원수 · 요정을 매료(함락시킨) 인원수 · 돈() · 복수 취득 가능한 아이템이다.
+;또, 현재의 설정 및 주인공의 성별(체격 외 처음에 설정한 몫도 포함)을 이어가면서 혹은 변경하는 게 가능
+;=============================================================================
+;인계 처리 외
+;=============================================================================
+@START_NEWGAME
+VARSET LOCAL, 0
+;初回周回でEASYからの引き継ぎ時のみ調合知識と魅惑は消滅
+IF FLAG:3 == 1 && FLAG:6 == 1
+	TALENT:MASTER:55 = 0
+	TALENT:MASTER:91 = 0
+ENDIF
+;初回周回でLUNATIC/PHANTASMクリアならば偉業を称えて称号贈呈
+IF FLAG:3 == 5 && FLAG:6 == 1
+	CFLAG:MASTER:157 |= 2
+	NICKNAME:MASTER = 공전절후의 천재 조교사
+ELSEIF FLAG:3 == 4 && FLAG:6 == 1
+	CFLAG:MASTER:157 |= 1
+	NICKNAME:MASTER = 기대의 수재 조교사
+ENDIF
+
+;日付、時間、調教対象や助手のリセット
+DAY = 1
+TIME = 0
+CALL CALENDAR_INIT
+TARGET = -1
+ASSI = -1
+;購入した土地の数をここで先にリセット
+FLAG:250 = 0
+FLAG:93 = 0
+
+;--------------------------------------------------
+;특정 조건을 만족하면 주인에게 새로운 소질이 추가되는 처리
+;--------------------------------------------------
+;条件を満たすとの中から一つ取得できる
+;ただし治療は調合知識を習得した後でしか取れない
+;ここでのローカル変数LOCAL:1は追加される素質番号を示す
+LOCAL:1 = 0
+;1回以上クリアかつ単体エンドを見た場合、舌使いを取得可能
+IF FLAG:6 >= 1 && (ITEM:98 || ITEM:99) && TALENT:MASTER:52 == 0
+	LOCAL:1 = 52
+;1回以上クリアかつノーマルハーレムエンドを見た場合、小悪魔を取得可能
+ELSEIF FLAG:6 >= 1 && FLAG:4002 && TALENT:MASTER:93 == 0
+	LOCAL:1 = 93
+;3回以上クリアかつ堕とした人数がその周回で20人以上のとき、魅惑を取得可能
+ELSEIF FLAG:6 >= 3 && CFLAG:MASTER:98 >= 20 && TALENT:MASTER:91 == 0
+	LOCAL:1 = 91
+;5回以上クリアかつその周回で烙印を押した人数が9人以上のとき、針さばきを取得可能
+ELSEIF FLAG:6 >= 5 && FLAG:31 >= 9 && TALENT:MASTER:53 == 0
+	LOCAL:1 = 53
+;7回以上クリアかつ蒐集品を12種全て30種類以上集めたとき、調合知識を取得可能
+ELSEIF FLAG:6 >= 7 && TALENT:MASTER:55 == 0
+	LOCAL:2 = 0
+	FOR LOCAL, 0, 12
+		SIF FLAG:(501 + LOCAL) >= 30
+			LOCAL:2 += 1
+	NEXT
+	SIF LOCAL:2 >= 12
+		LOCAL:1 = 55
+;9回以上クリアかつ恋慕か服従の付いた奴隷の中で調合知識または治療持ちが4人以上いたとき、治療を取得可能
+ELSEIF FLAG:6 >= 9 && TALENT:MASTER:59 == 0
+	LOCAL:2 = 0
+	FOR LOCAL, 0, CHARANUM
+		;主人あるいは失踪中のキャラは対象外
+		SIF LOCAL == MASTER || CFLAG:LOCAL:4 == 1
+			CONTINUE
+		;恋慕か服従を持ち、調合知識か治療を持っている奴隷をカウントする
+		SIF (TALENT:LOCAL:150 || TALENT:LOCAL:160) && (TALENT:LOCAL:55 || TALENT:LOCAL:59)
+			LOCAL:2 += 1
+	NEXT
+	SIF LOCAL:2 >= 4
+		LOCAL:1 = 59
+ENDIF
+;つるぺた堕し、大乳導を取得していない時、通常·ハーレムENDを合計20種類以上見た、
+;奴隷が全員恋慕または淫乱を持っている、かつ今回HARDモード以上でエンディングを迎えた場合、
+;奴隷全員が絶壁または貧乳を持っているとつるぺた堕しを取得可能
+;同様の条件で奴隷全員が巨乳または爆乳の場合は大乳導を取得可能
+;※あくまでも引き継いだ時点で所有している奴隷の能力です
+IF FLAG:3 >= 3 && FLAG:4000 >= 20 && TALENT:MASTER:96 == 0 && TALENT:MASTER:97 == 0 && LOCAL:1 == 0
+	LOCAL:2 = 0
+	LOCAL:3 = 0
+	FOR LOCAL, 0, CHARANUM
+		;主人あるいは失踪中のキャラは対象外
+		SIF LOCAL == MASTER || CFLAG:LOCAL:4 == 1
+			CONTINUE
+		;恋慕も淫乱も持っていないなら対象外です
+		SIF TALENT:LOCAL:150 == 0 && TALENT:LOCAL:170 == 0
+			CONTINUE
+		;でかいおっぱいっていいよね！
+		SIF TALENT:LOCAL:112 || TALENT:LOCAL:113
+			LOCAL:2 += 1
+		;ちっぱい！こそ正義！
+		SIF TALENT:LOCAL:110 || TALENT:LOCAL:111
+			LOCAL:3 += 1
+	NEXT
+	SIF LOCAL:2 == CHARANUM - 1
+		LOCAL:1 = 96
+	SIF LOCAL:3 == CHARANUM - 1
+		LOCAL:1 = 97
+ENDIF
+
+SIF LOCAL:1 > 0 && TALENT:MASTER:(LOCAL:1) == 0
+	CALL NEWTERM_TALENT_MASTER, LOCAL:1
+;지옥의 훈장(別名：へる子購入する権利)
+SIF TALENT:MASTER:831 == 0 && TALENT:MASTER:834 == 0 && CFLAG:MASTER:157 & 2 && FLAG:6 == 1
+	CALL NEWTERM_TALENT_MASTER, 834
+
+;--------------------------------------------------
+;주인 능력의 인계
+;--------------------------------------------------
+;経験は初期化される
+LOCAL:1 = NO:MASTER
+ADDCHARA LOCAL:1
+TARGET = CHARANUM-1
+
+;능력은 그대로 보존
+FOR LOCAL, 0, 100
+	ABL:LOCAL = ABL:MASTER:LOCAL
+NEXT
+
+;종족 변경 플래그
+CFLAG:5 = CFLAG:MASTER:5
+;ID도 카피
+CFLAG:3109 = CFLAG:MASTER:3109
+;종족 유전자 및 성별 반전 관련의 CFLAG를 카피
+FOR LOCAL, 3200, 3400
+	CFLAG:LOCAL = CFLAG:MASTER:LOCAL
+NEXT
+FOR LOCAL, 4995, 5000
+	CFLAG:LOCAL = CFLAG:MASTER:LOCAL
+NEXT
+
+;촉수 에너지
+BASE:6 = BASE:MASTER:6
+;이름은 보존
+NAME:TARGET = %NAME:MASTER%
+CALLNAME:TARGET = %CALLNAME:MASTER%
+NICKNAME:TARGET = %NICKNAME:MASTER%
+
+;소질 보존
+;구입할 수 있는 소질 중, [새드][마조][조루][지루]는 리셋
+;봉래인
+	TALENT:49 = TALENT:MASTER:49
+;혀놀림
+	TALENT:52 = TALENT:MASTER:52
+;바느질
+	TALENT:53 = TALENT:MASTER:53
+;조합지식
+	TALENT:55 = TALENT:MASTER:55
+;금단의 지식
+	TALENT:56 = TALENT:MASTER:56
+;요정지식
+	TALENT:57 = TALENT:MASTER:57
+;음구지식
+	TALENT:58 = TALENT:MASTER:58
+;치료
+	TALENT:59 = TALENT:MASTER:59
+;불결무시
+	TALENT:64 = TALENT:MASTER:64
+;매혹
+	TALENT:91 = TALENT:MASTER:91
+;수수께끼의 매력
+	TALENT:92 = TALENT:MASTER:92
+;소악마
+	TALENT:93 = TALENT:MASTER:93
+;절벽가슴격추왕
+	TALENT:96 = TALENT:MASTER:96
+;대유도
+	TALENT:97 = TALENT:MASTER:97
+;대범함
+	TALENT:98 = TALENT:MASTER:98
+;교육자
+	TALENT:126 = TALENT:MASTER:126
+;촉수사역술
+	TALENT:149 = TALENT:MASTER:149
+;광기
+	TALENT:158 = TALENT:MASTER:158
+;가전제품지식
+	TALENT:189 = TALENT:MASTER:189
+;음감
+	TALENT:191 = TALENT:MASTER:191
+;요리잘함
+	TALENT:193 = TALENT:MASTER:193
+;조리명인
+	TALENT:194 = TALENT:MASTER:194
+;공작명인
+	TALENT:195 = TALENT:MASTER:195
+;보도자
+	TALENT:196 = TALENT:MASTER:196
+;마술기능
+	TALENT:197 = TALENT:MASTER:197
+;초상계산
+	TALENT:198 = TALENT:MASTER:198
+
+;요리잘함, 조리명인, 음감 보유시 요리못함, 음치의 소거 처리
+SIF TALENT:MASTER:193 || TALENT:MASTER:194
+TALENT:MASTER:192 == 0
+
+SIF TALENT:MASTER:194
+TALENT:MASTER:193 == 0
+
+SIF TALENT:MASTER:191
+TALENT:MASTER:190 == 0
+
+;종족소질
+FOR LOCAL, 200, 231
+	TALENT:LOCAL = TALENT:MASTER:LOCAL
+NEXT
+;야채의 연금술사
+	TALENT:831 = TALENT:MASTER:831
+;Spell Card
+	TALENT:833 = TALENT:MASTER:833
+;지옥의 훈장
+	TALENT:834 = TALENT:MASTER:834
+;변천
+	TALENT:835 = TALENT:MASTER:835
+;디버그 모드
+	TALENT:998 = TALENT:MASTER:998
+
+;ABNORMAL용
+;역조교의 성격은 대상 외
+IF FLAG:4 == 1
+	TALENT:0 = TALENT:MASTER:0
+	TALENT:37 = TALENT:MASTER:37
+	TALENT:38 = TALENT:MASTER:38
+	TALENT:83 = TALENT:MASTER:83
+	TALENT:110 = TALENT:MASTER:110
+	TALENT:111 = TALENT:MASTER:111
+	TALENT:112 = TALENT:MASTER:112
+	TALENT:113 = TALENT:MASTER:113
+	TALENT:120 = TALENT:MASTER:120
+	TALENT:121 = TALENT:MASTER:121
+	TALENT:127 = TALENT:MASTER:127
+	TALENT:128 = TALENT:MASTER:128
+	TALENT:129 = TALENT:MASTER:129
+	EXP:0 = EXP:MASTER:0
+	EXP:12 = EXP:MASTER:12
+	EXP:13 = EXP:MASTER:13
+ENDIF
+
+;촉수의 구슬
+JUEL:198 = JUEL:MASTER:198
+
+SWAPCHARA MASTER, TARGET
+
+TARGET = -1
+MASTER = 0
+DELCHARA CHARANUM-1
+
+;주인의 종족 변경 처리
+SIF FLAG:70
+	CALL CHANGE_RACE_MASTER
+
+;봉래인 인계 처리
+;아나타이 인간(?)이 아니라면 인계 처리가 실행되지 않게 해둔다
+IF TALENT:MASTER:49 == 1 && CFLAG:MASTER:5 == 0
+	CALL TAKEOVER_TALENT_HOURAI, 49
+ELSE
+	TALENT:MASTER:49 = 0
+ENDIF
+
+IF TALENT:MASTER:158 == 1
+	CALL TAKEOVER_TALENT_MADNESS, 158
+ELSE
+	TALENT:MASTER:158 = 0
+ENDIF
+
+;--------------------------------------------------
+;조수 인계 가능 인원수 계산 사전 준비
+;--------------------------------------------------
+;FLAG:8을 사용. 한 번이라도 인원수 증가의 조건을 채웠으면 그 다음부터는 따로 조건을 채울 필요가 없어진다
+;[대범함]을 가지고 있다
+SIF TALENT:MASTER:98 && (FLAG:8 & 1) == 0
+	FLAG:8 |= 1
+;난이도 PHANTASM를 1번이라도 클리어했던 적이 있다
+SIF FLAG:9 & 16 && (FLAG:8 & 2) == 0
+	FLAG:8 |= 2
+;조교사 Lv가 5가 되어 있다
+SIF ABL:MASTER:99 > 4 && (FLAG:8 & 4) == 0
+	FLAG:8 |= 4
+;조교중에 연모 처녀를 빼앗은 인원수의 누계가 100명 이상
+SIF FLAG:400 >= 100 && (FLAG:8 & 8) == 0
+	FLAG:8 |= 8
+;노예 매각으로 번 금액의 누계가 25000000원이상
+SIF MONEY:990 >= 25000000 && (FLAG:8 & 16) == 0
+	FLAG:8 |= 16
+;고급 노예 매각으로 번 금액의 누계가 10000000원이상
+SIF MONEY:991 >= 10000000 && (FLAG:8 & 32) == 0
+	FLAG:8 |= 32
+;노예 매각으로 번 최고 금액이 400000원이상
+SIF MONEY:997 >= 400000 && (FLAG:8 & 64) == 0
+	FLAG:8 |= 64
+;주인이 요정, 흡혈귀, 기계, 망령, 인형, 악마, 캇파, 요호, 반백택, 좀비 페어리로 전생할 수 있다
+SIF FLAG:70 & 1 && FLAG:70 & 2 && FLAG:70 & 4 && FLAG:70 & 8 && FLAG:70 & 16 && FLAG:70 & 32 && FLAG:70 & 64 && FLAG:70 & 256 && FLAG:70 & 512 && (FLAG:8 & 128) == 0
+	FLAG:8 |= 128
+;개발한 목욕탕과 촉수의 능력의 총수가 45이상
+SIF (FLAG:8 & 256) == 0
+	CALL CHECK_BATH_AND_TENTACLE
+;환상향 비보관이 될 때까지 전시실을 발전시켰다
+SIF FLAG:500 >= 500 && (FLAG:8 & 512) == 0
+	FLAG:8 |= 512
+;노멀·하렘 엔드를 20 종류 이상 보았다
+SIF FLAG:4000 >= 20 && (FLAG:8 & 1024) == 0
+	FLAG:8 |= 1024
+;과거에 1번 환상향을 손에 넣었다
+SIF FLAG:90 == 5 && (FLAG:8 & 2048) == 0
+	FLAG:8 |= 2048
+;과거에 촉수공주 엔딩을 보았다
+SIF FLAG:4004 > 0 && (FLAG:8 & 4096) == 0
+	FLAG:8 |= 4096
+;동시에 10종 이상의 하렘 엔딩의 조건을 채웠다(bit8192)
+;오베론이나 티타니아의 칭호 자격을 얻고 있다
+SIF FLAG:32 >= 1000 && (FLAG:8 & 16384) == 0
+	FLAG:8 |= 16384
+;[지옥의 훈장]을 소지
+SIF TALENT:MASTER:834 && (FLAG:8 & 32768) == 0
+	FLAG:8 |= 32768
+
+;--------------------------------------------------
+;조수 인계 처리
+;--------------------------------------------------
+; 캐릭터가 조수 가능 [연모] 또는 [복종] 또는 [음란]을 가지고하고 호감도 또는 주인 조교 경험이 2000 이상을 충족하면 
+; 뉴 게임 이후에도 조수로 인계 할 수있게된다. 
+; 그러나 계승되는 조수의 수는 [대범함]을 가지지 않는 경우, 최대 9 명까지로한다.
+;LOCAL:5～7とTFLAG:0を判定に使用.
+;周回数-1だけ引き継ぎ可能人数が増える(最大5人)
+LOCAL:6 = LIMIT(FLAG:6 - 1, 0, 5)
+;함락 인원의 1/10 만 인수 가능 인원이 증가 (최대 4명)
+SIF FLAG:30 >= 10
+	LOCAL:6 += MIN(FLAG:30 / 10, 4)
+;[대범함]을 가지고 인수 가능 인원 증가
+IF TALENT:MASTER:98
+	FOR LOCAL, 0, 17
+		LOCAL:6 += GETBIT(FLAG:8, LOCAL)
+	NEXT
+ENDIF
+;대체 인원의 한계 값 설정. 또한 디버그 모드의 경우 99 명까지 인수 가능
+LOCAL:7 = (TALENT:MASTER:98) ? 20 # 9
+LOCAL:6 = (TALENT:MASTER:998) ? 99 # LIMIT(LOCAL:6, 0, LOCAL:7)
+
+LOCAL:5 = 0
+TFLAG:0 = 0
+IF CHARANUM > 1
+	FOR LOCAL, 0, CHARANUM
+		MARK:LOCAL:98 = 0
+		;일단 주인 자신은 제거
+		SIF LOCAL == MASTER
+			CONTINUE
+		;그 자리에 없으면 안됨(육아 중이거나 창관 노동중이라면 문제 없다)
+		SIF CFLAG:LOCAL:4 == 1 || CFLAG:LOCAL:4 == 4
+			CONTINUE
+		;괴뢰, 괴조 인격, 음마 중 하나를 가지고 반발 각인 2 이하라면 계승 할 수있다
+		IF (TALENT:LOCAL:168 || TALENT:LOCAL:169 || TALENT:LOCAL:180) && MARK:LOCAL:9 < 3
+			LOCAL:5 += 1
+			CONTINUE
+		ENDIF
+		;조수가능해야 함
+		SIF CFLAG:LOCAL:1 < 2
+			CONTINUE
+		;호감도 또는 주인 조교 경험 중 하나가 2000 이상이 아니면 안돼
+		SIF CFLAG:LOCAL:2 < 2000 && EXP:LOCAL:98 < 2000
+			CONTINUE
+		;연모 또는 복종 또는 음란이 없으면 안돼
+		SIF TALENT:LOCAL:150 || TALENT:LOCAL:160 || TALENT:LOCAL:170
+			LOCAL:5 += 1
+	NEXT
+	IF LOCAL:5 > 0 && LOCAL:6 > 0
+		DRAWLINE
+		PRINTFORML 지금 있는 캐릭터 중 누군가를 조수로서 인계할 수 있습니다.
+		PRINTL 조수로서 인계하겠습니까?
+		PRINTLC [0] 예
+		PRINTLC [1] 아니오
+		PRINTL 
+		$INPUT_LOOP_0
+		INPUT
+		IF RESULT == 0
+			DRAWLINE
+			TFLAG:0 = 1
+		ELSEIF RESULT != 1
+			GOTO INPUT_LOOP_0
+		ENDIF
+	ENDIF
+ENDIF
+
+SIF TFLAG:0 == 1
+	CALL TAKEOVER_ASSI, LOCAL:7
+SIF TFLAG:0 == 0
+	CALL RESET_ASSI
+
+;--------------------------------------------------
+;설정 인계 처리
+;--------------------------------------------------
+;コンフィグのリセット処理
+;「TFLAG:1～20にコンフィグの設定をいったん保存」→「アイテム引き継ぎのためにコンフィグの機能を全開放」
+;→「アイテムの引き継ぎ処理」→「コンフィグの機能を全部無効」……という流れで行われる
+FOR LOCAL, 1, 21
+	SELECTCASE LOCAL
+		CASE 1 TO 12
+			TFLAG:LOCAL = FLAG:(LOCAL + 9)
+		CASE 13
+			TFLAG:LOCAL = FLAG:1100
+		CASE 14
+			TFLAG:LOCAL = FLAG:1200
+		CASE 15
+			TFLAG:LOCAL = FLAG:1300
+		CASE 16
+			TFLAG:LOCAL = FLAG:1500
+		CASE 17
+			TFLAG:LOCAL = FLAG:3998
+		CASE 18
+			TFLAG:LOCAL = FLAG:3999
+		CASE 19
+			TFLAG:LOCAL = FLAG:1600
+		CASE 20
+			TFLAG:LOCAL = FLAG:1700
+	ENDSELECT
+NEXT
+
+;複数所持可能アイテムの引き継ぎ(元の所持数の1/5に減少.酒類のみ10本まで引き継ぎ可能)
+FOR LOCAL, 0, 610
+	IF LOCAL >= 60 && LOCAL < 90
+		ITEM:LOCAL = MAX(ITEM:LOCAL / 5, 0)
+	ELSEIF LOCAL >= 600 && LOCAL < 610
+		ITEM:LOCAL = MIN(ITEM:LOCAL, 10)
+	ELSE
+		ITEM:LOCAL = 0
+	ENDIF
+NEXT
+;助手に誰がいるかを判別
+;助手のみキャラカードを取得する処理をここで行う.
+FOR LOCAL, 0, CHARANUM
+	ITEM:(NO:LOCAL + 100) = (NO:LOCAL < 150 || NO:LOCAL >= 200) ? 1 # 0
+NEXT
+;コンフィグの機能全封印処理
+;CALL CONFIGURATION_SHOP_NONE
+;CALL CONFIGURATION_ITEM_NONE
+CALL CONFIGURATION_MODE_NONE
+CALL CONFIGURATION_TRAIN_NONE
+
+;お金の引き継ぎ
+LOCAL:1 = MONEY / 100
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 1000, 95)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 2500, 90)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 5000, 80)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 10000, 75)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 25000, 50)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 50000, 25)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 100000, 10)
+MONEY = LOCAL:1
+;周回を重ねていく毎に引き継いだ分以外にボーナスが入る様に
+;ただし引き継ぎボーナスの最高額は100万までとする(そこまで周回を重ねるのも困難な話だが)
+LOCAL:1 = MIN(1000 + 500 * FLAG:6, 1000000)
+MONEY += LOCAL:1
+
+;蒐集品引き継ぎ処理
+;ビット演算でLOCAL:2が1のときはフラグリセット処理において蒐集品フラグが消去されないようになる
+LOCAL:2 = 0
+IF FLAG:500 > 0
+	DRAWLINE
+	PRINTL 수집품을 인계하겠습니까?
+	PRINTLC [0] 예
+	PRINTLC [1] 아니오
+	PRINTL 
+	$INPUT_LOOP_1
+	INPUT
+	IF RESULT == 0
+		PRINTW 수집품을 인계했습니다.
+		LOCAL:2 |= 1
+	ELSEIF RESULT != 1
+		GOTO INPUT_LOOP_1
+	ENDIF
+ENDIF
+;촉수의 능력·τ탈취 처리
+;미리 τ(주인의 BASE:6)를 저장하고 인수하는 것을 선택하지 않은 경우는 0으로 처리
+;비트 연산 LOCAL:2가 2의 경우 플래그 재설정 프로세스에서 촉수 설정 플래그(촉수 능력)이 삭제되지 않게된다
+IF FLAG:75 > 0
+	DRAWLINE
+	PRINTL 촉수의 능력을 인계하겠습니까?
+	PRINTLC [0] 예
+	PRINTLC [1] 아니오
+	PRINTL 
+	$INPUT_LOOP_2
+	INPUT
+	IF RESULT == 0
+		PRINTW 촉수의 능력을 인계했습니다.
+		LOCAL:2 |= 2
+	ELSEIF RESULT == 1
+		BASE:MASTER:6 = 0
+		DITEMTYPE:59:999 = 0
+	ELSE
+		GOTO INPUT_LOOP_2
+	ENDIF
+ENDIF
+FOR LOCAL, 0, 3006
+	IF LOCAL == 3 || LOCAL == 4 || (LOCAL >= 6 && LOCAL <= 11) || (LOCAL >= 18 && LOCAL <= 21) || LOCAL == 29 || LOCAL == 30 || LOCAL == 32 || (LOCAL >= 34 && LOCAL <= 39) || LOCAL == 51 || LOCAL == 70 || LOCAL == 76 || LOCAL == 93 || (LOCAL >= 100 && LOCAL < 420) || (LOCAL >= 600 && LOCAL < 603) || LOCAL == 999
+		CONTINUE
+	ELSEIF (LOCAL == 75 || (LOCAL == 97 && DITEMTYPE:59:999) || LOCAL == 98 || LOCAL == 99) && LOCAL:2 & 2
+		CONTINUE
+	;蒐集品フラグリセット(集めた種類)
+	ELSEIF LOCAL >= 500 && LOCAL < 520 && LOCAL:2 & 1
+		CONTINUE
+	;IDの値は引き継いでおく
+	ELSEIF LOCAL == 998
+		CONTINUE
+	ELSE
+		FLAG:LOCAL = 0
+	ENDIF
+NEXT
+;蒐集品のフラグリセット
+IF (LOCAL:2 & 1) == 0
+	IF CHARANUM > 1
+		;蒐集品採取済みフラグのリセット
+		FOR LOCAL, 0, CHARANUM
+			CFLAG:LOCAL:10 = 0
+			;触手出産回数は触手の能力を引き継ぐ場合のみ保存
+			SIF (LOCAL:2 & 2) == 0
+				CFLAG:LOCAL:34 = 0
+		NEXT
+	ENDIF
+	FOR LOCAL, 100, 600
+		FOR LOCAL:1, 101, 113
+			DITEMTYPE:LOCAL:(LOCAL:1) = 0
+		NEXT
+	NEXT
+ENDIF
+IF FLAG:4 == 0
+	;YMモードの場合、どうするか尋ねる
+	DRAWLINE
+	PRINTL eratohoYM 모드가 아니라 PROSTITUTE 모드로 들어가시겠습니까?
+	PRINTLC [0] - 아니오. 일반 플레이를 하겠습니다
+	PRINTLC [1] - 예. 가끔은 좋을지도
+	PRINTL 
+	$INPUT_LOOP_6
+	INPUT
+	IF RESULT == 0
+		PRINTW eratohoYM 본래의 모드로 계속합니다.
+		FLAG:4 = 0
+	ELSEIF RESULT == 1
+		PRINTW “PROSTITUTE” 모드로 들어왔습니다.
+		ITEM:90 = 1
+		FLAG:4 = 4
+		FLAG:13 |= 1024
+		MONEY += 200
+		MONEY:100 = 2000000
+	ELSE
+		GOTO INPUT_LOOP_6
+	ENDIF
+ELSEIF FLAG:4 == 4
+	;PROモードの場合、どうするか尋ねる
+	DRAWLINE
+	PRINTL PROSTITUTE 모드를 그만두고、통상 플레이로 돌아가겠습니까?
+	PRINTLC [0] - 예
+	PRINTLC [1] - 아니오
+	PRINTL 
+	$INPUT_LOOP_7
+	INPUT
+	IF RESULT == 0
+		PRINTW eratohoYM 본래의 모드로 돌아갑니다
+		MONEY:100 = 1000000
+		FLAG:4 = 0
+	ELSEIF RESULT == 1
+		PRINTW “PROSTITUTE” 모드로 이어서 하겠습니다.
+		PRINTW 창관 관계의 컨피그 설정은 이어지지 않으므로 주의하세요.
+		ITEM:90 = 1
+		FLAG:13 |= 1024
+		MONEY += 200
+	ELSE
+		GOTO INPUT_LOOP_7
+	ENDIF
+ENDIF
+;難易度設定
+CALL SELECT_NEWTERM_DIFFICULTY
+
+;コンフィグの設定を変更するかどうか決定
+PRINTL 
+DRAWLINE
+PRINTL 추가기능은 어떻게 하겠습니까?
+PRINTLC [0] 지금 설정 그대로
+PRINTLC [1] 다시 설정한다
+PRINTLC [2] 나중에 설정한다
+PRINTL 
+$INPUT_LOOP_3
+INPUT
+IF RESULT == 0
+	PRINTW 설정을 계승합니다.
+	FOR LOCAL, 1, 21
+		SELECTCASE LOCAL
+			CASE 1 TO 12
+				FLAG:(LOCAL + 9) = TFLAG:LOCAL
+			CASE 13
+				FLAG:1100 = TFLAG:LOCAL
+			CASE 14
+				FLAG:1200 = TFLAG:LOCAL
+			CASE 15
+				FLAG:1300 = TFLAG:LOCAL
+			CASE 16
+				FLAG:1500 = TFLAG:LOCAL
+			CASE 17
+				FLAG:3998 = TFLAG:LOCAL
+			CASE 18
+				FLAG:3999 = TFLAG:LOCAL
+			CASE 19
+				FLAG:1600 = TFLAG:LOCAL
+			CASE 20
+				FLAG:1700 = TFLAG:LOCAL
+		ENDSELECT
+	NEXT
+ELSEIF RESULT == 1 || RESULT == 2
+	FLAG:12 = 0
+	FLAG:13 = 0
+	FLAG:14 = 0
+	FLAG:15 = 0
+	FLAG:18 = 4
+	FLAG:19 = 9
+	IF RESULT == 1
+		FLAG:12 |= 8192
+		PRINTW 설정을 변경합니다.
+		CALL NEWGAME_CONFIGURATION_RESET
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP_3
+ENDIF
+
+IF FLAG:4 == 1
+	;ABNORMALの場合、最初から始めたときに選択した設定を変更するかどうかを訪ねる
+	DRAWLINE
+	PRINTL 주인의 성별·체격 등의 설정은 지금 이대로 인계하겠습니까?
+	PRINTLC [0] 예
+	PRINTLC [1] 아니오
+	PRINTL 
+	$INPUT_LOOP_4
+	INPUT
+	IF RESULT == 0
+		PRINTW 주인의 성별·체격 등의 설정을 인계했습니다.
+	ELSEIF RESULT == 1
+		PRINTW 지금부터 주인의 성별·체격 등을 설정합니다.
+		CALL SET_MASTER_SEX
+	ELSE
+		GOTO INPUT_LOOP_4
+	ENDIF
+ENDIF
+
+;フラグリセット
+VARSET TFLAG, 0
+;収容可能人数初期化
+FLAG:91 = 1
+FLAG:92 = 10
+;周回フラグ
+FLAG:6 += 1
+PRINTFORMW 강하게 뉴 게임을 시작합니다.　({FLAG:6}주차)
+;念のためもう一度リセット
+TARGET = -1
+ASSI = -1
+FLAG:996 = -1
+;引き継ぎ処理実行中の判定ON
+TFLAG:994 = 1
+
+;만복도시스템 체크. 초기값 세팅.
+SIF FLAG:5000 & 32 
+	CALL INIT_HUNGERSYSTEM_TORIKOMODE
+;--------------------------------------------------
+;난이도 설정(주차 플레이)
+;--------------------------------------------------
+@SELECT_NEWTERM_DIFFICULTY
+DRAWLINE
+PRINTFORML 난이도는 어떻게 하시겠습니까? \@(TALENT:MASTER:998) ? # ((※나중에 변경은 불가능합니다!))\@
+PRINTL [1] EASY    （120일 기한）
+PRINTL [2] NORMAL  （90일 기한）
+PRINTL [3] HARD    （99일 기한）
+PRINTL [4] LUNATIC （90일 기한）
+PRINTL [5] PHANTASM（60일 기한）
+;SIF FLAG:3 >= 4
+;	PRINTL [6]PRO     （30日＋α期限）
+;SIF FLAG:3 >= 5 && FLAG:6 <= 2
+;	PRINTL [7]ULTRA（14日＋α期限）
+PRINTL [100] HELP  （각 난이도의 간단한 설명）
+$INPUT_LOOP_2
+INPUT
+IF RESULT == 100
+	DRAWLINE
+	PRINTL EASY　　：초심자 or 연습하고 싶은 사람 지향
+
+	PRINTL NORMAL　：보통 플레이를 하고 싶은 사람 지향
+	PRINTL HARD　  ：어려운 플레이도 OK인 사람 지향
+	PRINTL LUNATIC ：꽤나 마조스러운 플레이어 지향
+	PRINTL PHANTASM：초특급 마조 플레이어 지향
+;	PRINTL PRO      ：평생 트라우마가 생기고 싶은 사람 지향
+;	PRINTL ULTRA    ：이해 불능의 세계를 보고 싶은 사람 지향
+	DRAWLINE
+	WAIT
+	DRAWLINE
+	DRAWLINE
+	DRAWLINE
+	RESTART
+ELSEIF RESULT == 1
+	PRINTW 난이도 “EASY”를 선택했습니다.
+ELSEIF RESULT == 2
+	PRINTW 난이도 “NORMAL”을 선택했습니다.
+ELSEIF RESULT == 3
+	PRINTW 난이도 “HARD”를 선택했습니다.
+ELSEIF RESULT == 4
+	PRINTW 난이도 “LUNATIC”을 선택했습니다.
+ELSEIF RESULT == 5
+	PRINTW 난이도 “PHANTASM”을 선택했습니다.
+	;主人の技巧を強制的に1にする
+	ABL:MASTER:12 = 1
+	;禁断の知識没収
+	TALENT:MASTER:56 = 0
+;ELSEIF RESULT == 4 && FLAG:3 >= 4
+;	PRINTW “Welcome to Special Round”
+;ELSEIF RESULT == 5 && FLAG:3 >= 5 && FLAG:6 <= 2
+;	PRINTW “지옥에 어서오세요”
+ELSE
+	GOTO INPUT_LOOP_2
+ENDIF
+FLAG:3 = RESULT
+
+;=============================================================================
+;주차 플레이에서 주인의 소질 취득 · 변경 처리
+;=============================================================================
+;--------------------------------------------------
+;主人の素質追加処理
+;--------------------------------------------------
+;いいえを選択しても壊造人格を『覚えさせたことがある』と判定される
+@NEWTERM_TALENT_MASTER, ARG
+DRAWLINE
+PRINTFORMW [%TALENTNAME:ARG%]을 습득할 수 있습니다.
+PRINTL 습득하겠습니까?
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW %조사처리(NAME:MASTER,"는")% [%TALENTNAME:ARG%]을 체득했다.
+	TALENT:MASTER:ARG = 1
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;주인의 종족 변경 처리
+;--------------------------------------------------
+@CHANGE_RACE_MASTER
+PRINTL 주인의 종족을 변경할 수 있습니다.
+PRINTL 변경하겠습니까?
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTW 주인의 종족을 변경합니다.
+	CALL RACE_MASTER_LIST
+ELSEIF RESULT == 1
+	PRINTW 주인의 종족을 변경하지 않습니다.
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;………………………………………………
+;주인의 종족 선택
+;………………………………………………
+@RACE_MASTER_LIST
+PRINTL 주인의 종족을 선택해 주십시오.
+DRAWLINE
+IF FLAG:400 > 99 && CFLAG:MASTER:5
+	PRINTLC [00] 원래로 돌아간다.
+ELSE
+	PRINTL ※최악의 경우 원래대로 돌아갈 수 없을 가능성도 있습니다.
+ENDIF
+SIF FLAG:70 & 1
+	PRINTLC [01] 요정
+SIF FLAG:70 & 2
+	PRINTLC [02] 흡혈귀
+SIF FLAG:70 & 4
+	PRINTLC [03] 기계
+SIF FLAG:70 & 8
+	PRINTLC [04] 망령
+SIF FLAG:70 & 16
+	PRINTLC [05] 인형
+SIF FLAG:70 & 32
+	PRINTLC [06] 악마
+SIF FLAG:70 & 64
+	PRINTLC [07] 캇파
+SIF FLAG:70 & 128
+	PRINTLC [08] 요호
+SIF FLAG:70 & 256
+	PRINTLC [09] 백택
+SIF FLAG:70 & 512
+	PRINTLC [10] 좀비페어리
+PRINTLC [100] 그만둔다
+PRINTL 
+DRAWLINE
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	PRINTW 주인의 종족을 변경하지 않습니다.
+	RETURN 0
+ELSEIF RESULT == 0 && FLAG:400 > 99 && CFLAG:MASTER:5
+	PRINTW 주인의 종족을 원래대로 되돌렸습니다.
+	LOCAL = 0
+ELSEIF RESULT == 1 && FLAG:70 & 1
+	LOCAL = 200
+	LOCAL:1 = 3203
+ELSEIF RESULT == 2 && FLAG:70 & 2
+	LOCAL = 205
+	LOCAL:1 = 3206
+ELSEIF RESULT == 3 && FLAG:70 & 4
+	LOCAL = 206
+	LOCAL:1 = 3246
+ELSEIF RESULT == 4 && FLAG:70 & 8
+	LOCAL = 207
+	LOCAL:1 = 3211
+ELSEIF RESULT == 5 && FLAG:70 & 16
+	LOCAL = 208
+	LOCAL:1 = 3221
+ELSEIF RESULT == 6 && FLAG:70 & 32
+	LOCAL = 209
+	LOCAL:1 = 3204
+ELSEIF RESULT == 7 && FLAG:70 & 64
+	LOCAL = 210
+	LOCAL:1 = 3227
+ELSEIF RESULT == 8 && FLAG:70 & 128
+	LOCAL = 211
+	LOCAL:1 = 3212
+ELSEIF RESULT == 9 && FLAG:70 & 256
+	;ワーハクタクは専用処理するのでLOCAL:1は設定しない
+	LOCAL = 212
+ELSEIF RESULT == 10 && FLAG:70 & 512
+	LOCAL = 48
+	LOCAL:1 = 3245
+ELSE
+	RESTART
+ENDIF
+
+;種族変更フラグセット
+CFLAG:MASTER:5 = RESULT
+
+;種族遺伝子を一旦全て初期化
+VARSET CFLAG:MASTER:0, 0, 3200, 3400
+
+;[呪精]リセット
+TALENT:MASTER:48 = 0
+
+;種族素質全てリセット
+VARSET TALENT:MASTER:0, 0, 200, 226
+
+;人間(？)に戻る
+IF LOCAL == 0
+	CFLAG:MASTER:3200 = 100
+	RETURN 0
+;種族遺伝子セット.ワーハクタクだけ専用処理
+ELSEIF LOCAL == 212
+	CFLAG:MASTER:3201 = 50
+	CFLAG:MASTER:3253 = 50
+ELSE
+	CFLAG:MASTER:(LOCAL:1) = 100
+ENDIF
+;種族別素質セット
+TALENT:MASTER:LOCAL = 1
+PRINTFORMW %CALLNAME:MASTER%의 종족을 [%TALENTNAME:LOCAL%]로 변경했습니다.
+
+;--------------------------------------------------
+;주인의 소질(봉래인) 인계 처리
+;--------------------------------------------------
+@TAKEOVER_TALENT_HOURAI,ARG
+DRAWLINE
+PRINTFORMW 소질 [%TALENTNAME:ARG%]을 계승할 수 있습니다.
+PRINTFORML [%TALENTNAME:ARG%]이 되겠습니까?
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW %조사처리(NAME:MASTER,"는")% 영원한 삶을 살아가게 되었다.
+	TALENT:MASTER:ARG = 1
+ELSEIF RESULT == 1
+	PRINTFORMW %조사처리(NAME:MASTER,"는")% 끝이 있는 삶을 즐기기로 결정했다.
+	TALENT:MASTER:ARG = 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;주인의 소질(광기) 인계 처리
+;--------------------------------------------------
+@TAKEOVER_TALENT_MADNESS,ARG
+DRAWLINE
+PRINTFORMW 소질 [%TALENTNAME:ARG%]를 계승할 수 있습니다.
+PRINTFORML [%TALENTNAME:ARG%]를 유지하겠습니까?
+PRINTLC [0]네
+PRINTLC [1]아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW %조사처리(NAME:MASTER,"는")% 광인으로 남기로 결정했다.
+	TALENT:MASTER:ARG = 1
+ELSEIF RESULT == 1
+	PRINTFORMW %조사처리(NAME:MASTER,"는")% 눈에 생기를 되찾았다.
+	TALENT:MASTER:ARG = 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;개발한 목욕탕과 촉수 능력의 총 숫자
+;--------------------------------------------------
+@CHECK_BATH_AND_TENTACLE
+;触手の能力の数
+LOCAL:1 = SPECIALTENTACLE_CHECK()
+;キャラ触手の数
+LOCAL:1 += CHARATENTACLE_CHECK()
+;特殊風呂の数
+LOCAL:1 += SPECIALBATH_CHECK()
+;合計45以上なら付与
+SIF LOCAL:1 >= 45
+	FLAG:8 |= 256
+
+;=============================================================================
+;조수를 인계하지 않을 때의 처리
+;=============================================================================
+@RESET_ASSI
+PICKUPCHARA MASTER
+
+;노파심에 또 한 번 체크
+SIF CHARANUM > 1
+	RESTART
+
+;=============================================================================
+;조수 인계 처리
+;=============================================================================
+;MARK:98が3のキャラは引き継ぎ対象としてマーク
+;引き継ぎ可能にするには助手可能で好感度が2000以上、[연모]か[복종]か[음란]を持っている必要がある
+;また引き継ぎできる人数は通常で最大9人である(ただし特定条件を満たすと20人まで引き継ぎ可能……にする予定)
+;LOCALは引き継ぐことができる助手数、LOCAL:1は選択している助手数を示す
+@TAKEOVER_ASSI, ARG
+VARSET LOCAL, 0
+$TAKEOVER_ASSI_START
+;表示させるキャラを抽出（LOCAL:2に人数）
+CALLF CLEAR_LIST
+LOCAL:2 = 0
+LOCAL:3 = 0
+REPEAT CHARANUM
+	;選択した助手はそのままの判定
+	SIF MARK:COUNT:98 != 3
+		MARK:COUNT:98 = 0
+	;主人、あるいはその場にいない助手はここで弾く
+	SIF COUNT == MASTER || CFLAG:COUNT:4 == 1 || CFLAG:COUNT:4 == 4
+		CONTINUE
+	;[Debug]付加キャラもここで弾く
+	SIF TALENT:COUNT:998
+		CONTINUE
+	;[괴뢰]か[괴조인격]か[음마]持ちの場合は반발각인3以下ならOK
+	IF TALENT:COUNT:168 == 0 && TALENT:COUNT:169 == 0 && TALENT:COUNT:180 == 0 && MARK:COUNT:9 < 3
+		;助手可能である
+		SIF CFLAG:COUNT:1 < 2
+			CONTINUE
+		;好感度が2000以上か주인조교경험2000以上必要
+		SIF CFLAG:COUNT:2 < 2000 && EXP:COUNT:98 < 2000
+			CONTINUE
+		;[연모]か[복종]か[음란]を持っている
+		SIF TALENT:COUNT:150 == 0 && TALENT:COUNT:160 == 0 && TALENT:COUNT:170 == 0
+			CONTINUE
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	SIF MARK:COUNT:98 != 3
+		MARK:COUNT:98 = 1
+REND
+LOCAL:3 = (LOCAL:2 - 1) / 20
+$TAKEOVER_ASSI_PRINT
+DRAWLINE
+PRINTFORML 앞으로 {ARG-LOCAL:1}명 더 인계할 수 있습니다. ＜page.{LOCAL+1}＞
+DRAWLINE
+CALL TAKEOVER_ASSI_LIST, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 끝
+PRINTFORMLC \@(LOCAL >= LOCAL:3) ? %" " * 16% # [1009] 다음페이지\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	LOCAL = 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO TAKEOVER_ASSI_PRINT
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:3
+	LOCAL += 1
+	GOTO TAKEOVER_ASSI_PRINT
+ELSEIF RESULT < 1 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ELSE
+	IF MARK:RESULT:98 == 3
+		PRINTFORMW %조사처리(CALLNAME:RESULT,"를")% 인계 대상에서 제외했습니다.
+		LOCAL:1 -= 1
+		MARK:RESULT:98 = 0
+	ELSEIF ARG == LOCAL:1
+		PRINTW 더 이상 인계할 대상을 선택할 수 없습니다.
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:RESULT,"를")% 인계 대상으로 선택했습니다.
+		LOCAL:1 += 1
+		MARK:RESULT:98 = 3
+	ENDIF
+	GOTO TAKEOVER_ASSI_START
+ENDIF
+
+IF LOCAL:1 == 0
+	PRINTL 아무도 인계 대상으로 선택하지 않았습니다.
+	PRINTL 괜찮겠습니까?
+ELSE
+	REPEAT CHARANUM
+		SIF MARK:COUNT:98 == 3
+			PRINTFORM [%CALLNAME:COUNT%] 
+	REND
+	PRINTL 
+	PRINTL 이상을 조수로서 인계하겠습니까?
+ENDIF
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	GOTO TAKEOVER_ASSI_START
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP_1
+ENDIF
+
+;--------------------------------------------------
+;노예 소거 처리
+;--------------------------------------------------
+IF LOCAL:1 == 0
+	TFLAG:0 = 0
+	RETURN 0
+ENDIF
+LOCAL:3 = 0
+$DEL_SLAVE
+REPEAT CHARANUM
+	;主人自身は消去しちゃらめぇえええ！
+	SIF COUNT == MASTER
+		CONTINUE
+	IF MARK:COUNT:98 == 3
+		MARK:COUNT:98 = 2
+		LOCAL:3 += 1
+		BREAK
+	ELSEIF MARK:COUNT:98 < 2
+		DELCHARA COUNT
+		BREAK
+	ENDIF
+REND
+;処理が引き継ぐ予定の人数に達していないまたは処理が完了していない場合はもう一度処理を繰り返す
+SIF LOCAL:3 < LOCAL:1 || CHARANUM > LOCAL:1 + 1
+	GOTO DEL_SLAVE
+
+;10人以上引き継いだ場合は購入できる奴隷数追加のため、ここで土地を追加させる
+SIF LOCAL:3 > 9
+	FLAG:93 = LOCAL:3 - 9
+
+;--------------------------------------------------
+;조수의 능력 인계용 리셋 처리
+;--------------------------------------------------
+FOR ASSI, 0, CHARANUM
+	;主人は飛ばす
+	SIF ASSI == MASTER
+		CONTINUE
+	LOCAL:4 = 0
+	;引き継ぎ操作の前に予め桃の飴玉を飲んでいるとＥＸ化の解除選択できるようになる
+	SIF EQUIP:ASSI:0 == 1
+		CALL RESET_EX_ASSI
+	;조수가 즉각함락을 갖고 있지 않음＋(과거 주회 플레이를 포함해)지금까지 淫乱、淫核／淫茎、淫壷、淫尻、淫乳、尿道狂、キス魔、ドＳ、ドＭを全て([オトコ]の場合、[淫壷]は不要)취득、
+	;혹은 지금까지 [연모] [친애] [상애] [복종] [낙인] [예속] [사역마] [음란]을 전부 취득
+	;かつ今回の周回プレイで難易度HARD以上をクリアした場合、または一度でも即落ちを覚えさせた場合最初から即落ちが付加されるようになる.
+	IF (((TALENT:ASSI:120 && CFLAG:ASSI:16 == 507) || CFLAG:ASSI:16 == 511) && FLAG:3 >= 3) || ((CFLAG:ASSI:16 & 512) && TALENT:ASSI:179 == 0)
+		CALL FALLEN_ASSI, LOCAL:4
+		LOCAL:4 = RESULT
+	ELSEIF CFLAG:ASSI:14 >= 15 && CFLAG:ASSI:15 >= 15 && (CFLAG:ASSI:16 & 1) > 0 && TALENT:ASSI:179 == 0
+		CALL FALLEN_ASSI, LOCAL:4
+		LOCAL:4 = RESULT
+	ENDIF
+	;助手が壊造人格を持っていない＋(過去の周回プレイを含め)今までに幼児退行、狂気、精神崩壊、傀儡を全て取得し、記憶消去薬を1回以上飲ませ、
+	;かつ今回の周回プレイで難易度HARD以上をクリアした場合、または一度でも壊造人格を覚えさせた場合最初から壊造人格が付加されるようになる.
+	IF ((CFLAG:ASSI:17 == 31 && FLAG:3 >= 3) || CFLAG:ASSI:17 & 32) && TALENT:ASSI:169 == 0
+		CALL CONVERTED_ASSI, LOCAL:4
+		LOCAL:4 = RESULT
+	ENDIF
+	;助手がオトコでも生娘ではなく、好感度が1万以上、現在[相愛]を持っている＋(過去の周回プレイを含め)今までに恋慕、妄信、親愛、相愛を全て取得し、
+	;かつ今回の周回プレイで難易度HARD以上をクリアした場合、または一度でも生娘化を実行した場合、生娘化にするか選択できるようになる.
+	SIF (((CFLAG:ASSI:14 & 15) > 0 && FLAG:3 >= 3) || CFLAG:ASSI:14 & 16) && CFLAG:ASSI:2 > 9999 && TALENT:ASSI:0 != 1 && TALENT:ASSI:120 == 0 && TALENT:ASSI:153
+		CALL VIRGIN_ASSI
+
+	;캐릭터 전용 대사 내에 특수 인계 설정 처리가 있을 경우에는 그쪽 처리를 우선한다. 그 외에는 통상 인계 처리.
+	IF CFLAG:ASSI:9 == 0
+		TRYCCALLFORM KOJO_{NO:ASSI}_EVENT_ASSI_TAKEOVER, LOCAL:4
+		CATCH
+			CALL ASSI_STATE_TAKEOVER, LOCAL:4
+		ENDCATCH
+	ELSE
+		;조수의 능력 인계용 리셋 처리
+		CALL ASSI_STATE_TAKEOVER, LOCAL:4
+	ENDIF
+
+NEXT
+
+;삭제 처리 방지용
+TFLAG:0 = 1
+
+;--------------------------------------------------
+;조수 인계 일람 표시
+;--------------------------------------------------
+@TAKEOVER_ASSI_LIST, ARG
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+	;主人公と助手対象と調教中キャラは排除
+	SIF LOCAL == 0
+		CONTINUE
+	SIF CFLAG:LOCAL:4 == 1
+		CONTINUE
+	IF MARK:LOCAL:98 == 3
+		PRINT ★
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	PRINTL 
+REND
+PRINTL 　　　★：조수로서 인계할 예정인 캐릭터를 표시합니다.
+
+;=============================================================================
+;조수의 능력 인계용 리셋 처리
+;=============================================================================
+;そのままでスタートするにはゲームに不都合な部分をここで処理
+@ASSI_STATE_TAKEOVER, ARG
+;助手を経験したことを示す
+ISASSI:ASSI = 1
+;引き継いだキャラであることを判別するためのフラグ
+CFLAG:ASSI:18 = 1
+;称号リセット
+NICKNAME:ASSI = %CSVNICKNAME (NO:ASSI , 0)%
+;館にいた時の状況
+CSTR:ASSI:3 = 과거에 %CALLNAME:MASTER%의 조교를 받았다.
+
+;妊娠·抱卵中·乳母でなく育児中の場合は減っている体力を戻す
+IF TALENT:ASSI:140 || TALENT:ASSI:143 || (TALENT:ASSI:141 && CFLAG:ASSI:79 == 0)
+	MAXBASE:ASSI:0 += 500
+	CALL RESET_ASSI_PREGNANT, ASSI
+;懐卵時の体力の最大値低下を戻す処理
+ELSEIF TALENT:ASSI:145
+	MAXBASE:ASSI:0 += 500
+ENDIF
+
+;特定のゲージをリセット
+REPEAT 4
+	MAXBASE:ASSI:(COUNT+4) = 0
+	BASE:ASSI:(COUNT+4) = 0
+REND
+;居場所のフラグリセット
+CFLAG:ASSI:4 = 0
+;恐怖·反発刻印取得済み判定リセット
+MARK:ASSI:96 = 0
+MARK:ASSI:97 = 0
+;薬物刻印1Lv分減少
+MARK:ASSI:3 = MAX(MARK:ASSI:3 - 1, 0)
+
+;特定の素質をリセット
+FOR LOCAL, 140, 180
+	;壊造人格、即落ちは引き継ぎで取得させていない場合はリセット
+	IF (LOCAL == 169 && (ARG & 2) == 0) || (LOCAL == 179 && (ARG & 1) == 0)
+		TALENT:ASSI:LOCAL = 0
+	;妊娠、育児中、母性、抱卵中、寄生、懐卵はリセット(バグ防ぐため)
+	ELSEIF (LOCAL >= 140 && LOCAL <= 143) || LOCAL == 145 || LOCAL == 146
+		TALENT:ASSI:LOCAL = 0
+	;恋慕系、服従系、淫乱系もリセット(特に恋慕、淫乱、服従は堕とした人数のカウントに影響されるため)
+	ELSEIF (LOCAL >= 150 && LOCAL < 157) || (LOCAL >= 159 && LOCAL < 169) || (LOCAL >= 170 && LOCAL < 179)
+		TALENT:ASSI:LOCAL = 0
+	ENDIF
+NEXT
+TALENT:ASSI:65 = 0
+TALENT:ASSI:998 = 0
+
+;CFLAGをリセット
+FOR LOCAL, 0, 100
+	;売却不可フラグ、ＶＡ異常経験変動フラグリセット
+	IF LOCAL == 3 || LOCAL == 11
+		CFLAG:ASSI:LOCAL = 0
+	;嫉妬、放尿レベル、媚薬中毒、鈴蘭の毒、陰毛、触手インプラント、烙印用装備フラグはリセット
+	ELSEIF (LOCAL >= 30 && LOCAL <= 33) || LOCAL == 36 || LOCAL == 41 || LOCAL == 42
+		CFLAG:ASSI:LOCAL = 0
+	;汎用口上、逆口上の人格再設定用
+	ELSEIF LOCAL == 43 || LOCAL == 44
+		CFLAG:ASSI:LOCAL = 0
+	;最後の調教を受けた日と最後に助手を外された日をリセット（しないと表示が不自然になる）
+	ELSEIF LOCAL == 46 || LOCAL == 47
+		CFLAG:ASSI:LOCAL = 0
+	;部位開発度、強制精飲絶頂フラグはリセット
+	ELSEIF (LOCAL >= 60 && LOCAL <= 64)
+		CFLAG:ASSI:LOCAL = 0
+	;妊娠出産系フラグも全部リセット
+	ELSEIF LOCAL >= 70 && LOCAL <= 79
+		CFLAG:ASSI:LOCAL = 0
+	ENDIF
+NEXT
+FOR LOCAL, 1000, 10000
+	;가필수정판 일상생활 패치의 플래그를 저장
+	SIF LOCAL >= 1600 && LOCAL < 1630
+		CONTINUE
+	;娘に関するフラグを保存
+	SIF LOCAL >= 3100 && LOCAL < 3110
+		CONTINUE
+	;種族遺伝子に関するフラグを保存
+	SIF LOCAL >= 3200 && LOCAL < 3400
+		CONTINUE
+	;性別反転した時のもとの素質に関するフラグを保存
+	SIF LOCAL >= 4995 && LOCAL < 5000
+		CONTINUE
+	CFLAG:ASSI:LOCAL = 0
+NEXT
+
+;EQUIPをリセットする
+VARSET EQUIP:ASSI:0, 0, 0, 15
+
+;好感度は減少させた状態で引き継ぎ
+;最低は50(引き継ぐ時点で1000以上はあると見込んでいるため)
+;素質が変動する700、1000、2000、5000を境界に引き継ぎ率が激減するように
+LOCAL:1 = CFLAG:ASSI:2 / 20
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 100, 90)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 250, 80)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 500, 75)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 700, 66)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 1000, 50)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 2000, 33)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 5000, 25)
+CFLAG:ASSI:2 = LOCAL:1
+
+;--------------------------------------------------
+;조수의 가슴을 원래대로 되돌리는 처리
+;--------------------------------------------------
+;[妊娠]等による胸の大きさの変動をここで修正
+@RESET_ASSI_PREGNANT, ARG
+;胸の素質が変化していないなら帰る
+SIF !CFLAG:ARG:3006
+	RETURN 0
+
+;一旦胸の素質をリセット
+TALENT:ARG:110 = 0
+TALENT:ARG:111 = 0
+TALENT:ARG:112 = 0
+TALENT:ARG:113 = 0
+
+;拡大前の状態に戻す
+;절벽だった
+IF CFLAG:ARG:3006 == 1
+	TALENT:ARG:110 = 1
+;빈유だった
+ELSEIF CFLAG:ARG:3006 == 2
+	TALENT:ARG:111 = 1
+;거유だった
+ELSEIF CFLAG:ARG:3006 == 4
+	TALENT:ARG:112 = 1
+;폭유だった
+ELSEIF CFLAG:ARG:3006 == 5
+	TALENT:ARG:113 = 1
+ENDIF
+
+;--------------------------------------------------
+;조수의 EX화 해제 선택 처리
+;--------------------------------------------------
+@RESET_EX_ASSI
+PRINTFORMW ＜복숭아빛 사탕의 효과로 %CALLNAME:ASSI%의 EX화 상태를 해제할 수가 있습니다＞
+PRINTFORML ＜%CALLNAME:ASSI%의 EX화 상태를 해제하겠습니까?＞
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP_RESET_EX_ASSI
+INPUT
+IF RESULT == 0
+	CALL RESET_EX_COMMON, ASSI
+	PRINTFORMW %CALLNAME:ASSI%의 EX화 상태를 해제했습니다.
+ELSEIF RESULT == 1
+	PRINTFORMW %CALLNAME:ASSI%의 EX화 상태 해제를 보류했습니다.
+ELSE
+	GOTO INPUT_LOOP_RESET_EX_ASSI
+ENDIF
+;桃の飴玉の効果が切れる
+EQUIP:ASSI:0 = 0
+
+;--------------------------------------------------
+;조수에게 [즉각함락]을 추가시키는 처리
+;--------------------------------------------------
+;いいえを選択しても即落ちを『覚えさせたことがある』と判定される
+;(つまりこの選択肢を出した時点で淫乱系素質全取得の条件が1つ満たされることに)
+@FALLEN_ASSI, ARG
+PRINTFORMW %조사처리(CALLNAME:ASSI,"가")% 이쪽을 보는 눈이 이상하다….
+PRINTFORMW 수도 없이 조교를 받은 %CALLNAME:ASSI%의 몸은 완전히 %CALLNAME:MASTER%의 손에 함락되어버린 모양이다…….
+PRINTFORMW ＜%CALLNAME:MASTER%의 손으로 보다 더 느끼기 쉬운 몸으로 바꿀 수 있습니다＞
+PRINTFORML ＜%CALLNAME:ASSI%에게 [즉각함락]을 배우게 하겠습니까?＞
+SIF (CFLAG:ASSI:16 & 512) == 0
+	PRINTL (※아니오를 선택해도 즉각함락을 『배웠던 적이 있다』고 판정됩니다)
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP_FALLEN_ASSI
+INPUT
+IF RESULT == 0
+	PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% [즉각함락]을 얻었다.
+	TALENT:ASSI:179 = 1
+	ARG |= 1
+ELSEIF RESULT == 1
+	PRINTFORMW %조사처리(CALLNAME:ASSI,"가")% [즉각함락]을 익히는 것을 보류했습니다.
+ELSE
+	GOTO INPUT_LOOP_FALLEN_ASSI
+ENDIF
+CFLAG:ASSI:16 |= 512
+
+RETURN ARG
+
+;--------------------------------------------------
+;조수에게 [괴조인격]을 추가시키는 처리
+;--------------------------------------------------
+;いいえを選択しても壊造人格を『覚えさせたことがある』と判定される
+@CONVERTED_ASSI, ARG
+PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 뿌얘진 유리구슬 같은 눈동자로 이쪽을 바라보고 있다….
+PRINTFORMW 수도 없이 가혹한 조교를 받은 %CALLNAME:ASSI%의 인격은 형체도 없이 파괴되고 만 모양이다…….
+PRINTFORMW ＜%CALLNAME:MASTER%의 손으로 새로운 인격을 심어줄 수 있습니다＞
+PRINTFORML ＜%CALLNAME:ASSI%에게 [괴조인격]을 심어주겠습니까?＞
+SIF (CFLAG:ASSI:17 & 32) == 0
+	PRINTL (※아니오를 선택해도 괴조인격을 『익혔던 적이 있다』고 판정됩니다)
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP_CONVERTED_ASSI
+INPUT
+IF RESULT == 0
+	PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% %CALLNAME:MASTER%에 의해 새로운 인격이 덧씌워졌습니다.
+	PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% [괴조인격]을 얻었다.
+	TALENT:ASSI:169 = 1
+	NICKNAME:MASTER = 『귀축』
+	FLAG:37 += 1
+	CFLAG:MASTER:157 |= 8
+	;主人との相性が500％に(解釈は各自ご自由に)
+	IF RELATION:ASSI:MASTER < 500
+		RELATION:ASSI:MASTER = 500
+		PRINTFORMW %CALLNAME:ASSI%의 영혼은 영원히 %CALLNAME:MASTER%의 손에서 벗어나지 못하게 되었습니다.
+	ENDIF
+	ARG |= 2
+ELSEIF RESULT == 1
+	PRINTFORMW %조사처리(CALLNAME:ASSI,"가")% [괴조인격]을 익히는 것을 보류했습니다.
+ELSE
+	GOTO INPUT_LOOP_CONVERTED_ASSI
+ENDIF
+SIF (CFLAG:ASSI:17 & 32) == 0
+	FLAG:37 += 1
+CFLAG:ASSI:17 |= 32
+
+RETURN ARG
+
+;--------------------------------------------------
+;조수가 숫처녀화하는 처리
+;--------------------------------------------------
+@VIRGIN_ASSI
+PRINTFORMW %CALLNAME:ASSI%의 손에는 어느 새 아름답고도 아련하게 빛나는 보주가 쥐어져 있었다….
+PRINTFORMW 이건 %CALLNAME:ASSI%에게 깊은 애정을 쏟아부어 찾아온 기적인 걸까?
+PRINTW 그게 아니면――
+PRINTW ……
+PRINTW …………
+PRINTW ………………
+PRINTFORMW ＜보주의 힘을 해방시킴으로써 %조사처리(NAME:ASSI,"를")% [숫처녀]로 되돌릴 수 있습니다＞
+PRINTFORML ＜%조사처리(NAME:ASSI,"를")% [숫처녀]로 만들겠습니까?＞
+SIF EXP:ASSI:0 || EXP:ASSI:32 || EXP:ASSI:42 || EXP:ASSI:51 || EXP:ASSI:52 || CFLAG:ASSI:34
+	PRINTL (※예를 선택하면 [처녀]를 얻는 대신 관련된 Ｖ경험은 모두 리셋됩니다)
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP_VIRGIN_ASSI
+INPUT
+IF RESULT == 0
+	PRINTFORMW %CALLNAME:ASSI%의 몸은 보주의 힘으로 숫처녀로 돌아갔습니다.
+	PRINTFORMW %조사처리(NAME:ASSI,"는")% [처녀]를 얻었다.
+	TALENT:ASSI:0 = 1
+	CFLAG:ASSI:14 |= 16
+	IF ABL:ASSI:1 || EXP:ASSI:0 || EXP:ASSI:32 || EXP:ASSI:42 || EXP:ASSI:51 || EXP:ASSI:52 || EXP:ASSI:81 || EXP:ASSI:82 || EXP:ASSI:83 || CFLAG:ASSI:34
+		PRINTFORMW 보주의 힘으로 %NAME:ASSI%의 질은 [숫처녀]의 그것으로 변화했다.
+		ABL:ASSI:1 = 0
+		EXP:ASSI:0 = 0
+		EXP:ASSI:32 = 0
+		EXP:ASSI:42 = 0
+		EXP:ASSI:51 = 0
+		EXP:ASSI:52 = 0
+		EXP:ASSI:81 = 0
+		EXP:ASSI:82 = 0
+		EXP:ASSI:83 = 0
+		CFLAG:ASSI:34 = 0
+	ENDIF
+ELSEIF RESULT == 1
+	PRINTFORMW %조사처리(NAME:ASSI,"를")% [숫처녀]로 되돌리는 건 보류했습니다.
+ELSE
+	GOTO INPUT_LOOP_VIRGIN_ASSI
+ENDIF

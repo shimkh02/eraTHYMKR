@@ -1,0 +1,992 @@
+﻿;=============================================================================
+;아침 이벤트 그 0～아침 펠라
+;=============================================================================
+;-----------------------------------------------
+;아침 펠라 실행 판정
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_0
+;아침 이벤트 범용 실행 판정(주인의 좆대가 있는가?)
+SIF MORNING_EVENT_COMMON_JUDGMENT(2) == 0
+	RETURN 0
+
+;고양이혀면 고양이 펠라가 유효하지 않으면 불가
+IF TALENT:54
+	;고양이혀면 순종 3 · 기교 5 · 봉사정신 4가 필요
+	SIF (FLAG:14 & 16 && (ABL:10 < 3 || ABL:12 < 5 || ABL:13 < 4)) || (FLAG:14 & 16) == 0
+		RETURN 0
+ENDIF
+RETURN 1
+
+;-----------------------------------------------
+;아침 펠라
+;-----------------------------------------------
+@MORNING_EVENT_0
+;정액중독
+IF ABL:31 == 1
+	LOCAL = 1
+ELSEIF ABL:31 == 2
+	LOCAL = 2
+ELSEIF ABL:31 == 3
+	LOCAL = 3
+ELSEIF ABL:31 == 4
+	LOCAL = 4
+ELSE
+	LOCAL = 5
+ENDIF
+;악취둔감
+IF TALENT:61
+	LOCAL += 1
+;악취민감
+ELSEIF TALENT:62
+	LOCAL -= 1
+ENDIF
+;헌신적
+SIF TALENT:63
+	LOCAL += 1
+;연모
+SIF TALENT:150
+	LOCAL += 1
+;복종
+SIF TALENT:160
+	LOCAL += 1
+;음란
+SIF TALENT:170
+	LOCAL += 1
+;조건을 만족시키지 않았다
+SIF LOCAL < 1
+	RETURN 0
+
+DRAWLINE
+;지문 컷
+SIF CFLAG:99 == 0
+	PRINTFORML 아침, %CALLNAME:TARGET%의 펠라로 눈을 떴다.
+
+;대사의 함수, FLAG:200의 140을 사용
+CALL SELF_KOJO, TARGET, 140, LOCAL
+
+;펠라 경험
+CALL COMMON_UP_EXP,TARGET, 22, LOCAL , 0, 1
+IF LOCAL / 2 > 0
+	;정액경험
+	CALL COMMON_UP_EXP,TARGET, 4, (LOCAL / 2), 0, 1
+	;사정경험(주인)
+	CALL COMMON_UP_EXP,MASTER, 3, (LOCAL / 2), 0
+
+	;LUNATIC 이상은 사정할 때마다 체력이 감소
+	CALL EXHAUST_EJAC, MASTER, LOCAL / 2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	;레즈 경험
+	CALL COMMON_UP_EXP,TARGET, 12, 3, 0, 1
+ELSEIF TALENT:120 && TALENT:MASTER:120
+	;ＢＬ경험
+	CALL COMMON_UP_EXP,TARGET, 13, 3, 0, 1
+ENDIF
+
+;[精愛味覚]があれば条件分岐
+IF TALENT:66 > 0
+	;精飲절정경험
+	CALL COMMON_UP_EXP,TARGET, 8, 1, 0, 1
+	;욕정의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL * 100), 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, (LOCAL * 100), 0, 1
+ENDIF
+
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL * 40), 0, 1
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 100), 0, 1
+;굴복의 구슬
+CALL COMMON_UP_JUEL, TARGET, 14, (LOCAL * 30), 1, 1
+DRAWLINE
+
+;=============================================================================
+;아침 이벤트 그 1～아침 새댁 플레이(상애시 한정)
+;=============================================================================
+;-----------------------------------------------
+;아침 새댁 플레이 실행 판정
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_1
+;상애がなかったらダメ
+SIF TALENT:153 == 0
+	RETURN 0
+;オトコだったらダメ
+SIF TALENT:120
+	RETURN 0
+;人魚はダメ
+SIF TALENT:229
+	RETURN 0
+
+RESULT = 0
+;범용身体サイズチェック
+SIF COMMON_BODYSIZE_CHECK(MASTER, TARGET) == 0
+	RETURN 0
+
+;エプロンがない場合はだめ
+SIF (ITEM:44 == 0 && NOITEM == 0)
+	RETURN 0
+;주인に棒がある場合は, 処女もしくはＶ경험がない場合もだめ（再生処女でも許さない）
+SIF (TALENT:MASTER:120 || TALENT:MASTER:121) && (TALENT:0 || EXP:0 <= 0)
+	RETURN 0
+;주인に棒がある場合は, 貞操帯を装着している場合, 不可能
+SIF (TALENT:MASTER:120 || TALENT:MASTER:121) && CFLAG:42 & 2
+	RETURN 0
+;育児室に居て出産前なら不可能
+SIF CFLAG:4 == 2 && (TALENT:140 == 1 || TALENT:143 == 1)
+	RETURN 0
+RETURN 1
+
+;-----------------------------------------------
+;朝の新妻プレイ
+;-----------------------------------------------
+@MORNING_EVENT_1
+;露出癖
+IF CFLAG:2 > 4000
+	LOCAL = (ABL:14 >= 5 && CFLAG:2 > 4500) ? 4 # 3
+ELSE
+	LOCAL = (ABL:14 < 4) ? 1 # 2
+ENDIF
+;헌신적
+SIF TALENT:63
+	LOCAL += 1
+;快感に素直
+SIF TALENT:70
+	LOCAL += 1
+;Ｖ敏感(相手が棒持ち)
+IF TALENT:102 && (TALENT:MASTER:120 || TALENT:MASTER:121)
+	LOCAL += 1
+;Ｖ鈍感(相手が棒持ち)
+ELSEIF TALENT:103 && (TALENT:MASTER:120 || TALENT:MASTER:121)
+	LOCAL -= 1
+ENDIF
+;Ｂ敏感(相手が棒なし)
+IF TALENT:106 && TALENT:MASTER:120 == 0 && TALENT:MASTER:121 == 0
+	LOCAL += 1
+;Ｂ鈍感(相手が棒なし)
+ELSEIF TALENT:107 && TALENT:MASTER:120 == 0 && TALENT:MASTER:121 == 0
+	LOCAL -= 1
+ENDIF
+;연모
+SIF TALENT:150
+	LOCAL += 1
+;조건을 만족시키지 않았다
+SIF LOCAL < 1
+	RETURN 0
+
+CFLAG:154 |= 4
+CFLAG:MASTER:154 |= 32
+
+DRAWLINE
+;지문 컷
+IF CFLAG:99 == 0
+	PRINTFORML 아침에 일어나니, 부엌에서 좋은 냄새가 풍겨 왔다.
+	PRINTFORML 그 쪽으로 가 보니 %조사처리(CALLNAME:TARGET,"가")% 알몸 에이프런 차림으로 아침식사를 만들고 있었다….
+	PRINTFORML 애정이 듬뿍 느껴지는 모습에 %조사처리(CALLNAME:TARGET,"는")% 강하게 욕정을 느꼈다….
+ENDIF
+
+;대사의 함수,TFLAG:200の145を使用
+CALL SELF_KOJO, TARGET, 145, LOCAL
+
+;주인に棒がないとＶは攻撃できんぜ
+IF TALENT:MASTER:120 || TALENT:MASTER:121
+	;Ｖ경험
+	CALL COMMON_UP_EXP,TARGET, 0, LOCAL , 0, 1
+	;정액경험
+	CALL COMMON_UP_EXP,TARGET, 4, LOCAL , 0, 1
+	;Ｖ調律경험
+	CALL COMMON_UP_EXP,TARGET, 42, LOCAL , 0, 1
+	;레즈 경험
+	SIF TALENT:MASTER:120 == 0
+		CALL COMMON_UP_EXP,TARGET, 12, LOCAL , 0, 1
+	;사정경험(주인)
+	CALL COMMON_UP_EXP,MASTER, 3, (LOCAL / 2), 0
+
+	;LUNATIC 이상은 사정할 때마다 체력이 감소
+	CALL EXHAUST_EJAC, MASTER, LOCAL
+;棒ないときはおっぱい鷲づかみさせておきます
+ELSE
+	;Ｂ快楽경험
+	CALL COMMON_UP_EXP,TARGET, 44, LOCAL , 0, 1
+	;레즈 경험
+	CALL COMMON_UP_EXP,TARGET, 12, LOCAL , 0, 1
+ENDIF
+
+;절정경험
+CALL COMMON_UP_EXP,TARGET, 2, LOCAL , 0
+
+;주인に棒がないとＶは攻撃できんぜ
+IF TALENT:MASTER:120 || TALENT:MASTER:121
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, (LOCAL * 50), 0, 1
+;棒ないときはおっぱい鷲づかみさせておきます
+ELSE
+	;快Ｂの珠
+	CALL COMMON_UP_JUEL, TARGET, 3, (LOCAL * 50), 0, 1
+ENDIF
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 100), 0, 1
+;욕정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL * 40), 1, 1
+DRAWLINE
+
+;=============================================================================
+;朝イベントその2～朝パイズリ
+;=============================================================================
+;-----------------------------------------------
+;パイズリ実行判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_2
+;オトコか絶壁だと不可
+SIF TALENT:120 || TALENT:110
+	RETURN 0
+;[爆乳]なら技巧LV1以上, [巨乳]でなければ技巧3以上, [貧乳]だと技巧4以上必要
+SIF (TALENT:113 && ABL:12 == 0) || (TALENT:112 && ABL:12 < 2) || (TALENT:111 == 0 && TALENT:112 == 0 && TALENT:113 == 0 && ABL:12 < 3) || (TALENT:111 && ABL:12 < 4)
+	RETURN 0
+
+;朝イベント범용実行判定（주인の竿が有るか？）
+SIF MORNING_EVENT_COMMON_JUDGMENT(2) == 0
+	RETURN 0
+
+;범용身体サイズチェック
+SIF COMMON_BODYSIZE_CHECK(MASTER, TARGET) == 0
+	RETURN 0
+RETURN 1
+
+;-----------------------------------------------
+;パイズリ
+;-----------------------------------------------
+@MORNING_EVENT_2
+;정액중독
+IF ABL:31 == 1
+	LOCAL:0 = 1
+ELSEIF ABL:31 == 2
+	LOCAL:0 = 2
+ELSEIF ABL:31 == 3
+	LOCAL:0 = 3
+ELSEIF ABL:31 == 4
+	LOCAL:0 = 4
+ELSE
+	LOCAL:0 = 5
+ENDIF
+;악취둔감
+IF TALENT:61
+	LOCAL:0 += 1
+;악취민감
+ELSEIF TALENT:62
+	LOCAL:0 -= 1
+ENDIF
+;헌신적
+SIF TALENT:63
+	LOCAL:0 += 1
+;Ｂ敏感
+IF TALENT:106
+	LOCAL:0 += 1
+;Ｂ鈍感
+ELSEIF TALENT:107
+	LOCAL:0 -= 1
+ENDIF
+;음란
+SIF TALENT:170
+	LOCAL:0 += 1
+;조건을 만족시키지 않았다
+SIF LOCAL:0 < 1
+	RETURN 0
+
+DRAWLINE
+;지문 컷
+IF CFLAG:99 == 0
+	;貧乳の場合
+	IF TALENT:111
+		PRINTFORML 잠에서 깨는 것과 동시에 하복부에 위화감이 느껴졌다.
+		PRINTFORML 눈치채이지 않게 눈을 가만히 뜨니 %조사처리(CALLNAME:TARGET,"가")% 가슴으로 페니스를 희롱하는 중이었다.
+		PRINTFORML 아무래도 파이즈리의 연습을 하고 있는 모양이다…….
+	;巨乳・爆乳の場合
+	ELSEIF TALENT:112 || TALENT:113
+		PRINTFORML 잠에서 깨는 것과 동시에 하복부에 위화감이 느껴졌다.
+		PRINTFORML 눈을 뜨니 %조사처리(CALLNAME:TARGET,"가")% 커다란 가슴으로 페니스를 끼우고 세게 부비고 있다.
+	;それ以外
+	ELSE
+		PRINTFORML 잠에서 깨는 것과 동시에 하복부에 위화감이 느껴졌다.
+		PRINTFORML 눈을 뜨니 %조사처리(CALLNAME:TARGET,"가")% 가슴으로 페니스를 부비며 발사된 정액을 빨아마시고 있다.
+	ENDIF
+ENDIF
+
+;대사의 함수,TFLAG:200の141を使用
+CALL SELF_KOJO, TARGET, 141, LOCAL
+
+;巨乳・爆乳の場合のボーナス,欲情が2倍
+LOCAL:1 = (TALENT:112 || TALENT:113) ? 60 # 30
+
+;首謀者のパイズリ実行回数
+CFLAG:56 += 1
+;주인のパイズリ堪能回数
+CFLAG:MASTER:57 += 1
+;정액경험
+CALL COMMON_UP_EXP,TARGET, 4, LOCAL:0 , 0, 1
+;사정경험(주인)
+CALL COMMON_UP_EXP,MASTER, 3, LOCAL:0 , 0
+
+;LUNATIC 이상은 사정할 때마다 체력이 감소
+CALL EXHAUST_EJAC, MASTER, LOCAL:0
+
+;奉仕快楽경험
+CALL COMMON_UP_EXP,TARGET, 20, (LOCAL:0 / 2), 0, 1
+;레즈 경험
+SIF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	CALL COMMON_UP_EXP,TARGET, 12, 7, 0, 1
+
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL:0 * 40), 0, 1
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL:0 * 100), 0, 1
+;욕정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL:0 * LOCAL:1), 0, 1
+;恥情の珠(貧乳の場合のボーナス)
+SIF TALENT:110
+	CALL COMMON_UP_JUEL, TARGET, 15, (LOCAL:0 * 30), 0, 1
+;굴복의 구슬
+CALL COMMON_UP_JUEL, TARGET, 14, (LOCAL:0 * 40), 1, 1
+DRAWLINE
+
+;=============================================================================
+;朝イベントその3～朝騎乗位
+;=============================================================================
+;-----------------------------------------------
+;朝騎乗位実行判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_3
+;オトコだったらダメ
+SIF TALENT:120
+	RETURN 0
+;貞操帯を装着している場合, 不可能
+SIF CFLAG:42 & 2
+	RETURN 0
+;処女かＶ경험ない場合もダメ
+SIF TALENT:0 || EXP:0 < 1
+	RETURN 0
+;人魚はダメ
+SIF TALENT:229
+	RETURN 0
+
+;범용身体サイズチェック
+SIF COMMON_BODYSIZE_CHECK(MASTER, TARGET) == 0
+	RETURN 0
+
+;朝イベント범용実行判定（주인の竿が有るか？）
+SIF MORNING_EVENT_COMMON_JUDGMENT(2) == 0
+	RETURN 0
+RETURN 1
+
+;-----------------------------------------------
+;騎乗位
+;-----------------------------------------------
+@MORNING_EVENT_3
+;尻穴狂いの場合, 1/5の確率でアナル騎乗位になる
+;尻穴狂いの条件は以下の通り
+;「Ａ感覚3以上」もしくは「Ａ敏感な음란持ち」もしくは「淫尻持ち」もしくは「淫魔持ち」の状態でＡ경험がLv3より上の時
+IF RAND:5 == 0 && (ABL:2 >= 3 || (TALENT:104 && TALENT:170) || TALENT:173 || TALENT:180) && EXP:1 > EXPLV:3
+	RESULT = 0
+	;アナル騎乗位実行判定
+	CALL MORNING_EVENT_JUDGMENT_4
+	
+	IF RESULT != 0
+		;アナル騎乗位呼び出し
+		CALL MORNING_EVENT_4
+		RETURN 1
+	ENDIF
+ENDIF
+
+;朝から凄いなぁ……
+;정액중독
+IF ABL:31 == 1
+	LOCAL = 1
+ELSEIF ABL:31 == 2
+	LOCAL = 2
+ELSEIF ABL:31 == 3
+	LOCAL = 3
+ELSEIF ABL:31 == 4
+	LOCAL = 4
+ELSE
+	LOCAL = 5
+ENDIF
+;헌신적
+SIF TALENT:63
+	LOCAL += 1
+;快感に素直
+SIF TALENT:70
+	LOCAL += 1
+;Ｖ敏感
+IF TALENT:102
+	LOCAL += 1
+;Ｖ鈍感
+ELSEIF TALENT:103
+	LOCAL -= 1
+ENDIF
+;연모
+SIF TALENT:150
+	LOCAL += 1
+;복종
+SIF TALENT:160
+	LOCAL += 1
+;음란
+SIF TALENT:170
+	LOCAL += 1
+;조건을 만족시키지 않았다
+SIF LOCAL < 1
+	RETURN 0
+
+CFLAG:154 |= 1
+CFLAG:MASTER:154 |= 8
+
+;ここで주인が胸を揉む分岐判定(ただし, Ｂ感覚Lv3未満もしくは絶壁持ちは分岐しない)
+DRAWLINE
+IF ABL:3 >= 3 && TALENT:110 == 0 && RAND:100 < 20
+	;騎乗位で胸揉み付きの場合
+
+	;지문 컷
+	IF CFLAG:99 == 0
+		PRINTFORML 아침에 일어나니 허리 부근에 무게가 느껴졌다.
+	PRINTFORML 눈을 뜨니 %조사처리(CALLNAME:TARGET,"가")% 위에 올라타 신음하고 있다…….
+	ENDIF
+
+	;대사의 함수,TFLAG:200の146を使用(朝騎乗位＋胸揉み)
+	CALL SELF_KOJO, TARGET, 146, LOCAL
+
+	;지문 컷
+	IF CFLAG:99 == 0
+		PRINTFORML 기승위로 눈을 뜬 %조사처리(CALLNAME:MASTER,"는")% 모처럼 기회가 왔으니
+		PRINTFORML 보기 좋게 흔들리는 %CALLNAME:TARGET%의 가슴을 주물러주기로 했다…….
+	ENDIF
+
+	;Ｖ경험
+	CALL COMMON_UP_EXP,TARGET, 0, LOCAL , 0, 1
+	IF LOCAL/2 > 0
+		;절정경험
+		CALL COMMON_UP_EXP,TARGET, 2, (LOCAL / 2), 0, 1
+		;정액경험
+		CALL COMMON_UP_EXP,TARGET, 4, (LOCAL / 2), 0, 1
+		;奉仕快楽경험
+		CALL COMMON_UP_EXP,TARGET, 20, (LOCAL / 2), 0, 1
+		;사정경험(주인)
+		CALL COMMON_UP_EXP,MASTER, 3, (LOCAL / 2), 0
+
+		;LUNATIC 이상은 사정할 때마다 체력이 감소
+		CALL EXHAUST_EJAC, MASTER, LOCAL / 2
+	ENDIF
+
+	;Ｖ調律경험
+	CALL COMMON_UP_EXP,TARGET, 42, LOCAL , 0, 1
+	;Ｂ快楽경험
+	CALL COMMON_UP_EXP,TARGET, 44, LOCAL , 0, 1
+	;레즈 경험
+	SIF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+		CALL COMMON_UP_EXP,TARGET, 12, 7, 0, 1
+
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, (LOCAL * 50), 0, 1
+	;快Ｂの珠
+	CALL COMMON_UP_JUEL, TARGET, 3, (LOCAL * 50), 0, 1
+	;순종의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 100), 0, 1
+	;욕정의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL * 45), 1, 1
+ELSE
+	;激しく騎乗位の場合
+
+	;지문 컷
+	IF CFLAG:99 == 0
+		PRINTFORML 아침에 일어나니 허리 부근에 무게가 느껴졌다.
+		PRINTFORML 눈을 뜨니 %조사처리(CALLNAME:TARGET,"가")% 위에 올라타 신음하고 있다…….
+	ENDIF
+
+	;대사의 함수,TFLAG:200の142を使用(朝騎乗位)
+	CALL SELF_KOJO, TARGET, 142, LOCAL
+
+	;지문 컷
+	SIF CFLAG:99 == 0
+		PRINTFORML 기승위로 눈을 떴습니다.
+
+	;Ｖ경험
+	CALL COMMON_UP_EXP,TARGET, 0, LOCAL , 0, 1
+	IF LOCAL / 2 > 0
+		;절정경험
+		CALL COMMON_UP_EXP,TARGET, 2, (LOCAL / 2), 0, 1
+		;정액경험
+		CALL COMMON_UP_EXP,TARGET, 4, (LOCAL / 2), 0, 1
+		;奉仕快楽경험
+		CALL COMMON_UP_EXP,TARGET, 20, (LOCAL / 2), 0, 1
+		;사정경험(주인)
+		CALL COMMON_UP_EXP,MASTER, 3, (LOCAL / 2), 0
+
+		;LUNATIC 이상은 사정할 때마다 체력이 감소
+		CALL EXHAUST_EJAC, MASTER, LOCAL / 2
+	ENDIF
+
+	;Ｖ調律경험
+	CALL COMMON_UP_EXP,TARGET, 42, LOCAL , 0, 1
+	;레즈 경험
+	SIF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+		CALL COMMON_UP_EXP,TARGET, 12, 7, 0, 1
+
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, (LOCAL * 50), 0, 1
+	;순종의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 100), 0, 1
+	;욕정의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL * 40), 1, 1
+ENDIF
+DRAWLINE
+
+;=============================================================================
+;朝イベントその4～朝騎乗位アナル
+;=============================================================================
+;-----------------------------------------------
+;朝騎乗位アナル実行判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_4
+;一定のＡ경험がない場合は不可
+SIF EXP:1 < EXPLV:3
+	RETURN 0
+;貞操帯を装着している場合, 不可能
+SIF CFLAG:42 & 2
+	RETURN 0
+
+;범용身体サイズチェック
+SIF COMMON_BODYSIZE_CHECK(MASTER, TARGET) == 0
+	RETURN 0
+
+;朝イベント범용実行判定（주인の竿が有るか？）
+SIF MORNING_EVENT_COMMON_JUDGMENT(2) == 0
+	RETURN 0
+
+RETURN 1
+
+;-----------------------------------------------
+;騎乗位アナル
+;-----------------------------------------------
+;朝から凄いなぁ……
+@MORNING_EVENT_4
+;정액중독
+IF ABL:31 == 1
+	LOCAL = 1
+ELSEIF ABL:31 == 2
+	LOCAL = 2
+ELSEIF ABL:31 == 3
+	LOCAL = 3
+ELSEIF ABL:31 == 4
+	LOCAL = 4
+ELSE
+	LOCAL = 5
+ENDIF
+;헌신적
+SIF TALENT:63
+	LOCAL += 1
+;快感に素直
+SIF TALENT:70
+	LOCAL += 1
+;Ａ敏感
+IF TALENT:104
+	LOCAL += 1
+;Ａ鈍感
+ELSEIF TALENT:105
+	LOCAL -= 1
+ENDIF
+;연모
+SIF TALENT:150
+	LOCAL += 1
+;복종
+SIF TALENT:160
+	LOCAL += 1
+;음란
+SIF TALENT:170
+	LOCAL += 1
+;조건을 만족시키지 않았다
+SIF LOCAL < 1
+	RETURN 0
+
+CFLAG:154 |= 2
+CFLAG:MASTER:154 |= 16
+
+DRAWLINE
+;지문 컷
+IF CFLAG:99 == 0
+	PRINTFORML 아침에 일어나니 허리 부근에 무게가 느껴졌다.
+	PRINTFORML 눈을 뜨니 %조사처리(CALLNAME:TARGET,"가")% 국문에 딱딱해진 물건을 물고서 위에 올라타 신음하고 있다…….
+ENDIF
+
+;대사의 함수,TFLAG:200の147を使用(朝騎乗位アナル)
+CALL SELF_KOJO, TARGET, 147, LOCAL
+
+;지문 컷
+SIF CFLAG:99 == 0
+	PRINTFORML 기승위 애널로 눈을 떴습니다.
+
+;Ａ경험
+CALL COMMON_UP_EXP,TARGET, 1, LOCAL , 0, 1
+IF LOCAL / 2 > 0
+	;절정경험
+	CALL COMMON_UP_EXP,TARGET, 2, (LOCAL / 2), 0, 1
+	;정액경험
+	CALL COMMON_UP_EXP,TARGET, 4, (LOCAL / 2), 0, 1
+	;奉仕快楽경험
+	CALL COMMON_UP_EXP,TARGET, 20, (LOCAL / 2), 0, 1
+	;사정경험(주인)
+	CALL COMMON_UP_EXP,MASTER, 3, (LOCAL / 2), 0, 1
+
+	;LUNATIC 이상은 사정할 때마다 체력이 감소
+	CALL EXHAUST_EJAC, MASTER, LOCAL / 2
+ENDIF
+
+;Ａ快楽경험
+CALL COMMON_UP_EXP,TARGET, 43, LOCAL , 0, 1
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	;레즈 경험
+	CALL COMMON_UP_EXP,TARGET, 12, 7, 0, 1
+ELSEIF TALENT:120 && TALENT:MASTER:120
+	;ＢＬ경험
+	CALL COMMON_UP_EXP,TARGET, 13, 7, 0, 1
+ENDIF
+
+;快Ａの珠
+CALL COMMON_UP_JUEL, TARGET, 2, (LOCAL * 50), 0, 1
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 100), 0, 1
+;욕정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL * 40), 1, 1
+DRAWLINE
+
+;=============================================================================
+;朝イベントその5～お目覚めのキッス
+;=============================================================================
+;-----------------------------------------------
+;キスで起こされる実行判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_5
+;봉사정신が2未満, 순종が3未満のいずれかを満たす場合は不可
+SIF ABL:13 < 2 || ABL:10 < 3
+	RETURN 0
+;どちらかが猫舌だと猫フェラが有効でないとダメ
+IF TALENT:54 || TALENT:MASTER:54
+	;주인か調教者が猫舌だと二人の技巧が足して7必要
+	SIF (FLAG:14 & 16 && (ABL:MASTER:12 + ABL:12) < 7) || (FLAG:14 & 16) == 0
+		RETURN 0
+ENDIF
+
+;育児室に居て出産前なら不可能
+SIF CFLAG:4 == 2 && (TALENT:140 == 1 || TALENT:143 == 1)
+	RETURN 0
+RETURN 1
+
+;-----------------------------------------------
+;お目覚めのキッス
+;-----------------------------------------------
+@MORNING_EVENT_5
+;순종＋봉사정신
+IF ABL:13 + ABL:10 < 7
+	LOCAL = 1
+ELSEIF ABL:13 + ABL:10 < 9
+	LOCAL = 2
+ELSE
+	LOCAL = 4
+ENDIF
+;헌신적
+SIF TALENT:63
+	LOCAL += 1
+;친애
+SIF TALENT:152
+	LOCAL += 2
+;조건을 만족시키지 않았다
+SIF LOCAL < 1
+	RETURN 0
+
+DRAWLINE
+;지문 컷
+SIF CFLAG:99 == 0
+	PRINTFORML %CALLNAME:TARGET%의 입맞춤으로 눈을 떴습니다.
+
+;대사의 함수,TFLAG:200의 143을 사용
+CALL SELF_KOJO, TARGET, 143, LOCAL
+
+;지문 컷
+SIF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 뺨을 붉게 물들이며 아침 인사를 했다.
+
+;愛情경험
+SIF LOCAL / 2 > 0
+	CALL COMMON_UP_EXP,TARGET, 21, (LOCAL / 2), 0, 1
+;キス경험
+CALL COMMON_UP_EXP,TARGET, 23, 1, 0, 1
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	;레즈 경험
+	CALL COMMON_UP_EXP,TARGET, 12, 2, 0, 1
+ELSEIF TALENT:120 && TALENT:MASTER:120
+	;ＢＬ경험
+	CALL COMMON_UP_EXP,TARGET, 13, 2, 0, 1
+ENDIF
+
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL * 100), 0, 1
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 50), 1, 1
+DRAWLINE
+
+;=============================================================================
+;朝イベントその6～朝の足コキ
+;=============================================================================
+;-----------------------------------------------
+;朝の足コキ実行判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_6
+;サドっ気が3未満, 反発刻印がLv3以上のときはダメ
+SIF ABL:20 < 3 || MARK:9 >= 3
+	RETURN 0
+;育児室に居て出産前なら不可能
+SIF CFLAG:4 == 2 && (TALENT:140 == 1 || TALENT:143 == 1)
+	RETURN 0
+;人魚はダメ
+SIF TALENT:229
+	RETURN 0
+RETURN 1
+
+;-----------------------------------------------
+;朝の足コキ（朝足コキ追加)
+;-----------------------------------------------
+@MORNING_EVENT_6
+;サドっ気で加算Lv3で1
+;そもそもココに来る時点で3あるので最低1
+LOCAL = (ABL:20 - 2)
+;倒錯的
+SIF TALENT:80
+	LOCAL += 1
+;サド
+SIF TALENT:81
+	LOCAL += 2
+;小悪魔
+SIF TALENT:93
+	LOCAL += 1
+;ドＳ
+SIF TALENT:177
+	LOCAL += 5
+;연모
+SIF TALENT:150
+	LOCAL += 1
+;음란
+SIF TALENT:170
+	LOCAL += 2
+;조건을 만족시키지 않았다
+SIF LOCAL < 1
+	RETURN 0
+
+;노예が朝足コキした/MASTERが朝足コキで起きた
+CFLAG:154 |= 64
+CFLAG:MASTER:154 |= 128
+
+DRAWLINE
+;지문 컷
+IF CFLAG:99 == 0
+	PRINTFORML 다리 사이에 위화감을 느끼며 잠에서 깨자 %조사처리(CALLNAME:TARGET,"가")% 자기 발로 
+	PRINTFORM %CALLNAME:MASTER%의 
+	;竿の有無で分岐
+	IF TALENT:MASTER:120 || TALENT:MASTER:121
+		PRINTL 우뚝 솟은 물건을 부비고 있었다.
+	ELSE
+		PRINTL 보지를 찌걱뿌걱 소리를 내며 희롱하고 있었다.
+	ENDIF
+ENDIF
+
+;대사의 호출,TFLAG:200の148を使用
+CALL SELF_KOJO, TARGET, 148, LOCAL
+
+;射精処理/竿が無ければ飛ばす.
+IF LOCAL / 2 > 0 && (TALENT:MASTER:120 || TALENT:MASTER:121)
+	;정액경험
+	CALL COMMON_UP_EXP,TARGET, 4, (LOCAL / 2), 0, 1
+	;사정경험(주인)
+	CALL COMMON_UP_EXP,MASTER, 3, (LOCAL / 2), 0
+
+	;LUNATIC 이상은 사정할 때마다 체력이 감소
+	CALL EXHAUST_EJAC, MASTER, LOCAL / 2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	;레즈 경험
+	CALL COMMON_UP_EXP,TARGET, 12, 3, 0, 1
+ELSEIF TALENT:120 && TALENT:MASTER:120
+	;ＢＬ경험
+	CALL COMMON_UP_EXP,TARGET, 13, 3, 0, 1
+ENDIF
+
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL * 20), 0, 1
+;욕정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL * 70), 0, 1
+;先導の珠
+CALL COMMON_UP_JUEL, TARGET, 32, (LOCAL * 40), 1, 1
+DRAWLINE
+
+;=============================================================================
+;朝イベントその7～朝の３Ｐ
+;=============================================================================
+;-----------------------------------------------
+;朝の３Ｐ実行判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT_7
+;조수が居ない, もしくは조수が朝イベントの対象である時は不可
+SIF ASSI < 0 || ASSI == TARGET
+	RETURN 0
+;対象もしくは조수がオトコの場合は不可
+SIF TALENT:120 || TALENT:ASSI:120
+	RETURN 0
+;対象もしくは조수が反発刻印3の時は不可
+SIF MARK:9 >= 3 || MARK:ASSI:9 >= 3
+	RETURN 0
+;対象もしくは조수に貞操帯が付いてる場合は不可
+SIF (CFLAG:42 & 2) || (CFLAG:ASSI:42 & 2)
+	RETURN 0
+;対象もしくは조수が育児室に居て出産前なら不可能
+SIF (CFLAG:4 == 2 && (TALENT:140 == 1 || TALENT:143 == 1)) || (CFLAG:ASSI:4 == 2 && (TALENT:140 == 1 || TALENT:143 == 1))
+	RETURN 0
+;対象もしくは조수が「レズっ気1未満で両刀でない」場合は不可
+SIF (ABL:22 < 1 && TALENT:83 == 0) || (ABL:ASSI:22 < 1 && TALENT:ASSI:83 == 0)
+	RETURN 0
+;1/4の確率で発生
+SIF RAND:4 != 0
+	RETURN 0
+RETURN 1
+
+;-----------------------------------------------
+;朝の３Ｐ
+;-----------------------------------------------
+@MORNING_EVENT_7
+VARSET LOCAL, 0
+;노예と조수の欲望とレズ中毒を加算して平均化
+LOCAL:50 += (ABL:11 + ABL:32 + ABL:ASSI:11 + ABL:ASSI:32) / 4
+
+;음란
+SIF TALENT:170
+	LOCAL:50 += 2
+SIF TALENT:ASSI:170
+	LOCAL:50 += 2
+;헌신적
+SIF TALENT:63
+	LOCAL:50 += 1
+SIF TALENT:ASSI:63
+	LOCAL:50 += 1
+;친애
+SIF TALENT:152
+	LOCAL:50 += 1
+SIF TALENT:ASSI:152
+	LOCAL:50 += 1
+;상애
+SIF TALENT:153
+	LOCAL:50 += 1
+SIF TALENT:ASSI:153
+	LOCAL:50 += 1
+;조수が鼓舞
+SIF TALENT:ASSI:95
+	LOCAL:50 += 1
+;恐怖刻印2以上
+SIF MARK:8 >= 2
+	LOCAL:50 -= 1
+SIF MARK:ASSI:8 >= 2
+	LOCAL:50 -= 1
+;反発刻印あり
+SIF MARK:9
+	LOCAL:50 -= MARK:9
+SIF MARK:ASSI:9
+	LOCAL:50 -= MARK:ASSI:9
+;조건을 만족시키지 않았다
+SIF LOCAL:50 < 1
+	RETURN 0
+;LOCAL:50 = 1の場合は処理の都合上サービスする
+SIF LOCAL:50 == 1
+	LOCAL:50 = 2
+
+DRAWLINE
+;지문 컷
+IF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"가")% 눈을 뜨자
+	PRINTFORML %조사처리(CALLNAME:TARGET,"과")% %조사처리(CALLNAME:ASSI,"가")% 알몸으로 서로를 애무하고 있었다.
+	PRINTFORML 두 사람은 %조사처리(CALLNAME:MASTER,"가")% 일어난 것을 알아채고는 셋이서 기분 좋아지자고 말해왔다.
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 아침부터 두 사람을 상대로 운동하게 되었다.
+ENDIF
+
+TFLAG:99 = 0
+;대사의 호출,TFLAG:200의 163,164를 사용
+CALL SELF_KOJO, TARGET, 163, LOCAL:50
+
+;노예側の口上でTFLAG:99を立ててなければ, 조수側の口上を呼び出す
+SIF TFLAG:99 == 0
+	CALL SELF_KOJO, ASSI, 164, LOCAL:50
+
+;노예と조수が朝３Ｐした/MASTERが３Ｐで起こされた
+CFLAG:154 |= 256
+CFLAG:ASSI:154 |= 256
+CFLAG:MASTER:154 |= 512
+
+;LOCAL:1=주인が受ける정액경험, LOCAL:2=조교 대상が受ける정액경험, LOCAL:3=조수が受ける정액경험
+;주인의 사정 처리/주인에게 좆대가 없으면 넘어갑니다.
+IF TALENT:MASTER:120 || TALENT:MASTER:121
+	LOCAL:2 += LOCAL:50 / 2
+	LOCAL:3 += LOCAL:50 / 2
+ENDIF
+
+;노예의 사정 처리/노예에게 좆대가 없으면 넘어갑니다.
+IF TALENT:120 || TALENT:121
+	LOCAL:1 += LOCAL:50 / 2
+	LOCAL:3 += LOCAL:50 / 2
+ENDIF
+
+;조수의 사정 처리/조수에게 좆대가 없으면 넘어갑니다.
+IF TALENT:ASSI:120 || TALENT:ASSI:121
+	LOCAL:1 += LOCAL:50 / 2
+	LOCAL:2 += LOCAL:50 / 2
+ENDIF
+
+FOR LOCAL:99 , 0 , 3
+	IF LOCAL:99 == 0
+		LOCAL = MASTER
+	ELSEIF LOCAL:99 == 1
+		LOCAL = TARGET
+	ELSE
+		LOCAL = ASSI
+	ENDIF
+	
+	;정액경험(범용)
+	SIF LOCAL:(LOCAL:99 + 1) > 0
+		CALL COMMON_UP_EXP , LOCAL, 4, (LOCAL:(LOCAL:99 + 1)), 0
+	;범용 사정 처리/보고 있는 대상에게 좆대가 없으면 넘어갑니다.
+	IF TALENT:LOCAL:120 || TALENT:LOCAL:121
+		;사정경험(범용)
+		CALL COMMON_UP_EXP ,LOCAL , 3, LOCAL:50, 0
+
+		;LUNATIC 이상은 사정할 때마다 체력이 감소
+		CALL EXHAUST_EJAC , LOCAL, LOCAL:50
+	ENDIF
+NEXT
+
+;레즈 경험(조교 대상 · 조수)
+IF TALENT:MASTER:120 == 0
+	CALL COMMON_UP_EXP,TARGET, 12, 6, 0
+	CALL COMMON_UP_EXP,ASSI, 12, 6, 0
+ELSE
+	CALL COMMON_UP_EXP,TARGET, 12, 3, 0
+	CALL COMMON_UP_EXP,ASSI, 12, 3, 0
+ENDIF
+
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL:50 * 80), 0
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL:50 * 110), 0
+;욕정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL:50 * 150), 0
+
+;습득의 구슬(조수)
+CALL COMMON_UP_JUEL, ASSI, 11, (LOCAL:50 * 80), 0
+;순종의 구슬(조수)
+CALL COMMON_UP_JUEL, ASSI, 12, (LOCAL:50 * 110), 0
+;욕정의 구슬(조수)
+CALL COMMON_UP_JUEL, ASSI, 13, (LOCAL:50 * 150), 1
+DRAWLINE

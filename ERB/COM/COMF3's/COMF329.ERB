@@ -1,0 +1,124 @@
+﻿;=============================================================================
+;불알 애무한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE329
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:329 > 0
+	RETURN 0
+;ふたたま커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:14 & 32) == 0
+	RETURN 0
+;オトコか, 후타나리かつ玉ありじゃないとダメ
+SIF TALENT:120 == 0 && TALENT:121 != 2
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼)2미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 2) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM329
+PRINTL 불알 애무한다
+TSTR:0 = 불알 애무한다
+CALL TRAIN_MESSAGE_COM329
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 25
+DOWNBASE:1 += 90
+
+SOURCE:12 = 100
+SOURCE:15 = 50
+SOURCE:22 = 150
+SOURCE:30 = 80
+
+;ABL:플레이어의 기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:15 , 0.60
+	TIMES SOURCE:22 , 1.00
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:22 , 1.20
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:22 , 1.40
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:22 , 1.60
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:15 , 2.50
+	TIMES SOURCE:22 , 1.80
+ELSE
+	TIMES SOURCE:15 , 4.00
+	TIMES SOURCE:22 , 2.00
+ENDIF
+
+;노예의 P⇔조교자의 손가락의 불결이 이동
+STAIN:2 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:2
+
+;동성이라면 레즈비언(BL) 경험이 들어간다
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM329
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;애태우기플레이로 대상으로 반발 각인 Lv2 이상이 있을 때
+IF TEQUIP:68 && MARK:9 > 1
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 싫어서 버둥대는 %CALLNAME:TARGET%의 불알주머니를 가볍게 어루만졌다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 굴욕을 느끼면서도 자극에 몸을 흔들어댔다….
+;애태우기플레이
+ELSEIF TEQUIP:68
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 불알주머니를 계속 가볍게 어루만졌다….
+;대상으로 반발 각인 Lv2 이상이 있을 때
+ELSEIF MARK:9 > 1
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 싫어서 버둥대는 %CALLNAME:TARGET%의 불알주머니를 억지로 비볐다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 굴욕을 느끼면서도 더욱 자극을 받고 싶어하는 것 같이 보였다….
+;주인 조교로 대상이 친애나 상애 때
+ELSEIF ASSIPLAY == 0 && (TALENT:152 || TALENT:153)
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 기대의 눈빛으로 바라보고 있는 %CALLNAME:TARGET%의 불알을 \@(ABL:PLAYER:12 >= 5) ? 교묘하게 # 나선을 그리듯이 돌리며\@ 비비어 주었다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 사랑하는 사람의 자극을 마음껏 만끽하고 있는 것 같다….
+;그 외 때(조교자의 기교가 Lv5 때는 조금 표시가 다르다)
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 불알주머니를 \@(ABL:PLAYER:12 >= 5) ? 교묘하게 # 나선을 그리듯이 돌리며\@ 비볐다….
+ENDIF

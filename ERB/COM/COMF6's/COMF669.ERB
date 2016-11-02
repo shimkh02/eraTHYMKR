@@ -1,0 +1,139 @@
+﻿;=============================================================================
+;꼬리를 잡아당긴다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커멘드를 직접 선택할 수 없다)
+@COM_ABLE669
+RETURN 0
+
+@EXCOM_ABLE669
+;개별 설정 커멘드 필터
+SIF DITEMTYPE:999:670 > 0
+	RETURN 0
+;동물귀 이외 불가
+SIF TALENT:116 == 0
+	RETURN 0
+;조교자의 기교가 3 미만은 안돼
+SIF ABL:PLAYER:12 < 3
+	RETURN 0
+;곤착용중의 경우 조교자의 기교 4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교중은 안 됨
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM669
+PRINTL 꼬리를 잡아당긴다
+TSTR:0 = 꼬리를 잡아당긴다
+
+SELECTCOM = 669
+CALL TRAIN_MESSAGE_COM669
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 70
+
+SOURCE:12 = 20
+SOURCE:15 = 10
+SOURCE:17 = 50
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:11 = 75
+	SOURCE:20 = 20
+ELSEIF ABL:10 == 1
+	SOURCE:11 = 120
+ELSEIF ABL:10 == 2
+	SOURCE:11 = 170
+	SOURCE:12 = 10
+ELSEIF ABL:10 == 3
+	SOURCE:11 = 200
+	SOURCE:12 = 50
+ELSEIF ABL:10 == 4
+	SOURCE:11 = 250
+	SOURCE:12 = 150
+	SOURCE:17 = 150
+ELSE
+	SOURCE:11 = 280
+	SOURCE:12 = 200
+	SOURCE:17 = 250
+ENDIF
+
+;ABL:욕망을 본다
+IF ABL:11 == 0
+	SOURCE:18 = 40
+	SOURCE:20 = 20
+ELSEIF ABL:11 == 1
+	SOURCE:18 = 70
+ELSEIF ABL:11 == 2
+	SOURCE:18 = 300
+ELSEIF ABL:11 == 3
+	SOURCE:10 = 50
+	SOURCE:18 = 850
+ELSEIF ABL:11 == 4
+	SOURCE:10 = 300
+	SOURCE:17 = 50
+	SOURCE:18 = 1200
+ELSE
+	SOURCE:10 = 600
+	SOURCE:17 = 200
+	SOURCE:18 = 1700
+ENDIF
+
+
+
+
+IF TEQUIP:59 == 2 || TEQUIP:59 == 12 || TEQUIP:59 == 13
+	;학교수영복·비키니·위험한 레오타드 장착중
+	SOURCE:10 = 1200
+	SOURCE:12 += 400
+ELSEIF TEQUIP:59 == 17 || SOURCE:59 == 21
+	;곤·라서스펜더 장착중
+	SOURCE:10 = 1400
+	SOURCE:12 += 800
+ELSEIF TFLAG:899 <= 0 && EQUIP:14 <= 0 && (TALENT:152 || TALENT:153) && (TEQUIP:59 == 1 || TEQUIP:59 == 19)
+	;친애나 상애로 앞치마나 웨딩 드레스 장착중(다만 수면이나 실신하고 있지 않을 때)
+	TIMES SOURCE:11 , 1.50 
+ELSEIF TEQUIP:36
+	;사라시 장착중
+	SOURCE:10 = 1200
+	TIMES SOURCE:3 , 1.80
+	TIMES SOURCE:11 , 1.40
+ENDIF
+
+RETURN 1
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM669
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+IF TEQUIP:68
+	PRINTL 민감한 꼬리를 조심스럽게 당기고 있다.
+ELSE
+	PRINTL 꼬리를 격렬하게 당기고 있다.
+ENDIF
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF ABL:11 == 0
+	PRINTW 꼬리가 만져져서 혐오감을 드러내고 있다.
+ELSEIF ABL:11 == 1
+	PRINTW 꼬리를 잡아당겨지는, 이상한 감각에 당황하고 있다.
+ELSEIF ABL:11 == 2
+	PRINTW 꼬리에서 오는 쾌감에 신음소리를 참고 있다.
+ELSEIF ABL:11 == 3
+	PRINTW 꼬리에서 오는 쾌감을 즐기고 있는 것 같다….
+ELSEIF ABL:11 == 4
+	PRINTW 꼬리가 당겨질 때마다 정신을 잃고 있다….
+ELSEIF ABL:11 == 5
+	PRINTW 군침을 흘리면서 꼬리가 당겨질 때마다 절정하고 있다.
+ENDIF

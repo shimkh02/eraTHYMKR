@@ -1,0 +1,144 @@
+﻿;=============================================================================
+;흥분제
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE70
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:70 > 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:69 == 0 && NOITEM == 0
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;산란촉진제를 사용 중이면 사용할 수 없다
+SIF TEQUIP:9
+	RETURN 0
+;효과 발휘중·반동 중에는 불가
+SIF TEQUIP:14
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;수커맨드의 사이, 쾌감과 윤활과 취기가 증강되는 약을 먹인다.
+;효과가 끊어진 후, 당분간 쾌감이나 윤활 감퇴＆트라우마 증강, 약물 경험 대량 증가.
+@COM70
+PRINTL 흥분제
+TSTR:0 = 흥분제
+CALL TRAIN_MESSAGE_COM070
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 90
+
+SOURCE:26 = 3800
+SOURCE:31 = 3200
+
+IF NOITEM == 0
+	ITEM:69 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:69
+		CALL FILL_PLURAL_ITEM, 69
+ENDIF
+TEQUIP:14 = 10
+
+;약물 경험
+TCVAR:40 += 5
+
+RETURN 1
+
+;--------------------------------------------------
+;흥분제 효과 발휘중
+;--------------------------------------------------
+@EQUIP_COM70
+IF TEQUIP:14 > 4
+	PRINTL <흥분제 효과 발휘 중>
+	TEQUIP:14 -= 1
+
+	TIMES SOURCE:0 , 1.30
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:3 , 1.30
+	TIMES SOURCE:19 , 1.20
+	TIMES SOURCE:26 , 1.30
+	TIMES SOURCE:40 , 1.30
+	TIMES SOURCE:41 , 1.30
+
+	;약물 경험
+	TCVAR:40 += 1
+
+ELSEIF TEQUIP:14 > 1
+	PRINTL <흥분제 반동 중>
+	TEQUIP:14 -= 1
+	CALL EQUIP_MESSAGE_COM070
+
+	TIMES DOWNBASE:1 , 1.10
+	TIMES SOURCE:0 , 0.70
+	TIMES SOURCE:1 , 0.70
+	TIMES SOURCE:2 , 0.70
+	TIMES SOURCE:3 , 0.70
+	TIMES SOURCE:19 , 0.60
+	TIMES SOURCE:25 , 2.40
+	TIMES SOURCE:26 , 1.20
+	TIMES SOURCE:40 , 1.20
+	TIMES SOURCE:41 , 1.20
+ELSEIF TEQUIP:14 == 1
+	PRINTL <흥분제 반동 종료>
+	TEQUIP:14 = 0
+
+	TIMES SOURCE:26 , 1.20
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM070
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%에게 
+SIF ABL:PLAYER:12 >= 3
+	PRINT 입으로 
+SIF ABL:10 == 0
+	PRINT 억지로 
+	PRINTL 흥분제를 먹였다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF ABL:10 > 3 && MARK:9 < 3
+	PRINTFORML 곤혹스런 표정을 지으며, 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 불안하게 보고 있다.
+ELSEIF MARK:9 >= 3
+	PRINTFORML 경계하며, 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 째려보고 있다.
+ELSE
+	PRINTFORML 놀란 표정을 지으며, 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 보고 있다.
+ENDIF
+
+;--------------------------------------------------
+;장착시 메시지
+;--------------------------------------------------
+@EQUIP_MESSAGE_COM070
+CALL KOJO_EQUIP_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW 흥분제의 효과가 끝난 %조사선택(CALLNAME:TARGET, "는")% 양팔로 전신을 움켜쥐곤 몰려오는 불쾌함을 억지로 참고 있다.

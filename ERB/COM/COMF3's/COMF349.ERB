@@ -1,0 +1,135 @@
+﻿;=============================================================================
+;포-윳-!
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE349
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:349 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;勝手に実行する場合は別条件
+IF TFLAG:699 > 0
+	;実行者が陥落しているか奉仕경험이 ないとダメ
+	SIF TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0 && ABL:13 <= 0
+		RETURN 0
+ELSE
+	;조교자가 主人か[恋慕]か奉仕경험Lv3이상이 아니면 불가
+	SIF ASSIPLAY && TALENT:PLAYER:150 == 0 && ABL:PLAYER:13 < 3
+		RETURN 0
+	;조교자가 [精神崩壊], [傀儡]だとダメ
+	SIF TALENT:PLAYER:167 || TALENT:PLAYER:168
+		RETURN 0
+ENDIF
+;조교 대상이 [精神崩壊], [傀儡]だとダメ
+SIF TALENT:167 || TALENT:168
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;目隠し, 耳栓, 暗闇展開をしていた場合効果は無し
+SIF TEQUIP:41 || TEQUIP:45 || TEQUIP:70
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;완전 취미 커맨드이므로 실용성 미묘
+;그렇지만 개에 사용하면(자) 판데믹크 발생
+;끈질기게 사용하면(자) 미움받는다
+@COM349
+PRINTL For you~!
+TSTR:0 = For you~!
+CALL TRAIN_MESSAGE_COM349
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 40
+
+IF TFLAG:143 > 10
+	SOURCE:31 = (TFLAG:143 - 10) * 10
+ELSE
+	SOURCE:24 = 50 - (TFLAG:143 * 5)
+ENDIF
+
+;개-!
+IF NO:TARGET == 7
+	;ABL:노출벽을 본다
+	IF ABL:14 == 0
+		SOURCE:12 = 1000
+		SOURCE:25 = 800
+		SOURCE:32 = 500
+	ELSEIF ABL:14 == 1
+		SOURCE:12 = 500
+		SOURCE:25 = 100
+		SOURCE:32 = 200
+	ELSEIF ABL:14 == 2
+		SOURCE:12 = 300
+		SOURCE:25 = 20
+		SOURCE:32 = 100
+	ELSEIF ABL:14 == 3
+		SOURCE:12 = 150
+		SOURCE:32 = 50
+	ELSEIF ABL:14 == 4
+		SOURCE:12 = 100
+	ELSE
+		SOURCE:12 = 50
+	ENDIF
+	;마음대로 실행했을 경우
+	SIF TFLAG:699 > 0
+		SOURCE:28 = (1+ABL:13)*500
+ELSEIF NO:PLAYER == 7
+	;ABL:봉사 정신을 본다
+	IF ABL:13 == 0
+		SOURCE:11 = 10
+	ELSEIF ABL:13 == 1
+		SOURCE:11 = 25
+	ELSEIF ABL:13 == 2
+		SOURCE:11 = 50
+	ELSEIF ABL:13 == 3
+		SOURCE:11 = 75
+	ELSEIF ABL:13 == 4
+		SOURCE:11 = 100
+	ELSE
+		SOURCE:11 = 150
+	ENDIF
+	SOURCE:24 *= 2
+ENDIF
+
+;카운트(다만 마음대로 했을 경우는 카운트 하지 않는다)
+SIF TFLAG:699 == 0
+	TFLAG:143 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM349
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TFLAG:699 > 0
+	PRINTFORML %조사선택(CALLNAME:MASTER, "가")% 아무것도 명령하지 않았는데도 %조사선택(CALLNAME:TARGET, "는")% 
+	PRINTFORML 왼손을 허리에 짚고 오른손의 엄지를 곧추 세우면서 검지로 %조사선택(CALLNAME:PLAYER,"를")% 가리켰다.
+	IF NO:TARGET == 7
+		PRINTL 그리고 만면의 미소를 띠며 「For you~!」라고 외쳤다.
+		PRINTFORML 그리고, 자신이 저지른 행위를 알아차린 %조사선택(CALLNAME:TARGET, "는")%
+		PRINTW 너무나 부끄러워서 얼굴을 새빨갛게 하면서 굳어져 버렸다….
+	ELSE
+		PRINTW 그리고 만면의 미소를 띠며 「For you~!」라고 외쳤다.
+	ENDIF
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 왼손을 허리에 짚고 오른손의 엄지를 곧추 세우면서 검지로 %조사선택(CALLNAME:TARGET, "를")% 가리켰다.
+	PRINTW 그리고 만면의 미소를 띠며 「For you~!」라고 외쳤다….
+ENDIF

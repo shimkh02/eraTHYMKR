@@ -1,0 +1,213 @@
+﻿;=============================================================================
+;요도 면봉
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE140
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:140 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;요도개발경험이 1이하일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:46 <= 1
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:79 == 0 && NOITEM == 0
+	RETURN 0
+;남자일 경우, 기교2이상이 아니면 쓸 수 없다
+SIF TALENT:120 && ABL:12 < 2
+	RETURN 0
+;ASSI일 경우, 기교3이상이 아니면 쓸 수 없다.
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 3
+		RETURN 0
+ENDIF
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;그밖의 Ｕ계 장착구 사용 중에는 불가
+SIF (TEQUIP:32 && TEQUIP:32 != 1)
+	RETURN 0
+;남자일 경우, Ｃ계 장착구 사용 중에는 불가
+SIF (TEQUIP:30 || TEQUIP:31) && TALENT:120
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;새댁 플레이 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;eraElona 동고의 자작 커맨드를 유용
+@COM140
+PRINTL 요도 면봉
+TSTR:0 = 요도 면봉
+CALL TRAIN_MESSAGE_COM140
+
+DOWNBASE:0 += 40
+DOWNBASE:1 += 90
+
+SOURCE:12 = 300
+SOURCE:31 = 200
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 10
+	SOURCE:22 = 150
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 50
+	SOURCE:22 = 250
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 250
+	SOURCE:22 = 400
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 600
+	SOURCE:22 = 700
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1200
+	SOURCE:22 = 1300
+ELSE
+	SOURCE:0 = 1800
+	SOURCE:22 = 2000
+ENDIF
+
+;EXP:요도 개발 경험을 본다
+IF EXP:46 < EXPLV:1
+	TIMES SOURCE:0 , 0.20
+	TIMES SOURCE:22 , 0.20
+	SOURCE:20 = 300
+ELSEIF EXP:46 < EXPLV:2
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:22 , 0.50
+	SOURCE:20 = 180
+ELSEIF EXP:46 < EXPLV:3
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:22 , 0.80
+	SOURCE:20 = 80
+ELSEIF EXP:46 < EXPLV:4
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:22 , 1.00
+	SOURCE:20 = 30
+ELSEIF EXP:46 < EXPLV:5
+	TIMES SOURCE:0 , 1.60
+	TIMES SOURCE:22 , 1.20
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:0 , 1.80
+	TIMES SOURCE:22 , 1.50
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:0 , 0.10
+	SOURCE:20 += 1000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:0 , 0.20
+	SOURCE:20 += 500
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:0 , 0.60
+	SOURCE:20 += 100
+	TIMES SOURCE:20 , 0.80
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSE
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.50
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.50
+ELSE
+	TIMES SOURCE:0 , 1.80
+ENDIF
+
+;요도광
+SIF TALENT:175
+	TIMES SOURCE:0 , 1.20
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:100
+	TIMES SOURCE:12 , 1.50
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+ELSEIF TALENT:101
+	TIMES SOURCE:12 , 0.60
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	TIMES SOURCE:22 , 2.00
+
+;면봉 1개 소비
+IF NOITEM == 0
+	ITEM:79 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:79
+		CALL FILL_PLURAL_ITEM, 79
+ENDIF
+
+TCVAR:46 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM140
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 면봉을 %CALLNAME:TARGET%의 
+SIF TALENT:127 || TALENT:128
+	PRINT 작고 미숙한 
+PRINTL 요도구에 갖다 대었다.
+PRINTFORML 면봉이 %CALLNAME:TARGET%의 요도안에 빙글빙글 돌며 들어가고 있다….
+PRINTW

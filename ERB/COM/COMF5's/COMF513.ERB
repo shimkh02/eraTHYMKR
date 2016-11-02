@@ -1,0 +1,173 @@
+﻿;=============================================================================
+;촉수 파이즈리
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE513
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:513 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;[절벽]이면 불가
+SIF TALENT:110
+	RETURN 0
+;[爆乳]なら기교LV1이상, [巨乳]でなければ기교3이상, [貧乳]だと기교4이상 필요
+SIF (TALENT:113 && ABL:12 == 0) || (TALENT:112 && ABL:12 < 2) || (TALENT:111 == 0 && TALENT:112 == 0 && ABL:12 < 3) || (TALENT:111 && ABL:12 < 4)
+	RETURN 0
+;촉수緊縛中は不可
+SIF TEQUIP:40
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM513
+PRINTL 촉수 파이즈리
+TSTR:0 = 촉수 파이즈리
+CALL TRAIN_MESSAGE_COM513
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 30
+DOWNBASE:1 += 180
+
+SOURCE:22 = 1000
+SOURCE:31 = 1500
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 180
+	SOURCE:16 = 100
+	SOURCE:30 = 1200
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 270
+	SOURCE:16 = 160
+	SOURCE:30 = 800
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 360
+	SOURCE:16 = 240
+	SOURCE:30 = 400
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 450
+	SOURCE:16 = 380
+	SOURCE:30 = 200
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 540
+	SOURCE:16 = 600
+	SOURCE:30 = 100
+ELSE
+	SOURCE:15 = 600
+	SOURCE:16 = 850
+	SOURCE:30 = 10
+ENDIF
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	LOCAL:1 = 50
+ELSEIF ABL:3 == 1
+	LOCAL:1 = 100
+ELSEIF ABL:3== 2
+	LOCAL:1 = 250
+ELSEIF ABL:3 == 3
+	LOCAL:1 = 500
+ELSEIF ABL:3 == 4
+	LOCAL:1 = 800
+ELSE
+	LOCAL:1 = 1000
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 1.00
+	TIMES SOURCE:15 , 0.50
+	TIMES SOURCE:16 , 0.50
+	TIMES SOURCE:30 , 2.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 1.20
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 1.50
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 1.80
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+	TIMES SOURCE:30 , 0.50
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 2.00
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:16 , 1.50
+	TIMES SOURCE:30 , 0.10
+ELSE
+	TIMES LOCAL:1 , 2.40
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+	TIMES SOURCE:30 , 0.00
+ENDIF
+
+;B민감·둔감
+IF TALENT:106
+	TIMES LOCAL:1 , 1.20
+ELSEIF TALENT:107
+	TIMES LOCAL:1 , 0.70
+ENDIF
+;큰 가슴·폭유
+IF TALENT:112
+	TIMES LOCAL:1 , 1.20
+ELSEIF TALENT:113
+	TIMES LOCAL:1 , 1.50
+ENDIF
+;음유
+SIF TALENT:174
+	TIMES LOCAL:1 , 1.20
+
+SOURCE:3 += LOCAL:1
+SOURCE:23 += LOCAL:1 /2
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 1
+;조교 대상의 파이즈리 실행 회수
+CFLAG:56 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM513
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM 좌우로부터 가까워진 촉수가 %CALLNAME:TARGET%의 
+IF TALENT:111
+	PRINT 납작한 
+ELSEIF TALENT:112
+	PRINT 풍만한 
+ELSEIF TALENT:113
+	PRINT 지나치게 풍만한 
+ELSE
+	PRINT 아름다운 형태의 
+ENDIF
+PRINTL 가슴을 모으듯이 껴안더니,
+PRINTW 유방으로 만든 터널에 다른 촉수가 아래에서 위로 기어들어 피스톤 운동을 시작했다….

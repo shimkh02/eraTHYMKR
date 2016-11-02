@@ -1,0 +1,4034 @@
+﻿;-------------------------------------------------
+;스이카 대사 설정
+;080104　엔딩 따위 추가(분기 있음). 코멘트아웃하고 있으므로 취향에 따라 해제하세요.
+;-------------------------------------------------
+
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+;대사의 존재 판정(YM판)
+@TRY_23
+RETURN 1
+
+@EVENTTRAIN
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+@EVENTEND
+#LATER
+
+
+;--------------------------------------------------
+;EVENTTRAIN関係（XXXをキャラ番号に置換）
+;調教開始時のセリフ CFLAG 201～210を使用
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 23
+	RETURN 0
+;--------------------------------------------------
+;엑스트라 모드 구문 CFLAG:5020을 사용
+;예를 선택했을 때 첫 조교시에 대사 설정용의 소질로 변경할 수 있습니다.
+;밑에 적은 처녀화할 경우의 구문을 샘플로 실어둡니다.
+;-------------------------------------------------;
+IF CFLAG:5020 == 0
+	PRINTL 처녀 모드로 이행하겠습니까?
+	PRINTL [0] 예
+	PRINTL [1] 아니오
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―처녀 모드로 소질, 능력을 변경합니다―
+		TALENT:0 = 1
+		ABL:1 = 0
+		EXP:0 = 0
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드로 조교를 개시합니다―
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+	PRINTL 슈와슈와 스파크 LOVE 두근두근거려?
+	PRINTL [0] 사랑의 비약 들어간 큥큥 칵테일로 EXTEND!
+	PRINTL [1] 이해할 수 없다
+	$INPUT_LOOP_SUWASUPA
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ★★★ (≧Д≦) E X T E N D ! ★★★
+		TALENT:55 = 1
+		TALENT:193 = 1
+			SIF RELATION:1 < 200
+			RELATION:1 = 200
+	ELSEIF RESULT == 1
+		PRINTFORMW ― 뭐라는 거야 이 술주정뱅이가! ―
+	ELSE
+		GOTO INPUT_LOOP_SUWASUPA
+	ENDIF
+	CFLAG:5020 = 1
+ENDIF
+;--------------------------------------------------
+;-------------------------------------------------
+;初調教時 CFLAG201
+;-------------------------------------------------
+IF CFLAG:5201 == 0
+	DRAWLINE
+	PRINTFORMW 「……인간을 믿은 내가 바보였지」
+	PRINTFORMW 「너희들은…… 정말로 속이거나, 함정에 빠트리기를 좋아하는구나」
+	PRINTFORMW 「한심스럽도다 인간들아. 어찌 거짓을 일삼는가. 귀신조차 이와 같은 짓은 하지 않거늘…… 이러면 어때?」
+	CFLAG:5201 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;調教開始時（一回のみ） CFLAG201
+;-------------------------------------------------
+
+;굴복각인Lv1
+ELSEIF CFLAG:5201 < 2 && MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 「……너같은 것이 있기 때문에 오니는 자취를 감추었다고」
+	PRINTFORMW 「」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"를")% 보면서 스이카는 깊게 한숨을 쉬었다.
+	CFLAG:5201 = 2
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF CFLAG:5201 < 3 && MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「오늘도? 아니 뭐, 물어보나 마나겠지만」
+	PRINTFORMW 스이카는 반쯤 체념한 얼굴로 %CALLNAME:MASTER%에게 물어보았다.
+	CFLAG:5201 = 3
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF CFLAG:5201 < 4 && MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「왔군. 그럼, 시작해볼까」
+	PRINTFORMW 말하자마자 스이카는 옷을 벗기 시작한다.
+	CFLAG:5201 = 4
+	RETURN 1
+
+;굴복각인Lv3+연모
+ELSEIF CFLAG:5201 < 5 && MARK:2 == 3 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 방에 들어가니 달려온 스이카는 말없이 %CALLNAME:MASTER%의 가슴에 얼굴을 묻어왔다.
+	PRINTFORMW 머리를 스다듬어주자 스이카는 붉어진 눈으로 %조사처리(CALLNAME:MASTER,"를")% 올려다 보았다.
+	PRINTFORMW 「……너 말이야, 지독한 인간이라고. 자각은 있어?」
+	PRINTFORMW 「오니를 속여서 붙잡아서, 희롱하고 범하고 울리고 말이야」
+	PRINTFORMW 「그리고는…… 반하게 만들다니……」
+	PRINTFORMW 어미의 품에 파고드는 새끼고양이처럼 머리를 가슴에 부비적거렸다.
+	PRINTFORMW 「응―, 일단 곁에 둬줘」
+	PRINTFORMW 「그것만으로…… 지금은 만족하거든」
+	CFLAG:5201 = 5
+	RETURN 1
+
+;助手の有無をチェック（いない場合は2회째 이후へ飛ぶ）
+ELSEIF ASSI < 0
+	CALL K23_KOJO2
+
+;-------------------------------------------------
+;助手との掛け合い(XXを助手のキャラ番号に置換, CALL KXXX_KOJO2のXXXをキャラ番号に変更する) CFLAG202　
+;掛け合いをするキャラを増やす場合は, コピ―＆ペ―ストをして, CFLAGの数を203, 204と増やす
+;-------------------------------------------------
+;助手
+;ELSEIF ASSINO() == XX
+;	DRAWLINE
+	;처음
+;	IF CFLAG:5202 == 0
+		;연모＋연모時初口上（陥落イベント）が発生済み
+;		IF TALENT:150 == 1 && CFLAG:5201 == 5
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5202 = 1
+;			RETURN 1
+	;2회째 이후
+;	ELSEIF CFLAG:5202 == 1 && FLAG:11 ==2
+		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+
+;ELSEIF ASSINO() == XX
+;	DRAWLINE
+	;처음
+;	IF CFLAG:5203 == 0
+		;연모＋연모時初口上（陥落イベント）が発生済み
+;		IF TALENT:150 == 1 && CFLAG:5201 == 5
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5203 = 1
+;			RETURN 1
+	;2회째 이후
+;	ELSEIF CFLAG:5203 == 1 && FLAG:11 ==2
+		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+
+;口上のある助手が居ない場合は, 通常の2회째 이후の口上へ飛ぶ
+ELSE
+	CALL K23_KOJO2
+ENDIF
+
+;-------------------------------------------------
+;調教開始時（2回目以降） CFLAGなし 
+;-------------------------------------------------
+
+@K23_KOJO2
+;굴복각인Lv0
+IF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 스이카는 여유로운 표정으로 이쪽을 향해 가볍게 손을 흔들고 있다.
+	RETURN 1
+
+;굴복각인Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 스이카는 여유로운 표정으로 이쪽을 향해 가볍게 손을 흔들고 있다.
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「이거야 나 참……」
+	PRINTFORMW 스이카는 경계하듯이 %조사처리(CALLNAME:MASTER,"를")% 노려보고 있다.
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「할 거지? 빨리 하라고」
+	PRINTFORMW 그렇게 말하면서, 스이카는 옷을 벗기 시작했다.
+	RETURN 1
+
+;굴복각인Lv3+연모
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	;口上のランダムセレクト
+	A = RAND:3
+	IF A == 0
+		PRINTFORMW 「아, 드디어 왔군, 오늘도 잔뜩 해볼까」
+		PRINTFORMW 이미 전라가 된 희색만면한 스이카가 맞아주었다.
+	ELSEIF A ==1
+		PRINTFORMW 문을 열어보니 알코올의 향기가 콧구멍을 간지럽힌다.
+		PRINTFORMW 「늦었다고, 기다리느라 녹초가 되어버렸어」
+		PRINTFORMW 「근데 있지, 술도 사랑도, 묵힌 만큼 맛도 깊어져」
+		PRINTFORMW 「……마셔도 떨어지지 않는 오니의 사랑, 한번 맛볼까?」
+		PRINTFORMW 정욕과 연모로 가득한 눈동자를 빛내면서 스이카는 열정적으로 속삭였다.
+	ELSE
+		PRINTFORMW 「기다렸어―, 응― ……츄웁」
+		PRINTFORMW 「오늘의 나는 조금 달라―」
+		PRINTFORMW 「우훗…… 인간이 무서워 하는 오니의 업, 충분히 맛보게 해주겠어」
+		PRINTFORMW 옷 위로 사타구니를 어루만지면서, 스이카는 음란하게 웃는다.
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND関係
+;調教終了時のセリフ CFLAG 211～220を使用
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 23
+	RETURN 0
+
+;굴복각인Lv3＋연모＋체력500이상
+IF MARK:2 == 3 && BASE:0 >= 500 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「에―, 벌써 끝나? 뭔가 좀 부족한데……」
+	PRINTFORMW 스이카는 물기 띤 눈으로 %조사처리(CALLNAME:MASTER,"를")% 바라보면서, 입을 삐죽 내밀고 있다.
+	RETURN 1
+;굴복각인Lv3＋연모＋체력500미만（この条件を加えるには, ELSEIFから四行の;を消して, 上に && BASE:0 >= 500を加える）
+ELSEIF MARK:2 == 3 && BASE:0 < 500 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「휴우우…… 역시 좀 지쳤네」
+	PRINTFORMW 「조금 쉬게 해줘. 그리고 나서, 또 하자……」
+	RETURN 1
+;반발각인Lv3＋굴복각인Lv1이하
+ELSEIF MARK:2 <= 1 && MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「……인간 나부랭이가……」
+	PRINTFORMW 스이카는 얼음과 같은 차가운 눈빛으로 %조사처리(CALLNAME:MASTER,"를")% 노려보았다.
+	RETURN 1
+;굴복각인Lv3
+ELSEIF MARK:2 == 3
+	DRAWLINE
+	PRINTFORMW 「아―……아니, 아무것도 아니야」
+	PRINTFORMW 스이카는 얼굴을 붉게 하면서 무슨 말을 하려다가 고개를 내저었다.
+	RETURN 1
+;굴복각인Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 스이카는 말없이 표주박의 내용을 병채로 마시기 시작했다.
+	PRINTFORMW 그런 눈에는 희미하게 눈물이 떠올라 있었다
+	RETURN 1
+;굴복각인Lv1이하
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「나 원 참…… 술로 좀 씻기나 할까」
+	PRINTFORMW 스이카는 방금 전의 행위에 관심도 두지 않은 것처럼 표주박을 들이키기 시작했다.
+	RETURN 1
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM関係
+;コマンド実行時に出力されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_23
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;-------------------------------------------------
+;コマンド実行時のセリフ CFLAG 301～400を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;愛撫 CFLAG301
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;처음
+	IF CFLAG:5301 == 0
+		;굴복각인Lv2이상
+		IF MARK:2 >= 2
+			PRINTFORMW 「응……손대고 싶으면 마음대로 하라고」
+		;그 외
+		ELSE
+			PRINTFORMW 「함부로 손대지 마라」
+			PRINTFORMW 스이카는 얼굴을 찡그려 애무하는 손으로 부터 피하듯 몸을 비트는 행동을 취했다.
+		ENDIF
+			CFLAG:5301 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;굴복각인Lv3+연모
+		IF TALENT:150 == 1 && MARK:2 == 3 && (CFLAG:5301 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아아, 으응, 기분 좋아…… 좀 더 %조사처리(CALLNAME:MASTER,"가")% 좋아하는 대로 만져줘……」
+			CFLAG:5301 = 5
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5301 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 후……쿡……」
+			PRINTFORMW 스이카는 교성을 지르면서 애무를 받아드린다.
+			CFLAG:5301 = 4
+		;굴복각인Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:5301 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「너무 이상한 곳 만지막 거리는거 ……읏……」
+			CFLAG:5301 = 3
+		;그 외（굴복각인Lv1이하）
+		ELSEIF MARK:2 <= 1 && (CFLAG:5301 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「기분 나쁘다고, 그만두라고」
+			CFLAG:5301 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クンニ CFLAG302
+;岩清水 CFLAG303
+;-------------------------------------------------
+IF SELECTCOM == 1
+	;처음
+	IF CFLAG:5222 == 0
+		;처녀
+		IF TALENT:0 == 1
+			PRINTFORMW 「이 자식! 나를 핥다니……! 그만두라고!」
+		;그 외
+		ELSE
+			PRINTFORMW 「혀, 그만두라고……! 히잇, 으읏!」
+		ENDIF
+			CFLAG:5222 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5222 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으읏……거기, 좋아……좀 더, 좀 더 핥아줘……」
+			CFLAG:5222 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5222 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후……우우……응」
+			PRINTFORMW 스이카는 입술을 깨물어서 소리를 죽이고 있다
+			CFLAG:5222 = 3
+		;그 외（굴복각인Lv3미만）
+		ELSEIF CFLAG:5222 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이, 자식……! 그만둬! 이놈이 정말!」
+			PRINTFORMW 스이카는 다리를 바둥거리면서 피할려고 한다
+			CFLAG:5222 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;岩清水
+IF SELECTCOM == 611 || (SELECTCOM == 1 && TEQUIP:56)
+	;연모+노출벽Lv3이상+C감각Lv3이상
+	IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:0 >= 3 && (CFLAG:5303 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5303 = 6
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:5303 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5303 = 5
+	;굴복각인Lv3+노출벽Lv3이상+C감각Lv3이상
+	ELSEIF MARK:2 == 3 && ABL:0 >= 3 && ABL:14 >= 3 && (CFLAG:5303 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5303 = 4
+	;굴복각인Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:5303 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5303 = 3
+	;그 외
+	ELSEIF CFLAG:5303 <= 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5303 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナル愛撫 CFLAG304
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;처음
+	IF CFLAG:5304 == 0
+		PRINTFORMW 「무엇을……아팟!? 그런 곳에 손가락을……아프다고, 움직이지마!」
+		CFLAG:5304 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활Lv2이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5304 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아, 응, 좀 더, 엉덩이 만져도 좋으니깐……」
+			CFLAG:5304 = 5
+		;연모+윤활Lv2미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5304 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「말하지 않았어? ……손놀림이 조금 성급하다고」
+			CFLAG:5304 = 4
+		;윤활Lv2이상＋A감각Lv3이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5304 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아, 뭐야, 이거……뭐나고, 이런 것 따위가…… 기분이 좋아……?」
+			CFLAG:5304 = 3
+		;그 외（연모 없음, 윤활Lv2미만, A감각Lv3미만）
+		ELSEIF CFLAG:5304 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「크, 쿠욱……그만두라고, 기분 나쁘다고!」
+			CFLAG:5304 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;自慰 CFLAG305
+;シャワ―オナニ― CFLAG306
+;-------------------------------------------------
+IF SELECTCOM == 7
+	;처음
+	IF CFLAG:5305 == 0
+		PRINTFORMW 「……뭣 때문에 내가 자위를 해야 한다는거야……」
+		CFLAG:5305 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋자위중독Lv3이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:5305 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아아아! %CALLNAME:MASTER%에게 보여지고 있어! 기분이 너무 좋아아아아아!!」
+			CFLAG:5305 = 5
+		;연모＋자위중독Lv3미만
+		ELSEIF TALENT:150 == 1 && ABL:30 < 3 && (CFLAG:5305 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으읏……보여지다니, 이것도……좋은것, 일까나」
+			CFLAG:5305 = 4
+		;자위중독Lv3이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:5305 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……하아, 손가락이, 손가락이 멈추지 않아!」
+			CFLAG:5305 = 3
+		;그 외（연모 없음, 자위중독Lv3미만）
+		ELSEIF CFLAG:5305 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「무슨……그런 것, 봐도 즐겁지 않다고?」
+			CFLAG:5305 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;シャワ―オナニ―
+ELSEIF SELECTCOM == 7 && TEQUIP:54
+	;처음
+	IF CFLAG:5306 == 0
+		PRINTFORMW 
+		CFLAG:5306 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋자위중독Lv3이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:5306 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5306 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5306 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5306 = 4
+		;자위중독Lv3이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:5306 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5306 = 3
+		;그 외
+		ELSEIF CFLAG:5306 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5306 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラされる(ふたなり/オトコのみ) CFLAG307
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;처음
+	IF CFLAG:5307 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5307 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5307 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5307 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5307 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5307 = 3
+		;그 외（굴복각인Lv3미만）
+		ELSEIF CFLAG:5307 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5307 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸愛撫 CFLAG308
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;처음
+	IF CFLAG:5308 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「가슴에 손대는 거야?? 우응, 좋아한다면야」
+			PRINTFORMW 「우―응, 나도 좀 더 컸다면 좋은데」
+		;그 외（연모 없음）
+		ELSE
+			PRINTFORMW 「간질이지……아팟! 유두를 만지지 말라고!」
+		ENDIF
+			CFLAG:5308 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5308 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 우……좀 더 만져줘……기분 좋게 말이야……」
+			CFLAG:5308 = 4
+		;B감각Lv3이상
+		ELSEIF ABL:3 >= 3 && (CFLAG:5308 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「어, 어쩐지……우우우, 이상한 느낌이……」
+			CFLAG:5308 = 3
+		;그 외（연모 없음, B감각Lv3미만）
+		ELSEIF CFLAG:5308 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우우……이런 곳을 손대어서 뭐가 좋다고」
+			CFLAG:5308 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;キス CFLAG309
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;처음
+	IF CFLAG:5309 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……으으, 추웃」
+			PRINTFORMW 「에에, 어쩐지 수줍어버리네 헤헤」
+		;그 외
+		ELSE
+			PRINTFORMW 「우우웃!? 이, 이 자식!」
+			PRINTFORMW 「장난치는거냐……!」
+			PRINTFORMW 「다음에도 이런 짓을 한다면……그놈의 혀, 염마를 대신해서 뽑아주지」
+		ENDIF
+			CFLAG:5309 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5309 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아……으으, 무우웃, 추우웃, 쥬우웃……즈큐웅, 할짝할짝……」
+			PRINTFORMW  혀를 음란하게 얽히면서 희미하게 알코올이 향기나는 입 안을 유린했다
+			PRINTFORMW 「날름날름, 응……진하네……으응, 꿀꺽……」
+			PRINTFORMW  스이카는 흘러내리는 타액을 삼키고 있었다
+			CFLAG:5309 = 4
+		;순종Lv2이상
+		ELSEIF MARK:2 == 3 && (CFLAG:5309 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……츄웃」
+			PRINTFORMW 「……으읏―……」
+			CFLAG:5309 = 3
+		;그 외
+		ELSEIF CFLAG:5309 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……우우 기분 나빠」
+			CFLAG:5309 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;何もしない CFLAG310
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;처음
+	IF CFLAG:5310 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응? 아무것도 안 해?」
+		;그 외
+		ELSE
+			PRINTFORMW 「…………」
+			PRINTFORMW (다음에는 무엇을 꾸미고 있는지……	인간은 계략을 세우는걸 좋아한다고)
+		ENDIF
+			CFLAG:5310 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋欲情Lv3이상
+		IF TALENT:150 == 1 && PALAM:13 >= PALAMLV:3 && (CFLAG:5310 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으응……에에, 요즘 따라 너무 능숙하다고」
+			PRINTFORMW 「나의 이쪽은 말이야 지금이라도 너를 넘어트리고……범해주고 싶은 기분이라고」
+			CFLAG:5310 = 4
+			
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5310 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하는 일이 없다면, 한 오니에 대해서 전해지는 이야기를 하나 해줄까」
+			PRINTFORMW 「뭐, 그다지 재미있을지 모르겠지만. ……웃차아!」
+			PRINTFORMW 「에―, 옛날옛적에 한 오니가 있었어. 훌륭한 뿔이 두 개 달린 그녀는――」
+			PRINTFORMW 스이카는 그립다는 듯, 그리고 어딘가 외롭다는 듯 이야기 하기 시작하였다
+			CFLAG:5310 = 3
+
+		;굴복각인Lv3
+		ELSEIF TALENT:150 == 1 && (CFLAG:5310 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5310 = 3
+		;그 외（굴복각인Lv3미만）
+		ELSEIF CFLAG:5310 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…………」
+			PRINTFORMW (제기랄, 무엇을 꾸미고 있는거야)
+			CFLAG:5310 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ロ―タ― CFLAG311
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;처음
+	IF CFLAG:5311 == 0
+		;굴복각인Lv3+연모
+		IF MARK:2 == 3 && TALENT:150 == 1
+			PRINTFORMW 「아앗……이거, 좋을지도……」
+		;그 외（연모 없음, 굴복각인Lv3미만）
+		ELSE
+			PRINTFORMW 「……그런 장난감으로 나를 어찌 할수 있다고 생각 하……는……… 읏!?」
+		ENDIF
+			CFLAG:5311 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;굴복각인Lv3+연모
+		IF MARK:2 == 3 && TALENT:150 == 1 && (CFLAG:5311 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우, 우응, 후아……이거어어, 기분 좋아아아……」
+			CFLAG:5311 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5311 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……구읏! ……으으읏!」
+			PRINTFORMW 스이카는 이를 악물어 교성을 삼킬려고 하고 있다.
+			CFLAG:5311 = 3
+		;그 외（굴복각인Lv3미만）
+		ELSEIF CFLAG:5311 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「크……이런 거 따위에……!」
+			CFLAG:5311 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;バイブ CFLAG312　CFLAG313
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 12 && TEQUIP:20 == 1
+	;처음
+	IF CFLAG:5312 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「뭐야? 웬만한 건 상상이 가는데 말이야」
+				PRINTFORMW 「이런 장난감이 먼저 들어오는 거야……?」
+				PRINTFORMW 「……처음은 너에게 주고 싶지만 말이야……」
+			;그 외
+			ELSE
+				PRINTFORMW 「……너의 쓸모없는 자지가 들어오는 것보단 좋네」
+				PRINTFORMW （처음에는 피가 나지 않는 장난감, 인가）
+			ENDIF
+		;非처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「그런 장난감보단……너의 자지를 갖고싶은데……」
+			;그 외
+			ELSE
+				PRINTFORMW 「……너의 조루자지가 들어오는것 보단 좋다고」
+			ENDIF
+		ENDIF
+			CFLAG:5312 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5312 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이런게 말고, 다른……… 으응……!」
+			CFLAG:5312 = 4
+		;V감각Lv3이상
+		ELSEIF ABL:1 >= 3 && (CFLAG:5312 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으응……이딴, 장난감…… 주제!」
+			CFLAG:5312 = 3
+		;그 외
+		ELSEIF CFLAG:5312 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……또 그거인가, 허리 재주가 없구먼」
+			CFLAG:5312 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5313 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아……응, 만족했어……다음은 너의 것으로……」
+		PRINTFORMW 스이카는 젖어서 빛나는 보지를 늘리면서 음탕한 미소를 짖는다
+		CFLAG:5313 = 2
+	;그 외
+	ELSEIF CFLAG:5313 < 1 || FLAG:11 == 2
+		PRINTFORMW 스이카는 무표정하게 점액에 젖은 바이브에게 눈을 돌린다……
+		CFLAG:5313 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;Ｅマッサ―ジャ CFLAG231
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;처음
+	IF CFLAG:5231 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5231 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5231 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5231 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5231 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5231 = 3
+		;그 외（굴복각인Lv3미만）
+		ELSEIF CFLAG:5231 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5231 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルバイブ CFLAG315　CFLAG317
+;-------------------------------------------------
+IF SELECTCOM == 13 && TEQUIP:25 == 1
+	;처음
+	IF CFLAG:5315 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이것을 엉덩이에……? 에에에, 이런 거……」
+			PRINTFORMW 「아프게 하지 않을꺼지?」
+		;그 외（연모 없음）
+		ELSE
+			PRINTFORMW 「히앗, 농담이 아니야, 에!? 이이잇, 크우우웃……!」
+		ENDIF
+			CFLAG:5315 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:5315 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응,……그것, 엉덩이에 빨리」
+			PRINTFORMW 스이카는 항문의 균열을 확대해 바이브의 삽입을 졸라댄다
+			CFLAG:5315 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5315 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또 이건가. 흐으음, 그리 싫지는 않은데……」
+			CFLAG:5315 = 4
+		;A감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:5315 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 쿠웃……이런, 거, 자주, 이잇……!」
+			CFLAG:5315 = 3
+		;그 외（연모 없음, A감각Lv3미만）
+		ELSEIF  CFLAG:5315 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아팟！이런 거！빼라고, 이런 거라니 정말!」
+			CFLAG:5315 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5316 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「므으―, 아직도 뭔가 들어가 있는 느낌이 들어」
+		CFLAG:5316 = 3
+	;A감각Lv3이상
+	ELSEIF ABL:2 >= 3 && (CFLAG:5316 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「으히야, 우……아우우」
+		CFLAG:5316 = 2
+	;그 외
+	ELSEIF CFLAG:5316 < 1 || FLAG:11 == 2
+		PRINTFORMW 스이카는 무언으로 이쪽을 노려보고 있다
+		CFLAG:5316 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;クリキャップ CFLAG317　CFLAG318
+;-------------------------------------------------
+IF SELECTCOM == 14
+	;처음
+	IF CFLAG:5317 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5317 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5317 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5317 = 3
+		;그 외
+		ELSEIF CFLAG:5317 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5317 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 14 && TEQUIP:30 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5318 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5318 = 2
+	;그 외
+	ELSEIF CFLAG:5318 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5318 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;ニプルキャップ CFLAG319 CFLAG320
+;-------------------------------------------------
+IF SELECTCOM == 15
+	;처음
+	IF CFLAG:5319 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5319 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5319 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5319 = 3
+		;그 외
+		ELSEIF CFLAG:5319 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5319 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 15 && TEQUIP:35 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5320 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5320 = 2
+	;그 외
+	ELSEIF CFLAG:5320 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5320 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;搾乳機(母乳体質のみ) CFLAG321  CFLAG322
+;-------------------------------------------------
+IF SELECTCOM == 191
+	;처음
+	IF CFLAG:5321 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5321 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5321 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5321 = 3
+		;그 외
+		ELSEIF CFLAG:5321 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5321 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 191 && TEQUIP:35 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5322 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5322 = 2
+	;그 외
+	ELSEIF CFLAG:5322 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5322 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;オナホ―ル(ふたなり/オトコのみ) CFLAG323　CFLAG324
+;-------------------------------------------------
+IF SELECTCOM == 16
+	;처음
+	IF CFLAG:5323 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5323 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5323 = 3
+		;그 외
+		ELSEIF CFLAG:5323 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5323 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 16 && TEQUIP:30 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5324 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5324 = 2
+	;그 외
+	ELSEIF CFLAG:5324 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5324 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+
+;-------------------------------------------------
+;正常位 CFLAG325
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;처음
+	IF CFLAG:5325 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「……스스로 말하는 것도 그렇긴 하지만」
+				PRINTFORMW 「너는 역시……어린아이의 취미가 있기도 하는거야?」
+				PRINTFORMW 「아니, 나 같은 작은아이를 안고 싶다니, 그렇게 생각하잖아 보통」
+				PRINTFORMW 「뭐, 좋아. 기분은 그리 나쁘지 않기도 하고」
+				PRINTFORMW 「……나, 처음이니깐. 상냥하게 해준다면, 기쁠까나」
+				PRINTFORMW 스이카는 수줍어하면서 나에게 몸을 맡겼다
+			;그 외
+			ELSE
+				PRINTFORMW 「이놈! 저리 가! 이, 자식!」
+				PRINTFORMW 날뛰는 스이카를 이내 덮쳤다
+				PRINTFORMW 「그, 그만둬……그만, 히잇!? 하, 하지마……히잇, 아캿」
+				PRINTFORMW 억지로 날뛰는 스이카를 억지로 범하기 시작하였다
+			ENDIF
+		;非처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「……뭐야―, 상당하게 초조하게 해주니깐―……」
+				PRINTFORMW 스이카는 그렇게 말하면서도 어딘가 기쁜듯 침대에 몸은 던졌다
+			;그 외
+			ELSE
+				PRINTFORMW 「이 자식! 놓아라! 개, 자식이!」
+				PRINTFORMW 날뛰는 스이카를 이내 몸으로 덮쳐 눌렀다
+			ENDIF
+		ENDIF
+			CFLAG:5325 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5325 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아, 좋아앗! 좀 더 해줘어……끝까지 찔러, 끝쪽으로 찔러줘엇!」
+			PRINTFORMW 자궁구를 찔러 주면 , 질내의 고기가 움찔거리면서 안쪽으로 자지를 끌어들어왔다
+			CFLAG:5325 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5325 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「오우웃, 배안으로오……가득히이이!」
+			CFLAG:5325 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5325 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……아아……아웃……크」
+			PRINTFORMW 작은 입술에서는 때때로 억누르지 못할 단 교성이 빠져 나오고 있다
+			CFLAG:5325 = 3
+		;그 외
+		ELSEIF CFLAG:5325 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…………큭!」
+			PRINTFORMW 얼굴을 돌린채로, 눈도 맞추려고 하지않는 스이카를 정면에서 응시한 채로 관철하였다
+			CFLAG:5325 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;後背位 CFLAG326
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;처음
+	IF CFLAG:5326 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「얼굴이 안 보이는 것은 조금, 무서워……」
+				PRINTFORMW 「아, 그런데 말이야……나, 처음이야」
+				PRINTFORMW 「그러니깐, 그……상냥하게 해줬으면 하는데, 말이야」
+			;그 외
+			ELSE
+				PRINTFORMW 「에엣! ……뭐하는거야……에, 거짓말」
+				PRINTFORMW 침대에 억지로 억눌려 있던 스이카의 표정에, 또렷이 무서워하는 표정을 간파 할수 있었다
+				PRINTFORMW 「앗, 놓으라고! ……안 돼, 히이잇!? 아, 안 돼……히큿, 아큿」
+				PRINTFORMW 배후에서 스이카의 순결의 증거를 용서없이 꿰뚫었다
+			ENDIF
+		;非처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「뒤에서? ……」
+				PRINTFORMW 「적어도, 마음껏 찌르고, 느끼게 해줘……읏……!」
+			;그 외
+			ELSE
+				PRINTFORMW 「……이런, 교미하고 싶은……읏!」
+				PRINTFORMW 「우……쿠읏……들어가…아아아……」
+			ENDIF
+		ENDIF
+			CFLAG:5326 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5326 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아! 더 격렬하게! 가득 찔러줘!!」
+			CFLAG:5326 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5326 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 안 돼, 너무 격렬해……오오오오오!!!」
+			CFLAG:5326 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5326 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크으……배가, 아파……하우우」
+			PRINTFORMW 「응, 으웃……질내에다가, 내지 말아줘」
+			CFLAG:5326 = 3
+		;그 외
+		ELSEIF CFLAG:5326 <= 1 || FLAG:11 == 2
+			PRINTFORMW 저항하는 스이카를 억눌러, 작은 신체를 억지로에 범했다
+			CFLAG:5326 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルセックス CFLAG327
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;처음
+	IF CFLAG:5327 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「여기로? 우―응……아프지 않게 해줘」
+		;그 외（연모 없음）
+		ELSE
+			PRINTFORMW 「우웃……! 뭐야, 뭘 생각하고 있는거야!」
+		ENDIF
+			CFLAG:5327 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:5327 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아, 우아앗! 중독될 거 같아, 쿠와……앗」
+			PRINTFORMW 「버릇, 될 것만 같아……」
+			CFLAG:5327 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5327 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 쿠우…… 아파, 하지만, 이딴거……참아, 보겠어……」
+			CFLAG:5327 = 4
+		;A감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:5327 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아, 앗…… 이런 건 싫은데, 싫어하는데……!」
+			CFLAG:5327 = 3
+		;그 외（연모 없음, A감각Lv3미만）
+		ELSEIF  CFLAG:5327 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이, 자식! ……안 돼, 이거……빠져, 우웃」
+			CFLAG:5327 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;逆レイプ CFLAG328
+;(主人が非オトコ, 奴隷がオトコ/ふたなりのみ)
+;-------------------------------------------------
+;IF SELECTCOM == 25
+	;처음
+;	IF CFLAG:5328 == 0
+		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5328 = 1
+;			RETURN 0
+	;2회째 이후
+;	ELSE
+		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5328 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5328 = 3
+		;그 외
+;		ELSEIF CFLAG:5328 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5328 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;手淫 CFLAG329
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;처음
+	IF CFLAG:5329 == 0
+		;봉사정신Lv3이상
+		IF ABL:13 >= 3
+			PRINTFORMW 「읏샤, 읏샤……이런, 느낌으로, 계속하면 되는거지?」
+		;그 외（봉사정신Lv3미만）
+		ELSE
+			PRINTFORMW 「아―아, 잡아 주고 싶은데 말이야……」
+		ENDIF
+			CFLAG:5329 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋봉사정신Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5329 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「기분이 좋아……？여기 파고든 곳, 약하지요」
+			PRINTFORMW 「후후, 귀엽네……실록실록해서 벌써 나와버릴 것 같아?」
+			CFLAG:5329 = 4
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5329 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「어때? 이제 조금 더 , 강하게 잡는게 좋은거야?」
+			CFLAG:5329 = 3
+		;그 외（봉사정신Lv3미만）
+		ELSEIF CFLAG:5329 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「에 그냥 이대로 꺾어 버릴까……?」
+			CFLAG:5329 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラチオ CFLAG330
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;처음
+	IF CFLAG:5330 == 0
+		;봉사정신Lv3이상
+		IF ABL:13 >= 3
+			PRINTFORMW 「응―, 츄웁, 우우웃……어래, 츄우웁」
+			PRINTFORMW 「응, 이런 식으로는 어떨까?」
+		;그 외（봉사정신Lv3미만）
+		ELSE
+			PRINTFORMW 「물어 뜯겨질 각오가 있다면 해보는거야」
+			PRINTFORMW (턱을 누르다니……이 자식)
+		ENDIF
+			CFLAG:5330 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋봉사정신Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5330 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 츄우, 즈큐웅……싸는거야? 가득 내달라고, 입 속에 가득……」
+			CFLAG:5330 = 4
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5330 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「츄유웁……응……좋은걸까?」
+			CFLAG:5330 = 3
+		;그 외（봉사정신Lv3미만）
+		ELSEIF CFLAG:5330 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우에에……냄새나는게 맛도 최악……」
+			CFLAG:5330 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリ CFLAG331
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;처음
+	IF CFLAG:5331 == 0
+		;봉사정신Lv3이상
+		IF ABL:13 >= 3
+			PRINTFORMW 「응―, 유카리처럼 크지는 않지만, 그런데도 괜찮아?」
+		;그 외（봉사정신Lv3미만）
+		ELSE
+			PRINTFORMW 「그런 걸 사이에 둔다니？나의 가슴으로？……불쾌하다고」
+		ENDIF
+			CFLAG:5331 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋봉사정신Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5331 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「히아앗, 뜨거운게 콧치 콧치 하는구나, 내 가슴에 화상을 입을거 같아」
+			PRINTFORMW 「작아서 미안하다고, 역시 너도 커다란걸 좋아하는거야??」
+			PRINTFORMW 「……뭐―, 거기는 크지 않지만, 너의 자지가 좋다고―」
+			PRINTFORMW 「그랬더니, 우후후……후후, 벌써부터 나올려는거야?」
+			CFLAG:5331 = 4
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5331 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「기분 좋아?, 으응？ 끝족을 핥아주는것이 좋을까……?」
+			CFLAG:5331 = 3
+		;그 외（봉사정신Lv3미만）
+		ELSEIF  CFLAG:5331 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「최저의, 으읏, 기분이야……」
+			CFLAG:5331 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;素股 CFLAG332
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;처음
+	IF CFLAG:5332 == 0
+		;연모有り
+		IF TALENT:150 == 1
+			PRINTFORMW 「아, 우아, 기분 좋아, 자지가……!」
+		;그 외（연모 없음）
+		ELSE
+			PRINTFORMW 「……가랑이? 이상한 것만 생각하는군」
+		ENDIF
+			CFLAG:5332 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모有り
+		IF TALENT:150 == 1 && (CFLAG:5332 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아, 클리에 접하는게, 나도 기분이, 좋아……!」
+			CFLAG:5332 = 3
+		;그 외（연모 없음）
+		ELSEIF CFLAG:5332 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「가랑이로 좋다는 건……남자가 신사인걸 구분할수 있다고」
+			PRINTFORMW 「그렇지 않다면 네가 이상한 것 뿐이겠지만」
+			CFLAG:5332 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位 CFLAG333
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;처음
+	IF CFLAG:5333 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「어쩔 수 없네……」
+				PRINTFORMW 「미리 말해두지만 처음이기 때문에, 그러니깐 상냥하게 해줄 거지?」
+			;그 외
+			ELSE
+				PRINTFORMW 「내가 스스로? 죽어도 상관없는거지?」
+				PRINTFORMW 「이 자식! 싫다고, 이놈! 놓으라고!」
+				PRINTFORMW 「악!? 아팟! 놓으……라고!」
+				PRINTFORMW 저항하는 스이카의 허리를 잡고, 억지로 찔렀다
+			ENDIF
+		;非처녀
+		ELSE
+		;연모＋순종Lv5
+			IF TALENT:150 == 1 && ABL:10 >= 5
+				PRINTFORMW 「위로 타는 것보단……보통의 자세로 하는게 기분 좋다고 생각하는데」
+			;그 외（연모 없음, 순종Lv5미만）
+			ELSE
+				PRINTFORMW 「싫엇. 무엇을 스스로 하라니……앗, 잠깐! 놓으라고――」
+				PRINTFORMW 고개를 저으면서 말하는 스이카의 허리를 잡고, 아래로부터 밀어 올렸다
+			ENDIF
+			CFLAG:5333 = 1
+			RETURN 0
+		ENDIF
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5333 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 읏, 아, 이렇게? 좋아, 응? 앗, 나, 나도, 기분 좋아아!」
+			PRINTFORMW 「즈큣, 웃, 삐걱삐걱! 앗, 엣! 허리, 뽑지마앗……!」
+			CFLAG:5333 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5333 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아니야! 허리가, 마음대로 움직이는거라고!」
+			PRINTFORMW 아니라고 부정하는 스이카의 비웃으면서 , 허리를 좀 더 강하게 놀렸다
+			CFLAG:5333 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5333 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 스이카는 입을 굳게 다물어, 묵묵하게 허리를 흔들고 있었다
+			CFLAG:5333 = 3
+		;그 외（연모 없음, 순종Lv5미만）
+		ELSEIF CFLAG:5333 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「후, 우웃！……이런일을, 시키다닛……」
+			CFLAG:5333 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;スパンキング CFLAG334
+;-------------------------------------------------
+IF SELECTCOM == 220
+	;처음
+	IF CFLAG:5334 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아팟!? 뭐하는 짓이야!」
+			PRINTFORMW 「아, 아까 전에 비위에 거슬리는 짓을 했다면 사과할께……」
+		;그 외
+		ELSE
+			PRINTFORMW 「익!? ……후응, 예의범절을 가르킬 생각이야?」
+		ENDIF
+			CFLAG:5334 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5334 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「히아앗! 좀 더 강하게 해도, 욱, 괜찮다고」
+			PRINTFORMW 「아읏! 너에게라면, 혼나는 것도, 아으윽!괜찮을지도……」
+			
+			CFLAG:5334 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5334 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이, 얼얼하다고」
+			PRINTFORMW 「기, 기분 좋을리가 없잖아」
+			CFLAG:5334 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5334 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아……우, 아파……이제 만족한거야?」
+			PRINTFORMW 「더 보통으로 하자고―……변태 같은 것은 용서해줄테니깐」
+			CFLAG:5334 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5334 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아우읏! 엉덩이를 때리면서 기뻐하다니, 하앗하아아……」
+			PRINTFORMW 「어디까지 비뚤어지고 있는거야, 너는……」
+			CFLAG:5334 = 3
+		;그 외
+		ELSEIF CFLAG:5334 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5334 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;鞭 CFLAG335
+;-------------------------------------------------
+IF SELECTCOM == 221
+	;처음
+	IF CFLAG:5335 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5335 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5335 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5335 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5335 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5335 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5335 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5335 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5335 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5335 = 3
+		;그 외
+		ELSEIF CFLAG:5335 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5335 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;針 CFLAG336
+;-------------------------------------------------
+IF SELECTCOM == 222
+	;처음
+	IF CFLAG:5336 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「잠깐, 잠깐잠깐잠깐……그거 지금 농담하고 있는거 아니지」
+			PRINTFORMW 「거짓말, 그만둬――아큭!」
+		;그 외
+		ELSE
+			PRINTFORMW 「……오니에게 침이라니. 에에……네놈이 지옥에 떨어진다면 , 가장 먼저 찔릴껀데 말이야」
+			PRINTFORMW 「쿳……아아아아아아앗! 우아아아아아아아아아!!!」 
+		ENDIF
+			CFLAG:5336 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5336 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아……우……또 그거야? ……이젠 싫다고」
+			PRINTFORMW 스이카는 피학당하는 것에 즐거움을 느끼는 눈동자로 되어가고 있었다
+			CFLAG:5336 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5336 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5336 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5336 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「나, 나는 학대 받아도 즐겁지 않다고……」
+			CFLAG:5336 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5336 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 바늘을 응시하는 스이카의 표정에는, 어딘가 즐기는 듯한 표정이 떠올라 있다
+			CFLAG:5336 = 3
+		;그 외
+		ELSEIF CFLAG:5336 <= 1 || FLAG:11 == 2
+			PRINTFORMW 격렬한 통증에 괴로워 하면서도, 스이카의 눈동자는 격렬한 증오에 불타고 있다
+			CFLAG:5336 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アイマスク CFLAG337　CFLAG:5338
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 225 && TEQUIP:41 == 1
+	;처음
+	IF CFLAG:5337 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「쿳, 어두워―무섭단 말이야―」
+			PRINTFORMW 「거, 거짓말이 아니라고!」
+		;그 외
+		ELSE
+			PRINTFORMW 「네 악취미에 구역질이 나오는군」
+		ENDIF
+			;CFLAG:5337 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5337 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「우읏! ……에에, 아무것도 보이지 않으니 민감해지는거 같아」
+			PRINTFORMW 「조금 손되어져 있는 걸로, 굉장해, 즈큐웅이야」
+			;CFLAG:5337 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5337 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			;CFLAG:5337 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5337 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			;CFLAG:5337 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5337 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			;CFLAG:5337 = 3
+		;그 외
+		ELSEIF CFLAG:5337 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			;CFLAG:5337 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 225 && TEQUIP:41 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5338 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「두근두근한걸. 나쁘지 않다고」
+		PRINTFORMW 「하지만 역시 네 얼굴이 보이는게 더 좋단 말이야」
+		;CFLAG:5338 = 2
+	;그 외
+	ELSEIF CFLAG:5338 < 1 || FLAG:11 == 2
+		PRINTFORMW 「제일 최초로 보이는 게 네 얼굴만이 아니었다면 좋았을텐데 말이야」
+		;CFLAG:5338 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;縄 CFLAG339　CFLAG:5340
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 224 && TEQUIP:40
+	;처음
+	IF CFLAG:5339 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5339 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5339 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5339 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5339 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5339 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5339 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5339 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5339 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5339 = 3
+		;그 외
+		ELSEIF CFLAG:5339 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5339 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 224 && TEQUIP:40 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5340 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5340 = 2
+	;그 외
+	ELSEIF CFLAG:5340 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5340 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;ボ―ルギャグ CFLAG341　CFLAG:5342
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 226 && TEQUIP:42 == 1
+	;처음
+	IF CFLAG:5341 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5341 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5341 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5341 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5341 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5341 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5341 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5341 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5341 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5341 = 3
+		;그 외
+		ELSEIF CFLAG:5341 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5341 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 226 && TEQUIP:42 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5342 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5342 = 2
+	;그 외
+	ELSEIF CFLAG:5342 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5342 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;浣腸 CFLAG343
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 174 && TEQUIP:25 == 7
+	;처음
+	IF CFLAG:5343 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5343 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상＋마조끼Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5343 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5343 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5343 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5343 = 4
+		;A감각Lv3이상＋마조끼Lv3이상
+		ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5343 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5343 = 3
+		;그 외
+		ELSEIF  CFLAG:5343 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5343 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;排泄 CFLAG344
+;-------------------------------------------------
+IF TEQUIP:25 == 0 && SELECTCOM == 174
+	;처음
+	IF CFLAG:5344 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5344 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상＋마조끼Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5344 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5344 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5344 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5344 = 4
+		;A감각Lv3이상＋마조끼Lv3이상
+		ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5344 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5344 = 3
+		;그 외
+		ELSEIF  CFLAG:5344 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5344 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ロ―ション使用 CFLAG345
+;-------------------------------------------------
+IF SELECTCOM == 60
+	;처음
+	IF CFLAG:5345 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭐야 이건?」
+			PRINTFORMW 「후―응, 인간이라고 하는 것은 변함없이 재미있는 생물이네」
+		;그 외
+		ELSE
+			PRINTFORMW 「읏! 손놀림이 기분나쁘다고옷」
+		ENDIF
+			CFLAG:5345 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5345 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응―, 아무리 이 차가운 감촉은……」
+			CFLAG:5345 = 3
+		;그 외
+		ELSEIF CFLAG:5345 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「네이네이, 또 그거군」
+			PRINTFORMW 「그래서 혼자 놀고 있는거 처럼 보인다고, 너 말이야」
+			CFLAG:5345 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;媚薬使用 CFLAG346
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;처음
+	IF CFLAG:5346 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이건 뭐야?」
+			PRINTFORMW 「응―, 미시라고 한다면 마시겠지만―」
+		;그 외（연모 없음）
+		ELSE
+			PRINTFORMW 「후으읏, 약에 의지하지 않으면 여자도 안을 수 없는거야? 겁쟁이 같아」
+		ENDIF
+			CFLAG:5346 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5346 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아하핫, 이거 좋은 기분이야―. 꼭 술마시고 있는 기분이라고」
+			PRINTFORMW 「우―……슬슬 달아오르는데」
+			CFLAG:5346 = 3
+		;그 외（연모 없음）
+		ELSEIF CFLAG:5346 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「하읏, 약에 의지하지 않으면 여자도 안을 수 없는거야? 병신 같아」
+			CFLAG:5346 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ビデオカメラ使用 CFLAG347
+;-------------------------------------------------
+IF SELECTCOM == 100 && TEQUIP:50
+	;처음
+	IF CFLAG:5347 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「그거, 어떻게 할려는거야？ ……헤에, 판다는거야……」
+			PRINTFORMW 「아아, 혐오한다는 건 아니야. 이참에 마음껏 과시해주자고」
+		;그 외（연모 없음）
+		ELSE
+			PRINTFORMW 「네가 나를 범하는 것을 찍고, 팔아 치우는 건가」
+			PRINTFORMW 「어딘가의 텐구가 양심적인 일과 같네……아마도」
+		ENDIF
+			CFLAG:5347 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5347 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아까워라……우리가 찍은 것을 보면서 해보고 싶지 않아?」
+			CFLAG:5347 = 3
+		;그 외（연모 없음）
+		ELSEIF CFLAG:5347 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……네놈도 이걸 갖고 싶어하는 놈도, 어쩔 수 없는 잉여로운 사람이구나」
+			PRINTFORMW 「인간이라……이런 건가」
+			CFLAG:5347 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;野外プレイ CFLAG348　CFLAG:5349
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 104 && TEQUIP:52
+	;처음
+	IF CFLAG:5348 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5348 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋노출벽Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:5348 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5348 = 4
+		;노출벽Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:5348 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5348 = 3
+		;그 외
+		ELSEIF CFLAG:5348 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5348 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5349 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5349 = 2
+	;그 외
+	ELSEIF CFLAG:5349 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5349 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;助手を犯す CFLAG350
+;-------------------------------------------------
+IF SELECTCOM == 26
+	;처음
+	IF CFLAG:5350 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「잠까아아안―……그것은 나에게 해주면 안될까」
+		;그 외
+		ELSE
+			PRINTFORMW 「……악취미구나, 딱히 부럽진 않다고」
+		ENDIF
+			CFLAG:5350 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5350 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그러니까아아아앗……왜 나에게 안해주는거냐고오옷」
+			PRINTFORMW 「너란 말이야, 다음에 차분하게 이야기 해야 할것 같다고」
+			CFLAG:5350 = 3
+		;그 외
+		ELSEIF CFLAG:5350 <= 1 || FLAG:11 == 2
+			PRINTFORMW  「……악취미 구나, 무다무다무다 하다고」
+			CFLAG:5350 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;イラマチオ CFLAG351
+;-------------------------------------------------
+IF SELECTCOM == 230
+	;처음
+	IF CFLAG:5351 == 0
+		;봉사정신Lv3이상
+		IF ABL:13 >= 3
+			PRINTFORMW 「이히히힛, 입으로 하는거구나. 아―……으후우웃!? 오쿳, 으무우웃!?」
+			PRINTFORMW 봉사 하려고 한 스이카의 머리를 잡아, 억지로 입 안쪽으로 페니스를 찔렀다.
+		;그 외（봉사정신Lv3미만）
+		ELSE
+			PRINTFORMW 「으쿠웃……! 콜록, 콜록! ……심한 일을 하는데……」
+			PRINTFORMW 타액으로 젖은 입숩을 닦으면서, 스이카는 %조사처리(CALLNAME:MASTER,"를")% 바라보았다
+		ENDIF
+			CFLAG:5351 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋봉사정신Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5351 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……후아. 조금 괴롭지만, 입 안쪽까지 돌진하는 기분이 버릇들겠는걸」
+			CFLAG:5351 = 4
+		;봉사정신Lv3이상, Lv5미만
+		ELSEIF ABL:13 >= 3 && (CFLAG:5351 <= 2 || FLAG:11 == 2)
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"를")% 째려보면서, 스이카는 혀를 시용하고 있다
+			CFLAG:5351 = 3
+		;그 외（봉사정신Lv3미만）
+		ELSEIF CFLAG:5351 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응, 으쿠우웃……우웨엑, 토할꺼 같다고……」
+			CFLAG:5351 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フィスト系コマンド CFLAG352
+;-------------------------------------------------
+IF SELECTCOM == 231 || SELECTCOM == 232 || SELECTCOM == 233
+	;처음
+	IF CFLAG:5352 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5352 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋마조끼Lv5이상
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5352 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5352 = 6
+		;연모＋마조끼Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:5352 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5352 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5352 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5352 = 4
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:5352 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5352 = 3
+		;그 외
+		ELSEIF CFLAG:5352 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5352 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;触手召喚 CFLAG353　CFLAG:5354
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 500 && TEQUIP:90
+	;처음
+	IF CFLAG:5353 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5353 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+触手経験20이상（消費基本値が三分の一になる）
+		IF TALENT:150 == 1 && EXP:53 >= 20 && (CFLAG:5353 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5353 = 4
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5353 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5353 = 3
+		;그 외
+		ELSEIF CFLAG:5353 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5353 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+	;연모+触手経験20이상（消費基本値が三分の一になる）
+	IF TALENT:150 == 1 && EXP:53 >= 20 && (CFLAG:5354 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5354 = 3
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:5354 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5354 = 2
+	;그 외
+	ELSEIF CFLAG:5354 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5354 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+;追加コマンド・通常版 CFLAG355以降を使用
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+
+;-------------------------------------------------
+;指挿入れ CFLAG355
+;Gスポット刺激 CFLAG356
+;-------------------------------------------------
+IF SELECTCOM == 4 || SELECTCOM == 600
+	;Gスポット刺激
+	IF SELECTCOM == 600 || (PREVCOM == 4 && ABL:PLAYER:12 >= 3 || PREVCOM == 600)
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5356 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아우우우우웃, 거, 거기이이……좀 더 세게 긁어줘어어」
+			CFLAG:5356 = 4
+		;V감각Lv3이상
+		ELSEIF ABL:1 >= 3 && (CFLAG:5356 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후, 우읏……거기, 기분 좋아앗……」
+			CFLAG:5356 = 3
+		;그 외
+		ELSEIF CFLAG:5356 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏! ……으읏, 장난감이 아니라고옷! 좋아할 것 같아?」
+			CFLAG:5356 = 2
+		ENDIF
+			RETURN 0
+	;指挿入れ
+	ELSE
+		;처음
+		IF CFLAG:5355 == 0
+			;처녀（처녀でないキャラの場合は無記入でよい）
+			IF TALENT:0 == 1
+				;연모
+				IF TALENT:150 == 1
+					PRINTFORMW 「으읏……좀 더, 기분 좋게에」
+					PRINTFORMW 「앗!? 아, 거기, 더, 더어」
+				;그 외
+				ELSE
+					 PRINTFORMW 「잇!? 아, 거기이, 이얏, 안 돼애애!」
+				ENDIF
+					CFLAG:5355 = 1
+					RETURN 0
+			;非처녀
+			ELSE
+				;연모
+				IF TALENT:150 == 1
+					PRINTFORMW 「아우웃, 거기, 아프다니깐」
+					PRINTFORMW 「뭐―, 좀 더 상냥하게 취급해 달라고」
+				;V감각Lv3이상
+				ELSEIF ABL:1 >= 3
+					PRINTFORMW 「우오옷……기, 기분 좋지 않다고, 흐 ,흐흥」
+				;그 외
+				ELSE
+					PRINTFORMW 「읏! ……으읏, 장난감이 아니라고옷! 좋아할 것 같아?」
+				ENDIF
+					CFLAG:5355 = 1
+					RETURN 0
+			ENDIF
+		;2회째 이후
+		ELSE
+			;연모
+			IF TALENT:150 == 1 && (CFLAG:5355 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「후우웃, 좀 더, 거기잇……아흐읏」
+				PRINTFORMW 「우아아앗―, 약한 곳을 전부 조사라도 한거야, 후후……」
+				CFLAG:5355 = 4
+			;V감각Lv3이상
+			ELSEIF ABL:1 >= 3 && (CFLAG:5355 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「으오옷……딱, 딱히 기분 좋다는건 아니니깐 착각하지마」
+				CFLAG:5355 = 3
+			;그 외
+			ELSEIF CFLAG:5355 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「읏! ……하핫, 손장난인가, 으쿳! 어지간히 좋아하나보구먼」
+				CFLAG:5355 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;シャワ― CFLAG357
+;-------------------------------------------------
+IF SELECTCOM == 351 && TEQUIP:54
+	;처음
+	IF CFLAG:5357 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5357 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5357 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5357 = 3
+		;그 외
+		ELSEIF CFLAG:5357 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5357 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位 CFLAG358
+;-------------------------------------------------
+IF SELECTCOM == 22
+	;처음
+	IF CFLAG:5358 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「심장이 두근두근 하고 있어, 여기서도 들린다고」
+			PRINTFORMW 「어쩐지 평소보다 더욱더 느끼고 있어」
+		;그 외
+		ELSE
+			PRINTFORMW 「얼굴을, 가까이 하지말라고. 불쾌해 죽겠어」
+		ENDIF
+			CFLAG:5358 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5358 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응, 츄우, 츄웁……」
+			PRINTFORMW 「이거, 상당히 기분 좋아, 가까히 붙어서 하기 때문에 상당히 따듯하다고」
+			CFLAG:5358 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5358 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「얼굴, 가깝다니깐……으큿」
+			PRINTFORMW 스이크는 머리를 숙이면서 스스로 허리를 흔들고 있다
+			CFLAG:5358 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5358 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「얼굴, 가깝다니깐……으큿」
+			PRINTFORMW 스이카는 머리를 숙이면서 허리를 전후로 흔들기 시작하였다
+			CFLAG:5358 = 3
+		;그 외
+		ELSEIF CFLAG:5358 <= 1 || FLAG:11 == 2
+			PRINTFORMW 스이카는 입을 꼭 다문 채, 끄덕도 하지 않는다.
+			CFLAG:5358 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面座位 CFLAG359
+;乱れ牡丹 CFLAG360
+;-------------------------------------------------
+;背面座位
+IF SELECTCOM == 23 && TEQUIP:56 == 0
+	;처음
+	IF CFLAG:5359 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5359 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5359 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5359 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5359 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5359 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5359 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5359 = 3
+		;그 외
+		ELSEIF CFLAG:5359 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5359 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;乱れ牡丹
+IF SELECTCOM == 612 || (SELECTCOM == 23 && TEQUIP:56)
+	;처음
+	IF CFLAG:5360 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5360 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+노출벽Lv3이상+V감각Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:5360 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5360 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5360 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5360 = 5
+		;굴복각인Lv3+노출벽Lv3이상+V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && ABL:14 >= 3 && (CFLAG:5360 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5360 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5360 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5360 = 3
+		;그 외
+		ELSEIF CFLAG:5360 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5360 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;泡踊り CFLAG361
+;-------------------------------------------------
+IF SELECTCOM == 352
+	;처음
+	IF CFLAG:5361 == 0
+		;봉사정신Lv3이상
+		IF ABL:13 >= 3
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5361 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋봉사정신Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:5361 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5361 = 4
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5361 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5361 = 3
+		;그 외
+		ELSEIF  CFLAG:5361 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5361 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;利尿剤 CFLAG362
+;-------------------------------------------------
+IF SELECTCOM == 62
+	;연모+おもらし癖
+	IF TALENT:150 && TALENT:45 && (CFLAG:5362 < 4 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5362 = 4
+	;연모
+	ELSEIF TALENT:150 && (CFLAG:5362 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5362 = 3
+	;굴복각인Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:5362 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5362 = 2
+	;그 외
+	ELSEIF CFLAG:5362 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5362 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;羞恥プレイ CFLAG363 解除 CFLAG364
+;-------------------------------------------------
+IF SELECTCOM == 103 && TEQUIP:56
+	;처음
+	IF CFLAG:5363 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;노출벽Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5363 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+노출벽Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:5363 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5363 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5363 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5363 = 4
+		;노출벽Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 
+			CFLAG:5363 = 3
+		;그 외
+		ELSEIF CFLAG:5272 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5363 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;처음
+	IF CFLAG:5364 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5364 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5364 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5364 = 3
+		;그 외
+		ELSEIF CFLAG:5364 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5364 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;お風呂場プレイ CFLAG365 解除 CFLAG366
+;-------------------------------------------------
+IF SELECTCOM == 350 && TEQUIP:53
+	;처음
+	IF CFLAG:5365 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「카아―, 산뜻하니 기분 좋구먼」
+			PRINTFORMW 「여기서 데운 술까지 있다면 더나위 할것 없을텐데―」
+		;그 외
+		ELSE
+			PRINTFORMW 「내가 어째서 너랑 같이 들어가야하나고」
+		ENDIF
+			CFLAG:5365 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5365 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「목욕탕이라면 역시 술이 제격이지, 거기다가 벚꽃이라던지 달이라던지 보였다면 더 좋았을텐데」
+			PRINTFORMW 「자 그렇다면 한잔 ……을 하기 전에 먼저 씻는게 좋겠지, 등을 닦아줄게」
+			CFLAG:5365 = 3
+		;그 외
+		ELSEIF CFLAG:5365 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「내가 어째서 너랑 같이 목욕해야 하는데」
+			CFLAG:5365 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;처음
+	IF CFLAG:5366 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「자아자아, 땀을 흘리니 산뜻한걸」
+			PRINTFORMW 「에에…… 계속, 설레는걸?」
+		;그 외
+		ELSE
+			PRINTFORMW 「모처럼 깨끗하게 되었네, 너의 상대는 이제 그만 했으면 한다고」
+		ENDIF
+			CFLAG:5366 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5366 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「자아자아, 땀을 흘리니 산뜻한걸」
+			PRINTFORMW 「에에…… 계속, 설레는걸?」
+			CFLAG:5366 = 3
+		;그 외
+		ELSEIF CFLAG:5366 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「모처럼 깨끗하게 되었네, 너의 상대는 이제 그만 했으면 한다고」
+			CFLAG:5366 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;新妻プレイ CFLAG367 解除 CFLAG368
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 90 && TEQUIP:59
+	;처음
+	IF CFLAG:5367 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이건 잘 모르겠지만 , 이건 알몸에 착용하는 것이 아닌……아니 맞군, 훤히 들여다 보이는 걸」
+			PRINTFORMW 「새댁이라……뭐―, 너는 사람이고―……」
+			PRINTFORMW 「이히히힛, 입으라고 하신다면 입어드리지요, 서방님」
+		;그 외
+		ELSE
+			PRINTFORMW 「사람들이 생각하는 것은 이해할수가 없네」
+		ENDIF
+			CFLAG:5367 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5367 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「너도 좋아하는구나, 이거」
+			PRINTFORMW 「에―, 아둔한 서방님을 가지면 고생한다던데」
+			PRINTFORMW 스이카는 그렇게 말하면서, 기쁜 얼굴로 에이프런을 입고 있다
+			CFLAG:5367 = 3
+		;그 외
+		ELSEIF CFLAG:5367 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5367 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 90 && TEQUIP:59 == 0
+	;처음
+	IF CFLAG:5368 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「어라, 벌써 끝이야?」
+		;그 외
+		ELSE
+			PRINTFORMW 「후응……」
+		ENDIF
+			CFLAG:5368 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5368 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「다음에는―, 굳이 이런 거 안 입혀도 될꺼 같은데 」
+			PRINTFORMW 「하지만 이런 걸 좋아하나보네, 그치?」
+			CFLAG:5368 = 3
+		;그 외
+		ELSEIF CFLAG:5368 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「질리지도 않는거냐, 너란놈은」
+			CFLAG:5368 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;放尿 CFLAG369
+;強制放尿 CFLAG370
+;-------------------------------------------------
+IF SELECTCOM == 111 || SELECTCOM == 620
+	;強制放尿
+	IF SELECTCOM == 620 || SELECTCOM == 111 && ((TALENT:45 == 0 && ABL:10 >= 4 && ABL:11 >= 3 && ABL:21 >= 3) || (TALENT:45 && TEQUIP:12 == 0))
+		;연모+おもらし癖+野外プレイ
+		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5370 < 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5370 = 5
+		;연모+おもらし癖
+		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5370 < 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5370 = 4
+		;노출벽Lv5
+		ELSEIF ABL:14 >= 5 && (CFLAG:5370 < 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5370 = 3
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5370 < 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5370 = 2
+		;그 외
+		ELSEIF CFLAG:5370 < 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5370 = 1
+		ENDIF
+	;放尿
+	ELSE
+		;연모+おもらし癖+野外プレイ
+		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5369 < 5 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5369 = 5
+		;연모+おもらし癖
+		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5369 < 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5369 = 4
+		;노출벽Lv5
+		ELSEIF ABL:14 >= 5 && (CFLAG:5369 < 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5369 = 3
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5369 < 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5369 = 2
+		;그 외
+		ELSEIF CFLAG:5369 < 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5369 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+;追加コマンド・アナル関連 CFLAG371以降を使用
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+
+;-------------------------------------------------
+;アナル舐め CFLAG371
+;-------------------------------------------------
+IF SELECTCOM == 180
+	;처음
+	IF CFLAG:5371 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우아, 거기이……더럽다니까아……안」
+		;그 외
+		ELSE
+			PRINTFORMW 「읏! 어, 어딜 핱는거야, 드디어 미쳐버린건가?」
+		ENDIF
+			CFLAG:5371 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5371 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우으읏, 거기 부분만……할짝할짝이라니……이」
+			CFLAG:5371 = 4
+		;A감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:5371 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우, 쿠우……엉덩이 구멍으로, 느껴버릴 리가, 없잖아아……」
+			CFLAG:5371 = 3
+		;그 외
+		ELSEIF CFLAG:5371 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그런 곳을, 핥다니……진짜 구제불능이구먼, 너란 자식은」
+			CFLAG:5371 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルビ―ズ 開始時CFLAG372 終了時CFLAG373
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 172 && TEQUIP:25 == 5
+	;처음
+	IF CFLAG:5372 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5372 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상＋마조끼Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5372 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5372 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5372 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5372 = 4
+		;A감각Lv3이상＋마조끼Lv3이상
+		ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5372 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5372 = 3
+		;그 외
+		ELSEIF  CFLAG:5372 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5372 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 172 && TEQUIP:25 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5373 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5373 = 3
+	;A감각Lv3이상＋마조끼Lv3이상
+	ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5373 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5373 = 2
+	;그 외
+	ELSEIF CFLAG:5373 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5373 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;------------------------------------------------
+;正常位アナル CFLAG374
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;처음
+	IF CFLAG:5374 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5374 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활Lv2이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5374 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5374 = 5
+		;연모+윤활Lv2미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5374 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5374 = 4
+		;윤활Lv2이상＋A감각Lv3이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5374 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5374 = 3
+		;그 외
+		ELSEIF CFLAG:5374 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5374 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位アナル CFLAG375
+;-------------------------------------------------
+IF SELECTCOM == 31
+	;처음
+	IF CFLAG:5375 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5375 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활Lv2이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5375 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5375 = 5
+		;연모+윤활Lv2미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5375 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5375 = 4
+		;윤활Lv2이상＋A감각Lv3이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5375 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5375 = 3
+		;그 외
+		ELSEIF CFLAG:5375 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5375 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位アナル CFLAG376
+;-------------------------------------------------
+IF SELECTCOM == 32
+	;처음
+	IF CFLAG:5376 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5376 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활Lv2이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5376 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5376 = 5
+		;연모+윤활Lv2미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5376 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5376 = 4
+		;윤활Lv2이상＋A감각Lv3이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5376 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5376 = 3
+		;그 외
+		ELSEIF CFLAG:5376 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5376 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面座位アナル CFLAG377
+;-------------------------------------------------
+IF SELECTCOM == 33
+	;처음
+	IF CFLAG:5377 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5377 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활Lv2이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5377 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5377 = 5
+		;연모+윤활Lv2미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5377 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5377 = 4
+		;윤활Lv2이상＋A감각Lv3이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5377 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5377 = 3
+		;그 외
+		ELSEIF CFLAG:5377 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5377 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位アナル CFLAG378
+;-------------------------------------------------
+IF SELECTCOM == 34
+	;처음
+	IF CFLAG:5378 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5378 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활Lv2이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5378 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5378 = 5
+		;연모+윤활Lv2미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5378 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5378 = 4
+		;윤활Lv2이상＋A감각Lv3이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5378 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5378 = 3
+		;그 외
+		ELSEIF CFLAG:5378 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5378 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;空気浣腸 開始時CFLAG379 終了時CFLAG380
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 175 && TEQUIP:25 == 8
+	;처음
+	IF CFLAG:5379 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5379 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상＋마조끼Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5379 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5379 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5379 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5379 = 4
+		;A감각Lv3이상＋마조끼Lv3이상
+		ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5379 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5379 = 3
+		;그 외
+		ELSEIF  CFLAG:5379 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5379 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 175 && TEQUIP:25 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5380 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5380 = 3
+	;A감각Lv3이상＋마조끼Lv3이상
+	ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5380 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5380 = 2
+	;그 외
+	ELSEIF CFLAG:5380 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5380 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;拡張バル―ン 開始時CFLAG381 終了時CFLAG382
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 173 && TEQUIP:25 == 6
+	;처음
+	IF CFLAG:5381 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5381 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상＋마조끼Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5381 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5381 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5381 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5381 = 4
+		;A감각Lv3이상＋마조끼Lv3이상
+		ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5381 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5381 = 3
+		;그 외
+		ELSEIF  CFLAG:5381 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5381 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 173 && TEQUIP:25 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5382 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5382 = 3
+	;A감각Lv3이상＋마조끼Lv3이상
+	ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5382 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5382 = 2
+	;그 외
+	ELSEIF CFLAG:5382 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5382 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナル電極 開始時CFLAG383 終了時CFLAG384
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 171 && TEQUIP:25 == 4
+	;처음
+	IF CFLAG:5383 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5383 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상＋마조끼Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5383 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5383 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5383 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5383 = 4
+		;A감각Lv3이상＋마조끼Lv3이상
+		ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5383 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5383 = 3
+		;그 외
+		ELSEIF  CFLAG:5383 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5383 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 171 && TEQUIP:25 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5384 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5384 = 3
+	;A감각Lv3이상＋마조끼Lv3이상
+	ELSEIF ABL:2 >= 3 && ABL:21 >= 3 && (CFLAG:5384 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5384 = 2
+	;그 외
+	ELSEIF CFLAG:5384 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5384 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナル奉仕強制 CFLAG385
+;-------------------------------------------------
+IF SELECTCOM == 44
+	;처음
+	IF CFLAG:5385 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우……으으, 그런데 말이야」
+			PRINTFORMW 「제대로 께끗히 해 온거야?」
+		;그 외
+		ELSE
+			PRINTFORMW 「개자식……」
+		ENDIF
+			CFLAG:5385 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+순종Lv5이상
+		IF TALENT:150 == 1 && ABL:10 >= 5 && (CFLAG:5385 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「할짝, 이봐이봐……혀, 넣어주어서 인가?」
+			PRINTFORMW 「나, 혀가 길기 때문에 안쪽까지 넣어도 괜찮지?」
+			CFLAG:5385 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5385 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「할짝, 여기, 기분 좋아?」
+			
+			CFLAG:5385 = 4
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5385 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「와아……남자 주제에 엉덩이 구멍으로 느끼는거냐」
+			PRINTFORMW 「나는, 그다지……」
+			CFLAG:5385 = 3
+		;그 외
+		ELSEIF CFLAG:5385 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그렇게 엉덩이 구멍이 좋다면 봉조각이라도 처 박아두던지……제길」
+			CFLAG:5385 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+;レズ調教コマンド（デフォ主人公でも可能なもの） CFLAG646以降を使用
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+
+;-------------------------------------------------
+;３P CFLAG386
+;-------------------------------------------------
+IF SELECTCOM == 610
+	;처음
+	IF CFLAG:5386 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5386 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5386 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5386 = 5
+		;V감각Lv3이상＋A감각Lv3이상
+		ELSEIF ABL:1 >= 3 && ABL:2 >= 3 && (CFLAG:5386 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5386 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5386 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5386 = 3
+		;그 외
+		ELSEIF CFLAG:5386 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5386 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;シックスナイン CFLAG387
+;-------------------------------------------------
+IF SELECTCOM == 602
+	;처음
+	IF CFLAG:5387 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「으읏, 우아……그렇게 소리내서 핥지 않는다고」
+			PRINTFORMW 「할짝, 으후웃……레로레로……? 와라히? 와라히뷰우……」
+			PRINTFORMW 「으후우…… 네가 그렇게 하라고 했기 때문이라고―」
+		;그 외
+		ELSE
+			PRINTFORMW 「빠는 것도 핥아지는 것도 너로부터는 사절이라고……읏」
+		ENDIF
+			CFLAG:5387 = 1
+			RETURN 0
+	ELSE
+		;연모+봉사정신Lv3이상+C감각Lv3이상
+		IF TALENT:150 == 1 && ABL:13 >= 3 && ABL:0 >= 3 && (CFLAG:5387 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「으응, 으응……으으읏」
+			PRINTFORMW 「뭐―, 언제까지나 당하고 있던 스이카로 생각하는거야―?」
+			PRINTFORMW 「아우웃, 어라, 츄웁! 츄우우우, 즈큐우우우웅!」
+			CFLAG:5387 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5387 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「으―읏, 할짝할짝」
+			PRINTFORMW 「으으읏! ……으후후훗, 할짝할짝, 츄웁츄웁」
+			CFLAG:5387 = 5
+		;굴복각인Lv3+봉사정신Lv3이상+C감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:13 >= 3 && ABL:0 >= 3 && (CFLAG:5387 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「할짝, 후우……할짝, 츄웁추윱, 으카아앗?!?」
+			PRINTFORMW 「……에……츕, 츄팟츄팟, 우화, 할짝」
+			CFLAG:5387 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5387 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5387 = 3
+		;그 외
+		ELSEIF CFLAG:5387 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5387 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG関係（XXXをキャラ番号に置換）
+;パラメ―タ変動をトリガ―にした口上
+;パラメ―タ変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_23
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+
+;-------------------------------------------------
+;パラメ―タ変動時のセリフ CFLAG 221～260を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;처음윤활がLV2超えた CFLAG221
+;-------------------------------------------------
+P = PALAM:10 + UP:10
+IF P > PALAMLV:2 && CFLAG:5221 == 0
+	;연모
+	IF TALENT:150 == 1
+		;ロ―ションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「이런 물건, 딱히 사용하지 않아도 괜찮은데 말이야」
+			PRINTFORMW 라면서 스이카는 이미 축축하게 젖은 자신의 보지를 넒게 벌린다
+		;그 외
+		ELSE
+			PRINTFORMW 「와하하하……완전히 준비되어서 할수 있겠구먼―……」
+			PRINTFORMW 스이카의 눈동자는 이내 정욕으로 젖어 있었다
+		ENDIF
+	;그 외
+	ELSE
+		;ロ―ションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「……칠하는 기분이 상당히 더럽다고, 이거. 괜한 걱정인지는 모르겠지만」
+		;그 외
+		ELSE
+			PRINTFORMW 「으읏……！?」
+			PRINTFORMW 「아, 아무것도 아니야……!」
+			PRINTFORMW (차갑단 말이야……)
+			
+		ENDIF
+	ENDIF
+		CFLAG:5221 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음欲情がLV2超えた CFLAG222
+;-------------------------------------------------
+P = PALAM:13 + UP:13
+IF P > PALAMLV:2 && CFLAG:5222 == 0
+	;연모
+	IF TALENT:150 == 1
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「뭐야……이런 건 이제와서 필요하지 않다고……」
+		;그 외
+		ELSE
+			PRINTFORMW 「으후훗……그런 기분이 들게 해주잖아……」
+			PRINTFORMW 「뭐어, 이젠 여기도 사양하지 않으니깐」
+		ENDIF
+	;그 외
+	ELSE
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「이런 약으로……어떻게 되는 일 따윈 없어, 무다무다」
+			PRINTFORMW 「약, 사실은……효능이 없는거 아니야?」
+		;그 외
+		ELSE
+			PRINTFORMW (쿠웃, ……왜, 이런 놈 따위에게……)
+		ENDIF
+	ENDIF
+		CFLAG:5222 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음恥情がLV2超えた CFLAG223
+;-------------------------------------------------
+P = PALAM:15 + UP:15
+IF P > PALAMLV:2 && CFLAG:5223 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「응―……너도 심술궂어」
+	;그 외
+	ELSE
+		PRINTFORMW 「뭐, 뭐야, 그 눈은!」
+	ENDIF
+		CFLAG:5223 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음恐怖がLV2超えた CFLAG224
+;-------------------------------------------------
+P = PALAM:17 + UP:17
+IF P > PALAMLV:2 && CFLAG:5224 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「자, 잠깐……, 웃을수 없는 농담이구나. 하핫……」
+	;그 외
+	ELSE
+		PRINTFORMW 「히앗……!」
+		PRINTFORMW (무, 무서울리가 없어, 무서울리가 없다니깐！)
+	ENDIF
+		CFLAG:5224 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음C절정 CFLAG225
+;-------------------------------------------------
+IF NOWEX:0 > 0 && CFLAG:5225 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「이, 이거……광장해, 아……오, 온다!」
+		PRINTFORMW 「아, 으으읏！안 돼안 돼안 돼안 돼……！읏！가 , 가버려어어엇!」
+		PRINTFORMW 스이카는 이를 악물어서 덮쳐오는 절정의 물결을 참고 있는 것 처럼 보인다
+	;그 외
+	ELSE
+		PRINTFORMW 「싫, 싫어……！너 같은거 따위에……!」
+		PRINTFORMW 「 제길……젠장맞을, 죽, 죽여버릴꺼야……」
+		PRINTFORMW 「크으읏……기억하고 있으라고……」	
+	ENDIF
+		CFLAG:5225 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음V절정 CFLAG226
+;-------------------------------------------------
+IF NOWEX:1 > 0 && CFLAG:5226 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「히아앗！굉장해, 오……오오오오!」
+		PRINTFORMW 「～～～～～～～～～～！！!」
+		PRINTFORMW 「괭, 장해……이거, 중독될거 같아아……」
+		
+	;그 외
+	ELSE
+		PRINTFORMW 「이, 자식……！너 같은거 따위에……엣!」
+		PRINTFORMW 「히쿡……개자식, 죽, 죽여버린다……」
+		PRINTFORMW 「크으읏……기억 하고 있어……」
+	ENDIF
+		CFLAG:5226 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음A절정 CFLAG227
+;-------------------------------------------------
+IF NOWEX:2 > 0 && CFLAG:5227 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「하쿠우웃……엉덩이로, 느껴버려, 뭐야 이거……!」
+		PRINTFORMW 「안, 돼……안 돼안 돼안 돼안 돼……엣！으읏！가, 가버려어어어엇!」
+		PRINTFORMW 「으오, 아하하하……엉덩이로 느끼는거, 중독 되어버릴지도……」
+	;그 외
+	ELSE
+		PRINTFORMW 「읏！우으읏！크으읏……～～～～～～っ!」
+		PRINTFORMW 「히우, 우……뭐, 야……」
+		PRINTFORMW 「빠, 빨리, 이거……빼, 빼라고……」
+	ENDIF
+		CFLAG:5227 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음B절정 CFLAG228
+;-------------------------------------------------
+IF NOWEX:3 > 0 && CFLAG:5228 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「으으……가슴으로, 기분 좋아져……, 크읏……읏」
+		PRINTFORMW 「하후우, 가슴만으로, 가버리다니 원참」
+	;그 외
+	ELSE
+		PRINTFORMW 「응……가슴, 하우우웃……히, 으으……」
+	ENDIF
+		CFLAG:5228 = 1
+ENDIF
+
+
+;-------------------------------------------------
+;처녀 상실(처녀만) CFLAG229
+;-------------------------------------------------
+A = UP:20 + UP:21
+IF TFLAG:0 > 0 && CFLAG:5229 == 0
+	;연모에다 主人のセックスによる처녀 상실
+	IF TFLAG:2
+		;연모에다 반발각인 마취득
+		IF TALENT:150 == 1 && (A < 500 || TFLAG:105 == 1)
+			PRINTFORMW 「천천히, 조금만 느긋하게……」
+			PRINTFORMW 「쿠, 아……아아아앗……아파, ……」
+			PRINTFORMW 「으응? ……네, 네가 내 첫남자야」
+			PRINTFORMW 「아야야…… 아직 움직이지 말라고 정말……」
+			PRINTFORMW 「각오는 되어 있는거지, 오니의 상처를 건들였으니깐」
+			PRINTFORMW 「뭐어…… 더 이상은 놓치지 않을테니깐」
+			PRINTFORMW 희미하게 눈물을 머금은 눈동자로 %조사처리(CALLNAME:MASTER,"를")% 바라보았다
+		;연모에다 반발각인취득
+		ELSE
+			PRINTFORMW 「천천히, 조금만 느긋하게……」
+			PRINTFORMW 「쿠, 아……온다……아파아, 아앗……」
+			PRINTFORMW 「아야야……이걸로 나도 상처입은 물건이구나……」
+			PRINTFORMW 「별로……딱히 신경은 쓰이지 않아」
+		ENDIF
+	;指挿入れで처녀 상실（反感がかなり少ない）
+	ELSEIF SELECTCOM == 4
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이, 아야야야……」
+			PRINTFORMW 「처음은, 역시 너의 것으로 해주길 바랬는데, 말이야」
+			PRINTFORMW 스이카는 부루퉁한 모습으로 외연하고 있다
+		;그 외
+		ELSE
+			PRINTFORMW 「……크으으읏!」
+		ENDIF
+	;그 외の時に처녀 상실
+	ELSE
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아파……아프다고오……」
+			PRINTFORMW 「귀신도 말이야, 아야얏……처음은 말이야, 보통의 것이 좋은데……」
+		;그 외
+		ELSE
+			PRINTFORMW 「히이잇! ……각오하고 있으라고, 네놈……」
+			PRINTFORMW 스이카는 쏘아 죽일 눈빛으로 %조사처리(CALLNAME:MASTER,"를")% 노려보았다
+		ENDIF
+	ENDIF
+		CFLAG:5229 = 1
+ENDIF
+
+
+;-------------------------------------------------
+;セックスで射精させた CFLAG230 CFLAG231
+;-------------------------------------------------
+IF TFLAG:9 > 0 || TFLAG:10 > 0
+	;アナルセックスか？
+	IF TFLAG:9 > 0
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5231 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우, 아, 뜨거워라……너의 것으로, 나의 배……가득하다고」
+			PRINTFORMW 「우하아, 나의 엉덩이, 그렇기 기분 좋았던거야?」
+			CFLAG:5231 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5231 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우, 아, 뜨거워……엉덩이에……내보내다니……」
+			CFLAG:5231 = 3
+		;그 외
+		ELSEIF CFLAG:5231 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「히잇!? 그, 그만둬!」
+			PRINTFORMW 「배, 뱃속에……우에, 기분나빠……」
+			CFLAG:5231 = 2
+		ENDIF
+		;그 외
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5230 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아읏♪ 후후, 광장한 기세구나」
+			PRINTFORMW 「으읏……아핫, 뱃속에서 반응하고 있어」
+			PRINTFORMW 「이런 기세라면 자궁 안에서…… 잉태할지도 몰라?」
+			PRINTFORMW 「응―, 나는……너와의 아이라면 계속 가지고 싶을지도」
+			PRINTFORMW 사랑스러운 표정으로 하복부를 어루만지면서 스이카는 넋을 잃고 중얼거리고 있다
+			CFLAG:5230 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5230 <= 2 || FLAG:11 == 2)
+				IF RAND:3 == 0
+					PRINTFORML 「히이잇! 자궁으로 내뿜고 있어……이렇게」
+					PRINTFORMW 스이카는 보지로 부터 빠져나오고 있는 정액의 양에 절망을 들어내면서 눈물을 머금기 시작했다.
+				ELSEIF RAND:2 == 0
+					PRINTFORML 「그만둬! 질내에는……우우우우, 아직, 나와아아……빨리, 빼라고오!」
+					PRINTFORMW 스이카는 질 내에서 방출되는 정액의 미지근함에, 혐오를 드러내고 있다
+				ELSE
+					PRINTFORML 「이 자식, 얼마나 안에다가 내야지 , 정말로 임신해버리면……아니, 싫어」
+					PRINTFORML 「으오옷, 또 질내에게다가……이 자식 적당히 하라고……」
+					PRINTFORMW 스이카는 질내에서 다시 커지는 페니스를 느꼈는지, 초조한 표정으로 단 교성을 울리고 있다
+					ENDIF
+			CFLAG:5230 = 3
+		;그 외
+		ELSEIF CFLAG:5230 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「히이잇!? 그, 그만워어! 빨리! 빼란 말이야!」
+			PRINTFORMW 「우아……개자식, 나오고 있어……히익, 쓰레기 같으니……」
+			PRINTFORMW 질구로부터 흘러넘치는 정액의 양에 스이카의 얼굴에는 공포와 절망이 떠오르기 시작한다
+			CFLAG:5230 = 2
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手で射精させた CFLAGCFLAG232
+;-------------------------------------------------
+IF TFLAG:12 > 0
+	;봉사정신Lv5
+	IF ABL:13 >= 5 && (CFLAG:5232 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「히아아앗……우―, 잔뜩 내보냈네」
+		PRINTFORMW 「하아아아, 추유윱, 우우……벌써라니, 아까운데 말이야」
+		PRINTFORMW 스이카는 체내에 붙은 특농의 정액을 삼키기 시작했다
+		CFLAG:5232 = 3
+	;봉사정신Lv3
+	ELSEIF ABL:13 >= 3 && (CFLAG:5232 <= 1 || FLAG:11 == 2)
+		PRINTFORMW 「후후, 싸고 있는 얼굴이 귀여운걸」
+		CFLAG:5232 = 2
+	;그 외
+	ELSEIF CFLAG:5232 <= 0 || FLAG:11 == 2
+		PRINTFORMW 「우와, ……더러운걸 잘도……」
+		PRINTFORMW 「냄새가 나는 것도……심하네, 최악이야」
+		CFLAG:5232 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;口で射精させた CFLAG233 CFLAG234
+;-------------------------------------------------
+IF TFLAG:11 > 0
+	;フェラ, イラマチオの場合
+	IF SELECTCOM == 41 || SELECTCOM == 230
+		;정액중독Lv5
+		IF ABL:31 >= 5 && (CFLAG:5233 < 5 || FLAG:11 == 2)
+			IF RAND:3 == 0
+				PRINTFORMW 「읏쿠우, 쿠우웃, 으읏……하후훗, 추유윱, 으쿳」
+				PRINTFORMW 「쿠우웃, 응―……으응? 아직 여기에 남아 있겠지」
+				PRINTFORMW 스이카는 입 안의 정액을 마신 후에
+				PRINTFORMW 요도에 남은 정액까지 빨아드릴 기세로, 페니스를 빨라 올리기 시작했다
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「으쿠웃!? 케하핫, 쿠하앗……잠까안―……」
+				PRINTFORMW 「갑자기 안쪽까지 돌진하지 말라고」
+				PRINTFORMW 「히야아, 그런……일 안해도 제대로 마셔 줄꺼라니깐」
+			ELSE
+				PRINTFORMW 「으, 으으―……츄우웁, 츄르르르릅, 추하앗」
+				PRINTFORMW 「쿠우우수, 코아아앗……아우우웃」
+				PRINTFORMW 「후후후후, 이렇게 진하게……진뜩히」
+				PRINTFORMW 스이카는 입 안의 정액을 거품이 일게 해서 맛보고 있었다.
+				CFLAG:5233 = 5
+			ENDIF
+		;정액중독Lv3
+		ELSEIF ABL:31 >= 3 && (CFLAG:5233 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「우쿠웃, 으후훗……코쿠쿳, 으쿠웃」
+			PRINTFORMW 「후아앗, 익숙해지면 그리 나쁜 맛도 아니네」
+			CFLAG:5233 = 3
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5233 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「으뭇……응쿠」
+			PRINTFORMW 「케하핫, 또 상당히 입 안에다가」
+			CFLAG:5233 = 2
+		;그 외
+		ELSEIF CFLAG:5233 < 1 || FLAG:11 == 2
+			PRINTFORMW 「쿳!? 우, 하아웃, 쿨럭, 쿨럭!」
+			PRINTFORMW 「이런 물건을 입속에다가 깊게 집어넣다니……」
+			PRINTFORMW 「하, 하아? 이런 더러운 것 따윌 마실 수 있다고 생각하는거야?!」
+			PRINTFORMW 스이카는 입 안에 흘러 들어간 정액을 남김없이 토해내 이쪽을 노려보고 있다
+			CFLAG:5233 = 1
+		ENDIF
+	;パイズリの場合
+	ELSEIF SELECTCOM == 42
+		;봉사정신Lv5
+		IF ABL:13 >= 5 && (CFLAG:5234 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「응―, 진한게 이렇게 많이 나오다니」
+			PRINTFORMW 「머리카락도, 머리도, 몸도……전부 너의 냄새가 스며들어벌니다」
+			PRINTFORMW 「후후, 나의 전부가 너의 물건이 되어버릴꺼 같아」
+			PRINTFORMW 스이카는 흘러내리는 정액을 두손으로 모아 마시면서, 열정적인 시선으로 바라보았다
+			CFLAG:5234 = 3
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5234 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「와, 와앗……뭐ㅡ, 싼다면 싼다고 말을 해야지」
+			PRINTFORMW 「덕분에 가슴에다가 싸다니」
+			PRINTFORMW 「그래도 그렇게 나의 가슴이 기분 좋았어?」
+			CFLAG:5234 = 2
+		;그 외
+		ELSEIF CFLAG:5234 < 1 || FLAG:11 == 2
+			PRINTFORMW 「으읏! ……」
+			PRINTFORMW 「후응……좋은 기분이야」
+			CFLAG:5234 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;射精した(ふたなり/オトコのみ) CFLAG235
+;-------------------------------------------------
+IF TFLAG:30 > 0
+	;처음
+	IF CFLAG:5235 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5235 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5235 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5235 = 3
+		;그 외
+		ELSEIF CFLAG:5235 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5235 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;噴乳した(母乳体質のみ) CFLAG236
+;-------------------------------------------------
+IF TFLAG:31 > 0
+	;처음
+	IF CFLAG:5236 == 0
+		;순종Lv4이상
+		IF ABL:10 >= 4
+			PRINTFORMW 「뭐―, 모르는 동안에 이렇게 가슴에서 나올줄이야……」
+			PRINTFORMW 「조금……책임, 져야 할꺼야」
+		;그 외
+		ELSE
+			PRINTFORMW 「어째서 젖이……설마, 그런일이……」
+		ENDIF
+			CFLAG:5236 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+순종Lv4이상
+		IF TALENT:150 == 1 && ABL:10 >= 4 && (CFLAG:5236 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「조금, 그렇게 강하게 마시면 아프다니깐」
+			PRINTFORMW 「히야앗, 이빨을 세우는 것도 금지!」
+			PRINTFORMW 「응―……오니와 인간 사이라도, 아이를 가질수는 있는건가……」
+			CFLAG:5236 = 4
+		;순종Lv4이상
+		ELSEIF ABL:10 >= 4 && (CFLAG:5236 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……맛있어？나의 젖」
+			CFLAG:5236 = 3
+		;그 외
+		ELSEIF CFLAG:5236 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또, 젖이라니……어째서야……」
+			PRINTFORMW 「싫어……멈추란 말이야……」
+			CFLAG:5236 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｃ감각Lv5로 Ｃ절정50이상 CFLAG237
+;-------------------------------------------------
+IF ABL:0 >= 5 && EX:0 >= 50 && NOWEX:0 > 0
+	;처음
+	IF CFLAG:5237 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5237 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5237 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5237 = 3
+		;그 외
+		ELSEIF CFLAG:5237 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5237 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ감각Lv5로 Ｖ절정50이상 CFLAG238
+;-------------------------------------------------
+IF ABL:1 >= 5 && EX:1 >= 50 && NOWEX:1 > 0
+	;처음
+	IF CFLAG:5238 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5238 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5238 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5238 = 3
+		;그 외
+		ELSEIF CFLAG:5238 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5238 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ감각Lv5로 Ａ절정50이상 CFLAG239
+;-------------------------------------------------
+IF ABL:2 >= 5 && EX:2 >= 50 && NOWEX:2 > 0
+	;처음
+	IF CFLAG:5239 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5239 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5239 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5239 = 3
+		;그 외
+		ELSEIF CFLAG:5239 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5239 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｂ감각Lv5로 Ｂ절정50이상 CFLAG240
+;-------------------------------------------------
+IF ABL:3 >= 5 && EX:3 >= 50 && NOWEX:3 > 0
+	;처음
+	IF CFLAG:5240 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;그 외
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5240 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5240 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5240 = 3
+		;그 외
+		ELSEIF CFLAG:5240 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5240 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG関係（X1をキャラ番号に置換）
+;刻印変動をトリガ―にした口上
+;刻印変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_23
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;고통각인 Lv3 취득 CFLAG297
+;-------------------------------------------------
+IF TFLAG:40 == 3 && CFLAG:5297 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「아, 아파아아……어째서 이런 짓을 하는거야……」
+	ELSE
+		PRINTFORMW 「아쿠웃……아픔으로 나를 조교할수 있다고 생각 하는 건……생각 자체를 안하는구나」
+	ENDIF
+		CFLAG:5297 = 1
+ENDIF
+
+;-------------------------------------------------
+;쾌락각인 Lv3 취득 CFLAG298
+;-------------------------------------------------
+IF TFLAG:41 == 3 && CFLAG:5298 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW (하아앗, 하아…… 최, 최고아아, 기분 좋아아아)
+	ELSE
+		PRINTFORMW (어째서…… 어째서 이렇게 기분이 좋다니……)
+	ENDIF
+		CFLAG:5298 = 1
+ENDIF
+
+;-------------------------------------------------
+;굴복각인 Lv3 취득 CFLAG299
+;-------------------------------------------------
+IF TFLAG:42 == 3 && CFLAG:5299 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW (이젠, 포기……할까)
+		PRINTFORMW (이 녀석의 완구가 되는 일도…… 괜찮을까)
+	ELSE
+		PRINTFORMW (이젠, 무리……인가)
+		PRINTFORMW (이 자식의 완구가 될 수 밖에…… 없는건가)
+	ENDIF
+		CFLAG:5299 = 1
+ENDIF
+
+;-------------------------------------------------
+;반발각인 Lv3 취득 CFLAG300
+;-------------------------------------------------
+IF TFLAG:44 == 3 && CFLAG:5300 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「너 말이야……내가 아니였다면 뒤에서 식칼로 싹둑되어도 불평하지 말라고」
+	ELSE
+		PRINTFORMW 「오니를 얕보지 말란 말이지」
+		PRINTFORMW 「산채로 손가락 끝부터 천천히 부수어 버릴까?」
+	ENDIF
+		CFLAG:5300 = 1
+ENDIF
+
+;-------------------------------------------------
+;イベント口上集（X1, X2をキャラ番号に置換する） FLAG 261～296
+;-------------------------------------------------
+@SELF_KOJO_K23
+;-------------------------------------------------
+;調教後自慰 CFLAG261
+;-------------------------------------------------
+IF TFLAG:200 == 151
+	;연모
+	IF TALENT:150 ==1 && (CFLAG:5261 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「아으읏…이거 , 조금 부족한데……으읏 하아」
+		CFLAG:5261 = 3
+	;자위중독Lv3이상
+	ELSEIF ABL:30 >= 3 && (CFLAG:5261 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「뭐, 뭐야……」
+		PRINTFORMW 「몸이, 말하는 것을 듣지 않아」
+		CFLAG:5261 = 2
+	;그 외
+	ELSEIF CFLAG:5261 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5261 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;レズプレイ CFLAG262
+;-------------------------------------------------
+IF (TFLAG:200 == 154 || TFLAG:200 == 155)
+	;연모
+	IF TALENT:150 ==1 && (CFLAG:5262 < 4 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5262 = 4
+	;レズ中毒Lv3이상
+	ELSEIF ABL:32 >= 3 && (CFLAG:5262 < 3 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5262 = 3
+	;レズっけLv3이상
+	ELSEIF ABL:22 >= 3 && (CFLAG:5262 < 2 || FLAG:11 == 2)
+		PRINTFORMW 
+		CFLAG:5262 = 2
+	;그 외
+	ELSEIF CFLAG:5262 < 1 || FLAG:11 == 2
+		PRINTFORMW 
+		CFLAG:5262 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;朝フェラ CFLAG263
+;-------------------------------------------------
+IF TFLAG:200 == 140
+	;연모
+	IF TALENT:150 ==1 && (CFLAG:5263 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「츄루루룹, 으츄우웃……후아앗」
+		PRINTFORMW 「추륩추륩, 진하네, 으읏」
+		PRINTFORMW 「아침답게……즈큐우우웃, 후아아, 최고로 진하네」
+		PRINTFORMW 「맛있는 아침식사네, 너의 잠자는 얼굴을 보면서 하는 나도 특이한걸지도」
+		CFLAG:5263 = 3
+	;봉사정신Lv5이상
+	ELSEIF ABL:13 >= 5 && (CFLAG:5263 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「일어난건가」
+		PRINTFORMW 「즈큐우웃……아침의 근무는 이것부터」
+		CFLAG:5263 = 2
+	;그 외
+	ELSEIF CFLAG:5263 < 1 || FLAG:11 == 2
+		PRINTFORMW 「응쿠？일어났다」
+		PRINTFORMW 「뭔가 불만 있어？언제나 맘대로 돌진해 오는 주제에」
+		PRINTFORMW 「쳇, ……츄웁, 얌전히 하고 있으라고, 씹고 뜯고 맛보고 즐기지 않을테니깐」
+		CFLAG:5263 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後セックス CFLAG264
+;-------------------------------------------------
+IF TFLAG:200 == 150
+	;V감각Lv4이상
+	IF ABL:1 >= 4 && (CFLAG:5264 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아직도 부족한데」
+		PRINTFORMW 「나를 이렇게 해두고, 방치하는건 허락하지 않을테니깐……」
+		CFLAG:5264 = 2
+	;그 외
+	ELSEIF CFLAG:5264 < 1 || FLAG:11 == 2
+		PRINTFORMW 「건강하구나……」
+		PRINTFORMW 「너도 아직 충분하지 않지, 나의 몸도 그렇다고」
+		CFLAG:5264 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後夜這い　 CFLAG265
+;-------------------------------------------------
+IF TFLAG:200 == 158
+	;V감각Lv5이상
+	IF ABL:1 >= 5 && (CFLAG:5265 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「하로롱」
+		PRINTFORMW 「나쁘지는 않지만, 아직도 부족하다고 느껴지는데」
+		PRINTFORMW 「후후, 각오하라고」
+		PRINTFORMW 「오니의 진심이라면, 너는 안될꺼야 아마」
+		CFLAG:5265 = 2
+	;그 외
+	ELSEIF CFLAG:5265 < 1 || FLAG:11 == 2
+		PRINTFORMW 「야아」
+		PRINTFORMW 「혼자 자기도 어느 의미로 외롭고」
+		PRINTFORMW 「오니도 피부를 맞대고 자는게 그리워질때가 있는거야」
+		PRINTFORMW 「그러니깐, 동침동침」
+		PRINTFORMW 「그렇게 경계하면 다치는데, 이히히힛 잡아먹지는 않아♪」
+		CFLAG:5265 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;売却
+;信じてたけど裏切られる……とかそんな感じで. 
+;-------------------------------------------------
+IF TFLAG:200 == 130
+	;연모+반발각인Lv3미만
+	IF TALENT:150 && MARK:9 < 3
+		PRINTFORMW 「……이, 인간을 믿은, 내가 어리석었지……」
+		PRINTFORMW 「역시나 , 인간은 비겁하고, 거짓말 쟁이에, 왜소하고, 그리고, 그리고옷……!」
+		PRINTFORMW 「너를 믿고 있었던 나는 우스꽝스러웠던건가!? 바보 같았던 거냐고!?」
+		PRINTFORMW 「……제기랄……」
+		PRINTFORMW 「그런데도, 나는 아직도, 너를 좋아한다 말이야……이 더러운 자식아!」
+	;반발각인Lv3
+	ELSEIF MARK:9 == 3
+		PRINTFORMW 「팔려간다는 것도 사실 슬픈 거지만……너에게로 부터 희롱 당하는 것 보단, 괜찮은거네」
+		PRINTFORMW 「답례로, 언젠가 찾아와주지. 기대하고 있으란 말이야」
+	;음란
+	ELSEIF TALENT:170
+		PRINTFORMW 「자아, 이거, 줄게」
+		PRINTFORMW 그렇게 말하면서 스이카는 너에게 전한 것은, 언제든지 차고 있던 표주박이였다
+		PRINTFORMW 「술에 취하는 것보단 느낌이 좋은 일, 알아버렸기 때문에……이젠 필요없다고, 그거」
+		PRINTFORMW 「답례 대신으로는 해주는 건, 그것을 소중하게 사용해 줬으면 하는데 말이야……」
+		PRINTFORMW 스이카는 음탕한 표정으로 , 상인에게 달려간다……
+	;그 외
+	ELSE
+		PRINTFORMW 「……그런 건가」
+		PRINTFORMW 「역시, 인간을 믿고 있던 내가 바보였지 뭐……」
+		PRINTFORMW 스이카는 한탄하는 표정으로, %CALLNAME:MASTER%에게 말했다……
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;약혼 반지 사용시
+;-------------------------------------------------
+IF TFLAG:200 == 200
+	PRINTFORMW 
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+
+;-------------------------------------------------
+;@단독 엔딩 관계
+;음란이면 에로 분기로……라고 생각했지만,  『아나타』 외가 캐릭터 범하는 거 싫어하는 사람이 있으려나― 싶어서 코멘트아웃.
+;-------------------------------------------------
+@SINGLE_ENDING_K23
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW  
+	;음란
+	IF TALENT:170 == 1
+		PRINTFORMW 미묘한 소리가 지하실에서 울리고 있다……
+		PRINTFORMW 그 소리의 원흉은 남자들의 난폭한 숨소리와 헐떡이는 스이카의 소리였다
+		PRINTFORMW 스이카의 능력에 의해서 모아진 남자들은, 스이카의 구멍이라는 구멍을 전부 범해서, 만족스러운 표정으로……
+		PRINTFORMW 남자들은, %CALLNAME:MASTER%의 육봉만으로는 만족 할수 없는 스이카가 무단으로 불러 들인 부랑자다.
+		PRINTFORMW 추잡한 연회는, 언제 끝날지도 모르는 채 계속 되어만 간다……
+		PRINTFORMW  ・
+		PRINTFORMW  ・
+		PRINTFORMW  ・
+		PRINTFORMW 며칠 후, 백탁으로 질퍽질퍽하게 된 스이카를 씻겨서, 침대로 데려가 재우는 %조사처리(CALLNAME:MASTER,"는")%, 이내, 방의 한구석에서 무언가를 발견했다. 
+		PRINTFORMW 거기에 있던것은, %조사처리(CALLNAME:MASTER,"가")% 주었던 반지와, 그녀가 항상 가지고 있던 , 술이 솟아 나오는 표죽박이다. 
+		PRINTFORMW 반지는 자위의 방해가 된다고선, 표주박은 그 이상으로 걸리적 거린다는 이유로, 그런 각자의 이유로 방치되어 있었다.. 
+		PRINTFORMW ……%조사처리(CALLNAME:MASTER,"는")%, 먼지가 가득 쌓인 표주박을 털어내고, 술을 한입 마시고는, 스이카에게 입으로 전해주었다. 
+		PRINTFORMW 그 술은, 어째서인가, 눈물과 같은 맛이 났다……
+		PRINTFORMW  
+		PRINTFORMW 　　　　　　　　―― Ending No.1023 (스이카 -육욕으로 범벅된 사랑- 엔딩)
+	;그 외	
+	ELSE
+		PRINTFORMW 「……뭐야? 이전보다 술 마시지 않아도 괜찮아?」
+		PRINTFORMW 조련사를 그만둔 %조사처리(CALLNAME:MASTER,"는")%, 주변의 마을에 집을 가지면서, 환상향의 거주자의 친숙해 지기 시작하고 있었다. 
+		PRINTFORMW 그러한 나날의 하루. 연회의 돌아가는 길에서의 사소한 의문이었지만, 스이카는 이내 미간을 찌푸리면서 고민하기 시작했다……
+		PRINTFORMW 「……그런게 말한다면야……우―응……」
+		PRINTFORMW 아, 라면서 얼굴을 올린 스이카는, 이미 평소와 같은, 밝은 표정이 되어 있었다.
+		PRINTFORMW 「나는 언제나 너의 사랑으로 몹시 취해버리기 때문인거 같아!」
+		PRINTFORMW ……말한 후에, 스이카의 빰이 붉게 되어간다……
+		PRINTFORMW 「으읏, 뭐라도 말이라도 해보라고!」
+		PRINTFORMW 스이카는 이내 부끄러운 듯 나에게 매달려 온다.
+		PRINTFORMW 「그 보단 이번에는 할수 있다면, 쾌락에도 취하게 된다면 좋을지도……?」
+		PRINTFORMW 스이카는 %CALLNAME:MASTER%의 팔에다가, 자신의 작은 가슴을 가까히 눌렀다. 
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 조련사때의 미소를 지으며, 집으로 귀가 했다……. 
+		PRINTFORMW  
+		PRINTFORMW 　　　　　　　　―― Ending No.1023 (스이카 엔딩)
+;스스로 생각해놓고 어쩐지 ↓는 뭐하다 싶었다
+;		PRINTFORMW 　　　　　　　　―― Ending No.1023 (스이카 -사랑에 범벅된 주욕- 엔딩)
+	ENDIF
+RETURN 0
+

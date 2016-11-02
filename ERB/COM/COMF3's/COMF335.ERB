@@ -1,0 +1,200 @@
+﻿;=============================================================================
+;파이즈리펠라한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE335
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:335 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;조교자가 남자면 안 됨
+SIF TALENT:PLAYER:120
+	RETURN 0
+;조교자가 고양이혀일 경우 고양이 펠라 패치 유효가 아니면 불가
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀일 경우 조교자에게 기교4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;순종4미만 · 레즈끼4미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4)) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;주인이 [금단의 지식]持ちじゃないとき, 体格差が2段階以内か조교자가 [금단의 지식]持ちじゃないとダメ
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, TARGET) == 0
+	RETURN 0
+;性器が汚れているとMASTERの場合はできない(조교자가 汚れ無視か愛液, Ｐ, 母乳のよごれならＯＫ)
+SIF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && ASSIPLAY == 0 && TALENT:MASTER:64 == 0
+	RETURN 0
+;性器が汚れており, 汚臭敏感で순종4미만의 ASSI일 경우はできない(조교자가 汚れ無視か愛液, Ｐ, 母乳のよごれならＯＫ)
+IF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;[절벽]이면 불가
+IF TALENT:PLAYER:110
+	RETURN 0
+;[貧乳]だと기교5이상 필요
+ELSEIF TALENT:PLAYER:111 && ABL:PLAYER:12 < 5
+	RETURN 0
+;[巨乳]なら기교3이상 필요
+ELSEIF TALENT:PLAYER:112 && ABL:PLAYER:12 < 3
+	RETURN 0
+;[爆乳]なら기교LV2이상 필요
+ELSEIF TALENT:PLAYER:113 && ABL:PLAYER:12 < 2
+	RETURN 0
+;그 외의 경우에는 기교4이상 필요
+ELSEIF TALENT:PLAYER:111 == 0 && TALENT:PLAYER:112 == 0 && TALENT:PLAYER:113 == 0 && ABL:PLAYER:12 < 4
+	RETURN 0
+ENDIF
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 褌と裸Ｙシャツ以外のコスプレ中はだめ
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 > 2 && TEQUIP:ASSI:59 != 11 && TEQUIP:ASSI:59 != 17
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM335
+PRINTL 파이즈리펠라한다
+TSTR:0 = 파이즈리펠라한다
+CALL TRAIN_MESSAGE_COM335
+
+DOWNBASE:0 += 55
+DOWNBASE:1 += 220
+
+SOURCE:11 = 1000
+SOURCE:12 = 240
+SOURCE:14 = 1000
+SOURCE:16 = 1000
+SOURCE:31 = 100
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 1400
+	SOURCE:24 = 800
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 2300
+	SOURCE:24 = 1000
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 3200
+	SOURCE:24 = 1300
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 3950
+	SOURCE:24 = 1700
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 4750
+	SOURCE:24 = 2200
+ELSE
+	SOURCE:0 = 5000
+	SOURCE:24 = 2800
+ENDIF
+
+;조교자의 TALENT:혀사용을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:0 , 2.00
+	SOURCE:17 += SOURCE:0 / 20
+ENDIF
+;조교자의 고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:0 , 0.70
+
+TCVAR:PLAYER:22 += 1
+
+;노예의 P⇔조교자의 입의 불결이 이동
+STAIN:2 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:2
+;노예의 P⇔조교자의 가슴의 불결이 이동
+STAIN:2 |= STAIN:PLAYER:5
+STAIN:PLAYER:5 |= STAIN:2
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+
+;조교자의 파이즈리 실행 회수
+CFLAG:PLAYER:56 += 1
+;조교 대상의 파이즈리 능숙 회수
+CFLAG:57 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM335
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TALENT:PLAYER:110 || TALENT:PLAYER:111
+	PRINTFORM 납작한 가슴으로 열심히 %CALLNAME:TARGET%의 페니스를 
+ELSEIF TALENT:PLAYER:112 || TALENT:PLAYER:113
+	PRINTFORM 풍만한 가슴으로 %CALLNAME:TARGET%의 페니스를 감싸 
+ELSE
+	PRINTFORM 가슴으로 %CALLNAME:TARGET%의 페니스를 끼워 
+ENDIF
+PRINTL 문질러대며,
+;고양이혀
+IF TALENT:PLAYER:54
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTW 입에 물고, 혀끝으로 간질였다….
+;초조하게 해
+ELSEIF TEQUIP:68
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:1
+		PRINT 실룩실룩 조금씩 떨고 있는 클리토리스에, 
+	ELSE
+		SIF EX:30
+			PRINT 앞부분이 미끌미끌하게 젖어있는 
+		PRINT 두근두근 맥박 치는 페니스에, 
+	ENDIF
+	PRINTW 가벼운 입맞춤을 반복했다….
+;노멀
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTW 입에 물고 빨아 돌렸다….
+ENDIF

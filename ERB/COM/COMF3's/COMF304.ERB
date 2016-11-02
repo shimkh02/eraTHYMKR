@@ -1,0 +1,551 @@
+﻿;=============================================================================
+;W펠라치오
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE304
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:304 > 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;助手じゃないとダメ(フェラチオから来た場合は無視)
+SIF SELECTCOM != 41 && PLAYER != ASSI
+	RETURN 0
+;主人にペニスがないとダメ
+SIF EXIST_BAR(MASTER) == 0
+	RETURN 0
+;助手にペニスがないとダメ
+SIF EXIST_BAR(ASSI) == 0
+	RETURN 0
+;주인이 【魅惑】か【謎の魅力】じゃないとダメ
+SIF TALENT:MASTER:91 == 0 && TALENT:MASTER:92 == 0
+	RETURN 0
+;対象が猫舌だと猫フェラパッチ有効でないとダメ
+SIF TALENT:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;猫舌だと기교5 · 奉仕精神5 · 순종5 · フェラ경험100が필요
+SIF TALENT:54 && (ABL:12 < 5 || ABL:13 < 5 || ABL:10 < 5 || EXP:22 < 100)
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;패닉 중에는 불가
+SIF TFLAG:108 > 0
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;조수가 훈도시 착용 중일 경우에는 불가
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;2 개빨게 한다
+@COM304
+;특정의 주인과 조수의 편성을 조사한다
+CALL JUDGE_TRAIN_PAIR, MASTER, ASSI
+IF TFLAG:175 == 1
+	LOCALS = 홍마 자매의 것으로
+ELSEIF TFLAG:175 == 2
+	LOCALS = 겨드랑이 무녀 두 명의 것으로
+ELSEIF TFLAG:175 == 3
+	LOCALS = 가을의 소득을 축하하는 2기둥의 것으로
+ELSEIF TFLAG:175 == 4
+	LOCALS = 달의 자매의 것으로
+ELSEIF TFLAG:175 == 5
+	LOCALS = 비봉클럽의 두 명의 것으로
+ELSEIF TFLAG:175 == 6
+	LOCALS = 춘고정, W릴리의 것으로
+ELSEIF TFLAG:175 == 7
+	LOCALS = 사토리 자매의 것으로
+ELSEIF TFLAG:175 == 8
+	LOCALS = 몽환 자매의 것으로
+ELSEIF TFLAG:175 == 9
+	LOCALS = 유유유의 것으로
+ELSEIF TFLAG:175 == 10 || TFLAG:175 == 11 || TFLAG:175 == 12
+	LOCALS = 소령 자매의 것으로
+ELSE
+	LOCALS = 
+ENDIF
+PRINTFORM %LOCALS% 
+SIF TEQUIP:30 == 2 || TEQUIP:ASSI:30 == 2
+	PRINT 오나홀 
+SIF TEQUIP:30 == 6 || TEQUIP:ASSI:30 == 6
+	PRINT 전극 오나홀 
+PRINTFORML \@(TALENT:196) ? 더블 스포일러 # 2자루 펠라치오\@
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER, 304
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+SELECTCOM = 304
+TSTR:0 = %LOCALS% \@(TALENT:196) ? W스포일러 # W펠라(2개 빨기)\@
+CALL TRAIN_MESSAGE_COM304
+
+;-------------------------------------------------
+;사정 게이지 체크 1(주인)
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 1200
+ELSEIF ABL:12 == 1
+	LOCAL = 1700
+ELSEIF ABL:12 == 2
+	LOCAL = 2300
+ELSEIF ABL:12 == 3
+	LOCAL = 3000
+ELSEIF ABL:12 == 4
+	LOCAL = 3600
+ELSE
+	LOCAL = 4200
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL)
+;정액 중독을 본다
+LOCAL = EJACULATIONCHECK_ABL_31_1(TARGET, LOCAL)
+
+;TALENT:혀사용을 본다
+SIF TALENT:52
+	TIMES LOCAL , 2.00
+;TALENT:고양이혀을 본다
+SIF TALENT:54
+	TIMES LOCAL , 0.70
+
+;주인의 C감각을 본다
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:MASTER:121 || TALENT:MASTER:122
+	BASE:MASTER:2 += LOCAL
+
+;-------------------------------------------------
+;사정 게이지 체크 2(조수)
+;-------------------------------------------------
+LOCAL:1 = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL:1 = 1200
+ELSEIF ABL:12 == 1
+	LOCAL:1 = 1700
+ELSEIF ABL:12 == 2
+	LOCAL:1 = 2300
+ELSEIF ABL:12 == 3
+	LOCAL:1 = 3000
+ELSEIF ABL:12 == 4
+	LOCAL:1 = 3600
+ELSE
+	LOCAL:1 = 4200
+ENDIF
+
+;순종을 본다
+LOCAL:1 = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL:1)
+;봉사 정신을 본다
+LOCAL:1 = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL:1)
+;정액 중독을 본다
+LOCAL:1 = EJACULATIONCHECK_ABL_31_1(TARGET, LOCAL:1)
+
+;TALENT:혀사용을 본다
+SIF TALENT:52
+	TIMES LOCAL:1 , 2.00
+;TALENT:고양이혀을 본다
+SIF TALENT:54
+	TIMES LOCAL:1 , 0.70
+
+;조수의 C감각을 본다
+LOCAL:1 = EJACULATIONCHECK_ABL_0_1(ASSI, LOCAL:1)
+
+SIF TALENT:ASSI:121 || TALENT:ASSI:122
+	BASE:ASSI:2 += LOCAL:1
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 80
+DOWNBASE:1 += 250
+
+SOURCE:14 = 400
+SOURCE:22 = 6000
+SOURCE:31 = 600
+
+;위 쪽으로 계산한 더러운 데이터
+SOURCE:30 = TFLAG:242*40 + 100
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 800
+	SOURCE:16 = 600
+	TIMES SOURCE:30 , 4.00
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 1200
+	SOURCE:16 = 900
+	TIMES SOURCE:30 , 2.50
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 1400
+	SOURCE:16 = 1000
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 1600
+	SOURCE:16 = 1200
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 1740
+	SOURCE:16 = 1500
+	TIMES SOURCE:30 , 0.50
+ELSE
+	SOURCE:15 = 2000
+	SOURCE:16 = 2200
+	TIMES SOURCE:30 , 0.10
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:16 , 1.50
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+ELSE
+	TIMES SOURCE:15 , 2.20
+	TIMES SOURCE:16 , 2.20
+ENDIF
+
+;-------------------------------------------------
+;사정 체크(주인)
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(MASTER)
+LOCAL = TFLAG:91
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	TIMES SOURCE:15 , 3.00
+
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 = 0
+		TIMES SOURCE:16 , 2.00
+		TIMES SOURCE:22, 4.00
+	ELSEIF ABL:31 == 1
+		SOURCE:24 = 500
+		TIMES SOURCE:16 , 3.00
+		TIMES SOURCE:22, 3.00
+	ELSEIF ABL:31 == 2
+		SOURCE:24 = 1200
+		TIMES SOURCE:16 , 4.00
+		TIMES SOURCE:22, 2.50
+	ELSEIF ABL:31 == 3
+		SOURCE:24 = 3000
+		TIMES SOURCE:16 , 6.00
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 4
+		SOURCE:24 = 6000
+		TIMES SOURCE:16 , 9.00
+		TIMES SOURCE:22, 1.50
+	ELSE
+		SOURCE:24 = 12000
+		TIMES SOURCE:16 , 15.00
+		TIMES SOURCE:22, 1.00
+	ENDIF
+	;사정처 타입의 설정
+	TFLAG:703 = 4
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;사정자 판정용의 임시 변수
+	TFLAG:93 = MASTER
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+TCVAR:22 += 2
+
+;노예의 입⇔조교자의 P의 불결이 이동
+STAIN:0 |= STAIN:MASTER:2
+STAIN:MASTER:2 |= STAIN:0
+
+;봉사 정신 LV2 이상, 기교 LV2 이상이라면 P의 더러움을 없는 취한다
+;다만 대상이 고양이혀의 경우, 고양이 펠라 패치 유효해 게다가
+;봉사 정신 LV4 이상, 기교 LV5, 순종 LV3 이상 없으면 않은 취하지 않는다
+IF (TALENT:54 == 0 && ABL:13 >= 2 && ABL:12 >= 2) || (TALENT:54 && FLAG:14 & 16 && ABL:13 >= 4 && ABL:12 >= 5 && ABL:10 >=3)
+	STAIN:MASTER:2 = 2
+	SIF LOCAL >= 1
+		TFLAG:21 = 1
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 == 1 && TALENT:MASTER:120 == 1
+	TCVAR:13 += 7
+ENDIF
+
+;조교자가 후타나리
+SIF TALENT:MASTER:121
+	SOURCE:22 /= 2
+
+;-------------------------------------------------
+;사정 체크 2
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(ASSI)
+LOCAL = TFLAG:91
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+
+	;사정처 타입의 설정
+	TFLAG:703 = 12
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;사정자 판정용의 임시 변수
+	TFLAG:93 = ASSI
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;노예의 입⇔주인의 P의 불결이 이동
+IF TALENT:MASTER:121 || TALENT:MASTER:122
+	STAIN:0 |= STAIN:MASTER:2
+	STAIN:MASTER:2 |= STAIN:0
+ENDIF
+
+;노예의 입⇔조수의 P의 불결이 이동
+IF TALENT:ASSI:121 || TALENT:ASSI:122
+	STAIN:0 |= STAIN:ASSI:2
+	STAIN:ASSI:2 |= STAIN:0
+ENDIF
+
+;봉사 정신 LV2 이상, 기교 LV2 이상이라면 P의 더러움을 없는 취한다
+;다만 대상이 고양이혀의 경우, 고양이 펠라 패치 유효해 게다가
+;봉사 정신 LV4 이상, 기교 LV5, 순종 LV3 이상 없으면 않은 취하지 않는다
+IF (TALENT:54 == 0 && ABL:13 >= 2 && ABL:12 >= 2) || (TALENT:54 && FLAG:14 & 16 && ABL:13 >= 4 && ABL:12 >= 5 && ABL:10 >=3)
+	STAIN:ASSI:2 = 2
+	SIF LOCAL >= 1
+		TFLAG:21 = 1
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:12 += 10
+ELSEIF TALENT:120 && TALENT:ASSI:120
+	TCVAR:13 += 10
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_304
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%에게 자신의 페니스와 %CALLNAME:ASSI%의 페니스에 동시에 봉사하도록 명령해 보았지만 거절당했다.
+PRINTW 조금 더 조교가 필요할 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM304
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %CALLNAME:TARGET%에게 %조사선택(CALLNAME:MASTER, "와")% %CALLNAME:ASSI%의 페니스를 동시에 봉사하도록 명령했다….
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_304, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:봉사 정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+;ABL:BL기분＆TALENT:남자
+IF (TALENT:PLAYER:120 || TALENT:MASTER:120) && TALENT:120
+	SIF LOCAL:99
+		RESULTS = %RESULTS% - 
+	;↓의 LOCAL:99의 기준(자위 5, 펠라/A애무 강제 10)
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:120%같은 종류({LOCAL:99})
+	IF ABL:23
+		LOCAL:99 = ABL:23
+		TFLAG:240 += LOCAL:99 * 4
+		RESULTS = %RESULTS% + %ABLNAME:23%LV{LOCAL:99}({LOCAL:99 * 4})
+	ENDIF
+ENDIF
+;ABL:정액 중독
+IF ABL:31
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:31
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:31%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;악취 둔감
+IF TALENT:61
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:61%({LOCAL:99})
+;악취 민감
+ELSEIF TALENT:62
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:62%({LOCAL:99})
+ENDIF
+;헌신적
+IF TALENT:63
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:63%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+
+;조교자가 후타나리
+IF TALENT:PLAYER:121
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:121%({LOCAL:99})
+ENDIF
+
+;조교자의 P의 더러움
+TFLAG:242 = COMORDER_STAIN_CALC(2, 0)
+
+;서로 불결
+IF TFLAG:242
+	RESULTS = %RESULTS% - 
+	TFLAG:240 -= TFLAG:242
+	;악취 둔감
+	IF TALENT:61
+		RESULTS = %RESULTS% 서로 불결,
+		PRINTS TALENTNAME:61 
+	ELSEIF TALENT:62
+		RESULTS = %RESULTS% 서로 불결,
+		PRINTS TALENTNAME:62 
+	ELSE
+		RESULTS = %RESULTS% 서로 불결
+	ENDIF
+	RESULTS = %RESULTS%({TFLAG:242})
+	LOCAL:99 = 1
+ENDIF
+
+;난이도 상승
+;오나호로+5
+TFLAG:241 = 32
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	TFLAG:241 += 5
+SIF TEQUIP:ASSI:30 == 2 || TEQUIP:ASSI:30 == 6
+	TFLAG:241 += 5

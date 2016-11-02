@@ -1,0 +1,137 @@
+﻿;=============================================================================
+;촉수 귓구멍 삽입
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE529
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:529 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;조교자는 촉수사역LV1이상 필요
+SIF ABL:PLAYER:98 < 1
+	RETURN 0
+;그밖의 촉수耳穴責め中はダメ
+SIF TEQUIP:45 && TEQUIP:45 != 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM529
+PRINTL 촉수 귓구멍 삽입
+TSTR:0 = 촉수이혈삽입
+CALL TRAIN_MESSAGE_COM529
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 60
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	SOURCE:22 = 50
+	SOURCE:24 = 100
+	SOURCE:30 = 3000
+ELSEIF ABL:35 == 1
+	SOURCE:22 = 100
+	SOURCE:24 = 200
+	SOURCE:30 = 1000
+ELSEIF ABL:35 == 2
+	SOURCE:22 = 250
+	SOURCE:24 = 400
+	SOURCE:30 = 200
+ELSEIF ABL:35 == 3
+	SOURCE:22 = 500
+	SOURCE:24 = 800
+	SOURCE:30 = 50
+ELSEIF ABL:35 == 4
+	SOURCE:22 = 1000
+	SOURCE:24 = 1200
+	SOURCE:30 = 0
+ELSE
+	SOURCE:22 = 1750
+	SOURCE:24 = 2000
+	SOURCE:30 = 0
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	SOURCE:25 = 250 * (1 + MARK:8)
+
+;촉수의 뽑아 꽂아
+IF TEQUIP:45
+	TEQUIP:45 = 0
+ELSE
+	TEQUIP:45 = 2
+ENDIF
+;촉수 경험 플래그
+TFLAG:90 = 0
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+RETURN 1
+
+;-------------------------------------------------
+;촉수이혈삽입중
+;-------------------------------------------------
+@EQUIP_COM529
+PRINTL <촉수 귓구멍 삽입 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 30
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	SOURCE:22 += 25
+	SOURCE:24 += 40
+	SOURCE:30 += 1500
+ELSEIF ABL:35 == 1
+	SOURCE:22 += 50
+	SOURCE:24 += 80
+	SOURCE:30 += 500
+ELSEIF ABL:35 == 2
+	SOURCE:22 += 100
+	SOURCE:24 += 160
+	SOURCE:30 += 100
+ELSEIF ABL:35 == 3
+	SOURCE:22 += 250
+	SOURCE:24 += 300
+	SOURCE:30 += 50
+ELSEIF ABL:35 == 4
+	SOURCE:22 += 500
+	SOURCE:24 += 500
+ELSE
+	SOURCE:22 += 900
+	SOURCE:24 += 800
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	SOURCE:25 += 75 * (1 + MARK:8)
+;촉수 경험 플래그
+TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM529
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:45
+	PRINTFORMW 촉수는 %CALLNAME:TARGET%의 귓구멍 으로부터 뽑혀졌다.
+ELSE
+	PRINTFORMW 가느다란 촉수가 %CALLNAME:TARGET%의 귓구멍에 침입했다.
+ENDIF

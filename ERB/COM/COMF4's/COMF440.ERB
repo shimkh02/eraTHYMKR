@@ -1,0 +1,475 @@
+﻿;=============================================================================
+;반령을 범한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;반령そのものと普通に性交したいなら正常位とかを使おう
+@COM_ABLE440
+;반령의 性別が重要なのでここでそのためのフラグクリアを実施する
+TARGET:1 = -1
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:440 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교 대상이 요우무 · 요우키でないとダメ
+SIF NO:TARGET != 19 && NO:TARGET != 70
+	RETURN 0
+;조교 대상이 요우무の場合は반령이 調教可能キャラとして存在し, 主人や助手以外でないとダメ
+IF NO:TARGET == 19
+	;반령이 현재 조교 가능
+	LOCAL = GETCHARA(65)
+	;반령이 いなければダメ
+	SIF LOCAL == -1
+		RETURN 0
+	;반령이 主人か助手の場合はだめ
+	SIF LOCAL == MASTER || LOCAL == ASSI
+		RETURN 0
+	;妊娠していたら除外
+	SIF TALENT:LOCAL:140 == 1
+		RETURN 0
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:LOCAL:4
+		RETURN 0
+	;反発刻印もしくは恐怖刻印３がある場合は除外(拒絶する)
+	SIF MARK:LOCAL:8 > 2 || MARK:LOCAL:9
+		RETURN 0
+	;반령의 체력과 기력이 일정 이하だとダメ
+	SIF BASE:LOCAL:0 < 500 || BASE:LOCAL:1 < 200
+		RETURN 0
+	;요우무がオトコではなくて, 반령もオトコではない場合
+	IF TALENT:120 == 0 && TALENT:LOCAL:120 == 0
+		;Ｖ조교 필터가 오프되어 있지 않으면 불가
+		SIF FLAG:2 & 1
+			RETURN 0
+		;반령이 처녀라면 안 됨
+		SIF TALENT:LOCAL:0
+			RETURN 0
+		;반령에게 일정의 Ｖ경험이 필요
+		SIF EXP:LOCAL:0 < EXPLV:2
+			RETURN 0
+	;그 외의 경우
+	ELSE
+		;Ａ조교 필터가 오프되어 있지 않으면 불가
+		SIF FLAG:2 & 2
+			RETURN 0
+		;반령에게 일정의 Ａ경험이 필요
+		SIF EXP:LOCAL:1 < EXPLV:3
+			RETURN 0
+	ENDIF
+;조교 대상이 요우키の場合は반령(요우키)が調教可能キャラとして存在し, 主人や助手以外でないとダメ
+ELSEIF NO:TARGET == 70
+	;반령(요우키)が현재 조교 가능
+	LOCAL = GETCHARA(99)
+	;반령(요우키)がいなければダメ
+	SIF LOCAL == -1
+		RETURN 0
+	;반령(요우키)が主人か助手の場合はだめ
+	SIF LOCAL == MASTER || LOCAL == ASSI
+		RETURN 0
+	;妊娠していたら除外
+	SIF TALENT:LOCAL:140 == 1
+		RETURN 0
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:LOCAL:4
+		RETURN 0
+	;反発刻印もしくは恐怖刻印３がある場合は除外(拒絶する)
+	SIF MARK:LOCAL:8 > 2 || MARK:LOCAL:9
+		RETURN 0
+	;반령의 체력과 기력이 일정이하だとダメ
+	SIF BASE:LOCAL:0 < 500 || BASE:LOCAL:1 < 200
+		RETURN 0
+	;요우키がオトコではなくて, 반령(요우키)もオトコではない場合
+	IF TALENT:120 == 0 && TALENT:LOCAL:120 == 0
+		;Ｖ조교 필터가 오프되어 있지 않으면 불가
+		SIF FLAG:2 & 1
+			RETURN 0
+		;반령이 처녀라면 안 됨
+		SIF TALENT:LOCAL:0
+			RETURN 0
+		;반령에게 일정의 Ｖ경험이 필요
+		SIF EXP:LOCAL:0 < EXPLV:2
+			RETURN 0
+	;그 외의 경우
+	ELSE
+		;Ａ조교 필터가 오프되어 있지 않으면 불가
+		SIF FLAG:2 & 2
+			RETURN 0
+		;반령에게 일정의 Ａ경험이 필요
+		SIF EXP:LOCAL:1 < EXPLV:3
+			RETURN 0
+	ENDIF
+ENDIF
+;조교자에게 ペニスがない, かつペニスバンドもないかアイテムなし設定でないとダメ
+SIF TALENT:PLAYER:1 == 0 && TALENT:PLAYER:120 == 0 && TALENT:PLAYER:121 == 0 && ITEM:2 == 0 && NOITEM == 0
+	RETURN 0
+;반령의 登録キャラ番号をTARGET:1に代入しておく
+TARGET:1 = LOCAL
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;베이스는 정상위
+;처녀인 채 쾌V 번다든가 반칙이겠지 상고…
+;요기에서도 가능하게 해 보았다. 베이스는 정상위 어널
+;젖지 않아도 가능이라든지 반칙……일까?　뭐, 반발은 각오 해 두어라
+;또한 여기서, TARGET:1=반령or반령(기)의 등록 캐릭터 번호이다=이 커맨드 전용
+;그리고, 본체와 그 반령에 모두 V가 있을 때 마셔 전을 범한다. 그 이외는 뒤의 구멍을 범한다.
+@COM440
+PRINTL 반령을 범한다
+TSTR:0 = 반령을 범한다
+CALL TRAIN_MESSAGE_COM440
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 1500
+ELSEIF ABL:12 == 1
+	LOCAL = 1600
+ELSEIF ABL:12 == 2
+	LOCAL = 1800
+ELSEIF ABL:12 == 3
+	LOCAL = 2000
+ELSEIF ABL:12 == 4
+	LOCAL = 2400
+ELSE
+	LOCAL = 3000
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;욕망을 본다
+LOCAL = EJACULATIONCHECK_ABL_11_1(TARGET, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;능력이나 경험의 일부에 대해서는 반령의 것을 보지만, 소스 그 자체는 본체에 들어간다.
+;본체와 반령이 모두 남자가 아닌 경우
+IF TALENT:120 == 0 && TALENT:(TARGET:1):120 == 0
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 200
+	;반령의 체력 기력 소모를 여기서 해 버린다
+	BASE:(TARGET:1):0 = LIMIT(BASE:(TARGET:1):0 - 50, 0, MAXBASE:(TARGET:1):0)
+	BASE:(TARGET:1):1 = LIMIT(BASE:(TARGET:1):1 - 100, 0, MAXBASE:(TARGET:1):1)
+	PRINTFORML %CALLNAME:(TARGET:1)%의 체력이 50 감소했다.
+	PRINTFORML %CALLNAME:(TARGET:1)%의 기력이 100 감소했다.
+
+	SOURCE:12 = 800
+
+	;반령의 ABL:V감각을 본다
+	IF ABL:(TARGET:1):1 == 0
+		SOURCE:1 = 800
+		SOURCE:11 = 150
+	ELSEIF  ABL:(TARGET:1):1 == 1
+		SOURCE:1 = 1000
+		SOURCE:11 = 250
+	ELSEIF  ABL:(TARGET:1):1 == 2
+		SOURCE:1 = 1200
+		SOURCE:11 = 350
+	ELSEIF  ABL:(TARGET:1):1 == 3
+		SOURCE:1 = 1400
+		SOURCE:11 = 500
+	ELSEIF ABL:(TARGET:1):1 == 4
+		SOURCE:1 = 1600
+		SOURCE:11 = 700
+	ELSE
+		SOURCE:1 = 1800
+		SOURCE:11 = 1000
+	ENDIF
+
+	;반령의 EXP:V경험을 본다
+	IF EXP:(TARGET:1):0 < EXPLV:1
+		TIMES SOURCE:1 , 0.80
+	ELSEIF EXP:(TARGET:1):0 < EXPLV:2
+		TIMES SOURCE:1 , 0.90
+	ELSEIF EXP:(TARGET:1):0 < EXPLV:3
+		TIMES SOURCE:1 , 1.00
+	ELSEIF EXP:(TARGET:1):0 < EXPLV:4
+		TIMES SOURCE:1 , 1.10
+	ELSEIF EXP:(TARGET:1):0 < EXPLV:5
+		TIMES SOURCE:1 , 1.20
+	ELSE
+		TIMES SOURCE:1 , 1.30
+	ENDIF
+
+	;조교자가 후타나리
+	IF ASSIPLAY
+		SIF TALENT:ASSI:121
+			TIMES SOURCE:1 , 2.50
+	ENDIF
+
+	;PALAM:욕정을 본다(이것은 본체의 것을 본다)
+	IF PALAM:13 < PALAMLV:1
+		TIMES SOURCE:1 , 0.60
+		TIMES SOURCE:11 , 0.30
+	ELSEIF PALAM:13 < PALAMLV:2
+		TIMES SOURCE:1 , 0.80
+		TIMES SOURCE:11 , 0.60
+	ELSEIF PALAM:13 < PALAMLV:3
+		TIMES SOURCE:1 , 1.00
+		TIMES SOURCE:11 , 1.00
+	ELSEIF PALAM:13 < PALAMLV:4
+		TIMES SOURCE:1 , 1.20
+		TIMES SOURCE:11 , 1.50
+	ELSE
+		TIMES SOURCE:1 , 1.50
+		TIMES SOURCE:11 , 1.80
+	ENDIF
+
+	;ABL:순종을 본다(이것도 본체의 것을 본다)
+	IF ABL:10 == 0
+		TIMES SOURCE:1 , 0.50
+		TIMES SOURCE:11 , 0.60
+		TIMES SOURCE:32 , 2.00
+	ELSEIF ABL:10 == 1
+		TIMES SOURCE:1 , 0.80
+		TIMES SOURCE:11 , 0.80
+		TIMES SOURCE:32 , 1.50
+	ELSEIF ABL:10 == 2
+		TIMES SOURCE:1 , 1.00
+		TIMES SOURCE:11 , 1.00
+		TIMES SOURCE:32 , 1.00
+	ELSEIF ABL:10 == 3
+		TIMES SOURCE:1 , 1.30
+		TIMES SOURCE:11 , 1.20
+		TIMES SOURCE:32 , 0.80
+	ELSEIF ABL:10 == 4
+		TIMES SOURCE:1 , 1.60
+		TIMES SOURCE:11 , 1.40
+		TIMES SOURCE:32 , 0.60
+	ELSE
+		TIMES SOURCE:1 , 2.00
+		TIMES SOURCE:11 , 1.60
+		TIMES SOURCE:32 , 0.30
+	ENDIF
+
+	;반령의 V경험 증가(반령에 관해서는 후의 경험 가산 처리가 발동하지 않을 가능성이 있으므로)
+	CFLAG:(TARGET:1):11 |= 1
+	EXP:(TARGET:1):0 += 1
+	PRINTFORML V경험( %CALLNAME:(TARGET:1)%)＋1 
+	SIF ASSIPLAY == 0 && (TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1)
+		CFLAG:(TARGET:1):173 += 1
+;그 이외의 경우
+ELSE
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 240
+	;반령의 체력 기력 소모를 여기서 해 버린다
+	BASE:(TARGET:1):0 = LIMIT(BASE:(TARGET:1):0 - 100, 0, MAXBASE:(TARGET:1):0)
+	BASE:(TARGET:1):1 = LIMIT(BASE:(TARGET:1):1 - 150, 0, MAXBASE:(TARGET:1):1)
+	PRINTFORML %CALLNAME:(TARGET:1)%의 체력이 100 감소했다.
+	PRINTFORML %CALLNAME:(TARGET:1)%의 기력이 150 감소했다.
+
+	SOURCE:12 = 400
+
+	;반령의 ABL:A감각을 본다
+	IF ABL:(TARGET:1):2 == 0
+		SOURCE:2 = 200
+		SOURCE:11 = 10
+		SOURCE:22 = 100
+	ELSEIF ABL:(TARGET:1):2 == 1
+		SOURCE:2 = 500
+		SOURCE:11 = 30
+		SOURCE:22 = 500
+	ELSEIF ABL:(TARGET:1):2 == 2
+		SOURCE:2 = 800
+		SOURCE:11 = 150
+		SOURCE:22 = 1200
+	ELSEIF ABL:(TARGET:1):2 == 3
+		SOURCE:2 = 1100
+		SOURCE:11 = 300
+		SOURCE:22 = 2400
+	ELSEIF ABL:(TARGET:1):2 == 4
+		SOURCE:2 = 1400
+		SOURCE:11 = 500
+		SOURCE:22 = 3600
+	ELSE
+		SOURCE:2 = 1700
+		SOURCE:11 = 900
+		SOURCE:22 = 5000
+	ENDIF
+
+	;반령의 EXP:A경험을 본다
+	IF EXP:(TARGET:1):1 < EXPLV:1
+		TIMES SOURCE:2 , 0.50
+		SOURCE:20 = 2500
+		DOWNBASE:1 += 50
+	ELSEIF EXP:(TARGET:1):1 < EXPLV:2
+		TIMES SOURCE:2 , 0.60
+		SOURCE:20 = 2000
+		DOWNBASE:1 += 40
+	ELSEIF EXP:(TARGET:1):1 < EXPLV:3
+		TIMES SOURCE:2 , 0.70
+		SOURCE:20 = 1500
+		DOWNBASE:1 += 30
+	ELSEIF EXP:(TARGET:1):1 < EXPLV:4
+		TIMES SOURCE:2 , 0.80
+		SOURCE:20 = 1000
+		DOWNBASE:1 += 20
+	ELSEIF EXP:(TARGET:1):1 < EXPLV:5
+		TIMES SOURCE:2 , 0.90
+		SOURCE:20 = 500
+		DOWNBASE:1 += 10
+	ELSE
+		TIMES SOURCE:2 , 1.00
+		SOURCE:20 = 0
+		DOWNBASE:1 += 0
+	ENDIF
+
+	;조교자가 후타나리
+	IF ASSIPLAY
+		SIF TALENT:ASSI:121
+			TIMES SOURCE:1 , 2.50
+	ENDIF
+
+	;PALAM:욕정을 본다(이것은 본체의 것을 본다)
+	IF PALAM:13 < PALAMLV:1
+		TIMES SOURCE:2 , 0.60
+		TIMES SOURCE:22 , 0.60
+	ELSEIF PALAM:13 < PALAMLV:2
+		TIMES SOURCE:2 , 0.80
+		TIMES SOURCE:22 , 0.80
+	ELSEIF PALAM:13 < PALAMLV:3
+		TIMES SOURCE:2 , 1.00
+		TIMES SOURCE:22 , 1.00
+	ELSEIF PALAM:13 < PALAMLV:4
+		TIMES SOURCE:2 , 1.20
+		TIMES SOURCE:22 , 1.20
+	ELSE
+		TIMES SOURCE:2 , 1.40
+		TIMES SOURCE:22 , 1.40
+	ENDIF
+
+	;ABL:순종을 본다(이것도 본체의 것을 본다)
+	IF ABL:10 == 0
+		TIMES SOURCE:11 , 0.60
+		TIMES SOURCE:32 , 2.00
+	ELSEIF ABL:10 == 1
+		TIMES SOURCE:11 , 0.80
+		TIMES SOURCE:32 , 1.50
+	ELSEIF ABL:10 == 2
+		TIMES SOURCE:11 , 1.00
+		TIMES SOURCE:32 , 1.00
+	ELSEIF ABL:10 == 3
+		TIMES SOURCE:11 , 1.20
+		TIMES SOURCE:32 , 0.80
+	ELSEIF ABL:10 == 4
+		TIMES SOURCE:11 , 1.40
+		TIMES SOURCE:32 , 0.60
+	ELSE
+		TIMES SOURCE:11 , 1.60
+		TIMES SOURCE:32 , 0.30
+	ENDIF
+
+	;반령의 A경험 추가(반령에 관해서는 후의 경험 가산 처리가 발동하지 않을 가능성이 있으므로)
+	CFLAG:(TARGET:1):11 |= 2
+	EXP:(TARGET:1):1 += 2
+	PRINTFORML A경험( %CALLNAME:(TARGET:1)%)＋2 
+	SIF ASSIPLAY == 0 && (TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1)
+		CFLAG:(TARGET:1):174 += 2
+ENDIF
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+SIF TFLAG:91 >= 1 && ABL:10 >= 3 && ABL:11 >= 3 && FLAG:10
+	PRINTFORML %CALLNAME:TARGET%의 반령은 %CALLNAME:PLAYER%에게 끌려왔다….
+
+;대량 사정
+IF TFLAG:91 == 2
+	PRINTL 대량 사정
+	TCVAR:PLAYER:3 += 2
+	PRINTFORML 정액 경험( %CALLNAME:(TARGET:1)%)＋1
+	EXP:(TARGET:1):4 += 1
+	;P에 정액 더러움
+	STAIN:PLAYER:2 |= 4
+;통상의 사정
+ELSEIF TFLAG:91 == 1
+	PRINTL 사정
+	TCVAR:PLAYER:3 += 1
+	;P에 정액 더러움
+	STAIN:PLAYER:2 |= 4
+ENDIF
+BASE:PLAYER:2 = LIMIT(BASE:PLAYER:2 - EJAC*(TFLAG:91), 0, EJAC-1)
+
+;섹스로 사정 플래그
+;TFLAG:10 = TFLAG:91
+
+;LUNATIC 이상은 사정할 때마다 체력이 감소
+CALL EXHAUST_EJAC, PLAYER, TFLAG:91
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 4
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 4
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:11 >= 3) ?  2 # 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM440
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;본체와 반령이 모두 남자가 아닌 경우
+IF TALENT:120 == 0 && TALENT:(TARGET:1):120 == 0
+	IF PREVCOM != 440 && PREVCOM != 441 && PREVCOM != 442 && PREVCOM != 443
+		IF NO:TARGET == 70 
+			PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령(기)을 불러냈다.
+		ELSE
+			PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령을 불러냈다.
+		ENDIF
+	ENDIF
+	;조교자가 페니스 있어
+	IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 그 격분한 남근을
+		PRINTFORML %CALLNAME:TARGET%의 반령의 구멍(?) 같은 곳에 삽입해, 허리를 흔들기 시작했다.
+		PRINTFORMW 그 옆에서 %CALLNAME:TARGET% 자신도 끓어올라 오는 쾌감에 번민하고 있다….
+	;그 외
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 장착한 페니스 밴드로
+		PRINTFORML %CALLNAME:TARGET%의 반령의 구멍(?) 같은 곳에 삽입해, 출납을 시작했다.
+		PRINTFORMW 그 옆에서 %CALLNAME:TARGET% 자신도 끓어올라 오는 쾌감에 번민하고 있다….
+	ENDIF
+;그 이외의 경우
+ELSE
+	IF PREVCOM != 440 && PREVCOM != 441 && PREVCOM != 442 && PREVCOM != 443 && PREVCOM != 444
+		IF NO:TARGET == 70 
+			PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령(기)을 불러냈다.
+		ELSE
+			PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령을 불러냈다.
+		ENDIF
+	ENDIF
+	;조교자가 페니스 있어
+	IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 그 격분한 노장을
+		PRINTFORML %CALLNAME:TARGET%의 반령의 뒤의 구멍(?) 같은 곳에 삽입해, 허리를 흔들기 시작했다.
+		PRINTFORMW 그 옆에서 %CALLNAME:TARGET% 자신도 끓어올라 오는 쾌감에 번민하고 있다….
+	;그 외
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 장착한 페니스 밴드로
+		PRINTFORML %CALLNAME:TARGET%의 반령의 뒤의 구멍(?) 같은 곳에 삽입해, 왕복하기 시작했다.
+		PRINTFORMW 그 옆에서 %CALLNAME:TARGET% 자신도 끓어올라 오는 쾌감에 번민하고 있다….
+	ENDIF
+ENDIF

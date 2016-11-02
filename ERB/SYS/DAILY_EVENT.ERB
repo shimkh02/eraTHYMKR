@@ -1,0 +1,666 @@
+﻿;=============================================================================
+;일상 에로 이벤트 관련
+;=============================================================================
+;RR1331.2の関連イベントの移植発展形
+;ここで1を返すと日常イベント(純愛系＆集団風呂イベント)は起きません.
+;0……休ませて否定の珠を減らしてあげる
+;1……路地裏で割れ目責め(女性専用)
+;2……バイブを入れさせて通りを歩く(女性専用)
+;3……アナルバイブを入れさせて通りを歩く
+;4……街頭自慰強制(女性専用)
+;-----------------------------------------------
+;일상 에로 이벤트 분기 판정
+;-----------------------------------------------
+@DAILY_EVENT_JUDGMENT
+;純愛モード有効時はこちらはスルーする ※ 純愛モード時は、上限を落として、発生自体はさせる30～50%ぐらい?
+;SIF FLAG:12 & 32
+;	RETURN 0
+;ローカル変数初期化
+VARSET LOCAL
+;対象退避のためのローカル関数設定
+LOCAL:1 = TARGET
+;対象のイベント積極性をLOCAL:2に
+LOCAL:2 = DAILY_EVENT_PLAY_CHECK(TARGET)
+;助手がいる場合は助手のイベント積極性をLOCAL:3
+SIF ASSI >= 0
+	LOCAL:3 = DAILY_EVENT_PLAY_CHECK(ASSI)
+;イベントの種類は4種類
+LOCAL = RAND:5
+
+;実行判定処理
+;不可能な日常エロイベントが呼ばれたら0が返ってくる
+$JUDGMENT
+TRYCALLFORM DAILY_EVENT_JUDGMENT_{LOCAL}
+
+IF RESULT != 0
+	;イベント積極性の値以下ならイベント実行
+	IF LOCAL:2 >= RAND:100
+		;対象に関する日常エロイベント個別呼び出し
+		TRYCALLFORM DAILY_EVENT_{LOCAL}
+	ELSE
+		RETURN 0
+	ENDIF
+;不可能な場合は次に助手についてイベントチェックをする
+ELSEIF ASSI >= 0
+	;一時的に助手を対象にした上でイベントチェックを行う
+	TARGET = ASSI
+	TRYCALLFORM DAILY_EVENT_JUDGMENT_{LOCAL}
+	IF RESULT == 0
+		;一時的に助手を対象にしたので、戻す ※この処理が無かった為、ここを通過直後に調教開始をすると調教対象と助手が同一人物になる不具合が発生した模様
+		TARGET = LOCAL:1
+		RETURN 0
+	ELSE
+		;イベント積極性の値以下ならイベント実行
+		IF LOCAL:3 >= RAND:100
+			;助手に関する日常エロイベント個別呼び出し
+			TRYCALLFORM DAILY_EVENT_{LOCAL}
+			;退避してあった対象を戻す
+			TARGET = LOCAL:1
+		ELSE
+			;退避してあった対象を戻す
+			TARGET = LOCAL:1
+			RETURN 0
+		ENDIF
+	ENDIF
+;TARGETが不可で、助手もいないなら0で戻し
+ELSE
+	RETURN 0
+ENDIF
+;必ず[0]以外を返す.ここで[0]を返すとほのぼの日常イベントを実行してしまうので辻褄が合わなくなる.
+RETURN 1
+
+;-----------------------------------------------
+;日常エロイベントの汎用実行判定
+;-----------------------------------------------
+;実行可能なら1/不可なら0
+;ARG:0……対象が女であるか判定（0なら女でなくてOK、0以外なら女限定）
+@DAILY_EVENT_COMMON_JUDGMENT(ARG)
+#FUNCTION
+;対象の主人調教経験が10未満
+SIF EXP:98 < 10
+	RETURNF 0
+;対象が女ではない
+SIF ARG != 0 && TALENT:120
+	RETURNF 0
+;対象がその場にいないとダメ
+SIF CFLAG:4
+	RETURNF 0
+;対象か主人が睡眠薬で眠っていたらダメ
+SIF EQUIP:14 || EQUIP:MASTER:14
+	RETURNF 0
+;体力や気力が消耗しすぎているとダメ、また酔いつぶれていてもダメ
+SIF BASE:0 < 500 || BASE:1 < 1 || BASE:8 > MAXBASE:8
+	RETURNF 0
+;主人の体力気力および酔いも見る
+SIF BASE:MASTER:0 < 500 || BASE:MASTER:1 < 1 || BASE:MASTER:8 > MAXBASE:MASTER:8
+	RETURNF 0
+;欲望が1未満、従順1未満、恐怖刻印3以上、反発刻印3以上、いずれか一つを満たす場合は0を返す
+SIF ABL:11 < 1 || ABL:10 < 4 || MARK:8 > 2 || MARK:9 > 2
+	RETURNF 0
+;調教したことがないか好感度0だとダメ
+SIF CFLAG:1610 == 0 || CFLAG:2 == 0
+	RETURNF 0
+;対象か主人が媚薬中毒中、抱卵中はダメ
+SIF TALENT:MASTER:46 || TALENT:MASTER:143 || TALENT:46 || TALENT:143
+	RETURNF 0
+;精神崩壊してる対象がやる意味はない.
+SIF TALENT:169
+	RETURNF 0
+;昼間の吸血鬼は日傘ないとダメ
+SIF TIME == 0 && (TALENT:MASTER:205 || TALENT:205) && (ITEM:48 == 0 && NOITEM == 0)
+	RETURNF 0
+RETURNF 1
+
+;-----------------------------------------------
+;日常エロイベントの実行積極性計算処理
+;-----------------------------------------------
+;実行可能なら1/不可なら0
+;ARG:0……だれについて判定するか？を登録キャラ番号で.ただし、主人を入れると意味不明に.
+@DAILY_EVENT_PLAY_CHECK(ARG)
+
+;比較対象が常にTARGETではないので(実際にASSIがある)、ARGで判定
+#FUNCTION
+;基本は20%
+LOCAL = 20
+;処女
+SIF TALENT:ARG:0
+	LOCAL -= 5
+;恋慕
+SIF TALENT:ARG:150
+	LOCAL += 10
+;服従
+SIF TALENT:ARG:160
+	LOCAL += 10
+;淫乱
+SIF TALENT:ARG:170
+	LOCAL += 10
+;従順
+	LOCAL += (ABL:ARG:10*ABL:ARG:10)
+;従順3以上でボーナス
+SIF ABL:ARG:10 >= 3
+	LOCAL += 15
+;従順4以上でボーナス
+SIF ABL:ARG:10 >= 4
+	LOCAL += 5
+;従順5以上でボーナス
+SIF ABL:ARG:10 >= 5
+	LOCAL += 10
+;欲望
+	LOCAL += (ABL:ARG:11*ABL:ARG:11)
+;欲望3以上でボーナス
+SIF ABL:ARG:11 >= 3
+	LOCAL += 15
+;欲望4以上でボーナス
+SIF ABL:ARG:11 >= 4
+	LOCAL += 10
+;欲望5以上でボーナス
+SIF ABL:ARG:11 >= 5
+	LOCAL += 15
+;臆病
+SIF TALENT:ARG:10
+	TIMES LOCAL , 0.85
+;反抗的
+SIF TALENT:ARG:11
+	TIMES LOCAL , 0.85
+;素直
+SIF TALENT:ARG:13
+	TIMES LOCAL , 1.20
+;大人しい
+SIF TALENT:ARG:14
+	TIMES LOCAL , 0.85
+;感情乏しい
+SIF TALENT:ARG:22
+	TIMES LOCAL , 0.70
+;好奇心
+SIF TALENT:ARG:23
+	TIMES LOCAL , 1.30
+;保守的
+SIF TALENT:ARG:24
+	TIMES LOCAL , 0.85
+;楽観的
+SIF TALENT:ARG:25
+	TIMES LOCAL , 1.35
+;一線超えない
+SIF TALENT:ARG:27
+	TIMES LOCAL , 0.85
+;抑圧
+SIF TALENT:ARG:32
+	TIMES LOCAL , 0.75
+;解放
+SIF TALENT:ARG:33
+	TIMES LOCAL , 1.35
+;抵抗
+SIF TALENT:ARG:34
+	TIMES LOCAL , 0.80
+;恥じらい
+IF TALENT:ARG:35
+	TIMES LOCAL , 0.90
+;恥薄い
+ELSEIF TALENT:ARG:36
+	TIMES LOCAL , 1.25
+ENDIF
+;快感に素直
+IF TALENT:ARG:70
+	TIMES LOCAL , 1.25
+;快感の否定
+ELSEIF TALENT:ARG:71
+	TIMES LOCAL , 0.60
+ENDIF
+;恋慕
+SIF TALENT:ARG:150
+	TIMES LOCAL , 1.30
+;淫乱
+SIF TALENT:ARG:170
+	TIMES LOCAL , 2.00
+;男嫌い(主人がオトコの場合のみ)
+IF TALENT:ARG:37 && TALENT:MASTER:120
+	TIMES LOCAL , 0.75
+;女嫌い(主人がオトコじゃないの場合のみ)
+ELSEIF TALENT:ARG:38 && TALENT:MASTER:120 == 0
+	TIMES LOCAL , 0.75
+ENDIF
+;反発刻印2以上
+SIF MARK:ARG:9 >= 2
+	TIMES LOCAL , 0.50
+
+;@DAILY_EVENT_COMMON_JUDGMENT"日常エロイベントの汎用実行判定"にて、
+;";欲望が1未満、従順1未満、恐怖刻印3以上、反発刻印3以上、いずれか一つを満たす場合は0を返す"とある(0は不可)
+;その為無意味?
+;恐怖刻印3以上
+;SIF MARK:ARG:8 >= 3
+;	TIMES LOCAL , 0.65
+;相性
+SIF RELATION:ARG:(NO:MASTER) != 0
+	LOCAL = (LOCAL*RELATION:ARG:(NO:MASTER))/100
+
+;下限は0、上限は純愛モード有効時は25,そうでなければ85とする ※現状5種類なので、25%と低めに設定しますが、15種類以上とかイベント数が増えれば、40,50%まで引き上げれば良いと思います
+;それとは別にコンフィグを新設するのも手だとは思いますが
+LOCAL = (FLAG:12 & 32) ? LIMIT(LOCAL, 0, 25) # LIMIT(LOCAL, 0, 85)
+RETURNF LOCAL
+
+;=============================================================================
+;日常エロイベントその0～休養
+;=============================================================================
+;-----------------------------------------------
+;イベント休養実行判定
+;-----------------------------------------------
+@DAILY_EVENT_JUDGMENT_0
+;日常エロイベント汎用実行判定
+SIF DAILY_EVENT_COMMON_JUDGMENT(0) == 0
+	RETURN 0
+
+;否定の珠2以上ないとダメ
+SIF JUEL:100 < 2
+	RETURN 0
+
+RETURN 1
+
+;-----------------------------------------------
+;イベント休養
+;-----------------------------------------------
+@DAILY_EVENT_0
+
+DRAWLINE
+;地の文章カット
+IF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에게 뭔가 시키려 생각했지만
+	PRINTFORMW 너무나 초췌한 모습이라 이번은 %조사처리(CALLNAME:TARGET,"를")% 쉬게 했다…
+ENDIF
+
+;口上の関数,TFLAG:200の800を使用
+CALL SELF_KOJO, TARGET, 800
+
+;地の文章カット
+SIF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 몸과 마음의 휴식을 취함으로써 부정의 구슬이 감소했습니다
+JUEL:100 /= 2
+
+;ストレスがあればそれも軽減される
+IF CFLAG:65 > 0
+	LOCAL = CFLAG:65
+	TIMES LOCAL , 0.25
+	IF LOCAL > 0
+		;地の文章カット
+		SIF CFLAG:99 == 0
+			PRINTFORML 또 쌓여있던 스트레스도 감소했습니다
+		CFLAG:65 -= LOCAL
+	ENDIF
+ENDIF
+
+;地の文章カット
+SIF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 아주 곯아떨어졌다…
+
+
+;=============================================================================
+;日常エロイベントその1～路地裏で割れ目責め
+;=============================================================================
+;-----------------------------------------------
+;割れ目責め実行判定(女性専用)
+;-----------------------------------------------
+@DAILY_EVENT_JUDGMENT_1
+;日常エロイベント汎用実行判定
+SIF DAILY_EVENT_COMMON_JUDGMENT(1) == 0
+	RETURN 0
+
+;従順3以上、欲望2以上,Ｃ感覚1以上、露出癖1以上ないとダメ
+SIF ABL:10 < 3 || ABL:11 < 2 || ABL:0 < 1 || ABL:14 < 1
+	RETURN 0
+
+RETURN 1
+
+;-----------------------------------------------
+;割れ目責めイベント
+;-----------------------------------------------
+@DAILY_EVENT_1
+VARSET LOCAL,0
+LOCAL = ABL:0 * 3 + ABL:11 + ABL:14
+DRAWLINE
+;地の文章カット
+IF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 문득 좋은 생각이 떠올라 %조사처리(CALLNAME:TARGET,"를")% 불러냈다.
+	PRINTFORML 그리고 %조사처리(CALLNAME:TARGET,"를")% 마을에 데리고 가 으슥한 골목으로 끌고 갔다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 치마 속에 손을 집어넣고 갈라진 곳을 몇 번이나 손가락으로 쓰다듬었다…
+ENDIF
+
+;口上の関数,TFLAG:200の801を使用(TFLAG:99に対象の反応基本分岐変数を入れている)
+CALL SELF_KOJO, TARGET, 801, LOCAL
+
+IF LOCAL <= 7
+	;地の文章カット
+	SIF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:MASTER%의 집요한 자극에 소리 죽이며 참고 있었다…
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 100, 0, 1
+ELSEIF LOCAL <= 14
+	;地の文章カット
+	SIF CFLAG:99 == 0
+		PRINTFORML 얼마 되지 않은 사이에 %CALLNAME:TARGET%의 속옷은 흠뻑 젖어있었다…
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 300, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 100, 0, 1
+ELSEIF LOCAL <= 22
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 퍼득퍼득 떨며 %CALLNAME:MASTER%의 손가락으로 느끼고 있었다.
+		PRINTFORML 속옷을 끌어내리고 맨 보지에 손가락을 쑤셔넣자 %조사처리(CALLNAME:TARGET,"는")% 남의 눈도 상관 않고 크게 소리 지르며 절정했다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 2, 0, 1
+	;Ｃ調律経験
+	CALL COMMON_UP_EXP, TARGET, 41, 1, 0, 1
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 1000, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 500, 0, 1
+ELSE
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %CALLNAME:TARGET%의 속옷은 아무것도 하지 않았을 때부터 흥건히 젖어있었다.
+		PRINTFORML 애태우듯이 가볍게 쓰다듬기만 하고 있어도 %조사처리(CALLNAME:TARGET,"는")% 절정을 맞이해 뭔가 부족한 듯 %CALLNAME:MASTER%의 손가락으로 그 곳을 문질러댔다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 2, 0, 1
+	;Ｃ調律経験
+	CALL COMMON_UP_EXP, TARGET, 41, 1, 0, 1
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 2000, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 500, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 800, 0, 1
+ENDIF
+
+;=============================================================================
+;日常エロイベントその2～バイブを入れさせて通りを歩かせる(女性専用)
+;=============================================================================
+;-----------------------------------------------
+;バイブを入れさせて通りを歩かせる実行判定
+;-----------------------------------------------
+@DAILY_EVENT_JUDGMENT_2
+;日常エロイベント汎用実行判定
+SIF DAILY_EVENT_COMMON_JUDGMENT(1) == 0
+	RETURN 0
+
+;処女でもＶ感覚はLv2まで上がってしまう可能性がある(Ｖ経験不要なので)
+;流石に地の文増補をしない限り、処女は厳しいと思われます
+;尚、一応再生処女も弾いていますが、地の文増補+処女喪失処理等をすれば問題ないとは思います、そこまで元気が無いので私には厳しいですがorz
+;従順3以上、欲望2以上,Ｖ感覚1以上、露出癖1以上、Ｖ経験1以上かつ処女以外でないとダメ
+SIF ABL:10 < 3 || ABL:11 < 2 || ABL:1 < 1 || ABL:14 < 1 || TALENT:0 || EXP:0 < 1
+	RETURN 0
+
+;Ｖ調教フィルタがオフになってないとダメ
+SIF FLAG:2 & 1
+	RETURN 0
+
+;バイブがあるかアイテムなしモードでないとだめ
+SIF ITEM:3 == 0 && NOITEM == 0
+	RETURN 0
+
+RETURN 1
+
+;-----------------------------------------------
+;バイブを入れさせて通りを歩かせるイベント
+;-----------------------------------------------
+@DAILY_EVENT_2
+
+;"HELP0.ERB"にてＶ調律経験とは"どれだけヴァギナが主人のモノを呑みこんだのかを示します"、
+;"PRINTL 主人調教中でセックス系コマンドを実行することで上昇させることが出来ます"とあるので、
+;Ｖ調律経験付与は不味い気が……(バイブの実行処理覗いてみましたが、Ｖ調律経験はつかない模様……愛液採集器はついているけどorz)
+;あるはずのＶ経験付与がないのでそちらにする?
+VARSET LOCAL,0
+LOCAL = ABL:1 * 2 + ABL:11 + ABL:14 * 2
+DRAWLINE
+;地の文章カット
+IF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 문득 좋은 생각이 떠올라 %조사처리(CALLNAME:TARGET,"를")% 불러냈다.
+	PRINTFORML %CALLNAME:TARGET%에게 바이브를 넣도록 시키고, 그 상태로 마을까지 데려갔다.
+	PRINTW 그리고 일부러 번화한 길을 데리고 걸어봤다…
+ENDIF
+
+;口上の関数,TFLAG:200の802を使用(TFLAG:99に対象の反応基本分岐変数を入れている)
+CALL SELF_KOJO, TARGET, 802, LOCAL
+
+;Ｖ経験
+CALL COMMON_UP_EXP, TARGET, 0, 1, 0, 1
+IF LOCAL <= 9
+	;地の文章カット
+	SIF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:MASTER,"가")% 때때로 바이브를 누를 때마다 원망스러운 눈을 하고 있었다…
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, 50, 0, 1
+ELSEIF LOCAL <= 13
+	;地の文章カット
+	SIF CFLAG:99 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:MASTER,"가")% 때때로 바이브를 눌러줄 때마다 엉거주춤하게 다리를 비비꼬며 %CALLNAME:MASTER%의 손을 조급하게 마주 잡아댔다…
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, 200, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 300, 0, 1
+ELSEIF LOCAL <= 20
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 항상 뭔가에 정신이 팔린 듯한 눈으로 걷고 있었다.
+		PRINTFORML 스위치를 넣은 순간, %CALLNAME:MASTER%에게 몸을 맡기는 듯한 자세로 참으며 작은 소리로 용서를 청했다.
+		PRINTFORML 왕래하는 사람이 적어진 순간에 스위치를 최강으로 올려주자 %조사처리(CALLNAME:TARGET,"는")% 양 무릎을 지면에 대고 격렬히 절정했다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 2, 0, 1
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, 800, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 500, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 600, 0, 1
+ELSE
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 명백히 부자연스러울 만큼 어질대며 허리를 비비꼬거나 사타구니에 손을 대며 걷고 있었다.
+		PRINTL 허벅지를 지나는 투명한 액체는 짧은 치마로는 미처 다 가려지지 않았다.
+		PRINTFORML 마치 실금한 것처럼 %CALLNAME:TARGET%의 무릎 주변까지 미끈거리는 흔적이 뻗고 있다.
+		PRINTFORML 정기적으로 %CALLNAME:TARGET%의 \@(TALENT:208 == 1) ? 입구를 격렬하게 움직이는 소리 # 「가요, 갑니다…!」하는 소리\@가 들리고 그 때마다 %CALLNAME:TARGET%의 손으로부터 애달픈 경련이 전해졌다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 4, 0, 1
+	;快Ｖの珠
+	CALL COMMON_UP_JUEL, TARGET, 1, 1000, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 600, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 800, 0, 1
+ENDIF
+
+;=============================================================================
+;日常エロイベントその3～アナルバイブを入れさせて通りを歩かせる
+;=============================================================================
+;-----------------------------------------------
+;アナルバイブを入れさせて通りを歩かせる実行判定
+;-----------------------------------------------
+@DAILY_EVENT_JUDGMENT_3
+;日常エロイベント汎用実行判定
+SIF DAILY_EVENT_COMMON_JUDGMENT(0) == 0
+	RETURN 0
+
+;従順3以上、欲望2以上,Ａ感覚1以上、露出癖1以上ないとダメ
+SIF ABL:10 < 3 || ABL:11 < 2 || ABL:2 < 1 || ABL:14 < 1
+	RETURN 0
+
+;Ａ調教フィルタがオフになってないとダメ
+SIF FLAG:2 & 2
+	RETURN 0
+
+;アナルバイブがあるかアイテムなしモードでないとだめ
+SIF ITEM:9 == 0 && NOITEM == 0
+	RETURN 0
+
+RETURN 1
+
+;-----------------------------------------------
+;アナルバイブを入れさせて通りを歩かせるイベント
+;-----------------------------------------------
+@DAILY_EVENT_3
+VARSET LOCAL,0
+LOCAL = ABL:2 * 2 + ABL:11 + ABL:14 * 2
+DRAWLINE
+;地の文章カット
+IF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 문득 좋은 생각이 떠올라 %조사처리(CALLNAME:TARGET,"를")% 불러냈다.
+	PRINTFORML %CALLNAME:TARGET%에게 애널 바이브를 넣도록 시키고, 그 상태로 마을까지 데리고 갔다.
+	PRINTW 그리고 일부러 번화한 길을 데리고 걸어봤다…
+ENDIF
+
+;口上の関数,TFLAG:200の803を使用(TFLAG:99に対象の反応基本分岐変数を入れている)
+CALL SELF_KOJO, TARGET, 803, LOCAL
+
+IF LOCAL <= 9
+	;地の文章カット
+	SIF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 시종일관 기분 더럽다는 듯이 눈에 짜증을 담고 있었다…
+	;快Ａの珠
+	CALL COMMON_UP_JUEL, TARGET, 2, 12, 0, 1
+ELSEIF LOCAL <= 13
+	;地の文章カット
+	SIF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:MASTER,"가")% 애널 바이브를 밀어넣을 때마다 살짝 앞으로 구부정하니 허리 숙이며 들썩이는 호흡을 주체 못하고 있었다…
+	;快Ａの珠
+	CALL COMMON_UP_JUEL, TARGET, 2, 50, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 300, 0, 1
+ELSEIF LOCAL <= 20
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 애널 바이브를 밀어넣을 때마다 한 동안 눈을 감고 평정을 유지하려 시도했다.
+		PRINTL 하지만 그 시험도 몇 번하는 사이에 침착성을 잃고 푸념 같은, 허덕임 같은 한숨을 흘리기 시작했다.
+		PRINTFORML %CALLNAME:MASTER%의 손을 쥐는 힘도 처음에는 강했었으나 얼마 안가 연약하게 빠져나갔다.
+		PRINTFORML 마지막에는 야단맞은 아이 같이 얌전한 얼굴로 걷는 %CALLNAME:TARGET%의 모습이 있었다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 2, 0, 1
+	;Ａ快楽経験
+	CALL COMMON_UP_EXP, TARGET, 43, 1, 0, 1
+	;快Ａの珠
+	CALL COMMON_UP_JUEL, TARGET, 2, 400, 0, 1
+	;恭順の珠
+	CALL COMMON_UP_JUEL, TARGET, 12, 500, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 300, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 900, 0, 1
+	
+ELSE
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 애널 바이브를 밀어넣고 있는 동안에도 그렇지 않을 때도 어색하게 발길을 옮기고 있었다.
+		PRINTFORML 호흡은 비교적 침착했지만 때때로 휘청거리듯 %조사처리(CALLNAME:MASTER,"를")% 길 옆으로 밀거나 안겨들었다.
+		PRINTFORML \@(TALENT:208 == 1) ? 말을 꺼내지 못할 그 입에서 추잡한 소리를 내면서 # 헛소리처럼 「기분 좋아」 「느껴」라는 말을 중얼거리며\@ 눈은 전혀 초점이 맞지 않은 상태다.
+		PRINTFORML 끝내는 \@(TALENT:208 == 1) ? 뭔가가 폭발하는 것 같은 소리와 # 신음성 같은 소리와 \@함께 %CALLNAME:MASTER%의 가슴에 얼굴을 묻고 \@(TALENT:208 == 1) ? 격하게 고개를 문질러대었다 #「가버려」라고 알렸다\@.
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 그 직후 %CALLNAME:MASTER%의 팔 속에서 전율하듯 절정했다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 4, 0, 1
+	;Ａ快楽経験
+	CALL COMMON_UP_EXP, TARGET, 43, 2, 0, 1
+	;快Ａの珠
+	CALL COMMON_UP_JUEL, TARGET, 2, 1000, 0, 1
+	;恭順の珠
+	CALL COMMON_UP_JUEL, TARGET, 12, 1000, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 700, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 1500, 0, 1
+ENDIF
+
+;=============================================================================
+;日常エロイベントその4～街頭自慰強制(女性専用)
+;=============================================================================
+;-----------------------------------------------
+;街頭自慰強制実行判定
+;-----------------------------------------------
+@DAILY_EVENT_JUDGMENT_4
+;日常エロイベント汎用実行判定
+SIF DAILY_EVENT_COMMON_JUDGMENT(1) == 0
+	RETURN 0
+
+;従順4以上、欲望3以上,Ｃ感覚3以上、露出癖3以上ないとダメ
+SIF ABL:10 < 4 || ABL:11 < 3 || ABL:1 < 3 || ABL:14 < 3
+	RETURN 0
+
+RETURN 1
+
+;-----------------------------------------------
+;街頭自慰強制イベント
+;-----------------------------------------------
+@DAILY_EVENT_4
+VARSET LOCAL,0
+LOCAL = ABL:0 * 2 + ABL:10 + ABL:11 + ABL:14 * 3
+DRAWLINE
+;地の文章カット
+IF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 문득 좋은 생각이 떠올라 %조사처리(CALLNAME:TARGET,"를")% 마을로 데리고 갔다.
+	PRINTFORMW 그리고 번화한 큰길로 데려가 그 자리에서 자위하라고 명령했다.
+ENDIF
+
+;口上の関数,TFLAG:200の804を使用(TFLAG:99に対象の反応基本分岐変数を入れている)
+CALL SELF_KOJO, TARGET, 804, LOCAL
+
+;自慰経験 ※ 調教自慰経験に関しては、調教限定との事なので無しでよいのではと思い追加していません
+CALL COMMON_UP_EXP, TARGET, 10, 1, 0, 1
+IF LOCAL <= 25
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 주위가 신경 쓰여 기분이 동하지 않는 모양이었지만 치마 안쪽에서는 확실하게 끈적거리는 물소리가 들렸다.
+		PRINTFORML 손가락을 보이라고 말하자 %조사처리(CALLNAME:TARGET,"는")% 순순히 젖은 집게손가락을 드러냈다…
+	ENDIF
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 100, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 300, 0, 1
+ELSEIF LOCAL <= 29
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 타인의 시선이 향하는 곳이나 자기 몸 움직임에 세심하게 신경 쓰면서도 손가락을 음란하게 넣다 빼기를 계속했다.
+		PRINTFORML 어디를 만지고 있는지 묻자 \@(TALENT:208 == 1) ? 클리토리스를 손가락으로 가리켰다. # 클리토리스라고 큰소리는 아니지만 똑똑히 들리는 목소리로 말했다. \@
+		PRINTFORML 그리고 \@(TALENT:208 == 1) ? %CALLNAME:MASTER% 보고 끄덕이고 나서 # 「지금부터 가겠습니다」라고 선언하고 나서 \@ 앞으로 숙인 자세로 손가락을 사타구니에 끼우고 격렬하게 손을 움직였다.
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 그대로 입을 알듯 모를 듯 벌리고 풀썩 고개를 늘어뜨리며 절정해버렸다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 2, 0, 1
+	;Ｃ調律経験
+	CALL COMMON_UP_EXP, TARGET, 41, 1, 0, 1
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 1000, 0, 1
+	;恭順の珠
+	CALL COMMON_UP_JUEL, TARGET, 12, 1000, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 1000, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 1000, 0, 1
+ELSE
+	;地の文章カット
+	IF CFLAG:99 == 0
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 고분고분 끄덕이고 망설임없이 치마 밑으로 손가락을 넣었다.
+		PRINTL 달작지근한 소리를 감추려고 하지 않고 허리를 비틀며 행위하는데 힘쓴다.
+		PRINTFORML 치마 위쪽에서 봐도 %CALLNAME:TARGET%의 손가락이 어떤 식으로 움직이고 있는지 일목요연했다.
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 우선 선 상태로 절정에 달하고 여운이 남은 성기를 비벼대며 두 번째 절정을 맞이했다.
+		PRINTL 마지막으로 그늘에 숨어 하반신을 발가벗고 훤히 드러난 클리토리스를 만지작거렸다.
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 싱거울 만큼 간단히 가버리더니 반라 상태로 온몸을 뒤흔들었다.
+		PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에게 메모지를 건네어 「여기서 자위했습니다」라고 적게 시킨 뒤 축축히 젖은 속옷과 함께 가까이 있는 벽에 핀으로 고정시켰다…
+	ENDIF
+	;절정経験
+	CALL COMMON_UP_EXP, TARGET, 2, 4, 0, 1
+	;Ｃ調律経験
+	CALL COMMON_UP_EXP, TARGET, 41, 2, 0, 1
+	;露出快楽経験
+	CALL COMMON_UP_EXP, TARGET, 14, 2, 0, 1
+	;快Ｃの珠
+	CALL COMMON_UP_JUEL, TARGET, 0, 2500, 0, 1
+	;恭順の珠
+	CALL COMMON_UP_JUEL, TARGET, 12, 2500, 0, 1
+	;欲情の珠
+	CALL COMMON_UP_JUEL, TARGET, 13, 2500, 0, 1
+	;恥情の珠
+	CALL COMMON_UP_JUEL, TARGET, 15, 2500, 0, 1
+
+ENDIF
+

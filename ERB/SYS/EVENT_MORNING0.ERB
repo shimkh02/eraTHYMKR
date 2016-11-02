@@ -1,0 +1,135 @@
+﻿;=============================================================================
+;아침에 일어나는 이벤트 관련
+;=============================================================================
+;0……朝フェラ
+;1……朝新妻プレイ（相愛時限定）
+;2……朝パイズリ
+;3……朝騎乗位
+;4……朝騎乗位アナル
+;5……キスで起こされる
+;6……朝の足コキ
+;7……朝の３Ｐ
+
+;実行判定関数を通して判定.
+;各条件式は可読性を優先して分割している.
+;-----------------------------------------------
+;朝のイベント分岐判定
+;-----------------------------------------------
+@MORNING_EVENT_JUDGMENT
+;純愛モード無効時は朝フェラのみ発生
+IF (FLAG:12 & 32) == 0
+	LOCAL = 0
+;条件によってイベントの種類が増える
+ELSEIF TALENT:150
+	LOCAL = RAND:8
+;それ以外(朝フェラしか発生しない)
+ELSE
+	LOCAL = 0
+ENDIF
+RESULT = 0
+
+;実行判定処理
+;不可能な朝イベントが呼ばれたら0が返ってくる
+;ただし、朝フェラが出来ない場合は処理を切り上げる
+$JUDGMENT
+TRYCALLFORM MORNING_EVENT_JUDGMENT_{LOCAL}
+
+;朝フェラが出来ない場合は朝イベント終了
+IF RESULT == 0 && LOCAL == 0
+	RETURN 0
+;0が返ってきたら朝フェラを再チェック
+ELSEIF RESULT == 0
+	LOCAL = 0
+	GOTO JUDGMENT
+ENDIF
+
+;朝イベント呼び出し
+TRYCALLFORM MORNING_EVENT_{LOCAL}
+
+;-----------------------------------------------
+;朝イベントの汎用実行判定
+;-----------------------------------------------
+;実行可能なら1/不可なら0
+;ARG:0……主人の竿判定（0ならなくてOK、1なら男限定、2ならふたなりを含む）
+@MORNING_EVENT_COMMON_JUDGMENT(ARG)
+#FUNCTION
+;男ではない
+IF ARG == 1 && TALENT:MASTER:120 == 0
+	RETURNF 0
+;竿自体がない
+ELSEIF ARG == 2 && TALENT:MASTER:120 == 0 && TALENT:MASTER:121 == 0
+	RETURNF 0
+ENDIF
+;欲望が4未満、奉仕精神が4未満、精液中毒が1未満、反発刻印あり、いずれか一つを満たす場合は0を返す
+SIF ABL:11 < 4 || ABL:13 < 4 || ABL:31 == 0 || MARK:9 > 0
+	RETURNF 0
+;育児室に居て出産前なら不可能
+SIF CFLAG:4 == 2 && (TALENT:140 == 1 || TALENT:143 == 1)
+	RETURNF 0
+;調教したことがないキャラは不可能
+SIF CFLAG:1610 == 0
+	RETURNF 0
+RETURNF 1
+
+;-----------------------------------------------
+;朝の搾りたてミルク（別枠イベント）
+;-----------------------------------------------
+@MORNING_EVENT_MILK
+;反発刻印があるとダメ
+SIF MARK:9 > 0
+	RETURN 0
+;噴乳中毒
+IF ABL:34 == 1
+	LOCAL = 1
+ELSEIF ABL:34 == 2
+	LOCAL = 2
+ELSEIF ABL:34 == 3
+	LOCAL = 3
+ELSEIF ABL:34 == 4
+	LOCAL = 4
+ELSE
+	LOCAL = 5
+ENDIF
+
+;献身的
+SIF TALENT:63
+	LOCAL += 1
+;Ｂ敏感
+IF TALENT:106
+	LOCAL += 1
+;Ｂ鈍感
+ELSEIF TALENT:107
+	LOCAL -= 1
+ENDIF
+;恋慕
+SIF TALENT:150
+	LOCAL += 1
+;淫乱
+SIF TALENT:170
+	LOCAL += 1
+;条件を満たしていない
+SIF LOCAL < 1
+	RETURN 0
+
+DRAWLINE
+;地の文章カット
+SIF CFLAG:99 == 0
+	PRINTFORML 아침에 일어나보니 %조사처리(CALLNAME:TARGET,"가")% 자신의 모유를 그릇에 짜내고 있다.
+
+;口上の関数,TFLAG:200の144を使用
+CALL SELF_KOJO, TARGET, 144, LOCAL
+
+;地の文章カット
+SIF CFLAG:99 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 짜낸 자신의 모유를 컵에 담아 주었다.
+
+;噴乳経験
+CALL COMMON_UP_EXP,TARGET, 5, LOCAL , 0, 1
+
+;快Ｂの珠
+CALL COMMON_UP_JUEL, TARGET, 3, (LOCAL * 50), 0, 1
+;習得の珠
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL * 20), 0, 1
+;恭順の珠
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL * 60), 1, 1
+DRAWLINE

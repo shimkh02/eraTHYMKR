@@ -1,0 +1,1167 @@
+﻿;-------------------------------------------------
+;技師パッチYM 改良ツール用各種処理群 1
+;-------------------------------------------------
+;中毒者曰く：
+;調教器具を改造したり、改造した調教器具を使ったりしたときの処理群
+;CSVにABL:73「工作技能」を追加したので本当ににとり以外も高性能道具使えるように。
+;ペニスバンドの性能向上は見送り：女主人問題。というかペニバンのがティンコより良いって悲しいだろjk
+;
+;以下関数群
+;@TITLE_CUSTOMTOOL          : 開始名称チェック
+;@USE_CUSTOMTOOL            : 使用時名称チェック
+;@CHECK_DEALER_CUSTOMTOOL   : 開発者チェック
+;@USABLE_LVCHECK_CUSTOMTOOL : 使用可能道具レベル確認
+;@SELECT_CUSTOMTOOL         : 調教器具開発者選択
+;@DEVELOP_CUSTOMTOOL        : 開発開始チェック
+;@DEVELOPED_CUSTOMTOOL      : 開発完了チェック
+;@SOURCECHECK_CUSTOMTOOL    : 使用時ソースチェック
+;@INIT_EQUIP_CUSTOMTOOL     : 調教開始前調教道具開発者フラグ初期化処理
+
+;以下口上呼び出し関数群
+;@KOJO_DEVELOP_CUSTOMTOOL_ASSI_PLUS : 開発決定：特製品 助手時
+;@KOJO_DEVELOP_CUSTOMTOOL_PLUS      : 開発決定：特製品 調教中
+;@KOJO_DEVELOP_CUSTOMTOOL_ASSI      : 開発決定：上質／高性能 助手時
+;@KOJO_DEVELOP_CUSTOMTOOL           : 開発決定：上質／高性能 調教中
+;@KOJO_DEVELOPED_CUSTOMTOOL_PLUS    : 開発完了：特製品 調教開始時
+;@KOJO_DEVELOPED_CUSTOMTOOL         : 開発完了：上質／高性能 調教開始時
+
+
+;以下外部関数群
+;@SPECIALNAME_CUSTOMTOOL  : 道具名すり替えチェック
+;@DEFAULTNAME_CUSTOMTOOL  : すり替えない場合の名前チェック
+;@KOJO_CUSTOMTOOL_PLUS    : アイテム特製品化完了口上
+;@KOJO_CUSTOMTOOL         : アイテム高性能化完了口上
+;@ITEMNUM_TYPE_CHECK      : アイテム種別チェック
+
+;道具タイプ番号抜粋
+;1 : 調教道具か否か
+;2 : 電動製品。より高い開発技術が必要。
+;4 : SM用品。サドかマゾが必要。より相手を弄れるように、もしくはより自分がよく弄られるように調整するため。
+
+;使用フラグ等
+;CFLAG 700～790       : 道具各種の開発状況(700+道具番号) (道具番号90台：エンディング系アイテムは作成不可とする)
+;  1 : 着手
+;  2 : 開発中
+;  4 : 上質／高性能アイテム開発済
+;  8 : 特製品アイテム開発済
+;  ※ 流れ： 調教コマンド開始でアイテム見る(1) ⇒ 同コマンド終了で上質開発開始(2) ⇒ 上質開発完了(4) ⇒ 再度調教コマンド開始で性能不足見る(5) ⇒ 同コマンド終了で特製開発開始(6) ⇒ 特製開発完了(12)
+;CFLAG 790～798       : LOSEBASE変動値管理用
+;CFLAG 799            : 開発着手フラグ 
+;  1 : 着手チェック未のアイテムあり
+;  2 : 上質／高性能アイテム開発中
+;  4 : 特製品開発中
+;FLAG  1000～1089     : 今回の調教で使用するアイテムの作者番号(-2：未決定 -1：誰のでもない)
+;FLAG  1100           : 技師パッチ用コンフィグフラグ (1:技師パッチの使用 2:特製品固有名の使用 4:特製品固有名のステータス表示方法 8:工房の使用)
+;FLAG  1101           : 開発者自動選択フラグ
+;FLAG  1102           : 工房開発状況フラグ
+;FLAG  1110           : 関数引数 (アイテム番号)
+;FLAG  1111～1119     : 関数引数 (詳細は各関数ヘッダにて)
+;FLAG  1120～1129     : 関数戻り値
+;STR   2              : 名称チェック結果(道具名)
+;STR   4              : 名称チェック結果(エゴ名)
+
+;=======================================;
+;NAMECHECK_CUSTOMTOOL 名称チェック
+;引数
+;FLAG 1110 : 対象アイテム番号
+;STR 2  : 名称チェック結果(道具名)
+;戻値
+;RETURN : 0固定
+;STR 2  : 名称チェック結果(道具名)
+;STR 3  : 名称チェック結果(タイトル用)
+;STR 4  : 名称チェック結果(地の文用)
+;LOCAL変数
+;0      : 引数受け取り(対象アイテム番号)
+;1      : 使用可能な道具レベル
+;10     : RESULT受け取り
+;11     : 調教道具持ち主番号
+;12     : 開発状況管理番号 (対象アイテム番号＋700)
+;13     : 道具タイプ
+;LOCALS変数
+;0      : 編集用
+;=======================================;
+@NAMECHECK_CUSTOMTOOL
+;道具の指定がなければスルー
+LOCAL:0 = FLAG:1110
+IF	LOCAL:0 > -1
+	CALL CHECK_DEALER_CUSTOMTOOL
+	LOCAL:11 = FLAG:1120
+	IF LOCAL:11 == -1
+		;誰のでもなければ普通品
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = %TSTR:7%
+		RETURN 0
+	ENDIF
+	LOCAL:12 = LOCAL:0 + 700
+	CALL ITEMNUM_TYPE_CHECK
+	LOCAL:13 = FLAG:1120
+	FLAG:1111 = LOCAL:11
+	IF LOCAL:11 == MASTER
+		FLAG:1112 = 0
+	ELSEIF LOCAL:11 == ASSI
+		FLAG:1112 = 2
+	ELSE
+		FLAG:1112 = 1
+	ENDIF
+	FLAG:1113 = LOCAL:13
+	CALL USABLE_LVCHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+	IF LOCAL:1 == 2
+		;特製品を使用する場合
+		CALL SPECIALNAME_CUSTOMTOOL
+		LOCAL:10 = RESULT
+		IF LOCAL:10
+			TSTR:8 = %TSTR:7%
+			TSTR:9 = %TSTR:7%
+		ELSE
+			IF LOCAL:11 == TARGET
+				LOCALS:0 =  자신이 특별히 조정한
+			ELSE
+				LOCALS:0 = (이)가 특별히 조정한
+			ENDIF
+			TSTR:8 = %CALLNAME:(LOCAL:11)% 특제 %TSTR:7%
+			TSTR:9 = %CALLNAME:(LOCAL:11)%%LOCALS:0% %TSTR:7%
+		ENDIF
+	ELSEIF LOCAL:1 == 1
+		;上質／高性能を使用する場合
+		IF LOCAL:13 & 2
+			IF TALENT:(LOCAL:11):210
+				LOCALS:0 = 캇파제
+			ELSE
+				LOCALS:0 = 고성능
+			ENDIF
+		ELSE
+			LOCALS:0 = 상급
+		ENDIF
+		TSTR:8 = %LOCALS:0% %TSTR:7%
+		TSTR:9 = %LOCALS:0%의 %TSTR:7%
+	ELSE
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = %TSTR:7%
+	ENDIF
+ENDIF
+RETURN 0
+
+;=======================================;
+;CHECK_DEALER_CUSTOMTOOL 開発者チェック
+;引数
+;FLAG 1110 : 対象アイテム番号
+;戻値
+;RETURN    : 開発者決定状態(0:未定 1:決定済)
+;FLAG 1120 : 開発者番号(未定の場合はMASTERの番号,異常時は-1でエラー終了)
+;LOCAL変数
+;0      : 対象アイテム番号
+;1      : 対象アイテムの道具タイプ
+;3      : 乱数結果値
+;4      : 使用中アイテムの開発者管理番号 (対象アイテム番号＋1000)
+;10     : 戻り値受け取り
+;11     : 場の人数
+;12     : 主人の道具レベル
+;13     : 調教対象の道具レベル
+;14     : 助手の道具レベル
+;15     : 調査中の開発者番号
+;16     :
+;=======================================;
+@CHECK_DEALER_CUSTOMTOOL
+;今回のコマンドで使用する道具の持ち主が決定済みかを確認 (決定済みならソレを使用)
+;アイテム番号として正しいかを確認
+LOCAL:0 = FLAG:1110
+IF LOCAL:0 < 0 || LOCAL:0 > 99
+	PRINTFORML 아이템 번호 에러 @CHECK_DEALER_CUSTOMTOOL
+	FLAG:1120 = -2
+	RETURN 0
+ENDIF
+
+;既に決定済みであればその開発者番号を返す
+LOCAL:4 = LOCAL:0 + 1000
+IF FLAG:(LOCAL:4) > -2
+	FLAG:1120 = FLAG:(LOCAL:4)
+	RETURN 1
+ENDIF
+
+CALL ITEMNUM_TYPE_CHECK
+LOCAL:1 = FLAG:1120
+;調教器具でないか消耗品か、対象外アイテムであればMASTERの番号を返す
+IF (LOCAL:1 & 16) || (LOCAL:1 & 1) == 0 || LOCAL:1 == -1
+	FLAG:1120 = MASTER
+	RETURN 0
+ENDIF
+LOCAL:12 =  0
+LOCAL:13 = -1
+LOCAL:14 = -1
+;助手が居る場合
+IF ASSI > 0
+	LOCAL:11 = 3
+ELSE
+	LOCAL:11 = 2
+ENDIF
+REPEAT LOCAL:11
+	IF COUNT == 0
+		LOCAL:15 = MASTER
+	ELSEIF COUNT == 1
+		LOCAL:15 = TARGET
+	ELSE
+		LOCAL:15 = ASSI
+	ENDIF
+	;技師の確認
+	FLAG:1110 = LOCAL:0
+	FLAG:1111 = LOCAL:15
+	FLAG:1112 = COUNT
+	FLAG:1113 = LOCAL:1
+	CALL USABLE_LVCHECK_CUSTOMTOOL
+	LOCAL:17 = FLAG:1120
+	IF COUNT == 0
+		LOCAL:12 = LOCAL:17
+	ELSEIF COUNT == 1
+		LOCAL:13 = LOCAL:17
+	ELSE
+		LOCAL:14 = LOCAL:17
+	ENDIF
+REND
+;開発者の決定
+IF FLAG:1101 == 0 || FLAG:1101 == 3
+	IF FLAG:1101 == 3 && ASSI > -1
+		LOCAL:15 = ASSI
+	ELSE
+		FLAG:1110 = LOCAL:0
+		FLAG:1111 = LOCAL:12
+		FLAG:1112 = LOCAL:13
+		FLAG:1113 = LOCAL:14
+		FLAG:1114 = LOCAL:11
+		FLAG:1115 = LOCAL:1
+		CALL SELECT_CUSTOMTOOL
+		LOCAL:15 = FLAG:1120
+	ENDIF
+ELSEIF FLAG:1101 == 1 || FLAG:1101 == 4
+	IF LOCAL:1 & 4 == 4
+		;SM用品なら調教者(助手・主人)＞調教対象
+		IF LOCAL:12 >= LOCAL:13 && LOCAL:14 >= LOCAL:13
+			IF LOCAL:12 > LOCAL:14
+				LOCAL:15 = MASTER
+			ELSEIF LOCAL:12 < LOCAL:14
+				LOCAL:15 = ASSI
+			ELSE
+				LOCAL:15 = PLAYER
+			ENDIF
+		ELSEIF LOCAL:12 < LOCAL:13 && LOCAL:14 >= LOCAL:13
+			LOCAL:15 = ASSI
+		ELSEIF LOCAL:12 >= LOCAL:13 && LOCAL:14 < LOCAL:13
+			LOCAL:15 = MASTER
+		ELSE
+			LOCAL:15 = TARGET
+		ENDIF
+	ELSE
+		;SM用品でなければ調教対象＞調教者(助手・主人)
+		IF LOCAL:12 > LOCAL:13 && LOCAL:14 > LOCAL:13
+			IF LOCAL:12 > LOCAL:14
+				LOCAL:15 = MASTER
+			ELSEIF LOCAL:12 < LOCAL:14
+				LOCAL:15 = ASSI
+			ELSE
+				LOCAL:15 = PLAYER
+			ENDIF
+		ELSEIF LOCAL:12 <= LOCAL:13 && LOCAL:14 > LOCAL:13
+			LOCAL:15 = ASSI
+		ELSEIF LOCAL:12 > LOCAL:13 && LOCAL:14 <= LOCAL:13
+			LOCAL:15 = MASTER
+		ELSE
+			LOCAL:15 = TARGET
+		ENDIF
+	ENDIF
+ELSEIF FLAG:1101 == 2 || FLAG:1101 == 5
+	IF FLAG:1101 == 5 && ASSI > -1
+		LOCAL:15 = ASSI
+	ELSE
+		LOCAL:3 = RAND:(LOCAL:11)
+		IF LOCAL:3 == 0
+			LOCAL:15 = MASTER
+		ELSEIF LOCAL:3 == 1
+			LOCAL:15 = TARGET
+		ELSE
+			LOCAL:15 = ASSI
+		ENDIF
+	ENDIF
+ELSEIF FLAG:1101 == 6 || FLAG:1101 == 8
+	IF FLAG:1101 == 6 && ASSI > -1
+		LOCAL:15 = ASSI
+	ELSE
+		LOCAL:15 = MASTER
+	ENDIF
+ELSEIF FLAG:1101 == 7 || FLAG:1101 == 10
+	IF FLAG:1101 == 7 && ASSI > -1
+		LOCAL:15 = ASSI
+	ELSE
+		LOCAL:15 = TARGET
+	ENDIF
+ELSE
+	LOCAL:15 = PLAYER
+ENDIF
+FLAG:(LOCAL:4) = LOCAL:15
+;コマンド頭で呼ぶので此処で開発チェックも呼ぶ
+FLAG:1110 = LOCAL:0
+CALL DEVELOP_CUSTOMTOOL
+;返り値を設定
+FLAG:1120 = LOCAL:15
+RETURN 0
+
+;=======================================;
+;USABLE_LVCHECK_CUSTOMTOOL 使用可能道具レベル確認
+;引数
+;FLAG 1110 : 対象アイテム番号
+;FLAG 1111 : 開発者
+;FLAG 1112 : 開発者の立場 (0:主人 1:調教対象 2:助手)
+;FLAG 1113 : 対象アイテムの道具タイプ
+;戻値
+;RETURN    : 道具レベル (2:特製 1:上質／高性能 0:普通) 
+;FLAG 1120 : 道具レベル
+;LOCAL変数
+;0 : 対象アイテム番号受け取り
+;1 : 開発者受け取り
+;2 : 開発者立場受け取り
+;3 : 対象アイテムの開発状況管理番号 (対象アイテム番号＋700)
+;4 : 対象アイテムの道具タイプ受け取り
+;=======================================;
+@USABLE_LVCHECK_CUSTOMTOOL
+LOCAL:0 = FLAG:1110
+LOCAL:1 = FLAG:1111
+LOCAL:2 = FLAG:1112
+LOCAL:3 = LOCAL:0 + 700
+LOCAL:4 = FLAG:1113
+IF ABL:(LOCAL:1):73 > 0
+	;主人なら無条件で主人専用道具を使おうとする
+	IF LOCAL:2 == 0
+		IF CFLAG:(LOCAL:1):(LOCAL:3) & 8
+			FLAG:1120 = 2
+			RETURN 2
+		ELSEIF CFLAG:(LOCAL:1):(LOCAL:3) & 4
+			FLAG:1120 = 1
+			RETURN 1
+		ELSE
+			FLAG:1120 = 0
+			RETURN 0
+		ENDIF
+	;主人でなければSM用品ならさらに条件確認
+	ELSEIF LOCAL:4 & 4
+		;調教対象の場合
+		IF LOCAL:2 == 1
+			;[ドＭ]か[マゾ]か『[従順]Lv3以上＆[マゾっ気]Lv3以上』を確認＆開発状況確認
+			IF (TALENT:(LOCAL:1):178 || TALENT:(LOCAL:1):82 || (ABL:(LOCAL:1):10 > 3 && ABL:(LOCAL:1):21 > 3)) && (CFLAG:(LOCAL:1):(LOCAL:3) & 4)
+				;[ドＭ]か[マゾ]か『[マゾっ気]＋[従順]が8以上』で[露出癖]Lv2以上かつ特製品開発済みなら専用道具
+				IF (TALENT:(LOCAL:1):178 || TALENT:(LOCAL:1):82 || (ABL:(LOCAL:1):10 + ABL:(LOCAL:1):21) > 8) && ABL:(LOCAL:1):14 > 1 && (CFLAG:(LOCAL:1):(LOCAL:3) & 8)
+					FLAG:1120 = 2
+					RETURN 2
+				;それ以外なら高性能／上質
+				ELSE
+					FLAG:1120 = 1
+					RETURN 1
+				ENDIF
+			;でなきゃ通常品
+			ELSE
+				FLAG:1120 = 0
+				RETURN 0
+			ENDIF
+		;助手の場合
+		ELSE
+			;『[ドＳ]か[サド]か[サドっ気]Lv3以上』かつ『[技巧]がLv4以上』かつ専用開発済みならば専用道具
+			IF (TALENT:(LOCAL:1):177 || TALENT:(LOCAL:1):81 || ABL:(LOCAL:1):20 > 3) && ABL:(LOCAL:1):12 > 4 && (CFLAG:(LOCAL:1):(LOCAL:3) & 8)
+				FLAG:1120 = 2
+				RETURN 2
+			;『[ドＳ]か[サド]か[サドっ気]Lv3以上』かつ『[技巧]がLv2以上』かつ改良済みならば高性能／上質
+			ELSEIF (TALENT:(LOCAL:1):177 || TALENT:(LOCAL:1):81 || ABL:(LOCAL:1):20 > 3) && ABL:(LOCAL:1):12 > 2 && (CFLAG:(LOCAL:1):(LOCAL:3) & 4)
+				FLAG:1120 = 1
+				RETURN 1
+			;でなきゃ通常品
+			ELSE
+				FLAG:1120 = 0
+				RETURN 0
+			ENDIF
+		ENDIF
+	;SM用品でない場合
+	ELSE
+		;調教対象の場合
+		IF LOCAL:2 == 1
+			;自分に自分の改造道具を使用するには[従順]Lv3以上が必要
+			IF (CFLAG:(LOCAL:1):(LOCAL:3) & 4) && (ABL:(LOCAL:1):10 > 2)
+				;調教対象の特製品使用にはさらに[露出癖]Lv2以上が必要
+				IF (CFLAG:(LOCAL:1):(LOCAL:3) & 8) && (ABL:(LOCAL:1):14 > 1)
+					FLAG:1120 = 2
+					RETURN 2
+				;それ以外なら高性能／上質
+				ELSE
+					FLAG:1120 = 1
+					RETURN 1
+				ENDIF
+			;でなきゃ通常品
+			ELSE
+				FLAG:1120 = 0
+				RETURN 0
+			ENDIF
+		;助手の場合
+		ELSE
+			;助手の特製品使用には[技巧]Lv3と『[ドＳ]か[サド]か[サドっ気]Lv4以上』か特製品開発時より1Lv高い工作技能が必要
+			IF (CFLAG:(LOCAL:1):(LOCAL:3) & 4) && (ABL:(LOCAL:1):12 > 2) && (TALENT:(LOCAL:1):177 || TALENT:(LOCAL:1):81 || ABL:(LOCAL:1):20 > 3 || (LOCAL:4 & 2 == 0 && ABL:(LOCAL:1):73 > 3) || (LOCAL:4 & 2 == 2 && ABL:(LOCAL:1):73 > 4))
+				FLAG:1120 = 2
+				RETURN 2
+			;助手の高性能／上質道具を使用するには[技巧]Lv2と『[ドＳ]か[サド]か[サドっ気]Lv2以上』か開発時より1Lv高い工作技能が必要
+			ELSEIF (CFLAG:(LOCAL:1):(LOCAL:3) & 4) && (ABL:(LOCAL:1):12 > 1) && (TALENT:(LOCAL:1):177 || TALENT:(LOCAL:1):81 || ABL:(LOCAL:1):20 > 1 || (LOCAL:4 & 2 == 0 && ABL:(LOCAL:1):73 > 2) || (LOCAL:4 & 2 == 2 && ABL:(LOCAL:1):73 > 3))
+				FLAG:1120 = 1
+				RETURN 1
+			;でなきゃ通常品
+			ELSE
+				FLAG:1120 = 0
+				RETURN 0
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+;工作技能が無い等条件から外れたなら通常品
+FLAG:1120 = 0
+RETURN 0
+
+;=======================================;
+;SELECT_CUSTOMTOOL 調教器具開発者選択
+;引数
+;FLAG 1110 : 対象アイテム番号
+;FLAG 1111 : 主人の道具レベル
+;FLAG 1112 : 調教対象の道具レベル
+;FLAG 1113 : 助手の道具レベル
+;FLAG 1114 : その場の人数
+;FLAG 1115 : 道具タイプ
+;戻値
+;FLAG 1120 : 開発者番号
+;LOCAL変数
+;0 : 対象アイテム番号受け取り
+;1 : 最長名前文字列長
+;2 : 開発者番号
+;3 : 使用可能道具レベル
+;4 : COUNT保持
+;5 : 未改造品チェック
+;=======================================;
+@SELECT_CUSTOMTOOL
+LOCAL:0 = FLAG:1110
+;名前文字列長の確認
+STRLENS CALLNAME:MASTER
+LOCAL:1 = RESULT
+STRLENS CALLNAME:TARGET
+SIF LOCAL:1 < RESULT
+	LOCAL:1 = RESULT
+IF ASSI > -1
+	STRLENS CALLNAME:ASSI
+	SIF LOCAL:1 < RESULT
+		LOCAL:1 = RESULT
+ENDIF
+
+;コマンド表示
+PRINTFORML 누구의 %조사처리(ITEMNAME:(FLAG:1110), "를")% 쓰겠습니까?
+LOCAL:5 = 0
+REPEAT FLAG:1114
+	IF COUNT == 0
+		LOCAL:2 = MASTER
+		LOCAL:3 = FLAG:1111
+	ELSEIF COUNT == 1
+		LOCAL:2 = TARGET
+		LOCAL:3 = FLAG:1112
+	ELSE
+		LOCAL:2 = ASSI
+		LOCAL:3 = FLAG:1113
+	ENDIF
+	PRINTFORM [{COUNT}]%CALLNAME:(LOCAL:2)%
+	STRLENS CALLNAME:(LOCAL:2)
+	FLAG:1110 = LOCAL:1 - RESULT + 1
+	LOCAL:4 = COUNT
+	CALL SPACER
+	COUNT = LOCAL:4
+	PRINTFORM : 
+	IF LOCAL:3 == 2
+		PRINTL [특제품]
+	ELSEIF LOCAL:3 == 1
+		IF FLAG:1115 & 2
+			IF TALENT:(LOCAL:2):210
+				PRINTL [캇파제]
+			ELSE
+				PRINTL [고성능]
+			ENDIF
+		ELSE
+			PRINTL [상등품]
+		ENDIF
+	ELSE
+		PRINTL [보통품]
+		LOCAL:5 += 1
+	ENDIF
+REND
+FLAG:1120 = -2
+IF LOCAL:5 == 0
+	PRINTFORML [{COUNT}] 누구의 것도 아닌 [보통품]
+ENDIF
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	FLAG:1120 = MASTER
+ELSEIF RESULT == 1
+	FLAG:1120 = TARGET
+ELSEIF RESULT == 2 && (ASSI > -1 || LOCAL:5 == 0)
+	IF ASSI > -1
+		FLAG:1120 = ASSI
+	ELSE
+		FLAG:1120 = -1
+	ENDIF
+ELSEIF RESULT == 3 && ASSI > -1 && LOCAL:5 == 0
+	FLAG:1120 = -1
+ENDIF
+SIF FLAG:1120 > -2
+	RETURN 0
+GOTO INPUT_LOOP
+
+;=======================================;
+;DEVELOP_CUSTOMTOOL 開発開始チェック
+;引数
+;FLAG 1110 : 対象アイテム番号
+;戻値
+;RETURN    : 1:開始した 0:開始なし
+;LOCAL変数
+;0      : 対象アイテム番号
+;1      : 対象アイテムの道具タイプ
+;2      : 対象アイテムの開発状況管理番号 (対象アイテム番号＋700)
+;3      : 判定対象
+;10     : 開発着手者フラグ ( 0:なし 1:調教対象 2:助手)
+;11     : SM用品開発条件チェック結果
+;12     : 工作技能条件チェック結果
+;13     : 開発着手フラグ管理フラグ
+;=======================================;
+@DEVELOP_CUSTOMTOOL
+;使用した道具の確認
+LOCAL:0 = FLAG:1110
+;指定の道具が無ければ終了
+SIF LOCAL:0 < 0 || LOCAL:0 > 98
+	RETURN 0
+;道具を使っている場合のみ
+IF ITEMPRICE:(LOCAL:0) > 0
+	LOCAL:10 = 0
+	;道具タイプの確認
+	CALL ITEMNUM_TYPE_CHECK
+	LOCAL:1 = FLAG:1120
+	LOCAL:2 = LOCAL:0 + 700
+	REPEAT 2
+		IF COUNT == 0
+			LOCAL:3 = ASSI
+		ELSE
+			LOCAL:3 = TARGET
+		ENDIF
+		;助手なしなら1回スキップ
+		SIF LOCAL:3 <= 0
+			CONTINUE
+		;判定対象が工作技能Lv2以上かつ助手可能の場合工作の可能性あり
+		IF ABL:(LOCAL:3):73 > 1 && CFLAG:(LOCAL:3):1 > 1
+			LOCAL:11 = 0
+			LOCAL:12 = 0
+			;対象の道具が未開発の場合
+			IF CFLAG:(LOCAL:3):(LOCAL:2) == 0
+				;SM用品の場合
+				IF LOCAL:1 & 4
+					;技巧Lv2以上＋サドっ気Lv3以上
+					SIF ABL:(LOCAL:3):12 > 1 && ABL:(LOCAL:3):20 > 2
+						LOCAL:11 += 1
+					;技巧Lv2＋サド系(ドＳorサド)
+					SIF ABL:(LOCAL:3):12 > 1 && (TALENT:(LOCAL:3):177 || TALENT:(LOCAL:3):81)
+						LOCAL:11 += 2
+					;従順Lv3以上＋マゾっ気Lv3以上＋自慰中毒Lv1以上
+					SIF ABL:(LOCAL:3):10 > 2 && ABL:(LOCAL:3):21 > 2 && ABL:(LOCAL:3):30
+						LOCAL:11 += 4
+					;自慰中毒LV1＋マゾ系(ドＭor
+					SIF ABL:(LOCAL:3):10 > 1 && (TALENT:(LOCAL:3):178 || TALENT:(LOCAL:3):82)
+						LOCAL:11 += 8
+				;SM用品ではない場合
+				ELSE
+					;自慰中毒Lv1以上
+					SIF ABL:(LOCAL:3):30
+						LOCAL:11 = 16
+				ENDIF
+				;電動製品の場合
+				IF LOCAL:1 & 2
+					;工作技能Lv3
+					SIF ABL:(LOCAL:3):73 > 2
+						LOCAL:12 = 1
+				;非電動製品の場合
+				ELSE
+					;工作技能Lv2
+					SIF ABL:(LOCAL:3):73 > 1
+						LOCAL:12 = 2
+				ENDIF
+				IF LOCAL:11 > 0 && LOCAL:12 > 0
+					;開発を決意する
+					SIF (CFLAG:(LOCAL:3):(LOCAL:2) & 1) == 0
+						CFLAG:(LOCAL:3):(LOCAL:2) |= 1
+					SIF (CFLAG:(LOCAL:3):799 & 1) == 0
+						CFLAG:(LOCAL:3):799 |= 1
+				ENDIF
+			;対象の道具が上質/高性能に改良済みの場合
+			ELSEIF CFLAG:(LOCAL:3):(LOCAL:2) == 4
+				;SM用品の場合
+				IF LOCAL:1 & 4
+					;技巧Lv3以上＋サドッ気Lv3以上＋(技巧＋サドっ気)Lv8以上
+					SIF ABL:(LOCAL:3):12 > 2 && ABL:(LOCAL:3):20 > 2 && (ABL:(LOCAL:3):12 + ABL:(LOCAL:3):20) > 7 
+						LOCAL:11 += 1
+					;技巧Lv4以上＋サド系(ドＳorサド)
+					SIF ABL:(LOCAL:3):12 > 3 && (TALENT:(LOCAL:3):177 || TALENT:(LOCAL:3):81)
+						LOCAL:11 += 2
+					;従順Lv3以上＋マゾっ気Lv3以上＋(従順＋マゾっ気)Lv8以上＋自慰中毒Lv3以上
+					SIF ABL:(LOCAL:3):10 > 2 && ABL:(LOCAL:3):21 > 2 && (ABL:(LOCAL:3):10 + ABL:(LOCAL:3):21) > 7 && ABL:(LOCAL:3):30 > 2
+						LOCAL:11 += 4
+					;自慰中毒LV3以上＋マゾ系(ドＭorマゾ）
+					SIF ABL:(LOCAL:3):30 > 2 && (TALENT:(LOCAL:3):178 || TALENT:(LOCAL:3):82)
+						LOCAL:11 += 8
+				;SM用品ではない場合
+				ELSE
+					;自慰中毒Lv3以上＆陥落系素質か淫乱系素質(恋慕or妄信or親愛or相愛or服従or烙印or隷属or使い魔or淫乱or淫核or淫壷or淫尻or淫乳or尿道狂orキス魔orドＳorドＭor即落ち)
+					SIF ABL:(LOCAL:3):10 > 2 && (TALENT:(LOCAL:3):150 || TALENT:(LOCAL:3):151 || TALENT:(LOCAL:3):152 || TALENT:(LOCAL:3):153 || TALENT:(LOCAL:3):160 || TALENT:(LOCAL:3):161 || TALENT:(LOCAL:3):162 || TALENT:(LOCAL:3):164 || TALENT:(LOCAL:3):170 || TALENT:(LOCAL:3):171 || TALENT:(LOCAL:3):172 || TALENT:(LOCAL:3):173 || TALENT:(LOCAL:3):174 || TALENT:(LOCAL:3):175 || TALENT:(LOCAL:3):176 || TALENT:(LOCAL:3):177 || TALENT:(LOCAL:3):178 || TALENT:(LOCAL:3):179)
+						LOCAL:11 = 16
+					;自慰中毒Lv5以上
+					SIF ABL:(LOCAL:3):30 > 4
+						LOCAL:11 = 16
+				ENDIF
+				;電動製品の場合
+				IF LOCAL:1 & 2
+					;工作技能Lv4
+					SIF ABL:(LOCAL:3):73 > 3
+						LOCAL:12 = 1
+				;非電動製品の場合
+				ELSE
+					;工作技能Lv3
+					SIF ABL:(LOCAL:3):73 > 2
+						LOCAL:12 = 2
+				ENDIF
+				IF LOCAL:11 > 0 && LOCAL:12 > 0
+					SIF (CFLAG:(LOCAL:3):(LOCAL:2) & 1) == 0
+						CFLAG:(LOCAL:3):(LOCAL:2) |= 1
+					SIF (CFLAG:(LOCAL:3):799 & 1) == 0
+						CFLAG:(LOCAL:3):799 |= 1
+				ENDIF
+			ENDIF
+		ENDIF
+	REND
+	RETURN 1
+ENDIF
+RETURN 0
+
+			
+;=======================================;
+;DECLARE_CUSTOMTOOL 開発決定宣言
+; 調教コマンド終了時、ソース計算前に呼び出し
+;引数
+;なし
+;戻値
+;RETURN    : 0:処理終了
+;LOCAL変数
+;0      : 対象人数
+;1      : 判定対象
+;2      : COUNTテンポラリ
+;3      : 判定対象の開発着手アイテム
+;5      : 着手アイテム管理LOCAL番号管理
+;6      : 調教対象の開発着手アイテム
+;7      : 助手の開発着手アイテム
+;=======================================;
+@DECLARE_CUSTOMTOOL
+IF ASSI > -1
+	LOCAL:0 = 2
+ELSE
+	LOCAL:0 = 1
+ENDIF
+LOCAL:3 = -1
+LOCAL:6 = -1
+LOCAL:7 = -1
+REPEAT LOCAL:0
+	;判定対象決定
+	IF COUNT == 1
+		LOCAL:1 = ASSI
+	ELSE
+		LOCAL:1 = TARGET
+	ENDIF
+	IF CFLAG:(LOCAL:1):799 & 1
+		;着手未チェックフラグが立っていればチェック処理を呼ぶ
+		LOCAL:2 = COUNT
+		LOCAL:5 = COUNT + 6
+		FLAG:1110 = LOCAL:1
+		FLAG:1111 = LOCAL:2
+		CALL DECLARE_CHECK_CUSTOMTOOL
+		LOCAL:3 = FLAG:1120
+		COUNT = LOCAL:2
+		;着手未チェックフラグを倒す
+		CFLAG:(LOCAL:1):799 -= 1
+	ENDIF
+	IF LOCAL:3 > -1
+		;開発アイテム番号の指定があれば判定対象の開発着手アイテム番号をキープ
+		LOCAL:(LOCAL:5) = LOCAL:3
+	ENDIF
+REND
+;ここから地の文
+IF LOCAL:6 > -1 && LOCAL:7 > -1 && LOCAL:6 == LOCAL:7
+	PRINTFORM %조사처리(CALLNAME:ASSI, "과")% %조사처리(CALLNAME:TARGET, "는")% 
+	IF LOCAL:6 == 99
+		PRINTFORM 조교 도구를 
+	ELSE
+		PRINTFORM %조사처리(ITEMNAME:(LOCAL:6), "를")% 
+	ENDIF
+	PRINTFORMW 보고 뭔가 생각하는 것 같다.
+ELSE
+	IF LOCAL:7 > -1
+		PRINTFORM %조사처리(CALLNAME:ASSI, "는")% 
+		IF LOCAL:7 == 99
+			PRINTFORM 조교 도구를 
+		ELSE
+			PRINTFORM %조사처리(ITEMNAME:(LOCAL:7), "를")% 
+		ENDIF
+		PRINTFORMW 보고 뭔가 생각하는 것 같다.
+	ENDIF
+	IF LOCAL:6 > -1
+		PRINTFORM %조사처리(CALLNAME:TARGET, "는")% 
+		IF LOCAL:6 == 99
+			PRINTFORM 조교 도구를 
+		ELSE
+			PRINTFORM %조사처리(ITEMNAME:(LOCAL:6), "를")% 
+		ENDIF
+		PRINTFORMW 보고 뭔가 생각하는 것 같다.
+	ENDIF
+ENDIF
+RETURN 0
+
+;=======================================;
+;DECLARE_CHECK_CUSTOMTOOL 開発決定チェック
+; DECLARE_CUSTOMTOOLのループ内ループ処理
+;引数
+;FLAG 1110 : 判定対象
+;FLAG 1111 : 判定対象の立場 (0:調教対象 1:助手)
+;戻値
+;RETURN    : 0:処理終了
+;FLAG 1120 : 開発対象アイテム番号 (なしの場合は-1 複数ある場合は99)
+;LOCAL変数
+;0      : 対象アイテム番号
+;1      : 対象アイテムの開発状況管理番号 (対象アイテム番号＋700)
+;2      : FLAG:1110 受け取り
+;3      : FLAG:1111 受け取り
+;=======================================;
+@DECLARE_CHECK_CUSTOMTOOL
+;開発着手アイテム確認
+;全道具チェック(0～89)
+LOCAL:2 = FLAG:1110
+LOCAL:3 = FLAG:1111
+FLAG:1120 = -1
+REPEAT 90
+	LOCAL:0 = COUNT
+	LOCAL:1 = LOCAL:0 + 700
+	;開発決定口上呼び出し処理
+	IF CFLAG:(LOCAL:2):(LOCAL:1) & 1
+		FLAG:1110 = LOCAL:0
+		IF CFLAG:(LOCAL:2):(LOCAL:1) & 4
+			;上質／高品質開発済みならば特製品作成開始口上
+			IF LOCAL:3 == 1
+				CALL KOJO_DEVELOP_CUSTOMTOOL_ASSI_PLUS
+			ELSE
+				CALL KOJO_DEVELOP_CUSTOMTOOL_PLUS
+			ENDIF
+			;開発管理フラグ(特製品)の確認
+			SIF (CFLAG:(LOCAL:2):799 & 4) == 0
+				CFLAG:(LOCAL:2):799 |= 4
+		ELSE
+			;上質／高品質未開発ならば上質／高品質作成開始口上
+			IF LOCAL:3 == 1
+				CALL KOJO_DEVELOP_CUSTOMTOOL_ASSI
+			ELSE
+				CALL KOJO_DEVELOP_CUSTOMTOOL
+			ENDIF
+			;開発管理フラグ(上質／高品質)の確認
+			SIF (CFLAG:(LOCAL:2):799 & 2) == 0
+				CFLAG:(LOCAL:2):799 |= 2
+		ENDIF
+		SIF CFLAG:(LOCAL:2):(LOCAL:1) & 1
+			CFLAG:(LOCAL:2):(LOCAL:1) -= 1
+		SIF (CFLAG:(LOCAL:2):(LOCAL:1) & 2) == 0
+			CFLAG:(LOCAL:2):(LOCAL:1) |= 2
+		IF FLAG:1120 == -1
+			FLAG:1120 = LOCAL:0
+		ELSE
+			FLAG:1120 = 99
+		ENDIF
+	ENDIF
+REND
+RETURN 0
+
+;=======================================;
+;DEVELOPED_CUSTOMTOOL 開発完了チェック
+;CFLAG引数
+;なし
+;ARG引数
+; 0 : 呼び出し状況(0か省略時：調教前　1:工房待機時)
+; 1 : 開発者番号(CHARANUM、ただし工房待機時のみ)
+;戻値
+;RETURN    : 対象アイテム有無 (0:なし 1:あり)
+;FLAG 1120 : 対象アイテム番号 (なし時-1)
+;FLAG 1121 : 対象アイテムの改造度 (0:改造なし 1:高品質化 2:特製品化)
+;LOCAL変数
+;     0 : 調査対象開発レベル
+;     1 : 対象アイテム番号
+;     2 : 対象アイテムの開発状況管理番号 (対象アイテム番号＋700)
+;     3 : 対象アイテム数
+;     4 : 乱数受け皿(何番目の対象アイテムかを指定)
+;     5 : 対象アイテム番号チェックカウンタ
+;     6 : 対象アイテム番号
+;     7 : 開発決定済みアイテム数
+;     8 : 調教対象番号テンポラリ(工房待機時用)
+;     9 : 処理終了フラグ
+;=======================================;
+@DEVELOPED_CUSTOMTOOL, ARG:0, ARG:1
+FLAG:1120 = -1
+FLAG:1121 = 0
+IF ARG:0 != 0
+	;開発者指定ありの場合は開発者番号(ARG:1)をTARGETに変更する
+	LOCAL:8 = TARGET
+	TARGET = ARG:1
+ENDIF
+LOCAL:9 = 0
+;調査対象開発レベルを設定 (0⇒0、1⇒4)
+IF ABL:73 > 0
+	IF CFLAG:799 & 4
+		LOCAL:0 = 4
+	ELSEIF CFLAG:799 & 2
+		LOCAL:0 = 0
+	ELSE
+	;開発が無ければ終了
+		LOCAL:9 = 1
+	ENDIF
+ELSE
+	;工作技能が無ければ終了
+	LOCAL:9 = 1
+ENDIF
+IF LOCAL:9 == 1
+	;開発者指定ありの場合はTARGETを戻す
+	SIF ARG:0 != 0
+		TARGET = LOCAL:8
+	RETURN 0
+ENDIF
+;アイテム番号総ざらい(0～89 90番台のエンディング系アイテムは開発不可)
+LOCAL:3 = 0
+LOCAL:7 = 0
+FOR LOCAL:1, 0, 90
+	LOCAL:2 = LOCAL:1 + 700
+	;開発フラグが2(上質／高品質を開発中)か6(特製品を開発中)であれば対象アイテムとしてカウント
+	IF (CFLAG:(LOCAL:2) & 2)
+		LOCAL:7 += 1
+		SIF (LOCAL:0 == 0 || (CFLAG:(LOCAL:2) & LOCAL:0))
+			LOCAL:3 += 1
+	ENDIF
+NEXT
+LOCAL:5 = 0
+LOCAL:6 = -1
+IF LOCAL:3 > 0
+	;何番目の対象アイテムが完成するかを指定
+	LOCAL:4 = RAND:(LOCAL:3) + 1
+	FOR LOCAL:1, 0, 90
+		;対象アイテム番号を変換
+		LOCAL:2 = LOCAL:1 + 700
+		;開発フラグが2(上質／高品質を開発中)か6(特製品を開発中)であれば対象アイテムとしてカウント
+		IF (CFLAG:(LOCAL:2) & 2) && (LOCAL:0 == 0 || (CFLAG:(LOCAL:2) & LOCAL:0))
+			LOCAL:5 += 1
+			LOCAL:6 = LOCAL:1
+		ENDIF
+		;対象が見つかればループ終了
+		SIF LOCAL:5 == LOCAL:4
+			BREAK
+	NEXT
+	;アイテムが無ければ終了(念のため)
+	IF LOCAL:6 < 0
+		;開発者指定ありの場合はTARGETを戻す
+		SIF ARG:0 != 0
+			TARGET = LOCAL:8
+		RETURN 0
+	ENDIF
+	IF LOCAL:0 == 4
+		FLAG:1121 = 2
+	ELSE
+		FLAG:1121 = 1
+	ENDIF
+	IF CFLAG:4 == 0
+		;呼び出しが調教前であれば口上とフラグチェック
+		FLAG:1110 = LOCAL:1
+		IF LOCAL:0 == 4
+			CALL KOJO_DEVELOPED_CUSTOMTOOL_PLUS
+			CFLAG:(LOCAL:2) = 12
+			EXP:74 += 2
+			LOCAL:1--
+			PRINTFORML %CALLNAME:TARGET%의 %ITEMNAME:(LOCAL:1)%의 성능이 더 오른 것 같다.
+			LOCAL:1++
+			PRINTFORML %EXPNAME:74%+2
+			;特製品を作ったのを見て工房の設計を考える
+			IF (FLAG:1100 & 8) && FLAG:1102 < 1
+				PRINTW 공방을 개설할 수 있게 되었습니다.
+			ENDIF
+			SIF FLAG:1102 < 1
+				FLAG:1102 = 1
+			WAIT
+			SIF LOCAL:3 == 1
+				CFLAG:799 -= 4
+		ELSE
+			CALL KOJO_DEVELOPED_CUSTOMTOOL
+			CFLAG:(LOCAL:2) = 4
+			EXP:74 += 1
+			LOCAL:1--
+			PRINTFORML %CALLNAME:TARGET%의 %ITEMNAME:(LOCAL:1)%의 성능이 더 오른 것 같다.
+			LOCAL:1++
+			PRINTFORMW %EXPNAME:74%+1
+			SIF LOCAL:3 == 1
+				CFLAG:799 -= 2
+		ENDIF
+	ELSEIF CFLAG:4 == 3
+		;呼び出しが工房である場合の口上とフラグチェック
+		FLAG:1110 = LOCAL:1
+		;特製品を作成しているなら作業番号を切り替える
+		SIF LOCAL:0 == 4
+			CFLAG:690 = 105
+		RESULT = -1
+		TRYCALLFORM KOJO_WORKSHOP_{NO}, CFLAG:690, LOCAL:1
+		SIF RESULT == -1
+			TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:690, LOCAL:1
+		PRINTFORML %조사처리(CALLNAME:TARGET, "는")% 대기 중에 %ITEMNAME:(LOCAL:1)%의 성능을 \@ CFLAG:690 == 105 ? 더욱 더 # \@ 올린 것 같다.
+	ENDIF
+	;開発者指定ありの場合はTARGETを戻す
+	SIF ARG:0 != 0
+		TARGET = LOCAL:8
+	RETURN 1
+ENDIF
+;開発者指定ありの場合はTARGETを戻す
+SIF ARG:0 != 0
+	TARGET = LOCAL:8
+RETURN 0
+
+;=======================================;
+;INIT_EQUIP_CUSTOMTOOL 調教開始前調教道具開発者フラグ初期化処理
+;引数
+;なし
+;戻値
+;RETURN    : 0固定
+;=======================================;
+@INIT_EQUIP_CUSTOMTOOL
+REPEAT 99
+	LOCAL:0 = COUNT + 1000
+	FLAG:(LOCAL:0) = -2
+REND
+RETURN 0
+
+;=======================================;
+;SOURCECHECK_CUSTOMTOOL 使用時ソースチェック
+;引数
+;FLAG 1110 : 使用アイテム番号
+;FLAG 1111 : 改善タイプ(0:威力向上 1:SM系強化 2:苦痛系強化(非装備/装着時) 3:苦痛系強化(装備中/非装備2個目以降)
+;FLAG 1112 : チェック対象ソース値
+;戻値
+;RETURN    : 0固定
+;FLAG 1120 : チェック結果ソース値
+;LOCAL変数
+;0      : 引数受け皿(使用アイテム番号)
+;1      : 引数受け皿(チェック対象ソース番号)
+;2      : 引数受け皿(チェック対象ソース値)
+;3      : 対象アイテムの開発状況管理番号 (対象アイテム番号＋700)
+;4      : チェック対象ソース値演算テンポラリ
+;5      : 対象アイテムの開発者管理番号 (対象アイテム＋1000)
+;6      : 苦痛軽減ランク
+;7      : 苦痛軽減結果
+;=======================================;
+@SOURCECHECK_CUSTOMTOOL
+LOCAL:0 = FLAG:1110
+LOCAL:1 = FLAG:1111
+LOCAL:2 = FLAG:1112
+LOCAL:3 = LOCAL:0 + 700
+LOCAL:4 = LOCAL:2
+LOCAL:5 = LOCAL:0 + 1000
+LOCAL:6 = 0
+LOCAL:7 = 0
+IF FLAG:(LOCAL:5) < 0
+	;開発者管理番号が0未満(誰のでもないか未定)なら変動なし
+	FLAG:1120 = LOCAL:0
+	RETURN 0
+ENDIF
+IF LOCAL:1 == 0
+	;通常の性能向上
+	IF CFLAG:(FLAG:(LOCAL:5)):(LOCAL:3) & 8
+		;特製品
+		IF FLAG:(LOCAL:5) == TARGET
+			;調教対象特製品であれば自慰中毒に合わせて倍率変化
+			IF ABL:30 == 5
+				TIMES LOCAL:4 , 1.75
+			ELSEIF ABL:30 == 4
+				TIMES LOCAL:4 , 1.50
+			ELSEIF ABL:30 == 3
+				TIMES LOCAL:4 , 1.35
+			ELSE
+				TIMES LOCAL:4 , 1.25
+			ENDIF
+		ELSE
+			;他者製
+			TIMES LOCAL:4 , 1.25
+		ENDIF
+	ELSEIF CFLAG:(FLAG:(LOCAL:5)):(LOCAL:3) & 4
+		;上質／高性能
+		IF FLAG:(LOCAL:5) == TARGET
+			;調教対象製
+			TIMES LOCAL:4 , 1.20
+		ELSE
+			;他者製
+			TIMES LOCAL:4 , 1.15
+		ENDIF
+	ENDIF
+ELSE
+	;SM系の特殊な性能向上
+	IF CFLAG:(FLAG:(LOCAL:5)):(LOCAL:3) & 8
+		;特製品
+		IF FLAG:(LOCAL:5) == TARGET
+			;調教対象特製品であれば自慰中毒に合わせて倍率変化
+			IF ABL:30 == 5
+				TIMES LOCAL:4 , 1.75
+			ELSEIF ABL:30 == 4
+				TIMES LOCAL:4 , 1.50
+			ELSEIF ABL:30 == 3
+				TIMES LOCAL:4 , 1.35
+			ELSE
+				TIMES LOCAL:4 , 1.25
+			ENDIF
+			LOCAL:6 = 2
+		ELSEIF FLAG:(LOCAL:5) == PLAYER
+			;調教者特製品であれば技巧レベルに合わせて倍率変化
+			IF ABL:PLAYER:12 == 5
+				TIMES LOCAL:4 , 1.75
+			ELSEIF ABL:PLAYER:12 == 4
+				TIMES LOCAL:4 , 1.50
+			ELSEIF ABL:PLAYER:12 == 3
+				TIMES LOCAL:4 , 1.35
+			ELSE
+				TIMES LOCAL:4 , 1.25
+			ENDIF
+			LOCAL:6 = 3
+		ELSE
+			;他者製
+			TIMES LOCAL:4 , 1.25
+			LOCAL:6 = 1
+		ENDIF
+	ELSEIF CFLAG:(FLAG:(LOCAL:5)):(LOCAL:3) & 4
+		;上質／高性能
+		IF FLAG:(LOCAL:5) == TARGET
+			;調教対象製
+			TIMES LOCAL:4 , 1.20
+			LOCAL:6 = 1
+		ELSEIF FLAG:(LOCAL:5) == PLAYER
+			;調教者製
+			TIMES LOCAL:4 , 1.20
+			LOCAL:6 = 2
+		ELSE
+			;他者製
+			TIMES LOCAL:4 , 1.15
+			LOCAL:6 = 1
+		ENDIF
+	ENDIF
+	;苦痛系なら体力・気力の消耗を軽減
+	IF LOCAL:1 == 2 || LOCAL:1 == 3
+		LOCAL:7 = LOCAL:4
+		IF LOCAL:6 == 3
+			TIMES LOCAL:7 , 0.03
+		ELSEIF LOCAL:6 == 2
+			TIMES LOCAL:7 , 0.02
+		ELSEIF LOCAL:6 == 1
+			TIMES LOCAL:7 , 0.01
+		ELSE
+			LOCAL:7 = 0
+		ENDIF
+		IF LOCAL:1 == 2
+			CFLAG:790 = LOCAL:7
+			CFLAG:791 = LOCAL:7
+		ELSEIF LOCAL:1 == 3
+			CFLAG:790 += LOCAL:7
+			CFLAG:791 += LOCAL:7
+		ENDIF
+	ENDIF
+ENDIF
+;演算結果を戻り値に渡す
+FLAG:1120 = LOCAL:4
+RETURN 0
+
+;=======================================;
+;REDUCE_LOSEBASE_CUSTOMTOOL 体力消耗軽減チェック
+;引数
+;なし
+;戻値
+;RETURN    : 0固定
+;LOCAL変数
+;0      : 対象BASEに対応する軽減フラグ(現状BASE番号＋790)
+;1      : LOSEBASE軽減の限界値(元値の9割減を限度とする)
+;=======================================;
+@REDUCE_LOSEBASE_CUSTOMTOOL
+;さしあたって体力と気力のみ
+REPEAT 2
+	LOCAL:0 = COUNT + 790
+	LOCAL:1 = LOSEBASE:COUNT
+	TIMES LOCAL:1 , 0.9
+	IF CFLAG:(LOCAL:0)
+		IF LOCAL:1 < CFLAG:(LOCAL:0)
+			LOSEBASE:COUNT -= LOCAL:1
+		ELSE
+			LOSEBASE:COUNT -= CFLAG:(LOCAL:0)
+		ENDIF
+	ENDIF
+	;軽減後、軽減フラグを初期化する
+	CFLAG:(LOCAL:0) = 0
+REND
+RETURN 0
+
+;@SPECIALNAME_CUSTOMTOOL
+@SPECIALNAME_CUSTOMTOOL
+RESULT = 0
+TRYCALLFORM KOJO_SPECIALNAME_CUSTOMTOOL_K{NO:(FLAG:1111)}
+SIF RESULT
+	RETURN 1
+RETURN 0
+
+;@KOJO_DEVELOP_CUSTOMTOOL_ASSI_PLUS 開発決定口上呼び出し（特製品 助手時）
+@KOJO_DEVELOP_CUSTOMTOOL_ASSI_PLUS
+RESULT = 0
+TRYCALLFORM KOJO_DEVELOP_CUSTOMTOOL_ASSI_PLUS_K{NO:ASSI}
+SIF RESULT
+	RETURN 1
+RETURN 0
+
+;@KOJO_DEVELOP_CUSTOMTOOL_PLUS  開発決定口上呼び出し（特製品 調教中）
+@KOJO_DEVELOP_CUSTOMTOOL_PLUS
+RESULT = 0
+TRYCALLFORM KOJO_DEVELOP_CUSTOMTOOL_PLUS_K{NO:TARGET}
+SIF RESULT
+	RETURN 1
+RETURN 0
+
+;@KOJO_DEVELOP_CUSTOMTOOL_ASSI  開発決定口上呼び出し（上質／高性能 助手時）
+@KOJO_DEVELOP_CUSTOMTOOL_ASSI
+RESULT = 0
+TRYCALLFORM KOJO_DEVELOP_CUSTOMTOOL_ASSI_K{NO:ASSI}
+SIF RESULT
+	RETURN 1
+RETURN 0
+
+;@KOJO_DEVELOP_CUSTOMTOOL 開発決定口上呼び出し（上質／高性能 調教中）
+@KOJO_DEVELOP_CUSTOMTOOL
+RESULT = 0
+TRYCALLFORM KOJO_DEVELOP_CUSTOMTOOL_K{NO:TARGET}
+SIF RESULT
+	RETURN 1
+RETURN 0
+
+;@KOJO_DEVELOPED_CUSTOMTOOL_PLUS 開発完了口上呼び出し（特製品 調教開始時）
+@KOJO_DEVELOPED_CUSTOMTOOL_PLUS
+RESULT = 0
+TRYCALLFORM KOJO_DEVELOPED_CUSTOMTOOL_PLUS_K{NO:TARGET}
+SIF RESULT
+	RETURN 1
+RETURN 0
+
+;@KOJO_DEVELOPED_CUSTOMTOOL 開発完了口上呼び出し（上質／高性能 調教開始時）
+@KOJO_DEVELOPED_CUSTOMTOOL
+RESULT = 0
+TRYCALLFORM KOJO_DEVELOPED_CUSTOMTOOL_K{NO:TARGET}
+SIF RESULT
+	RETURN 1
+RETURN 0
+

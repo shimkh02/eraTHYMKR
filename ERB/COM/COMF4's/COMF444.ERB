@@ -1,0 +1,395 @@
+﻿;=============================================================================
+;반령 재구성
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE444
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:444 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;対象, または조교자가 요우키でないとダメ
+SIF NO:TARGET != 70 && NO:PLAYER != 70
+	RETURN 0
+;반령(요우키)が현재 조교 가능
+LOCAL:1 = 0
+FOR LOCAL, 0, CHARANUM
+	;主人や助手や조교 대상이라면 除外
+	SIF LOCAL == MASTER || LOCAL == ASSI || LOCAL == TARGET
+		CONTINUE
+	;妊娠していたら除外
+	SIF TALENT:LOCAL:140 == 1
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:LOCAL:4
+		CONTINUE
+	;반령(요우키)だったらLOCAL:1に+1
+	SIF NO:LOCAL == 99
+		LOCAL:1 += 1
+NEXT
+SIF LOCAL:1 == 0
+	RETURN 0
+;요우키が대상의 とき, 助手可または恋慕または복종または조교자가 幽々子
+IF NO:TARGET == 70
+	SIF CFLAG:1 < 2 && TALENT:150 == 0 && TALENT:160 == 0 && NO:PLAYER != 20
+		RETURN 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;반사람몫의 요몽입니다들 반령으로 자신의 분신을 만들 수 있으니까, 스승이라면 좀 더 자유자재일 것이다
+;그렇다고 하는 것으로 만들어 보았다. 쇼타에서도 로리에서도 자유자재. 과연 스승
+@COM444
+PRINTFORML 반령 재구성
+TSTR:0 = 반령 재구성
+
+IF NO:TARGET == 70
+	DOWNBASE:0 += 200
+	DOWNBASE:1 += 1000
+ENDIF
+DRAWLINE
+PRINTL [재구성할 캐릭터를 선택해 주세요] 
+REPEAT CHARANUM
+	;임신하고 있으면 제외
+	SIF TALENT:COUNT:140 == 1
+		CONTINUE
+	;실종중 등 이 장소에 없으면 제외
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	SIF NO:COUNT == 99
+		CALL ARRANGE_CHARALIST, COUNT
+REND
+
+$INPUT_LOOP_SELECT_CHARA
+INPUT
+IF RESULT < 0 || RESULT >= CHARANUM
+	GOTO INPUT_LOOP_SELECT_CHARA
+ENDIF
+
+LOCAL = TARGET
+TARGET = RESULT
+PRINTFORMW 요우키는 %CALLNAME:TARGET%의 모습을 바꾸려 하고 있다….
+
+PRINTL 성별은 어떻게 하겠습니까?
+PRINTL [0] ♂
+PRINTL [1] ♀
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 0
+	TALENT:120 = 1
+ELSEIF RESULT == 1
+	TALENT:120 = 0
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+
+PRINTL 체형은?
+PRINTL [0] 보통으로
+PRINTL [1] 아담하게
+PRINTL [2] 인형 사이즈로!
+$INPUT_LOOP_2
+INPUT
+IF RESULT == 0
+	TALENT:127 = 0
+	TALENT:128 = 0
+ELSEIF RESULT == 1
+	TALENT:127 = 0
+	TALENT:128 = 1
+ELSEIF RESULT == 2
+	TALENT:127 = 1
+	TALENT:128 = 1
+ELSE
+	GOTO INPUT_LOOP_2
+ENDIF
+
+IF TALENT:120 == 0
+	PRINTL 가슴은… 어찌 해야 될까?
+	PRINTL [0] 납작!
+	PRINTL [1] 손바닥에 쏙 들어올 정도가 좋다.
+	PRINTL [2] 보통이 좋지?
+	PRINTL [3] 큰 것이야말로 정의롭다.
+	PRINTL [4] 폭유! 폭유!
+	$INPUT_LOOP_3
+	INPUT
+	IF RESULT == 0
+		TALENT:110 = 1
+		TALENT:111 = 0
+		TALENT:112 = 0
+		TALENT:113 = 0
+	ELSEIF RESULT == 1
+		TALENT:110 = 0
+		TALENT:111 = 1
+		TALENT:112 = 0
+		TALENT:113 = 0
+	ELSEIF RESULT == 2
+		TALENT:110 = 0
+		TALENT:111 = 0
+		TALENT:112 = 0
+		TALENT:113 = 0
+	ELSEIF RESULT == 3
+		TALENT:110 = 0
+		TALENT:111 = 0
+		TALENT:112 = 1
+		TALENT:113 = 0
+	ELSEIF RESULT == 4
+		TALENT:110 = 0
+		TALENT:111 = 0
+		TALENT:112 = 0
+		TALENT:113 = 1
+	ELSE
+		GOTO INPUT_LOOP_3
+	ENDIF
+
+	PRINTL 다, 달아둘까?
+	PRINTL [0] 고추 따위 필요 없어
+	PRINTL [1] 후타나리 이즈 정의! 영어로 말하면 JASUTEWISU!!!
+	$INPUT_LOOP_4
+	INPUT
+	IF RESULT == 0
+		TALENT:121 = 0
+	ELSEIF RESULT == 1
+		TALENT:121 = 1
+	ELSE
+		GOTO INPUT_LOOP_4
+	ENDIF
+ENDIF
+
+PRINTL 모처럼이니까, 동물 귀라든지…?
+PRINTL [0] 아무리 나라고 해도 그건 좀…
+PRINTL [1] 이야앗호! 해버리자고!
+$INPUT_LOOP_5
+INPUT
+IF RESULT == 0
+	TALENT:116 = 0
+ELSEIF RESULT == 1
+	TALENT:116 = 1
+ELSE
+GOTO INPUT_LOOP_5
+ENDIF
+
+PRINTL 붙여봤자 쓰잘데기 없지만, 고양이 혀는 어떨까?
+PRINTL [0] 기왕 말은 해줬는데 【필요 없어요】
+PRINTL [1] 야옹~! 냥냥 냐~~~앙!!!
+$INPUT_LOOP_6
+INPUT
+IF RESULT == 0
+	TALENT:54 = 0
+ELSEIF RESULT == 1
+	TALENT:54 = 1
+ELSE
+	GOTO INPUT_LOOP_6
+ENDIF
+
+;주인이나 조수가 금단의 지식 소유의 경우, 종족 선택도 추가
+IF TALENT:MASTER:56 || (ASSI > 0 && TALENT:ASSI:56)
+	PRINTL 종족을 골라주세요!
+	PRINT [0] 엥, 보통이 좋지 않나? 
+		IF TALENT:22
+			PRINTFORML 　　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	PRINT [1] 요정 씨! 
+	IF (TALENT:127 && TALENT:128) || (TALENT:127 == 0 && TALENT:128 == 0)
+		PRINTFORM 　　　　　　　　　　　　*%TALENTNAME:128%이 
+		IF TALENT:22
+			PRINTFORML 되고, %TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL 됩니다*
+		ENDIF
+	ELSEIF TALENT:127 == 0 && TALENT:128
+		IF TALENT:22
+			PRINTFORML 　　　　　　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	ENDIF
+	PRINT [2] 좀비 페어리! 
+	IF (TALENT:127 && TALENT:128) || (TALENT:127 == 0 && TALENT:128 == 0)
+		PRINTFORM 　　　　　　*%TALENTNAME:128%이 
+		IF TALENT:22 == 0
+			PRINTFORML 되고, %TALENTNAME:22%를 얻습니다*
+		ELSE
+			PRINTL 됩니다*
+		ENDIF
+	ELSEIF TALENT:127 == 0 && TALENT:128
+		IF TALENT:22 == 0
+			PRINTFORML 　　　　　　*%TALENTNAME:22%를 얻습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	ENDIF
+	PRINT [3] 흡혈귀도 좋지 
+		IF TALENT:22
+			PRINTFORML 　　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	PRINT [4] 사이보그 모에! 
+		IF TALENT:22
+			PRINTFORML 　　　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	PRINT [5] 영체는 신비적이야 
+		IF TALENT:22
+			PRINTFORML 　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	PRINT [6] 우후후후후후 자동인형 우후후후후 
+		IF TALENT:22
+			PRINTFORML 　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	PRINT [7] 갓파! 
+	IF TALENT:116
+		PRINTFORM 　　　　　　　　　　　*%TALENTNAME:116%
+		IF TALENT:22
+			PRINTFORML 와 %TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL 를 잃습니다*
+		ENDIF
+	ELSE
+		IF TALENT:22
+			PRINTFORML 　　　　　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	ENDIF
+	PRINT [8] 여우, 최강! 
+	IF TALENT:116 == 0
+		PRINTFORM 　　　　　　　　　　* TALENTNAME:116%가 
+		IF TALENT:22
+			PRINTFORML 되고, %TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL 됩니다*
+		ENDIF
+	ELSE
+		IF TALENT:22
+			PRINTFORML 　　　　　　　　　　*%TALENTNAME:22%를 잃습니다*
+		ELSE
+			PRINTL
+		ENDIF
+	ENDIF
+	$INPUT_LOOP_7
+	INPUT
+	;감정결여를 잃는다
+	IF RESULT == 0
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:200 = 0
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;작은 몸집 체형·요정을 얻어, 감정결여를 잃는다
+	ELSEIF RESULT == 1
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:127 = 0
+		TALENT:128 = 1
+		TALENT:200 = 1
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;작은 몸집 체형·요정·주정·감정결여를 얻는다
+	ELSEIF RESULT == 2
+		TALENT:22 = 1
+		TALENT:48 = 1
+		TALENT:127 = 0
+		TALENT:128 = 1
+		TALENT:200 = 1
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;흡혈귀를 얻어, 감정결여를 잃는다
+	ELSEIF RESULT == 3
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:200 = 0
+		TALENT:205 = 1
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;기계를 얻어, 감정결여를 잃는다
+	ELSEIF RESULT == 4
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:200 = 0
+		TALENT:205 = 0
+		TALENT:206 = 1
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;령체를 얻어, 감정결여를 잃는다
+	ELSEIF RESULT == 5
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:200 = 0
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 1
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;인형을 얻어, 감정결여를 잃는다
+	ELSEIF RESULT == 6
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:200 = 0
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 1
+		TALENT:210 = 0
+		TALENT:211 = 0
+	;갓빠를 얻어, 동물귀·감정결여를 잃는다
+	ELSEIF RESULT == 7
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:116 = 0
+		TALENT:200 = 0
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 1
+		TALENT:211 = 0
+	;요호·동물귀를 얻어, 감정결여를 잃는다
+	ELSEIF RESULT == 8
+		TALENT:22 = 0
+		TALENT:48 = 0
+		TALENT:116 = 1
+		TALENT:200 = 0
+		TALENT:205 = 0
+		TALENT:206 = 0
+		TALENT:207 = 0
+		TALENT:208 = 0
+		TALENT:210 = 0
+		TALENT:211 = 1
+	ELSE
+		GOTO INPUT_LOOP_7
+	ENDIF
+ENDIF
+
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 요우키의 힘으로, 그 모습을 바꾸었다.
+TARGET = LOCAL
+RETURN 1

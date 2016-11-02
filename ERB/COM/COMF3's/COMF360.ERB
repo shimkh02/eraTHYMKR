@@ -1,0 +1,365 @@
+﻿;=============================================================================
+;벌레목욕탕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE360
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:360 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 1) == 0
+	RETURN 0
+;一度も벌레 목욕に入ったことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:23 & 1) == 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;해제는 언제든 가능
+SIF TEQUIP:55 == 1
+	RETURN 1
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;緊縛中じゃないとダメ
+SIF TEQUIP:40 == 0
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 1
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수 개변 밸런스 새는 유시에 환던지기헤(˚로헤˚)
+@COM360
+PRINTL 벌레목욕탕
+TSTR:0 = 벌레목욕탕
+CALL TRAIN_MESSAGE_COM360
+
+IF TEQUIP:55 == 1
+	TEQUIP:55 = 0
+	;음충사정 게이지 리셋
+	TFLAG:997 = 0
+	TFLAG:998 = 0
+	RETURN 1
+ENDIF
+
+TEQUIP:55 = 1
+TFLAG:997 = 0
+TFLAG:998 = 10000
+
+LOCAL:1 = 100
+;EXP:이상 경험을 본다
+IF EXP:50 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:50 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:50 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:50 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:50 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+
+;리굴, 야마메
+IF NO:TARGET == 24 || NO:TARGET == 58
+	TIMES LOCAL:1 , 0.30
+	LOCAL:1 = MAX(LOCAL:1, 8)
+
+	DOWNBASE:0 += LOCAL:1 / 4
+	DOWNBASE:1 += LOCAL:1 / 2
+
+	SOURCE:25 += LOCAL:1 * 20
+	SOURCE:31 += LOCAL:1 * 3
+ELSE
+	DOWNBASE:0 += LOCAL:1 / 2
+	DOWNBASE:1 += LOCAL:1
+
+	SOURCE:25 += LOCAL:1 * 30
+	SOURCE:31 += LOCAL:1 * 10
+	SOURCE:32 = 25000
+ENDIF
+
+IF (CFLAG:23 & 1) == 0
+	CFLAG:23 |= 1
+	TCVAR:50 += 1
+ENDIF
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;--------------------------------------------------
+;충목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM360
+PRINTL <벌레목욕탕 입욕 중>
+
+LOCAL:3 = 100
+;EXP:이상 경험을 본다
+IF EXP:50 < EXPLV:1
+	TIMES LOCAL:3 , 3.00
+ELSEIF EXP:50 < EXPLV:2
+	TIMES LOCAL:3 , 2.50
+ELSEIF EXP:50 < EXPLV:3
+	TIMES LOCAL:3 , 2.00
+ELSEIF EXP:50 < EXPLV:4
+	TIMES LOCAL:3 , 1.00
+ELSEIF EXP:50 < EXPLV:5
+	TIMES LOCAL:3 , 0.80
+ELSE
+	TIMES LOCAL:3 , 0.60
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:3 , 2.00
+
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:3 , 0.60
+
+;리굴, 야마메
+IF NO:TARGET == 24 || NO:TARGET == 58
+	TIMES LOCAL:3 , 0.30
+	LOCAL:3 = MAX(LOCAL:3, 8)
+	DOWNBASE:0 += LOCAL:3 / 8
+	DOWNBASE:1 += LOCAL:3 / 4
+
+	SOURCE:25 += LOCAL:3 * 20
+	SOURCE:30 += LOCAL:3 * 6
+	SOURCE:31 += LOCAL:3 * 3
+ELSE
+	DOWNBASE:0 += LOCAL:3 / 4
+	DOWNBASE:1 += LOCAL:3 / 2
+
+	SOURCE:25 += LOCAL:3 * 30
+	SOURCE:30 += LOCAL:3 * 10
+	SOURCE:31 += LOCAL:3 * 15
+	SOURCE:32 += 5000
+ENDIF
+
+SOURCE:19 += 1000
+TIMES SOURCE:0 , 2.00
+TIMES SOURCE:1 , 2.00
+TIMES SOURCE:2 , 2.00
+TIMES SOURCE:3 , 2.00
+TIMES SOURCE:22 , 1.80
+
+;무엇이 나올까? (랜덤으로 이벤트가 발생하는 것도 있는 곳인? (이)라고 생각해 만들어 보았다)
+;기본 리굴, 야마메 이외로[감정 부족한],[광기],[정신 붕괴],[괴뢰],[괴조인격]을 가지고 있지 않은 캐릭터의 공포가 일정 이상 모였을 경우저확률로 발동
+IF TALENT:22 == 0 && TALENT:158 == 0 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0 && NO:TARGET != 24 && NO:TARGET != 58 && PALAM:17 > PALAMLV:4
+	IF RAND:25 == 0
+		LOCAL:4 = RAND:10
+		IF LOCAL:4 == 0
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 지나친 공포에 이성의 끈이 끊어져 버렸다….
+			CALL SELF_KOJO, TARGET, 6, 0
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 발광했다.
+			TALENT:158 = 1
+			CFLAG:12 |= 1
+			CFLAG:17 |= 2
+		ELSEIF (LOCAL:4 == 1 || LOCAL:4 == 2) && MARK:9 > 2
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 지나친 공포에 반항할 기력을 잃은 것 같다….
+			CALL SELF_KOJO, TARGET, 6, 1
+			PRINTW 반발 각인이 LV2로 떨어졌다.
+			MARK:9 = 2
+		ELSEIF (LOCAL:4 > 2 && LOCAL:4 < 6) && BASE:0 >= 500
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 지나친 공포로 기력과 체력이 단번에 소모한 것 같다….
+			CALL SELF_KOJO, TARGET, 6, 2
+			BASE:0 /= 5
+			BASE:1 = 0
+		ELSEIF LOCAL:4 >= 6 && TALENT:10 == 0 && BASE:0 >= 500
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 지나친 공포로 벌레목욕탕에 트라우마를 가지게 된 것 같다….
+			IF TALENT:159 == 0 && LOCAL:4 == 9
+				CALL SELF_KOJO, TARGET, 6, 3
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [유아 퇴행]해 버렸다.
+				TALENT:159 = 1
+				CFLAG:12 |= 2
+				CFLAG:17 |= 1
+			ELSE
+				CALL SELF_KOJO, TARGET, 6, 4
+			ENDIF
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [겁쟁이]가 되었다. 
+			TALENT:10 = 1
+			CFLAG:12 |= 4
+		ELSEIF LOCAL:4 >= 8 && TALENT:10 && TALENT:159 == 0 && BASE:0 >= 500
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 지나친 공포로 벌레목욕탕에 트라우마를 가지게 된 것 같다…. 
+			CALL SELF_KOJO, TARGET, 6, 3
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [유아 퇴행]해 버렸다. 
+			TALENT:159 = 1
+			CFLAG:12 |= 2
+			CFLAG:17 |= 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+IF TFLAG:998 != 0
+	LOCAL = 0
+	;ABL:기교를 본다
+	IF ABL:12 == 0
+		LOCAL = 500
+	ELSEIF ABL:12 == 1
+		LOCAL = 600
+	ELSEIF ABL:12 == 2
+		LOCAL = 800
+	ELSEIF ABL:12 == 3
+		LOCAL = 1000
+	ELSEIF ABL:12 == 4
+		LOCAL = 1400
+	ELSE
+		LOCAL = 2000
+	ENDIF
+
+	;ABL:순종을 본다
+	IF ABL:10 == 0
+		TIMES LOCAL , 0.80
+	ELSEIF ABL:10 == 1
+		TIMES LOCAL , 0.90
+	ELSEIF ABL:10 == 2
+		TIMES LOCAL , 1.00
+	ELSEIF ABL:10 == 3
+		TIMES LOCAL , 1.10
+	ELSEIF ABL:10 == 4
+		TIMES LOCAL , 1.20
+	ELSE
+		TIMES LOCAL , 1.30
+	ENDIF
+
+	;PALAM:욕정을 본다
+	IF PALAM:13 < PALAMLV:1
+		TIMES LOCAL , 1.00
+	ELSEIF PALAM:13 < PALAMLV:2
+		TIMES LOCAL , 1.10
+	ELSEIF PALAM:13 < PALAMLV:3
+		TIMES LOCAL , 1.20
+	ELSEIF PALAM:13 < PALAMLV:4
+		TIMES LOCAL , 1.30
+	ELSEIF PALAM:13 < PALAMLV:5
+		TIMES LOCAL , 1.40
+	ELSE
+		TIMES LOCAL , 1.50
+	ENDIF
+
+	TFLAG:997 += LOCAL
+
+	LOCAL:2 = TFLAG:997
+	EJAC = TFLAG:998
+
+	IF  LOCAL:2 > EJAC * 4
+		LOCAL:1 = 3
+	ELSEIF  LOCAL:2 > EJAC * 2
+		LOCAL:1 = 2
+	ELSEIF LOCAL:2 > EJAC
+		LOCAL:1 = 1
+	ELSE
+		LOCAL:1 = 0
+	ENDIF
+
+	;초대형량 사정
+	IF LOCAL:1 == 3
+		TCVAR:4 += 5
+		PRINTL 음충초대량 사정 
+		SOURCE:18 += EJAC*4
+		TFLAG:997 -= EJAC*4
+	;대량 사정
+	ELSEIF LOCAL:1 == 2
+		TCVAR:4 += 3
+		PRINTL 음충대량 사정 
+		SOURCE:18 += EJAC*2
+		TFLAG:997 -= EJAC*2
+	;통상의 사정
+	ELSEIF LOCAL:1 == 1
+		TCVAR:4 += 1
+		PRINTL 음충사정 
+		SOURCE:18 += EJAC
+		TFLAG:997 -= EJAC
+	ENDIF
+	TFLAG:997 = LIMIT(TFLAG:997, 0, (EJAC-1))
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM360
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 1
+	PRINTFORM %조사선택(CALLNAME:TARGET, "를")% 벌레 속에서 
+	IF NO:TARGET == 24 || NO:TARGET == 58
+		PRINTW 끄집어내자, 조금 복잡한 얼굴을 하고 있었다….
+	ELSE
+		PRINTW 구조해 내자, 안심한 것 같은 얼굴을 하고 있었다….
+	ENDIF
+ELSE
+	PRINTFORML 무수한 벌레들이 꿈틀거리는 목욕탕 통에 %조사선택(CALLNAME:TARGET, "를")% 빠뜨렸다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF NO:TARGET == 24 || NO:TARGET == 58
+		PRINTFORMW \@(TEQUIP:42) ? 잠깐 놀란 듯한 표정을 지었으나, # 잠깐 소리를 질러댔으나,\@ 곧바로 평정을 되찾고 있다….
+	ELSE
+		PRINTFORMW \@(TEQUIP:42) ? 격렬하게 고개를 저으며 싫어하고 # 소리가 나지 않는 비명을 지르고\@ 있다….
+	ENDIF
+ENDIF

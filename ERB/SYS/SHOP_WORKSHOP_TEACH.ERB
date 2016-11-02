@@ -1,0 +1,985 @@
+﻿;---------------------------------------------------------
+; SHOP_WORKSHOP_TEACH 技師パッチ 工房イベントファイル 教育結果
+;---------------------------------------------------------
+;中毒者曰く：
+;工房での教育による結果の判定処理関数群
+
+;以下関数群。大きく分けて2種。
+;1. 教育結果の珠・経験算出用。
+;@JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT         工作技能教習結果(先生側)
+;@JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT        工作技能教習結果(生徒側)
+;@JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT_SUPPORT 工作技能教習サポート結果
+;@JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT_WATCH  工作技能教習観察結果
+
+;2. 結果報告。口上処理。
+;@RESULT_WORKSHOP_THEACH                  工房技能教習結果報告
+
+;以下外部関数
+;@JUDGE_WORKSHOP_RESULT_ONANISM             工房自慰判定
+;@JUDGE_WORKSHOP_RESULT_ONANISM_MUTUAL      工房相互自慰判定
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT 工作技能教習結果
+;LOCAL変数
+;  0 : 教師の状況(ビット管理 4:乱交に参加 2:自慰 1:サボり 0:普通に教習)
+;  1 : 教育の能率
+;  2 : 生徒数
+;  3 : 授業を見ている人数
+;  4 : サポーター人数
+;  5 : サポート成果合計
+;  6 : サポート成果個人値
+;  7 : 授業形態フラグ
+;       0 : 通常の授業
+;       1 : 個人授業
+;       2 : 妖しい個人授業A 生徒れいぷ
+;       3 : 妖しい個人授業B 密着授業
+;  8 : 教育の成果 (0:理解が進まなかった 1:理解は進んだ 2:技能を修得した)
+;  9 : 相互自慰フラグ (0:オフ 1:オン)
+; 10 : FINDCHARA結果受け皿
+; 11 : 技能習得人数
+; 12 : 教育成功人数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 교습 결과 개시
+;工房作業の値を工作技能講座実施中に変更
+;まず先生の状況を確認
+IF CFLAG:COUNT:691 & 1p7
+	;先生が乱交状態の場合
+	LOCAL:0 = 4
+	CFLAG:COUNT:690 = 220
+	;抵抗失敗していてエロス暴走していないなら誰かに襲われている
+	SIF (CFLAG:COUNT:691 & 1p6) && (CFLAG:COUNT:691 & 1p3) == 0
+		CFLAG:COUNT:690 = 260
+ELSEIF CFLAG:COUNT:691 & 1p8
+	;自慰の確認
+	LOCAL:0 = 2
+	CFLAG:COUNT:690 = 240
+ELSE
+	LOCAL:0 = 0
+	CFLAG:COUNT:690 = 200
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 내용 베이스：{CFLAG:COUNT:690}
+;工作技能Lv、工作名人、教育者の素養により能率変化
+LOCAL:1 = ABL:COUNT:73
+SIF TALENT:COUNT:195
+	LOCAL:1 += 2
+SIF TALENT:COUNT:126
+	LOCAL:1 *= 2
+;教師がサボっていなければ能率増大
+IF CFLAG:COUNT:691 & 1p2
+	LOCAL:0 += 1
+	CFLAG:COUNT:690 += 10
+ELSE
+	LOCAL:1 *= 5
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 게으름 확인：{CFLAG:COUNT:690}
+;待機組関係の値を初期化
+LOCAL:3 = 0
+LOCAL:4 = 0
+LOCAL:5 = 0
+IF CFLAG:COUNT:692 < 0
+	;対多数の授業の場合、乱交状態ではない生徒の数を確認
+	LOCAL:2 = 0
+	LOCAL:10 = -1
+	While 1
+		SIF (LOCAL:10 + 1) == CHARANUM
+			BREAK
+		;先生を作業対象としてターゲットしているキャラを探す
+		FINDCHARA CFLAG:692, CFLAG:COUNT:3109, LOCAL:10 + 1
+		LOCAL:10 = RESULT
+		;いなくなったらループ脱出
+		SIF LOCAL:10 == -1
+			BREAK
+		;作業が工作技能講座受講中でなければスキップ
+		SIF CFLAG:(LOCAL:10):690 != 2
+			CONTINUE
+		;乱交状態であればスキップ
+		SIF CFLAG:(LOCAL:10):691 & 1p7
+			CONTINUE
+		LOCAL:2 += 1
+	WEND
+	LOCAL:7 = 0
+	IF CFLAG:COUNT:691 & 1p7
+		;乱交状態なら授業にならない
+		LOCAL:1 = 0
+	ELSE
+		;乱交状態でさえなければ自慰回数とサポーターの仕事ぶりで能率変化
+		;教師が自慰している場合、その回数に応じて能率減少
+		IF CFLAG:COUNT:691 & 1p8
+			CALL JUDGE_WORKSHOP_RESULT_ONANISM, COUNT
+		ENDIF
+		;乱交状態でない生徒が一人でもいればサポーターと観察者を確認
+		IF LOCAL:2 > 0
+			;観察者をカウント
+			LOCAL:10 = -1
+			While 1
+				;先生を作業対象としてターゲットしているキャラを探す
+				FINDCHARA CFLAG:692, COUNT, LOCAL:10 + 1
+				LOCAL:10 = RESULT
+				;いなくなったらループ脱出
+				SIF LOCAL:10 == -1
+					BREAK
+				;作業が待機ついでに授業を見ているのでなければスキップ
+				SIF CFLAG:(LOCAL:10):690 != 102
+					CONTINUE
+				;乱交状態であればスキップ
+				SIF CFLAG:(LOCAL:10):691 & 1p7
+					CONTINUE
+				LOCAL:3 += 1
+			WEND
+			;サポーターの数を確認
+			LOCAL:10 = -1
+			While 1
+				FINDCHARA CFLAG:690, 101, LOCAL:10 + 1
+				LOCAL:10 = RESULT
+				;サポーターがいなくなったらループ脱出
+				SIF LOCAL:10 == -1
+					BREAK
+				;サポート対象が他の先生ならスキップ
+				SIF CFLAG:(LOCAL:10):692 != COUNT
+					CONTINUE
+				;サポート成果を確認
+				LOCAL:6 = ABL:COUNT:73
+				SIF TALENT:COUNT:195
+					LOCAL:6 += 2
+				SIF TALENT:COUNT:126
+					LOCAL:6 *= 2
+				LOCAL:5 += LOCAL:6
+			WEND
+			;サポーターの人数が生徒人数＋観察者人数より多かった場合、授業が混乱して能率が下がる
+			IF LOCAL:4 > (LOCAL:3 + LOCAL:2)
+				LOCAL:1 /= 5
+				LOCAL:5 /= LOCAL:4 * 2
+			ENDIF
+			;最後に能率にサポーター成果を足す
+			LOCAL:1 += LOCAL:5
+		ENDIF
+	ENDIF
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 내용(수업 효과 확인 후)：{CFLAG:COUNT:690} 학생 인원：{LOCAL:2}명
+ELSE
+	;個人授業の場合
+	CFLAG:COUNT:690 += 5
+	;生徒を探す
+	FINDCHARA CFLAG:3109, CFLAG:COUNT:692
+	LOCAL:10 = RESULT
+	;個人授業なので生徒は必ず一人
+	LOCAL:2 = 1
+	IF LOCAL:10 < 0
+		;生徒が居なければ異常処理
+		LOCAL:2 = 0
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+			PRINTFORML ;;; %CALLNAME:COUNT%의 교습 결과 확인 이상:과외 학생 실종
+	ELSE
+		;教師と生徒の乱交状態を確認
+		IF CFLAG:COUNT:691 & 1p7
+			;乱交状態の場合は生徒との乱交状態を確認
+			IF (CFLAG:COUNT:691 & 1p4) && (CFLAG:COUNT:792 == CFLAG:(LOCAL:10):3109) && (CFLAG:(LOCAL:10):797 == 1) && (CFLAG:(LOCAL:10):691 & 1p4) && (CFLAG:(LOCAL:10):792 == CFLAG:COUNT:3109) && (CFLAG:COUNT:797 == 1)
+				;先生と生徒がそれぞれ誘惑し合っており、
+				;互いに他から誘惑を受けていない場合は妖しい授業化
+				LOCAL:7 = 3
+				CFLAG:COUNT:690 += 2
+				;一応授業として成立するので生徒数をカウント
+				LOCAL:2 = 1
+			ELSEIF (CFLAG:COUNT:691 & 1p4) && (CFLAG:COUNT:792 == CFLAG:(LOCAL:10):3109) && (CFLAG:(LOCAL:10):797 == 1) &&  (CFLAG:COUNT:797 == 0)
+				;先生が一方的に生徒を誘惑しており、
+				;互いに他から誘惑を受けていない場合は妖しい授業化
+				LOCAL:7 = 2
+				CFLAG:COUNT:690 += 1
+			ELSE
+				;先生が襲われているとか、他の参加者が入った場合は授業にならない
+				LOCAL:1 = 0
+				LOCAL:7 = 1
+			ENDIF
+		ELSEIF CFLAG:(LOCAL:10):691 & 1p7
+			;先生が非乱交状態で生徒が乱交状態なら授業にならない
+			LOCAL:1 = 0
+			LOCAL:7 = 1
+		ELSE
+			;双方乱交状態でない個人授業であれば能率を倍に
+			LOCAL:1 *= 2
+			LOCAL:7 = 1
+		ENDIF
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+			PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 내용(과외・난교 상황 확인 후)：{CFLAG:COUNT:690} 학생 수：{LOCAL:2}
+		;個人授業の場合は授業になっていれば生徒との相性で能率が変わる
+		IF LOCAL:2 > 0
+			IF RELATION:COUNT:(NO:(LOCAL:10))
+				LOCAL:1 *= RELATION:COUNT:(NO:(LOCAL:10))
+				LOCAL:1 /= 100
+			ENDIF
+			IF RELATION:(LOCAL:10):(NO:COUNT)
+				LOCAL:1 *= RELATION:(LOCAL:10):(NO:COUNT)
+				LOCAL:1 /= 100
+			ENDIF
+			;自慰している場合、相性処理後に能率減少
+			IF (CFLAG:COUNT:691 & 1p8) && (CFLAG:(LOCAL:10):691 & 1p8) && (TALENT:COUNT:121 || TALENT:(LOCAL:10):121 || (TALENT:COUNT:120 && TALENT:(LOCAL:10):120 == 0) || (TALENT:COUNT:120 && TALENT:(LOCAL:10):120 == 0) || (TALENT:COUNT:120 == 0 && TALENT:(LOCAL:10):120 == 0 && ABL:COUNT:22 > 1 && ABL:(LOCAL:10):22 > 1) || (TALENT:COUNT:120 && TALENT:(LOCAL:10):120 && ABL:COUNT:23 > 1 && ABL:(LOCAL:10):23 > 1))
+				;双方の相性が良く、かつ双方が自慰していれば、性別が違うかどちらかにふたなりがあれば無条件で、性別が一緒ならその気（レズっ気・ＢＬっ気）があれば相互自慰
+				CFLAG:COUNT:690 += 1
+				CALL JUDGE_WORKSHOP_RESULT_ONANISM_MUTUAL, COUNT, LOCAL:10
+			ELSEIF CFLAG:COUNT:691 & 1p8
+				;それ以外で先生が自慰してる場合は単に能率が下がるだけ
+				CALL JUDGE_WORKSHOP_RESULT_ONANISM, COUNT
+			ENDIF
+		ELSE
+			;個人授業時の生徒が居なくなってる状態での自慰処理
+			SIF CFLAG:COUNT:691 & 1p8
+				CALL JUDGE_WORKSHOP_RESULT_ONANISM, COUNT
+		ENDIF
+	ENDIF
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 내용(개인 수업 효과 확인 후)：{CFLAG:COUNT:690} 학생 인원：{LOCAL:2}명, 학생 작업
+ENDIF
+;自慰していた場合の能率下げ
+IF CFLAG:COUNT:691 & 1p8
+	;絶頂経験と自慰経験の多い側が能率を下げる
+	IF LOCAL@VALUE_WORKSHOP_EXP_02:COUNT > LOCAL@VALUE_WORKSHOP_EXP_10:COUNT
+		LOCAL:1 -= LOCAL@VALUE_WORKSHOP_EXP_02:COUNT
+	ELSE
+		LOCAL:1 -= LOCAL@VALUE_WORKSHOP_EXP_10:COUNT
+	ENDIF
+	;能率が0以下になったら工房作業内容修正(自慰のし過ぎで授業失敗)
+	IF LOCAL:1 < 1
+		LOCAL:1 = 0
+		CFLAG:COUNT:690 += 40
+	ENDIF
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 내용(자위 확인 후)：{CFLAG:COUNT:690} 학생 인원：{LOCAL:2}명
+;教育結果の算出
+LOCAL:11 = 0
+LOCAL:12 = 0
+;生徒の分
+IF LOCAL:2 > 0
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+		PRINTFORML ;;; %CALLNAME:COUNT%의 교습  학생들의 작업 내용 설정 시작
+	LOCAL:10 = -1
+	WHILE 1
+		SIF (LOCAL:10 + 1) == CHARANUM
+			BREAK
+		FINDCHARA CFLAG:692, CFLAG:COUNT:3109, LOCAL:10 + 1
+		LOCAL:10 = RESULT
+		;いなくなったらループ脱出
+		SIF LOCAL:10 == -1
+			BREAK
+		;作業が工作技能講座受講中でなければスキップ
+		SIF CFLAG:(LOCAL:10):690 != 2
+			CONTINUE
+		;結果値を判定する
+		CALL JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT, LOCAL:10, LOCAL:0, LOCAL:1, LOCAL:7, LOCAL:9
+		LOCAL:8 = RESULT
+		IF LOCAL:8 == 2
+			LOCAL:11 += 1
+		ELSEIF LOCAL:8 == 1
+			LOCAL:12 += 1
+		ENDIF
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+			PRINTFORML ;;; %CALLNAME:COUNT%의 교습  학생 %CALLNAME:(LOCAL:10)%의 작업 내용(결과값 판정 후)：{CFLAG:(LOCAL:10):690} 학생 인원：{LOCAL:2}명
+	WEND
+ELSEIF (CFLAG:COUNT:691 & 1p7) == 0
+	;先生が乱交していなくても生徒が居なくなってるなら授業にならない
+	CFLAG:COUNT:690 += 4
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 교습  작업 내용(학생 확인 후)：{CFLAG:COUNT:690}
+;待機組で授業見てたキャラの分
+IF LOCAL:3 > 0
+	LOCAL:10 = -1
+	WHILE 1
+		SIF (LOCAL:10 + 1) == CHARANUM
+			BREAK
+		FINDCHARA CFLAG:690, 102, LOCAL:10 + 1
+		LOCAL:10 = RESULT
+		;いなくなったらループ脱出
+		SIF LOCAL:10 == -1
+			BREAK
+		;見ている授業が違うならスキップ
+		SIF CFLAG:(LOCAL:10):692 != COUNT
+			CONTINUE
+		;結果値を判定する
+		CALL JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT_WATCH, LOCAL:10, LOCAL:0, LOCAL:1
+		LOCAL:8 = RESULT
+		IF LOCAL:8 == 1
+			LOCAL:12 += 1
+		ENDIF
+	WEND
+ENDIF
+;授業サポート組の分
+IF LOCAL:4 > 0
+	LOCAL:10 = -1
+	WHILE 1
+		SIF (LOCAL:10 + 1) == CHARANUM
+			BREAK
+		FINDCHARA CFLAG:692, COUNT, LOCAL:10 + 1
+		LOCAL:10 = RESULT
+		;いなくなったらループ脱出
+		SIF LOCAL:10 == -1
+			BREAK
+		;作業が工作技能講座受講中でなければスキップ
+		SIF CFLAG:(LOCAL:10):690 != 2
+			CONTINUE
+		;結果値を判定する
+		CALL JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT_SUPPORT, LOCAL:10, LOCAL:11, LOCAL:12
+	WEND
+ENDIF
+;教育成果あがっていれば先生の教育経験と習得の珠が上昇
+IF LOCAL:11 > 0 || LOCAL:12 > 0
+	LOCAL@VALUE_WORKSHOP_EXP_75:COUNT += LOCAL:11 * 2 + LOCAL:12
+	LOCAL@VALUE_WORKSHOP_JUEL_011:COUNT += LOCAL:11 * 2 + LOCAL:12
+	;教育成功人数も確保しておく
+	CFLAG:COUNT:798 = LOCAL:11 + LOCAL:12
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 교습 결과 완료  작업 내용：{CFLAG:COUNT:690}
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT_SUPPORT 工作技能教習サポート結果
+;ARG引数
+; 0 : サポートした人自身のCHARANUM番号
+; 1 : 技能を取得した人数
+; 2 : 教習の成果があったっぽい人数
+;戻り値
+;RETURN : 成果値
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT_SUPPORT, ARG:0, ARG:1, ARG:2
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:(ARG:0)%의 교육 지원 결과 개시
+IF ARG:1 > 0
+	;誰かが技能習得していれば教育経験+2、習得の珠+人数合計
+	LOCAL@VALUE_WORKSHOP_EXP_75:(ARG:0) += 2
+	LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += ARG:2 + ARG:1
+ELSEIF ARG:2 > 0
+	;誰かに教育の成果が出ていれば教育経験+1、習得の珠+人数
+	LOCAL@VALUE_WORKSHOP_EXP_75:(ARG:0) += 1
+	LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += ARG:2
+ELSE
+	;誰一人成果が上がっていないということは授業失敗なわけで
+	CFLAG:ARG:690 = 111
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:(ARG:0)%의 교육 지원 결과 완료  작업 내용：{CFLAG:ARG:690}
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT 工作技能教習受講結果
+;ARG引数
+; 0 : 生徒自身のCHARANUM番号
+; 1 : 教師の状態(ビット管理 4:乱交に参加 2:自慰 1:サボり 0:普通に教習)
+; 2 : 能率値
+; 3 : 授業形態
+; 4 : 相互自慰フラグ
+;LOCAL変数
+; 0 : 仮成果値
+; 1 : 成果
+; 2 : 実成果値 (習得の珠に響く)
+;※先生・生徒間の1対1での性行為に関する性的な値変動は乱交判定時に一緒に実施
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT, ARG:0 ,ARG:1, ARG:2, ARG:3, ARG:4
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:ARG%의 교육 수강 결과 개시 (이해도 {CFLAG:ARG:693}％・능률치{ARG:2})
+;工房作業内容変更
+CFLAG:ARG:690 = 300
+;自慰してた生徒の自慰による値変動はここで先に行う
+IF ARG:4
+	;相互自慰しているなら値の変動済みなので作業内容だけ修正
+	CFLAG:ARG:690 += 41
+ELSEIF CFLAG:ARG:691 & 1p8
+	CALL JUDGE_WORKSHOP_RESULT_ONANISM, ARG
+	CFLAG:ARG:690 += 40
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:ARG%의 학습  작업 내용(자위 확인 후)：{CFLAG:ARG:690}
+;サボりの場合、工房作業内容を修正
+SIF CFLAG:ARG:691 & 1p2
+	CFLAG:ARG:690 += 10
+;先生の態度がいい加減だが授業になっていた場合、工房作業内容を修正
+SIF (ARG:1 & 1) && ARG:2 > 0
+	CFLAG:ARG:690 += 2
+;個人授業系の工房作業内容の修正
+SIF ARG:3 > 0
+	CFLAG:ARG:690 += 5
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:ARG%의 학습  작업 내용(수업 형태 확인 후)：{CFLAG:ARG:690}
+LOCAL:0 = ARG:2
+IF ARG:3 == 3
+	;妖しい密着授業
+	;生徒がサボると仮成果値激減
+	SIF CFLAG:ARG:691 & 1p2
+		TIMES LOCAL:0, 0.10
+	CFLAG:ARG:690 += 22
+ELSEIF ARG:3 == 2
+	;妖しい授業・生徒れいぷ
+	CFLAG:ARG:690 += 61
+	;生徒が抵抗するわ話を聞かないわで効率悪いため仮成果値減
+	TIMES LOCAL:0, 0.30
+	;サボられるとさらに仮成果値激減
+	SIF CFLAG:ARG:691 & 1p2
+		TIMES LOCAL:0, 0.10
+ELSEIF CFLAG:ARG:691 & 1p7
+	;乱交に突入していたら授業受けられていない
+	LOCAL:0 = 0
+	CFLAG:ARG:690 += 20
+	;抵抗失敗していてエロス暴走していないなら誰かに襲われている
+	SIF (CFLAG:COUNT:691 & 1p6) && (CFLAG:COUNT:691 & 1p3) == 0
+		CFLAG:ARG:690 += 40
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+		PRINTFORML ;;; %CALLNAME:ARG%의 교육 수강 결과 종료  난교 중이므로 스킵
+	RETURN 0
+ELSEIF ARG:2 < 1
+	;授業にならなかった場合
+	CFLAG:ARG:690 += 4
+	IF (ARG:1 & 2) || (ARG:1 & 4)
+		;教師が乱交中・自慰中であれば自慰中毒に合わせて欲情追加
+		SELECTCASE ABL:ARG:30
+			CASE 0
+				LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += 10
+			CASE 1
+				LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += 20
+			CASE 2
+				LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += 50
+			CASE 3
+				LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += 100
+			CASE 4
+				LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += 200
+			CASEELSE
+				LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += 500
+		ENDSELECT
+	ELSEIF (CFLAG:ARG:691 & 1p8) == 0
+		;そうでなく、自分も自慰していなければ否定の珠が微増
+		LOCAL@VALUE_WORKSHOP_JUEL_100:ARG += 1
+	ENDIF
+	LOCAL:0 = 0
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+		PRINTFORML ;;; %CALLNAME:ARG%의 교육 수강 결과 종료  수업 불성립  작업 내용：{CFLAG:ARG:690}
+	RETURN 0
+ELSE
+	;普通に授業
+	;生徒がサボると成果値四半減
+	SIF CFLAG:ARG:691 & 1p2
+		TIMES LOCAL:0, 0.25
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:ARG%의 학습  작업 내용(수업 효과 확인 후)：{CFLAG:ARG:690}
+IF CFLAG:ARG:691 & 1p8
+	IF LOCAL@VALUE_WORKSHOP_EXP_02:ARG > LOCAL@VALUE_WORKSHOP_EXP_10:ARG
+		LOCAL:0 -= LOCAL@VALUE_WORKSHOP_EXP_02:ARG
+	ELSE
+		LOCAL:0 -= LOCAL@VALUE_WORKSHOP_EXP_10:ARG
+	ENDIF
+	;仮成果値が0以下になったら工房作業内容修正(自慰のし過ぎで学習失敗)
+	IF LOCAL:0 < 1
+		LOCAL:0 = 0
+		CFLAG:ARG:690 += 40
+	ENDIF
+ENDIF
+;実成果値を決定
+LOCAL:2 = 0
+SIF LOCAL:0 > 0
+	LOCAL:2 = RAND:(LOCAL:0) + 1
+CFLAG:ARG:693 += LOCAL:2
+LOCAL@VALUE_WORKSHOP_JUEL_011:ARG += LOCAL:2
+IF CFLAG:ARG:693 > 100
+	;工作技能を習得するのでご祝儀代わりに工作経験を+1(管理フラグ代わりでもある)
+	LOCAL@VALUE_WORKSHOP_EXP_74:ARG += 1
+	;習得できる程度の成果
+	LOCAL:1 = 2
+ELSE
+	;正常に授業を受けた程度の成果(身についたかはともかく)
+	LOCAL:1 = 1
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:ARG%의 교육 수강 결과 완료  결과：임시 성과치 {LOCAL:0}에 의한 실제 성과치 {LOCAL:2} 증가⇒\@ LOCAL:1 == 2 ? 습득 # 성공({CFLAG:ARG:693}％) \@  작업 내용：{CFLAG:ARG:690}
+RETURN LOCAL:1
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT_WATCH 工作技能教習観察結果
+;ARG引数
+; 0 : 生徒自身のCHARANUM番号
+; 1 : 教師の状態(ビット管理 4:乱交に参加 2:自慰 1:サボり 0:普通に教習)
+; 2 : 能率値
+;LOCAL変数
+; 0 : 仮成果値
+; 1 : 成果
+; 2 : 実成果値
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT_WATCH, ARG:0 ,ARG:1, ARG:2, ARG:3
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:ARG%의 교습 관찰 결과 개시
+;変数初期化
+LOCAL:0 = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+IF ARG:1 & 4 || ARG:2 == 0
+	;授業が成立していなければそのまま終了
+	CFLAG:ARG:690 = 112
+ELSE
+	;熱心に聞くわけでもないので低能率低成果
+	LOCAL:0 = ARG:2 / 10
+	;先生が自慰してたらさらに半減
+	SIF ARG:1 & 2
+		LOCAL:0 /= 2
+	;実成果値を決定
+	SIF LOCAL:0 > 0
+		LOCAL:2 = RAND:(LOCAL:0)
+	CFLAG:ARG:693 += LOCAL:2
+	LOCAL@VALUE_WORKSHOP_JUEL_011:ARG += LOCAL:2
+	SIF LOCAL:2 > 0
+		LOCAL:1 = 1
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:ARG%의 교습 관찰 결과 완료  결과：임시 성과치 {LOCAL:0}에 의한 실제 성과치 {LOCAL:2} 증가⇒\@ LOCAL:1 == 1 ? 성공 # 실패 \@({CFLAG:ARG:693}％) 작업 내용：{CFLAG:ARG:690}
+RETURN LOCAL:1
+
+;=======================================;
+;RESULT_WORKSHOP_THEACH 工作技能教習結果表示
+;LOCAL変数
+; 0 : 先生の反復子
+; 1 : 生徒他関係者の反復子
+; 2 : 人数カウンタ
+; 3 : 汎用フラグ
+; 4 : 個人授業の場合の生徒
+; 5 : 授業成果 (-1:失敗 0:一応成功？ 1～:成果あり)
+;LOCALS変数
+; 0 : 作業内容
+;=======================================;
+@RESULT_WORKSHOP_THEACH
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공작 기능 교육 결과 표시 시작
+FOR LOCAL:0, 0, CHARANUM
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 표시 후 플래그 \@ CFLAG:(LOCAL:0):691 & 1p9 ? on # off \@
+	;教師でなければスキップ
+	SIF (CFLAG:(LOCAL:0):690 < 200 || CFLAG:(LOCAL:0):690 > 299)
+		CONTINUE
+	IF CFLAG:(LOCAL:0):692 != -1
+		FINDCHARA CFLAG:3109, CFLAG:(LOCAL:0):692, 0
+		LOCAL:4 = RESULT
+	ELSE
+		LOCAL:4 = -1
+	ENDIF
+	LOCAL:5 = 0
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  선생：CFLAG:%CALLNAME:(LOCAL:0)%:690 = {CFLAG:(LOCAL:0):690}  교육대상：({CFLAG:(LOCAL:0):692} => {LOCAL:4} => \@ LOCAL:4 < 0 ? 복수 # %CALLNAME:(LOCAL:4)% 개인 \@)
+	PRINTFORM %조사처리(CALLNAME:(LOCAL:0), "는")% 
+	SELECTCASE CFLAG:(LOCAL:0):690
+		CASE 200
+			PRINTL 공작 기능의 수업을 실시했다.
+		CASE 204
+			PRINTL 공작 기능의 수업을 실시하려 했으나, 학생들이 전부 난교에 빠져 할 수 없게 되었다……
+			LOCAL:5 = -1
+		CASE 205
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 지도를 했다.
+		CASE 209
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능을 가르치려 했지만, 
+			LOCAL:5 = -1
+		CASE 210
+			PRINTL 공작 기능의 수업을 엉터리로 진행했다.
+		CASE 214
+			PRINTL 공작 기능의 수업을 대충이라도 진행하려 했지만, 학생들이 전부 난교에 빠져 할 수 없게 되었다……
+			LOCAL:5 = -1
+		CASE 215
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 귀찮은 듯이 공작 기능의 지도를 했다.
+		CASE 219
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 귀찮음을 무릅쓰고 공작 기능의 지도를 하려 했지만, 
+			LOCAL:5 = -1
+		CASE 220
+			PRINTL 공작 기능의 수업을 포기하고 난교에 동참했다……
+			LOCAL:5 = -1
+		CASE 225
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능 지도를 하다가 포기하고, 난교에 동참했다……
+			LOCAL:5 = -1
+		CASE 226
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게, 공작 기능을 가르치다가 덮쳐들었다……
+		CASE 227
+			PRINTFORML %조사처리(CALLNAME:(LOCAL:4), "과")% 뜨거운 시간을 보내며, 공작 기능을 가르쳤다……
+		CASE 230
+			PRINTL 공작 기능의 수업이 귀찮았는지, 난교에 섞였다……
+			LOCAL:5 = -1
+		CASE 235
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 기초를 가르치는 걸 잊은 채, 난교에 섞였다……
+			LOCAL:5 = -1
+		CASE 236
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게, 공작 기능의 지도라고 속인 뒤 덮쳤다……
+		CASE 237
+			PRINTFORML 공작 기능을 가르친다는 변명을 대며 %조사처리(CALLNAME:(LOCAL:4), "과")% 몸을 섞었다……
+		CASE 240
+			PRINTL 가끔 자위하면서 공작 기능의 수업을 진행했다.
+		CASE 244
+			PRINTL 공작 기능의 수업을 진행했지만, 수업 중에 자위하는 사이에 학생들이 전부 난교로 빠져들었다……
+			LOCAL:5 = -1
+		CASE 245
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 지도를 하며 종종 자위도 했다.
+		CASE 246
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 지도를 하며 상호 자위를 했다.
+		CASE 249
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 지도를 하며 자위도 하려 했지만, 
+			LOCAL:5 = -1
+		CASE 250
+			PRINTL 종종 자위하면서 적당히 공작 기능의 수업을 실시했다.
+		CASE 254
+			PRINTL 공작 기능의 수업을 대강 진행했지만, 수업 중에 자위하는 사이에 학생들이 전부 난교로 빠져들었다……
+			LOCAL:5 = -1
+		CASE 255
+			PRINTFORML 자위에 빠지면서도, %CALLNAME:(LOCAL:4)%에게 나름대로 공작 기능의 지도를 했다.
+		CASE 256
+			PRINTFORML %조사처리(CALLNAME:(LOCAL:4), "과")% 상호 자위를 하면서, 공작 기능의 지도를 했다.
+		CASE 259
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 귀찮아 하면서도 공작 기능을 가르치려 했지만, 자위하던 와중에 %조사처리(CALLNAME:(LOCAL:4), "가")% 혼음에 휘말리고 말았다……
+			LOCAL:5 = -1
+		CASE 260
+			PRINTL 공작 기능의 수업을 하다가, 누군가에게 덮쳐졌다……
+			LOCAL:5 = -1
+		CASE 265
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 수업을 하다가, 누군가에게 덮쳐졌다……
+			LOCAL:5 = -1
+		CASE 270
+			PRINTL 공작 기능의 수업을 대충 하다가, 누군가에게 덮쳐졌다……
+			LOCAL:5 = -1
+		CASE 275
+			PRINTFORML %CALLNAME:(LOCAL:4)%귀찮아 하면서도 공작 기능을 가르치는 와중에, 누군가에게 덮쳐졌다……
+			LOCAL:5 = -1
+		CASE 280
+			PRINTL 공작 기능의 수업을 하려 했지만, 중간에 자위에 몰입하는 바람에, 수업이 진행되지 않았다……
+			LOCAL:5 = -1
+		CASE 285
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 수업을 하려 했지만, 중간에 자위에 몰입하는 바람에, 수업이 진행되지 않았다……
+			LOCAL:5 = -1
+		CASE 286
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 수업을 하려 했지만, 서로 자위에 빠지는 바람에, 수업이 진행되지 않았다……
+			LOCAL:5 = -1
+		CASE 290
+			PRINTL 공작 기능의 수업은 무시하고, 자위에 열중했다……
+			LOCAL:5 = -1
+		CASE 295
+			PRINTFORML %CALLNAME:(LOCAL:4)%에게 공작 기능의 수업하는 건 무시하고, 자위에 열중했다……
+			LOCAL:5 = -1
+		CASE 296
+			PRINTFORML %조사처리(CALLNAME:(LOCAL:4), "과")% 서로 자위에 빠져서, 공작 기능 수업 계획은 무산됐다……
+			LOCAL:5 = -1
+	ENDSELECT
+	IF LOCAL:4 == -1
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  복수 학생
+		;複数人相手ならばここで先生の口上
+		RESULT = -1
+		TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:0)}, CFLAG:(LOCAL:0):690, LOCAL:0
+		SIF RESULT == -1
+			TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:0):690, LOCAL:0
+		;サポート役の結果表示
+		LOCAL:2 = 0
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  지원 확인
+		FOR LOCAL:1, 0, CHARANUM
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  지원 확인  %CALLNAME:(LOCAL:1)%의 작업：{CFLAG:(LOCAL:1):690} \@ CFLAG:(LOCAL:1):690 != 101 && CFLAG:(LOCAL:1):690 != 111 ? 지원 역 이외 # 지원 역 \@
+			;授業サポートしていなければスキップ
+			SIF CFLAG:(LOCAL:1):690 != 101 && CFLAG:(LOCAL:1):690 != 111
+				CONTINUE
+			;サポート相手が異なればスキップ
+			SIF CFLAG:(LOCAL:1):692 != LOCAL:0
+				CONTINUE
+			LOCAL:2 += 1
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  지원자：CFLAG:%CALLNAME:(LOCAL:1)%:690 = {CFLAG:(LOCAL:1):690}
+			PRINTFORML %CALLNAME:(LOCAL:1)%\@ LOCAL:2 == 1 ? %조사만처리(CALLNAME:(LOCAL:1), "는")% # 도 \@ %CALLNAME:(LOCAL:0)%의 수업을 지원\@ CFLAG:(LOCAL:1):690 == 101 ? 했다. # 하려 했으나, 수업이 이뤄지지 않았다…… \@
+			RESULT = -1
+			TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:1)}, CFLAG:(LOCAL:1):690, LOCAL:0
+			SIF RESULT == -1
+				TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:1):690, LOCAL:0
+		NEXT
+		;生徒の結果表示
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  학생 확인
+		FOR LOCAL:1, 0, CHARANUM
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  학생 확인 %CALLNAME:(LOCAL:1)%의 작업：{CFLAG:(LOCAL:1):690} \@ (CFLAG:(LOCAL:1):690 < 300 || CFLAG:(LOCAL:1):690 > 399) ? 학생 이외 # 학생 \@
+			;授業を受けていなければスキップ
+			SIF (CFLAG:(LOCAL:1):690 < 300 || CFLAG:(LOCAL:1):690 > 399)
+				CONTINUE
+			;先生が違うならスキップ
+			SIF CFLAG:(LOCAL:1):692 != CFLAG:(LOCAL:0):3109
+				CONTINUE
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  학생 역：CFLAG:%CALLNAME:(LOCAL:1)%:690 = {CFLAG:(LOCAL:1):690}
+			PRINTFORM %조사처리(CALLNAME:(LOCAL:1), "는")% 
+			LOCAL:3 = 0
+			SELECTCASE CFLAG:(LOCAL:1):690
+				CASE 300
+					PRINT 평범하게 수업
+					LOCAL:3 = 1
+				CASE 301
+					PRINT 엉성한 수업이라도 집중해서 수업
+					LOCAL:3 = 1
+				CASE 304
+					PRINTL 받던 수업이 파행으로 치달아서, 곤란해 했다……
+				CASE 310
+					PRINT 수업을 대충 
+					LOCAL:3 = 1
+				CASE 311
+					PRINTL 엉성한 수업을 대충 
+					LOCAL:3 = 1
+				CASE 314
+					PRINTL 수업 중 멍하니 있다가, 정신 차리고 보니 수업이 엉망진창이 된 걸 깨달았다……
+				CASE 320
+					PRINTL 자신을 억누르지 못하고, 수업도 포기한 채 난교에 들어갔다……
+				CASE 330
+					PRINTL 수업이 지겨워서, 포기하고 난교에 들어갔다……
+				CASE 340
+					PRINT 자위를 하면서도 수업
+					LOCAL:3 = 1
+				CASE 342
+					PRINT 자위하면서 엉성한 수업을 
+					LOCAL:3 = 1
+				CASE 344
+					PRINTL 자위하는 와중에 수업이 붕괴되어, 그대로 자위를 계속했다……
+				CASE 350
+					PRINT 자위하면서 수업을 적당히 
+					LOCAL:3 = 1
+				CASE 352
+					PRINT 자위하면서 엉성한 수업을 적당히 
+					LOCAL:3 = 1
+				CASE 354
+					PRINTL 수업 중 자위에 몰두했다가, 정신 차리고 보니 수업이 엉망진창이 된 걸 깨달았다……
+				CASE 360
+					PRINTL 공부하려 했으나, 누군가에게 덮쳐져 이어갈 수 없었다……
+				CASE 370
+					PRINTL 대충이라도 공부하려 했으나, 누군가에게 덮쳐져 이어갈 수 없었다……
+				CASE 380
+					PRINTL 자위만 하다가, 수업을 놓치고 말았다……
+				CASE 382
+					PRINTL 자위만 하다가, 애초에 엉성했던 수업의 티끌 하나도 얻어가지 못했다……
+				CASE 390
+					PRINTL 수업을 팽개치고 자위에 빠졌다……
+				CASE 392
+					PRINTL 너무 허술한 수업을 무심코 넘기고, 자위에 빠졌다……
+			ENDSELECT
+			IF LOCAL:3 == 1
+				PRINTFORML \@ LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:1) > 0 ? 받고, 공작 기능을 획득했다 # 받았다 \@.
+				;口上表示
+				RESULT = -1
+				TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:1)}, CFLAG:(LOCAL:1):690, LOCAL:0
+				SIF RESULT == -1
+					TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:1):690, LOCAL:0
+				;成果確認
+				IF LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:1) > 0
+					LOCAL:5 += 1
+					CFLAG:(LOCAL:1):690 = 402
+				ELSE
+					CFLAG:(LOCAL:1):690 = 403
+				ENDIF
+			ENDIF
+			;口上表示(成果があった場合はここで成果口上を呼ぶ)
+			RESULT = -1
+			TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:1)}, CFLAG:(LOCAL:1):690, LOCAL:0
+			SIF RESULT == -1
+				TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:1):690, LOCAL:0
+		NEXT
+		;観察者の結果表示
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  관찰자 확인
+		LOCAL:2 = 0
+		FOR LOCAL:1, 0, CHARANUM
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  관찰자 확인  %CALLNAME:(LOCAL:1)%의 작업：{CFLAG:(LOCAL:1):690} \@ CFLAG:(LOCAL:1):690 != 102 && CFLAG:(LOCAL:1):690 != 112 ? 관찰자 이외 # 관찰자 \@
+			;授業を見ていなければスキップ
+			SIF CFLAG:(LOCAL:1):690 != 102 && CFLAG:(LOCAL:1):690 != 112
+				CONTINUE
+			;見ている授業が異なればスキップ
+			SIF CFLAG:(LOCAL:1):692 != LOCAL:0
+				CONTINUE
+			LOCAL:2 += 1
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  관찰자：CFLAG:%CALLNAME:(LOCAL:1)%:690 = {CFLAG:(LOCAL:1):690}
+			PRINTFORML %CALLNAME:(LOCAL:1)%\@ LOCAL:2 == 1 ? %조사만처리(CALLNAME:(LOCAL:1), "는")% # 도 \@ %CALLNAME:(LOCAL:0)%의 수업을 참관\@ CFLAG:(LOCAL:0):690 == 101 ? 했다. # 하려 했으나, 수업이 이뤄지지 않았다…… \@
+			RESULT = -1
+			TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:1)}, CFLAG:(LOCAL:1):690, LOCAL:0
+			SIF RESULT == -1
+				TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:1):690, LOCAL:0
+		NEXT
+		;先生の乱交を確認
+		IF (CFLAG:(LOCAL:0):691 & 1p7) == 0 && LOCAL:5 > -1
+			;成果による気分表示
+			IF LOCAL:5 > 0
+				CFLAG:(LOCAL:0):690 = 400
+			ELSE
+				CFLAG:(LOCAL:0):690 = 401
+			ENDIF
+			;成果の口上表示
+			RESULT = -1
+			TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:0)}, CFLAG:(LOCAL:0):690, LOCAL:0
+			SIF RESULT == -1
+				TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:0):690, LOCAL:0
+			PRINTW 
+			;先生のパラメ表示
+			PRINTFORML %CALLNAME:(LOCAL:0)% 수업
+			CALL VALUE_WORKSHOP_SUM, LOCAL:0, 0, 2
+			;作業内容を戻しておく
+			CFLAG:(LOCAL:0):690 = 1
+			;表示完了フラグをセット
+			SIF (CFLAG:(LOCAL:0):691 & 1p9) == 0
+				CFLAG:(LOCAL:0):691 |= 1p9
+		ELSE
+			;表示一時停止
+			PRINTW 
+			;授業が崩壊した場合
+			PRINTFORML %CALLNAME:(LOCAL:0)% 수업 붕괴
+			IF (CFLAG:(LOCAL:0):691 & 1p7) == 0
+				;乱交に参加してなければ自慰の可能性もあるのでパラメ表示
+				CALL VALUE_WORKSHOP_SUM, LOCAL:0, 0, 2
+				;作業内容を戻しておく
+				CFLAG:(LOCAL:0):690 = 1
+				;表示完了フラグをセット
+				SIF (CFLAG:(LOCAL:0):691 & 1p9) == 0
+					CFLAG:(LOCAL:0):691 |= 1p9
+			ENDIF
+		ENDIF
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  %CALLNAME:(LOCAL:0)%의 표시 후 플래그 \@ CFLAG:(LOCAL:0):691 & 1p9 ? on # off \@
+		;先生以外の授業関係者全員のパラメ表示(乱交中キャラのぞく)
+		FOR LOCAL:1, 0, CHARANUM
+			;乱交中ならスキップ
+			SIF CFLAG:(LOCAL:1):691 & 1p7
+				CONTINUE
+			;そうでなければ作業内容を確認し、表示対象キャラであれば作業内容を元に戻す
+			SELECTCASE CFLAG:(LOCAL:1):690
+				CASE 101, 111
+					;サポート相手が異なればスキップ
+					SIF CFLAG:(LOCAL:1):692 != LOCAL:0
+						CONTINUE
+					;サポート対象授業が他の先生の授業ならばスキップ
+					LOCALS = (을)를 지원
+					CFLAG:(LOCAL:1):690 = 0
+				CASE 102, 112
+					;見ている授業が異なればスキップ
+					SIF CFLAG:(LOCAL:1):692 != LOCAL:0
+						CONTINUE
+					LOCALS = 의 수업을 관찰
+					CFLAG:(LOCAL:1):690 = 0
+				CASE 300 TO 399, 402, 403
+					;先生が違うならスキップ
+					SIF CFLAG:(LOCAL:1):692 != CFLAG:(LOCAL:0):3109
+						CONTINUE
+					;受講対象授業が他の先生の授業ならばスキップ
+					LOCALS = 의 수업을 받는다
+					IF LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:1) > 0
+						;技能習得していれば授業終了、待機に戻る
+						CFLAG:(LOCAL:1):690 = 0
+					ELSE
+						;作業内容を戻しておく
+						CFLAG:(LOCAL:1):690 = 2
+					ENDIF
+				CASEELSE
+					CONTINUE
+			ENDSELECT
+			PRINTW 
+			PRINTFORML %CALLNAME:(LOCAL:1)% %CALLNAME:(LOCAL:0)%%LOCALS%
+			CALL VALUE_WORKSHOP_SUM, LOCAL:1, 0, 2
+			;表示完了フラグをセット
+			SIF (CFLAG:(LOCAL:1):691 & 1p9) == 0
+				CFLAG:(LOCAL:1):691 |= 1p9
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+				PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  %CALLNAME:(LOCAL:1)%의 표시 후 플래그 \@ CFLAG:(LOCAL:1):691 & 1p9 ? on # off \@
+		NEXT
+	ELSE
+		;個人授業なら先に生徒の結果表示
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  과외 %CALLNAME:(LOCAL:4)%의 작업：{CFLAG:(LOCAL:4):690}
+		PRINTFORM %조사처리(CALLNAME:(LOCAL:4), "는")% 
+		SELECTCASE CFLAG:(LOCAL:4):690
+			CASE 305, 306, 315, 316
+				PRINTFORM \@ CFLAG:(LOCAL:4):690 < 310 ? 진지하 # 적당하 \@게 지도를 
+				LOCAL:3 = 1
+			CASE 309, 319
+				PRINTFORML \@ CFLAG:(LOCAL:4):690 == 309 ? 받던 # 귀찮던 \@ 수업이 난장판이 돼서 \@ CFLAG:(LOCAL:4):690 == 309 ? 곤란해 했 # 시간을 떼우고 있 \@다……
+			CASE 325, 335
+				PRINTFORML \@ CFLAG:(LOCAL:4):690 == 325 ? 유혹에 져서 # 할 마음이 없어서 \@ 수업을 팽개치고, 난교에 참여했다……
+			CASE 327, 329, 337, 339
+				PRINTFORML \@ CFLAG:(LOCAL:4):690 < 330 ? 이에 질세라 # 분위기에 맞춰 \@ %조사처리(CALLNAME:(LOCAL:0), "과")% 어울렸다……
+				LOCAL:3 = 2
+			CASE 345, 347, 355, 357
+				PRINTFORM 개인 지도 중에도 \@ CFLAG:(LOCAL:4):690 < 350 ? 몰래 자위하 # 자위에 빠지 \@면서, 강의를 
+				LOCAL:3 = 1
+			CASE 346, 348, 356, 358
+				PRINTFORM %CALLNAME:(LOCAL:0)%의 자위를 보고는 \@ CFLAG:(LOCAL:4):690 < 350 ? 따라서 자위하면서도, 중간에 강의를 # 같이 자위하며 대충 강의를  \@
+				LOCAL:3 = 1
+			CASE 349, 359
+				PRINTFORML \@ CFLAG:(LOCAL:4):690 == 349 ? 받던 # 귀찮던 \@ 수업이 난장판이 돼서, \@ CFLAG:(LOCAL:4):690 == 349 ? 당황하면서도 스스로를 위로 # 자중을 잃고 자위에 전념 \@했다……
+			CASE 365, 367, 375, 377
+				PRINTFORML \@ CFLAG:(LOCAL:4):690 > 370 ? 귀찮게 받던 # \@ 수업 중에 누군가에게 덮쳐져서, 난교의 고리에 휘말리고 말았다……
+			CASE 366, 368, 375, 378
+				PRINTFORML \@ CFLAG:(LOCAL:4):690 < 370 ? 저항도 헛되이 # 따분한 수업보다는 낫다면서 체념한 듯 \@, %CALLNAME:(LOCAL:0)%에게 좋을대로 희롱당하고 있었다……
+				LOCAL:3 = 2
+			CASE 385, 387, 395, 397
+				PRINTFORM \@ CFLAG:(LOCAL:4):690 < 390 ? 나름대로 흥미 있던 # 내키지 않았던 \@ 수업보다 자위에 대한 욕구가 이기는 바람에, 머리에 들어간 게 없었다……
+			CASE 386, 388, 396, 398
+				PRINTFORM \@ CFLAG:(LOCAL:4):690 < 390 ? 나름대로 흥미 있던 # 내키지 않았던 \@ 수업 대신 상호 자위에 빠져서, 머리에 남은 게 없었다……
+		ENDSELECT
+		IF LOCAL:3 == 1
+			PRINTFORML \@ LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:1) > 0 ? 받고, 공작 기능을 획득했다 # 받았다 \@.
+		ELSEIF LOCAL:3 == 2 && LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:1) > 0
+			PRINTFORML 그런 상태에서도 수업으로 최소한의 지식은 얻었는지, %조사처리(CALLNAME:(LOCAL:4), "는")% 공작 기능을 획득했다.
+		ENDIF
+		;口上の呼び出し
+		RESULT = -1
+		TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:0)}, CFLAG:(LOCAL:0):690, LOCAL:0
+		SIF RESULT == -1
+			TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:0):690, LOCAL:0
+		RESULT = -1
+		TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:4)}, CFLAG:(LOCAL:4):690, LOCAL:0
+		SIF RESULT == -1
+			TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:4):690, LOCAL:0
+		;授業成果表示
+		IF LOCAL:3 > 0
+			;成果による気分表示
+			IF LOCAL:5 > 0
+				CFLAG:(LOCAL:0):690 = 400
+				CFLAG:(LOCAL:4):690 = 402
+			ELSE
+				CFLAG:(LOCAL:0):690 = 401
+				CFLAG:(LOCAL:4):690 = 403
+			ENDIF
+			RESULT = -1
+			TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:4)}, CFLAG:(LOCAL:4):690, LOCAL:0
+			SIF RESULT == -1
+				TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:4):690, LOCAL:0
+			RESULT = -1
+			TRYCALLFORM KOJO_WORKSHOP_{NO:(LOCAL:0)}, CFLAG:(LOCAL:0):690, LOCAL:0
+			SIF RESULT == -1
+				TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:0):690, LOCAL:0
+		ENDIF
+		;パラメ表示
+		PRINTW 
+		PRINTFORML %CALLNAME:(LOCAL:0)%의 과외
+		;妖しい授業以外の乱交であればスキップ(妖しい授業であればここでパラメも表示し、乱交表示時には表示しない)
+		IF LOCAL:3 == 2 || (CFLAG:(LOCAL:0):691 & 1p7) == 0
+			CALL VALUE_WORKSHOP_SUM, LOCAL:0, 0, 2
+			;作業内容を戻しておく
+			CFLAG:(LOCAL:0):690 = 1
+			;表示完了フラグをセット
+			SIF (CFLAG:(LOCAL:0):691 & 1p9) == 0
+				CFLAG:(LOCAL:0):691 |= 1p9
+		ENDIF
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  %CALLNAME:(LOCAL:0)%의 표시 후 플래그 \@ CFLAG:(LOCAL:0):691 & 1p9 ? on # off \@
+		IF LOCAL:3 == 2 || (CFLAG:(LOCAL:4):691 & 1p7) == 0
+			PRINTW 
+			PRINTFORML %CALLNAME:(LOCAL:4)% %CALLNAME:(LOCAL:0)%의 과외를 받음
+			CALL VALUE_WORKSHOP_SUM, LOCAL:4, 0, 2
+			;作業内容を戻しておく
+			CFLAG:(LOCAL:4):690 = 2
+			;表示完了フラグをセット
+			SIF (CFLAG:(LOCAL:4):691 & 1p9) == 0
+				CFLAG:(LOCAL:4):691 |= 1p9
+		ENDIF
+		SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+			PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 공작 기능 교육 결과 표시  %CALLNAME:(LOCAL:4)%의 표시 후 플래그 \@ CFLAG:(LOCAL:4):691 & 1p9 ? on # off \@
+	ENDIF
+	PRINTW 
+NEXT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공작 기능 교육 결과 표시 완료
+RETURN 0

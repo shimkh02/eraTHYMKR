@@ -1,0 +1,403 @@
+﻿;=============================================================================
+;촉수 최면
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE550
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:550 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;一度も촉수催眠を実行したことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:24 & 8) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;조교자는 촉수사역LV4이상 필요
+SIF ABL:PLAYER:98 < 4
+	RETURN 0
+;촉수가 [催眠촉수]を得ていないとダメ
+SIF (FLAG:75 & 8) == 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;말분기에 TFLAG:99(0=최면 성공,1=최면 실패)와 TFLAG:201(0=최면 개시,1=최면 종료)를 사용. 무엇보다 TFLAG:201은 TEQUIP:92를 보면 좋지만.
+@COM550
+PRINTL 촉수 최면
+TSTR:0 = 촉수 최면
+TFLAG:99 = 0
+IF TEQUIP:92
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 20
+	TFLAG:201 = 0 
+	CALL TRAIN_MESSAGE_COM550
+	;촉수 최면
+	TEQUIP:92 = 0
+	;촉수 경험 플래그
+	TFLAG:90 = 0
+	RETURN 1
+ENDIF
+
+;최면 성공할까의 체크를 하지만 가이드에 정평 있는 사람들 이외는 우선 실패하지 않게
+LOCAL:1 = 0
+LOCAL:2 = 0
+
+;ABL:조교자의 촉수 사역을 본다
+IF ABL:PLAYER:98 == 0
+	LOCAL:1 = 1
+ELSEIF ABL:PLAYER:98 == 1
+	LOCAL:1 = 2
+ELSEIF ABL:PLAYER:98 == 2
+	LOCAL:1 = 3
+ELSEIF ABL:PLAYER:98 == 3
+	LOCAL:1 = 5
+ELSEIF ABL:PLAYER:98 == 4
+	LOCAL:1 = 7
+ELSE
+	LOCAL:1 = 10
+ENDIF
+;조교자의 새드, 왕S, 새드끼를 본다
+SIF TALENT:PLAYER:81 || TALENT:PLAYER:177 || ABL:PLAYER:20 > 2
+	LOCAL:1 += 3
+
+;기장
+SIF TALENT:12
+	LOCAL:2 += 2
+;순수
+SIF TALENT:13
+	LOCAL:2 -= 1
+;자제심
+SIF TALENT:20
+	LOCAL:2 += 5
+;무관심
+SIF TALENT:21
+	LOCAL:2 += 2
+;감정결여
+SIF TALENT:22
+	LOCAL:2 += 1
+;호기심
+SIF TALENT:23
+	LOCAL:2 -= 2
+;억압
+SIF TALENT:32
+	LOCAL:2 += 2
+;쾌감에 솔직
+IF TALENT:70
+	LOCAL:2 -= 2
+;쾌감의 부정
+ELSEIF TALENT:71
+	LOCAL:2 += 5
+ENDIF
+;도착적
+SIF TALENT:80
+	LOCAL:2 -= 2
+;중독 하기 쉽다
+SIF TALENT:84
+	LOCAL:2 -= 2
+;유치
+SIF TALENT:131
+	LOCAL:2 -= 5
+;음란
+SIF TALENT:170
+	LOCAL:2 -= 2
+LOCAL:2 = MAX(LOCAL:2, 0)
+IF LOCAL:2
+	;PALAM:욕정을 본다
+	IF PALAM:13 < PALAMLV:1
+		TIMES LOCAL:2 , 2.20
+	ELSEIF PALAM:13 < PALAMLV:2
+		TIMES LOCAL:2 , 1.70
+	ELSEIF PALAM:13 < PALAMLV:3
+		TIMES LOCAL:2 , 1.30
+	ELSEIF PALAM:13 < PALAMLV:4
+		TIMES LOCAL:2 , 1.00
+	ELSE
+		TIMES LOCAL:2 , 0.80
+	ENDIF
+ENDIF
+TFLAG:201 = 1
+;TFLAG:99가 1이라면 최면 실패, 0이라면 성공
+TFLAG:99 = (LOCAL:1 < LOCAL:2) ?  1 # 0
+CALL TRAIN_MESSAGE_COM550
+IF TFLAG:99
+	DOWNBASE:0 += 20
+	DOWNBASE:1 += 150
+	SOURCE:24 = 700
+	SOURCE:30 = 3000
+	SOURCE:31 = 5000
+	;촉수 경험 플래그
+	TFLAG:90 = 0
+ELSE
+	DOWNBASE:0 += 20
+	DOWNBASE:1 += 100
+	SOURCE:24 = 700
+	SOURCE:30 = 3000
+	SOURCE:31 = 5000
+	TEQUIP:92 = 1
+	;촉수 경험 플래그
+	TFLAG:90 = 1
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+RETURN 1
+
+;--------------------------------------------------
+;촉수 최면중
+;--------------------------------------------------
+;TFLAG:201을 주고 받아 용변수로서 이용.
+@EQUIP_COM550
+PRINTL <촉수 최면 중>
+
+LOCAL:6 = 0
+LOCAL:7 = 20
+
+;몇의 조건으로 판정해 랜덤 요소도 더해 이번 최면의 시추에이션을 결정하는, 밸런스를 찢는 정도의 능력
+;어느 효과도 강력하지만 플레이어의 계획에 의해 교환에 함정에 감일도 있습니다, 레즈비언이라든지 호감도라든지…
+;효과를 조정(일부 변경)해 보았다. 환각내에서의 사건이니까 소비 체력은 약간 억제해 기력을 크고
+LOCAL = RAND:12
+IF (LOCAL == 0 || LOCAL ==1) && EXP:53 < 600
+	LOCAL:6 += 100
+	LOCAL:7 += 300
+	LOCAL:1 = 1 + RAND:10
+	LOCAL:5 = 2
+	SOURCE:15 += 200*LOCAL:1
+	SOURCE:22 += 100*LOCAL:1
+	SOURCE:31 += 10000
+	SOURCE:23 += 100*LOCAL:1
+
+	CALL SELF_KOJO, TARGET, 8, 4
+	CALL EQIUP_MESSAGE_COM550
+	IF EXP:0 > 0
+		LOCAL:2 = RAND:6
+		IF LOCAL:2 > 0
+			LOCAL:3 = 1 + ABL:1
+			LOCAL:4 = RAND:4
+			TCVAR:0 += LOCAL:2
+			SOURCE:1 += (LOCAL:2 + LOCAL:3)*100
+			LOCAL:5 += 1
+			IF LOCAL:4 == 0
+				LOCAL:4 = 1 + RAND:2
+				TCVAR:32 += LOCAL:4
+				SOURCE:1 += (LOCAL:2 + LOCAL:3)*300
+				SOURCE:20 += (LOCAL:2 + LOCAL:3)*350
+				LOCAL:5 += 1
+			ENDIF
+		ENDIF
+	ENDIF
+	IF EXP:1 > 0
+		LOCAL:2 = RAND:6
+		IF LOCAL:2 > 0
+			LOCAL:3 = 1 + ABL:2
+			LOCAL:4 = RAND:4
+			TCVAR:1 += LOCAL:2
+			SOURCE:2 += (LOCAL:2 + LOCAL:3)*75
+			LOCAL:5 += 1
+			IF LOCAL:4 == 0
+				LOCAL:4 = 1 + RAND:2
+				TCVAR:33 += LOCAL:4
+				SOURCE:2 += (LOCAL:2 + LOCAL:3)*200
+				SOURCE:20 += (LOCAL:2 + LOCAL:3)*400
+				LOCAL:5 += 1
+			ENDIF
+		ENDIF
+	ENDIF
+	LOCAL:2 = RAND:6
+	IF LOCAL:2 > 0
+		LOCAL:3 = 1 + ABL:21
+		TCVAR:30 += LOCAL:2
+		TCVAR:31 += LOCAL:2
+		SOURCE:20 += (LOCAL:2 + LOCAL:3)*500
+		SOURCE:24 += (LOCAL:2 + LOCAL:3)*400
+		SOURCE:31 += (LOCAL:2 + LOCAL:3)*700
+		LOCAL:5 += 1
+	ENDIF
+	LOCAL:2 = RAND:6
+	IF LOCAL:2 > 0
+		LOCAL:3 = 1 + ABL:0
+		TCVAR:22 += LOCAL:2
+		SOURCE:15 += (LOCAL:2 + LOCAL:3)*500
+		SOURCE:16 += (LOCAL:2 + LOCAL:3)*400
+		LOCAL:3 = 1 + ABL:13
+		SOURCE:24 += (LOCAL:2 + LOCAL:3)*300
+		SOURCE:22 += (LOCAL:2 + LOCAL:3)*400
+		LOCAL:5 += 1
+	ENDIF
+	IF (CFLAG:24 & 8) == 0
+		TCVAR:50 += LOCAL:5/2
+		CFLAG:24 |= 8
+	ENDIF
+	;촉수 경험 플래그
+	TFLAG:90 += 14
+ELSEIF (LOCAL == 2 || LOCAL == 3) && (TALENT:82 || TALENT:37) && TALENT:120 == 0 && EXP:12 < 1000
+	LOCAL:6 += 10
+	LOCAL:7 += 50
+	LOCAL:1 = 1 + RAND:3
+	LOCAL:2 = 1 + ABL:10
+	SOURCE:11 += 1000
+	SOURCE:0 += (LOCAL:1 + LOCAL:2) * 100
+	SOURCE:19 += LOCAL:1*200
+	CALL SELF_KOJO, TARGET, 8, 1
+	TCVAR:12 += LOCAL:1*10
+ELSEIF (LOCAL == 4 || LOCAL == 5) && (TALENT:24 || TALENT:32)
+	LOCAL:1 = 1 + RAND:3
+	LOCAL:7 += 80
+	CALL SELF_KOJO, TARGET, 8, 5
+	TFLAG:201 = LOCAL:1
+	CALL EQIUP_MESSAGE_COM550
+	SOURCE:18 += 250*LOCAL:1
+	SOURCE:12 += 500*LOCAL:1
+	SOURCE:31 += 300*LOCAL:1
+ELSEIF (LOCAL == 6 || LOCAL == 7) && CFLAG:2 < 2000
+	CFLAG:2 += 100
+	SOURCE:11 += 250 + 250*ABL:10
+	CALL SELF_KOJO, TARGET, 8, 2
+	IF TALENT:37 && TALENT:MASTER:120 && CFLAG:2 >= 1500
+		CFLAG:12 |= 4096
+		TALENT:37 = 0
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% [남성혐오]을 잃었다.
+	ELSEIF TALENT:38 && TALENT:MASTER:120 == 0 && CFLAG:2 >= 1500
+		CFLAG:12 |= 8192
+		TALENT:38 = 0
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% [여성혐오]를 잃었다.
+	ELSEIF TALENT:MASTER:120 == 0 && TALENT:120 == 0
+		TCVAR:12 += 50
+	ELSEIF TALENT:MASTER:120 && TALENT:120
+		TCVAR:13 += 50
+	ENDIF
+ELSEIF MARK:9 > 0 && LOCAL == 11
+	SOURCE:17 += 500
+	CALL SELF_KOJO, TARGET, 8, 3
+	MARK:9 -= 1
+	PRINTFORMW %MARKNAME:9%의 레벨이 %조사처리(@"%TOSTR(MARK:9)%", "가")% 되었습니다.
+ELSE
+	CALL SELF_KOJO, TARGET, 8, 0
+	SOURCE:24 += 500
+	SOURCE:23 += 200
+	TIMES SOURCE:20 , 0.80
+	TIMES SOURCE:21 , 0.80
+	TIMES SOURCE:22 , 0.80
+ENDIF
+
+TFLAG:201 = LOCAL:1
+SIF TFLAG:99 != 4 && TFLAG:99 != 5
+	CALL EQIUP_MESSAGE_COM550
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:6 , 1.10
+	TIMES LOCAL:7 , 1.10
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:6 , 1.00
+	TIMES LOCAL:7 , 1.00
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:6 , 0.90
+	TIMES LOCAL:7 , 0.90
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:6 , 0.80
+	TIMES LOCAL:7 , 0.80
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:6 , 0.70
+	TIMES LOCAL:7 , 0.70
+ELSE
+	TIMES LOCAL:6 , 0.60
+	TIMES LOCAL:7 , 0.60
+ENDIF
+
+DOWNBASE:0 += LOCAL:6
+DOWNBASE:1 += LOCAL:7
+;촉수 경험 플래그
+TFLAG:90 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM550
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;최면 해제(TEQUIP:92로 봐야할 것인가? )
+IF TFLAG:201 == 0
+	PRINTL
+	PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%의 눈앞에서 요염하게 춤추고 있던 촉수를 치웠다.
+	IF ABL:35 < 2
+		PRINTFORML 속이 빈 것인 눈초리로 공중을 응시하고 있던 %조사처리(CALLNAME:TARGET, "였")%지만,
+		PRINTFORMW 잠시 후에 제정신을 되찾고는, %CALLNAME:MASTER%에게 불신감이 가득 찬 시선을 보냈다.
+	ELSE
+		PRINTFORML 그러나 %조사선택(CALLNAME:TARGET, "는")% 촉수의 마력에 완전히 붙잡힌 것 같아,
+		PRINTW 최면을 풀었음에도 불구하고 아직 환상을 보고 있는 것 같다….
+	ENDIF
+;최면 개시(TFLAG:99가 0이라면 성공, 1이라면 실패)
+ELSE
+	PRINTL
+	IF TFLAG:99 == 1
+		PRINTFORML %CALLNAME:TARGET%에게 감겨 있던 촉수는 갑자기,
+		PRINTL 끄트머리에서 달콤한 냄새가 나는 핑크색의 연기를 토해냈다.
+		PRINTFORML 연기를 빨아들인 %조사선택(CALLNAME:TARGET, "는")% 일순간 이성을 잃은 것 같았지만,
+		PRINTW 어떻게든 제정신을 유지하는 것에 성공했다….
+		PRINTW     ·
+		PRINTW     ·
+		PRINTW     ·
+		PRINTW 최면은 실패했다.
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%에게 감겨 있던 촉수는 갑자기,
+		PRINTL 끄트머리에서 달콤한 냄새가 나는 핑크색의 연기를 토해냈다.
+		PRINTFORMW 연기를 빨아들인 %CALLNAME:TARGET%의 표정은 서서히 멍해지고 있다….
+		PRINTW     ·
+		PRINTW     ·
+		PRINTW     ·
+		PRINTFORML 저항이 약해진 것을 알아챘는지, 가느다란 몇 가닥의 촉수가 %CALLNAME:TARGET%의 얼굴 앞에 왔다.
+		PRINTL 촉수들은 요사스런 빛을 내며 마치 춤을 추듯이 몸을 비틀어갔다.
+		PRINTFORMW 춤을 보고 있던 %조사선택(CALLNAME:TARGET, "는")% 최면상태에 빠져, 환상을 보기 시작했다….
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;장착시 메시지
+;--------------------------------------------------
+@EQIUP_MESSAGE_COM550
+CALL KOJO_EQUIP_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+SELECTCASE TFLAG:99
+	CASE 0
+		PRINTL
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 환상 안에서 무엇을 보고 있는지, 허공을 향해 편안한 미소를 짓고 있다.
+	CASE 1
+		PRINTL
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 전부터 신경이 쓰이고 있던 그 아이와 환상 안에서{TFLAG:201}회 레즈비언 플레이를 한 것 같다.
+		PRINTFORML 현실에서는 촉수에 범해지고 있으면서도, %조사선택(CALLNAME:TARGET, "는")% 덧붙여 상대의 이름을 계속 외치고 있다….
+		PRINTFORML %EXPNAME:12%＋{TFLAG:201*10}
+	CASE 2
+		PRINTL
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 환상 안에서 %조사선택(CALLNAME:MASTER, "와")% 데이트를 해, 로맨틱한 시간을 보냈다.
+		PRINTFORM 언제나 심한 일을 해대는 %조사선택(CALLNAME:MASTER, "가")% 갑자기 상냥해져 %조사선택(CALLNAME:TARGET, "는")% 조금 당황했지만,
+		PRINTFORML 이윽고 %CALLNAME:MASTER%의 매력을 느끼기 시작했다….
+	CASE 3
+		PRINTL
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 거짓된 환상을 보면서 나쁜 기억을 잊어버렸다.
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:MASTER%에게 강하게 반발하던 일도 잊어버린 것 같다….
+	CASE 4
+		PRINTL
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 환상 안의 촉수들에 의해 통상에서는 생각도 하지 못했던,
+		PRINTL 수 많은 극도로 괴이한 플레이를 하나 하나 체험하고 있다….
+	CASE 5
+		PRINTL
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 환상 안에서 많은 사람 앞에서 스스로 추잡한 행위를 계속 해대고 있다….
+		PRINTL 평상시의 자신에게는 있을 수 없는 대담한 행동을, 아무런 저항도 없이 차례차례로 해내는 것에
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 많이 충격을 받은 것 같다….
+ENDSELECT

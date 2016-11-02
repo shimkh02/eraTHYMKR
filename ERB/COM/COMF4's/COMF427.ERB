@@ -1,0 +1,180 @@
+﻿;=============================================================================
+;음모 지지기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE427
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:427 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 ＥＸ化していない妹紅でないとダメ
+SIF NO:PLAYER != 31 || CFLAG:PLAYER:0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;[후타나리]かつ조교자의 기교가 3미만이면 불가
+SIF TALENT:121 && ABL:PLAYER:12 < 3
+	RETURN 0
+;[パイパン]だと不可, 生えそろっていないと無理
+SIF TALENT:65 || (CFLAG:36 && BASE:5 < 250)
+	RETURN 0
+;テキストより[작은 체형]はデフォでツルツル。[소인체형]もそれに準じる
+SIF (TALENT:128 || TALENT:127) && CFLAG:36 == 0
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;귀갑 묶기일 때는 무리
+SIF TEQUIP:40 == 5
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM427
+PRINTL 음모 지지기
+TSTR:0 = 음모 지지기
+CALL TRAIN_MESSAGE_COM427
+
+DOWNBASE:0 += 55
+DOWNBASE:1 += 160
+
+LOCAL:1 = 2000
+SOURCE:16 = 750
+SOURCE:24 = 200
+SOURCE:22 = 300
+SOURCE:31 = 1500
+SOURCE:20 = 800
+
+;조교자의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:20 , 4.00
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:20 , 2.00
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:20 , 1.50
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:20 , 1.20
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:20 , 1.10
+ELSE
+	TIMES SOURCE:20 , 1.00
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:14 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:14 == 2
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:14 == 3
+	TIMES LOCAL:1 , 1.50
+ELSEIF ABL:14 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 2.60
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.40
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.70
+ELSE
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+SOURCE:24 += LOCAL:1
+SOURCE:18 += (LOCAL:1 / 2)
+SOURCE:12 += LOCAL:1
+
+;새드을 본다
+SIF TALENT:81
+	TIMES SOURCE:20 , 2.00
+;작은 몸집 체형, 소인 체형
+SIF TALENT:128 || TALENT:127
+	TIMES SOURCE:12 , 2.50
+
+;불길에 약할 것 같은 분들(치르노, 레티, 리굴, 미스티아)
+IF NO:TARGET == 5 || NO:TARGET == 12 || NO:TARGET == 24 || NO:TARGET == 25
+	TIMES SOURCE:20 , 2.00
+	SOURCE:25 += 3000
+ENDIF
+
+IF TALENT:65 == 0
+	PRINTL
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [%TALENTNAME:65%]가 되었다.
+	TALENT:65 = 1
+ENDIF
+;털은 나중에 나 오지 않게 된다
+CFLAG:36 = 1
+;반들반들이 된다
+SIF BASE:5
+	BASE:5 = 0
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM427
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 손가락 끝에 작은 불을 만들어, %CALLNAME:TARGET%의 음모를 지지기 시작했다.
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+;불길에 약할 것 같은 여러분
+IF NO:TARGET == 5 || NO:TARGET == 12 || NO:TARGET == 24 || NO:TARGET == 25
+	PRINTW 너무나 뜨거워서 비명을 지르면서, 도망치려고 필사적으로 발버둥 치고 있다….
+;아픔에 약하다
+ELSEIF TALENT:40
+	PRINTW 비명을 지르며 억수 같은 눈물을 흘리고 있다….
+;아픔에 강하다
+ELSEIF TALENT:41
+	PRINTW 눈을 꼭 감고 때때로 신음소리를 내고 있다.
+;그 외
+ELSE
+	PRINTW 작게 신음하고 있다….
+ENDIF

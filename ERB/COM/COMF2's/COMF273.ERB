@@ -1,0 +1,241 @@
+﻿;=============================================================================
+;채찍질 맞기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE273
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:273 > 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:32 == 0 && NOITEM == 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;奴隷が새드持ちまたはドＳ持ちまたは새드끼Lv1이상이 아니면 불가
+SIF TALENT:81 == 0 && TALENT:177 == 0 && ABL:20 < 1
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(マゾか마조끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:82 == 0 && ABL:ASSI:21 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;시체는 안됨
+SIF TALENT:226 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;효과는 굉장히 미묘.
+@COM273
+PRINTL 채찍질 맞기
+TSTR:0 = 채찍질 맞기
+CALL TRAIN_MESSAGE_COM273
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 25
+DOWNBASE:1 += 40
+
+DOWNBASE:PLAYER:0 += 200
+DOWNBASE:PLAYER:1 += 160
+
+SOURCE:14 = 660
+SOURCE:16 = 180
+SOURCE:17 = 100
+SOURCE:24 = 0
+SOURCE:31 = 40
+
+;ABL:새드끼를 본다
+IF ABL:20 <= 1
+	TIMES SOURCE:14 , 0.8
+	TIMES SOURCE:16 , 0.8
+	TIMES SOURCE:17 , 0.7
+ELSEIF ABL:20 == 2
+	TIMES SOURCE:14 , 1.0
+	TIMES SOURCE:16 , 1.0
+	TIMES SOURCE:17 , 0.9
+	SOURCE:24 += 50
+ELSEIF ABL:20 == 3
+	TIMES SOURCE:14 , 1.4
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.0
+	SOURCE:24 += 150
+ELSEIF ABL:20 == 4
+	TIMES SOURCE:14 , 1.8
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.2
+	SOURCE:24 += 450
+ELSE
+	TIMES SOURCE:14 , 2.2
+	TIMES SOURCE:16 , 2.0
+	TIMES SOURCE:17 , 1.6
+	SOURCE:24 += 950
+ENDIF
+
+;ABL:조교자의 마조끼를 본다
+IF ABL:PLAYER:21 == 0
+	TIMES SOURCE:14 , 0.8
+	TIMES SOURCE:16 , 0.8
+	TIMES SOURCE:17 , 0.8
+ELSEIF ABL:PLAYER:21 == 1
+	TIMES SOURCE:14 , 1.0
+	TIMES SOURCE:16 , 1.0
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:PLAYER:21 == 2
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.1
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:PLAYER:21 == 3
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.3
+	TIMES SOURCE:17 , 1.1
+ELSEIF ABL:PLAYER:21 == 4
+	TIMES SOURCE:14 , 1.8
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.2
+ELSE
+	TIMES SOURCE:14 , 2.0
+	TIMES SOURCE:16 , 1.8
+	TIMES SOURCE:17 , 1.5
+ENDIF
+
+;조교자가 왕M
+IF TALENT:PLAYER:178
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.5
+	SOURCE:18 = 360
+;조교자가 마조
+ELSEIF TALENT:PLAYER:82
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.2
+	SOURCE:18 = 180
+ENDIF
+;왕S
+IF TALENT:177
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.5
+	TIMES SOURCE:24 , 1.5
+	TIMES DOWNBASE:PLAYER:0 , 1.5
+	TIMES DOWNBASE:PLAYER:1 , 1.5
+;새드
+ELSEIF TALENT:81
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.2
+	TIMES SOURCE:24 , 1.2
+	TIMES DOWNBASE:PLAYER:0 , 1.2
+	TIMES DOWNBASE:PLAYER:1 , 1.2
+ENDIF
+
+;반발 각인 2이상
+SIF MARK:9 >= 2
+	SOURCE:32 = 550
+
+;조교자에게 고통 쾌락 경험, 대상으로 SM교육 경험이 들어갈 가능성이 있다
+LOCAL = SOURCE:14
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.10
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.25
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 0.50
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 0.75
+ELSE
+	TIMES LOCAL , 1.00
+ENDIF
+IF LOCAL >= 4000
+	LOCAL:1 = 8
+	LOCAL:2 = 3
+ELSEIF LOCAL >= 3000
+	LOCAL:1 = 6
+	LOCAL:2 = 2
+ELSEIF LOCAL >= 2000
+	LOCAL:1 = 4
+	LOCAL:2 = 2
+ELSEIF LOCAL >= 1000
+	LOCAL:1 = 2
+	LOCAL:2 = 1
+ELSEIF LOCAL >= 600
+	LOCAL:1 = 1
+	LOCAL:2 = 1
+ELSE
+	LOCAL:1 = 0
+	LOCAL:2 = 0
+ENDIF
+IF LOCAL:1
+	TCVAR:PLAYER:30 += LOCAL:1
+	TCVAR:39 += LOCAL:2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM273
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+;왕S소유
+IF TALENT:177 
+	PRINTFORML 채찍을 들자 마치 여왕님과 같은 박력을 보이며 마음껏 %조사선택(CALLNAME:PLAYER, "를")% 후려쳤다.
+;새드 소유
+ELSEIF TALENT:81
+	PRINTFORML 채찍을 들자 기쁜 듯한 표정을 보여 %조사선택(CALLNAME:PLAYER, "를")% 리드미컬하게 계속 후려쳤다.
+;그 외
+ELSE
+	PRINTFORML 채찍을 들자 조금 곤혹스러워 하면서도 흥분으로 얼굴을 붉히곤, %조사선택(CALLNAME:PLAYER, "를")% 후려치기 시작했다.
+ENDIF
+;조교자가 왕M소유
+IF TALENT:PLAYER:178
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 채찍에 맞을 때마다, 쾌감에 만취한 채로 환희의 소리를 지르고 있다….
+;조교자가 마조 소유
+ELSEIF TALENT:PLAYER:82
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 채찍에 맞을 때마다, 그 아픔에서 오는 쾌감을 맛보고 있다….
+;그 외
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 채찍에 맞을 때마다, 피부에 새빨간 줄이 지고 있다….
+ENDIF

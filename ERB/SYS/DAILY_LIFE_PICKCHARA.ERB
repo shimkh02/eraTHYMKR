@@ -1,0 +1,346 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;일상 이벤트에서 캐릭터를 땡겨오는 함수
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;-------------------------------------------------
+;条件なしでランダムにN人呼び出す関数
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA,ARG,ARG:1
+;ぶぶ漬けいかがどす
+SIF ARG:1 <= 0 || ARG < 0 || ARG >= CHARANUM || CHARANUM - 2 < ARG:1
+	RETURN 0
+
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;選んで渡すキャラの配列のインデックス
+LOCAL:2 = 0
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ番号を取得
+LOCAL = RAND:CHARANUM
+
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL)
+	;インデックスを進める
+	++LOCAL:2
+	;渡す配列にぶち込む
+	RESULT:(LOCAL:2) = LOCAL
+	;引数で渡された数だけ選んだ
+	IF LOCAL:2 >= ARG:1
+		;フラグのお掃除してお疲れ様
+		CALL RESET_CFLAG75
+		RETURN LOCAL:2
+	ELSE
+		;もう少し頑張ろう
+		GOTO SET_LOOP
+	ENDIF
+ELSE
+	;選んだ回数がキャラ数を越えている
+	IF LOCAL:1 >= CHARANUM
+		;フラグのお掃除してｶｴﾚ
+		CALL RESET_CFLAG75
+		RETURN LOCAL:2
+	ELSE
+		;選ぶ余地があるのでもう少し頑張る
+		GOTO SET_LOOP
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;特定の素質を持つキャラをランダムに
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA_TALENT,ARG,ARGS:0,ARGS:1,ARGS:2
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL)
+	FOR LOCAL:10, 0, 3
+		SIF GETNUM(TALENT, ARGS:(LOCAL:10)) != -1 && !TALENT:LOCAL:(ARGS:(LOCAL:10))
+			GOTO TO_BREAK
+	NEXT
+	;フラグのお掃除して戻す
+	CALL RESET_CFLAG75
+	RETURN LOCAL
+ENDIF
+$TO_BREAK
+;選んだ回数がキャラ数を越えている
+IF LOCAL:1 >= CHARANUM
+	;フラグのお掃除してｶｴﾚ
+	CALL RESET_CFLAG75
+	RETURN -1
+ELSE
+	;選ぶ余地があるのでもう少し頑張る
+	GOTO SET_LOOP
+ENDIF
+
+
+;-------------------------------------------------
+;特定の刻印を持つキャラをランダムに
+;-------------------------------------------------
+;メインキャラ	刻印番号	閾値	判定法(負:小なり、零:イコール、正:大なり)
+@DAILY_LIFE_PICKCHARA_MARK,ARG,ARG:1,ARG:2,ARG:3
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL) && SIGN(ARG:3) == SIGN(MARK:LOCAL:(ARG:1)-ARG:2)
+	;フラグのお掃除して戻す
+	CALL RESET_CFLAG75
+	RETURN LOCAL
+ENDIF
+;選んだ回数がキャラ数を越えている
+IF LOCAL:1 >= CHARANUM
+	;フラグのお掃除してｶｴﾚ
+	CALL RESET_CFLAG75
+	RETURN -1
+ELSE
+	;選ぶ余地があるのでもう少し頑張る
+	GOTO SET_LOOP
+ENDIF
+
+
+
+;-------------------------------------------------
+;특정 캐릭터를 취득
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA_NO,ARG,ARG:1
+LOCAL = GETCHARA(ARG:1, 1)
+RETURN (LOCAL != -1 && LOCAL != ARG && ABLE_DAILY_LIFE(LOCAL)) ? LOCAL # -1
+
+
+
+;-------------------------------------------------
+;境界を弄れるキャラをランダムに
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA_JUEL,ARG
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL)
+	FOR LOCAL:2, 0, 8
+		IF ABLE_DAILY_LIFE_JUEL(LOCAL,LOCAL:2)
+			;フラグのお掃除して戻す
+			CALL RESET_CFLAG75
+			RETURN LOCAL
+		ENDIF
+	NEXT
+ENDIF
+;選んだ回数がキャラ数を越えている
+IF LOCAL:1 >= CHARANUM
+	;フラグのお掃除してｶｴﾚ
+	CALL RESET_CFLAG75
+	RETURN -1
+ELSE
+	;選ぶ余地があるのでもう少し頑張る
+	GOTO SET_LOOP
+ENDIF
+
+
+
+;-------------------------------------------------
+;体力が少ないキャラをランダムに
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA_VIT,ARG
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL) && GET_DAILY_LIFE_VIT(LOCAL)
+	;フラグのお掃除して戻す
+	CALL RESET_CFLAG75
+	RETURN LOCAL
+ENDIF
+;選んだ回数がキャラ数を越えている
+IF LOCAL:1 >= CHARANUM
+	;フラグのお掃除してｶｴﾚ
+	CALL RESET_CFLAG75
+	RETURN -1
+ELSE
+	;選ぶ余地があるのでもう少し頑張る
+	GOTO SET_LOOP
+ENDIF
+
+
+
+;-------------------------------------------------
+;メインキャラに対して特定の相性を持つキャラをランダムに
+;-------------------------------------------------
+;メインキャラ	閾値	判定法(負:小なり、零:イコール、正:大なり)
+@DAILY_LIFE_PICKCHARA_RELATION,ARG,ARG:1,ARG:2,ARG:3
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL) && SIGN(ARG:2) == SIGN(RELATION:ARG:LOCAL-ARG:1)
+	;フラグのお掃除して戻す
+	CALL RESET_CFLAG75
+	RETURN LOCAL
+ENDIF
+;選んだ回数がキャラ数を越えている
+IF LOCAL:1 >= CHARANUM
+	;フラグのお掃除してｶｴﾚ
+	CALL RESET_CFLAG75
+	RETURN -1
+ELSE
+	;選ぶ余地があるのでもう少し頑張る
+	GOTO SET_LOOP
+ENDIF
+
+
+
+;-------------------------------------------------
+;写真を撮ってくれるキャラをランダムに
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA_CAMERA,ARG
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 1
+;ARGで渡したキャラは選び済みとする
+CFLAG:ARG:75 = 1
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL) && GET_DAILY_LIFE_CAMERA(LOCAL) && ABL:LOCAL:12 >= 4 && MARK:LOCAL:9 < 3
+	;フラグのお掃除して戻す
+	CALL RESET_CFLAG75
+	RETURN LOCAL
+ENDIF
+;選んだ回数がキャラ数を越えている
+IF LOCAL:1 >= CHARANUM
+	;フラグのお掃除してｶｴﾚ
+	CALL RESET_CFLAG75
+	RETURN -1
+ELSE
+	;選ぶ余地があるのでもう少し頑張る
+	GOTO SET_LOOP
+ENDIF
+
+
+
+;-------------------------------------------------
+;みんなでバカンスに参加できるのを全員ピックアップする
+;-------------------------------------------------
+@DAILY_LIFE_PICKCHARA_ENJOY_VACATION, ARG
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;人数
+LOCAL:1 = 0
+FOR LOCAL, 0, CHARANUM
+	;ARGで渡したキャラは選び済みとする
+	IF LOCAL == ARG
+		CFLAG:LOCAL:75 = 1
+		++LOCAL:1
+	ELSEIF ABLE_DAILY_LIFE_ENJOY_VACATION(LOCAL)
+		CFLAG:LOCAL:75 = 1
+		++LOCAL:1
+	ENDIF
+NEXT
+RETURN LOCAL:1

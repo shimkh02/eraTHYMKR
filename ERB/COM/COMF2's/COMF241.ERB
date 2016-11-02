@@ -1,0 +1,231 @@
+﻿;=============================================================================
+;배 펀치 
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE241
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:241 > 0
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드 · 狂気 · 망신 · 복종のどれかがあればＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;eraspe의 것을 베이스로 작성
+;말용으로 TFLAG:201을 사용. (0=통상, 1=역류, 2=흘려, 3=배설물 역류, 4=계란 역류, 5=기절)
+@COM241
+PRINTL 배 펀치
+TSTR:0 = 배 펀치
+TFLAG:201 = 0
+
+;실제로는 고통이 있기 (위해)때문에 좀 더 체력 기력을 갖고 있고 쉰다
+;임신, 포란중, 회란이라면 소모는 보다 격렬해진다
+DOWNBASE:0 += (TALENT:140 || TALENT:143 || TALENT:145) ?  120 # 80
+DOWNBASE:1 += (TALENT:140 || TALENT:143 || TALENT:145) ?  100 # 70
+
+SOURCE:31 = 1000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 1000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 1500
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 2200
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 3000
+ELSE
+	SOURCE:20 = 4000
+ENDIF
+
+;임신, 포란중, 회란이라면 고통은 보다 커진다
+SIF TALENT:140 || TALENT:143 || TALENT:145
+	TIMES SOURCE:20 , 2.00
+
+;PALAM:공포를 본다
+IF PALAM:17 < PALAMLV:1
+	SOURCE:31 += 1000
+ELSEIF PALAM:17 < PALAMLV:2
+	SOURCE:31 += 1500
+ELSEIF PALAM:17 < PALAMLV:3
+	SOURCE:31 += 2200
+ELSEIF PALAM:17 < PALAMLV:4
+	SOURCE:31 += 3000
+ELSEIF PALAM:17 >= PALAMLV:4
+	SOURCE:31 += 4000
+ENDIF
+
+CALL TRAIN_MESSAGE_COM241
+
+TFLAG:198 = 0
+;미약등의 약을 사용하고 있으면(자) 역류
+IF TEQUIP:11 == 1 || TEQUIP:13 || TEQUIP:18 || TEQUIP:19
+	TFLAG:201 = 1
+	TFLAG:198 |= 1
+ENDIF
+;이뇨제를 사용하고 있으면(자) 흘려
+IF TEQUIP:12
+	TCVAR:6 += 1
+	BASE:4 = 0
+	TFLAG:32 = 1
+	TFLAG:201 = 2
+	TFLAG:198 |= 2
+ENDIF
+;배설물 역류
+IF TEQUIP:25 == 7
+	TEQUIP:25 = 0
+	TCVAR:1 += 5
+	IF TFLAG:172 > 20
+		LOCAL = 5
+	ELSEIF TFLAG:172 > 10
+		LOCAL = 3
+	ELSEIF TFLAG:172 > 5
+		LOCAL = 2
+	ELSE
+		LOCAL = 1
+	ENDIF
+	IF FLAG:14 & 256
+		TCVAR:7 += 0
+	ELSE
+		TCVAR:7 += LOCAL
+	ENDIF
+	TFLAG:172 = 0
+	TFLAG:140 |= 256
+	TFLAG:201 = 3
+	TFLAG:198 |= 4
+ENDIF
+;계란 역류
+IF TEQUIP:93
+	TEQUIP:93 = 0
+	TFLAG:201 = 4
+	TFLAG:198 |= 8
+ENDIF
+;나머지 체력이 적으면 기절
+;(일단 체력을 500에 고정, 후에 DOWNBASE:0으로 한층 더 줄여지게 되므로 확실히 조교 종료가 된다)
+IF BASE:0 < 600
+	TFLAG:201 = 5
+	TFLAG:198 |= 16
+	BASE:0 = 500
+	DOWNBASE:1 += 1200
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;관장에 의한 배설 첫체험은 이상 경험＋1
+IF TFLAG:198 & 4 && (CFLAG:20 & 2) == 0
+	TCVAR:50 += 1
+	CFLAG:20 |= 2
+ENDIF
+;기절할 정도로의 강타를 받는 것도 이상이라고 할 수 있으므로 이상 경험＋1
+IF TFLAG:198 & 16 && (CFLAG:22 & 2) == 0
+	TCVAR:50 += 1
+	CFLAG:22 |= 2
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM241
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%의 배에 강력한 일격을 날랐다.
+;미약등의 약을 사용하고 있으면(자) 역류
+IF TEQUIP:11 == 1 || TEQUIP:13 || TEQUIP:18 || TEQUIP:19
+	IF TEQUIP:59 == 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 입고 있는 앞치마를 더럽혀 버렸다.
+	ELSEIF TEQUIP:59 == 2
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 입고 있는 스쿠미즈를 더럽혀 버렸다.
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 우웩 하고 대량의 토사물을 쏟아내며 보기 흉하게 바닥에 쓰러졌다.
+	ENDIF
+ENDIF
+;이뇨제를 사용하고 있으면(자) 흘려
+IF TEQUIP:12
+	PRINTFORML 복부에의 일격으로 %CALLNAME:TARGET%의 요도가 느슨해져 버린 것 같다.
+	PRINTFORMW %CALLNAME:TARGET%의 고간에서 주륵주륵 노란 물이 흘러내리고 있다.
+ENDIF
+;배설물/이물 역류
+IF FLAG:14 & 256
+	IF TEQUIP:25 == 7
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 복부에의 충격을 결국 참지 못하고, 관장물을 흘려 버렸다.
+		PRINTL
+		IF BASE:0 >= 600
+			IF ABL:21 == 0
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 억울함과 치욕이 가득한 표정을 짓고 있다.
+			ELSEIF ABL:21 == 1
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 비지땀을 흘리며 아랫배에 남아있는 배설감을 견디고 있다.
+			ELSEIF ABL:21 == 2
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러워하면서도, 해방감에 편안한 표정을 짓고 있다.
+			ELSEIF ABL:21 == 3
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 항문을 통과하는 액체의 감각에 때때로 허덕이며 음란한 소리를 내고 있다.
+			ELSEIF ABL:21 == 4
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 넋을 잃은 표정으로 애널에서 토해내는 이물질을 즐기고 있다.
+			ELSE
+				PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 이물을 쏟아내는 감각과 치욕을 마음껏 맛보고 있다.
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 격렬한 쾌감에 눈을 쳐 뜨고, 항문에서 관장물을 싸는 동시에 질구에서도 애액을 뚝뚝 방울져 떨어뜨리고 있다.
+			ENDIF
+		ENDIF
+	ENDIF
+ELSE
+	IF TEQUIP:25 == 7
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 복부에의 충격에 결국 참지 못하고, 배설물을 흘려 버렸다.
+		PRINTL
+		IF BASE:0 >= 600
+			IF ABL:21 == 0
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 억울함과 치욕이 가득한 표정을 짓고 있다.
+			ELSEIF ABL:21 == 1
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 비지땀을 흘리며 아랫배에 남아있는 배설감을 견디고 있다.
+			ELSEIF ABL:21 == 2
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러워하면서도, 해방감에 편안한 표정을 짓고 있다.
+			ELSEIF ABL:21 == 3
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 항문을 통과하는 배설물의 감각에 때때로 허덕이며 음란한 소리를 내고 있다.
+			ELSEIF ABL:21 == 4
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 넋을 잃은 표정으로 배설감을 즐기고 있다.
+			ELSE
+				PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 배설감과 치욕을 마음껏 맛보고 있다.
+				PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 격렬한 쾌감에 눈을 쳐 뜨고, 항문에서 오물을 싸는 동시에 질구에서도 애액을 뚝뚝 방울져 떨어뜨리고 있다.
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+;계란 역류
+IF TEQUIP:93
+	PRINTFORML 복부에의 일격에, %CALLNAME:TARGET%의 가랑이에서 푸샷하며 무언가가 홍수처럼 쏟아졌다.
+	PRINTL 주먹의 충격으로 뱃속에 담겨 있던 알이 몇인가 망가진 것 같다.
+	SIF BASE:0 >= 600
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 배를 누른 채로 떨고 있다….
+ENDIF
+;나머지 체력이 적으면 기절
+;(일단 체력을 500에 고정, 후에 DOWNBASE:0으로 한층 더 줄여지게 되므로 확실히 조교 종료가 된다)
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF BASE:0 < 600
+	PRINTL 마루에 쓰러져서 토사물의 바다에 푹 엎드린 채로 일어나질 않는다.
+	PRINTW 약간 힘 조절을 틀려버린 것 같다….
+	PRINTL 역시 이 상태로는 조교를 계속하기 힘들 것이다.
+	PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% 기절한 %조사선택(CALLNAME:TARGET, "를")% 안아 안쪽의 방으로 옮겼다.
+ELSEIF TEQUIP:25 == 7 && ABL:21 >= 2
+	PRINTW 차이는 것의 충격에 비틀거렸지만, 쾌감도 맛보았다.
+ELSE
+	PRINTW 괴로운 신음을 내며 풀썩 마루에 쓰러져버렸다.
+ENDIF

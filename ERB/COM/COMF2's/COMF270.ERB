@@ -1,0 +1,136 @@
+﻿;=============================================================================
+;매도 당하기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE270
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:270 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;奴隷が새드持ちまたはドＳ持ちまたは새드끼Lv1이상이 아니면 불가
+SIF TALENT:81 == 0 && TALENT:177 == 0 && ABL:20 < 1
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM270
+PRINTL 매도 당하기
+TSTR:0 = 매도 당하기
+CALL TRAIN_MESSAGE_COM270
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 20
+DOWNBASE:PLAYER:1 += 15
+
+SOURCE:14 = 250
+SOURCE:16 = 30
+SOURCE:17 = 30
+
+;ABL:새드끼를 본다
+IF ABL:20 <= 1
+	TIMES SOURCE:14 , 0.8
+	TIMES SOURCE:16 , 0.8
+	TIMES SOURCE:17 , 0.7
+ELSEIF ABL:20 == 2
+	TIMES SOURCE:14 , 1.0
+	TIMES SOURCE:16 , 1.0
+	TIMES SOURCE:17 , 0.9
+ELSEIF ABL:20 == 3
+	TIMES SOURCE:14 , 1.4
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:20 == 4
+	TIMES SOURCE:14 , 1.8
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.2
+ELSE
+	TIMES SOURCE:14 , 2.2
+	TIMES SOURCE:16 , 2.0
+	TIMES SOURCE:17 , 1.6
+ENDIF
+
+;ABL:조교자의 마조끼를 본다
+IF ABL:PLAYER:21 == 0
+	TIMES SOURCE:14 , 0.8
+	TIMES SOURCE:16 , 0.8
+	TIMES SOURCE:17 , 0.8
+ELSEIF ABL:PLAYER:21 == 1
+	TIMES SOURCE:14 , 1.0
+	TIMES SOURCE:16 , 1.0
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:PLAYER:21 == 2
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.1
+	TIMES SOURCE:17 , 1.0
+ELSEIF ABL:PLAYER:21 == 3
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.3
+	TIMES SOURCE:17 , 1.1
+ELSEIF ABL:PLAYER:21 == 4
+	TIMES SOURCE:14 , 1.8
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.2
+ELSE
+	TIMES SOURCE:14 , 2.0
+	TIMES SOURCE:16 , 1.8
+	TIMES SOURCE:17 , 1.5
+ENDIF
+
+;조교자가 왕M
+IF TALENT:PLAYER:178
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.5
+	SOURCE:18 = 120
+;조교자가 마조
+ELSEIF TALENT:PLAYER:82
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.2
+	SOURCE:18 = 60
+ENDIF
+;왕S
+IF TALENT:177
+	TIMES SOURCE:14 , 1.5
+	TIMES SOURCE:16 , 1.5
+	TIMES SOURCE:17 , 1.5
+;새드
+ELSEIF TALENT:81
+	TIMES SOURCE:14 , 1.2
+	TIMES SOURCE:16 , 1.2
+	TIMES SOURCE:17 , 1.2
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM270
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 도발하듯이 %CALLNAME:PLAYER%의 지금까지의 행적을 큰 소리로 나열하며, 욕설과 험담을 쏟아냈다….

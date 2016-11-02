@@ -1,0 +1,217 @@
+﻿;=============================================================================
+;볼 개그
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE226
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:226 > 0
+	RETURN 0
+;촉수口辱中, 強制開口器装着中はダメ
+SIF TEQUIP:42 && TEQUIP:42 != 1
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:42 == 1
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:31 == 0 && NOITEM == 0
+	RETURN 0
+;ASSI일 경우, 기교3이상이 아니면 쓸 수 없다。
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 3
+		RETURN 0
+ENDIF
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM226
+TSTR:7 = 볼 개그
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 31
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 볼 개그
+CALL TRAIN_MESSAGE_COM226
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 80
+	DOWNBASE:1 += 100
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 80
+ELSE
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 60
+ENDIF
+
+;LOCAL:1 = 250
+
+SOURCE:20 = 50
+SOURCE:24 = 50
+SOURCE:12 = 80
+SOURCE:22 = 150
+SOURCE:31 = 80
+SOURCE:17 = 80
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 31
+	FLAG:1111 = 1
+	FLAG:1112 = SOURCE:17
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:17 = FLAG:1120
+	FLAG:1112 = SOURCE:24
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:24 = FLAG:1120
+	FLAG:1112 = SOURCE:13
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:13 = FLAG:1120
+	FLAG:1112 = SOURCE:22
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:22 = FLAG:1120
+ENDIF
+
+TCVAR:31 += 2
+
+;커맨드 속성：도구(조교자)
+SIF TEQUIP:90 == 0
+	TFLAG:98 = 1
+
+;볼 개그의 착탈
+IF TEQUIP:42
+	TEQUIP:42 = 0
+ELSE
+	TEQUIP:42 = 1
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;볼 개그 장비중
+;-------------------------------------------------
+@EQUIP_COM226
+TSTR:7 = 볼 개그
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 31
+	CALL NAMECHECK_CUSTOMTOOL
+ENDIF
+PRINTFORML <%TSTR:7% 장비 중>
+
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 100
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 80
+ELSE
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 60
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 40
+ELSEIF ABL:21 == 1
+	LOCAL = 120
+ELSEIF ABL:21 == 2
+	LOCAL = 250
+ELSEIF ABL:21 == 3
+	LOCAL = 450
+ELSEIF ABL:21 == 4
+	LOCAL = 600
+ELSE
+	LOCAL = 750
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+LOCAL:1 = LOCAL
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 31
+	FLAG:1111 = 1
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:12 += LOCAL
+SOURCE:22 += LOCAL
+SOURCE:31 += LOCAL:1
+SOURCE:17 += LOCAL
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+TCVAR:31 += 1
+
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM226
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TEQUIP:42
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "로")%부터 %조사선택(TSTR:7, "를")% 벗겨 주었다.
+;도착적이어 공포 각인이 1 이하로 반발 각인이 없는 경우
+ELSEIF TALENT:80 && MARK:8 < 2 && MARK:9 < 1
+	PRINTFORML %CALLNAME:TARGET%에게 %조사선택(TSTR:9, "를")% 끼웠다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 입이 막힌 것만으로도, 격렬한 욕정을 느끼고 있다….
+;반항적인가 저항을 가져 함락 하지 않는 경우
+ELSEIF (TALENT:11 || TALENT:34) && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORMW 격렬하게 거부하는 %CALLNAME:TARGET%에게 억지로 %조사선택(TSTR:9, "를")% 끼웠다….
+;겁쟁이 소유나 공포 각인 2이상으로 기장과 감정결여를 가지지 않고, 함락 하고 있지 않는 경우
+ELSEIF  (TALENT:10 || MARK:8 >= 2) && TALENT:12 == 0 && TALENT:22 == 0 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORMW 공포에 질린 %CALLNAME:TARGET%에게 %조사선택(TSTR:9, "를")% 정중하게 끼워 주었다….
+;프라이드 높은가 신령해 게다가, 굴복 각인과 치욕 각인이 1 이하로, 함락 하고 있지 않는 경우
+ELSEIF (TALENT:16 || TALENT:222) && MARK:2 < 2 && MARK:4 < 2 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORML %CALLNAME:TARGET%에게 %조사선택(TSTR:9, "를")% 끼웠다. 
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 입을 막힌 굴욕에 떨면서도, 그 프라이드만은 꺾이지 않는 것 처럼 보였다….
+;해방이나 쾌감에 솔직한가 봄의 사람으로 아픔에 약하지만 않고, 반발 각인이 없는 경우
+ELSEIF (TALENT:33 || TALENT:70 || TALENT:263) && TALENT:40 == 0 && MARK:9 <= 0
+	PRINTFORMW 어쩐지 즐기는 듯한 %CALLNAME:TARGET%에게 %조사선택(TSTR:9, "를")% 정중하게 끼워 주었다….
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%에게 %조사선택(TSTR:9, "를")% 끼웠다.
+ENDIF

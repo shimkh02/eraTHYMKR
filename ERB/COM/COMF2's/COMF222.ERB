@@ -1,0 +1,163 @@
+﻿;=============================================================================
+;바늘(SELECTCOM=222), 촉수바늘 고문(SELECTCOM=552)
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE222
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:222 > 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:33 == 0 && NOITEM == 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(針さばきか, 새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0 && TALENT:ASSI:53 == 0
+		RETURN 0
+ENDIF
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수바늘 고문은 COMF500.ERB로부터 JUMP 해 온다.
+;실제로는 고통이 있기 (위해)때문에 좀 더 체력 기력을 갖고 있고 쉰다
+;말용(바늘 다루기 패치의 시츄용)에 TFLAG:201을 사용. (0=보통 바늘/기능 무효, 1=보통 강함으로, 2=약한에, 3=강하게 해에)
+;진가를 발휘하는 것은 아픔이 30000을 넘었을 때(다만 거기까지 거론될까는 불명. 체력 상승 필수일지도)
+@COM222
+IF TEQUIP:90
+	PRINTL 촉수바늘 고문
+	TSTR:0 = 촉수바늘 고문
+ELSE
+	TSTR:7 = 바늘
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 33
+		CALL NAMECHECK_CUSTOMTOOL
+	ELSE
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = %TSTR:7%
+	ENDIF
+	PRINTFORML %TSTR:8%
+	TSTR:0 = 바늘
+ENDIF
+CALL TRAIN_MESSAGE_COM222
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 20
+
+SOURCE:31 = 1000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 3000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 3300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 3600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 4000
+ELSEIF PALAM:16 < PALAMLV:5
+	SOURCE:20 = 4500
+ELSE
+	SOURCE:20 = 5500
+ENDIF
+
+TFLAG:201 = 0
+;고문계, 정신 조작계 커맨드가 유효하고 조교자가[바늘 다루기]를 가지고 있어 촉수 조교중이 아닌 경우, 선택사항이 출현.
+;통각의 소스를±50%로 조정 가능
+SIF FLAG:15 & 16 && TALENT:PLAYER:53 && TEQUIP:90 == 0
+	CALL COMF222_INPUT
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 33
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+IF TEQUIP:90
+	SELECTCOM = 552
+	SOURCE:31 *= 2
+	SOURCE:23 = SOURCE:20 / 2
+	;촉수 경험 플래그
+	TFLAG:90 = 2
+ELSEIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 3
+
+;커맨드 속성：촉수
+IF TEQUIP:90
+	TFLAG:98 = 8
+;커맨드 속성：도구(조교자)
+ELSE
+	TFLAG:98 = 1
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;바늘 가감(상태) 선택
+;--------------------------------------------------
+;고문계, 정신 조작계 커맨드 유효시에 불려 간다
+@COMF222_INPUT
+PRINTL 얼마나 강하게 찌를까?
+PRINTL [0] 보통
+PRINTL [1] 약하게
+PRINTL [2] 강하게
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	TFLAG:201 = 1
+ELSEIF RESULT == 1
+	TIMES SOURCE:20 , 0.50
+	TFLAG:201 = 2
+ELSEIF RESULT == 2
+	TIMES SOURCE:20 , 1.50
+	TFLAG:201 = 3
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM222
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:90
+	PRINTFORMW 끝이 바늘과 같이 날카로운 경질의 촉수가 %CALLNAME:TARGET%의 유두와 \@(TALENT:120 || TALENT:121) ? 페니스 # 클리토리스\@를 가차없이 찌르고 있다….
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 유두와 \@(TALENT:120 || TALENT:121) ? 페니스 # 클리토리스\@에 
+	IF TALENT:PLAYER:53 || TALENT:PLAYER:81 || TALENT:PLAYER:177
+		PRINTFORMW 가차 없이 %조사선택(TSTR:9, "를")% 찔렀다….
+	ELSE
+		PRINTFORMW %조사선택(TSTR:9, "를")% 찔렀다….
+	ENDIF
+ENDIF

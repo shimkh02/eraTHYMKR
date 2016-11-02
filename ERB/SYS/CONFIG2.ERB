@@ -1,0 +1,575 @@
+﻿;=============================================================================
+;조교 모드 확장
+;=============================================================================
+@CONFIGURATION_2
+LOCALS:0 = ×
+LOCALS:1 = ○
+;항목 전부 ON
+LOCAL = 511
+PRINTL 현재, 조교 모드 확장 기능 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+PRINTFORML %LOCALS:((FLAG:14 & 1) > 0)%[ 0] 조교 커맨드 필터
+;-------------------------------------------------
+SIF FLAG:14 & 1
+	PRINTFORML %LOCALS:((FLAG:2 & 1) > 0)%[ 1] Ｖ계 조교 필터
+;-------------------------------------------------
+SIF FLAG:14 & 1
+	PRINTFORML %LOCALS:((FLAG:2 & 2) > 0)%[ 2] Ａ계 조교 필터
+;-------------------------------------------------
+SIF FLAG:14 & 1
+	PRINTFORML %LOCALS:((FLAG:2 & 4) > 0)%[ 3] 이상경험계 조교 필터
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 2) > 0)%[ 4] 체력 · 기력 상승
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 4) > 0)%[ 5] 얀데레 모드 <주의!>
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 8) > 0)%[ 6] 랜덤성 배제
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 16) > 0)%[ 7] 고양이 펠라 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 32) > 0)%[ 8] 후타나리 불알 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 64) > 0)%[ 9] 조교 메뉴 등록
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:18 & 1) > 0)%[10] 사정 장소 선택 기능
+;-------------------------------------------------
+IF FLAG:18 & 1
+	CALL CHECK_SAMEN_PLACE
+	PRINTL [11] 사정 장소 자동선택 설정
+ENDIF
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 128) > 0)%[12] 후타나리 이벤트 억제
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:14 & 256) > 0)%[13] 조교배설경험 억제
+;-------------------------------------------------
+SIF FLAG:14 < LOCAL
+	PRINTL 　[98] 전부 유효
+SIF FLAG:14
+	PRINTL 　[99] 전부 무효
+PRINTL  [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 98 && FLAG:14 < LOCAL
+	PRINTW 조교 모드 확장 기능을 모두 사용할 수 있도록 설정했습니다.
+	FLAG:14 = LOCAL
+	FLAG:2 |= 7
+	FLAG:18 |= 1
+ELSEIF RESULT == 99 && FLAG:14
+	PRINTW 조교 모드 확장 기능을 모두 사용할 수 없도록 설정했습니다.
+	CALL CONFIGURATION_MODE_NONE
+	FLAG:14 = 0
+	FLAG:2 = 0
+	FLAG:18 &= ~1
+ELSEIF RESULT == 0
+	PRINTFORMW 조교 커맨드 필터 기능을 \@(FLAG:14 & 1) ? 무효 # 유효 \@로 합니다.
+	SIF FLAG:14 & 1
+		FLAG:2 = 0
+	FLAG:14 ^= 1
+ELSEIF RESULT == 1 && FLAG:14 & 1
+	PRINTFORMW Ｖ계 조교 필터를 \@(FLAG:2 & 1) ? 무효 # 유효 \@로 합니다.
+	FLAG:2 ^= 1
+ELSEIF RESULT == 2 && FLAG:14 & 1
+	PRINTFORMW Ａ계 조교 필터를 \@(FLAG:2 & 2) ? 무효 # 유효 \@로 합니다.
+	FLAG:2 ^= 2
+ELSEIF RESULT == 3 && FLAG:14 & 1
+	PRINTFORMW 이상경험계 조교 필터를 \@(FLAG:2 & 4) ? 무효 # 유효 \@로 합니다.
+	FLAG:2 ^= 4
+ELSEIF RESULT == 4
+	PRINTFORMW 조교 종료시 체력 · 기력의 상승이 \@(FLAG:14 & 2) ? 일어나지 않게 # 일어나게 \@ 합니다.
+	FLAG:14 ^= 2
+ELSEIF RESULT == 5
+	PRINTFORMW 얀데레 모드를 \@(FLAG:14 & 4) ? 무효 # 유효 \@로 합니다.
+	FLAG:14 ^= 4
+ELSEIF RESULT == 6
+	PRINTFORMW 일부 커맨드 및 이벤트의 효과를 \@(FLAG:14 & 8) ? 랜덤하게 # 선택 가능하게 \@ 합니다.
+	FLAG:14 ^= 8
+ELSEIF RESULT == 7
+	PRINTFORMW 고양이 펠라 패치의 기능을 \@(FLAG:14 & 16) ? 무효 # 유효 \@로 합니다.
+	FLAG:14 ^= 16
+ELSEIF RESULT == 8
+	PRINTFORMW 후타나리 불알 패치의 기능을 \@(FLAG:14 & 32) ? 무효 # 유효 \@로 합니다.
+	FLAG:14 ^= 32
+ELSEIF RESULT == 9
+	PRINTFORMW 조교 메뉴의 등록 기능을 \@(FLAG:14 & 64) ? 무효 # 유효 \@로 합니다.
+	FLAG:14 ^= 64
+ELSEIF RESULT == 10
+	CALL CHANGE_SAMEN_FLAG
+ELSEIF RESULT == 11 && FLAG:18 & 1
+	CALL CHANGE_SAMEN_PLACE
+ELSEIF RESULT == 12
+	PRINTFORMW 후타나리 이벤트를 \@(FLAG:14 & 128) ? 활성화 # 억제\@합니다.
+	FLAG:14 ^= 128
+ELSEIF RESULT == 13
+	PRINTFORMW 조교배설경험의 습득을 \@(FLAG:14 & 256) ? 유효 # 무효\@로 합니다.
+	FLAG:14 ^= 256
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에
+GOTO INPUT_LOOP_0
+
+;=============================================================================
+;커맨드 확장
+;=============================================================================
+@CONFIGURATION_3
+LOCALS:0 = ×
+LOCALS:1 = ○
+;항목 전부 ON
+LOCAL = 131071
+PRINTL 현재, 커맨드 확장 기능 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+PRINTFORML %LOCALS:((FLAG:15 & 1) > 0)%[ 0] Ｃ계 확장 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 2) > 0)%[ 1] Ｖ계 확장 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 4) > 0)%[ 2] Ａ계 확장 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 8) > 0)%[ 3] Ｂ계 확장 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 16) > 0)%[ 4] 고문계, 정신조작계 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 32) > 0)%[ 5] 약품계 확장 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 64) > 0)%[ 6] 주사계 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 128) > 0)%[ 7] 촬영 커맨드 확장
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 256) > 0)%[ 8] 야외 조교 커맨드 확장
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 512) > 0)%[ 9] 수치 플레이계 확장 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 1024) > 0)%[10] 특수목욕계 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 2048) > 0)%[11] 조교자 봉사 · 우후후계 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 4096) > 0)%[12] 신사적인 촉수계 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 8192) > 0)%[13] 수간계 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:15 & 16384) > 0)%[14] 캐릭터 전용 커맨드
+;-------------------------------------------------
+IF FLAG:15 & 16384
+	PRINTFORML %LOCALS:((FLAG:15 & 32768) > 0)%[15] caved!!!! 이벤트
+;-------------------------------------------------
+	PRINTFORML \@(FLAG:15 & 65536) ? ◆[16] 야마메의 스커트 속은 거미 다리 # ◇[16] 야마메의 스커트 속은 보통 다리\@
+ENDIF
+;-------------------------------------------------
+SIF FLAG:15 < LOCAL
+	PRINTL 　[98] 전부 유효
+SIF FLAG:15
+	PRINTL 　[99] 전부 무효
+PRINTL [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 98 && FLAG:15 < LOCAL
+	PRINTFORMW 커맨드 확장 기능을 모두 사용할 수 있도록 설정했습니다.
+	FLAG:15 = LOCAL
+ELSEIF RESULT == 99 && FLAG:15
+	PRINTFORMW 커맨드 확장 기능을 모두 사용하지 않게 설정했습니다.
+	CALL CONFIGURATION_TRAIN_NONE
+	FLAG:15 = 0
+ELSEIF RESULT == 0
+	PRINTFORMW Ｃ계 확장 커맨드를 \@(FLAG:15 & 1) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 1
+ELSEIF RESULT == 1
+	PRINTFORMW Ｖ계 확장 커맨드를 \@(FLAG:15 & 2) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 2
+ELSEIF RESULT == 2
+	PRINTFORMW Ａ계 확장 커맨드를 \@(FLAG:15 & 4) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 4
+ELSEIF RESULT == 3
+	PRINTFORMW Ｂ계 확장 커맨드를 \@(FLAG:15 & 8) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 8
+ELSEIF RESULT == 4
+	PRINTFORMW 고문계, 정신조작계 커맨드를 \@(FLAG:15 & 16) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 16
+ELSEIF RESULT == 5
+	PRINTFORMW 약품계 확장 커맨드를 \@(FLAG:15 & 32) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 32
+ELSEIF RESULT == 6
+	PRINTFORMW 주사계 커맨드를 \@(FLAG:15 & 64) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 64
+ELSEIF RESULT == 7
+	PRINTFORMW 촬영 커맨드 확장을 \@(FLAG:15 & 64) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 128
+ELSEIF RESULT == 8
+	PRINTFORMW 야외 조교 커맨드 확장을 \@(FLAG:15 & 256) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 256
+ELSEIF RESULT == 9
+	PRINTFORMW 수치 플레이계 확장 커맨드를 \@(FLAG:15 & 512) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 512
+ELSEIF RESULT == 10
+	PRINTFORMW 특수목욕계 커맨드를 \@(FLAG:15 & 1024) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 1024
+ELSEIF RESULT == 11
+	PRINTFORMW 조교자 봉사 · 우후후계 커맨드를 \@(FLAG:15 & 2048) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 2048
+ELSEIF RESULT == 12
+	PRINTFORMW 신사적인 촉수계 커맨드를 \@(FLAG:15 & 4096) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 4096
+ELSEIF RESULT == 13
+	PRINTFORMW 수간계 커맨드를 \@(FLAG:15 & 8192) ? 무효 # 유효 \@로 합니다.
+	FLAG:15 ^= 8192
+ELSEIF RESULT == 14
+	PRINTFORMW 캐릭터 전용 커맨드를 \@(FLAG:15 & 16384) ? 무효 # 유효 \@로 합니다.
+	SIF FLAG:15 & 16384
+		FLAG:15 &= ~229376
+	FLAG:15 ^= 16384
+ELSEIF RESULT == 15 && FLAG:15 & 16384
+	PRINTFORMW caved!!!! 이벤트를 \@(FLAG:15 & 32768) ? 일어나지 않게 # 일어나게 \@ 합니다.
+	FLAG:15 ^= 32768
+ELSEIF RESULT == 16 && FLAG:15 & 16384
+	PRINTFORMW 야마메 씨의 치마 속은 \@(FLAG:15 & 65536) ? 보통 다리  # 거미 다리 \@ 설정으로 합니다.
+	FLAG:15 ^= 65536
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+
+ENDIF
+DRAWLINE
+PRINT 그밖에
+GOTO INPUT_LOOP_0
+
+;=============================================================================
+;eratohoYM 확장 패치용 자리
+;=============================================================================
+;계열에 따라 번호를 정리할지도 몰라요
+@CONFIGURATION_4
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL eratohoYM 확장 패치 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해주세요.
+DRAWLINE
+;-------------------------------------------------
+PRINTFORM %LOCALS:((FLAG:18 & 2) > 0)%[ 0] 임신 · 출산 · 육아기능　　
+IF FLAG:18 & 2
+	PRINTFORML 　　 %LOCALS:((FLAG:18 & 4) > 0)%알 양육 패치　
+;	PRINTFORML 　　 %LOCALS:((FLAG:18 & 8) > 0)%육아실 확장 기능
+ELSE
+	PRINTL 
+ENDIF
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:1300 & 1)%[ 1] 딸도 조교 패치
+;-------------------------------------------------
+IF FLAG:1300 & 1
+	PRINTFORML %LOCALS:((FLAG:1300 & 4) > 0)%[ 2] 아들도 조교 패치
+;-------------------------------------------------
+	PRINTFORML %LOCALS:((FLAG:1300 & 2) > 0)%[ 3] 아이 성장 패치
+ENDIF
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:1100 & 1)%[ 4] 기사 패치
+;-------------------------------------------------
+;PRINTFORML %LOCALS:((FLAG:1200 & 1) > 0)%[ 5] 정액 도시락 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:1200 & 2) > 0)%[ 6] 정음절정 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:3999)%[ 7] 실신 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:3998)%[ 8] 변동 스테이터스 강조 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:1500 & 1)%[ 9] 신체 측정 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:1600 & 1)%[10] 범해짐 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:1700 & 1)%[11] 자위 은폐 발각 패치
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:1200 & 4) > 0)%[12] 한마디 패치
+;-------------------------------------------------
+;SIF FLAG:1200 & 4
+;	PRINTFORML %LOCALS:((FLAG:1200 & 8) > 0)%[13] 한마디 대신 정보를 표시
+;-------------------------------------------------
+PRINTL  [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	CALL NINSHIN_CHECK
+ELSEIF RESULT == 1
+	PRINTFORMW 아이 조교 가능화 모드를 \@(FLAG:1300 & 1) ?  무효 # 유효\@로 했습니다.
+	FLAG:1300 ^= 1
+ELSEIF RESULT == 2 && FLAG:1300 & 1
+	PRINTFORMW 아들\@(FLAG:1300 & 4) ? 은 조교할 수 없는 # 도 조교하는 \@ 설정을 적용합니다.
+	FLAG:1300 ^= 4
+ELSEIF RESULT == 3 && FLAG:1300 & 1
+	PRINTFORMW 아이 성장 패치의 기능을 \@(FLAG:1300 & 2) ? 무효 # 유효\@로 했습니다.
+	FLAG:1300 ^= 2
+ELSEIF RESULT == 4
+	PRINTFORMW 기사 패치의 기능을 \@(FLAG:1100 & 1) ? 무효 # 유효\@로 했습니다.
+	FLAG:1100 ^= 1
+ELSEIF RESULT == 6
+	PRINTFORMW 정음절정 패치의 기능을 \@(FLAG:1200 & 2) ? 무효 # 유효\@로 했습니다.
+	FLAG:1200 ^= 2
+ELSEIF RESULT == 7
+	PRINTFORMW 실신 패치의 기능을 \@(FLAG:3999 & 1) ? 무효 # 유효\@로 했습니다.
+	FLAG:3999 ^= 1
+ELSEIF RESULT == 8
+	PRINTFORMW 변동 스테이터스 강조 패치의 기능을 \@(FLAG:3998 & 1) ? 무효 # 유효\@로 했습니다.
+	FLAG:3998 ^= 1
+ELSEIF RESULT == 9
+	PRINTFORMW 신체 측정 패치의 기능을 \@(FLAG:1500 & 1) ? 무효 # 유효\@로 했습니다.
+	FLAG:1500 ^= 1 
+ELSEIF RESULT == 10
+	PRINTFORMW 범해짐 패치의 기능을 \@(FLAG:1600 & 1) ? 무효 # 유효\@로 했습니다.
+	FLAG:1600 ^= 1 
+ELSEIF RESULT == 11
+	PRINTFORMW 자위 은폐 발각의 기능을 \@(FLAG:1700 & 1) ? 무효 # 유효\@로 했습니다.
+	FLAG:1700 ^= 1 
+ELSEIF RESULT == 12
+	PRINTFORMW 한마디 패치의 기능을 \@(FLAG:1200 & 4) ? 무효 # 유효\@로 했습니다.
+	FLAG:1200 ^= 4
+;ELSEIF RESULT == 13 && FLAG:1200 & 4
+;	PRINTFORMW 한마디 대신 정보 표시를 \@(FLAG:1200 & 8) ? 무효 # 유효\@로 했습니다
+;	FLAG:1200 ^= 8
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+
+DRAWLINE
+PRINT 그밖에 
+GOTO INPUT_LOOP_0
+
+;=============================================================================
+;토리코 모드의 확장. BY V.K
+;=============================================================================
+@CONFIGURATION_5
+LOCALS:0 = ×
+LOCALS:1 = ○
+;항목 전부 ON
+LOCAL = 2047
+PRINTL 현재, 토리코 모드의 상태는 다음과 같습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+PRINTFORML %LOCALS:((FLAG:5000 & 1) > 0)%[ 0] 파라미터를 토리코 모드로 표시한다. <난이도가 올라갑니다>
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 2) > 0)%[ 1] 노예의 판매가 / 구매가 및 비디오 가격을 밸런싱한다. <난이도가 올라갑니다>
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 4) > 0)%[ 2] 노예의 더러운 정도를 상태창에 표시한다. (1번 옵션 필요)
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 8) > 0)%[ 3] 노예의 소질 정보를 출력한다.
+;-------------------------------------------------
+CALL SETCOLOR_TORIKOMODE, "RED", 5
+PRINTFORM 色
+RESETCOLOR
+PRINTFORML [ 4] 색을 설정한다.
+;;-------------------------------------------------
+;IF FLAG:5001 > 0
+;	PRINTFORML %LOCALS:(FLAG:5001 == 1)%[ 41] 진한 색 사용
+;;-------------------------------------------------
+;	PRINTFORML %LOCALS:(FLAG:5001 == 2)%[ 42] 연한 색 사용
+;;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 32) > 0)%[ 5] 만복도 시스템을 사용한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 64) > 0)%[ 6] 스트레스 시스템을 사용한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 128) > 0)%[ 7] 조교중 획득 소스를 출력하지 않는다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 256) > 0)%[ 8] 부카케 모드를 사용한다. (작동을 위해서는 사정 장소 선택 기능이 ON이어야 합니다)
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 16) > 0)%[ 9] 조교시간을 난이도에 따라 변경한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:5010 > 1)%[10] 의뢰소를 사용한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 512) > 0)%[11] 인터럽트 시스템을 사용한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5000 & 1024) > 0)%[12] 스케쥴 시스템을 사용한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5003 & 1) > 0)%[13] 경비 시스템을 사용한다. <게임 모드가 바뀝니다>
+;-------------------------------------------------
+;경비 시스템 하위메뉴
+SIF (FLAG:5003 & 1) > 0
+	PRINTFORML       ㄴ%LOCALS:((FLAG:5003 & 2) > 0)%[131] 시리즈별 노예 구매 제한을 둔다.
+
+;노모어글레이즈 상태일때는 이 옵션이 뜨지 않는다.
+SIF FLAG:5002 < 1000
+	PRINTFORML %LOCALS:((FLAG:5002%1000)>=100)%[14] 자동저장을 사용한다.
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:5005 & 1) > 0)%[15] 임신 및 딸 조교를 쉽게 한다.
+;-------------------------------------------------
+
+PRINTL 　[98] 전부 유효
+PRINTL 　[99] 전부 무효
+PRINTL  [100] 돌아간다
+
+;플래그 확인 디버그용.
+;PRINTFORML {FLAG:5000} 현재의 플래그 값.
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 98
+	PRINTW 토리코 모드의 기능을 모두 사용할 수 있도록 설정했습니다. (자동저장은 제외)
+	FLAG:5000 = LOCAL
+	FLAG:5001 = 4
+	FLAG:5010 = 2
+	FLAG:5003 = 3
+	FLAG:5005 = 1
+	;만약 이로인해 만복도 모드가 켜지면, 지금 만복도 시스템 정보가 없는 캐릭터들을 일괄 세팅 해 준다.
+	SIF FLAG:5000 & 32 
+		CALL INIT_HUNGERSYSTEM_TORIKOMODE
+	;경비시스템을 처음으로 켠 경우에 한해 한해, 무료 경비원을 지급한다.
+	SIF FLAG:5004 == 0 && FLAG:5003 & 1
+		CALL INIT_GUARDSMAN_TORIKOMODE
+
+ELSEIF RESULT == 99
+	PRINTW 토리코 모드의 기능을 모두 사용할 수 없도록 설정했습니다.
+	FLAG:5000 = 0
+	FLAG:5001 = 0
+	FLAG:5010 = 1
+	FLAG:5003 = 0
+	FLAG:5005 = 0
+ELSEIF RESULT == 0
+	PRINTFORMW 파라메터 표시를 \@(FLAG:5000 & 1) ? 오리지날 # 토리코 모드 \@로 합니다.
+	FLAG:5000 ^= 1
+ELSEIF RESULT == 1
+	PRINTFORML 노예의 판매/구매가/비디오 가격 등을 \@(FLAG:5000 & 2) ? 오리지날 # 토리코 모드 \@로 합니다.
+	FLAG:5000 ^= 2
+ELSEIF RESULT == 2
+	PRINTFORMW 노예의 더러운 정도를 상태창에 표시 \@(FLAG:5000 & 4) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 4
+ELSEIF RESULT == 3
+	PRINTFORMW 노예의 소질 정보를 구입시 및 상태창에 표시 \@(FLAG:5000 & 8) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 8
+
+;색 설정
+ELSEIF RESULT == 4
+	CALL CONFIG_SETCOLOR_TORIKOMODE
+	CALL SETCOLOR_TORIKOMODE, "RED", 5
+	PRINTFORMW 이 정도 농도로 설정 되었습니다.
+	RESETCOLOR
+
+;토리코 모드
+ELSEIF RESULT == 5
+	PRINTFORMW 만복도 및 식단 설정 시스템을 추가 \@(FLAG:5000 & 32) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 32
+	;만약 모드가 켜지면, 지금 만복도 시스템 정보가 없는 캐릭터들을 일괄 설정한다.
+	SIF FLAG:5000 & 32
+		CALL INIT_HUNGERSYSTEM_TORIKOMODE
+
+ELSEIF RESULT == 6
+	PRINTFORMW 스트레스 시스템을 사용 \@(FLAG:5000 & 64) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 64
+ELSEIF RESULT == 7
+	PRINTFORMW 조교중 획득 경험치/소스를 출력 \@(FLAG:5000 & 128) ? 합니다. # 하지 않습니다. \@
+	FLAG:5000 ^= 128
+ELSEIF RESULT == 8
+	PRINTFORMW 부카케 모드를 사용\@(FLAG:5000 & 256) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 256
+ELSEIF RESULT == 9
+	PRINTFORMW 조교 시간을 난이도에 따라 변경\@(FLAG:5000 & 16) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 16
+ELSEIF RESULT == 10
+	PRINTFORMW 의뢰소를 사용 \@(FLAG:5010  > 1 ) ? 하지 않습니다 # 합니다 \@.
+	;의뢰소 플래그를 조정. 의뢰소의 경우 의뢰를 받은 상태로 꺼버리면 날짜가 멈춰버릴 수 있으므로, 회피한다.
+	; 0 사용불가 <->2 사용준비  1사용대기 <-> 3사용중
+	IF FLAG:5010 == 0
+		FLAG:5010 = 2
+	ELSEIF FLAG:5010 == 2
+		FLAG:5010 = 0
+	ELSEIF FLAG:5010 == 1
+		FLAG:5010 = 3
+	ELSEIF FLAG:5010 == 3 || FLAG:5010 == 4
+		FLAG:5010 = 1
+	ENDIF
+ELSEIF RESULT == 11
+	PRINTFORMW 인터럽트 시스템을 사용\@(FLAG:5000 & 512) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 512
+ELSEIF RESULT == 12
+	PRINTFORMW 스케쥴 시스템을 사용\@(FLAG:5000 & 1024) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5000 ^= 1024
+ELSEIF RESULT == 13
+	PRINTFORMW 경비 시스템을 사용\@(FLAG:5003 & 1) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5003 ^= 1
+	;경비시스템을 처음으로 켠 경우에 한해 한해, 무료 경비원을 지급한다.
+	SIF FLAG:5004 == 0 && FLAG:5003 & 1
+		CALL INIT_GUARDSMAN_TORIKOMODE
+;경비 시스템 하위메뉴
+ELSEIF RESULT == 131 && FLAG:5003 & 1
+	PRINTFORMW 시리즈별 노예 구매 제한을\@(FLAG:5003 & 2) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5003 ^= 2
+;자동저장
+ELSEIF RESULT == 14 && FLAG:5002 < 1000
+	CALL DECODE_SAVEINFO_TORIKOMODE
+	IF RESULT:1 == 0
+		FLAG:5002 = FLAG:5002 + 100
+		PRINTFORMW 자동 저장을 사용합니다.
+		CALL SAVEGAME_EX_NOMOREGLAZE_TORIKOMODE
+	ELSEIF RESULT:1 == 1
+		FLAG:5002 = FLAG:5002 - 100
+		PRINTFORMW 자동 저장을 사용하지 않습니다.
+	ENDIF
+	;디버그
+	;PRINTFORML FLAG:5002 ={FLAG:5002}
+;임신난이도 하락패치
+ELSEIF RESULT == 15
+	PRINTFORMW 임신 및 딸 조교를 쉽게 \@(FLAG:5005 & 1) ? 하지 않습니다 # 합니다 \@.
+	FLAG:5005 ^= 1
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에
+GOTO INPUT_LOOP_0
+
+;---------------------------------------------------------
+;임신 기능의 사용 유무의 변경
+;---------------------------------------------------------
+@NINSHIN_CHECK
+PRINTFORML [ 0] 임신·출산·육아 기능을 \@(FLAG:18 & 2) ? 무효 # 유효\@로 한다.
+IF (FLAG:18 & 2) == 0
+	PRINTL [ 1] 임신 기능 및 알 기르기 패치를 유효로 한다.
+ELSEIF FLAG:18 & 4
+	PRINTL [ 1] 알 기르기 패치를 무효로 한다.
+ELSE
+	PRINTL [ 1] 알 기르기 패치를 유효로 한다.
+ENDIF
+;SIF (FLAG:18 & 2) == 2
+;	PRINTFORML [ 2] 육아실 확장 기능을 \@(FLAG:18 & 8) ? 무효 # 유효\@로 한다
+PRINTL [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	PRINTFORMW 임신·출산·육아 기능을 \@(FLAG:18 & 2) ? 무효 # 유효\@로 했습니다.
+	SIF FLAG:18 & 2
+		FLAG:18 &= ~12
+	FLAG:18 ^= 2
+ELSEIF RESULT == 1
+	IF (FLAG:18 & 2) == 0
+		PRINTW 임신·출산·육아 기능을 유효하게 했습니다.
+		FLAG:18 |= 2
+	ENDIF
+	PRINTFORMW 알 기르기 패치를 \@(FLAG:18 & 4) ? 무효 # 유효\@로 했습니다.
+	FLAG:18 ^= 4
+;ELSEIF RESULT == 2 && (FLAG:18 & 2) == 2
+;	PRINTFORMW 육아실 확장 기능을\@(FLAG:18 & 8) ?  무효 # 유효\@로 했습니다
+;	FLAG:18 ^= 8
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF

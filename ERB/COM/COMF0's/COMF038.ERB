@@ -1,0 +1,597 @@
+﻿;=============================================================================
+;배면입위 애널
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE38
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:38 > 0
+	RETURN 0
+;A조교 필터가 오프가 되지 않으면 안 됨
+SIF FLAG:2 & 2
+	RETURN 0
+;조교자에게 페니스가 없는, 한편(아이템 있음 설정이라면) 페니스 밴드도 없으면 안 됨
+SIF EXIST_BAR(PLAYER) == 0 && ITEM:2 == 0 && NOITEM == 0
+	RETURN 0
+;주인이 [금단의 지식] 소유가 아닐 때, 체격차이가 2 단계 이내나 조교자가 [금단의 지식] 소유가 아니면 안 됨
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, TARGET) == 0
+	RETURN 0
+;윤활 부족해, 순종 4 미만·레즈끼(BL끼) 4 미만의 ASSI의 경우, 조교 대상이 동성이라면 실행할 수 없다(새드나 새드끼 Lv3 이상, 또는 망신이나 복종이 있다면 OK)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;일정한 A경험이 필요
+SIF EXP:1 < EXPLV:3
+	RETURN 0
+;그 조교중에 관장 플레이＋배설이 있었을 경우, 조교자가 더러운 무시 혹은 악취 둔감을 가지지 않으면 실행할 수 없다
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;A계 장착도구 사용중은 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;목욕탕 플레이중은 플레이 매트가 없으면 안 됨
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우 조교자의 기교 4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;조수가 훈도시 착용중의 경우 기교 4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17 && ABL:12 < 4
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;애태우기플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;나체정식 중에는 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM38
+PRINTL 배면입위 애널
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 배면입위 애널
+CALL TRAIN_MESSAGE_COM038
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 1000
+ELSEIF ABL:12 == 1
+	LOCAL = 1300
+ELSEIF ABL:12 == 2
+	LOCAL = 1700
+ELSEIF ABL:12 == 3
+	LOCAL = 2200
+ELSEIF ABL:12 == 4
+	LOCAL = 3000
+ELSE
+	LOCAL = 4500
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_3(TARGET, LOCAL)
+;욕망을 본다
+LOCAL = EJACULATIONCHECK_ABL_11_1(TARGET, LOCAL)
+;윤활을 본다
+LOCAL = EJACULATIONCHECK_PALAM_10_2(TARGET, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 110
+DOWNBASE:1 += 200
+
+SOURCE:12 = 350
+SOURCE:11 = 50
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 50
+	SOURCE:11 += 10
+	SOURCE:22 += 80
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 150
+	SOURCE:11 += 130
+	SOURCE:22 += 300
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 300
+	SOURCE:11 += 500
+	SOURCE:22 += 700
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 600
+	SOURCE:11 += 1000
+	SOURCE:22 += 1500
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1000
+	SOURCE:11 += 1500
+	SOURCE:22 += 2600
+ELSE
+	SOURCE:2 = 1500
+	SOURCE:11 += 2000
+	SOURCE:22 += 4000
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.20
+	SOURCE:20 = 18000
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 60
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 0.60
+	SOURCE:20 = 250
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 50
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 = 50
+	DOWNBASE:0 += 20
+	DOWNBASE:1 += 40
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.10
+	SOURCE:20 = 5
+	DOWNBASE:0 += 10
+	DOWNBASE:1 += 30
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.20
+	SOURCE:20 = 0
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 20
+ELSE
+	TIMES SOURCE:2 , 1.30
+	SOURCE:20 = 0
+ENDIF
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 50
+	LOCAL:1 = 50
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 200
+	LOCAL:1 = 200
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 500
+	LOCAL:1 = 400
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 800
+	LOCAL:1 = 600
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1300
+	LOCAL:1 = 1000
+ELSE
+	SOURCE:3 = 1800
+	LOCAL:1 = 1400
+ENDIF
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:3 , 1.20
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+SOURCE:11 += LOCAL:1
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 40
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 160
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 500
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 900
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1400
+ELSE
+	SOURCE:0 = 2100
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 10000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 3600
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 1200
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 200
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+ENDIF
+
+;조교자가[남자]
+IF TALENT:PLAYER:120
+	TIMES SOURCE:2 , 2.50
+;조교자가[후타나리]
+ELSEIF TALENT:PLAYER:121
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.60
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;정조관념
+IF TALENT:30
+	IF EXP:1 == 0
+		TIMES SOURCE:11 , 1.20
+		TIMES SOURCE:17 , 1.10
+		SOURCE:32 = 500
+	ELSE
+		TIMES SOURCE:11 , 1.20
+		TIMES SOURCE:17 , 1.10
+		SOURCE:32 = 0
+	ENDIF
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:11 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:11 , 1.00
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.10
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:11 , 1.50
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:2 , 1.40
+	TIMES SOURCE:11 , 2.00
+ELSE
+	TIMES SOURCE:0 , 1.30
+	TIMES SOURCE:2 , 1.60
+	TIMES SOURCE:11 , 2.60
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:11 , 1.30
+	TIMES SOURCE:32 , 1.80
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:11 , 1.50
+	TIMES SOURCE:32 , 1.60
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:11 , 1.90
+	TIMES SOURCE:32 , 1.40
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:11 , 2.20
+	TIMES SOURCE:32 , 1.20
+ELSE
+	TIMES SOURCE:11 , 2.60
+	TIMES SOURCE:32 , 1.00
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	SOURCE:11 += 100
+	SOURCE:19 = 0
+	LOCAL:1 = 0
+ELSEIF ABL:PLAYER:12 == 1
+	SOURCE:11 += 150
+	SOURCE:19 += 50
+	LOCAL:1 = 0
+ELSEIF ABL:PLAYER:12 == 2
+	SOURCE:11 += 200
+	SOURCE:19 += 100
+	LOCAL:1 = 0
+ELSEIF ABL:PLAYER:12 == 3
+	SOURCE:11 += 300
+	SOURCE:19 += 150
+	LOCAL:1 = 50
+ELSEIF ABL:PLAYER:12 == 4
+	SOURCE:11 += 500
+	SOURCE:19 += 250
+	LOCAL:1 = 100
+ELSE
+	SOURCE:11 += 800
+	SOURCE:19 += 400
+	LOCAL:1 = 300
+ENDIF
+
+SOURCE:0 += LOCAL:1
+
+;TALENT:연모를 본다
+IF TALENT:150
+	TIMES SOURCE:11 , 3.00
+	TIMES SOURCE:17 , 2.00
+	TIMES SOURCE:24 , 2.00
+ENDIF
+
+TCVAR:1 += 1
+SIF ASSIPLAY == 0 && (TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1)
+	CFLAG:174 += 1
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	IF ABL:10 >= 3 && ABL:11 >= 3 && FLAG:10
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 몸을 뒤로 젖히고는 %CALLNAME:PLAYER%에게 기댔다….
+		PRINTL
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 2
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+;노예의 A⇔조교자의 P의 불결이 이동
+STAIN:4 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:4
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:1 >= 3) ?  2 # 1
+
+;처녀 상실의 후에 페니스를 뽑고 있을까
+TFLAG:101 = (TFLAG:101 == 2) ?  1 # 0
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_38
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "가")% %CALLNAME:TARGET%의 애널에 삽입하려고 했지만 거절당했다.
+PRINTW 좀 더 조교가 필요한 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM038
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;전회와 이번 조교자가 같아, 전회의 조교가 배면입위 애널이며, 뽑지 않는 플래그가 있는 경우
+IF TFLAG:102 && PREVCOM == 38 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 애널에 페니스를 삽입한 채로 허리를 계속 흔들었다….
+;전회와 이번 조교자가 같아, 전회의 조교가 배면좌위 애널이며, 뽑지 않는 플래그가 있는 경우
+ELSEIF TFLAG:102 && PREVCOM == 33 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTFORM %조사선택(CALLNAME:TARGET, "를")% 등 뒤에서 끌어안고 
+	PRINTFORM 흔들리는 %CALLNAME:TARGET%의 허리를 꽉 잡은 채 
+	PRINTW 일어섰다….
+;같이 전회의 조교가 후배위 애널이나 기승위 애널인 경우
+ELSEIF TFLAG:102 && (PREVCOM == 31 || PREVCOM == 34) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTFORM 애널에서 페니스를 뽑아내지 않은 채 %CALLNAME:TARGET%의 몸을 등 뒤에서 끌어안고 
+	PRINTW 격렬히 허리를 흔들어대면서 일어섰다….
+;같이 전회의 조교가 정상위 애널이나 대면좌위 애널인 경우
+ELSEIF TFLAG:102 && (PREVCOM == 30 || PREVCOM == 32) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTFORM 애널에 삽입한 채로 반대로 돌린 %CALLNAME:TARGET%의 몸을 
+	IF PREVCOM == 30
+		PRINT 안아 올려 
+	ELSE
+		PRINT 꾸욱 끌어안고 
+	ENDIF
+	PRINTW 격렬히 허리를 흔들어대면서 일어섰다….
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 몸을 안아 올리고 %조사선택(CALLNAME:PLAYER, "는")% 선 채로 등 뒤에서 
+	PRINTW 애널에 삽입했다….
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_38, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+;ABL:A감각
+IF ABL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:2
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:2%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+;ABL:봉사 정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+;ABL:정액 중독
+IF ABL:31
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:31
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:31%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;PALAM:윤활(의 부족)
+IF PALAM:10 < PALAMLV:3
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 윤활 부족({LOCAL:99})
+ENDIF
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 2
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;남자 싫다
+IF TALENT:37 && TALENT:PLAYER:120
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:37%({LOCAL:99})
+;여자 증오
+ELSEIF TALENT:38 && TALENT:PLAYER:120 == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:38%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+;음고
+IF TALENT:173
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:173%({LOCAL:99})
+ENDIF
+
+;조교자가 후타나리
+IF TALENT:PLAYER:121
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 4
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:121%({LOCAL:99})
+ENDIF
+
+;미약
+IF TEQUIP:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ITEMNAME:61%({LOCAL:99})
+ENDIF
+
+;조교자의 P의 더러움
+TFLAG:242 = COMORDER_STAIN_CALC(2, 0)
+;배면입위 애널에서는 더러움의 영향이 적은
+TFLAG:242 /= 3
+
+;서로불결
+IF TFLAG:242
+	RESULTS = %RESULTS% - 
+	TFLAG:240 -= TFLAG:242
+	RESULTS = %RESULTS% 서로불결
+	;악취 둔감
+	IF TALENT:61
+		RESULTS = %RESULTS% , %TALENTNAME:61%
+	ELSEIF TALENT:62
+		RESULTS = %RESULTS% , %TALENTNAME:62%
+	ENDIF
+	RESULTS = %RESULTS% ({TFLAG:242})
+	LOCAL:99 = 1
+ENDIF
+
+TFLAG:241 = 27

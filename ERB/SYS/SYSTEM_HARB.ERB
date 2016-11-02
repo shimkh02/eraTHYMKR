@@ -1,0 +1,513 @@
+﻿;=============================================================================
+;식물원 및 허브 관련 처리
+;=============================================================================
+;-------------------------------------------------
+;SHOP 커멘드에서의 식물원 처리
+;-------------------------------------------------
+@SHOP_HARB_MENU
+DRAWLINE
+PRINTL 무엇을 실시합니까?
+DRAWLINE
+SIF FLAG:79 & 2
+	PRINTLC [0] 허브 개발 지시
+SIF FLAG:79 & 4
+	PRINTLC [1] 허브 생산 지시
+PRINTL 
+PRINTL [100] 돌아가기
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && FLAG:79 & 2
+	PRINTW 허브의 개발을 지시합니다.
+	CALL DEVELOP_HARB_MENU
+	SIF RESULT == 1
+		RETURN 1
+ELSEIF RESULT == 1 && FLAG:79 & 4
+	PRINTW 허브의 생산을 지시합니다.
+	CALL MAKE_HARB_MENU
+	SIF RESULT == 1
+		RETURN 1
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;-------------------------------------------------
+;허브 개발 지시
+;-------------------------------------------------
+@DEVELOP_HARB_MENU
+DRAWLINE
+IF (FLAG:80 & 63) == 63
+	PRINTL 모든 허브가 개발되었습니다.
+	RETURN 0
+ELSEIF FLAG:83 > 0 && FLAG:83 <= 99
+	PRINTL 현재 개발 중인 허브가 있습니다.
+	CALL STOP_DEVELOP_HARB
+	RETURN RESULT
+ENDIF
+SIF (FLAG:80 & 1) == 0
+	PRINTLC [0] 시더우드
+SIF (FLAG:80 & 2) == 0
+	PRINTLC [1] 페퍼민트
+SIF (FLAG:80 & 4) == 0
+	PRINTLC [2] 자스민
+SIF (FLAG:80 & 8) == 0
+	PRINTLC [3] 라벤더
+SIF (FLAG:80 & 16) == 0
+	PRINTLC [4] 머스크
+SIF (FLAG:80 & 32) == 0 && (FLAG:80 & 31) == 31
+	PRINTLC [5] 프랑킨센스
+PRINTL 
+DRAWLINE
+PRINTL 어느 허브를 개발하겠습니까?
+PRINTL 한 번에 한 개의 허브만 개발 가능합니다.
+PRINTL 
+PRINTL [100] 선택하지 않고 돌아가기
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT >= 0 && RESULT <= 4 && GETBIT(FLAG:80, RESULT) == 0
+	PRINTFORMW %ITEMNAME:(610+RESULT)%의 개발을 시킵니다.
+	CALL DEVELOP_HARB_CHIEF_SLAVE_LIST, RESULT
+	SIF RESULT == 1
+		RETURN 1
+ELSEIF RESULT == 5 && (FLAG:80 & 32) == 0 && (FLAG:80 & 31) == 31
+	PRINTW 프랑킨센스의 개발을 시킵니다.
+	CALL DEVELOP_HARB_CHIEF_SLAVE_LIST, RESULT
+	SIF RESULT == 1
+		RETURN 1
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;-------------------------------------------------
+;허브 개발 담당자의 선정
+;-------------------------------------------------
+;조건은 「주인」 「조수」 「대상」이 아니라, 그 자리에 있다(실종, 육아, 유폐, 투옥, 매춘중은 불가)
+;미약중독·매춘 중독이 아닌(연구할 경황은 아니다), 임신·포란중·회란은 아니다(연구할 경황은 아니다)
+;유아 퇴행·정신 붕괴·괴뢰가 아닌(연구할 뿐(만큼)의 지성이 없다), 질투·거절이 아니다(연구 그 자체를 거절한다)
+;취기와 스트레스가 없는 것, 체력과 기력이 500이상인 것도 조건
+;기교 Lv5로, 요리 기능+공작 기능 Lv의 합계가 5이상 필요
+;조수 가능해 함락 하고 있어, 반발 각인이 없고,[금단의 지식]or[마술 기능]or[조제 지식]or[치료]or[야채의 연금 술사]or[교육자]or[공작 명인]중에서 2개 이상 소지하고 있는 것
+;ARG = 개발하는 허브의 종류
+@DEVELOP_HARB_CHIEF_SLAVE_LIST, ARG
+DRAWLINE
+IF CHARANUM <= 1
+	PRINTL 개발을 담당하는 노예가 없습니다.
+	RETURN 0
+ENDIF
+;표시시키는 캐릭터를 추출(LOCAL:2에 인원수)
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;개발 담당 자격이 없으면 안 됨
+	SIF HARB_CHIEF_SLAVE_LIST(COUNT, 0) == 0
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+PRINTFORML 누구에게 %ITEMNAME:(610+ARG)%의 개발을 명령하겠습니까?  ＜page. {LOCAL+1}＞
+CALL USE_ITEM_LIST, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ?  %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ?  %" " * 16% # [1009] 다음페이지\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+LOCAL:3 = TARGET
+TARGET = RESULT
+PRINTFORML ＜%CALLNAME:TARGET%에게 %ITEMNAME:(610+ARG)%의 개발을 담당시키겠습니까? ＞
+PRINTL 한 번 개발을 시작하면, 개발을 중지하거나 완료할 때까지 다른 일을 할 수 없습니다.
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1
+	TARGET = LOCAL:3
+	RETURN 0
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP_1
+ENDIF
+PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 허브 농장의 개발 시설에서 %ITEMNAME:(610+ARG)%의 개발에 착수합니다.
+PRINTW 개발 중일 때는 개발을 중지하거나 완료할 때까지 조교, 조수, 매춘, 수감이 불가능합니다.
+CFLAG:4 |= 2048
+FLAG:81 = ARG + 1
+FLAG:83 = 1
+TARGET = LOCAL:3
+RETURN 1
+
+;-------------------------------------------------
+;허브 개발 중지.
+;-------------------------------------------------
+@STOP_DEVELOP_HARB
+VARSET LOCAL
+;현재 개발 담당중의 노예를 찾는 처리
+LOCAL:1 = FINDCHARA(CFLAG:4, 2048, 0)
+PRINTFORML 현재, %조사처리(CALLNAME:(LOCAL:1),"가")% %ITEMNAME:(609+FLAG:81)%를 개발하고 있습니다.
+PRINTL 개발을 중지하겠습니까?
+PRINTL 개발을 중지했을 경우, 지금까지의 개발의 성과는 8:45가 됩니다.
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	RETURN 0
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP
+ENDIF
+CFLAG:(LOCAL:1):4 = 0
+FLAG:81 = 0
+FLAG:83 = 0
+PRINTFORML %ITEMNAME:(609+FLAG:81)%의 개발을 중지했습니다.
+PRINTFORML %조사처리(CALLNAME:(LOCAL:1),"는")% 조교 대상으로 선택할 수 있게 되었습니다.
+RETURN 1
+
+;-------------------------------------------------
+;허브 생산 지시
+;-------------------------------------------------
+@MAKE_HARB_MENU
+DRAWLINE
+IF FLAG:80 <= 0
+	PRINTL 생산할 수 있는 허브가 없습니다.
+	RETURN 0
+ELSEIF MINARRAY(ITEM, 610, 616) > 98
+	PRINTL 허브를 생산할 필요가 없습니다.
+	RETURN 0
+ENDIF
+SIF FLAG:80 & 1 && ITEM:610 < 99
+	PRINTLC [0] 시더우드
+SIF FLAG:80 & 2 && ITEM:611 < 99
+	PRINTLC [1] 페퍼민트
+SIF FLAG:80 & 4 && ITEM:612 < 99
+	PRINTLC [2] 자스민
+SIF FLAG:80 & 8 && ITEM:613 < 99
+	PRINTLC [3] 라벤더
+SIF FLAG:80 & 16 && ITEM:614 < 99
+	PRINTLC [4] 머스크
+SIF FLAG:80 & 32 && ITEM:615 < 99
+	PRINTLC [5] 프랑킨센스
+PRINTL 
+DRAWLINE
+PRINTL 어느 허브를 생산시키겠습니까?
+PRINTL 한 번에 한 종류의 허브만 만들 수 있습니다.
+PRINTL 
+PRINTL [100] 돌아가기
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT >= 0 && RESULT <= 5 && GETBIT(FLAG:80, RESULT) == 1 && ITEM:(610+RESULT) < 99
+	PRINTFORMW %ITEMNAME:(610+RESULT)%의 생산을 시킵니다.
+	CALL MAKE_HARB_CHIEF_SLAVE_LIST, RESULT
+	SIF RESULT == 1
+		RETURN 1
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;-------------------------------------------------
+;허브 생산 담당자의 선정
+;-------------------------------------------------
+;조건은 「주인」 「조수」 「대상」이 아니라, 그 자리에 있다(실종, 육아, 유폐, 투옥, 매춘중은 불가)
+;미약중독·매춘 중독이 아닌(생산할 경황은 아니다), 임신·포란중·회란은 아니다(생산할 경황은 아니다)
+;유아 퇴행·정신 붕괴·괴뢰가 아닌(생산할 뿐(만큼)의 지성이 없다), 질투·거절이 아니다(생산 그 자체를 거절한다)
+;취기와 스트레스가 없는 것, 체력과 기력이 500이상인 것도 조건
+;기교 Lv5로, 요리 기능+공작 기능 Lv의 합계가 4이상 필요
+;조수 가능해 함락 하고 있어, 반발 각인이 없고,[금단의 지식]or[마술 기능]or[조제 지식]or[치료]or[야채의 연금 술사]or[교육자]or[공작 명인]중에서 1개이상 소지하고 있는 것
+;ARG = 생산하는 허브의 종류
+@MAKE_HARB_CHIEF_SLAVE_LIST, ARG
+DRAWLINE
+IF CHARANUM <= 1
+	PRINTL 생산을 담당하는 노예가 없습니다.
+	RETURN 0
+ENDIF
+;표시시키는 캐릭터를 추출(LOCAL:2에 인원수)
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;생산 담당 자격이 없으면 안 됨
+	SIF HARB_CHIEF_SLAVE_LIST(COUNT, 1) == 0
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+PRINTFORML 누구에게 %ITEMNAME:(610+ARG)%의 생산을 명령하겠습니까?  ＜page. {LOCAL+1}＞
+SIF FLAG:82
+	PRINTL 덧붙여 현금산 담당을 선택했을 경우에는 제외만 가능합니다.
+CALL USE_ITEM_LIST, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ?  %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ?  %" " * 16% # [1009] 다음페이지\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+LOCAL:3 = TARGET
+TARGET = RESULT
+IF CFLAG:4 == 4096
+	PRINTFORML ＜%조사처리(CALLNAME:TARGET,"를")% 생산 담당에서 해제하겠습니까? ＞
+	PRINTLC [0] 예
+	PRINTLC [1] 아니오
+	PRINTL 
+	$INPUT_LOOP_2
+	INPUT
+	IF RESULT == 1
+		TARGET = LOCAL:3
+		RETURN 0
+	ELSEIF RESULT != 0
+		GOTO INPUT_LOOP_2
+	ENDIF
+	PRINTFORML %조사처리(CALLNAME:TARGET,"를")% 생산 담당으로부터 해제했습니다.
+	CFLAG:4 = 0
+	FLAG:82 = 0
+	TARGET = LOCAL:3
+	RETURN 1
+ELSE
+	PRINTFORML ＜%CALLNAME:TARGET%에게 %ITEMNAME:(610+ARG)%의 생산을 담당시키겠습니까? ＞
+	IF FLAG:82
+		PRINTL 덧붙여 생산 담당은 한 사람만 가능하므로, 다른 생산 담당을 선택했을 때는
+		PRINTL 이전의 생산 담당은 해제됩니다.
+	ENDIF
+	PRINTLC [0] 예
+	PRINTLC [1] 아니오
+	PRINTL 
+	$INPUT_LOOP_1
+	INPUT
+	IF RESULT == 1
+		TARGET = LOCAL:3
+		RETURN 0
+	ELSEIF RESULT != 0
+		GOTO INPUT_LOOP_1
+	ENDIF
+	;현재 생산 담당중의 노예를 해임하는 처리
+	COUNT = FINDCHARA(CFLAG:4, 4096, 0)
+	IF COUNT >= 0 && COUNT != TARGET
+		PRINTFORML %조사처리(CALLNAME:COUNT,"를")%, 생산 담당으로부터 해제했습니다.
+		CFLAG:COUNT:4 = 0
+	ENDIF
+	PRINTFORML %조사처리(CALLNAME:TARGET,"를")% 허브 농장의 생산 시설에서 %ITEMNAME:(610+ARG)%의 생산에 착수합니다.
+	PRINTFORMW 생산하는 동안에는 조교 대상 혹은 조수에 임명할 수 없고, 수감이나 매춘 역시 할 수 없습니다.
+	CFLAG:4 |= 4096
+	FLAG:82 = ARG + 1
+	TARGET = LOCAL:3
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;허브 생산 및 개발 담당자 자격을 조사하는 식 나카노세키수
+;-------------------------------------------------
+;조건에 관해서는 호출해 원의 코멘트를 참조하는 것.
+;ARG = 생산 혹은 개발 담당 후보의 캐릭터
+;ARG:1 = 0이 개발 담당, 1이 생산 담당의 자격을 조사한다
+@HARB_CHIEF_SLAVE_LIST(ARG, ARG:1)
+#FUNCTION
+;이상 범위라면 제외한다
+SIF ARG < 0 || ARG >= CHARANUM || ARG:1 < 0 || ARG:1 > 1
+	RETURNF 0
+;주인, 조수, 조교 대상은 안 됨
+SIF GROUPMATCH(ARG, MASTER, ASSI, TARGET) > 0
+	RETURNF 0
+;그 자리에 없는 캐릭터는 제외(현금산 혹은 개발 담당자를 제외하다)
+IF ARG:1 == 0
+	SIF CFLAG:ARG:4 && CFLAG:ARG:4 != 2048
+		RETURNF 0
+ELSEIF ARG:1 == 1
+	SIF CFLAG:ARG:4 && CFLAG:ARG:4 != 4096
+		RETURNF 0
+ENDIF
+;취기와 스트레스가 있으면(자) 안 됨
+SIF BASE:ARG:8 || CFLAG:ARG:65
+	RETURNF 0
+;조수 가능하지 않으면 안 됨
+SIF CFLAG:ARG:1 < 2
+	RETURNF 0
+;함락 하고 있지 않으면 안 됨
+SIF TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0
+	RETURNF 0
+;[미약중독][매춘 중독][임신][포란중][회란][유아 퇴행][정신 붕괴][괴뢰][거절][질투]중 한쪽이 있으면(자) 안 됨
+SIF TALENT:ARG:46 || TALENT:ARG:262 || TALENT:ARG:140 || TALENT:ARG:143 || TALENT:ARG:145 || TALENT:ARG:159 || TALENT:ARG:167 || TALENT:ARG:168 || TALENT:ARG:157 || TALENT:ARG:830
+	RETURNF 0
+;반발 각인 있으면(자) 안 됨
+SIF MARK:ARG:9
+	RETURNF 0
+;대상의 체력과 기력이 500이상이 아니면 안 됨
+SIF BASE:ARG:0 < 500 || BASE:ARG:1 < 500
+	RETURNF 0
+;기교 Lv가 5 미만, 요리 기능＋공작 기능 Lv의 합계가 5 미만이라면 안 됨
+SIF ABL:ARG:12 < 5 || (ABL:ARG:70 + ABL:ARG:73) < 5
+	RETURNF 0
+;필요 소질 조건을 조사한다
+IF ARG:1 == 0
+	;[금단의 지식]or[마술 기능]or[조제 지식]or[치료]or[야채의 연금 술사]or[교육자]or[공작 명인]중에서 2개 이상 가지고 있지 않으면 안 됨
+	SIF (TALENT:ARG:56 > 0) + (TALENT:ARG:197 > 0) + (TALENT:ARG:55 > 0) + (TALENT:ARG:59 > 0) + (TALENT:ARG:831 > 0) + (TALENT:ARG:126 > 0) + (TALENT:ARG:195 > 0) < 2
+		RETURNF 0
+ELSEIF ARG:1 == 1
+	;[금단의 지식]or[마술 기능]or[조제 지식]or[치료]or[야채의 연금 술사]or[교육자]or[공작 명인]중 한쪽이 없으면 안 됨
+	SIF (TALENT:ARG:56 > 0) + (TALENT:ARG:197 > 0) + (TALENT:ARG:55 > 0) + (TALENT:ARG:59 > 0) + (TALENT:ARG:831 > 0) + (TALENT:ARG:126 > 0) + (TALENT:ARG:195 > 0) < 1
+		RETURNF 0
+ENDIF
+
+RETURNF 1
+
+;-------------------------------------------------
+;턴 종료시의 허브 개발의 처리
+;-------------------------------------------------
+;ARG = 개발자의 등록 캐릭터 번호(원의 TFLAG:900)
+@DEVELOP_HARB_TURNEND, ARG
+VARSET LOCAL
+;조교 대상을 퇴피
+LOCAL:1 = TARGET
+;개발 담당자를 대상으로 한다
+TARGET = ARG
+;[금단의 지식]or[마술 기능]or[조제 지식]or[치료]or[야채의 연금 술사]or[교육자]or[공작 명인]의 합계를 기초치로 한다
+LOCAL =  (TALENT:56 > 0) + (TALENT:197 > 0) + (TALENT:55 > 0) + (TALENT:59 > 0) + (TALENT:831 > 0) + (TALENT:126 > 0) + (TALENT:195 > 0)
+;난수
+LOCAL:2 = 1 + RAND:3
+;진척도 상승치 결정
+LOCAL:3 = LOCAL * (LOCAL:2)
+;현재의 진척도에 가산한다
+FLAG:83 += LOCAL:3
+;100%를 넘으면(자) 보정함과 함께, 상승치도 보정한다.
+IF FLAG:83 > 100
+	LOCAL:4 = FLAG:83 - 100
+	FLAG:83 = 100
+	LOCAL:3 -= LOCAL:4
+ENDIF
+DRAWLINE
+PRINTFORML 허브 연구 시설에서 ,%조사처리(CALLNAME:TARGET,"는")% 묵묵히 %ITEMNAME:(609+FLAG:81)%의 개발을 계속하고 있다….
+PRINTFORML 현재의 개발도는 대략 {(FLAG:83 / 10)*10}퍼센트 정도라고 하는 보고가 있다.
+
+;연구 담당자의 각종 보석과 경험의 가산 처리
+CALL COMMON_UP_JUEL, TARGET, 11, (150 * LOCAL:3), 0
+CALL COMMON_UP_JUEL, TARGET, 32, ( 80 * LOCAL:3), 0
+CALL COMMON_UP_EXP, TARGET, 74, 1, 0
+
+;100%에 이르고 있으면(자) 개발 완료
+IF FLAG:83 >= 100
+	PRINTFORML 마침내 %ITEMNAME:(609+FLAG:81)%의 개발이 완료했습니다.
+	PRINTFORML 향후, 생산 담당자가 있으면 %ITEMNAME:(609+FLAG:81)%의 생산이 가능하게 됩니다.
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 개발을 끝내서 조교가 가능해졌다.
+	SETBIT FLAG:80, FLAG:81 - 1
+	CFLAG:4 = 0
+	FLAG:83 = 0
+	FLAG:81 = 0
+ENDIF
+DRAWLINE
+;퇴피되어 있던 조교 대상을 되돌린다
+TARGET = LOCAL:1
+
+;-------------------------------------------------
+;턴 종료시의 허브 생산의 처리
+;-------------------------------------------------
+;ARG = 생산자의 등록 캐릭터 번호(원의 TFLAG:900)
+@MAKE_HARB_TURNEND, ARG
+VARSET LOCAL
+
+;조교 대상을 퇴피
+LOCAL:1 = TARGET
+;개발 담당자를 대상으로 한다
+TARGET = ARG
+;[금단의 지식]or[마술 기능]or[조제 지식]or[치료]or[야채의 연금 술사]or[교육자]or[공작 명인]의 합계를 기초치로 한다
+LOCAL =  (TALENT:56 > 0) + (TALENT:197 > 0) + (TALENT:55 > 0) + (TALENT:59 > 0) + (TALENT:831 > 0) + (TALENT:126 > 0) + (TALENT:195 > 0)
+TIMES LOCAL, 10.0
+;난수
+LOCAL:2 = RAND:101
+;몇개(살) 할 수 있을까?
+LOCAL:3 = (LOCAL:2 < LOCAL) ?  2 # 1
+;현재의 진척도에 가산한다
+ITEM:(609+FLAG:82) += LOCAL:3
+;99(을)를 넘으면(자) 보정함과 함께, 상승치도 보정한다.
+IF ITEM:(609+FLAG:82) > 99
+	ITEM:(609+FLAG:82) = 99
+	LOCAL:3 -= 1
+ENDIF
+DRAWLINE
+PRINTFORML 허브 생산 시설에서 %조사처리(CALLNAME:TARGET,"는")% 묵묵히 %ITEMNAME:(609+FLAG:82)%의 생산을 계속하고 있다….
+;생산 담당자의 각종 보석의 가산 처리
+CALL COMMON_UP_JUEL, TARGET, 11, (70 * LOCAL:3), 0
+CALL COMMON_UP_JUEL, TARGET, 32, (25 * LOCAL:3), 0
+
+;99개에 이르고 있으면(자) 생산 완료
+IF ITEM:(609+FLAG:82) >= 99
+	PRINTFORML %ITEMNAME:(609+FLAG:82)%의 재고가 가득 찼기에 생산을 종료합니다.
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 조교가 가능합니다.
+	CFLAG:4 = 0
+	FLAG:82 = 0
+ENDIF
+DRAWLINE
+;퇴피되어 있던 조교 대상을 되돌린다
+TARGET = LOCAL:1
+
+;=============================================================================
+;향기를 피우는 처리(조교중)
+;=============================================================================
+@BURN_INCENSE
+DRAWLINE
+PRINTL 어느 향을 뿌리겠습니까?
+PRINTL 일단 피운 향은 조교하는 동안 변경하거나 지울 수 없습니다.
+PRINTL 덧붙여 향은 야외 플레이나 목욕탕 플레이 중 및 특수 목욕탕 플레이 때는 효과가 없습니다.
+PRINTL 그러나, 그러한 플레이를 해제하면 다시 효과를 발휘합니다.
+DRAWLINE
+REPEAT 6
+	SIF ITEM:(610+COUNT)
+		PRINTFORML [{COUNT}] %ITEMNAME:(610+COUNT)%
+REND
+PRINTL 
+PRINTL [100] 그만둔다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 5
+	GOTO INPUT_LOOP
+ELSEIF ITEM:(610+RESULT) <= 0
+	GOTO INPUT_LOOP
+ENDIF
+ITEM:(610+RESULT) -= 1
+TEQUIP:89 = RESULT + 1
+PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %조사처리(ITEMNAME:(610+RESULT),"를")% 피웠다.
+PRINTFORMW %ITEMNAME:(610+RESULT)%의 향기가 조교실 구석구석에까지 확대되었다….
+
+@KOJO_SELVE
+RETURN 0

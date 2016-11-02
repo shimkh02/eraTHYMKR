@@ -1,0 +1,103 @@
+﻿;=============================================================================
+;가슴 맞대기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE342
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:342 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;恋慕時のみ使用可
+SIF TALENT:150 == 0
+	RETURN 0
+;助手調教のときは助手も恋慕がないとダメ
+SIF ASSI >= 0 && ASSIPLAY && TALENT:ASSI:150 == 0
+	RETURN 0
+;欲情してると無理
+SIF PALAM:13 > PALAMLV:2
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;조수가 褌と裸Ｙシャツ以外のコスプレ中はだめ
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 > 2 && TEQUIP:ASSI:59 != 11 && TEQUIP:ASSI:59 != 17
+	RETURN 0
+;훈도시와 알몸 와이셔츠 외의 코스프레 중에는 안 됨
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 11 && TEQUIP:59 != 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;완전 취미 커맨드이므로 실용성 0
+@COM342
+PRINTL 가슴 맞대기
+TSTR:0 = 가슴 맞대기
+CALL TRAIN_MESSAGE_COM342
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 10
+
+SOURCE:17 = 50
+
+;조교자와 대상이 쌍방[음란]과[음유]소유로 욕정 추가
+SIF TALENT:PLAYER:170 && TALENT:PLAYER:174 && TALENT:170 && TALENT:174
+	SOURCE:18 = 30
+
+;[괴뢰]와[정신 붕괴]와[괴조인격]을 가지지 않고,[연모]소유라면 사랑의 소스와 애정 경험이 가산
+IF TALENT:150 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	SOURCE:11 = 10
+	TCVAR:21 += 1
+ENDIF
+
+;노예의 B⇔조교자의 손가락의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:5
+;노예의 손가락⇔조교자의 B의 불결이 이동
+STAIN:1 |= STAIN:PLAYER:5
+STAIN:PLAYER:5 |= STAIN:1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM342
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 서로의 가슴을 맞대었다.
+ELSEIF TALENT:PLAYER:170 && TALENT:PLAYER:174 && TALENT:170 && TALENT:174
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 서로의 가슴을 불쾌한 손놀림으로 비볐다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 서로의 가슴을 비볐다….
+ENDIF

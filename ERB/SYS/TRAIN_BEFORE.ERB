@@ -1,0 +1,600 @@
+﻿;=============================================================================
+;조교 개시시에 실행되는 특수한 처리
+;=============================================================================
+;-----------------------------------------------
+;각종 변수 리셋 처리
+;-----------------------------------------------
+@EVENTTRAIN
+#PRI
+;#ONLY
+;대사 표시의 개별 설정 플래그가 미설정일 경우, 사용하는 대사 선택시킨다
+;SIF CFLAG:9 <= 0
+	;CALL SELECT_TEXT_DISPLAY, TARGET
+
+;助手が酔い潰れている場合, ここで離脱する処理を追加
+IF ASSI >= 0 && BASE:ASSI:8 > MAXBASE:ASSI:8
+	PRINTFORML 술에 취해서인지 %CALLNAME:ASSI%의 얼굴이 시퍼렇다.
+	PRINTFORMW 당분간 %조사처리(CALLNAME:ASSI,"를")% 쉬게 하기로 했다…….
+	ASSI = -1
+ENDIF
+
+;主人の射精ゲージを0に
+BASE:MASTER:2 = 0
+;いちおう調教対象と助手も
+BASE:2 = 0
+SIF ASSI >= 0
+	BASE:ASSI:2 = 0
+;噴乳ゲージもリセット
+BASE:3 = 0
+;尿意ゲージもリセット
+BASE:4 = 0
+
+;睡眠プレイ開始
+SIF EQUIP:14
+	CALL SLEEP_CHECK
+
+;射精フラグ, 処女喪失フラグなどをリセット
+VARSET TFLAG, 0
+
+;経験フラグもリセット
+VARSET TCVAR:TARGET:0, 0, 0, 100
+VARSET TCVAR:MASTER:0, 0, 0, 100
+SIF ASSI >= 0
+	VARSET TCVAR:ASSI:0, 0, 0, 100
+	
+;調教者は誰か
+PLAYER = MASTER
+
+;PREVCOMリセット
+VARSET PREVCOM, -1, 0, 10
+
+;残り時間設定
+TFLAG:107 = 1
+;調教中の好感度上昇量に使用
+TFLAG:238 = 0
+;調教中の状態
+TFLAG:999 = 1
+
+;そのキャラを調教するのが初めてだった場合“調教した事があるフラグ”を立てる
+SIF CFLAG:1610 == 0
+	CFLAG:1610 = 1
+
+;調教された日数記録(ターンまでは無理)
+CFLAG:46 = DAY
+
+;最後に調教されたキャラを記録(IDで)
+FLAG:422 = CFLAG:3109
+;助手がおれば最後に助手をしたキャラを記録(IDで)
+SIF ASSI >= 0
+	FLAG:423 = CFLAG:ASSI:3109
+
+;전 회 커맨드 표시를 리셋
+TSTR:0 = 
+
+;펑션 측의 처리 호출
+CALL EVENTTRAIN_PANCTION
+
+;백택화 판정
+SIF TIME != 0
+	CALL CHANGE_HAKUTAKU
+
+;늑대인간 발모 판정
+SIF TIME != 0
+	CALL HATUMOU_OOKAMI
+
+IF FLAG:1100 & 1
+	;技師パッチ用開発チェック呼び出し
+	CALL DEVELOPED_CUSTOMTOOL
+	;装備の開発者フラグを初期化
+	CALL INIT_EQUIP_CUSTOMTOOL
+ENDIF
+
+;조교 개시 대사의 호출
+;CALL MESSAGE_TRAIN_START_MAIN
+
+;=============================================================================
+;조교 중에 실행되는 특수한 처리
+;=============================================================================
+;--------------------------------------------------
+;조교 중의 턴 개시시에 실행되는 처리
+;--------------------------------------------------
+;TFLAG:0～100 · UP · DOWN · SOURCEのリセット
+@EVENTCOM
+#PRI
+;ザーメンキス判定用に前ターンのTFLAG:30をTFLAG:145に
+TFLAG:145 = TFLAG:30
+;公開露出ライブ乱交フラグをリセット
+TFLAG:176 = 0
+;念のため組み合わせを示すTFLAGもリセット
+TFLAG:175 = 0
+;前回コマンドが素股, ダブル素股, サンドウィッチ以外
+SIF PREVCOM != 43 && PREVCOM != 305 && PREVCOM != 629
+	TFLAG:157 = 0
+;前ターンにおける情報をTFLAGに代入する処理を呼び出す
+CALL PRE_TFLAG_SET
+;以下フラグリセット
+VARSET TFLAG, 0, 0, 101
+VARSET UP, 0
+VARSET DOWN, 0
+VARSET SOURCE, 0
+VARSET TCVAR:TARGET:0, 0, 0, 100
+VARSET TCVAR:MASTER:0, 0, 0, 100
+SIF ASSI >= 0
+	VARSET TCVAR:ASSI:0, 0, 0, 100
+
+;--------------------------------------------------
+;전 조교 턴에서 정보의 일부를 TFLAG에 대입하는 처리
+;--------------------------------------------------
+;전용 대사에 따른 이용을 상정하고 있음.
+@PRE_TFLAG_SET
+;전 턴의 불결계 전사
+FOR COUNT, 0, 8
+	TFLAG:(910+COUNT) = STAIN:COUNT
+NEXT
+;전 턴에서 변동한 호감도 및 각종 경험의 TFLAG 전사
+TFLAG:903 = TFLAG:97
+TFLAG:904 = TFLAG:53
+TFLAG:905 = TFLAG:54
+TFLAG:906 = TFLAG:55
+TFLAG:907 = TFLAG:56
+TFLAG:908 = TFLAG:62
+TFLAG:909 = TFLAG:63
+;전 턴에 취득한 각인 관련의 TFLAG 전사
+FOR COUNT, 40, 47
+	TFLAG:(878+COUNT) = TFLAG:COUNT
+NEXT
+
+;--------------------------------------------------
+;조교 중의 턴 종료시에 실행되는 처리(우선도 높음)
+;--------------------------------------------------
+@EVENTCOMEND
+
+#PRI
+;陰核肥大関連
+SIF BASE:7 > 0 && BASE:7 < 250
+	CALL CHECK_CLITORIS_GROWTH
+
+BASE:0 = MAX(BASE:0, 0)
+;デバッグモードかつ自動レベルアップ機能オンの場合, 体力が500を切った時全快する
+IF TALENT:MASTER:998 && TALENT:998 && BASE:0 < 500
+	;元ネタ：言わずと知れたWIZ
+	;元ネタ：セ○クションきとうしのセリフより
+	PRINTFORMW \@(BASE:0 <= 0) ? 속삭임　－　좋아해　－　사랑해！ # 「P · O · W · E · R · －！！」\@
+	BASE:0 = MAXBASE:0
+	BASE:1 = MAXBASE:1
+ENDIF
+;불사각인 처리(봉래인과 주정보다 먼저 처리한다)
+SIF MARK:10 && BASE:0 <= 0
+	CALL TENTACLIC_REVIVAL
+IF BASE:0 <= 0
+	;[봉래인]용
+	IF TALENT:49
+		CALL IMMORTAL_REVIVAL, TARGET
+	;[주정]용
+	ELSEIF TALENT:48
+		CALL ZOMBIE_REVIVAL, TARGET
+	;YASAIリバイバルで救えるか！
+	ELSEIF TALENT:MASTER:831
+		CALL YASAI_REVIVAL
+	ENDIF
+	;手を尽くしたのですが…無念です.
+	SIF BASE:0 <= 0
+		JUMP EVENT_CHARA_DIE, TARGET
+ENDIF
+;助手がいる場合, 最初に死亡判定(助手を捕獲しているわけではないので不死刻印は効果を発揮しない)
+IF ASSI >= 0 && BASE:ASSI:0 <= 0
+	;[봉래인]용
+	IF TALENT:ASSI:49
+		CALL IMMORTAL_REVIVAL, ASSI
+	;[주정]용
+	ELSEIF TALENT:ASSI:48
+		CALL ZOMBIE_REVIVAL, ASSI
+	ENDIF
+	SIF BASE:ASSI:0 <= 0
+		JUMP EVENT_CHARA_DIE, ASSI
+ENDIF
+;난이도 LUNATIC 이상일 경우, 주인이 사망하면 게임 오버
+IF FLAG:3 >= 4 && BASE:MASTER:0 <= 0
+	;[봉래인]용
+	IF TALENT:MASTER:49
+		CALL IMMORTAL_REVIVAL, MASTER
+	;[주정]용
+	ELSEIF TALENT:MASTER:48
+		CALL ZOMBIE_REVIVAL, MASTER
+	ENDIF
+	SIF BASE:MASTER:0 <= 0
+		JUMP EVENT_CHARA_DIE, MASTER
+ELSEIF BASE:MASTER:0 <= 0
+	BASE:MASTER:0 = 1
+ENDIF
+;奴隷の体力が切れ掛かっているので調教終了する処理へ
+SIF BASE:0 < 500
+	CALL EVENT_LIFEOUT, TARGET
+;助手の体力が切れ掛かっていると調教終了する処理へ
+SIF ASSI >= 0 && BASE:ASSI:0 < 500
+	CALL EVENT_LIFEOUT, ASSI
+;主人の体力が切れ掛かっているので調教終了する処理へ
+SIF BASE:MASTER:0 < 500
+	CALL EVENT_LIFEOUT, MASTER
+;以下どのようかな形で実装するか検討中
+;奴隷の気力が切れているので調教終了する処理へ
+;SIF BASE:1 < 1
+;	CALL EVENT_VITALOUT, TARGET
+;助手の気力が切れていると調教終了する処理へ
+;SIF ASSI >= 0 && BASE:ASSI:1 < 1
+;	CALL EVENT_VITALOUT, ASSI
+;主人の気力が切れているので調教終了する処理へ
+;SIF BASE:MASTER:1 < 1
+;	CALL EVENT_VITALOUT, MASTER
+;奴隷の酔いをチェックする
+IF BASE:8 > MAXBASE:8 * 2
+	BASE:0 = 1
+	BASE:1 = 1
+	BASE:8 = MIN(BASE:8, MAXBASE:8 * 3)
+	;酔いが回って調教終了するときの口上
+	CALL SELF_KOJO, TARGET, 34
+	;지문 컷
+	SIF CFLAG:99 == 0
+		PRINTFORML 취기가 돈 것인지 %조사처리(CALLNAME:TARGET,"는")% 속이 안 좋은 듯한 기색이다…….
+	PRINTFORMW ( 몸 상태가 불량하여 %CALLNAME:TARGET%의 조교를 종료합니다 )
+	BEGIN AFTERTRAIN
+ENDIF
+
+;薀蓄語りによる時間切れ
+IF SELECTCOM == 445
+	PRINTL 
+	PRINTFORM \@(NO:TARGET == 69) ? %조사처리(CALLNAME:TARGET,"가")% # %조사처리(CALLNAME:PLAYER,"가")%\@ 
+	PRINTL 느긋하게 문답을 나눈 덕에, 조교시간이 종료되어 버렸다.
+	CALL EVENT_TIMEOUT
+;映姫様の説教による時間切れ
+ELSEIF SELECTCOM == 446
+	PRINTL 
+	PRINTFORM \@(NO:TARGET == 36) ? %CALLNAME:TARGET% # %CALLNAME:PLAYER%\@
+	PRINTL 의 고마우신 설교가 계속된 나머지, 남은 조교시간이 몽땅 끝나버렸다.
+	CALL EVENT_TIMEOUT
+;鉄の乙女に閉じ込められたことによる時間切れ
+ELSEIF SELECTCOM == 252
+	PRINTL 
+	PRINTFORML %조사처리(CALLNAME:TARGET,"가")% 아이언메이든에 갇혀버렸기 때문에, 조교시간이 종료되어 버렸다.
+	CALL EVENT_TIMEOUT
+
+;커맨드 실행 회수 일정수 넘음으로써 발생하는 시간 마감
+;토리코모드. 난이도에 따라 제한시간이 달라짐.
+ELSEIF FLAG:5000 & 16
+	CALL CHECK_TIMEOUT_TORIKOMODE
+;기존모드
+ELSEIF TFLAG:107 > 100
+	CALL EVENT_TIMEOUT
+ELSE
+ENDIF
+
+;--------------------------------------------------
+;조교 중의 체력 오링 범용 처리
+;--------------------------------------------------
+@EVENT_LIFEOUT, ARG
+PRINTFORMW ( %CALLNAME:ARG%의 체력이 한계에 달했습니다. 조교를 종료하겠습니다 )
+BEGIN AFTERTRAIN
+
+;--------------------------------------------------
+;조교 중의 기력 오링 범용 처리
+;--------------------------------------------------
+@EVENT_VITALOUT, ARG
+PRINTFORMW ( %CALLNAME:ARG%의 기력이 한계에 달했습니다. 조교를 종료하겠습니다 )
+BEGIN AFTERTRAIN
+
+;--------------------------------------------------
+;조교 중의 시간 마감 범용 처리
+;--------------------------------------------------
+@EVENT_TIMEOUT
+PRINTW ( 시간 제한이 되었습니다. 조교를 종료하겠습니다 )
+BEGIN AFTERTRAIN
+
+;--------------------------------------------------
+;조교 중의 턴 종료시에 실행되는 처리(우선도 보통)
+;--------------------------------------------------
+@EVENTCOMEND
+;[処女]（乙女でなくて)でＡ経験が0以上で快Ａのパラが0以上で貞操観念持ちで体力がある場合一度だけ「貞操を守れるなら～」イベント発生.
+IF TALENT:0 == 1 && EXP:1 > 0 && PALAM:2 > 0 && TALENT:30 && (CFLAG:20 & 1) == 0 && BASE:0 > 0
+	CFLAG:20 |= 1
+	PRINTFORMW (정조를 지킬 수 있다면, 조금쯤은 뒤를 공략당해도 좋다고 생각하는 것 같다……)
+	;貞操を守れるなら後ろを攻められてもよいと思ったときの口上
+	CALL SELF_KOJO, TARGET, 30
+ENDIF
+
+;狂気の目発動のチェック(被調教時)
+IF TFLAG:152 < 1 && TALENT:125
+	;相愛, 隷属, 精神崩壊, 傀儡, 괴조인격, 淫魔持ちの時は発動しない
+	IF TALENT:153 == 0 && TALENT:162 == 0 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0 && TALENT:180 == 0
+		;失神中 · 睡眠中 · 催眠中 · 目隠し中は発動できない(調教側の狂気の目は防衛側の狂気の目発動を阻害しない)
+		IF TFLAG:899 <= 0 && EQUIP:14 <= 0 && TEQUIP:92 <= 0 && TEQUIP:41 <= 0
+			LOCAL = RAND:50 + 1
+			LOCAL %= 12
+			IF LOCAL < 2 || LOCAL > 10
+				PRINTFORMW %CALLNAME:TARGET%의 ＜광기의 눈＞발동
+				TFLAG:152 = 1
+				;調教防衛用狂気の目発動時の口上
+				CALL SELF_KOJO, TARGET, 31
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;조교 종료시에 실행되는 처리(우선도 높음)
+;--------------------------------------------------
+@EVENTTURNEND
+#PRI
+;調教対象がいないなら帰る
+SIF TARGET < 0
+	RETURN 0
+;売却や助手化が可能になったか
+;ＣＶＡＢの各感覚Lvがいずれも3未満なら帰る
+SIF ABL:0 < 3 && ABL:1 < 3 && ABL:2 < 3 && ABL:3 < 3
+	RETURN 0
+;従順と欲望Lvを合計して6未満なら帰る
+SIF ABL:10 + ABL:11 < 6
+	RETURN 0
+;反抗的か気丈を持っているなら従順Lvが4未満でも帰る
+SIF ABL:10 < 4 && (TALENT:11 || TALENT:12)
+	RETURN 0
+;自制心か抑圧か抵抗を持っているなら欲望Lvが4未満でも帰る
+SIF ABL:11 < 4 && (TALENT:20 || TALENT:32 || TALENT:34)
+	RETURN 0
+;既に助手可能なら帰る
+SIF CFLAG:1 == 2
+	RETURN 0
+
+LOCAL = 0
+;売却可能になったかをチェック
+SIF (ABL:12 >= 3 && ABL:13 >= 3) || (ABL:14 >= 3 && ABL:30 >= 2) || ABL:21 >= 3 || (ABL:0 + ABL:1 + ABL:2 + ABL:3 >= 13) || ABL:10 >= 5 || ABL:11 >= 5
+	LOCAL |= 1
+;助手可能になったかをチェック
+SIF (ABL:0 >= 3 && ABL:10 >= 3 && ABL:11 >= 3 && ABL:12 >= 3 && ABL:(22 + TALENT:120) >= 3) || (ABL:10 >= 5 && ABL:11 >= 4)
+	LOCAL |= 2
+;売却可能か助手可能であると判定され, 今まで売却可能でなかった場合
+IF (LOCAL & 1 || LOCAL & 2) && CFLAG:1 < 1
+	;売却可能になったイベント口上呼び出し
+	CALL SELF_KOJO, TARGET, 122
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"가")% 매각 가능해졌습니다.
+	CFLAG:1 = 1
+;助手可能であると判定され, 今まで助手可能でなかった場合
+ELSEIF LOCAL & 2 && CFLAG:1 < 2
+	;助手可能になったイベント口上呼び出し
+	CALL SELF_KOJO, TARGET, 123
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"가")% 조수 가능해졌습니다.
+	CFLAG:1 = 2	
+ELSE
+	RETURN 0
+ENDIF
+
+;릴리 그레이 관련 처리(IRC 소재 주의)
+SIF ASSI >= 0 && TALENT:ASSI:835
+	CALL GRAY_TALENT, ASSI
+SIF TALENT:835
+	CALL GRAY_TALENT, TARGET
+RETURN 0
+
+;--------------------------------------------------
+;조교 종료시에 실행되는 처리(우선도 낮음)
+;--------------------------------------------------
+@EVENTTURNEND
+#LATER
+;助手が[妖狐]持ちで媚薬の在庫がなくアイテムなし設定でもなければ媚薬を入手できる
+IF ASSI >= 0 && TALENT:ASSI:211 && ITEM:61 == 0 && NOITEM == 0
+	PRINTW [요호]의 효과로 미약을 손에 넣었습니다.
+	ITEM:61 = 1
+	CFLAG:ASSI:20 |= 2048
+	;妖狐の効果で媚薬を入手できたときの口上
+	CALL SELF_KOJO, ASSI, 32
+ELSEIF ASSI >= 0 && TALENT:ASSI:227 && ITEM:61 == 0 && NOITEM == 0
+	PRINTW [둔갑너구리]의 효과로 미약을 손에 넣었습니다.
+	ITEM:61 = 1
+	CFLAG:ASSI:20 |= 2048
+	;둔갑너구리の効果で媚薬を入手できたときの口上
+	CALL SELF_KOJO, ASSI, 32
+ENDIF
+
+;--------------------------------------------------
+;調教者の特定素質所持による[母乳体質]付加処理
+;--------------------------------------------------
+@YOUJI
+;調教者が[幼稚], [幼児], [幼児退行]以外は弾かれる
+SIF TALENT:PLAYER:130 == 0 && TALENT:PLAYER:131 == 0 && TALENT:PLAYER:169 == 0
+	RETURN 0
+
+PRINTFORMW %조사처리(CALLNAME:PLAYER,"가")% 젖을 빨고 있다 보니 어느새 %조사처리(CALLNAME:TARGET,"는")% 모유가 나오게 되었다.
+TALENT:134 = 1
+CALL CALC_GAUGE3_SLAVE, TARGET, 1
+;母乳が出るようになったときの口上
+CALL SELF_KOJO, TARGET, 33
+
+;--------------------------------------------------
+;조수의 소질 부가 처리
+;--------------------------------------------------
+@ASSI_CHANGE
+;[不思議な根]である
+IF TALENT:ASSI:120 == 0 && TALENT:ASSI:121 == 0 && TALENT:ASSI:122 && (CFLAG:ASSI:42 & 1) == 0
+	;Ｃ感覚LV5, 精液中毒LV3以上
+	IF ABL:ASSI:0 == 5 && ABL:ASSI:31 >= 3 && (FLAG:14 & 128) == 0
+		DRAWLINE
+		CALL SELF_KOJO, ASSI, 101
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% [후타나리]가 되었다.
+		DRAWLINE
+		WAIT
+		TALENT:ASSI:121 = 1
+		TALENT:ASSI:122 = 0
+		TALENT:ASSI:124 |= 1
+	ENDIF
+ENDIF
+
+IF NO:ASSI == 401 && ISASSI:ASSI == 0
+	IF TALENT:MASTER:149 == 0
+		TALENT:MASTER:149 = 1
+		SIF FLAG:571 > 0
+			ABL:MASTER:98 = FLAG:571
+		FLAG:570 |= 16
+	ELSEIF ABL:MASTER:98 < FLAG:571
+		FLAG:572 = ABL:MASTER:98
+		ABL:MASTER:98 = FLAG:571
+		FLAG:570 |= 32
+	ENDIF
+ENDIF
+;助手がドリアードである時の処理（IRCネタ注意）
+IF NO:ASSI == 402 && FLAG:570 & 2
+	FLAG:570 |= 4
+	FLAG:570 &= 61
+ENDIF
+CFLAG:ASSI:3117 = (CFLAG:ASSI:3117 > 0) ? CFLAG:ASSI:3117 # DAY
+
+ISASSI:ASSI = 1
+RETURN 0
+
+;--------------------------------------------------
+;[봉래인]의 리저렉션 처리
+;--------------------------------------------------
+@IMMORTAL_REVIVAL, ARG
+PRINTW ＜리저렉션＞
+;봉래인 리저렉션 회수 플래그
+CFLAG:ARG:163 += 1
+;리저렉션 공통 처리
+CALL COMMON_REVIVAL, ARG
+
+;--------------------------------------------------
+;[주정]의 리저렉션 처리
+;--------------------------------------------------
+@ZOMBIE_REVIVAL, ARG
+PRINTW ＜그 자리 분위기 타서 부활!＞
+;주정 리저렉션 회수 플래그
+CFLAG:ARG:164 += 1
+;리저렉션 공통 처리
+CALL COMMON_REVIVAL, ARG
+;체력 · 기력의 최대치가 1000보다 클 경우에는 50 내려간다(1000 미만은 되지 않음)
+REPEAT 2
+	IF MAXBASE:ARG:COUNT > 1000
+		MAXBASE:ARG:COUNT = MAX(MAXBASE:ARG:COUNT - 50, 1000)
+		PRINTFORMW %CALLNAME:ARG%의 \@(COUNT == 0) ? 체력 # 기력\@ 최대치가 {MAXBASE:ARG:COUNT}으로 하향된다.
+	ENDIF
+REND
+;[연모] · [복종] · [괴조인격]이 없을 경우 반발각인 취득 이력이 1 내려간다(최저 0)
+SIF ARG != MASTER && MARK:ARG:97 > 0 && TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:169 == 0
+	MARK:ARG:97 -= 1
+
+BASE:ARG:1 = 0
+
+;--------------------------------------------------
+;리저렉션 공통 처리
+;--------------------------------------------------
+@COMMON_REVIVAL, ARG
+;이상경험
+IF TFLAG:999 != 1
+	CALL COMMON_UP_EXP, ARG, 50, 1, 1
+ELSE
+	TCVAR:ARG:50 += 1
+ENDIF
+;[연모] · [복종] · [괴조인격]이 없을 경우에는 순종 Lv이 1 내려간다(최저 Lv0)
+IF ARG != MASTER && ABL:ARG:10 > 0 && TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:169 == 0
+	ABL:ARG:10 -= 1
+	PRINTFORMW %CALLNAME:ARG%의 %ABLNAME:10%가 {ABL:10}로 떨어졌다.
+ENDIF
+;[기생]한 촉수는 사라진다
+IF TALENT:ARG:146
+	TALENT:ARG:146 = 0
+	BASE:ARG:6 = 0
+	MAXBASE:ARG:6 = 0
+	PRINTFORMW %CALLNAME:ARG%에게 기생하던 촉수는 소멸해버렸다.
+ENDIF
+EQUIP:2 = 0
+BASE:ARG:0 = 1
+
+;--------------------------------------------------
+;조교 중에 캐릭터가 사망했을 때의 처리
+;--------------------------------------------------
+@EVENT_CHARA_DIE, ARG
+;캐릭터 사망시의 이벤트 대사 호출
+IF ARG != MASTER
+	CALL SELF_KOJO, ARG, 98
+ENDIF
+;지문 컷
+IF CFLAG:ARG:99 == 0
+	PRINTW ………………
+	PRINTW …………
+	PRINTW ……
+	PRINTFORMW ★★★%조사처리(CALLNAME:ARG,"는")% 사라졌습니다★★★
+ENDIF
+PRINTW  
+PRINTW  
+PRINTW  
+DRAWLINE
+PRINTL ------------------------------------GAMEOVER-----------------------------------
+DRAWLINE
+WAIT
+JUMP EVENT_RETRY
+
+;--------------------------------------------------
+;조교 중에 게임 오버했을 때의 리트라이 처리
+;--------------------------------------------------
+@EVENT_RETRY
+LOCAL = RAND:9
+;모처럼 하는 거니 놀아봤습니다.
+IF LOCAL == 0
+	PRINTL 한 번 더 도전해볼래?
+	PRINTC [0] 예
+	PRINTC [1] 아니오
+	PRINTC [2] 단념한다
+ELSEIF LOCAL == 1
+	PRINTL 과거에서 다시 시작할래?
+	PRINTC [0] 그런 방법이 있었나
+	PRINTC [1] 수고하셨습니다
+	PRINTC [2] 그럴 수 없지 않아?
+ELSEIF LOCAL == 2
+	PRINTL 그 때로 돌아가고 싶어?
+	PRINTC [0] 네　　　
+	PRINTC [1] 그건 너무 자기편의
+	PRINTC [2] 질렸으니 잘래
+ELSEIF LOCAL == 3
+	PRINTL 피와 땀과…
+	PRINTC [0] 눈물을 돌려다오!
+	PRINTC [1] 눈물조차 없다
+	PRINTC [2] 눈물은 이미 말랐다
+ELSEIF LOCAL == 4
+	PRINTL 설마하니 오라오라오라오라입니까?!?
+	PRINTC [0] YES! YES! YES! YES! Y E S !
+	PRINTC [1] NO! NO! NO! NO! NO!
+	PRINTC [2] Exactly!
+ELSEIF LOCAL == 5
+	PRINTL 에로 경 「니토리 박사, 사정을 설명해 보실까」
+	PRINTC [0] 제게 조금만 더 시간과 예산을 주신다면…
+	PRINTC [1] 변명은 죄악이라는 걸 모르나!
+ELSEIF LOCAL == 6
+	PRINTL 지금 일은 없던 걸로 하고 싶어?
+	PRINTC [0] 도와줘요, 케이네 선생님!
+	PRINTC [1] caved!!!　　　　　　
+	PRINTC [2] 현실로 돌아오고 싶습니다
+ELSEIF LOCAL == 7
+	PRINTL 이런 일이 일어날 것 같은 조짐을 느꼈지. 하지만 행정관이 내 말을 듣지 않았어.
+	PRINTC [0] 1단계 방출기 작동 시작
+	PRINTC [1] 이건 미친 짓이야 난 여기서 나가겠어
+	PRINTC [2] 장비를 정지합니다.
+ELSE
+	PRINTL 앞으로는 조심해야 해요?
+	PRINTL [0] 로드한다
+	PRINTL [1] 타이틀로 돌아간다
+	PRINTL [2] 게임을 종료한다
+ENDIF
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	SIF LOCAL == 4
+		PRINTW YES！　YES！　YES！　"OH MY GOD"
+	SIF LOCAL == 7
+		PRINTW 1단계 방출기 작동 시작. 3, 2, 1. 2단계 방출기 작동 시작. 
+	CALL QUICKLOAD
+ELSEIF RESULT == 1
+	RESETDATA
+	BEGIN TITLE
+ELSEIF RESULT == 2
+	QUIT
+ELSE
+	GOTO INPUT_LOOP
+ENDIF

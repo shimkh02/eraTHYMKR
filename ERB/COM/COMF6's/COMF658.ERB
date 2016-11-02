@@ -1,0 +1,350 @@
+﻿;=============================================================================
+;구속∇
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE658
+RETURN 0
+
+@EXCOM_ABLE658
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;[처녀]のときは, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && TALENT:0
+	RETURN 0
+;조교자가 アリスでないとダメ
+SIF NO:PLAYER != 14
+	RETURN 0
+;조교자의 기교가 4無いとできない
+SIF ABL:PLAYER:12 < 4
+	RETURN 0
+;대상에게 페니스가 있다면 불가
+SIF EXIST_BAR(TARGET)
+	RETURN 0
+;人形愛撫残り使用可能回数オーバー
+SIF TFLAG:141 > 3
+	RETURN 0
+;바이브･애널바이브を両方持っているか, 아이템なし設定でないとダメ
+SIF (ITEM:3 == 0 || ITEM:9 == 0) && NOITEM == 0
+	RETURN 0
+;縄使用中でないとダメ
+SIF TEQUIP:40 == 0
+	RETURN 0
+;荊 · 거미줄で緊縛中のときはダメ
+SIF TEQUIP:40 >= 5 && TEQUIP:40 <= 7
+	RETURN 0
+;アイマスク装着中でないとダメ
+SIF TEQUIP:41 == 0
+	RETURN 0
+;ボールギャグ装着中でないとダメ
+SIF TEQUIP:42 == 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;별명 「고속요등」. 줄＋아이마스크＋볼 개그라고 하는 삼중 긴박 상태로
+;인형들이 바이브래이터와 어널 바이브래이터를 동시에 돌진해 피스톤 운동을 펼쳐 가는 커맨드
+;……(와)과 마음대로 정의
+@COM658
+IF FLAG:1100 & 1
+	;技師パッチ有効なら、バイブとアナルバイブの選択
+	TSTR:7 = 바이브
+	FLAG:1110 = 3
+	CALL NAMECHECK_CUSTOMTOOL
+	FLAG:1110 = 9
+	LOCALS:0 = %TSTR:7%
+	LOCALS:1 = %TSTR:9%
+	TSTR:7 = 애널바이브
+	CALL NAMECHECK_CUSTOMTOOL
+	IF TSTR:7 == "애널바이브" && LOCALS:0 == "바이브"
+		LOCALS:2 = 바이브
+	ELSE
+		LOCALS:2 = 조교기구
+	ENDIF
+	TSTR:7 = %LOCALS:1%
+	TSTR:8 = %STR:4%
+	TSTR:9 = 그것들
+	TSTR:10 = %LOCALS:2%
+ELSE
+	TSTR:7 = 바이브
+	TSTR:8 = 애널바이브
+	TSTR:9 = 바이브
+	TSTR:10 = 바이브
+ENDIF
+PRINTL 구속∇
+TSTR:0 = 구속∇
+CALL TRAIN_MESSAGE_COM658
+SELECTCOM = 658
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+DOWNBASE:0 += 90
+DOWNBASE:1 += 180
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 40
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 120
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 300
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 500
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 800
+ELSE
+	SOURCE:1 = 1500
+ENDIF
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 40
+	SOURCE:22 = 200
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 120
+	SOURCE:22 = 600
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 300
+	SOURCE:22 = 800
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 500
+	SOURCE:22 = 1200
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 800
+	SOURCE:22 = 1400
+ELSE
+	SOURCE:2 = 1400
+	SOURCE:22 = 1800
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 = 5500
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 300
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 50
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 = 10
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.40
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:1 , 1.60
+	SOURCE:20 = 0
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.50
+	SOURCE:20 += 2000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 300
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 1.10
+	SOURCE:20 += 50
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.20
+	SOURCE:20 += 10
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 0
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 += 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 1800
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 900
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 300
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 120
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:2 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.90
+	TIMES SOURCE:2 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.10
+	TIMES SOURCE:2 , 1.10
+ELSE
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:2 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:2 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.90
+	TIMES SOURCE:2 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.10
+	TIMES SOURCE:2 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:2 , 1.20
+ELSE
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:2 , 1.30
+ENDIF
+
+;작은 몸집 체형
+IF TALENT:128
+	TIMES SOURCE:20 , 2.00
+;소인 체형
+ELSEIF TALENT:127
+	TIMES SOURCE:20 , 3.50
+ENDIF
+;새드이나 왕S
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	TIMES SOURCE:1 , 2.50
+	TIMES SOURCE:2 , 2.50
+	TIMES SOURCE:20 , 1.50
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	;バイブの分
+	FLAG:1110 = 3
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:1 = FLAG:1120
+	;アナルバイブの分
+	FLAG:1110 = 9
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:2
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:2 = FLAG:1120
+ENDIF
+
+TFLAG:141 += 2
+TEQUIP:20 = 1
+TEQUIP:25 = 1
+TCVAR:0 += 2
+TCVAR:1 += 2
+IF TALENT:0 && (CFLAG:21 & 256) == 0
+	IF ASSIPLAY && TALENT:PLAYER:120 == 0
+		LOCAL = 2
+	ELSE
+		LOCAL = 1
+	ENDIF
+	TCVAR:50 += LOCAL
+	CFLAG:21 |= 256
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM658
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML 인형들은 각각 %조사선택(TSTR:7, "나")% %조사선택(TSTR:8, "를")% 들어 올리고,
+PRINTFORM 완전하게 구속되어 움직일 수 없는 %CALLNAME:TARGET%의 
+SIF PALAM:10 >= PALAMLV:4
+	PRINT 젖어 번들거리는 
+;조교자가 새드이나 왕S소유라면
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	PRINTFORML 성기와 항문에 사양 않고 %조사선택(TSTR:9, "를")% 꽂아 비벼댔다.
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 인형들에게 명령을 내려,
+	PRINTFORML %CALLNAME:TARGET%에게 꽂힌 %조사선택(TSTR:10, "를")% 가차 없이 앞뒤로 움직이게 했다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 이상한 자극에 견딜 수 없게 되어 왔는지, 때때로 경련하면서 몸을 흔들고 있다
+	;대상이 음란＋(음 단지 or음고or마조 or왕Mor즉빠짐) or음마
+	IF TALENT:180 || (TALENT:170 && (TALENT:172 || TALENT:173 || TALENT:82 || TALENT:178 || TALENT:179))
+		PRINTL .
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 인형들에게 괴롭혀지면서, 그 격렬한 자극에
+		PRINT 깊은 쾌감을 느껴 추잡하게 허덕이며 몇 번이나 몇 번이나 비명 지르고 있다
+	ENDIF
+ELSE
+	;대상이 음란＋(음 단지 or음고or마조 or왕Mor즉빠짐) or음마
+	IF TALENT:180 || (TALENT:170 && (TALENT:172 || TALENT:173 || TALENT:82 || TALENT:178 || TALENT:179))
+		PRINTFORML 성기와 항문에 사양 않고 %조사선택(TSTR:9, "를")% 꽂아 비벼댔다.
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 인형들에게 괴롭혀지면서, 그 격렬한 자극에
+		PRINT 깊은 쾌감을 느껴 추잡하게 허덕이며 몇 번이나 몇 번이나 비명 지르고 있다
+	ELSE
+		PRINTFORM 성기와 항문에 사양 않고 %조사선택(TSTR:9, "를")% 꽂아 비벼댔다
+	ENDIF
+ENDIF
+PRINTW ….

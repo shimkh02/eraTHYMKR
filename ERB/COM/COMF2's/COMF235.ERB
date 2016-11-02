@@ -1,0 +1,247 @@
+﻿;=============================================================================
+;애널 다이빙
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE235
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:235 > 0
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조교자가 소인체형であることが前提
+SIF TALENT:PLAYER:127 == 0
+	RETURN 0
+;조교 대상이 소인체형일 경우에는 ダメ
+SIF TALENT:127
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;主人調教の場合, 순종이 3미만かつ屈服刻印が1미만이면 불가
+SIF PLAYER == MASTER && ABL:10 < 3 && MARK:3 < 1
+	RETURN 0
+;ASSI일 경우, 순종4이상または새드かつ조교 대상も순종4이상じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && (TALENT:ASSI:81 == 0 && ABL:10 < 4)
+	RETURN 0
+ENDIF
+;작은 체형なら순종이 4이상かつ마조끼が4이상じゃないと実行できない
+IF TALENT:128
+	SIF ABL:10 < 4 || ABL:21 < 4
+		RETURN 0
+ENDIF
+;조교 대상の체력이 1500미만または기력이 500미만이면 불가
+SIF BASE:0 < 1500 || BASE:1 < 500
+	RETURN 0
+;조교자의 체력이 500미만または기력이 250미만이면 불가
+SIF BASE:PLAYER:0 < 500 || BASE:PLAYER:1 < 500
+	RETURN 0
+;妊娠中のときはダイビング系は連続で使えない
+SIF TALENT:140 && (PREVCOM == 234 || PREVCOM == 235)
+	RETURN 0
+;일정의 Ａ경험とＡ확장경험이 필요([巨躯]の場合は軽減)
+IF TALENT:129
+	LOCAL = 75
+	LOCAL:1 = 10
+ELSE
+	LOCAL = 150
+	LOCAL:1 = 20
+ENDIF
+SIF EXP:1 < LOCAL || EXP:33 < LOCAL:1
+	RETURN 0
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;潤滑不足の場合は不可能
+SIF PALAM:10 < PALAMLV:5
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;쿠스코 채웠으면 불가
+SIF TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;애널 피스트를 기본으로 작성
+@COM235
+IF NO:PLAYER == 10
+	TSTR:0 = 애널 크레이들
+ELSEIF PREVCOM == 235
+	TSTR:0 = 동굴탐험·뒤
+ELSE
+	TSTR:0 = 애널 다이빙
+ENDIF
+IF NO:PLAYER == 23
+	TSTR:0 = 스이카의 %TSTR:0%
+ELSEIF NO:PLAYER == 88
+	TSTR:0 = 샹하이의 %TSTR:0%
+ELSEIF NO:PLAYER == 89
+	TSTR:0 = 호라이의 %TSTR:0%
+ENDIF
+PRINTFORML %TSTR:0%
+CALL TRAIN_MESSAGE_COM235
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+IF PREVCOM == 235
+	DOWNBASE:0 += 800
+	DOWNBASE:1 += 400
+ELSE
+	DOWNBASE:0 += 600
+	DOWNBASE:1 += 300
+ENDIF
+
+SOURCE:12 = 1000
+SOURCE:17 = 1200
+SOURCE:20 = 3500
+SOURCE:22 = 1200
+SOURCE:31 = 14000
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 200
+	SOURCE:22 += 100
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 700
+	SOURCE:22 += 500
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 1300
+	SOURCE:22 += 700
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 1900
+	SOURCE:22 += 1500
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 2200
+	SOURCE:22 += 2300
+ELSE
+	SOURCE:2 = 2800
+	SOURCE:22 += 3200
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 500
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 += 100
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;연속으로 사용했을 경우
+IF PREVCOM == 235
+	DOWNBASE:0 += 200
+	DOWNBASE:1 += 100
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:20 , 2.00
+	TIMES SOURCE:22 , 2.00
+	TIMES SOURCE:31 , 3.00
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+TCVAR:1 += 25
+TCVAR:33 += 3
+
+SIF PREVCOM == 235 && TFLAG:135 == NO:PLAYER
+	BASE:1 /= 2
+
+TFLAG:135 = NO:PLAYER
+BASE:PLAYER:0 -= 500
+BASE:PLAYER:1 -= 300
+
+;노예의 A⇔조교자의 몸의 불결이 이동
+STAIN:PLAYER:0 |= STAIN:4
+STAIN:PLAYER:1 |= STAIN:4
+STAIN:PLAYER:5 |= STAIN:4
+STAIN:4 |= STAIN:PLAYER:0
+STAIN:4 |= STAIN:PLAYER:1
+STAIN:4 |= STAIN:PLAYER:5
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM235
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF PREVCOM == 235 && TFLAG:135 == NO:PLAYER
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 다시 %CALLNAME:TARGET%의 항문을 한계까지 넓히고,
+	PRINTL 전회보다 한층 더 안쪽으로 침입을 시도했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 장벽을 어루만지는 무서운 감촉에 결국 기절해 버렸다.
+	PRINTW 　　　　　　　　·
+	PRINTW 　　　　　　　　·
+	PRINTW 　　　　　　　　·
+	PRINTFORML 이윽고 더 이상은 무리라고 판단했는지, %조사선택(CALLNAME:PLAYER, "는")% 몸을 %CALLNAME:TARGET%의 항문에서 뽑아 냈다.
+	PRINTFORMW 이미 기력이 다했는지, %조사선택(CALLNAME:TARGET, "는")% 축 늘어진 채로다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 항문을 크게 넓히고, 머리를 안에 집어넣기 시작했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 직장을 거슬러 올라오는 거대한 이물감에 비명을 올렸다….
+	PRINTW 　　　　　　　　·
+	PRINTW 　　　　　　　　·
+	PRINTW 　　　　　　　　·
+	PRINTFORML 이윽고 더 이상은 무리라고 판단했는지, %조사선택(CALLNAME:PLAYER, "는")% 몸을 %CALLNAME:TARGET%의 항문에서 뽑아 냈다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈에 눈물을 머금고 가쁜 숨을 몰아 쉬고 있다….
+ENDIF

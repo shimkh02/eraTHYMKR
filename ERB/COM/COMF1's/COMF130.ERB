@@ -1,0 +1,238 @@
+﻿;=============================================================================
+;음핵 클립
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE130
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:130 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:36 == 0 && NOITEM == 0
+	RETURN 0
+;남자 또는 후타나리면 불가
+SIF EXIST_PENIS(TARGET)
+	RETURN 0
+;그밖의 Ｃ계 장착구 사용 중에는 불가
+SIF (TEQUIP:30 && TEQUIP:30 != 5) || TEQUIP:31
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM130
+TSTR:7 = 빨래집게
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 36
+	CALL NAMECHECK_CUSTOMTOOL
+	IF TSTR:8 != "빨래집게"
+		PRINTFORML 음핵 %TSTR:8%
+	ELSE
+		PRINTL 음핵 클립
+	ENDIF 
+ELSE
+	TSTR:9 = %TSTR:7%
+	PRINTL 음핵 클립
+ENDIF
+TSTR:0 = 음핵 클립
+CALL TRAIN_MESSAGE_COM130
+
+DOWNBASE:0 += 30
+DOWNBASE:1 += 30
+
+IF TEQUIP:30 == 5
+	TEQUIP:30 = 0
+	RETURN 1
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:20 = 300
+ELSEIF ABL:0 == 1
+	SOURCE:20 = 400
+ELSEIF ABL:0 == 2
+	SOURCE:20 = 500
+ELSEIF ABL:0 == 3
+	SOURCE:20 = 600
+ELSEIF ABL:0 == 4
+	SOURCE:20 = 800
+ELSE
+	SOURCE:20 = 1000
+ENDIF
+SOURCE:31 = 1000
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+
+TEQUIP:30 = 5
+RETURN 1
+
+;-------------------------------------------------
+;빨래집게(클리토리스)
+;-------------------------------------------------
+@EQUIP_COM130
+TSTR:7 = 빨래집게
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 36
+	CALL NAMECHECK_CUSTOMTOOL
+ENDIF
+PRINTFORML ＜%TSTR:7%(클리토리스)＞
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 50
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL = 600
+ELSEIF ABL:0 == 1
+	LOCAL = 800
+ELSEIF ABL:0 == 2
+	LOCAL = 1000
+ELSEIF ABL:0 == 3
+	LOCAL = 1200
+ELSEIF ABL:0 == 4
+	LOCAL = 1400
+ELSE
+	LOCAL = 2000
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL:1 = 0
+ELSEIF ABL:21 == 1
+	LOCAL:1 = 120
+ELSEIF ABL:21 == 2
+	LOCAL:1 = 240
+ELSEIF ABL:21 == 3
+	LOCAL:1 = 480
+ELSEIF ABL:21 == 4
+	LOCAL:1 = 960
+ELSE
+	LOCAL:1 = 1920
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.70
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 1.40
+ENDIF
+
+;도착적
+IF TALENT:80
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 1.50
+ENDIF
+;마조
+SIF TALENT:82
+	TIMES LOCAL:1 , 1.20
+;C민감
+IF TALENT:100
+	TIMES LOCAL , 2.00
+;C둔감
+ELSEIF TALENT:101
+	TIMES LOCAL , 0.75
+ENDIF
+;왕M
+SIF TALENT:178
+	TIMES LOCAL:1 , 1.50
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 36
+	FLAG:1111 = 3
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+	FLAG:1111 = 1
+	FLAG:1112 = LOCAL:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+ENDIF
+
+SOURCE:0 += (LOCAL+LOCAL:1)/10
+SOURCE:18 += LOCAL:1
+SOURCE:20 += LOCAL
+SOURCE:22 += (LOCAL+LOCAL:1)/2
+SOURCE:31 += LOCAL+LOCAL:1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM130
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:30 == 5
+	IF MARK:9 > 1
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 미처 손을 쓰기도 전에, %조사선택(CALLNAME:TARGET, "는")% 클리토리스로부터 %조사선택(TSTR:7, "를")% 벗어 던져버렸다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 클리토리스로부터 %조사선택(TSTR:7, "를")% 벗겼다….
+	ENDIF
+ELSE
+	IF MARK:9 > 1
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 싫어서 버둥대는 %조사선택(CALLNAME:TARGET, "를")% 억눌렀다.
+		PRINTFORMW 그리고, %CALLNAME:TARGET%의\@(TALENT:100) ? 민감한 # \@클리토리스를 %조사선택(TSTR:9, "로")% 강하게 집었다.
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의\@(TALENT:100) ? 민감한 # \@ 클리토리스를 %조사선택(TSTR:9, "로")% 집었다….
+	ENDIF
+ENDIF

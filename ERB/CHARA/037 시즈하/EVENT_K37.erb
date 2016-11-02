@@ -1,0 +1,3461 @@
+﻿;-------------------------------------------------
+;내 반려인 시즈하 씨 대사
+;埋めるだけで精一杯……
+;ところどころにあるおふざけ要素をONにしたい場合は, 「おふざけ」でこのERB内を検索
+;しかる後に【自己責任で】『;』を排除していってください. 
+;-------------------------------------------------
+
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+;대사의 존재 판정(YM판)
+@TRY_37
+RETURN 1
+
+@EVENTTRAIN
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+@EVENTEND
+#LATER
+
+;--------------------------------------------------
+;エキストラモード構文　CFLAG:5209を使用
+;はいを選択した時に初調教時に口上設定用の素質に変更できます
+;下記に処女化する場合の構文をサンプルとして載せておきます
+;-------------------------------------------------
+@SET_CHARA_KOJO_EXTRA_K37
+IF CFLAG:5209 == 0
+	PRINTL 처녀 모드로 이행하겠습니까? 
+	PRINTL [0] 예
+	PRINTL [1] 아니오
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―처녀 모드로 소질, 능력을 변경합니다―
+		;素質：処女を得る, 能力：V感覚を0にする, 経験：V経験を0にする
+		TALENT:0 = 1
+		ABL:1 = 0
+		EXP:0 = 0
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드에서 조교를 시작합니다―
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+	CFLAG:5209 = 1
+ENDIF
+
+;--------------------------------------------------
+;EVENTTRAIN関係（X1をキャラ番号に置換）
+;調教開始時のセリフ CFLAG 201～210を使用
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 37
+	RETURN 0
+;2주차 이후, 조교 개시시에 엑스트라 모드의 설정을 시행하지 않으면 설정 이벤트를 CALL
+SIF CFLAG:5209 == 0
+	CALL SET_CHARA_KOJO_EXTRA_K37
+
+;-------------------------------------------------
+;初調教時 CFLAG201
+;-------------------------------------------------
+IF CFLAG:5201 == 0
+	DRAWLINE
+	PRINTFORMW 「우우……여기는……?」 
+	PRINTFORML 시즈하는 자신이 어디에 있는지 이해하지 못하고 있는 것 같다.  
+	PRINTFORMW 무방비로 방치된 그녀의 모습을 보고있자,  
+	PRINTFORML 극상의 요리를 눈앞에 둔 것과 같이 군침이 흘러넘쳐 온다.  
+	PRINTFORMW ――빨리, 먹어, 치우자―― 
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 시즈하를 덮쳤다.  
+	CFLAG:5201 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;調教開始時（一回のみ） CFLAG201
+;-------------------------------------------------
+
+;屈服刻印Lv1
+ELSEIF CFLAG:5201 < 2 && MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 「풀어주는…… 일은 없겠지요……」
+	CFLAG:5201 = 2
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF CFLAG:5201 < 3 && MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「또……하는 군요?」 
+	PRINTFORML 시즈하는 단념한 것처럼 중얼거렸다.  
+	PRINTFORML 그 눈에는 이미 시든것 같은 눈물이 떠올라 있었다.  
+	CFLAG:5201 = 3
+	RETURN 1
+
+;屈服刻印Lv3
+ELSEIF CFLAG:5201 < 4 && MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「나……이제……」 
+	PRINTFORML 시즈하의 눈동자에서 굵은 눈물이 흘러넘쳤다.  
+	PRINTFORMW 우는 얼굴, 그렇게 불러도 지장이 없을 것이다 
+	PRINTFORML 보고있는 사이에, %조사처리(CALLNAME:MASTER,"는")% 죄책감과 함께 가학적인 마음이 끓어오르는 것을 느꼈다.  
+	CFLAG:5201 = 4
+	RETURN 1
+
+;屈服刻印Lv3+恋慕
+ELSEIF CFLAG:5201 < 5 && MARK:2 == 3 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORML 문을 열자, 시즈하는 %CALLNAME:MASTER%의 가슴으로 뛰어들어왔다.  
+	PRINTFORMW 「주인님……아니, 당신……」
+	PRINTFORMW 「나, 깨달았어. 당신과 함께 있는것이 나의 행복이라는걸」
+	PRINTFORMW 「그러니까……그러니까……나를, 당신의 곁에 쭉 두어주세요!」
+	PRINTL [0] 그래
+	PRINTL [1] 절대로 NO
+	$INPUT_LOOP
+	INPUT
+	SIF RESULT != 0 && RESULT != 1
+		GOTO INPUT_LOOP
+	DRAWLINE
+	IF RESULT == 0
+;		GOTO BECOME_LOVER
+	PRINTFORMW 「……정말……인가요?」
+	PRINTFORML 눈에 눈물을 머금으면서 기쁜 표정을 띄우는 시즈하. 
+	PRINTFORML 이 선택은 주인과 노예의 관계라면 잘못된 것일지도 모른다. 
+	PRINTFORMW 하지만, %조사처리(CALLNAME:MASTER,"과")% 시즈하의 관계라면――괜찮을지도. 
+	CFLAG:5201 = 5
+	RETURN 1
+
+	ELSEIF RESULT == 1
+	PRINTFORML 파삭, 하는 마른 소리가 울린다. 
+	PRINTFORMW 시즈하의 뺨에 핀 단풍은, 말하지 않아도 안다――부정. 
+	PRINTFORMW 「죄송했습니다……주인님……!? 히익!? 무, 무엇을!!?」
+	PRINTFORMW 「안 돼, 안 돼요!! 아펏!! 아퍼요!! 주인님!! 죄송해요!! 이젠 말하지 않을께요!! 싫어, 싫어어!!!」
+	PRINTFORML 『노예』의 제멋대로인 발언에 화를 낸 %조사처리(CALLNAME:MASTER,"는")%, 시즈하를 마루에 밀어 넘어뜨리고
+	PRINTFORML 그대로 그녀를 범하기 시작했다. 
+;書いてて心が張り裂けるかと思った. 
+	
+	CFLAG:5201 = 7
+	RETURN 1
+	ENDIF
+;恋人ルート
+ELSEIF CFLAG:5201 == 5
+	DRAWLINE
+	PRINTFORMW 「……%CALLNAME:MASTER%♪」 
+	PRINTFORML 기쁜 듯한 소리와 함께 시즈하가 %CALLNAME:MASTER%의 가슴으로 뛰어들어왔다. 
+	PRINTFORMW 「사랑하고 있어요, %CALLNAME:MASTER%♪」
+	PRINTFORMW 그렇게 말하면서, 시즈하와 %조사처리(CALLNAME:MASTER,"는")% 뜨거운 키스를 주고 받았다. 
+	CFLAG:5201 = 6
+	RETURN 1
+
+;奴隷ルート
+ELSEIF CFLAG:5201 == 7
+	DRAWLINE
+	PRINTFORMW 「……죄송했습니다, 주인님」
+	PRINTFORML 시즈하는 %CALLNAME:MASTER%의 얼굴을 보자, 약간 무서워하는 것 처럼 인사를 했다. 
+	PRINTFORML 아무래도 자신의 신분은 파악하고 있는것 같다. 
+	PRINTFORML 그 모습에 만족한 %조사처리(CALLNAME:MASTER,"는")%
+	PRINTFORML 침대에 앉아, 시즈하를 불러내어, 조속히 봉사를 시켰다. 
+	CFLAG:5201 = 8
+	RETURN 1
+
+;助手の有無をチェック（いない場合は二回目以降へ飛ぶ）
+ELSEIF ASSI < 0 
+	CALL K37_KOJO2
+
+;↑幽香口上を参考にしてます, 
+;-------------------------------------------------
+;助手との掛け合い(YYを助手のキャラ番号に置換, X1をキャラ番号に変更する) CFLAG202
+;掛け合いをするキャラを増やす場合は, コピー＆ペーストをして, CFLAGの数を203, 204と増やす
+;-------------------------------------------------
+;助手
+ELSEIF ASSINO() == 38
+	DRAWLINE
+	;初めて
+	IF CFLAG:5202 == 0
+		;恋慕＋恋慕時初口上（陥落イベント）が発生済み
+		IF TALENT:150 == 1 && CFLAG:5201 == 5
+			PRINTFORMW 「어라, 미노리코?」 
+			PRINTFORML 시즈하는 여동생의 모습을 확인하면서 고개를 갸우뚱 거린다.  
+			PRINTFORML 도대체, 무엇 때문에 이런 곳에, 라는 것일 터다.  
+			PRINTFORMW 『언니뿐이라니 치사해!! 나도 들어갈거야!!』 
+			PRINTFORMW 「안 돼, 미노리코. 이 사람은 나의 것이니까. 응, %CALLNAME:MASTER%?」 
+			PRINTFORMW 『유감인걸! 주인님의 허가는 받고 있습니다만～』 
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"는")% 정말…… 벌써……!!」 
+			PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 시즈하가 꾸짖는 것 같은 시선에 고개를 돌렸다.  
+		;それ以外
+		ELSE
+			PRINTFORML 문이 열리며 <<조수>>가 %조사처리(CALLNAME:MASTER,"과")% 함께 들어왔다 
+			PRINTFORMW 「……그런!!」
+			PRINTFORML 시즈하는 %CALLNAME:MASTER%의 뒤에 따라 들어온 인물을 보며, 경악하고 있었다.  
+			PRINTFORML 그럴수밖에 없는 것이, %조사처리(CALLNAME:MASTER,"과")% 함께 방에 들어온 것은 사랑스러운 여동생
+			PRINTFORMW 「미노리코!! 거짓말이지!? 대답해!! 뭐라도 말해!!」 
+			PRINTFORML ――아키 미노리코, 그 사람이었으니까.  
+			PRINTFORMW 『어라, 언니…… 함께 즐기자?』 
+			PRINTFORMW 「미노리코…… 그런…… 거짓말……」
+			PRINTFORML 이 세상의 끝을 본 것 같은 시즈하의 표정에, %CALLNAME:MASTER%의 요괴의 산은 격분했다. 
+		ENDIF
+			CFLAG:5202 = 1
+			RETURN 1
+	;二回目以降
+	ELSEIF CFLAG:5202 == 1 && FLAG:11 ==2
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「어라, 오늘도 미노리코와 함께?」 
+			PRINTFORMW 『그런 말투라면 나는 쓸모없는 아이인가 보네!!』 
+			PRINTFORMW 「농담이야, 자, 함께 즐기자는거네, 응? %CALLNAME:MASTER%♪」
+			PRINTFORMW 『아, 언니 치사해!!』 
+			PRINTFORML 시즈하와 미노리코의 자매 싸움(?)에 쓴 웃음을 지면서, 
+			PRINTFORML 침실로 %조사처리(CALLNAME:MASTER,"는")% 향했다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「미노리코, 부탁해!! 제정신으로 돌아와!!」 
+			PRINTFORMW 『무슨 말이야? 언니. 나는 멀쩡하다구?』 
+			PRINTFORMW 시즈하의 비통한 절규도, 미노리코에게는 닿지 않는다.  
+			PRINTFORMW 그러한 「자매사랑」에 %조사처리(CALLNAME:MASTER,"는")%, 입꼬리를 올렸다.  
+		ENDIF
+			RETURN 1
+	ENDIF
+
+;麗しき姉妹愛-HARD-
+;言ってみただけ
+;ELSEIF ASSINO() == YY
+;	DRAWLINE
+	;初めて
+;	IF CFLAG:5203 == 0
+		;恋慕＋恋慕時初口上（陥落イベント）が発生済み
+;		IF TALENT:150 == 1 && CFLAG:5201 == 5
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5203 = 1
+;			RETURN 1
+	;二回目以降
+;	ELSEIF CFLAG:5203 == 1 && FLAG:11 ==2
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+;口上のある助手が居ない場合は, 通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K37_KOJO2
+ENDIF
+
+
+;-------------------------------------------------
+;調教開始時（2回目以降, X1をキャラ番号に変更する） CFLAGなし 
+;-------------------------------------------------
+
+@K37_KOJO2
+;反発刻印Lv3
+IF MARK:9 == 3 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「오지 마! 오지 말라고!!」 
+	PRINTFORMW 시즈하는 닥치는 대로 방안의 물건을 내던져왔다.  
+	RETURN 1
+
+;屈服刻印Lv0
+ELSEIF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「부탁해요……여기서, 내보내주지 않을래요?」
+	PRINTFORMW 시즈하의 부탁을, %조사처리(CALLNAME:MASTER,"는")% 거절했다.  
+	PRINTFORMW 대답을 듣자, 시즈하는 눈동자에 다이아와 같은 눈물을 머금었다.  
+	RETURN 1
+
+;屈服刻印Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「시, 싫어……오지말아 주세요!!」
+	PRINTFORMW 시즈하는 자그마한 저항을 해보았지만, %조사처리(CALLNAME:MASTER,"는")% 시즈하를 밀어 넘어뜨려, 입안에 혀를 밀어넣었다. 
+	PRINTFORMW 그녀의 눈에는 굵은 눈물이 떠올라 있었다
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「또……하는 군요……?」
+	PRINTFORMW 시즈하는 포기한 것처럼 중얼거렸다. 
+	RETURN 1
+
+;屈服刻印Lv3＋恋慕無し
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「주인님, 오늘은, 무엇을 하나요……?」
+	PRINTFORMW 시즈하는 무서워하면서도, 반쯤은 체념한 듯한 표정으로 %CALLNAME:MASTER%에게 다가왔다. 
+	RETURN 1
+
+;屈服刻印Lv3+恋慕
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	;ランダムで口上が変化する（使わない場合はすべて同じにすればよい）
+	IF RAND:3 == 0
+		PRINTFORMW 「오늘도 좋으니……가득, 귀여워해주세요, %CALLNAME:MASTER%♪」
+		PRINTFORMW 시즈하의 얼굴에 깃든 미소에, %CALLNAME:MASTER%도 같이 웃기 시작했다. 
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「이제 와서 말하는 것도 아니지만……」
+		PRINTFORMW 「……%CALLNAME:MASTER%, 사랑하고 있어요♪」
+		PRINTFORMW 자신도다, 라고 말하면서, %조사처리(CALLNAME:MASTER,"는")% 시즈하에게 뜨거운 입맞춤을 선물했다. 
+	ELSE
+		PRINTFORMW 「%CALLNAME:MASTER%……어떠나요?」
+		PRINTFORML 평상시의 슬픔을 띤 웃는 얼굴의 본심을 가진, 음란한 미소라고 말하며 무심코 목을 숙이자, 
+		PRINTFORML 라고 말한 %CALLNAME:MASTER%의 페니스를 시즈하는 조용히 훑어내기 시작했다. 
+		PRINTFORML 이미 커져버린 그로테스크한 페니스에 매달리는 미녀. 
+		PRINTFORMW 그 광경과, 시즈하의 손 놀림에 견디지 못하고 %CALLNAME:MASTER%의 마스터 스파크가 폭발했다. 
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND関係（X1をキャラ番号に置換）
+;調教終了時のセリフ CFLAG 211～220を使用
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 37
+	RETURN 0
+
+;反発刻印Lv3
+IF MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「……읏!!」
+	PRINTFORMW 시즈하는 눈물을 닦으면서, 다부지게 이쪽을 째려봤다. 
+	RETURN 1
+
+;屈服刻印Lv1未満
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「고, 고맙……습니……다아……앗!!」
+	PRINTFORMW 시즈하는 이를 악물고 참고 있었다. 
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「흑……흑……흐윽……」
+	PRINTFORMW 시즈하는 눈물을 닦으면서 옷을 몸에 대고 있다. 
+	PRINTFORMW 그 후 모습을 보고 있자, %조사처리(CALLNAME:MASTER,"는")% 뭔가 알 수 없는 감각에 습격당해왔다. 
+	RETURN 1
+
+;屈服刻印Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「끝나다니, 뭐죠?」
+	PRINTFORMW 시즈하는 무서워하면서 물어왔다. 
+	RETURN 1
+
+;屈服刻印Lv3＋恋慕＋体力500未満
+;ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 < 500
+;	DRAWLINE
+;	PRINTFORMW 
+;	RETURN 1
+
+;屈服刻印Lv3＋恋慕
+ELSEIF MARK:2 == 3 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「%CALLNAME:MASTER%♪」
+	PRINTFORML 가련한 목소리와 함께, 시즈하는 %CALLNAME:MASTER%에게 안겨왔다. 
+	PRINTFORMW 「사랑해요……. %CALLNAME:MASTER%♪」
+	PRINTFORML 이제 몇 번째인지도 알 수 없는 시즈하의 사랑의 말에, %조사처리(CALLNAME:MASTER,"는")% 키스로 대답했다. 
+
+	RETURN 1
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM関係（X1をキャラ番号に置換）
+;コマンド実行時に出力されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_37
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボールギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 && (SELECTCOM != 226 && SELECTCOM != 229 && SELECTCOM != 506 && SELECTCOM != 509 && SELECTCOM != 560 && SELECTCOM != 588)
+	RETURN 0 
+;-------------------------------------------------
+;コマンド実行時のセリフ CFLAG 221～270を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;愛撫 CFLAG221
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;初めて
+	IF CFLAG:5221 == 0
+		;屈服刻印Lv2以上
+		IF MARK:2 >= 2
+			PRINTFORMW 「응……!으응～!!」
+			PRINTFORMW (시, 싫엇……!! 손이 닿고있어……!!)
+		;それ以外
+		ELSE
+			PRINTFORMW 「시, 싫어!! 손대지 말아주세요!!」
+		ENDIF
+			CFLAG:5221 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕+屈服刻印Lv3
+		IF TALENT:150 == 1 && MARK:2 == 3 && (CFLAG:5221 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아앙……우우웅……%CALLNAME:MASTER%!!」
+			CFLAG:5221 = 5
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5221 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으으응……아아앙」
+			PRINTFORMW (싫어……녹아버릴 것……)
+			CFLAG:5221 = 4
+		;屈服刻印Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:5221 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「시, 싫어엇!!크으……으응!!!」
+			CFLAG:5221 = 3
+		;それ以外
+		ELSEIF MARK:2 <= 1 && (CFLAG:5221 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「그만둬……손대지마……!!」
+			CFLAG:5221 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クンニ CFLAG222
+;岩清水 CFLAG328
+;-------------------------------------------------
+;クンニ
+IF SELECTCOM == 1 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:5222 == 0
+		;屈服刻印Lv2以上
+		IF MARK:2 >= 2
+			PRINTFORMW 「응……크응……」
+			PRINTFORML 자신의 부끄러운 곳을 보여지고 있어서인가, 시즈하는 귀까지 새빨갛게 되어있다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「앗!! 시, 싫어어!」
+		ENDIF
+			CFLAG:5222 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5222 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「빠는거, 좋네요……아앙♪」
+			CFLAG:5222 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5222 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……우웅……」
+			PRINTFORMW (싫어……녹아……녹아버려……!!)
+			CFLAG:5222 = 3
+		;それ以外
+		ELSEIF CFLAG:5222 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아후우……아, 안 돼애……그만둬어……」
+			CFLAG:5222 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;岩清水
+IF SELECTCOM == 611 || (SELECTCOM == 1 && TEQUIP:56)
+	;恋慕+露出癖Lv3以上+C感覚Lv3以上
+	IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:0 >= 3 && (CFLAG:5328 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「아아……! 부끄러운데……부끄러운데……아앙!!」
+		PRINTFORML 자신의 부끄러운 장소에서, 몹시 젖어버린 듯한 소리를 듣는다. 
+		PRINTFORML 그런 비정상적인 상태에 놓인 시즈하를 흥분과 쾌락이 계속 덮친다. 
+		PRINTFORMW 「싫어어, 부끄러워……아아, 아앙!!」
+		CFLAG:5328 = 6
+	;恋慕
+	ELSEIF TALENT:150 == 1 && (CFLAG:5328 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「응……나의 애액……맛있나요?……앙♪」
+		PRINTFORMW 시즈하의 어디의 유명한 물에도 이길 수 있을것 같은 애액과, 그 원류를 빨아, 계속 훌쩍거렸다. 
+;岩清水……岩の間から湧き出る水なんですってそーなのかー
+		CFLAG:5328 = 5
+	;屈服刻印Lv3+露出癖Lv3以上+C感覚Lv3以上
+	ELSEIF MARK:2 == 3 && ABL:0 >= 3 && ABL:14 >= 3 && (CFLAG:5328 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「크으……으응……하아앙!!」
+		CFLAG:5328 = 4
+	;屈服刻印Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:5328 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「아우……후우우우웅!!」
+		CFLAG:5328 = 3
+	;それ以外
+	ELSEIF CFLAG:5328 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「웅……앗!! 아아!!」
+		CFLAG:5328 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナル愛撫 CFLAG223
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;初めて
+	IF CFLAG:5223 == 0
+		PRINTFORMW 「……!? 그쪽은 멈췃 !! 머, 멈춰어!! 히익!!!」
+		CFLAG:5223 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		P = PALAM:3 + UP:3
+		;恋慕+潤滑Lv2以上
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5223 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아후우웅……크으……응! ……그쪽은 더러운데……」
+			PRINTFORML 삶은 낙지처럼 얼굴을 붉히면서 중얼거리는 시즈하에게, 
+			PRINTFORML 『시즈하의 몸에 더러운 곳은 없어』
+			PRINTFORML 라고 속삭였다
+			CFLAG:5223 = 5
+		;恋慕+潤滑Lv2未満
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5223 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이제, 조금, 적셔……하아앗!!」
+			CFLAG:5223 = 4
+		;潤滑Lv2以上＋A感覚Lv3以上
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5223 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이가, 엉덩이가 좋아……!!」
+			CFLAG:5223 = 3
+		;それ以外
+		ELSEIF CFLAG:5223 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우웅!! ……그쪽은……더러운데」
+			PRINTFORMW 시즈하는 삶은 낙지처럼 얼굴을 붉히면서 중얼거렸다. 
+			CFLAG:5223 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;自慰 CFLAG224
+;シャワーオナニー CFLAG312
+;-------------------------------------------------
+;通常自慰（シャワー無し）
+IF SELECTCOM == 7 && TEQUIP:54 == 0
+	;初めて
+	IF CFLAG:5224 == 0
+		PRINTFORMW 「그렇게……큿……보지마……」
+		PRINTFORMW (아, 싫어어……구멍이 벌려지는걸 보여지고 있어……)  
+		CFLAG:5224 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋自慰中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:5224 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의 일을 생각하면……손가락이……멈추지 않아……」
+			CFLAG:5224 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5224 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……후우……%CALLNAME:MASTER%……봐줘……」
+			CFLAG:5224 = 4
+		;自慰中毒Lv3以上
+		ELSEIF ABL:30 >= 3 && (CFLAG:5224 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「주인님……응!! 천박한 시즈하의 모습을……충분히 봐주세요……하아앙!!」
+			CFLAG:5224 = 3
+		;それ以外
+		ELSEIF CFLAG:5224 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「보지마……보지마아……」
+			CFLAG:5224 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;シャワーオナニー
+ELSEIF SELECTCOM == 7 && TEQUIP:54
+	;初めて
+	IF CFLAG:5312 == 0
+	;恋慕
+		IF TALENT:150 == 1
+		PRINTFORMW 「샤워로……인가요? 후후후, 좋아요」
+		;それ以外
+		ELSE
+;↑;恋慕～ELSEまで追加した物
+;エラー吐くなら恋慕～ELSEを削除
+		PRINTFORMW 「……이상한걸 생각해네내요」
+		PRINTFORMW 시즈하는 %조사처리(CALLNAME:MASTER,"가")% 낸 비상식적인 명령에 아연실색했다
+		ENDIF
+		CFLAG:5312 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋自慰中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:5312 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「샤워기가……아, 아아! %CALLNAME:MASTER%!! 아아앗!!」
+			CFLAG:5312 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5312 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아핫♪ %CALLNAME:MASTER%……내가 혼자서 하는걸 보니 발기해버리네……♪」
+			CFLAG:5312 = 4
+		;自慰中毒Lv3以上
+		ELSEIF ABL:30 >= 3 && (CFLAG:5312 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「샤워기가……건드려서!! 기분 좋아……!!」
+			CFLAG:5312 = 3
+		;それ以外
+		ELSEIF CFLAG:5312 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……응……하아……읏!! 으응!!」
+			CFLAG:5312 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラされる(ふたなり/オトコのみ) CFLAG225
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;初めて
+	IF CFLAG:5225 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭔가……이상한 느낌……이네요……응……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭔가……이상한 느낌……아, 아아아아!!!」
+		ENDIF
+			CFLAG:5225 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5225 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아……우응……후우……」
+			CFLAG:5225 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5225 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크흣……응……자지 기분 좋아……」
+;静葉さんに淫語を言わせ隊総勢一名集合!!即解散!!
+			CFLAG:5225 = 3
+		;それ以外
+		ELSEIF CFLAG:5225 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아앗!! ……아앙!! 우아아……!!」
+			CFLAG:5225 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸愛撫 CFLAG226
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;初めて
+	IF CFLAG:5226 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……큿 %CALLNAME:MASTER%……♪」
+;下はおふざけVerです. 誰に需要があるんだ……
+			PRINTFORMW 「우, 얇아요, 어차피……읏!! 아아앙!!」
+			PRINTFORML 얇아서 비빌 수 없다면, 유두를 훑어내면 된다
+		;それ以外
+		ELSE
+			PRINTFORMW 「소, 손대지 말아주세요……읏……」
+		ENDIF
+			CFLAG:5226 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5226 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……가슴……좋아……요……아……아앙!!」
+			CFLAG:5226 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:5226 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……!! 유, 유두를……핥지 말아주세욧!! 우아아앗!!!」
+			PRINTFORMW 시즈하는 전기가 통한 것 같은 감미로운 자극에 몸부림치고 있다. 
+			CFLAG:5226 = 3
+		;それ以外
+		ELSEIF CFLAG:5226 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「소, 손대지……말아……주세……으응!!」
+			CFLAG:5226 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;キス CFLAG227
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;初めて
+	IF CFLAG:5227 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%, 그것으로군요, ……%CALLNAME:MASTER%?」
+			PRINTFORML 사랑스럽고, 곱게 움직이는 시즈하의 입술을 뺏고 싶다……
+			PRINTFORMW 「%CALLNAME:MASTER%, 듣고 있나요? %CALLNAME:MASTER%……읏……츄웃……」
+			PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 참지 못하고, 욕망이 향하는 대로 시즈하의 고혹적인 에로티시즘이 감도는 입술을 훔쳤다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「응, 으응～!!! 푸핫!! ……큭……크윽! ……퉤엣!」
+		ENDIF
+			CFLAG:5227 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5227 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「저기, %CALLNAME:MASTER%……키스……해도 되나요?」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 시즈하의 턱을 가볍게 들어올려 입술을 겹치는 걸로 대답을 했다. 
+			CFLAG:5227 = 4
+		;従順Lv2以上
+		ELSEIF ABL:10 >=2 && (CFLAG:5227 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 시즈하의 턱을 톡, 하고 들어올려도, 의외로 시즈하는 저항하지 않고 눈을 감았다. 
+			PRINTFORMW 「아무쪼록……주, 주인……님」
+			CFLAG:5227 = 3
+		;それ以外
+		ELSEIF CFLAG:5227 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으응ーーーー!!! 푸하앗」
+			PRINTFORMW 시즈하는 굵은 눈물을 흘리면서 %조사처리(CALLNAME:MASTER,"를")% 노려봤다. 
+			CFLAG:5227 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;何もしない CFLAG228
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;初めて
+	IF CFLAG:5228 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%♪」
+			PRINTFORML 시즈하의 아름다운 소리에, %조사처리(CALLNAME:MASTER,"는")% 뒤돌아 봤다. 
+			PRINTFORML 풋, 하고 시즈하의 손가락이 %CALLNAME:MASTER%의 뺨에 닿는다. 
+			PRINTFORMW 「후훗, 불・렀・을・뿐・이・에요♪」
+			PRINTFORML 시즈하의 웃는 얼굴에 끌려, %CALLNAME:MASTER%도 웃기 시작했다. 
+;何だこの胸に湧き上がる感情は……
+		;それ以外
+		ELSE
+			PRINTFORMW 「벌써 끝나는……건가요?」
+			PRINTFORML 무서워하는 것 처럼 묻는 시즈하에게, %조사처리(CALLNAME:MASTER,"는")% 유감스럽게 고개를 저었다. 
+			PRINTFORMW 「그, 그런……」
+			PRINTFORML 시즈하의 절망한 듯한 표정을 보며, %조사처리(CALLNAME:MASTER,"는")% 다음의 조교를 떠올리고 힐쭉 얼굴을 비뚤어지게 했다. 
+		ENDIF
+			CFLAG:5228 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋欲情Lv3以上
+		IF TALENT:150 == 1 && PALAM:13 >= PALAMLV:3 && (CFLAG:5228 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……우웅……저기……%CALLNAME:MASTER%……」
+			PRINTFORMW
+			PRINTFORML 시즈하가 조르는 것 같은 말에, %조사처리(CALLNAME:MASTER,"는")% 두근거렸다. 
+			PRINTFORMW 【%CALLNAME:MASTER%의 탄도가 올랐다!】
+			PRINTFORMW 【%CALLNAME:MASTER%의 의욕이 올랐다!】
+			PRINTFORMW 【정신 포인트가 내려갔다!】
+;↑おふざけ要素
+			CFLAG:5228 = 4
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5228 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%, 쉬는건가요?」
+			PRINTFORMW 「후훗, 쉬는 것도, 가끔씩은 좋을지도 모르겠네요♪」
+			CFLAG:5228 = 3
+		;それ以外
+		ELSEIF CFLAG:5228 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이제……그만둬주세요……」
+			CFLAG:5228 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ローター CFLAG229
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;初めて
+	IF CFLAG:5229 == 0
+		;屈服刻印Lv3+恋慕
+		IF MARK:2 == 3 && TALENT:150 == 1
+			PRINTFORMW 「이거……기분좋아……아아아앙……!!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「뭔가요? 이건……우아아앗!!!」
+		ENDIF
+			CFLAG:5229 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋屈服刻印Lv3
+		IF TALENT:150 == 1 && MARK:2 == 3 && (CFLAG:5229 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아아아아아!! 후아아아아앙!!!」
+			CFLAG:5229 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5229 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아앙!! 부들부들……떨려……아앗!!」
+			CFLAG:5229 = 3
+		;それ以外
+		ELSEIF CFLAG:5229 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응……우웅……아아!!!」
+			CFLAG:5229 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;バイブ CFLAG230　CFLAG301
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 12 && TEQUIP:20 == 1
+	;初めて
+	IF CFLAG:5230 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 >= 5
+				PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 원하니까……읏……크으……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「히익, 추잡한 형태네요……에, 잠깐, 설마!?」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「그, 그런 물건보다 %CALLNAME:MASTER% 쪽이 좋아요……아앙!!」
+			;それ以外
+			ELSE
+				PRINTFORMW 「히익, 추잡한 형태네요……에, 잠깐, 아아앙!!!!」
+			ENDIF
+		ENDIF
+			CFLAG:5230 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5230 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「좀 더, 좀 더 움직여!!」
+			CFLAG:5230 = 4
+		;V感覚Lv3以上
+		ELSEIF ABL:1 >= 3 && (CFLAG:5230 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「안에서……꿈틀꿈틀 움직이고……히익!!!」
+			CFLAG:5230 = 3
+		;それ以外
+		ELSEIF CFLAG:5230 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어……움직이지마!! 아, 안 돼애!!!」
+			CFLAG:5230 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5301 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응……하아……하아……이번엔, %CALLNAME:MASTER%의 걸 주세요?」
+		CFLAG:5301 = 2
+	;それ以外
+	ELSEIF CFLAG:5301 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……흑……흐윽……흑!」
+		PRINTFORMW (말도 안 돼……기분 좋았다니……!!)
+		CFLAG:5301 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;Ｅマッサージャ CFLAG231
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;初めて
+	IF CFLAG:5231 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아우우우……아아아아아아!!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「어, 어째서 다가오는 건가요!? 시, 싫어어!!」
+		ENDIF
+			CFLAG:5231 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5231 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「크으……응…………아아앙!!!」
+			CFLAG:5231 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5231 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「히익!!! 크읏!! 꺄앗!! 응, 아앗!!!」
+			CFLAG:5231 = 3
+		;それ以外
+		ELSEIF CFLAG:5231 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응……응……!! !! ? 아아아아!!!!」
+			CFLAG:5231 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルバイブ CFLAG232　CFLAG302
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 13 && TEQUIP:25 == 1
+	;初めて
+	IF CFLAG:5232 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……크으읏……들어온다……」 
+		;それ以外
+		ELSE
+			PRINTFORMW 「시, 싫어엇!! 엉덩이에 넣다니!! ……싫어, 싫어어어!!」 
+		ENDIF
+			CFLAG:5232 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋A感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:5232 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「우, 우와앗!! 엉덩이 좋아……우아아앗!!」
+			CFLAG:5232 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5232 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「어, 엉덩이 기분좋아……기분 좋아아!!」 
+			CFLAG:5232 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:5232 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크으……응!!」
+			PRINTFORMW (엉덩이……기분 좋아……!!!)
+			CFLAG:5232 = 3
+		;それ以外
+		ELSEIF  CFLAG:5232 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어엇!! 벼, 변태!!! 시, 싫어어!! 싫어어어어!!!」 
+			CFLAG:5232 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5302 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응……우하아앗……!」
+		CFLAG:5302 = 3
+	;A感覚Lv3以上
+	ELSEIF ABL:2 >= 3 && (CFLAG:5302 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아……아아!」
+		CFLAG:5302 = 2
+	;それ以外
+	ELSEIF CFLAG:5302 < 1 || FLAG:11 == 2
+		PRINTFORMW 「으흑……!!」
+		CFLAG:5302 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;クリキャップ CFLAG233　CFLAG303
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 14 && TEQUIP:30 == 1
+	;初めて
+	IF CFLAG:5233 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「커지거나 할 것 같네요……응……!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「응……크으!!」
+		ENDIF
+			CFLAG:5233 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5233 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이렇게 작은데……히익!!」
+			CFLAG:5233 = 3
+		;それ以外
+		ELSEIF CFLAG:5233 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또, 또 인가요?……우아아앗!!」
+			CFLAG:5233 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 14 && TEQUIP:30 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5303 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「하아……하아……!!」
+		CFLAG:5303 = 2
+	;それ以外
+	ELSEIF CFLAG:5303 < 1 || FLAG:11 == 2
+		PRINTFORMW 「하아……하아……!!」
+		CFLAG:5303 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;ニプルキャップ CFLAG234　CFLAG304
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 15 && TEQUIP:35 == 1
+	;初めて
+	IF CFLAG:5234 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「가슴에……인가요? 후후……%조사처리(CALLNAME:MASTER,"가")% 바란다면……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「가, 가슴에……인가요……」
+			PRINTFORML 그렇게 중얼거리면서 시즈하는 고개를 숙여 자신의 가슴을 보았다. 
+			PRINTFORMW ……절벽까지는 아니지만, 꽤나 빈약한 가슴이다. 
+			PRINTFORMW 「아, 알았어요……응……크으……」
+;貴賓溢れる胸＝賓のある乳＝賓乳＝ｈ……（ｒｙ
+		ENDIF
+			CFLAG:5234 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5234 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「정말……버릇될것 같아요……응」
+			CFLAG:5234 = 3
+		;それ以外
+		ELSEIF CFLAG:5234 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또, 사용하는건가요……? 읏!! 크으!!」
+			PRINTFORMW 시즈하의 물음에 승낙해, 가슴을 숨기고 있는 손을 치우고 니플 캡을 장착했다. 
+;下はおふざけ要素
+			PRINTFORMW 그러나 아무튼, 빈유는 희소가치로 스테이터스라고 밖의 세계에서는 소란을 피우고 있는데……
+			PRINTFORMW ……곤란하다니깐……
+			CFLAG:5234 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 15 && TEQUIP:35 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5304 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응……흐으읏!!」
+		CFLAG:5304 = 2
+	;それ以外
+	ELSEIF CFLAG:5304 < 1 || FLAG:11 == 2
+		PRINTFORMW 「응……흐으읏!!」
+		CFLAG:5304 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;搾乳機(母乳体質のみ) CFLAG235　CFLAG305
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 191 && TEQUIP:35 == 2
+	;初めて
+	IF CFLAG:5235 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아아……나……짜내어지고 있어……소처럼……아아!!」
+;ハッハッハッ!牛みたいって言ってますけどそんなにｎ（ｺｷｬｯ
+		;それ以外
+		ELSE
+			PRINTFORMW 「응……아아! 아아아아!! 읏!! 가슴에서……짜내고 있어……」
+		ENDIF
+			CFLAG:5235 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5235 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아아……나……짜내어지고 있어……소처럼……아아!!」
+			CFLAG:5235 = 3
+		;それ以外
+		ELSEIF CFLAG:5235 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아아……나……짜내어지고 있어……소처럼……아아!!」
+			CFLAG:5235 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;ハッハッハッ!!牛ほどｎ（ｺｷｬｷｬｷｬｯ
+;脱着時
+ELSEIF SELECTCOM == 191 && TEQUIP:35 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5305 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「우아아앗!! ……하아……하아……」
+		CFLAG:5305 = 2
+	;それ以外
+	ELSEIF CFLAG:5305 < 1 || FLAG:11 == 2
+		PRINTFORMW 「우아아앗!! ……하아……하아……」
+		CFLAG:5305 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;オナホール(ふたなり/オトコのみ) CFLAG236　CFLAG306
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 16 && TEQUIP:30 == 2
+	;初めて
+	IF CFLAG:5236 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「전부터 알고 있었지만, 그래도……좋은 변태씨네요」
+			PRINTFORMW 시즈하는 가슴속 깊이 그렇게 중얼거리며, 오히려 단념했는지 오나홀에 페니스를 삽입했다
+			PRINTFORMW 「으으응……나도 당신에게 오염된 것 같아요……으읏!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「여기에……삽입을……!? 벼, 변태! 무슨 생각을 하는거야!?」
+			PRINTFORMW 시즈하는 필사적으로 저항을 하지만, 곧 그 저항도 허무해지고, 시즈하의 페니스를 오나홀 안에 넣었다
+			PRINTFORMW 「무, 무슨……속에서 미끈미끈해져서……기분 좋아……!!」
+		ENDIF
+			CFLAG:5236 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5236 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「또, 또 하는……건……가……요……그래도」
+			PRINTFORMW 시즈하가 어쩐지 중얼거리고 있는 것 같지만, 신경쓰지 않고 오나홀을 줬다
+			PRINTFORMW 「이거 미끈미끈해서……아, 아앗 아앗!!」
+			PRINTFORMW 시즈하는 오나홀이 정말로 마음에 든 것 같다. 
+;上はおふざけ……mysunが嫉妬マスクを被るときが来たようだ……
+			CFLAG:5236 = 3
+		;それ以外
+		ELSEIF CFLAG:5236 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또, 또 하는건가요!? 이젠 싫어어어어어어엇! 아아앗!!!」
+			CFLAG:5236 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 17 && TEQUIP:17 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5306 < 2 || FLAG:11 == 2)
+		PRINTFORMW 『퐁』하는 소리를 내며, 시즈하의 페니스에서 오나홀이 떼어졌다
+		PRINTFORMW 「이거……중독성 있네요……」
+		CFLAG:5306 = 2
+	;それ以外
+	ELSEIF CFLAG:5306 < 1 || FLAG:11 == 2
+		PRINTFORMW 「이젠……싫어어」
+		CFLAG:5306 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;正常位 CFLAG237
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;初めて
+	IF CFLAG:5237 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 >= 5
+				PRINTFORMW 「%CALLNAME:MASTER%에게……나의 처음을……」
+				PRINTFORMW 「와……주세요……%CALLNAME:MASTER%……!!!」
+				PRINTFORML 시즈하의 결심한 것 같은 말에 배를 누르며, %조사처리(CALLNAME:MASTER,"는")% 허리를 가까이 했다. 
+				PRINTFORMW 「%CALLNAME:MASTER%……나……%CALLNAME:MASTER%……훌쩍!!」
+				PRINTFORMW 눈 앞에서 눈물을 머금은 시즈하를 %조사처리(CALLNAME:MASTER,"는")% 천천히, 조용하게 꼭 껴안았다. 
+
+			;それ以外
+			ELSE
+				PRINTFORMW 「거짓말……들어오고……있다니……」
+				PRINTFORMW 「시, 싫어! 뽑아!! 뽑아줘!!! 싫어어어어!!!」
+				PRINTFORMW 시즈하의 비명을 무시하고, 페니스를 시즈하에게 찔러 넣었다
+;下はおふざけ
+;				PRINTFORMW 시즈하의 비명을 무시하고, 사타구니의 망나니 장군을 돌격시켰다. 
+;				PRINTFORMW <<주군, 터무니 없어요!!주군!!주구우우우우운!!!>>
+;				PRINTFORMW 부하의 비명도 허무하게, 망나니 장군은 전사했다……묵념!!
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「가득, 사랑해주세요?%CALLNAME:MASTER%」
+			;それ以外
+			ELSE
+				PRINTFORMW 「아……쿠으읏!! 히익!! 아우우!!!」
+			ENDIF
+		ENDIF
+			CFLAG:5237 = 1
+			RETURN 0
+;↑如何見ても処女の書く分でバテてます. 本当にありがとうございました. 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5237 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「우아아아아!! 후아아아아!!」
+			PRINTFORMW 시즈하는 %CALLNAME:MASTER%의 이름을 부르면서 몇번이나 절정에 도달했다. 
+			CFLAG:5237 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5237 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아……쿠읏!! 히익!! 아우우!!!」
+			CFLAG:5237 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5237 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아! 크으……!! 우아……아아아!!」
+			CFLAG:5237 = 3
+		;それ以外
+		ELSEIF CFLAG:5237 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어……싫어어어……!!!」
+			CFLAG:5237 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位 CFLAG238
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;初めて
+	IF CFLAG:5238 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 >= 5
+				PRINTFORMW 「처음이니까……저, 적어도 관대하게……」
+				PRINTFORMW 시즈하의 말에, 고개를 끄덕이면서 %조사처리(CALLNAME:MASTER,"는")% 허리를 가까이했다
+			;それ以外
+			ELSE
+				PRINTFORMW 「사, 상냥하게 해주세요……, 상냥하게, 상냥하게……엣……!!」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「마치……짐승같네요……!! 아, 아아!!」
+			;それ以外
+			ELSE
+				PRINTFORMW 「이런 자세로라니……」
+			ENDIF
+		ENDIF
+			CFLAG:5238 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5238 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 후읏, 후읏, 하앗, 우응……」
+			PRINTFORMW 허리를 앞뒤로 움직일때마다 흘러나오는 복숭아색의 한숨. 
+			PRINTFORMW 「아, 당!! 당신!! 읏! 아아아!!」
+			PRINTFORMW 리드미컬하게 허덕이는 시즈하의 감촉을 즐기고 싶다――. 
+			PRINTFORMW 지금은 욕망에 충실해도 좋다, 라고 %조사처리(CALLNAME:MASTER,"는")% 허리를 앞뒤로 계속 움직였다. 
+			CFLAG:5238 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5238 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「좋아!! 좋아아!!」
+			PRINTFORMW 흩날리는 땀과 복숭아색의 비명. 
+			PRINTFORMW 뒤로부터 육창(肉槍)으로 시즈하에게 붙을때마다, 시즈하의 사랑스러운 울음소리가 날아왔다. 
+			CFLAG:5238 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5238 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「좋아하는 것처럼……사용해주세요……앗!! 하아!!」
+			PRINTFORMW 절대로 신이어야할 자신이――이런 짐승 같은 자세로 성교하고 있다. 
+			PRINTFORMW 그 사실과, 그 굴욕감과, 무력감과, ――쾌락이, 그녀를 침식했다. 
+			PRINTFORMW 「주, 주인니임!! 우앗! 아아!!」
+			CFLAG:5238 = 3
+		;それ以外
+		ELSEIF CFLAG:5238 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어어……시, 싫어」
+			PRINTFORMW 리드미컬하게 움직이는 사랑스러운 엉덩이를 비벼주면서, %조사처리(CALLNAME:MASTER,"는")% 허리를 앞뒤로 움직였다. 
+			CFLAG:5238 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルセックス CFLAG239
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;初めて
+	IF CFLAG:5239 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「엉덩이로……인가요……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「트, 틀려!! 거기는 아니야ー!!」
+			PRINTFORMW 시즈하는 갑자기 방문한 침입자에게 눈을 크게 뜨고, 입을 금붕어처럼 뻐끔뻐끔 거리고 있다. 
+		ENDIF
+			CFLAG:5239 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋A感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:5239 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이……좋아요……아아! 아, 아아아ー!!」
+			CFLAG:5239 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5239 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의……읏……변태같은 것은……놀라고 있어……엇!!」
+			CFLAG:5239 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:5239 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「좋아! 엉덩이가 좋아요……나는……엉덩이로 좋아해버리는 변태에요……!!」
+			CFLAG:5239 = 3
+		;それ以外
+		ELSEIF  CFLAG:5239 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「크으……읏! 우아!! 흐윽!! 읏!」
+			CFLAG:5239 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;逆レイプ CFLAG240
+;(主人が非オトコ, 奴隷がオトコ/ふたなりのみ)
+;-------------------------------------------------
+IF SELECTCOM == 25
+	;初めて
+	IF CFLAG:5240 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%……잘먹겠습니다♪」
+			PRINTFORMW 시즈하는 그렇게 말하면서, %조사처리(CALLNAME:MASTER,"를")% 밀어 넘어뜨려, 페니스를 고간으로 가져갔다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「자지……들어갑니다?」
+		ENDIF
+			CFLAG:5240 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5240 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의 자지……좋아……아앙……」
+			CFLAG:5240 = 3
+		;それ以外
+		ELSEIF CFLAG:5240 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「마음대로, 인가요? 후후, 매저키스트의 기분이기도 하겠네요」
+			PRINTFORMW 그럴지도 모른다――
+			PRINTFORMW 하지만 %조사처리(CALLNAME:MASTER,"는")%「어떻게 몇배로 돌려줄까」, 하는 일을 생각하고 있었다. 
+;↑おふざけ?Mの方は「そうなのかも」, 倍返し好きな方は下もでおｋ
+			CFLAG:5240 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手淫 CFLAG241
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;初めて
+	IF CFLAG:5241 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「꺄앗……에, 에ー그러면……실례합니다……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「꺄앗……손으로……비비는건가요?」
+		ENDIF
+			CFLAG:5241 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:5241 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후후……실룩실룩거려서……사랑스러워……♪」
+			CFLAG:5241 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5241 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「기분 좋나요……?」
+			CFLAG:5241 = 3
+		;それ以外
+		ELSEIF CFLAG:5241 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「어, 어떤가요?」
+			CFLAG:5241 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラチオ CFLAG242
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;初めて
+	IF CFLAG:5242 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「……실례합니다」
+		;それ以外
+		ELSE
+			PRINTFORMW 「크, 무는건가요!?……우우……」
+		ENDIF
+			CFLAG:5242 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:5242 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%으 아이……아이어요……♪」
+			PRINTFORML （%CALLNAME:MASTER%의 자지……맛있어요……♪）
+			CFLAG:5242 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5242 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……실례합니……으웃, 츄웃」
+			CFLAG:5242 = 3
+		;それ以外
+		ELSEIF CFLAG:5242 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「어, 어허하요?」
+			PRINTFORML (어, 어떤가요? )
+			PRINTFORMW 시즈하는 눈을 치켜뜨면서 %CALLNAME:MASTER%에게 물어봤다. 
+;勿論咥えたままです
+			CFLAG:5242 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリ CFLAG243
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;初めて
+	IF CFLAG:5243 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「응……응……! 기분 좋나요?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「……불쾌하나요?」
+		ENDIF
+			CFLAG:5243 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:5243 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「기분 좋아요? %CALLNAME:MASTER%……후훗♪」
+			CFLAG:5243 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5243 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……어떤가요……?」
+			CFLAG:5243 = 3
+		;それ以外
+		ELSEIF  CFLAG:5243 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……바, 바보같아요……응……」
+			PRINTFORML 심한 욕을 하면서도 시즈하는 열심히 페니스를 가슴으로 문지르고 있다
+			CFLAG:5243 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;素股 CFLAG244
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;初めて
+	IF CFLAG:5244 == 0
+		;恋慕有り
+		IF TALENT:150 == 1
+			PRINTFORMW 「넣고 싶어지면……넣어도 좋아요?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「너, 넣지는 말아주세요……?」
+			PRINTFORML 시즈하는 무서워하면서 %CALLNAME:MASTER%에게 말했다. 
+		ENDIF
+			CFLAG:5244 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕有り
+		IF TALENT:150 == 1 && (CFLAG:5244 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……제 쪽이 참을수 없어서……응……」
+			CFLAG:5244 = 3
+		;それ以外
+		ELSEIF CFLAG:5244 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아, 야비해……읏!!」
+			CFLAG:5244 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位 CFLAG245
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;初めて
+	IF CFLAG:5245 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 >= 5
+				PRINTFORMW 「나의 순결……%CALLNAME:MASTER%에게 바쳐요……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「시, 싫어어!! 싫어어!!」
+				PRINTFORML 시즈하의 격렬한 저항도 허무고, 예의를 모르는 비소에 마의 손이 뻗쳤다. 
+				PRINTFORMW 「우……우우……싫어어……뽑아줘……」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「으읏……!! 자아……움직일게요」
+			;それ以外
+			ELSE
+				PRINTFORMW 「속에서……아, 아아!!」
+			ENDIF
+		ENDIF
+			CFLAG:5245 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5245 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의……안으로……들어가……앗!!」
+			CFLAG:5245 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5245 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「히익! 히익! 후앗!! 후아!! 힉!! 아아앗!!!」
+			PRINTFORML 당신이 허리를 상하로 움직일 때마다, 육 창(肉槍)이 시즈하의 신체를 능욕하며, 
+			PRINTFORML 시즈하의 입에서는 리드미컬하게 복숭아색의 소리가 새고 있다. 
+			PRINTFORMW 「히앗!! 아, 아아!!  후아아!! 히이익!! 하아아앙!!」
+			PRINTFORML 3번째로 찌르기까지는 비명을 버티고 있었지만, 지금은 이 모양이다. 
+			PRINTFORML 페니스를 흔들면서, 뽑고, 찌르면서 절정을 맞이하고 있었다. 
+;おふざけ?　陵辱度をあげたい場合は上の『;』を解除　しかしやりすぎた……
+			CFLAG:5245 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5245 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크으……응! 응!! 아아!! 응!! 응!!」
+			PRINTFORMW 찔러 넣을 때마다, 사랑스러운 신음소리가 시즈하의 입술에서 빠져나왔다. 
+			CFLAG:5245 = 3
+		;それ以外
+		ELSEIF CFLAG:5245 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우아…후아아아……으읏……」
+			PRINTFORML 시즈하는 필사적으로 목소리를 높이지 않으려 노력하고 있다. 
+			CFLAG:5245 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;スパンキング CFLAG246
+;-------------------------------------------------
+IF SELECTCOM == 220
+	;初めて
+	IF CFLAG:5246 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「징계……인가요?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「징계……하는군요……」
+		ENDIF
+			CFLAG:5246 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5246 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아아! 내 엉덩이에 단풍 모양이……아아! 아아아!!」
+			CFLAG:5246 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5246 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크흐읏……응……!!」
+			CFLAG:5246 = 3
+		;それ以外
+		ELSEIF CFLAG:5246 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「…………읏!」
+			CFLAG:5246 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;鞭 CFLAG247
+;-------------------------------------------------
+IF SELECTCOM == 221
+	;初めて
+	IF CFLAG:5247 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%가……원한다면……크아앗!!」
+			PRINTFORML 마른 작렬음이 난 후, 시즈하의 흰 피부에 붉은색의 지렁이가 모습을 나타냈다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「히익!! 죄송해요! 주인님, 아무쪼록 용서를……우아아앗!!」
+		ENDIF
+			CFLAG:5247 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5247 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……좀 더……주세요……우아아앗!!」
+			CFLAG:5247 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5247 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「조……좀 더……엇, 주세요……아아앗!!」
+			CFLAG:5247 = 3
+		;それ以外
+		ELSEIF CFLAG:5247 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「그, 그만둬 주세요 주인님! 아앗! 제, 제발 용서를!! 우아앗!!」
+			CFLAG:5247 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;まぁ, 使わないコマンドなので適当……不満がある人はご自分でご改良下さいまし?
+;-------------------------------------------------
+;針 CFLAG248
+;-------------------------------------------------
+IF SELECTCOM == 222
+	;初めて
+	IF CFLAG:5248 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아, 아픈 건가요……으읏……!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「설마……아!!」
+		ENDIF
+			CFLAG:5248 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5248 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……!! 크읏!! 조, 좀 더……해줘요」
+			CFLAG:5248 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5248 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아퍼……」
+			PRINTFORML (그래도……좀 더 하고싶어……)
+			CFLAG:5248 = 3
+		;それ以外
+		ELSEIF CFLAG:5248 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「아펏! 아퍼엇!! 우아아아……!!」
+			CFLAG:5248 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アイマスク CFLAG250　CFLAG:5307
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 225 && TEQUIP:41 == 1
+	;初めて
+	IF CFLAG:5250 == 0
+		PRINTFORMW 「뭐……뭘하는 건가요……?」
+		CFLAG:5250 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5250 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……거기에, 있나요?」
+			PRINTFORML （아아……무엇을 하게 될지……아마도 저런 일이나 이런 일을……）
+			PRINTFORML 시즈하는 어째서인지 뺨을 붉히며, 흥분된 신음 소리를 높이고 있다
+			CFLAG:5250 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5250 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (기, 기대하고 있는 것은 아니야. 에에, 그, 그래요……)
+			CFLAG:5250 = 3
+		;それ以外
+		ELSEIF CFLAG:5250 <= 1 && FLAG:11 == 2
+			PRINTFORMW (괘, 괜찮아……괜찮아……)
+			PRINTFORMW 시야를 차단당하자, 시즈하는 당신을 안듯이 움켜쥐고, 부들부들 떨고 있다
+;プルプルと震える静葉さんかわいい!!
+			CFLAG:5250 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 225 && TEQUIP:41 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5307 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아아, %CALLNAME:MASTER%…………」
+		PRINTFORMW 시즈하는 %CALLNAME:MASTER%의 얼굴을 확인하자, 안도의 눈물을 눈에 머금었다
+		CFLAG:5307 = 2
+	;それ以外
+	ELSEIF CFLAG:5307 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아, 눈부셔……」
+		CFLAG:5307 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;縄 CFLAG251　CFLAG:5308
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 224 && TEQUIP:40 == 1
+	;初めて
+	IF CFLAG:5251 == 0
+		PRINTFORMW 「우우……아, 끝나고 풀어주셔야해요……!!」
+		CFLAG:5251 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5251 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「조, 조금만 더 강하게……무, 묶어도……좋아요?」
+			PRINTFORML (아, 아아……매듭이 거기에 파고들고 있어……)
+			CFLAG:5251 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5251 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏……크으……」
+			PRINTFORML ((아, 아아……매듭이 거기에 파고들고 있어……))
+			CFLAG:5251 = 3
+		;それ以外
+		ELSEIF CFLAG:5251 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「아, 아퍼엇……우우……응……」
+			CFLAG:5251 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 224 && TEQUIP:40 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5308 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「%CALLNAME:MASTER%의 사랑으로……묶여있던 것 같은 느낌이 들었어……후훗♪」
+		CFLAG:5308 = 2
+	;それ以外
+	ELSEIF CFLAG:5308 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아, 흔적이 남을때까지 어째서 안풀어 준건가요!!」
+		CFLAG:5308 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;ボールギャグ CFLAG252　CFLAG:5309
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 226 && TEQUIP:42 == 1
+	;初めて
+	IF CFLAG:5252 == 0
+		PRINTFORMW 「호가아……호가아호아아……」
+		CFLAG:5252 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5252 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아후……아후아후아후우……」
+			PRINTFORML 시즈하의 입에서 흘러넘친 타액이, 매우 에로틱하다, 라고 %조사처리(CALLNAME:MASTER,"는")% 생각했다. 
+			CFLAG:5252 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5252 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후아아……하후우후아하아……」
+			CFLAG:5252 = 3
+		;それ以外
+		ELSEIF CFLAG:5252 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「후아, 후가아……」
+			CFLAG:5252 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 45 && TEQUIP:45 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5309 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「역시 이렇게 말할 수 있는 것은 좋네요, %CALLNAME:MASTER%♪」
+		CFLAG:5309 = 2
+	;それ以外
+	ELSEIF CFLAG:5309 < 1 || FLAG:11 == 2
+		PRINTFORMW 「콜록, 콜록!!」
+		CFLAG:5309 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;浣腸 CFLAG253
+;-------------------------------------------------
+IF TEQUIP:25 == 7 && SELECTCOM == 174
+	;初めて
+	IF CFLAG:5253 == 0
+		PRINTFORMW 「에……노, 농담이지요……!?」
+		CFLAG:5253 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5253 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「크으읏……우아……후, 후훗, 임신……한 것 같은 느낌……이네요……우앗!!」
+			CFLAG:5253 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5253 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……우아아……우우……」
+			CFLAG:5253 = 3
+		;それ以外
+		ELSEIF CFLAG:5253 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「우앗……우……우우……」
+			CFLAG:5253 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;排泄 CFLAG254
+;-------------------------------------------------
+IF TEQUIP:25 == 0 && SELECTCOM == 174
+	;初めて
+	IF CFLAG:5254 == 0
+		PRINTFORMW 「시, 싫어어!! 보지마!! 보지마아아아아아!!!!」
+		PRINTFORMW 시즈하의 갸냘픈 절규도 허무하게, 배설물이 시즈하의 사랑스러운 엉덩이로부터 분출했다. 
+		CFLAG:5254 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5254 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「보, 보지마! 보지말아주세요!! 우아아아……」
+			PRINTFORML (아, 안 돼……보여지는 걸로……느껴버렸어……)
+			CFLAG:5254 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5254 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「보, 보지마! 보지말아주세요!! 우아아아……」
+			PRINTFORML (아, 안 돼……보여지는 걸로……느껴버렸어……)
+			CFLAG:5254 = 3
+		;それ以外
+		ELSEIF CFLAG:5254 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「보, 보지마! 보지말아주세요!! 우아아아……」
+			CFLAG:5254 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ローション使用 CFLAG255
+;-------------------------------------------------
+IF SELECTCOM == 50
+	;初めて
+	IF CFLAG:5255 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「후훗……뭔가……야한 느낌이네요……」
+			PRINTFORMW 미끈미끈한 점성의 액체가, 시즈하의 몸을 에로틱하게 장식했다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「차가웟!! ……뭐, 뭔가요……끈적거려……」
+		ENDIF
+			CFLAG:5255 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5255 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 또 하는건가요? 이 다음은……어떻게 하나요?」
+			PRINTFORML 말하면서, 시즈하는 스스로 자기 몸에 로션을 발라간다. 
+			PRINTFORMW 젖은 그 몸이, 방의 얼마 안되는 빛에 비추어지고 빛나는……그 모습은 확실히 에로스 그 자체다. 
+			PRINTFORMW 　　　　　　　　　　　　%CALLNAME:MASTER%　　　　
+			PRINTFORML ＜＜젠장, 반찬으로 하기 위해 비디오 카메라를 설치해두면 좋았는데!!＞＞
+;おふざけ……うん
+			CFLAG:5255 = 3
+		;それ以外
+		ELSEIF CFLAG:5255 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「미끈미끈 하네요……우우……」
+			CFLAG:5255 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;媚薬使用 CFLAG256
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;初めて
+	IF CFLAG:5256 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「츄웃…… 응…… 가끔씩은 이런 것도 괜찮은거군요……후훗♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「으흣……!! 츄웃!! ……무, 무엇을……무엇을 먹인겁니까!?」
+			PRINTFORMW 「에, 그, 금방 알게 된다구……요……!? 우우……몸이……뜨거워……!!」
+		ENDIF
+			CFLAG:5256 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5256 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……츄우웃……응……후훗♪」
+			PRINTFORMW 「이렇게 먹이는 것, 좋네요, 후훗♪」
+			CFLAG:5256 = 3
+		;それ以外
+		ELSEIF CFLAG:5256 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「크, 약에 의지하지 않으면……응……안된다니……!!」
+			CFLAG:5256 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ビデオカメラ使用 CFLAG257
+;-------------------------------------------------
+IF SELECTCOM == 100 && TEQUIP:50 == 1
+	;初めて
+	IF CFLAG:5257 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「찍는건가요……다, 다음에 같이……보……죠?」
+			PRINTFORMW 좋아, 오늘 밤은 재우지 않는거야!! 라고, %조사처리(CALLNAME:MASTER,"는")% 의욕이 불타올랐다!
+			PRINTFORMW 의지가 올랐다!정력이 올랐다!여러가지 넘치고있다!!
+;おふざけ
+		;それ以外
+		ELSE
+			PRINTFORMW 「초, 초가을의 신데렐라……시즈하짱……이라는 건 찍어서 판다는 건가요!?」
+			PRINTFORMW 「아, 안 돼요! 절대로 안 돼요!!」
+;静葉さんスレもとい秋姉妹スレのネタ拝借しましたー　ｷﾗｯミ☆
+		ENDIF
+			CFLAG:5257 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5257 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 뭔가 벌써, 많은 사람들한테 보여지고 있는 느낌이네요……♪」
+			CFLAG:5257 = 3
+		;それ以外
+		ELSEIF CFLAG:5257 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「역시……파는거네요……」
+			CFLAG:5257 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;野外プレイ CFLAG258　CFLAG:5310
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 104 && TEQUIP:52 == 1
+	;初めて
+	IF CFLAG:5258 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「모두에게 보여주자구요……후훗♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「시, 싫어어……누군가에게 보여지기라도 하면……」
+		ENDIF
+			CFLAG:5258 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋露出癖Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:5258 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, %CALLNAME:MASTER%, 준비, 하고 있었어요」
+			PRINTFORMW 「또, 모두에게 보여주자구요?」
+			CFLAG:5258 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3 && (CFLAG:5258 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「제, 제발 용서해주세요……!! 싫어……!!」
+			PRINTFORML （싫어어……그, 그래도……보여지는건……기분 좋을……지도）
+			CFLAG:5258 = 3
+		;それ以外
+		ELSEIF CFLAG:5258 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어요! 어째서……어째서 이런 일을……」
+			CFLAG:5258 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5310 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「후훗, %CALLNAME:MASTER%……다녀왔어요……어서오세요♪」
+		PRINTFORMW 귀가의 인사를 한 시즈하에게, %조사처리(CALLNAME:MASTER,"는")%『어서와』와『다녀왔어』를 말했다
+		CFLAG:5310 = 2
+	;それ以外
+	ELSEIF CFLAG:5310 < 1 || FLAG:11 == 2
+		PRINTFORMW 「이제……밖은……우우……」
+		CFLAG:5310 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;助手を犯す CFLAG259
+;-------------------------------------------------
+IF SELECTCOM == 26
+	;初めて
+	IF CFLAG:5259 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「후훗……함꼐 즐기자는 거네요?」
+		;それ以外
+		ELSE
+			PRINTFORMW 「죄송해요……죄송해요……우아아……」
+		ENDIF
+			CFLAG:5259 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5259 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……하아……즐기자구요? ……으응……」
+			CFLAG:5259 = 3
+		;それ以外
+		ELSEIF CFLAG:5259 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우아아앗……죄송해요……죄송해요……우웃」
+			CFLAG:5259 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;イラマチオ CFLAG260
+;-------------------------------------------------
+IF SELECTCOM == 230
+	;初めて
+	IF CFLAG:5260 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「므긋! 우읍! 우우웁!! 후우!!」
+			PRINTFORMW 시즈하라고 하는 인물을 무시하고, 마치 도구 같은 취급으로 구강을 범해 찌른다. 
+			PRINTFORMW 당연히, 시즈하의 저항도 격렬했지만, 머리를 단단히 잡고 있었기에 어쩔 수 없었다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「므긋! 우읍! 우우웁!! 후우!!」
+			PRINTFORMW 시즈하라고 하는 인물을 무시하고, 마치 도구 같은 취급으로 구강을 범해 찌른다. 
+			PRINTFORMW 당연히, 시즈하의 저항도 격렬했지만, 머리를 단단히 잡고 있었기에 어쩔 수 없었다. 
+		ENDIF
+			CFLAG:5260 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:5260 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으그읏!? 으읏!! ……으가앗!! ……케엣!! ……으흡!!」
+			PRINTFORMW 시즈하는 목 안쪽까지 들어온 이물감과, 구토감을 필사적으로 견디면서, 
+			PRINTFORMW 입안을 범해지고 있다
+			CFLAG:5260 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5260 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「케엑……으긋……쿠아앗……츄웃……」
+			CFLAG:5260 = 3
+		;それ以外
+		ELSEIF CFLAG:5260 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우게엣!?……으그읏!! 읏!! 으흣!! 웩!!」
+			PRINTFORMW 시즈하의 입에서부터 목까지 철저하게 강간했다. 
+;			PRINTFORMW 시즈하의 구강에서 목에 걸쳐 철저하게 레이프!목을 레이프!!강간플레이 레이피스토!!하다
+;↑は当然おふざけ也……レイプストってなんやねん
+			CFLAG:5260 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フィスト系コマンド CFLAG261
+;-------------------------------------------------
+IF SELECTCOM == 231 || SELECTCOM == 232 || SELECTCOM == 233
+	;初めて
+	IF CFLAG:5261 == 0
+			PRINTFORMW 「아가앗……크으……」
+;			PRINTFORMW 『브로큰 펀○ 오오옷!!』
+;			PRINTFORMW 「히긱!!히극……」
+;			PRINTFORMW 가오%CALLNAME:MASTER%의 투입한 필살의 주먹이 시즈하존다의 질에 터진다!!
+		CFLAG:5261 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5261 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으기잇!! 히이익!! 우아아아!!」
+			CFLAG:5261 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5261 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으기잇!! 히이익!! 우아아아!!」
+			CFLAG:5261 = 3
+		;それ以外
+		ELSEIF CFLAG:5261 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「으기잇!! 히이익!! 우아아아!!」
+			CFLAG:5261 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;使いたくば;を外せば良いと思うでゴワス. 
+
+;-------------------------------------------------
+;触手召喚 CFLAG262　CFLAG:5311
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 500 && TEQUIP:90
+	;初めて
+	IF CFLAG:5262 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「미노리코쨩의 그것을 닮아……아무것도 아니에요, 에에」
+		;それ以外
+		ELSE
+			PRINTFORMW 「그, 그로테스크하네요……시, 싫어엇!?」
+		ENDIF
+			CFLAG:5262 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5262 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「에……그러면, 상냥하게……해주세요」
+			PRINTFORMW 시즈하는 왜인지는 모르지만 촉수에게 세 손가락을 모아 인사하고 있다
+			CFLAG:5262 = 3
+		;それ以外
+		ELSEIF CFLAG:5262 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「사, 상냥하게 부탁드려요」
+			CFLAG:5262 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5311 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응……아아……우우……」
+		PRINTFORMW 촉수의 HARD한 자극에 시즈하는,  숨이 완전히 끊어져버려, 라는 느낌으로 다운해버렸다. 
+		CFLAG:5311 = 2
+	;それ以外
+	ELSEIF CFLAG:5311 < 1 || FLAG:11 == 2
+		PRINTFORMW 「우게에……우아아……우우……에……」
+		PRINTFORMW 촉수의 LUNATIC한 자극에 시즈하는 정신이 끊어져버린 듯한 느낌으로
+		PRINTFORML 눈동자가 뒤집힌채 완전히 다운해버렸다. 
+		CFLAG:5311 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+;追加コマンド CFLAG313以降を使用
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+
+;-------------------------------------------------
+;指挿入れ CFLAG313
+;Gスポット刺激 CFLAG323
+;-------------------------------------------------
+IF SELECTCOM == 4 || SELECTCOM == 600
+	;Gスポット刺激
+	IF SELECTCOM == 600 || (PREVCOM == 4 && ABL:PLAYER:2 >= 3 || PREVCOM == 600)
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5323 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「천정이……우아!! 우아앗!! 으응!! 우아아앗!! 으응～～!!」
+			CFLAG:5323 = 4
+		;V感覚Lv3以上
+		ELSEIF ABL:1 >= 3 && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우아아앗! 크으! 크하……아아아아아아!!!」
+			CFLAG:5323 = 3
+		;それ以外
+		ELSEIF CFLAG:5323 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「크, 크으……응……우아, 앗, 아아아!!!!」
+			CFLAG:5323 = 2
+		ENDIF
+			RETURN 0
+	;指挿入れ
+	ELSE
+		;初めて
+		IF CFLAG:5313 == 0
+			;処女（処女でないキャラの場合は無記入でよい）
+			IF TALENT:0 == 1
+				;恋慕+従順Lv5
+				IF TALENT:150 == 1 && ABL:10 >= 5
+					PRINTFORMW 「아, 아무쪼록……저의……순결을……」
+				;それ以外
+				ELSE
+					PRINTFORMW 「부, 부탁해요……그것 만큼은……그것 만큼으은――!?」
+					PRINTFORMW 「우……우아아아……우우……」
+				ENDIF
+					CFLAG:5313 = 1
+					RETURN 0
+			;非処女
+			ELSE
+				;恋慕
+				IF TALENT:150 == 1
+					PRINTFORMW 「%CALLNAME:MASTER%의 손가락……우아아……!! 으흣!!」
+				;V感覚Lv3以上
+				ELSEIF ABL:1 >= 3
+					PRINTFORMW 「주, 주인……주인니이……응아아아아아!!!!」
+				;それ以外
+				ELSE
+					PRINTFORMW 「읏……크으……쿠아아……」
+				ENDIF
+					CFLAG:5313 = 1
+					RETURN 0
+			ENDIF
+		;二回目以降
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1 && (CFLAG:5313 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「%CALLNAME:MASTER%의 손가락……좋아아･･･…우아! 응아아……!!」
+				CFLAG:5313 = 4
+			;V感覚Lv3以上
+			ELSEIF ABL:1 >= 3 && (CFLAG:5313 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「주, 주인……주인니이……이아아아아아아!!?!!!」
+				CFLAG:5313 = 3
+			;それ以外
+			ELSEIF CFLAG:5313 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「응아아앗! 크하아!! 하아앗!!!」
+				CFLAG:5313 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;シャワー CFLAG314
+;-------------------------------------------------
+IF SELECTCOM == 351 && TEQUIP:54
+	;初めて
+	IF CFLAG:5314 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「등이랑, 앞쪽, 물이 흐르고 있네요♪후훗♪」
+			PRINTFORML 말하자 마자 시즈하는 %CALLNAME:MASTER%의 앞쪽으로 돌아가서, 꼿꼿이 서있는 그것을 입으로 빨아왔다. 
+			PRINTFORML 시즈하의 입안의 따뜻함과 기분 좋음에, 무심코 기분이 느슨해진 당신의 그것은, 정신이 들자 사정 직전. 
+			PRINTFORMW 나오려는걸 참지 못하고, 그대로 사정해버렸다. 
+			PRINTFORMW 「어허하요(어떤가요)? 어하요(좋아요)?……꺄앗!!」
+			PRINTFORMW 「……나오고 나오고……후훗, 농담이에요. 자아, 흘려보내요♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「괘, 괜찮아요!! 혼자서 씻을 수 있으니까!!!」
+			PRINTFORMW 그렇게 말하면서, 시즈하는 자신의 가슴과 그곳을 손으로 숨겼다. 
+		ENDIF
+			CFLAG:5314 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5314 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……등에서, 흐르고 있네요♪우후후훗♪」
+			PRINTFORML 「빨아주지 않는…다구요? 후훗, 나중에 얼마든지 빨아드릴게요……♪」
+			CFLAG:5314 = 3
+		;それ以外
+		ELSEIF CFLAG:5314 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그, 그러니까 괜찮아요!! 혼자서도 씻을수 있어요 정말!!」
+			CFLAG:5314 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位 CFLAG315
+;-------------------------------------------------
+IF SELECTCOM == 22
+	;初めて
+	IF CFLAG:5315 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%……츄우웃……응……응아아……」
+			PRINTFORML 시즈하와 상하로 입 맞춤을 하면서 사랑이 서로 깊어졌다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「응……크으……아……아후우……!!」
+		ENDIF
+			CFLAG:5315 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5315 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응……%CALLNAME:MASTER%의 것……안에서……아아……응……후우……!!」
+			PRINTFORMW 결코 다이나믹하지 않은 움직임으로, 허리를 앞뒤로 흔들면서
+			PRINTFORML 시즈하의 질 내를 맛보며, 비어있는 손으로 시즈하의 허리를 꼭 껴안았다
+			CFLAG:5315 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5315 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읏……주, 주인님……아아!! 읏!! 크으!!!」
+			CFLAG:5315 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5315 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫! 읏!! 주, 주인님……우아아!!」
+			CFLAG:5315 = 3
+		;それ以外
+		ELSEIF CFLAG:5315 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응……크으……아아……아아아……!!!」
+			CFLAG:5315 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面座位 CFLAG316
+;乱れ牡丹 CFLAG317
+;-------------------------------------------------
+;背面座位
+IF SELECTCOM == 23 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:5316 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아아……응……%CALLNAME:MASTER%……아아……♪」
+			PRINTFORML 「그……런……아아!! 우웅……!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「응……크흐……크……아아……!!」
+		ENDIF
+			CFLAG:5316 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5316 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아……크읏!! 힉!! 히익!!! %CALLNAME:MASTER%ぁ……♪」
+			CFLAG:5316 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5316 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗! 크우……!! 우아……우아아아아!!」
+			CFLAG:5316 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5316 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아……주인님……응……아아아……」
+			CFLAG:5316 = 3
+		;それ以外
+		ELSEIF CFLAG:5316 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응아……! 아아……아우……우아아……주인니임……!!」
+			CFLAG:5316 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;乱れ牡丹
+IF SELECTCOM == 612 || (SELECTCOM == 23 && TEQUIP:56)
+	;初めて
+	IF CFLAG:5317 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……%CALLNAME:MASTER%, 보고있어……연결되어진 곳……」
+			PRINTFORML 말하면서, 거울을 보면 하나로 합쳐진 자신들이, 음란한 댄스를 추고 있다. 
+			PRINTFORMW 「아아……이제……보고있을 뿐인데……읏!! 아아……우긋……」
+			PRINTFORML 아무래도 자신을 범하는, 범해지고 있다는 상황에, 시즈하는 흥분하고 있는 것일까. 
+			PRINTFORMW 「%CALLNAME:MASTER%……%CALLNAME:MASTER%……좀 더, 좀 더 찔러줘」
+			PRINTFORML 시즈하의 간절히 원하는 말에 %조사처리(CALLNAME:MASTER,"는")%, 찌르고 찌르고 찔러서 미치게 하였다……
+		;それ以外
+		ELSE
+			PRINTFORMW 「시, 싫어어……보여지고 있어……보여지고……」
+			PRINTFORML 실제로 보여지고 있는 것은 아니다. 
+			PRINTFORML 자신의 시선으로 보고 있다. 
+			PRINTFORMW 「으아……보여지는 채로……아……아아아아아아아!!!」
+		ENDIF
+			CFLAG:5317 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕+露出癖Lv3以上+V感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:5317 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아, 당시……인!! 아, 아아!! 응!! 하아!! 히익!!」
+			PRINTFORML 시즈하의 몸을 리드미컬하게 아래에서 밀어올리면, 시즈하는 밀어올린 만큼 반응한다. 
+			PRINTFORMW 「안쪽……안쪽까지 오고……아!! 응! 히이익!! 응!! 아아아아!!」
+			PRINTFORML 「아, 아아!! 후아아아아아!!」
+			PRINTFORML 자궁의 입구를 창처럼 찌르고, 뽑고, 찌르고, 의 반복. 
+			PRINTFORMW 「히, 히야아아아……읏!! 으응!! 아, 아아아아아아아!!!」
+			PRINTFORML 그 쾌락을, 끝내 다 참지 못하고 시즈하는 절규했다. 
+;やりすぎた＼(＾o＾)／ もう何このくどさ
+
+			CFLAG:5317 = 6
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5317 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아!! 보여져버려!! 응아, 아아아아아!!!」
+			PRINTFORML 평상시와는 다른 이 특이한 상황에, 시즈하도 %CALLNAME:MASTER%도 흥분하고 있다. 
+			CFLAG:5317 = 5
+		;屈服刻印Lv3+露出癖Lv3以上+V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && ABL:14 >= 3 && (CFLAG:5317 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아……응아아……하아……으그으……조, 좀 더……좀 더 봐줘……좀 더 봐줘엇!!」
+			PRINTFORMW 시즈하의 입에서 나온 말을 만족시켜 주려고, 
+			PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 허리를 격렬하게 움직여, 거울에 그 치태를 과시했다. 
+			CFLAG:5317 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5317 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후우……아아……히익……아아앙!! 주, 주인님, 주인니임!!」
+			CFLAG:5317 = 3
+		;それ以外
+		ELSEIF CFLAG:5317 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「크으……응! 응!! 아아!! 응!! 응!!」
+			PRINTFORMW 시즈하는 필사적으러 목소리를 높이지 않으려 노력하고 있다. 
+			CFLAG:5317 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;泡踊り CFLAG318
+;-------------------------------------------------
+IF SELECTCOM == 352
+	;初めて
+	IF CFLAG:5318 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「후훗, 봉사, 하는거네요♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「정말……이런 생각만하고」
+			PRINTFORML 「읏……이렇게 하나요? 어떤가요?」
+		ENDIF
+			CFLAG:5318 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:5318 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 제가 %조사처리(CALLNAME:MASTER,"를")% 씻겨드리네요♪」
+			PRINTFORML 말하면서, 시즈하는 바디 샴푸를 세워, 미소를 띄우며 전신에 발랐다. 
+			PRINTFORMW 「어떤가요, %CALLNAME:MASTER%♪」
+			PRINTFORML 여성 특유의 부드러움이, %조사처리(CALLNAME:MASTER,"를")% 감싼다
+			PRINTFORML 이런 훌륭한 맛사지를 독점하고 있다――
+			PRINTFORML 라는 사실이 더욱 %조사처리(CALLNAME:MASTER,"를")% 흥분 시켰다. 
+			CFLAG:5318 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5318 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「오늘도, 봉사하겠습니다」
+			PRINTFORML 「읏, 어, 어떤가요? 읏」
+			PRINTFORMW 말하면서 열심히 몸을 비벼대며 오는 기특한 시즈하가, 무척이나 사랑스럽게 보였다. 
+			CFLAG:5318 = 3
+		;それ以外
+		ELSEIF  CFLAG:5318 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이제……정말로 변태군요……」
+			PRINTFORML 얼굴을 새빨갛게 물들이고, 불평하면서도 시즈하는 자기 몸을 사용해서 %조사처리(CALLNAME:MASTER,"를")% 씻기 시작했다. 
+			CFLAG:5318 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;利尿剤 CFLAG319
+;-------------------------------------------------
+IF SELECTCOM == 62
+	;恋慕+おもらし癖
+	IF TALENT:150 && TALENT:45 && (CFLAG:5319 < 4 || FLAG:11 == 2)
+		PRINTFORMW 「무, 무엇을 먹인건……읏……아, 아아……」
+		CFLAG:5319 = 4
+	;恋慕
+	ELSEIF TALENT:150 && (CFLAG:5319 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「읏……%CALLNAME:MASTER%……무, 무엇을 먹인건가요?」
+		CFLAG:5319 = 3
+	;屈服刻印Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:5319 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「읏……무, 무엇을 먹인건가요!?」
+		CFLAG:5319 = 2
+	;それ以外
+	ELSEIF CFLAG:5319 < 1 || FLAG:11 == 2
+		PRINTFORMW 「읏……무……무엇을……?」
+		CFLAG:5319 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;羞恥プレイ CFLAG320 解除 CFLAG321
+;-------------------------------------------------
+IF SELECTCOM == 103 && TEQUIP:56
+	;初めて
+	IF CFLAG:5320 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「부……부끄러워요……」
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「후훗……버릇이 되어버렸……네요」
+			PRINTFORML 그렇게 말하는 시즈하는, 지금부터 일어날 일을 예상하고 몸을 꼭 껴안고 있었다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「벼, 변태……」
+		ENDIF
+			CFLAG:5320 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕+露出癖Lv3以上
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:5320 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 또……군요?」
+			PRINTFORML 「%CALLNAME:MASTER%의 변태씨에게는 놀라고 있어요……후훗♪」
+			PRINTFORML 「나도, 그렇습니다만……♪」
+			CFLAG:5320 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5320 <= 3 || FLAG:11 == 2)
+			PRINTFORML 「%CALLNAME:MASTER%의 변태씨에게는 놀라고 있어요……후훗♪」
+			CFLAG:5320 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「시, 싫어어……버릇이……되어버려……」
+			CFLAG:5320 = 3
+		;それ以外
+		ELSEIF CFLAG:5272 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「변함없는 변태……네요……」
+			CFLAG:5320 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:5321 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「또, 하자구요♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「이제……좀 봐주세요……」
+		ENDIF
+			CFLAG:5321 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5321 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「또, 하자구요♪」
+			CFLAG:5321 = 3
+		;それ以外
+		ELSEIF CFLAG:5321 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이제……좀 봐주세요……」
+			CFLAG:5321 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;お風呂場プレイ CFLAG322 解除 CFLAG323
+;-------------------------------------------------
+IF SELECTCOM == 350 && TEQUIP:53
+	;初めて
+	IF CFLAG:5322 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「함께 씻는 건가요? 후훗♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「하, 함께 욕실……이라고 말하는 것은 아니지요」
+		ENDIF
+			CFLAG:5322 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5322 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%, 등을 씻어 줄게요」
+			CFLAG:5322 = 3
+		;それ以外
+		ELSEIF CFLAG:5322 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「보통으로 들어간다면 좋겠습니다만……」
+			CFLAG:5322 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;初めて
+	IF CFLAG:5323 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%……닦아주세요♪」
+			PRINTFORMW 말하면서, 시즈하는 %CALLNAME:MASTER%에게 몸을 맡겨왔다. 
+			PRINTFORML ――어쩔 수 없지. 
+			PRINTFORMW 걸려있는 목욕 타올을 사용해서, %조사처리(CALLNAME:MASTER,"는")% 응석부려오는 애인의 신체를 상냥하게 닦아주었다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「다, 닦을거에요! 몸 정도는 스스로 닦습니다」
+		ENDIF
+			CFLAG:5323 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%, 닦아주세요♪」
+			CFLAG:5323 = 3
+		;それ以外
+		ELSEIF CFLAG:5323 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그, 그러니까 혼자서 닦아요 정말!!」
+			CFLAG:5323 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;新妻プレイ CFLAG324 解除 CFLAG325
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 90 && TEQUIP:59
+	;初めて
+	IF CFLAG:5324 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「어때요? 어울리나요, 당・신♪」
+			PRINTFORMW 그렇게 말하면서, 시즈하는 에이프런을 걸친 채로 빙글, 하고 그 자리에서 돌아보였다. 
+			PRINTFORMW 「후훗, 기뻐해주니 좋아요.」
+			PRINTFORML 「자, 밥과 저와……어느 쪽을 먼저 먹을래요? 후훗♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「잘도 이런걸 생각하네요……」
+			PRINTFORML 「사실 다른 의미로 존경해요……짖궃네요? 기뻐하지 말아줘요」
+		ENDIF
+			CFLAG:5324 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5324 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 밥과 저 중에……어느 쪽을 먼저 하나요?」
+			PRINTFORML 「어느쪽이라도 준비는 되어있어요……♪」
+			CFLAG:5324 = 3
+		;それ以外
+		ELSEIF CFLAG:5324 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 입니까……알았어요」
+			CFLAG:5324 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 59 && TEQUIP:59 == 0
+	;初めて
+	IF CFLAG:5325 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「후훗, 이런거 없어도……후후♪」
+			PRINTFORML 그렇게 말하면서, 시즈하는 %조사처리(CALLNAME:MASTER,"를")% 보고, 살짝 웃었다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「간신히 끝난……건가요」
+		ENDIF
+			CFLAG:5325 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5325 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「또 저번처럼, 해요……♪」
+			CFLAG:5325 = 3
+		;それ以外
+		ELSEIF CFLAG:5325 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이렇게 말하는 것도……이젠……나쁘지는……」
+			PRINTFORML 「그래도 %조사처리(CALLNAME:MASTER,"는")% 이게 안어울린다고 말하지는 않으니까?」
+			CFLAG:5325 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;放尿 CFLAG326
+;強制放尿 CFLAG327
+;-------------------------------------------------
+IF SELECTCOM == 111 || SELECTCOM == 620
+	;強制放尿
+	IF SELECTCOM == 620 || SELECTCOM == 111 && ((TALENT:45 == 0 && ABL:10 >= 4 && ABL:11 >= 3 && ABL:21 >= 3) || (TALENT:45 && TEQUIP:12 == 0))
+		;恋慕+おもらし癖+野外プレイ
+		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5327 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「앗……누, 누군가 와버리면, 아, 아아!!」
+			PRINTFORML 말하면서도 멈추지 않는 오줌에, 시즈하의 얼굴은 새빨갛게 물들었다. 
+;如何でも良いけどそまりあがったとソマリアってなんか似てる
+			CFLAG:5327 = 5
+		;恋慕+おもらし癖
+		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5327 < 4 || FLAG:11 == 2)
+			PRINTFORMW 「시, 싫어어! 멈춰……엇!!」
+			CFLAG:5327 = 4
+		;露出癖Lv5
+		ELSEIF ABL:14 >= 5 && (CFLAG:5327 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「시, 싫어어!! 멈추지 않아……멈추지 않아……!!」
+			CFLAG:5327 = 3
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5327 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿……후응……우우……」
+			CFLAG:5327 = 2
+		;それ以外
+		ELSEIF CFLAG:5327 < 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어어……싫어어……후으응……우우……」
+			CFLAG:5327 = 1
+		ENDIF
+	;放尿
+	ELSE
+		;恋慕+おもらし癖+野外プレイ
+		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5326 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아, 안 돼! 멈췃…………」
+			CFLAG:5326 = 5
+		;恋慕+おもらし癖
+		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5326 < 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%……읏…………하아……」
+			CFLAG:5326 = 4
+		;露出癖Lv5
+		ELSEIF ABL:14 >= 5 && (CFLAG:5326 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 싫어……보, 보지마……보지말고……」
+			CFLAG:5326 = 3
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5326 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「우……우우……보지말아……주세요」
+			CFLAG:5326 = 2
+		;それ以外
+		ELSEIF CFLAG:5326 < 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어어……보, 보지말아……주……세요」
+			CFLAG:5326 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG関係（X1をキャラ番号に置換）
+;パラメータ変動をトリガーにした口上
+;パラメータ変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_37
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボールギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42
+	RETURN 0 
+;-------------------------------------------------
+;パラメータ変動時のセリフ CFLAG 271～296を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;初めて潤滑がLV2超えた CFLAG271
+;-------------------------------------------------
+P = PALAM:10 + UP:10
+IF P > PALAMLV:2
+	;初めて
+	IF CFLAG:5271 == 0
+		;ローションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「미끈미끈……대단해……」
+		;それ以外
+		ELSE
+			PRINTFORMW (싫엇……나……그런……!!)
+		ENDIF
+			CFLAG:5271 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めて欲情がLV2超えた CFLAG272
+;-------------------------------------------------
+P = PALAM:13 + UP:13
+IF P > PALAMLV:2
+	IF CFLAG:5272 == 0
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「비, 비겁해……하아앙!!」
+		;それ以外
+		ELSE
+			PRINTFORMW (몸이……욱신거려……!)
+		ENDIF
+			CFLAG:5272 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めて恥情がLV2超えた CFLAG273
+;-------------------------------------------------
+P = PALAM:15 + UP:15
+IF P > PALAMLV:2
+	IF CFLAG:5273 == 0
+		PRINTFORMW (부끄러운데……싫어엇……!!)
+		CFLAG:5273 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めて恐怖がLV2超えた CFLAG274
+;-------------------------------------------------
+P = PALAM:17 + UP:17
+IF P > PALAMLV:2
+	IF CFLAG:5274 == 0
+		PRINTFORMW 「히익!! 죄, 죄송해요……!!」
+		CFLAG:5274 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてC절정 CFLAG275
+;-------------------------------------------------
+IF NOWEX:0 > 0
+	IF CFLAG:5275 == 0
+		PRINTFORMW 「응……아아아……우아아아앗!!!」
+		PRINTFORML 시즈하는 음핵에서 느껴지는 강렬한 쾌감에 몸부림쳤다
+		CFLAG:5275 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてV절정 CFLAG276
+;-------------------------------------------------
+IF NOWEX:1 > 0
+	IF CFLAG:5276 == 0
+		PRINTFORMW 「우아아……기분……좋아……앗」
+		PRINTFORML 시즈하는 탈진하면서, 전신으로 쾌감을 느끼고 있다
+		CFLAG:5276 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてA절정 CFLAG277
+;-------------------------------------------------
+IF NOWEX:2 > 0
+	IF CFLAG:5277 == 0
+		PRINTFORMW 「거, 거짓말……엉덩이로……가버린다니」
+		PRINTFORML 자신이 아날로 쾌감을 얻어서, 절정에 닿아버린 것에 놀라움을 숨길 수 없는 것 같다. 
+;		PRINTFORML 자신이 ANAL에서 쾌락을 얻고, 에쿠스타C!!에 도달한 것에 놀라움을 감추지 못하는 것 같다. 
+;↑おふざけ
+		CFLAG:5277 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてB절정 CFLAG278
+;-------------------------------------------------
+IF NOWEX:3 > 0
+	IF CFLAG:5278 == 0
+		PRINTFORMW 「가슴……가슴이 기분 좋아……아아앗!」
+		CFLAG:5278 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;処女喪失(処女のみ) CFLAG279
+;-------------------------------------------------
+IF TFLAG:0 > 0 && CFLAG:5279 == 0
+	;恋慕かつ主人のセックスによる処女喪失
+	IF TFLAG:2
+		;恋慕＋従順Lv5
+		IF TALENT:150 == 1 && ABL:10 >= 5
+			PRINTFORMW 「아팠지만……%CALLNAME:MASTER%에게 바칠 수 있어서……행복해요」
+			PRINTFORMW 시즈하는 눈동자에 눈물을 머금으면서도 미소지어, %CALLNAME:MASTER%에게 말했다. 
+			PRINTFORML 그 웃는 얼굴에, 당신은 살짝 입을 맞췄다. 
+		ENDIF
+	;指挿入れで処女喪失（反感がかなり少ない）
+	ELSEIF SELECTCOM == 4
+		;恋慕＋従順Lv5
+		IF TALENT:150 == 1 && ABL:10 >= 5
+			PRINTFORMW 「%CALLNAME:MASTER%에게 바쳤으면 좋았을텐데……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「우……읏, 아퍼……」
+		ENDIF
+	;それ以外の時に処女喪失
+	ELSE
+		;恋慕＋従順Lv5
+		IF TALENT:150 == 1 && ABL:10 >= 5
+			PRINTFORMW 「%CALLNAME:MASTER%에게 바쳤으면 좋았을텐데……」 
+		;それ以外
+		ELSE
+			PRINTFORMW 「시……싫어어……거짓말……거짓말……」
+		ENDIF
+	ENDIF
+		CFLAG:5279 = 1
+ENDIF
+
+;-------------------------------------------------
+;セックスで射精させた CFLAG280 CFLAG290
+;-------------------------------------------------
+IF TFLAG:9 > 0 || TFLAG:10 > 0
+	;アナルセックスか? 
+	IF TFLAG:9 > 0
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5290 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이 안에서 뜨거운 것이……읏」
+			CFLAG:5290 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5290 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫어어……뜨거운 것이……우우……」
+			CFLAG:5290 = 3
+		;それ以外
+		ELSEIF CFLAG:5290 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어어……우우……」
+			CFLAG:5290 = 2
+		ENDIF
+		;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5280 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아……%CALLNAME:MASTER%의 것이 질안에서……후훗」
+			CFLAG:5280 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5280 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「질 안에서……우우……큿……흑」
+			CFLAG:5280 = 3
+		;それ以外
+		ELSEIF CFLAG:5280 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「흑……흑……훌쩍……훌쩍……」
+			CFLAG:5280 = 2
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手で射精させた CFLAG281
+;-------------------------------------------------
+IF TFLAG:12 > 0
+	;奉仕精神Lv5
+	IF ABL:13 >= 5 && (CFLAG:5281 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「가득……나왔네요……기분 좋았는지요?」
+		CFLAG:5281 = 3
+	;奉仕精神Lv3
+	ELSEIF ABL:13 >= 3 && (CFLAG:5281 <= 1 || FLAG:11 == 2)
+		PRINTFORMW 「꺅, 기분 좋았나요?」
+		CFLAG:5281 = 2
+	;それ以外
+	ELSEIF CFLAG:5281 <= 0 || FLAG:11 == 2
+		PRINTFORMW 「꺅!! 이, 이것이……」
+		CFLAG:5281 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;口で射精させた CFLAG282
+;-------------------------------------------------
+IF TFLAG:11 > 0
+	;フェラ, イラマチオの場合
+	IF SELECTCOM == 41 || SELECTCOM == 230
+		;精液中毒Lv5
+		IF ABL:31 >= 5 && (CFLAG:5282 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「으읏……응……츄웁츄웁……」
+			PRINTFORMW 미녀가 천박한 소리를 내면서, 
+			PRINTFORML 자신의 정액을 마시고 있다는 갭에 %CALLNAME:MASTER%의 고간은 다시 격분했다. 
+			CFLAG:5282 = 5
+		;精液中毒Lv3
+		ELSEIF ABL:31 >= 3 && (CFLAG:5282 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……푸핫!! 저, 정액……좀 더 주세요……」
+			PRINTFORMW 그렇게 간절히 원하자 어쩔 수 없이, %CALLNAME:MASTER%의 페니스가 다시 하늘로 향해 솟아올랐다
+;			PRINTFORMW 이렇게 호소되어서는 어쩔수 없다, %CALLNAME:MASTER%의 자지가 선다……
+;			PRINTFORMW 그 쓸떄없는 거룩함은, 바로 페니스의 신, 마라님이였다!!
+;↑はおふざけ
+			CFLAG:5282 = 3
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5282 < 2 || FLAG:11 == 2)
+;下はおふざけ
+;			PRINTFORML この放送は字幕でお送りしております. 
+			PRINTFORML 「어흐 이호……이흐 오하아오?」
+			PRINTFORML (저의 입속……기분 좋았나요?)
+			CFLAG:5282 = 2
+		;それ以外
+		ELSEIF CFLAG:5282 < 1 || FLAG:11 == 2
+			PRINTFORMW 「으읍!? 나, 나온다면 말해주세요!!」
+			PRINTFORMW 당돌하게 발사된 정액에, 시즈하는 놀라면서도 불평해왔다. 
+;			PRINTFORMW 「무갹?후각, 후겍!!크칵……!!」
+;			PRINTFORMW 갑자기 발사 된 정액 카타스트로프에, 환상향이 비명을 질렀다. 물론. 시즈하도 그중 한사람이다. 
+;上はおふざけ……俺アリ新作まだかなぁ……
+			CFLAG:5282 = 1
+		ENDIF
+	;パイズリの場合(CFLAG289)
+	ELSEIF SELECTCOM == 42
+		;奉仕精神Lv5
+		IF ABL:13 >= 5 && (CFLAG:5289 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「우후후……기분 좋았나요? 좀 더 싸도 좋아요?」
+;			PRINTFORMW 「그 정도의 젖가슴 성인에게는……지지 않으니까」
+;
+			CFLAG:5289 = 3
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5289 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「기분 좋았나요? 저의……가, 가스……가슴……」
+			PRINTFORMW 그렇게 물어보면서, 시즈하는 귀까지 얼굴을 다홍색으로 물들여 버리고 있다. 
+;ウブだなぁ……可愛いよ静葉さん!!
+			CFLAG:5289 = 2
+		;それ以外
+		ELSEIF CFLAG:5289 < 1 || FLAG:11 == 2
+			PRINTFORMW 시즈하의 얼굴에 정액이 흩날렸다. 
+			PRINTFORMW 「우햐앗!! 나오면 나온다고……」
+			PRINTFORMW 그 모양은 아름다움과 추함의 조화를 자아내어, 어떤 종류의 예술 작품과 같았다. 
+			PRINTFORMW 당신은, 서둘러 정액투성이의 시즈하의 얼굴을 사진에 담아 나중에 반찬하기로 했다
+;上はおふざけ, 俺だってそーする. 誰だってそーする. 
+			CFLAG:5289 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;射精した(ふたなり/オトコのみ) CFLAG283
+;-------------------------------------------------
+IF TFLAG:30 > 0
+	;初めて
+	IF CFLAG:5283 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응, 사정해버렷!! 아아앗!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「응, 사정해버렷!! 아아앗!!」
+		ENDIF
+			CFLAG:5283 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5283 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 사정해버렷!! 아아앗!!」
+			CFLAG:5283 = 3
+		;それ以外
+		ELSEIF CFLAG:5283 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응, 사정해버렷!! 아아앗!!」
+			CFLAG:5283 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;噴乳した(母乳体質のみ) CFLAG284
+;-------------------------------------------------
+IF TFLAG:31 > 0
+	;初めて
+	IF CFLAG:5284 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「설마…… %조사처리(CALLNAME:MASTER,"와")%의 아이…… 가진 건가요?」
+			PRINTFORMW 시즈하는 눈을 빛내면서 %CALLNAME:MASTER%에게 다가왔다. 
+		;それ以外
+		ELSE
+			PRINTFORMW 「거짓……말……」
+		ENDIF
+			CFLAG:5284 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5284 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그렇게 짜내지 않아도…… %CALLNAME:MASTER%의 몫도 있어요, 후훗♪」
+			CFLAG:5284 = 3
+		;それ以外
+		ELSEIF CFLAG:5284 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어…… 거짓말…… 거짓말……」
+			PRINTFORMW 시즈하는 새파랗게 질린 얼굴로 고개를 흔들고 있다.
+			CFLAG:5284 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｃ感覚Lv5でＣ절정50以上 CFLAG285
+;-------------------------------------------------
+IF ABL:0 >= 5 && EX:0 >= 50
+	;初めて
+	IF CFLAG:5285 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「클리에서……가버렷……우우……우아아아아아아앗!!!」
+			PRINTFORML 쾌락에 견디지 못하고, 시즈하는 허리를 끊듯이 상하로 움직였다. 
+			PRINTFORMW 「하아……하아……하아……하아……하아……」
+			PRINTFORMW 머리카락은 땀으로 붙고, 눈은 풀린채로, 입을 뻐끔거리며 어깨로 숨을 쉬는 모양은, 
+			PRINTFORML 평상시의 시즈하와는 동떨어져 보였다……
+		;それ以外
+		ELSE
+			PRINTFORMW 「클리에서……가버렷……우우……우아아아아아아앗!!!」
+			PRINTFORML 쾌락에 견디지 못하고, 시즈하는 허리를 끊듯이 상하로 움직였다. 
+			PRINTFORMW 「하아……하아……하아……하아……」
+			PRINTFORML 눈이 풀리고, 입을 뻐끔거리며 어깨로 숨을 쉬는 모양은, 평상시의 시즈하와는 동떨어져 보였다……
+		ENDIF
+			CFLAG:5285 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5285 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「시, 싫어엇! 가버렷! 가버렷!! 우아아아앗!! 아아아아아아아앗!!」
+			PRINTFORML 몇번이나 알 수없는 음핵에서의 절정에, 시즈하는 몇번이나 절규를 반복했다
+			PRINTFORMW 「후우우우우우우……후우우우우우……」
+			PRINTFORML 「후……후훗……%CALLNAME:MASTER%……사랑해요……♪」
+			CFLAG:5285 = 3
+		;それ以外
+		ELSEIF CFLAG:5285 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어어……이젠……가버려어어……아아아아아아아!!!」
+			PRINTFORML 몇번이나 알 수없는 음핵에서의 절정에, 시즈하는 몇번이나 절규를 반복했다
+			PRINTFORMW 「후우우우우……후우우우우우우……후우우우우우……」
+			PRINTFORML 「이, 이제……그만둬 주세요……우우……」
+			CFLAG:5285 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ感覚Lv5でＶ절정50以上 CFLAG286
+;-------------------------------------------------
+IF ABL:1 >= 5 && EX:1 >= 50
+	;初めて
+	IF CFLAG:5286 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응!! 아아, %CALLNAME:MASTER%의 것이, 안에서, 아, 아아!! 가버렷, 가버려어!!!」
+			PRINTFORML 「아아! 아아아!!! ……%CALLNAME:MASTER%…」
+			PRINTFORMW 몇번째인지도 모르는 질에서의 절정. 시즈하의 허리가 튈 때마다 땀이 흩날렸다. 
+			PRINTFORMW 「하아…… %CALLNAME:MASTER%……이대로……쭈욱……해줘?」
+			PRINTFORML 절정을 맞은 시즈하의 부탁. 
+			PRINTFORMW 거절할 이유가 없으므로, %조사처리(CALLNAME:MASTER,"는")% 시즈하를 꾸욱, 하고 껴안는다. 
+			PRINTFORMW 「%CALLNAME:MASTER%……기분……좋아……♪」
+			PRINTFORML 시즈하의 안도한 것 같은 목소리. %조사처리(CALLNAME:MASTER,"는")% 시즈하를 꼭 껴안은 채로 그녀의 머리를 쓰다듬고 있다. 
+;バカップル自重
+		;それ以外
+		ELSE
+			PRINTFORMW 「가버리는건…… 싫어, 가버리는건……싫어어어어어엇!!」
+			PRINTFORML 「하아아아아…… 하아아아아……」
+			PRINTFORMW 절정의 여운이 가시지 않은채, 시즈하는 어깨로 크게 호흡을 하고 있었다. 
+		ENDIF
+			CFLAG:5286 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5286 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%…… 나 이제……가버려요, 가버려요옷!!」
+			PRINTFORML 그렇게, 시즈하는 %CALLNAME:MASTER%에게 안겨오면서 외쳤다. 
+			PRINTFORMW 「후, 후훗…… %CALLNAME:MASTER%……♪」
+			PRINTFORML 그렇게 중얼거리는 시즈하의 웃는 얼굴은, 마치 신 그 자체의, 아름다움의 상징이라고 말해도 좋을 정도였다. 
+			CFLAG:5286 = 3
+		;それ以外
+		ELSEIF CFLAG:5286 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「가버리는건……싫어, 가버리는건……싫어어어어어엇!!」
+			PRINTFORML 「하아아아아……하아아아아……」
+			PRINTFORMW 절정의 여운이 가시지 않은채, 시즈하는 어깨로 크게 호흡을 하고 있었다. 
+			CFLAG:5286 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ感覚Lv5でＡ절정50以上 CFLAG287
+;-------------------------------------------------
+IF ABL:2 >= 5 && EX:2 >= 50
+	;初めて
+	IF CFLAG:5287 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응아아앗……엉덩이로……우우우웃아아아아아아!!!」
+			PRINTFORML 「후, 후훗……%CALLNAME:MASTER%……♪ 다음은……앞쪽으로……?」
+			PRINTFORMW 그렇게 말한 이상 도전하지 않는 것은 남자의 수치므로, %조사처리(CALLNAME:MASTER,"는")% 자신을 좀 더 분발시켰다
+		;それ以外
+		ELSE
+			PRINTFORMW 「어……엉덩이로……우우……」
+			PRINTFORML 「이제……돌아올 수 없어……」
+			PRINTFORMW 그렇게 말하는 시즈하의 눈동자에서 굵은 보석이 흘러넘쳐 떨어졌다. 
+			PRINTFORML 쾌락인가, 후회인가――는 알 수 없지만, 어딘가 모르게 미안한 기분을, %조사처리(CALLNAME:MASTER,"는")% 느꼈다. 
+		ENDIF
+			CFLAG:5287 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5287 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이, 엉덩이로 가버려어어어어어어엇!! 아아아아아!!!」
+			PRINTFORML 「후……후후……%조사처리(CALLNAME:MASTER,"는")%……정말로 엉덩이를 좋아하네요……」
+			PRINTFORMW 그런 말을 들으니, 왠지 모르게 %조사처리(CALLNAME:MASTER,"는")% 미안한 기분이 되어버렸다. 
+			CFLAG:5287 = 3
+		;それ以外
+		ELSEIF CFLAG:5287 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「가버려어어어어어!!! 엉덩, 엉덩이로 가버려어어어어어!! !」
+			PRINTFORMW 이미 평상시와는 완전히 다른 언어로 절규하는 시즈하를 꼭 껴안으면서, %조사처리(CALLNAME:MASTER,"는")%
+			PRINTFORML 혼잡한 와중에 엉덩이 안에 사정했다. 
+;なんて外道だ
+			CFLAG:5287 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｂ感覚Lv5でＢ절정50以上 CFLAG288
+;-------------------------------------------------
+IF ABL:3 >= 5 && EX:3 >= 50
+	;初めて
+	IF CFLAG:5288 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「아아, 유두 잡아당기지 말고……우아아……아아아아아앗!!」
+			PRINTFORML 보통 정도의 크기이지만 아름다운 라인의 시즈하의 가슴을 모아 세우자, 시즈하는 소리지르면서 절정했다. 
+			PRINTFORMW 「우우……%CALLNAME:MASTER%……우앗! 우아아아앗!!!」
+			PRINTFORML 시즈하의 작게 중얼거리는 소리를 들어
+			PRINTFORML 좀 더 하고 싶은 것인지, 라고 착각한 %조사처리(CALLNAME:MASTER,"는")% 또 시즈하의 유두를 괴롭힌다――. 
+			PRINTFORMW 「%CALLNAME:MASTER%!! 우우우우아아아아앗!!!!」
+		;それ以外
+		ELSE
+			PRINTFORMW 「우아아……가슴으로……가버……려어어엇……!!!」
+			PRINTFORML 소리지르면서 몸을 활처럼 굽히면서 절정에 다다르는 시즈하. 
+			PRINTFORML 그렇지만 %CALLNAME:MASTER%의 손이 멈추는 일은 없다. 
+			PRINTFORML 다음은……――
+		ENDIF
+			CFLAG:5288 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5288 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우아아앗!! %CALLNAME:MASTER%!! 응아앗!! 우아아아아앗!!!」
+			PRINTFORML 「하아……하아……%CALLNAME:MASTER%……」
+			PRINTFORMW 사르륵, 하고 %CALLNAME:MASTER%에게 의지하는 시즈하의 머리카락의 향기가 %CALLNAME:MASTER%의 코를 간질였다. 
+			CFLAG:5288 = 3
+		;それ以外
+		ELSEIF CFLAG:5288 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시, 싫어!! 싫어어!! 가슴으로 가버려어어어!!!」
+			PRINTFORML 소리를 높이고, 절정에 닿아버린 시즈하의 체중이 %CALLNAME:MASTER%에게 맡겨진다. 
+			PRINTFORMW 무너지는 시즈하를 받아들여, %조사처리(CALLNAME:MASTER,"는")% 잠시 휴식을 취했다. 
+			CFLAG:5288 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG関係（X1をキャラ番号に置換）
+;刻印変動をトリガーにした口上
+;刻印変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_37
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボールギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0 
+;-------------------------------------------------
+;苦痛刻印Lv3取得 CFLAG297
+;-------------------------------------------------
+IF TFLAG:40 == 3
+	IF CFLAG:5297 == 0
+		PRINTFORMW 「아퍼……아퍼……우우……」
+		PRINTFORMW 그렇게 중얼거리는 시즈하의 눈동자에서는 굵은 보석이 뚝뚝 떨어졌다……
+;言うまでも無いけど宝石＝涙です, っと
+		CFLAG:5297 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;快楽刻印Lv3取得 CFLAG298
+;-------------------------------------------------
+IF TFLAG:41 == 3
+	IF CFLAG:5298 == 0
+		PRINTFORMW 「아, 아아!! 오고있어! 무엇인가가!! 아, 아아아아아아!!!」
+		PRINTFORMW 「하아아아아……하아아아아아아……하아아아아아아……」
+		PRINTFORMW 눈에 힘이 풀린채로, 입을 뻐끔뻐끔 거리는 시즈하. 
+		PRINTFORMW 그녀에게서, 이 쾌락이 사라지는 일은, 아마――없을 것이다……
+		PRINTFORMW 「아아……주인님……저를……시즈하를……좀 더 괴롭혀주세요!!」
+		PRINTFORMW 그 증거로, 시즈하는 %CALLNAME:MASTER%에게 울면서 매달려, 간절히 원했다
+		CFLAG:5298 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;屈服刻印Lv3取得 CFLAG299
+;-------------------------------------------------
+IF TFLAG:42 == 3
+	IF CFLAG:5299 == 0
+		PRINTFORMW 「우우……이젠……거역하지 않을게요……」
+		PRINTFORML 「부탁드려요……더 이상은……우우……」
+		PRINTFORMW 울면서, 시즈하는 복종의 말을 말했다. 
+		CFLAG:5299 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;反発刻印Lv3取得 CFLAG300
+;-------------------------------------------------
+IF TFLAG:44 == 3
+	IF CFLAG:5300 == 0
+		PRINTFORMW 「……정말로 싫습니다……아무 말도 하지 마세요……」
+		PRINTFORMW 시즈하는 몸의 안쪽으로 얼굴을 묻으면서 우는 듯이 말했다. 
+		PRINTFORMW ――오열
+		PRINTFORMW 너무 한건가……%조사처리(CALLNAME:MASTER,"는")% 그렇게 생각하면서도, 
+		PRINTFORMW 스스로의 안에서 죄학감과 가학심이 떠올라오는 것을 느꼈다. 
+;可愛いよすねてる静葉さんも物凄く可愛いよ!!
+		CFLAG:5300 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;イベント口上集（X1, X2をキャラ番号に置換する）
+;-------------------------------------------------
+@SELF_KOJO_K37
+;-------------------------------------------------
+;調教後自慰 CFLAG400
+;-------------------------------------------------
+IF TFLAG:200 == 151
+	;恋慕
+	IF TALENT:150 ==1 && (CFLAG:5400 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응……쿠응……%CALLNAME:MASTER%……%CALLNAME:MASTER%……!!!」
+		PRINTFORML 「%CALLNAME:MASTER%의 손가락이……%CALLNAME:MASTER%의 혀가……으응……!!」
+		PRINTFORMW 「하아앗!! 으으으으응～～～!! ……%CALLNAME:MASTER%……」
+		PRINTFORMW 시즈하는 오로지 %CALLNAME:MASTER%의 이름만 부르면서 자위에 몰두하고 있는 것 같다. 
+		CFLAG:5400 = 3
+	;自慰中毒Lv3以上
+	ELSEIF ABL:30 >= 3 && (CFLAG:5400 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아……그만두지 않으면……우으으응……그만두지 않으면……우응……!!!」 
+		CFLAG:5400 = 2
+	;それ以外
+	ELSEIF CFLAG:5400 < 1 || FLAG:11 == 2
+		PRINTFORMW 「멈추지 않으면……우……응……멈추지 않으면……응……쿠으……」
+		CFLAG:5400 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;レズプレイ CFLAG401
+;-------------------------------------------------
+IF TFLAG:200 == 154
+	;恋慕
+	IF TALENT:150 ==1 && (CFLAG:5401 < 4 || FLAG:11 == 2)
+		PRINTFORM 「자아, 즐기자구요?……후훗」
+		CFLAG:5401 = 4
+	;レズ中毒Lv3以上
+	ELSEIF ABL:32 >= 3 && (CFLAG:5401 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「후훗, 깨끗한 피부……」
+		PRINTFORML 「사랑스러운 소리……」
+		PRINTFORMW 「당신의 그곳은 어떤 맛일까요……후훗」
+		CFLAG:5401 = 3
+	;レズっけLv3以上
+	ELSEIF ABL:22 >= 3 && (CFLAG:5401 < 2 || FLAG:11 == 2)
+		PRINTFORM 「자아, 즐기자구요?……후훗」
+		CFLAG:5401 = 2
+	;それ以外
+	ELSEIF CFLAG:5401 < 1 || FLAG:11 == 2
+		PRINTFORM 「자아, 즐기자구요?……후훗」
+		CFLAG:5401 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;朝フェラ CFLAG402
+;-------------------------------------------------
+IF TFLAG:200 == 140
+	;恋慕
+	IF TALENT:150 ==1 && (CFLAG:5402 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「……후핫!! 좋은 아침이에요, %CALLNAME:MASTER%♪」
+		PRINTFORMW 「에? 어째서 빨고 있나? 인가요?」
+		PRINTFORMW 「%CALLNAME:MASTER%의 아이에게도 아침 인사, 하는 거죠……후훗♪」
+		CFLAG:5402 = 3
+	;奉仕精神Lv5以上
+	ELSEIF ABL:13 >= 5 && (CFLAG:5402 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아, 아침의 봉사를 하러……왔습니다」
+		PRINTFORMW 「어, 어허하효? 우이이……」
+		PRINTFORML (어, 어떤가요? 주인님……)
+		CFLAG:5402 = 2
+	;それ以外
+	ELSEIF CFLAG:5402 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아, 좋은 아침이에……요?」
+		PRINTFORMW 당신은, 얼굴에 정액이 흩날린 시즈하를 보고, 벌떡 일어났다
+		PRINTFORMW 『이게, 무슨……무엇?에?누가좀 상황을 설명해줘……』
+;何だこの状況
+		CFLAG:5402 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後セックス CFLAG403
+;-------------------------------------------------
+IF TFLAG:200 == 150
+	;恋慕V感覚Lv4以上
+	IF TALENT:150 == 1 && ABL:1 >= 4 && (CFLAG:5403 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「으아앗!! %CALLNAME:MASTER%!! 좀 더, 좀 더 해주세요……」
+		PRINTFORML 「아아, %CALLNAME:MASTER%!! 으아아아!! 으읏!! 아아앗!!!」
+		CFLAG:5403 = 2
+	;それ以外
+	ELSEIF CFLAG:5403 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아, 아직도 하는건가요……으앗」
+		PRINTFORML 「저, 정말로 짐승이네요……옷! 이익!! 으아앗!!!」 
+		CFLAG:5403 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後夜這い　 CFLAG404
+;-------------------------------------------------
+IF TFLAG:200 == 158
+	;恋慕V感覚Lv5以上
+	IF TALENT:150 == 1 && ABL:1 >= 5 && (CFLAG:5404 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「%CALLNAME:MASTER%……나의……여기에……주세요」
+		PRINTFORML 말하자마자 시즈하는 %CALLNAME:MASTER%의 품에 뛰어들어, %조사처리(CALLNAME:MASTER,"를")% 밀어 넘어뜨리면서 빠르게 그것을 꺼냈다. 
+		PRINTFORMW 「%CALLNAME:MASTER%의……자지……아아……으응……아아아아아……」
+		PRINTFORML 시즈하에게 삼켜져가는 %CALLNAME:MASTER%의 페니스. 
+		PRINTFORMW 「%CALLNAME:MASTER%……아아아아……응……하아……후우……」
+		PRINTFORML 밤은――영원하다. %조사처리(CALLNAME:MASTER,"는")% 살아남을 수 있을지 어떨지를 진심으로 걱정하기 시작했다. 
+		CFLAG:5404 = 2
+	;それ以外
+	ELSEIF CFLAG:5404 < 1 || FLAG:11 == 2
+		PRINTFORMW 「하아……하아……참을……수 없어……엇!!」
+		PRINTFORMW 문을 열자마자 살기를 띤 눈으로 %조사처리(CALLNAME:MASTER,"를")% 바라보는 시즈하. 
+		PRINTFORML 결국 밀어 넘어뜨려져, %조사처리(CALLNAME:MASTER,"는")% 역강간을 당하고 있었다. 
+		PRINTFORMW ――자업자득이지만, 뭐, 이 명기를 맛볼 수 있다면 좋은거니. 
+		PRINTFORML 헐떡이는 시즈하의 몸을 바라보면서, %조사처리(CALLNAME:MASTER,"는")% 멍하니 그렇게 생각했다. 
+		CFLAG:5404 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;売却
+;-------------------------------------------------
+IF TFLAG:200 == 130
+	;恋慕+反発刻印Lv3未満
+	IF TALENT:150 && MARK:9 < 3
+		PRINTFORMW 「%CALLNAME:MASTER%――――안녕히……」
+		PRINTFORMW 뒤돌아 본 모습, -임종과 외로움의 상징-에서 흘러넘친 보석에, %조사처리(CALLNAME:MASTER,"는")% 끝내 잊을 수 없었다――
+		PRINTFORMW 중요한 사람의 가치는, 사라지고나서 처음으로 안다고 한다――
+		PRINTFORML 반신이 사라진것 같은, 허무감을 %조사처리(CALLNAME:MASTER,"는")% 가슴에 새겼다. 
+	;反発刻印Lv3
+	ELSEIF MARK:9 == 3
+		PRINTFORMW 「당신의 얼굴 볼 수 없게 되어서 좋다고 생각하면……후련해요」
+		PRINTFORML 「기억해 둘거에요, 저를 포함한 야오요로즈의 신 중 하나……를 이렇게 한 것은, 반드시――」
+		PRINTFORMW 그렇게 말하면서 시즈하는 %CALLNAME:MASTER%에게 등을 돌려 걷기 시작했다. 
+	;淫乱
+	ELSEIF TALENT:170
+		PRINTFORMW 「……안녕하세요, 새로운 주인님」
+		PRINTFORML 「후훗, 벌써 흥분되나요……? 후후훗 저도 그러네요」
+		PRINTFORMW 저쪽에서는 구매자와 시즈하가 담소를 나누고 있는것 같다. 
+		PRINTFORML 그럭저럭 괜찮은 가격인가――%조사처리(CALLNAME:MASTER,"는")% 자신의 성노예가 하나 사라진 사실만을 생각하고 있었다. 
+	;それ以外
+	ELSE
+		PRINTFORMW 「저를……파는 건가요?」
+		PRINTFORML 「좋네요. %CALLNAME:MASTER%의 얼굴을 잊지 않을거에요. 이 빚은…… 반드시 돌려드립니다――」
+		PRINTFORMW 그렇게 말하면서, 그녀, 아키 시즈하는 %CALLNAME:MASTER%에게 등을 돌려 걷기 시작했다. 
+	ENDIF
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+;-------------------------------------
+;エンゲイジ!!リング……『彼』＝主人公視点
+;-------------------------------------
+IF TFLAG:200 == 200
+	PRINTFORMW
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+;
+;-------------------------------------------------
+;@단독 엔딩 관계
+;-------------------------------------------------
+;表記例, 1, 22
+@SINGLE_ENDING_K37
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW 
+PRINTFORMW 
+PRINTFORML ――결과만 말하자면, 『그』는 성노예를 파는『사업』에서 손을 떼었다. 
+PRINTFORMW 그리고 요괴의 산 근처에 작은 집을 짓고 살고 있다. 
+PRINTFORMW 
+PRINTFORML 실은 혼자가 아니다. 
+PRINTFORMW 임종과 외로움의 상징으로 불린 가을의 여신과 함께, 적막하게――
+PRINTFORMW
+PRINTFORML 『그』가 범한 죄는, 무겁다. 
+PRINTFORMW 팔린 소녀들은 마음에 상처를 입었을 것이다. 
+PRINTFORMW 도덕적으로도 용서되는 일은 아닐 것이다. 
+PRINTFORMW 때문에 『그』는 그 죄를 조금이라도 가볍게 하려고 노력하고 있다. 
+PRINTFORMW 
+PRINTFORMW 
+PRINTFORML 멀리서 『그』를 부르는, 시즈하의 목소리가 들렸다. 
+PRINTFORMW 
+PRINTFORML 『그』는 손수건으로 얼굴의 땀을 닦았다. 
+PRINTFORMW 자, 벌써一쉬는 시간인가――. 
+PRINTFORMW 
+PRINTFORML 수확의 가을은, 가까워지고 있으니까. 
+PRINTFORMW 
+PRINTFORMW 　　　　　　　　―― Ending No.137 (임종과 외로움의 상징 엔딩)
+PRINTFORMW                   다음에는 좀 더 여러 가지 캐릭터를 사용해보자!!
+;미실장였심다^^;
+RETURN 0

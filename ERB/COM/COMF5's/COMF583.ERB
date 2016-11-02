@@ -1,0 +1,197 @@
+﻿;=============================================================================
+;촉수 강제 음주
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE583
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:583 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:42 == 4
+	RETURN 1
+;조교자는 촉수사역LV3이상 필요
+SIF ABL:PLAYER:98 < 3
+	RETURN 0
+;촉수가 [SUIKA촉수]を得ていないとダメ
+SIF (FLAG:98 & 8) == 0
+	RETURN 0
+;萃香を촉수生贄に捧げていない(=萃香が何らかの形で存在している)とダメ
+SIF (FLAG:97 & 8) == 0
+	RETURN 0
+;口が塞がっているときは不可
+SIF TEQUIP:42 && TEQUIP:42 != 4
+	RETURN 0
+;촉수貫通中はダメ
+SIF TEQUIP:25 == 3
+	RETURN 0
+;촉수強制回復中(口内)はダメ
+SIF TEQUIP:91 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수생지를 통해서 촉수와 일체화한 췌향을 소환,
+;촉수가 분비한 술을 구전으로 먹여 강제적으로 취하게 한다……라고 하는 너무 난해한 플레이
+@COM583
+PRINTL 촉수 강제 음주
+TSTR:0 = 촉수 강제 음주
+CALL TRAIN_MESSAGE_COM583
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 100
+DOWNBASE:1 += 150
+
+LOCAL:1 = 200
+LOCAL:2 = 300
+LOCAL:3 = 500
+LOCAL:4 = 1000
+SOURCE:40 = 2500
+SOURCE:41 = 1500
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.10
+	TIMES LOCAL:4 , 4.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 2.50
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 1.00
+	TIMES LOCAL:3 , 0.80
+	TIMES LOCAL:4 , 1.50
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 1.00
+	TIMES LOCAL:4 , 1.00
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 1.80
+	TIMES LOCAL:2 , 1.80
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 0.50
+ELSE
+	TIMES LOCAL:1 , 2.50
+	TIMES LOCAL:2 , 2.50
+	TIMES LOCAL:3 , 2.00
+	TIMES LOCAL:4 , 0.10
+ENDIF
+
+;키스마
+IF TALENT:176
+	TIMES LOCAL:1 , 2.50
+	TIMES LOCAL:2 , 2.50
+ENDIF
+
+;췌향과의 궁합 있고 없음으로 보정이 상하
+LOCAL:5 = 23
+IF RELATION:(LOCAL:5) > 0 && RELATION:(LOCAL:5) != 100
+	LOCAL:1 *= RELATION:(LOCAL:5)
+	LOCAL:1 /= 100
+	LOCAL:2 *= RELATION:(LOCAL:5)
+	LOCAL:2 /= 100
+	LOCAL:3 *= RELATION:(LOCAL:5)
+	LOCAL:3 /= 100
+	LOCAL:4 *= RELATION:(LOCAL:5)
+	LOCAL:4 /= 100
+ENDIF
+
+SOURCE:15 = LOCAL:1
+SOURCE:16 = LOCAL:2
+SOURCE:22 = LOCAL:3
+SOURCE:31 = LOCAL:4
+
+IF TEQUIP:42 == 4
+	TEQUIP:42 = 0
+ELSE
+	TEQUIP:42 = 4
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;촉수 강제 음주중
+;-------------------------------------------------
+@EQUIP_COM583
+PRINTL <촉수 강제 음주중> 
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 10
+
+LOCAL = 250
+LOCAL:1 = 100
+
+;키스마
+IF TALENT:176
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+SOURCE:40 += LOCAL
+SOURCE:41 += LOCAL:1
+
+;췌향의 성별상, 조교 대상이♀의 때만 레즈비언 경험이 들어가는 사양에
+SIF TALENT:120 == 0
+	TCVAR:12 += 1
+
+;촉수 경험 플래그
+TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM583
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:42 == 4
+	PRINTFORML %CALLNAME:PLAYER%의 명령을 받으자, 스이카는 일순간 의아스러운 듯한 표정을 띄웠다.
+	PRINTFORMW 그러나 술을 마실 수 있겠다고 판단했는지, %CALLNAME:TARGET%의 입술을 한번 빨고 떨어졌다.
+	PRINTFORML 술로 얼굴을 붉히면서 눈을 흑백으로 하고 있는 %CALLNAME:TARGET%에게 음란한 미소를 던지며,
+	PRINTW 스이카는 촉수를 물더니 뭐라고 알수 없는 주문을 외고는, 촉수의 벽 안으로 사라져갔다.
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%의 명령에 반응해, 육벽의 안쪽에서 사람이 들어갈 수 있을 정도의 굵기를 자랑하는 촉수가 한 개 나타났다.
+	PRINTFORML 촉수가 %CALLNAME:TARGET%에게 가까워지자 끄트머리가 갈라져,
+	PRINTL 안에서 촉수와 일체화한 스이카가 술냄새를 풍기며,
+	PRINTW 촉수를 발가벗은 온몸에 휘감은 모습으로 나타났다.
+	PRINTFORML 스이카는 몹시 취하고 있는지 어떤지 %CALLNAME:MASTER%에게 대충 인사 하고,
+	PRINTL 몸에감긴 촉수의 끄트머리를 물고, 무엇인가 마신다고 생각하던 찰나,
+	IF TALENT:54
+		PRINTFORML %CALLNAME:TARGET%에게 얼굴을 접근해 그대로 입에 자신의 혀를 미끄러져 들어가게 해
+		PRINTW 바둥거리는 혀를 스스로의 혀로 살그머니 누르면서, 입에 들어있던 액체를 흘려 넣었다….
+	ELSE
+		PRINTFORML 병적이라고도 말할 수 있을 정도의 흰 손으로 %CALLNAME:TARGET%의 턱을 상냥하게 들어
+		PRINTFORMW %CALLNAME:TARGET%의 입에 자신의 입을 마주치고, 그대로 입에 넣었던 액체를 흘려 넣었다….
+	ENDIF
+	PRINTL 촉수로부터 분비된 술 같은 것의 이상한 맛과 자극,
+	PRINTFORMW 그리고 독특한 악취가 %조사선택(CALLNAME:TARGET, "를")% 취하게 해 이성을 교란시켜 간다….
+ENDIF

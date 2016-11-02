@@ -1,0 +1,1345 @@
+﻿;=============================================================================
+;공개 노출 라이브
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE105
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:105 > 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;이미 실행 중이면 불가
+SIF TFLAG:140 & 2
+	RETURN 0
+;아이템｢マイク｣を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:52 == 0 && NOITEM == 0
+	RETURN 0
+;[音感]持ち以外は歌唱技能が2이상 없으면 안 됨
+SIF TALENT:191 == 0 && ABL:72 < 2
+	RETURN 0
+;노출증が2이하だとダメ。ただし持っている素質によって値が変動
+LOCAL = 3
+;臆病
+SIF TALENT:10
+	LOCAL += 1
+;目立ちたがり
+SIF TALENT:28
+	LOCAL -= 1
+;抑圧
+SIF TALENT:32
+	LOCAL += 1
+;解放
+SIF TALENT:33
+	LOCAL -= 1
+;恥じらい
+SIF TALENT:35
+	LOCAL += 1
+;恥薄い
+SIF TALENT:36
+	LOCAL -= 1
+;求められる노출증が0～5となるように
+LOCAL = LIMIT(LOCAL, 0, 5)
+SIF ABL:14 < LOCAL
+	RETURN 0
+;恋慕を持っていないまたは순종이 5미만이면 불가
+SIF ABL:10 < 5 && TALENT:150 == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;쿠스코 채웠으면 불가
+SIF TEQUIP:21
+	RETURN 0
+;긴박 중이면 불가
+SIF TEQUIP:40
+	RETURN 0
+;재갈 물리고 있으면 불가
+SIF TEQUIP:42
+	RETURN 0
+;야외 플레이 중이 아니면 불가
+SIF TEQUIP:52 == 0
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM105
+PRINTL 공개 노출 라이브
+;-------------------------------------------------
+;안뜰 이외라면, 성공 실패에 관련되지 않고, 집단시간모드에
+;-------------------------------------------------
+IF FLAG:15 & 256
+	SIF TFLAG:150 != 0
+		TFLAG:151 = 4
+ENDIF
+;-------------------------------------------------
+;성공할 수 있을까의 판정
+;-------------------------------------------------
+TFLAG:240 = 0
+LOCAL:99 = 0
+
+;ABL:욕망
+SIF ABL:11
+	TFLAG:240 += ABL:11
+;ABL:노출벽
+SIF ABL:14
+	TFLAG:240 += ABL:14 * 2
+;ABL:가창 기능
+SIF ABL:72
+	TFLAG:240 += ABL:72 * 3
+;MARK:쾌락 각인
+SIF MARK:1
+	TFLAG:240 += MARK:1 * 2
+;MARK:공포 각인
+SIF MARK:8
+	TFLAG:240 -= MARK:8 * 3
+;MARK:반발 각인
+SIF MARK:9
+	TFLAG:240 -= MARK:9 * 5
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+SIF LOCAL:2
+	TFLAG:240 += LOCAL:2 * 2
+
+;EXP:가창 경험(상당히 높지 않으면＋이 되지 않는다)
+IF EXP:73 < EXPLV:1
+	TFLAG:240 -= 2
+ELSEIF EXP:73 < EXPLV:2
+	TFLAG:240 -= 1
+ELSEIF EXP:73 < EXPLV:3
+	TFLAG:240 += 0
+ELSEIF EXP:73 < EXPLV:4
+	TFLAG:240 += 1
+ELSEIF EXP:73 < EXPLV:5
+	TFLAG:240 += 2
+ELSE
+	TFLAG:240 += 4
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TFLAG:240 -= 5
+;자제심
+SIF TALENT:20
+	TFLAG:240 -= 5
+;튀고 싶어함
+SIF TALENT:28
+	TFLAG:240 += 5
+;부끄럼쟁이
+SIF TALENT:35
+	TFLAG:240 -= 5
+;부끄럼없음
+SIF TALENT:36
+	TFLAG:240 += 2
+;음감 소유
+SIF TALENT:191
+	TFLAG:240 += 5
+;음치 소유
+SIF TALENT:190
+	TFLAG:240 -= 2
+;천식이나 구문지소유
+SIF TALENT:47 || TALENT:216
+	TFLAG:240 -= 3
+
+;합계를 표시(37이상으로 성공, 미만으로 실패 이벤트에)
+;난이도 상승
+;비디오로+10, C계 또는 카테터계 도구 장착으로＋4,
+;V계나 A계의 도구로+5, 확장계 도구 장착으로 게다가＋3
+TFLAG:241 = 37
+SIF TEQUIP:50
+	TFLAG:241 += 10
+SIF TEQUIP:30 || TEQUIP:32
+	TFLAG:241 += 4
+SIF TEQUIP:20 || TEQUIP:21
+	TFLAG:241 += 5
+SIF TEQUIP:25 || TEQUIP:26
+	TFLAG:241 += 5
+SIF TEQUIP:20 == 2 || TEQUIP:20 == 5 || TEQUIP:20 == 6 || TEQUIP:20 == 8 || TEQUIP:25 == 2 || TEQUIP:25 == 5 || TEQUIP:25 == 6 || TEQUIP:25 == 8 || TEQUIP:26 > 2
+	TFLAG:241 += 3
+
+;랜덤 요소
+TFLAG:241 += RAND:41
+LOCAL = 1 + RAND:3
+TFLAG:240 /= LOCAL
+
+;성공, 실패
+IF TFLAG:240 < TFLAG:241
+	CALL COM105_FAIL
+ELSE
+	CALL COM105_SUCCESS
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+TFLAG:140 |= 2
+RETURN 1
+
+;-------------------------------------------------
+;실행 결정(성공)
+;-------------------------------------------------
+@COM105_SUCCESS
+;칭호 취득에 관계 있으므로 이 자구를 바꾸는 경우, SOURCE2.ERB도 참조.
+TSTR:0 = 공개 노출 라이브
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 500
+DOWNBASE:1 += 500
+
+LOCAL:1 = 750
+LOCAL:2 = 900
+LOCAL:3 = 0
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+	LOCAL:3 += 0
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+	LOCAL:3 += 1
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+	LOCAL:3 += 2
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+	LOCAL:3 += 4
+ELSE
+	TIMES LOCAL:1 , 1.20
+	LOCAL:3 += 8
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	LOCAL:3 += 0
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 50
+	SOURCE:19 += 50
+	LOCAL:3 += 1
+	TIMES LOCAL:1, 1.20
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 100
+	SOURCE:19 += 100
+	LOCAL:3 += 2
+	TIMES LOCAL:1, 1.40
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 200
+	SOURCE:19 += 200
+	LOCAL:3 += 3
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 400
+	SOURCE:19 += 400
+	LOCAL:3 += 4
+	TIMES LOCAL:1, 2.00
+ELSE
+	SOURCE:24 += 800
+	SOURCE:19 += 800
+	LOCAL:3 += 5
+	TIMES LOCAL:1, 3.00
+ENDIF
+;ABL:가창 기능을 본다
+IF ABL:72 == 0
+	LOCAL:3 += 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:72 == 1
+	LOCAL:3 += 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:72 == 2
+	LOCAL:3 += 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:72 == 3
+	LOCAL:3 += 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:72 == 4
+	LOCAL:3 += 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	LOCAL:3 += 5
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;튀고 싶어함
+IF TALENT:28
+	TIMES LOCAL:1 , 1.50
+	LOCAL:3 += 10
+ENDIF
+;해방
+IF TALENT:33
+	TIMES LOCAL:1 , 1.50
+	LOCAL:3 += 5
+ENDIF
+;겁쟁이
+IF TALENT:10
+	TIMES LOCAL:2 , 2.00
+	LOCAL:3 -= 10
+ENDIF
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:2 , 2.00
+	LOCAL:3 -= 7
+;부끄러워하고 얇다
+ELSEIF TALENT:36
+	TIMES LOCAL:2 , 0.80
+	LOCAL:3 += 7
+ENDIF
+;매력
+SIF TALENT:90
+	LOCAL:3 += 20
+;매혹
+SIF TALENT:91
+	LOCAL:3 += 10
+;수수께끼의 매력
+SIF TALENT:92
+	LOCAL:3 += 25
+;인기
+SIF TALENT:94
+	LOCAL:3 += 30
+;고무
+SIF TALENT:95
+	LOCAL:3 += 50
+;음감 소유
+SIF TALENT:191
+	LOCAL:3 += 50
+;음치 소유
+SIF TALENT:190
+	LOCAL:3 -= 20
+;천식이나 구문지소유
+SIF TALENT:47 || TALENT:216
+	LOCAL:3 -= 30
+
+SOURCE:12 += LOCAL:1 /2
+SOURCE:22 += LOCAL:1 /4
+SOURCE:25 += LOCAL:2 /5
+SOURCE:28 += LOCAL:1 /4
+SOURCE:29 += LOCAL:1 /3
+SOURCE:31 += LOCAL:2
+
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF TEQUIP:41
+	IF FLAG:1100 & 1
+		;技師パッチ有効でアイマスク装備中なら特殊な名前チェック
+		TSTR:7 = 아이마스크
+		FLAG:1110 = 30
+		CALL NAMECHECK_CUSTOMTOOL
+		PRINTFORM %조사선택(TSTR:7, "를")% 
+	ELSE
+		PRINT 안대를 
+	ENDIF
+	PRINT 쓴 채로 
+	LOCAL:3 += 10
+ENDIF
+IF TEQUIP:30
+	IF TEQUIP:30 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でクリキャップ装備中なら特殊な名前チェック
+			TSTR:7 = 클리캡
+			FLAG:1110 = 15
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 클리 캡을 
+		ENDIF
+	ELSEIF TEQUIP:30 == 2
+		IF FLAG:1100 & 1
+			;技師パッチ有効でオナホール装備中なら特殊な名前チェック
+			TSTR:7 = 오나홀
+			FLAG:1110 = 16
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 오나홀을 
+		ENDIF
+	ELSEIF TEQUIP:30 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効で陰核電極装備中なら特殊な名前チェック
+			TSTR:7 = 클리 전극
+			FLAG:1110 = 18
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 클리 전극을 
+		ENDIF
+	ELSEIF TEQUIP:30 == 6
+		IF FLAG:1100 & 1
+			;技師パッチ有効で電極オナホール装備中なら特殊な名前チェック
+			TSTR:7 = 전극 오나홀
+			FLAG:1110 = 17
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 전극 오나홀을 
+		ENDIF
+	ENDIF
+	LOCAL:3 += 13
+	IF TEQUIP:35
+		PRINT , 
+	ELSE
+		PRINT 달고 
+	ENDIF
+ENDIF
+IF TEQUIP:35
+	IF TEQUIP:35 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でニプルキャップ装備中なら特殊な名前チェック
+			TSTR:7 = 유두캡
+			FLAG:1110 = 20
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 유두캡을 
+		ENDIF
+	ELSEIF TEQUIP:35 == 2
+		IF FLAG:1100 & 1
+			;技師パッチ有効で搾乳機装備中なら特殊な名前チェック
+			TSTR:7 = 착유기
+			FLAG:1110 = 21
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 착유기를 
+		ENDIF
+	ELSEIF TEQUIP:35 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効でテープ付き電極装備中なら特殊な名前チェック
+			TSTR:7 = 테이프 첨부 전극
+			FLAG:1110 = 23
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 테이프 첨부 전극을 
+		ENDIF
+	ENDIF
+	LOCAL:3 += 15
+	PRINT 달고 
+ENDIF
+IF TEQUIP:20
+	PRINT 보지에는 
+	IF TEQUIP:20 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でバイブ装備中なら特殊な名前チェック
+			TSTR:7 = 바이브
+			FLAG:1110 = 3
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 바이브를 
+		ENDIF
+		LOCAL:3 += 25
+	ELSEIF TEQUIP:20 == 2
+		PRINT 요석을 
+		LOCAL:3 += 26
+	ELSEIF TEQUIP:20 == 3
+		IF FLAG:1100 & 1
+			;技師パッチ有効でローター装備中なら特殊な名前チェック
+			TSTR:7 = 로터
+			FLAG:1110 = 0
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 로터를 
+		ENDIF
+		LOCAL:3 += 25
+	ELSEIF TEQUIP:20 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナ電極装備中なら特殊な名前チェック
+			TSTR:7 = 전극
+			FLAG:1110 = 7
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:7
+				TSTR:7 = 전극
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 전극을 
+		ENDIF
+		LOCAL:3 += 26
+	ELSEIF TEQUIP:20 == 5
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナバーベル装備中なら特殊な名前チェック
+			TSTR:7 = 바벨
+			FLAG:1110 = 4
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:4
+				TSTR:7 = 바벨
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 바벨을 
+		ENDIF
+		LOCAL:3 += 26
+	ELSEIF TEQUIP:20 == 6
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナバルーン装備中なら特殊な名前チェック
+			TSTR:7 = 풍선
+			FLAG:1110 = 5
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:5
+				TSTR:7 = 풍선
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 풍선을 
+		ENDIF
+		LOCAL:3 += 20
+	ELSEIF TEQUIP:20 == 7
+		IF FLAG:1100 & 1
+			;技師パッチ有効で愛液採集器装備中なら特殊な名前チェック
+			TSTR:7 = 애액 채집기
+			FLAG:1110 = 6
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 애액 채집기를 
+		ENDIF
+		LOCAL:3 += 20
+	ELSEIF TEQUIP:20 == 9
+		PRINT 군고구마를 
+		LOCAL:3 += 29
+	ENDIF
+	IF TEQUIP:59 || TEQUIP:36
+		PRINT 깊이 넣은 채로 
+	ELSE
+		PRINT 넣은 채로 
+	ENDIF
+ENDIF
+IF TEQUIP:25
+	PRINT 엉덩이의 구멍에는 
+	IF TEQUIP:25 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でアナルバイブ装備中なら特殊な名前チェック
+			TSTR:7 = 애널 바이브
+			FLAG:1110 = 9
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 애널 바이브를 
+		ENDIF
+	ELSEIF TEQUIP:25 == 2
+		PRINT 요석을 
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 3
+		IF FLAG:1100 & 1
+			;技師パッチ有効でローター装備中なら特殊な名前チェック
+			TSTR:7 = 로터
+			FLAG:1110 = 0
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 로터를 
+		ENDIF
+	ELSEIF TEQUIP:25 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナ電極装備中なら特殊な名前チェック
+			TSTR:7 = 전극
+			FLAG:1110 = 14
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:14
+				TSTR:7 = 전극
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 전극을 
+		ENDIF 
+	ELSEIF TEQUIP:25 == 5
+		IF FLAG:1100 & 1
+			;技師パッチ有効でアナルビーズ装備中なら特殊な名前チェック
+			TSTR:7 = 비즈
+			FLAG:1110 = 11
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:11
+				TSTR:7 = 비즈
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 비즈를 
+		ENDIF
+	ELSEIF TEQUIP:25 == 6
+		IF FLAG:1100 & 1
+			;技師パッチ有効で拡張バルーン装備中なら特殊な名前チェック
+			TSTR:7 = 벌룬
+			FLAG:1110 = 13
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:13
+				TSTR:7 = 벌룬
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 벌룬을 
+		ENDIF
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 7 || TEQUIP:25 == 8
+		IF FLAG:1100 & 1
+			;技師パッチ有効でプラグ装備中なら特殊な名前チェック
+			TSTR:7 = 플러그
+			FLAG:1110 = 10
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:10
+				TSTR:7 = 플러그
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 플러그를 
+		ENDIF
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 9
+		PRINT 커다란 봉을 
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 10
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナバーベル装備中なら特殊な名前チェック
+			TSTR:7 = 바벨
+			FLAG:1110 = 4
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:4
+				TSTR:7 = 바벨
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 바벨을 
+		ENDIF
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:26
+		PRINT 고드름을 
+		LOCAL:3 += 5
+	ENDIF
+	LOCAL:3 += 20
+	IF TEQUIP:59 || TEQUIP:36
+		PRINT 삼킨 채로, 거기에 더해 
+	ELSE
+		PRINT 삼킨 채로 
+	ENDIF
+ENDIF
+IF TEQUIP:59 == 2
+	PRINT 학교 수영복을 입고 
+	LOCAL:3 += 20
+ELSEIF TEQUIP:59
+	PRINT 수치심을 부추기는 의상을 입고 
+	LOCAL:3 += 20
+ELSEIF TEQUIP:36
+	IF FLAG:1100 & 1
+		;技師パッチ有効でサラシ装備中なら特殊な名前チェック
+		TSTR:7 = 사라시
+		FLAG:1110 = 24
+		CALL NAMECHECK_CUSTOMTOOL
+		PRINTFORM %조사선택(TSTR:7, "를")% 입고 
+	ELSE
+		PRINT 사라시를 입고 
+	ENDIF
+	LOCAL:3 += 15
+ENDIF
+PRINTL 청중의 앞에서 노래했다.
+IF FLAG:15 & 256
+	IF TFLAG:150 == 1
+		PRINTL 신사의 경내에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 2
+		PRINTL 홍마관에 노랫소리가 울려 건넌다.
+	ELSEIF TFLAG:150 == 3
+		PRINTL 긴 계단의 구석구석까지 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 4
+		PRINTL 넓은 대나무숲의 구석구석까지 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 5
+		PRINTL 삼도천 건너편까지 노랫소리가 울려 퍼진다.
+;	ELSEIF TFLAG:150 == 6
+;		PRINTL
+	ELSEIF TFLAG:150 == 7
+		PRINTL 작은 골목 안에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 8
+		PRINTL 숲에 노랫소리가 울려 퍼진다.
+;	ELSEIF TFLAG:150 == 9
+;		PRINTL
+	ELSEIF TFLAG:150 == 10
+		PRINTL 해바라기 밭에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 11
+		PRINTL 하늘 높이 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 12
+		PRINTL 이계의 하늘아래 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 99
+		PRINTL 숲에 노랫소리가 울려 퍼진다.
+	ENDIF
+ENDIF
+
+LOCAL:4 = (ABL:72 + LOCAL:3 + RAND:6) / 5
+
+LOCAL:3 /= 1 + RAND:3
+IF RAND:3 != 0
+	LOCAL:3 += RAND:21
+ELSE
+	LOCAL:3 -= RAND:21
+	LOCAL:3 = MAX(LOCAL:3, 0)
+ENDIF
+
+PRINTL
+PRINTW 「♪~」
+PRINTW 「♪♪~」
+PRINTW 「♪~♪~」
+PRINTW ……….
+PRINTW  !
+PRINTL
+
+;음란
+IF TALENT:170 && RAND:3 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 요염한 미소를 띠며 음란한 춤을 추고 있다.
+	LOCAL:3 = 1000
+ENDIF
+
+IF LOCAL:3 >= 60
+	TFLAG:99 = 1
+	IF FLAG:15 & 256
+		CALL OUTDOOR_GALLERY_NAME
+		PRINTFORMW 은 %CALLNAME:TARGET%의 노래에 듣고 반하고 있다.
+	ELSE
+		PRINTFORMW 청중은 %CALLNAME:TARGET%의 노래를 듣고 있다.
+	ENDIF
+	LOCAL:5 = 1
+	CALL COM105_CHAOS, LOCAL:3, LOCAL:5
+ELSE
+	PRINTFORMW 노래를 마친 %CALLNAME:TARGET%에게 성대한 박수갈채가 쏟아졌다….
+	CALL SELF_KOJO, TARGET, 4, 3
+	SOURCE:16 += 7500
+ENDIF
+
+LOCAL:4 += RAND:5
+LOCAL:4 = MAX(LOCAL:4, 1)
+TCVAR:73 += LOCAL:4
+
+;조교 대상의 공개 노출 라이브 성공 회수
+CFLAG:51 += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;실행 결정(실패)
+;-------------------------------------------------
+@COM105_FAIL
+TSTR:0 = 후회 야외 라이브
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 500
+DOWNBASE:1 += 500
+
+LOCAL:1 = 1500
+LOCAL:2 = 1000
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 50
+	SOURCE:19 += 50
+	TIMES LOCAL:1, 1.20
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 100
+	SOURCE:19 += 100
+	TIMES LOCAL:1, 1.40
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 200
+	SOURCE:19 += 200
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 400
+	SOURCE:19 += 400
+	TIMES LOCAL:1, 2.00
+ELSE
+	SOURCE:24 += 800
+	SOURCE:19 += 800
+	TIMES LOCAL:1, 3.00
+ENDIF
+;ABL:가창 기능을 본다
+IF ABL:72 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:72 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:72 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:72 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:72 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:2 , 2.00
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1 , 1.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:2 , 2.00
+;부끄럼없음
+SIF TALENT:36
+	TIMES LOCAL:2 , 0.80
+
+SOURCE:12 += LOCAL:1 /2
+SOURCE:22 += LOCAL:1 /4
+SOURCE:25 += LOCAL:2 /10
+SOURCE:28 += LOCAL:1 /4
+SOURCE:29 += LOCAL:1 /3
+SOURCE:31 += LOCAL:2
+
+LOCAL:3 = RAND:5
+
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF TEQUIP:41
+	IF FLAG:1100 & 1
+		;技師パッチ有効でアイマスク装備中なら特殊な名前チェック
+		TSTR:7 = 아이마스크
+		FLAG:1110 = 30
+		CALL NAMECHECK_CUSTOMTOOL
+		PRINTFORM %조사선택(TSTR:7, "를")% 
+	ELSE
+		PRINT 안대를 
+	ENDIF
+	PRINT 쓴 채로 
+	LOCAL:3 += 10
+ENDIF
+IF TEQUIP:30
+	IF TEQUIP:30 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でクリキャップ装備中なら特殊な名前チェック
+			TSTR:7 = 클리캡
+			FLAG:1110 = 15
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 클리 캡을 
+		ENDIF
+	ELSEIF TEQUIP:30 == 2
+		IF FLAG:1100 & 1
+			;技師パッチ有効でオナホール装備中なら特殊な名前チェック
+			TSTR:7 = 오나홀
+			FLAG:1110 = 16
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 오나홀을 
+		ENDIF
+	ELSEIF TEQUIP:30 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効で陰核電極装備中なら特殊な名前チェック
+			TSTR:7 = 클리 전극
+			FLAG:1110 = 18
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 클리 전극을 
+		ENDIF
+	ELSEIF TEQUIP:30 == 6
+		IF FLAG:1100 & 1
+			;技師パッチ有効で電極オナホール装備中なら特殊な名前チェック
+			TSTR:7 = 전극 오나홀
+			FLAG:1110 = 17
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 전극 오나홀을 
+		ENDIF
+	ENDIF
+	LOCAL:3 += 13
+	IF TEQUIP:35
+		PRINT , 
+	ELSE
+		PRINT 달고 
+	ENDIF
+ENDIF
+IF TEQUIP:35
+	IF TEQUIP:35 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でニプルキャップ装備中なら特殊な名前チェック
+			TSTR:7 = 유두캡
+			FLAG:1110 = 20
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 유두캡을 
+		ENDIF
+	ELSEIF TEQUIP:35 == 2
+		IF FLAG:1100 & 1
+			;技師パッチ有効で搾乳機装備中なら特殊な名前チェック
+			TSTR:7 = 착유기
+			FLAG:1110 = 21
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 착유기를 
+		ENDIF
+	ELSEIF TEQUIP:35 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効でテープ付き電極装備中なら特殊な名前チェック
+			TSTR:7 = 테이프 첨부 전극
+			FLAG:1110 = 23
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 테이프 첨부 전극을 
+		ENDIF
+	ENDIF
+	LOCAL:3 += 15
+	PRINT 달고 
+ENDIF
+IF TEQUIP:20
+	PRINT 보지에는 
+	IF TEQUIP:20 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でバイブ装備中なら特殊な名前チェック
+			TSTR:7 = 바이브
+			FLAG:1110 = 3
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 바이브를 
+		ENDIF
+		LOCAL:3 += 25
+	ELSEIF TEQUIP:20 == 2
+		PRINT 요석을 
+		LOCAL:3 += 26
+	ELSEIF TEQUIP:20 == 3
+		IF FLAG:1100 & 1
+			;技師パッチ有効でローター装備中なら特殊な名前チェック
+			TSTR:7 = 로터
+			FLAG:1110 = 0
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 로터를 
+		ENDIF
+		LOCAL:3 += 25
+	ELSEIF TEQUIP:20 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナ電極装備中なら特殊な名前チェック
+			TSTR:7 = 전극
+			FLAG:1110 = 7
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:7
+				TSTR:7 = 전극
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 전극을 
+		ENDIF
+		LOCAL:3 += 26
+	ELSEIF TEQUIP:20 == 5
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナバーベル装備中なら特殊な名前チェック
+			TSTR:7 = 바벨
+			FLAG:1110 = 4
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:4
+				TSTR:7 = 바벨
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 바벨을 
+		ENDIF
+		LOCAL:3 += 26
+	ELSEIF TEQUIP:20 == 6
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナバルーン装備中なら特殊な名前チェック
+			TSTR:7 = 풍선
+			FLAG:1110 = 5
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:5
+				TSTR:7 = 풍선
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 풍선을 
+		ENDIF
+		LOCAL:3 += 20
+	ELSEIF TEQUIP:20 == 7
+		IF FLAG:1100 & 1
+			;技師パッチ有効で愛液採集器装備中なら特殊な名前チェック
+			TSTR:7 = 애액 채집기
+			FLAG:1110 = 6
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 애액 채집기를 
+		ENDIF
+		LOCAL:3 += 20
+	ELSEIF TEQUIP:20 == 9
+		PRINT 군고구마를 
+		LOCAL:3 += 29
+	ENDIF
+	IF TEQUIP:59 || TEQUIP:36
+		PRINT 깊이 넣은 채로 
+	ELSE
+		PRINT 넣은 채로 
+	ENDIF
+ENDIF
+IF TEQUIP:25
+	PRINT 엉덩이의 구멍에는 
+	IF TEQUIP:25 == 1
+		IF FLAG:1100 & 1
+			;技師パッチ有効でアナルバイブ装備中なら特殊な名前チェック
+			TSTR:7 = 애널 바이브
+			FLAG:1110 = 9
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 애널 바이브를 
+		ENDIF
+	ELSEIF TEQUIP:25 == 2
+		PRINT 요석을 
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 3
+		IF FLAG:1100 & 1
+			;技師パッチ有効でローター装備中なら特殊な名前チェック
+			TSTR:7 = 로터
+			FLAG:1110 = 0
+			CALL NAMECHECK_CUSTOMTOOL
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 로터를 
+		ENDIF
+	ELSEIF TEQUIP:25 == 4
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナ電極装備中なら特殊な名前チェック
+			TSTR:7 = 전극
+			FLAG:1110 = 14
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:14
+				TSTR:7 = 전극
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 전극을 
+		ENDIF 
+	ELSEIF TEQUIP:25 == 5
+		IF FLAG:1100 & 1
+			;技師パッチ有効でアナルビーズ装備中なら特殊な名前チェック
+			TSTR:7 = 비즈
+			FLAG:1110 = 11
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:11
+				TSTR:7 = 비즈
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 비즈를 
+		ENDIF
+	ELSEIF TEQUIP:25 == 6
+		IF FLAG:1100 & 1
+			;技師パッチ有効で拡張バルーン装備中なら特殊な名前チェック
+			TSTR:7 = 벌룬
+			FLAG:1110 = 13
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:13
+				TSTR:7 = 벌룬
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 벌룬을 
+		ENDIF
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 7 || TEQUIP:25 == 8
+		IF FLAG:1100 & 1
+			;技師パッチ有効でプラグ装備中なら特殊な名前チェック
+			TSTR:7 = 플러그
+			FLAG:1110 = 10
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:10
+				TSTR:7 = 플러그
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 플러그를 
+		ENDIF
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 9
+		PRINT 커다란 봉을 
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:25 == 10
+		IF FLAG:1100 & 1
+			;技師パッチ有効でヴァギナバーベル装備中なら特殊な名前チェック
+			TSTR:7 = 바벨
+			FLAG:1110 = 4
+			CALL NAMECHECK_CUSTOMTOOL
+			SIF TSTR:7 == ITEMNAME:4
+				TSTR:7 = 바벨
+			PRINTFORM %조사선택(TSTR:7, "를")% 
+		ELSE
+			PRINT 바벨을 
+		ENDIF
+		LOCAL:3 += 5
+	ELSEIF TEQUIP:26
+		PRINT 고드름을 
+		LOCAL:3 += 5
+	ENDIF
+	LOCAL:3 += 20
+	IF TEQUIP:59 || TEQUIP:36
+		PRINT 삼킨 채로, 거기에 더해 
+	ELSE
+		PRINT 삼킨 채로 
+	ENDIF
+ENDIF
+IF TEQUIP:59 == 2
+	PRINT 학교 수영복을 입고 
+	LOCAL:3 += 20
+ELSEIF TEQUIP:59
+	PRINT 수치심을 부추기는 의상을 입고 
+	LOCAL:3 += 20
+ELSEIF TEQUIP:36
+	IF FLAG:1100 & 1
+		;技師パッチ有効でサラシ装備中なら特殊な名前チェック
+		TSTR:7 = 사라시
+		FLAG:1110 = 24
+		CALL NAMECHECK_CUSTOMTOOL
+		PRINTFORM %조사선택(TSTR:7, "를")% 입고 
+	ELSE
+		PRINT 사라시를 입고 
+	ENDIF
+	LOCAL:3 += 15
+ENDIF
+PRINTFORML 청중의 앞에서 노래했다.
+IF FLAG:15 & 256
+	IF TFLAG:150 == 1
+		PRINTL 신사의 경내에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 2
+		PRINTL 큰 저택 안에 노랫소리가 울려 건넌다.
+	ELSEIF TFLAG:150 == 3
+		PRINTL 긴 계단의 구석구석까지, 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 4
+		PRINTL 넓은 대나무숲의 구석구석까지, 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 5
+		PRINTL 삼도천 너머로 노랫소리가 울려 퍼진다.
+;	ELSEIF TFLAG:150 == 6
+;		PRINTL
+	ELSEIF TFLAG:150 == 7
+		PRINTL 작은 골목 안에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 8
+		PRINTL 숲 안에 노랫소리가 울려 퍼진다.
+;	ELSEIF TFLAG:150 == 9
+;		PRINTL
+	ELSEIF TFLAG:150 == 10
+		PRINTL 해바라기 밭에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 11
+		PRINTL 마을의 뒷길에 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 12
+		PRINTL 이계의 하늘아래 노랫소리가 울려 퍼진다.
+	ELSEIF TFLAG:150 == 99
+		PRINTL 숲 속에 노랫소리가 울려 퍼진다.
+	ENDIF
+ENDIF
+
+LOCAL:4 = (ABL:72 / 2 + LOCAL:3) / 3
+
+PRINTL
+PRINTW 「♪~」
+PRINTW 「♪♪~」
+PRINTW 「♪~♪~」
+PRINTW 「……」
+PRINTW ……….
+PRINTL
+PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 부끄러움 때문에인가, 그렇지 않으면 긴장한 탓인지
+PRINTW 라이브 중임에도 불구하고 완전히 얼어붙어 버렸다….
+LOCAL:5 = 0
+CALL COM105_CHAOS, LOCAL:3, LOCAL:5
+
+LOCAL:4 += RAND:3
+LOCAL:4 = MAX(LOCAL:4, 1)
+TCVAR:73 += LOCAL:4
+
+;조교 대상의 공개 노출 라이브 실패 회수
+CFLAG:52 += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;라이브중의 난교 이벤트
+;-------------------------------------------------
+;ARG   = ( 구C) 조교 대상이 권하는 것 같은 행동을 했는지?
+;ARG:1 = ( 구S) 라이브 그 자체가 성공했는지 실패했는지
+@COM105_CHAOS, ARG, ARG:1
+VARSET LOCAL, 0
+LOCAL:8 = 2 + RAND:9
+SIF ARG > 999
+	LOCAL:8 *= (2+RAND:4)
+LOCAL:6 = 3 + RAND:5
+LOCAL:7 = RAND:16
+
+IF LOCAL:7 > 6 && TEQUIP:25 == 0 && TEQUIP:26 == 0
+;A감각을 본다
+	IF ABL:2 == 0
+		LOCAL = 40
+	ELSEIF ABL:2 == 1
+		LOCAL = 60
+	ELSEIF ABL:2 == 2
+		LOCAL = 90
+	ELSEIF ABL:2 == 3
+		LOCAL = 130
+	ELSEIF ABL:2 == 4
+		LOCAL = 180
+	ELSE
+		LOCAL = 240
+	ENDIF
+	LOCAL:4 = 2 + RAND:5
+	LOCAL *= LOCAL:4
+ENDIF
+
+;B감각을 본다
+IF ABL:3 == 0
+	LOCAL:1 = 50
+ELSEIF ABL:3 == 1
+	LOCAL:1 = 80
+ELSEIF ABL:3 == 2
+	LOCAL:1 = 160
+ELSEIF ABL:3 == 3
+	LOCAL:1 = 240
+ELSEIF ABL:3 == 4
+	LOCAL:1 = 320
+ELSE
+	LOCAL:1 = 480
+ENDIF
+LOCAL:1 *= LOCAL:8
+
+;C감각을 본다
+IF ABL:0 == 0
+	LOCAL:2 = 100
+ELSEIF ABL:0 == 1
+	LOCAL:2 = 130
+ELSEIF ABL:0 == 2
+	LOCAL:2 = 170
+ELSEIF ABL:0 == 3
+	LOCAL:2 = 250
+ELSEIF ABL:0 == 4
+	LOCAL:2 = 360
+ELSE
+	LOCAL:2 = 500
+ENDIF
+LOCAL:2 *= LOCAL:8
+
+IF LOCAL:7 < 10 && TEQUIP:20 == 0 && TEQUIP:21 == 0 && TALENT:120 == 0
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+	TFLAG:1 = 1
+;V감각을 본다
+	IF ABL:1 == 0
+		LOCAL:3 = 100
+	ELSEIF ABL:1 == 1
+		LOCAL:3 = 120
+	ELSEIF ABL:1 == 2
+		LOCAL:3 = 150
+	ELSEIF ABL:1 == 3
+		LOCAL:3 = 180
+	ELSEIF ABL:1 == 4
+		LOCAL:3 = 200
+	ELSE
+		LOCAL:3 = 250
+	ENDIF
+	LOCAL:5 = 2 + RAND:5
+	SIF TALENT:0
+		LOCAL:3 *= LOCAL:5
+ENDIF
+
+LOCAL:9 = LOCAL:4+LOCAL:5+LOCAL:6+(LOCAL:8/2)
+
+;ARG:1이 1이라면 라이브 성공 후의 난교, 그 이외(ARG:1=0)라면 실패 후의 난교
+IF ARG:1 == 1
+	PRINTFORML %CALLNAME:TARGET%의 매력과 가성에 매료되었는가
+	PRINTFORMW 흥분한 청중들이 일제히 %CALLNAME:TARGET%의 아래에 몰려들었다….
+ELSE
+	PRINTFORMW 무슨 스위치가 들어갔는지 돌연 청중들은 %조사선택(CALLNAME:TARGET, "로")% 향해 구름처럼 몰려들었다….
+ENDIF
+CALL SELF_KOJO, TARGET, 4, ARG:1
+PRINTL     ·
+PRINTL     ·
+PRINTL     ·
+;음마, 처녀가 아닌＋음란＋해방, 처녀가 아닌＋음란＋쾌감에 솔직하면 지문이 다르다
+IF TALENT:180 || ((TALENT:0 == 0) && TALENT:170 && TALENT:33) || ((TALENT:0 == 0 ) && TALENT:170 && TALENT:70)
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 몰려오는 청중을 보며 기쁜 듯이 뛰어올라 
+	SIF LOCAL:5 > 0
+		PRINTFORM 보지로 {LOCAL:5} 자루의, 
+	SIF LOCAL:4 > 0
+		PRINTFORM 항문으로 {LOCAL:4} 자루의, 
+	PRINTFORM 입으로 {LOCAL:6} 자루의 
+	PRINTW 자지를 맛있다는 듯이 범했다….
+	;난교된 플래그
+	TFLAG:176 = 2
+ELSE
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 모인 청중에게 
+	SIF LOCAL:5 > 0
+		PRINTFORM 보지를 {LOCAL:5}회, 
+	SIF LOCAL:4 > 0
+		PRINTFORM 항문을 {LOCAL:4}회, 
+	PRINTFORM 입을 {LOCAL:6}회 
+	PRINTW 범해져 버렸다….
+	;난교된 플래그
+	TFLAG:176 = 1
+ENDIF
+PRINTL
+PRINTL
+IF LOCAL:5 > 0
+	TCVAR:0 += LOCAL:5
+	SIF TALENT:0 == 1
+		TCVAR:50 += 3
+	STAIN:3 |= 2
+	STAIN:3 |= 4
+ENDIF
+IF LOCAL:4 > 0
+	TCVAR:1 += LOCAL:4
+	STAIN:4 |= 2
+	STAIN:4 |= 4
+ENDIF
+TCVAR:22 += LOCAL:6
+SOURCE:15 += 310 * LOCAL:8
+SOURCE:16 += 370 * LOCAL:8
+SOURCE:17 += 150 * LOCAL:8
+SOURCE:20 += 150 * LOCAL:8
+SOURCE:31 += 150 * LOCAL:8
+STAIN:0 |= 2
+STAIN:0 |= 4
+SIF (LOCAL:4+LOCAL:5+LOCAL:6)/2 > 0
+	TCVAR:4 += (LOCAL:4+LOCAL:5+LOCAL:6)/2
+TCVAR:81 += 1
+TCVAR:82 += 1
+SOURCE:0 += LOCAL:2
+SOURCE:1 += LOCAL:3
+SOURCE:2 += LOCAL
+SOURCE:3 += LOCAL:1
+SOURCE:22 += 750 * LOCAL:9
+SOURCE:25 += 280 * LOCAL:9
+
+;조교 대상의 공개 노출 라이브중의 난교 회수
+CFLAG:53 += 1
+
+RETURN 1

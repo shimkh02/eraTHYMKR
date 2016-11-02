@@ -1,0 +1,238 @@
+﻿;=============================================================================
+;보지 비비기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE301
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:301 > 0
+	RETURN 0
+;조교자か조교 대상이 肥大陰核かオトコか후타나리だとダメ
+SIF EXIST_BAR(TARGET) || EXIST_BAR(PLAYER)
+	RETURN 0
+;주인이 [금단의 지식]持ちじゃないとき, 体格差が2段階以内か조교자가 [금단의 지식]持ちじゃないとダメ
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, TARGET) == 0
+	RETURN 0
+;욕망3이하일 경우貝あわせはできない(소악마, 相性良好ならＯＫ)
+LOCAL = NO:PLAYER
+SIF ASSIPLAY && ABL:ASSI:11 <= 3 && TALENT:ASSI:93 == 0 && RELATION:LOCAL < 150
+	RETURN 0
+;HARDモード이상は条件追加
+IF FLAG:3 >= 3
+	;바이브삽입中はダメ
+	SIF TEQUIP:20 == 1
+		RETURN 0
+	;Ｃ계 장착구 사용 중에는 불가
+	SIF TEQUIP:30
+		RETURN 0
+ENDIF
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;Ｕ계 장착구 사용 중에는 불가
+SIF TEQUIP:32
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 훈도시 착용 중일 경우에는 불가
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;인어는 안됨
+SIF TALENT:229 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM301
+;전회의 커맨드가 가랑이로 샌드위치 실행 가능의 판정이 있으면(자) 체크 후 샌드위치에 파생
+IF PREVCOM == 43 && TFLAG:157
+	CALL JUDGE_TRAIN_PAIR, TARGET, ASSI
+	IF TFLAG:175 > 0
+		CALL EXCOM_ABLE629
+		SIF RESULT == 1
+			JUMP COM629
+	ENDIF
+	TFLAG:157 = 0
+ENDIF
+
+PRINTL 보지 비비기
+TSTR:0 = 보지 비비기
+CALL TRAIN_MESSAGE_COM301
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 30
+DOWNBASE:1 += 90
+
+SOURCE:10 = 500
+SOURCE:12 = 250
+SOURCE:22 = 400
+SOURCE:31 = 300
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:18 = 200
+ELSEIF ABL:10 == 1
+	SOURCE:18 = 120
+ELSEIF ABL:10 == 2
+	SOURCE:18 = 60
+ELSEIF ABL:10 == 3
+	SOURCE:18 = 20
+ELSEIF ABL:10 == 4
+	SOURCE:18 = 0
+ELSE
+	SOURCE:18 = 0
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 20
+	SOURCE:15 = 0
+	SOURCE:16 = 0
+	TIMES SOURCE:12 , 0.80
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 80
+	SOURCE:15 = 10
+	SOURCE:16 = 50
+	TIMES SOURCE:12 , 0.90
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 350
+	SOURCE:15 = 50
+	SOURCE:16 = 100
+	TIMES SOURCE:12 , 1.00
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 750
+	SOURCE:15 = 100
+	SOURCE:16 = 300
+	TIMES SOURCE:12 , 1.10
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1200
+	SOURCE:15 = 700
+	SOURCE:16 = 600
+	TIMES SOURCE:12 , 1.20
+ELSE
+	SOURCE:0 = 1750
+	SOURCE:15 = 2000
+	SOURCE:16 = 1000
+	TIMES SOURCE:12 , 1.30
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.70
+	TIMES SOURCE:16 , 0.75
+	TIMES SOURCE:22 , 0.50
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.90
+	TIMES SOURCE:22 , 0.60
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+	TIMES SOURCE:22 , 0.70
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.25
+	TIMES SOURCE:22 , 0.80
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 1.40
+	TIMES SOURCE:16 , 1.50
+	TIMES SOURCE:22 , 0.90
+ELSE
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:16 , 1.75
+	TIMES SOURCE:22 , 1.00
+ENDIF
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:13 == 1
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:13 == 2
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:13 == 3
+	TIMES SOURCE:16 , 1.40
+ELSEIF ABL:13 == 4
+	TIMES SOURCE:16 , 1.70
+ELSE
+	TIMES SOURCE:16 , 2.00
+ENDIF
+
+;조교자의 ABL:C감각을 본다
+IF ABL:PLAYER:0 == 0
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:PLAYER:0 == 1
+	TIMES SOURCE:15 , 0.90
+	TIMES SOURCE:16 , 0.70
+ELSEIF ABL:PLAYER:0 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:PLAYER:0 == 3
+	TIMES SOURCE:15 , 1.10
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:PLAYER:0 == 4
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.40
+ELSE
+	TIMES SOURCE:15 , 1.30
+	TIMES SOURCE:16 , 1.70
+ENDIF
+
+;노예의 V⇔조교자의 V의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:3
+STAIN:PLAYER:3 |= STAIN:3
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 8
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:0 >= 3
+	TFLAG:50 += 1
+
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM301
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 서로의 성기를 비벼댔다….

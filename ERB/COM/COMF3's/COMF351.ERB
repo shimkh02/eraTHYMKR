@@ -1,0 +1,342 @@
+﻿;=============================================================================
+;샤워
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE351
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:351 > 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:54
+	RETURN 1
+;吸血鬼や動物耳には순종4がないと使用不可(プレイヤーが새드ならＯＫ)
+IF TALENT:205 || TALENT:116
+	SIF ABL:0 < 4 && TALENT:PLAYER:81 == 0
+		RETURN 0
+ENDIF
+;お風呂プレイ中じゃないとダメ
+SIF TEQUIP:53 != 1
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;조수가 スク水とビキニと褌以外のコスプレ中はだめ
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 > 1 && TEQUIP:ASSI:59 != 2 && TEQUIP:ASSI:59 != 12 && TEQUIP:ASSI:59 != 17
+	RETURN 0
+;ビキニと褌以外のコスプレ中はだめ
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 12 && TEQUIP:59 != 17
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM351
+LOCAL:1 = 1
+PRINTL 샤워
+IF TEQUIP:54 || (FLAG:15 & 1024) == 0
+	TSTR:0 = 샤워
+ELSE
+	CALL SELECT_SHOWER
+	LOCAL:1 = RESULT + 1
+ENDIF
+;말용
+TFLAG:99 = LOCAL:1
+CALL TRAIN_MESSAGE_COM351
+
+;온수(보통) 샤워, 샤워 정지
+IF LOCAL:1 == 1
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 10
+
+	SOURCE:12 = 50
+	SOURCE:16 = 400
+	SOURCE:17 = 200
+	SOURCE:31 = 50
+;냉수 샤워
+ELSEIF LOCAL:1 == 2
+	;치르노＆레티는 별취급
+	IF NO:TARGET == 5 || NO:TARGET == 12
+		DOWNBASE:0 += 0
+		DOWNBASE:1 += 10
+	
+		SOURCE:12 = 50
+		SOURCE:16 = 400
+		SOURCE:17 = 200
+		SOURCE:31 = 50
+	ELSE
+		DOWNBASE:0 += 20
+		DOWNBASE:1 += 30
+	
+		SOURCE:12 = 50
+		SOURCE:16 = 400
+		SOURCE:20 = 200
+		SOURCE:31 = 100
+	ENDIF
+;열탕 샤워
+ELSEIF LOCAL:1 == 3
+	;치르노＆레티는 별취급
+	IF NO:TARGET == 5 || NO:TARGET == 12
+		DOWNBASE:0 += 40
+		DOWNBASE:1 += 60
+	
+		SOURCE:12 = 50
+		SOURCE:16 = 400
+		SOURCE:20 = 400
+		SOURCE:31 = 400
+	ELSE
+		DOWNBASE:0 += 20
+		DOWNBASE:1 += 30
+
+		SOURCE:12 = 50
+		SOURCE:16 = 400
+		SOURCE:20 = 100
+		SOURCE:31 = 200
+	ENDIF
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:12 += 10
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:12 += 30
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:12 += 60
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:12 += 100
+ELSE
+	SOURCE:12 += 150
+ENDIF
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:11 = 0
+ELSEIF ABL:13 == 1
+	SOURCE:11 = 20
+ELSEIF ABL:13 == 2
+	SOURCE:11 = 40
+ELSEIF ABL:13 == 3
+	SOURCE:11 = 70
+ELSEIF ABL:13 == 4
+	SOURCE:11 = 110
+ELSE
+	SOURCE:11 = 150
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:16 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:16 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:16 , 1.20
+ELSE
+	TIMES SOURCE:16 , 1.30
+ENDIF
+
+;흡혈귀의 경우
+IF TALENT:205
+	SOURCE:21 = 100
+	TIMES SOURCE:20 , 1.60
+	TIMES SOURCE:22 , 2.00
+	TIMES SOURCE:32 , 1.40
+ENDIF
+;동물귀의 경우
+IF TALENT:116
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.60
+	TIMES SOURCE:32 , 2.00
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;샤워의 개시와 종료
+TEQUIP:54 = (TEQUIP:54) ?  0 # LOCAL:1
+
+;샤워로 더러움이 리셋
+RESET_STAIN TARGET
+
+;(할 수 있으면) 윤활이 반에
+PALAM:10 /= 2
+PALAM:21 /= 2
+
+RETURN 1
+
+;-------------------------------------------------
+;샤워 선택
+;-------------------------------------------------
+@SELECT_SHOWER
+PRINTL 물을 얼마나 데울까요?
+PRINTL [0] - 보통
+PRINTL [1] - 차갑게…
+PRINTL [2] - 뜨겁게!
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	TSTR:0 = 온수 샤워
+ELSEIF RESULT == 1
+	TSTR:0 = 냉수 샤워
+ELSEIF RESULT == 2
+	TSTR:0 = 열탕 샤워
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+RETURN RESULT
+
+;-------------------------------------------------
+;샤워 사용중
+;-------------------------------------------------
+@EQUIP_COM351
+IF TEQUIP:54 == 1
+	PRINTL <샤워 사용 중>
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 10
+	SOURCE:17 += 200
+ELSEIF TEQUIP:54 == 2
+	PRINTL <샤워(냉수) 사용 중>
+	;치르노＆레티는 구별
+	IF NO:TARGET == 5 || NO:TARGET == 12
+		DOWNBASE:0 += 0
+		DOWNBASE:1 += 10
+		SOURCE:17 += 200
+	ELSE
+		DOWNBASE:0 += 5
+		DOWNBASE:1 += 20
+		SOURCE:20 += 200
+	ENDIF
+ELSEIF TEQUIP:54 == 3
+	PRINTL <샤워(열탕) 사용 중>
+	;치르노＆레티는 구별
+	IF NO:TARGET == 5 || NO:TARGET == 12
+		DOWNBASE:0 += 10
+		DOWNBASE:1 += 50
+		SOURCE:20 += 200
+		SOURCE:31 += 50
+	ELSE
+		DOWNBASE:0 += 5
+		DOWNBASE:1 += 25
+		SOURCE:20 += 100
+	ENDIF
+ENDIF
+
+SOURCE:16 += 400
+SOURCE:17 += 100
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:12 += 10
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:12 += 30
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:12 += 60
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:12 += 100
+ELSE
+	SOURCE:12 += 150
+ENDIF
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:11 += 0
+ELSEIF ABL:13 == 1
+	SOURCE:11 += 20
+ELSEIF ABL:13 == 2
+	SOURCE:11 += 40
+ELSEIF ABL:13 == 3
+	SOURCE:11 += 70
+ELSEIF ABL:13 == 4
+	SOURCE:11 += 110
+ELSE
+	SOURCE:11 += 150
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:16 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:16 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:16 , 1.20
+ELSE
+	TIMES SOURCE:16 , 1.30
+ENDIF
+
+SOURCE:18 += 50
+SOURCE:12 += 50
+
+;흡혈귀의 경우
+IF TALENT:205
+	SOURCE:21 += 150
+	TIMES SOURCE:20 , 1.60
+	TIMES SOURCE:22 , 2.00
+	TIMES SOURCE:32 , 1.40
+ENDIF
+;동물귀의 경우
+IF TALENT:116
+	SOURCE:32 += 150
+	TIMES SOURCE:31 , 1.60
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:32 , 2.00
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;샤워로 더러움이 리셋
+RESET_STAIN TARGET
+
+PALAM:10 /= 2
+PALAM:21 /= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM351
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:54
+	PRINTFORMW %CALLNAME:TARGET%에게 샤워를 멈추게 했다.
+ELSE
+	IF TFLAG:99 == 2
+		PRINTFORMW 샤워기에서 얼음과 같이 차가운 물이 %CALLNAME:TARGET%에게 쏟아졌다.
+	ELSEIF TFLAG:99 == 3
+		PRINTFORMW %CALLNAME:TARGET%의 몸에 뜨거운 물을 끼얹었다.
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%에게 샤워를 하게 했다.
+	ENDIF
+ENDIF

@@ -1,0 +1,212 @@
+﻿;=============================================================================
+;돈 목욕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE374
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:374 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 32768) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 16
+	RETURN 1
+;貧乏人には扱えないシロモノです
+SIF MONEY < 150000
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이中じゃ無いとダメ
+SIF TEQUIP:53 != 1
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 16
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;자금을 돈뭉치로 바꾸어 거기에 뛰어들게 한다고 하는 브르죠와인 커맨드.
+;이상한 잡지의 이상한 광고라든지에 있던 놈w
+;첫회에 150000원, 효과 유지에 매턴 1000원필요(이 값은 술목욕탕과 같다)
+@COM374
+PRINTL 돈 목욕
+TSTR:0 = 돈뭉치 목욕탕
+CALL TRAIN_MESSAGE_COM374
+
+IF TEQUIP:55 == 16
+	DOWNBASE:0 += 10
+	DOWNBASE:1 += 20
+	SIF ABL:10 >= 3
+		SOURCE:32 = 100
+	TEQUIP:55 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 40
+
+SOURCE:24 = 500
+SOURCE:16 = 100
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:32 = 500
+	SOURCE:17 = 0
+	SOURCE:31 = 500
+	SOURCE:22 = 0
+ELSEIF ABL:10 == 1
+	SOURCE:32 = 250
+	SOURCE:17 = 20
+	SOURCE:31 = 250
+	SOURCE:22 = 20
+ELSEIF ABL:10 == 2
+	SOURCE:32 = 100
+	SOURCE:17 = 100
+	SOURCE:31 = 100
+	SOURCE:22 = 100
+ELSEIF ABL:10 == 3
+	SOURCE:32 = 10
+	SOURCE:17 = 250
+	SOURCE:31 = 10
+	SOURCE:22 = 250
+ELSEIF ABL:10 == 4
+	SOURCE:32 = 5
+	SOURCE:17 = 500
+	SOURCE:31 = 5
+	SOURCE:22 = 500
+ELSE
+	SOURCE:32 = 0
+	SOURCE:17 = 800
+	SOURCE:31 = 0
+	SOURCE:22 = 800
+ENDIF
+
+MONEY -= 150000
+TEQUIP:55 = 16
+
+RETURN 1
+
+;--------------------------------------------------
+;돈뭉치 목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM374
+PRINTL <돈 목욕탕 입욕 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 20
+
+SOURCE:24 += 90
+SOURCE:16 += 100
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:32 += 600
+	SOURCE:17 += 5
+	SOURCE:31 += 600
+	SOURCE:22 += 5
+ELSEIF ABL:10 == 1
+	SOURCE:32 += 300
+	SOURCE:17 += 15
+	SOURCE:31 += 300
+	SOURCE:16 += 15
+ELSEIF ABL:10 == 2
+	SOURCE:32 += 150
+	SOURCE:17 += 80
+	SOURCE:31 += 150
+	SOURCE:16 += 80
+ELSEIF ABL:10 == 3
+	SOURCE:32 += 30
+	SOURCE:17 += 150
+	SOURCE:31 += 30
+	SOURCE:22 += 150
+ELSEIF ABL:10 == 4
+	SOURCE:32 += 10
+	SOURCE:17 += 300
+	SOURCE:31 += 10
+	SOURCE:22 += 300
+ELSE
+	SOURCE:32 += 0
+	SOURCE:17 += 600
+	SOURCE:31 += 0
+	SOURCE:22 += 600
+ENDIF
+
+;돈을 소비
+MONEY -= 2000
+IF MONEY < 2000
+	PRINTL 목욕탕에 돈뭉치를 채우기 위한 자금이 부족해졌다….
+	PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 어쩔 수 없이 목욕탕에서 %조사선택(CALLNAME:TARGET, "를")% 꺼냈다.
+	IF ABL:10 >= 3
+		PRINTFORML 아무래도 %조사선택(CALLNAME:TARGET, "는")% 돈이 떨어진걸 아쉬워 하는 것 같다….
+		SOURCE:32 += 500
+	ENDIF
+	TEQUIP:55 = 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM374
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 16
+	PRINTFORML 돈뭉치로 채워진 목욕탕에서 %조사선택(CALLNAME:TARGET, "를")% 꺼냈다.
+	SIF ABL:10 >= 3
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 조금 유감스러운 얼굴을 하고 있다….
+	PRINTW
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 돈뭉치로 채워진 목욕탕에 잠기게 했다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF (TALENT:150 || TALENT:152 || TALENT:153) && TALENT:160 == 0 && TALENT:164 == 0 && ASSIPLAY == 0
+		PRINTFORMW %CALLNAME:MASTER%에게 함께 하지 않을지 권해왔다.
+	ELSEIF ABL:10 >= 5
+		PRINTW 머리 끝까지 돈뭉치에 잠겨, 갑부가 된 듯한 기분을 만끽하고 있다….
+	ELSEIF ABL:10 == 4
+		PRINTW 돈뭉치의 촉감을 마음껏 즐기고 있다….
+	ELSEIF ABL:10 == 3
+		PRINTW 대량의 돈뭉치에 부끄러운 듯이 파묻히면서도, 얼굴에는 미약한 웃음이 보인다….
+	ELSEIF ABL:10 == 2
+		PRINTW 기쁜 것인지 혼란스러워 하는 것인지, 애매한 표정을 짓고 있다.
+	ELSEIF ABL:10 == 1
+		PRINTW 기가 막혀 하면서도, 돈뭉치에 몸을 파묻고 있다.
+	ELSE
+		PRINTFORMW 노골적인 경멸의 눈빛을 %CALLNAME:PLAYER%에게 보내면서, 억지로 돈뭉치 안으로 들어갔다….
+	ENDIF
+ENDIF

@@ -1,0 +1,189 @@
+﻿;=============================================================================
+;조교 중에서의 캐릭터 정보
+;=============================================================================
+;커스텀 메뉴 · 능력 표시로 표시되는 정보를 이곳에서
+;-------------------------------------------------
+;조교 중에서의 캐릭터 정보 표시 처리(메인 페이지)
+;-------------------------------------------------
+@SHOW_INFO_TRAIN_MAIN, ARG
+LOCAL = 0
+LOCAL:1 = (ARG == TARGET) ? 2 # 0
+LOCAL:2 = (ARG != TARGET && ASSI >= 0) ? 1 # 0
+
+$PRINT_LIST
+CALL NEW_DRAWLINE
+PRINTFORML %CALLNAME:ARG%\@(NO:ARG >= 150 && NO:ARG < 200 && CALLNAME:ARG != NAME:ARG) ? (%ITEMNAME:(100+NO:ARG)%) # \@
+CALLFORM SHOW_INFO_TRAIN_{LOCAL}, ARG
+CALL NEW_DRAWLINE
+IF LOCAL:2 == 1
+	PRINTFORMLC [1001]\@(ARG == MASTER) ? 조수 # 주인 \@의 표시
+ELSE
+	PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞 페이지로\@
+ENDIF
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음 페이지로\@
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL:2 == 1
+	ARG = (ARG == MASTER) ? ASSI # MASTER
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+
+;=============================================================================
+;조교 중에서의 캐릭터 정보 표시 처리(0페이지째)
+;=============================================================================
+@SHOW_INFO_TRAIN_0, ARG
+;
+SIF FLAG:1500 & 1
+	CALL SHOW_SIZE, ARG
+;
+CALL SHOW_INFO_PAGE_1, ARG
+
+IF ARG != MASTER
+	IF FLAG:12 & 2
+		CALL NEW_PRINT_JUEL, ARG
+	ELSE
+		CALL SHOW_INFO_JUEL, ARG
+	ENDIF
+	SIF FLAG:500 > 0 && FLAG:12 & 8
+		CALL PRINT_COLLECTION_YN, ARG
+ENDIF
+IF ARG == TARGET
+	IF (EX:0 || EX:1 || EX:2 || EX:3 || EX:10 || EX:11 || EX:12 || EX:13)
+		SIF FLAG:12 & 2
+			PRINTL □ 절정
+		CALL SHOW_ORGASM
+		CALL NEW_DRAWLINE
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;절정회수 표시
+;--------------------------------------------------
+@SHOW_ORGASM
+FOR LOCAL, 0, 14
+	SIF STRLENS(EXNAME:LOCAL) && EX:LOCAL
+			PRINTFORM %EXNAME:LOCAL, 6%:{EX:LOCAL}회　
+NEXT
+PRINTL 
+IF TFLAG:180 + TFLAG:181 + TFLAG:182 + TFLAG:183
+	PRINTL 
+	PRINTL 전회 절정 회수
+	REPEAT 4
+		SIF TFLAG:(180 + COUNT) > 0
+			PRINTFORM %EXNAME:COUNT%:{TFLAG:(180+COUNT)}회　
+	REND
+	PRINTL 
+ENDIF
+
+;=============================================================================
+;조교 중에서의 캐릭터 정보 표시 처리(1페이지째)
+;=============================================================================
+@SHOW_INFO_TRAIN_1, ARG
+;現在の宝珠取得予定数表示処理(奴隷専用情報)
+IF ARG == TARGET
+	CALL SHOW_WILLGET_JUEL
+ENDIF
+
+;--------------------------------------------------
+;현재의 보주 취득 예정수 표시 처리(노예 전용 정보)
+;--------------------------------------------------
+;eraSQの同機能を移植
+@SHOW_WILLGET_JUEL
+CALL NEW_DRAWLINE
+PRINTL 현재의 구슬 취득 예정수
+PRINTL 
+PRINTL 대상 파라미터  현재의 구슬 취득 예정  조교 후 구슬
+VARSET LOCAL , 0
+REPEAT 33
+	;パラメータレベルによる取得数
+	IF COUNT == 20 || COUNT == 21 || COUNT == 22
+		LOCAL:100 += CALC_JUEL(COUNT)
+	ELSE
+		LOCAL:COUNT = CALC_JUEL(COUNT)
+	ENDIF
+REND
+	
+LOCAL:101 = 0
+VARSET LOCALS,""
+SPLIT "0,1,2,3,11,12,13,14,15,16,17,30,31,32,100",",",LOCALS
+REPEAT 15
+	LOCAL:101 = TOINT(LOCALS:COUNT)
+
+	;注意、実際にJUELの数値そのものは動かさない
+	IF JUEL:(LOCAL:101) >= 9999999
+		LOCAL:(LOCAL:101) = 0
+	ELSEIF (JUEL:(LOCAL:101) + LOCAL:(LOCAL:101)) >= 9999999
+		LOCAL:(LOCAL:101) = MAX(9999999 - JUEL:(LOCAL:101), 0)
+	ENDIF
+
+	;パラメータ名・桁数を揃えつつパラメータ、現在の宝珠＋予定＝合計を表示
+	LOCAL:102 = (LOCAL:101 == 100) ? PALAM:20 + PALAM:21 + PALAM:22 # PALAM:(LOCAL:101)
+	LOCAL:103 = JUEL:(LOCAL:101)+LOCAL:(LOCAL:101)
+	PRINTFORML %PALAMNAME:(LOCAL:101)% {LOCAL:102, 10} %PALAMNAME:(LOCAL:101)%의 구슬×({JUEL:(LOCAL:101), 10}＋{LOCAL:(LOCAL:101), 10})＝{LOCAL:103, 10}
+REND
+PRINTL 
+PRINTL ※부정의 구슬은 욕정·순종·굴복의 구슬을 우선적으로 상쇄합니다.
+PRINTW ※부정의 구슬이 남았을 경우, 치정·고통·공포의 구슬을 상쇄합니다.
+
+;=============================================================================
+;조교 중에서의 캐릭터 정보 표시 처리(2페이지째)
+;=============================================================================
+@SHOW_INFO_TRAIN_2, ARG
+;その他の細かい情報表示処理(奴隷専用情報)
+IF ARG == TARGET
+	CALL SHOW_OTHER_STATUS
+ENDIF
+
+;--------------------------------------------------
+;その他の細かい情報表示処理(奴隷専用情報)
+;--------------------------------------------------
+@SHOW_OTHER_STATUS
+CALL NEW_DRAWLINE
+PRINTFORML 이번 조교 때 %CALLNAME:TARGET%의 세세한 상황을 표시합니다.
+PRINTL 
+SIF TFLAG:101
+	PRINTFORML 이번 조교 때 %CALLNAME:TARGET%의 처녀를 받았습니다.
+SIF TFLAG:102
+	PRINTFORML 꽂은 상태로 다음의 조교가 실행될 가능성이 있습니다.
+SIF TFLAG:103
+	PRINTFORML 이번 조교 때 %CALLNAME:TARGET%의 질내에 주인이\@(ASSI >= 0) ? 조수가 # \@ 사정했습니다.
+SIF TFLAG:140 & 1
+	PRINTFORML 이번 조교 때는 이제 「아무것도 하지 않는다」는 실행할 수 없습니다.
+SIF TFLAG:140 & 2
+	PRINTFORML %CALLNAME:TARGET%의 공개 노출 라이브를 실행했습니다.
+SIF TFLAG:140 & 4
+	PRINTFORML 이번 조교 때는 이제 「흡혈」은 실행할 수 없습니다.
+SIF TFLAG:140 & 8
+	PRINTFORML 이번 조교 때는 이제 「시리코다마 뽑기」는 실행할 수 없습니다.
+SIF TFLAG:140 & 16
+	PRINTFORML 이번 조교 때는 이제 「시간 정지」는 실행할 수 없습니다.
+SIF TFLAG:140 & 32
+	PRINTFORML 싫은 일이 있었군요…, (Caved!!!발동 완료)
+SIF TFLAG:140 & 64
+	PRINTFORML 이번 조교 때는 이제 「촉수 흡혈」은 실행할 수 없습니다.
+SIF TFLAG:141
+	PRINTFORML 이 조교중의 인형 애무 사용 회수：{TFLAG:141}회
+SIF TFLAG:142
+	PRINTFORML 현재의 거미의 실의 강도(0이 되면 뜯어집니다)：{TFLAG:142}
+SIF TFLAG:143
+	PRINTFORML 이 조교중 포―윳―! · 피버 사용 회수：{TFLAG:143}회
+SIF TFLAG:166
+	PRINTFORML %CALLNAME:TARGET%의 질을 뱀장어가 즐기고 있습니다.
+SIF TFLAG:167
+	PRINTFORML %CALLNAME:TARGET%의 애널을 뱀장어가 즐기고 있습니다.
+SIF TFLAG:168
+	PRINTFORML %CALLNAME:TARGET%의 요도를 뱀장어가 즐기고 있습니다.
+SIF TFLAG:171
+	PRINTFORML %CALLNAME:TARGET%의 이 조교중의 고드름 삽입 회수：{TFLAG:171}회

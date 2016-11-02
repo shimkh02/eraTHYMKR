@@ -1,0 +1,223 @@
+﻿;=============================================================================
+;물감옥
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE365
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:365 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 32) == 0
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;해제는 언제든 가능
+SIF TEQUIP:55 == 7
+	RETURN 1
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;縄で緊縛中じゃないとダメ
+SIF TEQUIP:40 == 0 || (TEQUIP:40 >= 5 && TEQUIP:40 <= 7)
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 7
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;줄로 긴박과 병용 하면서 실시하기 (위해)때문에, 꽤 하드. 시간을 둘 때 마다 소모가 격렬해진다
+;주로 고통을 넣는 것이 목적이지만 보통 조교에는 그다지 향하지 않았다
+;어디까지나 시츄를 즐기는 정도
+@COM365
+PRINTL 물 감옥
+TSTR:0 = 물 감옥
+CALL TRAIN_MESSAGE_COM365
+
+DOWNBASE:0 = 10
+DOWNBASE:1 = 25
+
+IF TEQUIP:55 == 7
+	TEQUIP:55 = 0
+	TFLAG:155 = 0
+	RETURN 1
+ENDIF
+
+SOURCE:32 = 10000
+SOURCE:22 = 1500
+
+TEQUIP:55 = 7
+TFLAG:155 = 0
+RETURN 1
+
+;--------------------------------------------------
+;물고문중
+;--------------------------------------------------
+@EQUIP_COM365
+PRINTL <물고문 중>
+IF TFLAG:155 < 20
+	TFLAG:155 += 1
+	PRINTL
+	PRINTFORML 차오르는 물에 %조사선택(CALLNAME:TARGET, "는")% 허우적 거리고 있다….
+ENDIF
+DOWNBASE:0 += 30 * TFLAG:155
+DOWNBASE:1 += 60 * TFLAG:155
+
+LOCAL = 150 * TFLAG:155
+LOCAL:1 = 100 * TFLAG:155
+LOCAL:2 = 125 * TFLAG:155
+
+;순종
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 2.50
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.90
+	TIMES LOCAL:2 , 2.00
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 1.50
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.20
+	TIMES LOCAL:2 , 0.75
+ELSE
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 0.50
+ENDIF
+
+;마조끼
+IF ABL:21 == 0
+	TIMES LOCAL , 5.00
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 3.00
+ELSEIF ABL:21 == 1
+	TIMES LOCAL , 3.50
+	TIMES LOCAL:1 , 1.25
+	TIMES LOCAL:2 , 2.50
+ELSEIF ABL:21 == 2
+	TIMES LOCAL , 2.40
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 1.50
+ELSEIF ABL:21 == 3
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:21 == 4
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.90
+	TIMES LOCAL:2 , 0.50
+ELSE
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.20
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.50
+;도착적
+IF TALENT:80
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 0.80
+ENDIF
+;마조
+IF TALENT:82
+	TIMES LOCAL , 0.50
+	TIMES LOCAL:1 , 1.30
+	TIMES LOCAL:2 , 0.50
+ENDIF
+
+;갓빠 보정
+IF TALENT:210
+	TIMES LOCAL , 0.30
+	TIMES LOCAL:1 , 0.30
+	TIMES LOCAL:2 , 0.30
+ENDIF
+
+SOURCE:20 += LOCAL
+SOURCE:22 += LOCAL:1
+SOURCE:32 += LOCAL:2
+SOURCE:23 += LOCAL:1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM365
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;해방
+IF TEQUIP:55 == 7
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 수옥에서 꺼내주었다.
+;물고문 개시에 대상이 반발 각인 Lv2 이상 소유로 연모와 복종과 공포 각인이 없는 경우
+ELSEIF MARK:9 > 1 && MARK:8 <= 0 && TALENT:150 == 0 && TALENT:160 == 0
+	PRINTFORML 속박되어 움직일 수 없는 %조사선택(CALLNAME:TARGET, "를")% 수옥에 던져 넣고, 물을 채워 넣기 시작했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:MASTER, "를")% 죽일 듯이 노려보고 있다.
+;물고문 개시에 대상이 공포 각인 Lv2 이상 소유로 연모와 복종과 기장이 없는 경우
+ELSEIF MARK:8 > 1 && TALENT:12 == 0 && TALENT:150 == 0 && TALENT:160 == 0
+	PRINTFORML 속박되어 움직일 수 없을 텐데도, 공포로 부들부들 떨고 있는 %조사선택(CALLNAME:TARGET, "를")% 수옥에 집어넣고, 물을 채워 넣기 시작했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:MASTER%에게 울면서 용서를 빌고 있다….
+;물고문 개시에 그 외
+ELSE
+	PRINTFORMW 속박되어 움직일 수 없는 %조사선택(CALLNAME:TARGET, "를")% 수옥에 던져 넣고, 물을 채워 넣기 시작했다.
+ENDIF

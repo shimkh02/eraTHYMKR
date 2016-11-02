@@ -1,0 +1,110 @@
+﻿;=============================================================================
+;꼬리베개
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE670
+;개별 설정 커멘드 필터
+SIF DITEMTYPE:999:670 > 0
+	RETURN 0
+;조교자 봉사·우후후계 커멘드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;동물귀 이외 불가
+SIF TALENT:116 == 0
+	RETURN 0	
+;순종 4 미만·레즈비언기분(BL기분) 3 미만의 ASSI의 경우, 조교 대상이 동성이라면 실행할 수 없다(망신이나 복종이라면 OK)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;줄사용중은 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마중은 안 됨
+SIF TEQUIP:43
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕중은 안 됨
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;나체정식안은 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;때 멈춤중은 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교중은 안 됨
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM670
+PRINTL 꼬리베개
+TSTR:0 = 꼬리베개
+CALL TRAIN_MESSAGE_COM670
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 5
+DOWNBASE:1 += 20
+
+SOURCE:10 = 50
+SOURCE:11 = 100
+
+IF CFLAG:2 < 500
+	SOURCE:14 = 10
+ELSEIF CFLAG:2 <= 1000
+	SOURCE:10 = 100
+	SOURCE:11 = 200
+	SOURCE:14 = 100
+ELSEIF CFLAG:2 <= 3000
+	SOURCE:10 = 300
+	SOURCE:11 = 700
+	SOURCE:14 = 300
+ELSEIF CFLAG:2 <= 5000
+	SOURCE:10 = 500
+	SOURCE:11 = 1100
+	SOURCE:14 = 500
+ELSE
+	SOURCE:10 = 1000
+	SOURCE:11 = 2000
+	SOURCE:14 = 1000
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM670
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+IF CFLAG:2 <= 100
+	PRINT 위협으로 곤두선 
+ELSEIF CFLAG:2 <= 500
+	PRINT 긴장한 
+ELSEIF CFLAG:2 <= 1000
+	PRINT 편안한 
+ELSEIF CFLAG:2 <= 3000
+	PRINT 부드럽게 감싸는 것 같은 
+ELSE
+	PRINT 깨끗이 정돈되어 좋은 냄새가 나는 
+ENDIF
+PRINTL 꼬리에 드러누웠다….
+SIF CFLAG:2 >= 3000
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자애로운 표정으로, %조사선택(CALLNAME:PLAYER, "를")% 보고 있다.

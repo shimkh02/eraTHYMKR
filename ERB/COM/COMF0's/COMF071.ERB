@@ -1,0 +1,128 @@
+﻿;=============================================================================
+;조수피임약
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE71
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:71 > 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:65 == 0 && NOITEM == 0
+	RETURN 0
+;조수가 없으면 안 됨
+SIF ASSI < 0
+	RETURN 0
+;주인이 아니면 안 됨
+SIF ASSIPLAY
+	RETURN 0
+;주인 혹은 노예가 남자나 후타나리 나오지 않으면 안 됨
+SIF EXIST_PENIS(MASTER) == 0 && EXIST_PENIS(TARGET) == 0
+	RETURN 0
+;약물내성의 경우 안 됨
+SIF TALENT:ASSI:44
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:ASSI:120
+	RETURN 0
+;임신중이라면 불가
+SIF TALENT:ASSI:140
+	RETURN 0
+;회란 중에는 불가
+SIF TALENT:ASSI:145
+	RETURN 0
+;산란촉진제를 사용 중이면 사용할 수 없다(사용할 수 없겠지만)
+SIF TEQUIP:ASSI:9
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:ASSI:14
+	RETURN 0
+;배란유도제를 사용 중이면 사용할 수 없다(사용할 수 없겠지만)
+SIF TEQUIP:ASSI:16
+	RETURN 0
+;벌써 사용중이라면 사용할 수 없다
+SIF TEQUIP:ASSI:17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;역시, 조수에 먹이지 않으면 안 될 때는 있을 것
+@COM71
+PRINTL 조수피임약
+TSTR:0 = 조수피임약
+CALL TRAIN_MESSAGE_COM071
+
+;조제 지식이 있으면 소비를 억제한다
+IF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	DOWNBASE:ASSI:1 += 30
+ELSE
+	DOWNBASE:ASSI:1 += 50
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 5
+
+IF NOITEM == 0
+	ITEM:65 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:65
+		CALL FILL_PLURAL_ITEM, 65
+ENDIF
+TEQUIP:ASSI:17 = 1
+
+;상애 or친애 or낙인 소유
+IF TALENT:153 || TALENT:152 || TALENT:161
+	;[광기]＋[질투]
+	IF TALENT:157 && TALENT:158
+		SOURCE:32 = 6666
+	;[질투]
+	ELSEIF TALENT:157
+		SOURCE:32 = 3333
+	;[질투하기 쉽다]
+	ELSEIF TALENT:19
+		SOURCE:32 = 666
+	ENDIF
+ELSE
+	;[광기]＋[질투]
+	IF TALENT:157 && TALENT:158
+		SOURCE:32 = 666
+	;[질투]
+	ELSEIF TALENT:157
+		SOURCE:32 = 333
+	ENDIF
+ENDIF
+
+SIF TALENT:MASTER:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:ASSI:12 += 1
+
+;약물 경험
+TCVAR:ASSI:40 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM071
+;조수의 대사에서 제어하는 방법은 없습니다.
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:ASSI%에게 긴급 피임약을 먹으라고 명령했다.
+PRINTFORM 그것을 들은 %조사선택(CALLNAME:ASSI, "는")% 
+;[연모],[친애],[상애] 중 최악이어도 1개를 가진다
+IF TALENT:ASSI:150 || TALENT:ASSI:152 || TALENT:ASSI:153
+	PRINTW 조금 서운한 표정을 짓고 있다.
+ELSE
+	PRINTW 명령을 충실히 따르고 있다….
+ENDIF

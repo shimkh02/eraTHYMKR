@@ -1,0 +1,1382 @@
+﻿;--------------------------------------------------
+;실적 일람
+;--------------------------------------------------
+;GLOBAL에 대해서
+;0-154를 게임 개시시의 주인공 소질 기록
+;199를 호환용으로 사용
+;900-1000 중 몇 개를 컨피크 등의 기록
+;1000-1999를 클리어 체크 함수 @GLOBALEVENT에서 사용
+;실적 일람에서는 200～사용. 비트 연산으로 실적 취득 완료인지 판정
+;--------------------------------------------------
+@TROPHY
+CALL TROPHY_CHECK_200
+
+VARSET B, 0
+VARSET S, 0
+VARSET G, 0
+VARSET P, 0
+VARSET LOCAL, 0
+LOCAL:2 = 200
+LOCAL:3 = 20
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 　　～ 환상향연기 ～　　
+PRINTL Ｂ=브론즈　　쉽게 해금 가능. 일단은 이것을 노리자.
+PRINTL Ｓ=실버　　　다소 어렵다. 꾸준히 노력하고 달성해 나가자.
+PRINTL Ｇ=골드　　　상당한 난이도. 근성과 실력을 겸비해야 할 것이다.
+PRINTL Ｐ=플래티넘　달성자가 있는지조차 의심스럽다.
+SIF (LOCAL:2) == 200
+	PRINTFORML ■ 일반 실적
+SIF (LOCAL:2) == 201
+	PRINTFORML ■ 조교 관계
+SIF (LOCAL:2) == 202
+	PRINTFORML ■ 조교 대상 관계
+DRAWLINE
+FOR LOCAL, 0, (LOCAL:3)
+	TRYCALLFORM TROPHY_{LOCAL:2}_{LOCAL}
+	SIF RESULTS:0 == ""
+		CONTINUE
+	GETBIT GLOBAL:(LOCAL:2), LOCAL
+	IF RESULTS:0 == "브론즈"
+		SETCOLOR 151, 107, 47
+		PRINT [B] 
+	ELSEIF RESULTS:0 == "실버"
+		SETCOLOR 158, 158, 158
+		PRINT [S] 
+	ELSEIF RESULTS:0 == "골드"
+		SETCOLOR 180, 158, 83
+		PRINT [G] 
+	ELSEIF RESULTS:0 == "플래티넘"
+		SETCOLOR 217, 217, 140 
+		PRINT [P] 
+	ENDIF
+	RESETCOLOR
+	SIF RESULT == 0
+		SETCOLOR 105, 105, 105
+	SIF RESULT == 0 && (RESULTS:0 == "실버" || RESULTS:0 == "골드" || RESULTS:0 == "플래티넘")
+		RESULTS:1 = ？？？
+	SIF RESULT == 0 && (RESULTS:0 == "골드" || RESULTS:0 == "플래티넘")
+		RESULTS:2 = ？？？
+	PRINTFORML %RESULTS:1,20,LEFT% %RESULTS:2%
+	VARSET RESULTS, ""
+	RESETCOLOR
+NEXT
+
+DRAWLINE
+;실적 수 카운트
+CALL TROPHY_COUNT
+LOCAL:0 = B:0 + S:0 + G:0 + P:0
+LOCAL:1 = B:1 + S:1 + G:1 + P:1
+PRINTFORM 달성률 {(LOCAL:1)*100/(LOCAL:0)}％　
+CALL PRINT_BAR, LOCAL:1, LOCAL:0, 32, UNICODE(0x2585), UNICODE(0x2585), 0x0082FF, 0x002050
+IF LOCAL:0 == LOCAL:1
+	SETCOLOR 217, 217, 140 
+	PRINT [P]
+	RESETCOLOR
+ENDIF
+PRINTL 
+PRINTFORML 실적수 {LOCAL:1}/{LOCAL:0}
+SETCOLOR 217, 217, 140 
+PRINT [P]
+RESETCOLOR
+PRINTFORM {P:1} 
+
+SETCOLOR 180, 158, 83
+PRINT [G]
+RESETCOLOR
+PRINTFORM {G:1} 
+
+SETCOLOR 158, 158, 158
+PRINT [S]
+RESETCOLOR
+PRINTFORM {S:1} 
+
+SETCOLOR 151, 107, 47
+PRINT [B]
+RESETCOLOR
+PRINTFORM {B:1} 
+
+PRINTL 
+DRAWLINE
+PRINTFORML page{(LOCAL:2)-199}　[1][2][3]
+PRINTFORML [100] 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 1 || RESULT == 2 || RESULT == 3
+	LOCAL:2 = 199 + RESULT
+	SIF RESULT == 1
+		LOCAL:3 = 20
+	SIF RESULT == 2
+		LOCAL:3 = 15
+	SIF RESULT == 3
+		LOCAL:3 = 58
+	GOTO PRINT_LIST
+ELSE
+	PRINTFORML 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP
+ENDIF
+
+;-------------------------------------------------------------------------------
+;BAR 표시용 함수
+;カラーバー表示をOFFにしている場合ARG、ARG:1、ARG:2を利用して従来のBARで表示する
+;-------------------------------------------------------------------------------
+@PRINT_BAR(ARG, ARG:1, ARG:2, ARGS, ARGS:1, ARG:3, ARG:4)
+;IF FLAG:23 & 256
+;	PRINT  
+;	CALL PRINT_COLORBAR, ARG, ARG:1, ARG:2, ARGS, ARGS:1, ARG:3, ARG:4
+;	PRINT  
+;ELSE
+	BAR ARG, ARG:1, ARG:2
+;ENDIF
+
+;--------------------------------------------------
+;실적 수 카운트
+;--------------------------------------------------
+@TROPHY_COUNT
+LOADGLOBAL
+
+VARSET B, 0
+VARSET S, 0
+VARSET G, 0
+VARSET P, 0
+VARSET LOCAL, 0
+
+FOR LOCAL:1, 200, 203
+	FOR LOCAL, 0, 50
+		TRYCALLFORM TROPHY_{LOCAL:1}_{LOCAL}
+		SIF RESULTS:0 == ""
+			CONTINUE
+		GETBIT GLOBAL:(LOCAL:1), LOCAL
+		IF RESULTS:0 == "브론즈"
+			B:0 += 1
+			B:1 += RESULT
+		ELSEIF RESULTS:0 == "실버"
+			S:0 += 1
+			S:1 += RESULT
+		ELSEIF RESULTS:0 == "골드"
+			G:0 += 1
+			G:1 += RESULT
+		ELSEIF RESULTS:0 == "플래티넘"
+			P:0 += 1
+			P:1 += RESULT
+		ENDIF
+		VARSET RESULTS, ""
+	NEXT
+NEXT
+
+;--------------------------------------------------
+;판정(GLOBAL:200)
+;--------------------------------------------------
+@TROPHY_CHECK_200
+LOADGLOBAL
+
+;전 실적 취득 판정
+;실적 수 카운트
+CALL TROPHY_COUNT
+LOCAL:0 = B:0 + S:0 + G:0
+LOCAL:1 = B:1 + S:1 + G:1
+SIF LOCAL:0 == LOCAL:1
+	GLOBAL:200 |= 1p0
+
+;실적 판정(1페이지째)
+SIF GLOBAL:200 == 1048572 || GLOBAL:200 == 1048573
+	GLOBAL:200 |= 1p1
+
+;실적 판정(2페이지째)
+SIF FLAG:2201 == 14
+	GLOBAL:201 |= 1p0
+
+SIF GLOBAL:200 == 1048574 && FLAG:2201 == 14 && GLOBAL:202 == 144115188075855871
+	GLOBAL:200 |= 1p0
+
+VARSET T, 0
+VARSET LOCAL, 0
+;경험～～이상 등의 실적은 여기서 일괄적으로 판정
+FOR LOCAL, 1, CHARANUM
+	;호감도
+	SIF CFLAG:LOCAL:2 >= 1000
+		GLOBAL:200 |= 1p8
+	SIF CFLAG:LOCAL:2 >= 10000
+		GLOBAL:200 |= 1p9
+	SIF CFLAG:LOCAL:2 >= 50000
+		GLOBAL:200 |= 1p10
+	SIF CFLAG:LOCAL:2 >= 100000
+		GLOBAL:200 |= 1p11
+	SIF CFLAG:LOCAL:2 >= 999999
+		GLOBAL:200 |= 1p12
+NEXT
+
+;キャラをGETCHARAで検索し、いるなら実績取得判定をする
+CALL GETCHARA_NUMVER
+
+;151010 버전 기준으로 LOCAL이 존재하는 실적의 범위를 넘어가면 TRYCALLFORM의 실행이 실패하게 됩니다.
+;emuera1818 기준으로는 실패했을 때 RESULT가 0이 나오는 걸 확인했습니다. 그러나 버전이 다르거나 예외적인 상황에서는 -1 같은 결과가 나올지도 모릅니다.
+;문제는 SIF RESULT라는 문장은 -1 또한 실적 달성으로 처리하기 때문에 결과적으로 GLOBAL에는 예상치 못한 값이 저장됩니다.
+;따라서 FOR LOCAL의 범위를 실적에 딱 맞게 조절했습니다. T
+
+VARSET LOCAL, 0
+FOR LOCAL, 0, 19
+	;조건을 클리어했는가
+	TRYCALLFORM TROPHY_200_{LOCAL}
+	SIF RESULT == 1
+		SETBIT GLOBAL:200, LOCAL
+NEXT
+
+VARSET LOCAL, 0
+FOR LOCAL, 0, 56
+	;조건을 클리어했는가
+	TRYCALLFORM TROPHY_202_{LOCAL}
+	SIF RESULT == 1
+		SETBIT GLOBAL:202, LOCAL
+NEXT
+
+;아래 문장은 기존 GLOBAL 데이터의 오류를 복구하기 위해 추가한 문장입니다.
+;예를 들어 실적은 실제로 20개가 존재하는데 기존 명령문에 따르면 존재하지도 않는 21번째부터 26번째 실적이 달성될 가능성이 있으며 이는 잘못된 값이 저장되는 오류를 초래합니다.
+;실제로는 존재하지 않는 실적에 대한 값을 삭제하여 올바른 값을 갖도록 합니다. T
+
+IF (GLOBAL:200 & 1p20)
+	VARSET LOCAL, 0
+	FOR LOCAL, 20, 25
+		CLEARBIT GLOBAL:200, LOCAL
+	NEXT
+ENDIF
+
+IF (GLOBAL:201 && 1p15)
+	VARSET LOCAL, 0
+	FOR LOCAL, 15, 20
+		CLEARBIT GLOBAL:201, LOCAL
+	NEXT
+ENDIF
+
+IF (GLOBAL:202 & 1p57)
+	VARSET LOCAL, 0
+	FOR LOCAL, 57, 63
+		CLEARBIT GLOBAL:202, LOCAL
+	NEXT
+ENDIF
+
+SAVEGLOBAL
+
+;--------------------------------------------------
+;실적(GLOBAL:200)
+;--------------------------------------------------
+;예
+;@TROPHY_200_X
+;RESULTS:0 = 실적의 랭크
+;RESULTS:1 = 실적명
+;RESULTS:2 = 설명문
+;;달성 판정(조건을 달성했으면 RETURN 1)
+;SIF 1
+;	RETURN 1
+
+@TROPHY_200_0
+RESULTS:0 = 플래티넘
+RESULTS:1 = eratohoYM MASTER
+RESULTS:2 = 모든 실적 취득
+;달성 판정은 별도
+
+@TROPHY_200_1
+RESULTS:0 = 플래티넘
+RESULTS:1 = eratohoYM 제패
+RESULTS:2 = 보통의 실적을 모두 취득
+;달성 판정은 별도
+
+@TROPHY_200_2
+RESULTS:0 = 브론즈
+RESULTS:1 = eratohoYM 데뷔
+RESULTS:2 = eratohoYM을 플레이
+;달성 판정
+RETURN 1
+
+@TROPHY_200_3
+RESULTS:0 = 브론즈
+RESULTS:1 = 저금이 좋아
+RESULTS:2 = 소지금 $100000 이상 달성
+;달성 판정
+SIF MONEY >= 100000
+	RETURN 1
+
+@TROPHY_200_4
+RESULTS:0 = 브론즈
+RESULTS:1 = 밀리언 달러!
+RESULTS:2 = 소지금 $1000000 이상 달성
+;달성 판정
+SIF MONEY >= 1000000
+	RETURN 1
+
+@TROPHY_200_5
+RESULTS:0 = 실버
+RESULTS:1 = 이 세상의 돈
+RESULTS:2 = 소지금 $10000000 이상 달성
+;달성 판정
+SIF MONEY >= 10000000
+	RETURN 1
+
+@TROPHY_200_6
+RESULTS:0 = 골드
+RESULTS:1 = 억만장자!
+RESULTS:2 = 소지금 $100000000 이상 달성
+;달성 판정
+SIF MONEY >= 100000000
+	RETURN 1
+
+@TROPHY_200_7
+RESULTS:0 = 골드
+RESULTS:1 = GOLD RUSH!!
+RESULTS:2 = 소지금 $999999999999999999(최대값) 달성
+;달성 판정
+SIF MONEY >= 999999999999999999
+	RETURN 1
+
+@TROPHY_200_8
+RESULTS:0 = 브론즈
+RESULTS:1 = I like Anata
+RESULTS:2 = 호감도 1000 이상
+;달성 판정은 일괄
+
+@TROPHY_200_9
+RESULTS:0 = 브론즈
+RESULTS:1 = I love Anata
+RESULTS:2 = 호감도 10000 이상
+;달성 판정은 일괄
+
+@TROPHY_200_10
+RESULTS:0 = 실버
+RESULTS:1 = I love only Anata
+RESULTS:2 = 호감도 50000 이상
+;달성 판정은 일괄
+
+@TROPHY_200_11
+RESULTS:0 = 골드
+RESULTS:1 = 사랑은 영원히
+RESULTS:2 = 호감도 100000 이상
+;달성 판정은 일괄
+
+@TROPHY_200_12
+RESULTS:0 = 골드
+RESULTS:1 = 변치 않는 사랑
+RESULTS:2 = 호감도 999999 이상
+;달성 판정은 동일
+
+@TROPHY_200_13
+RESULTS:0 = 브론즈
+RESULTS:1 = 수련자
+RESULTS:2 = 난이도 EASY를 클리어(주회 플레이 금지)
+;달성 판정
+SIF FLAG:3 == 1 && (FLAG:5 & 2) && FLAG:6 == 1
+	RETURN 1
+
+@TROPHY_200_14
+RESULTS:0 = 브론즈
+RESULTS:1 = 도전자
+RESULTS:2 = 난이도 NORMAL을 클리어(주회 플레이 금지)
+;달성 판정
+SIF FLAG:3 == 2 && (FLAG:5 & 2) && FLAG:6 == 1
+	RETURN 1
+
+@TROPHY_200_15
+RESULTS:0 = 실버
+RESULTS:1 = 실력자
+RESULTS:2 = 난이도 HARD를 클리어(주회 플레이 금지)
+;달성 판정
+SIF FLAG:3 == 3 && (FLAG:5 & 2) && FLAG:6 == 1
+	RETURN 1
+
+@TROPHY_200_16
+RESULTS:0 = 골드
+RESULTS:1 = 달성자
+RESULTS:2 = 난이도 LUNATIC을 클리어(주회 플레이 금지)
+;달성 판정
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:6 == 1
+	RETURN 1
+
+@TROPHY_200_17
+RESULTS:0 = 실버
+RESULTS:1 = 전광석화!
+RESULTS:2 = 10일 이내에 클리어
+;달성 판정
+SIF (FLAG:5 & 2) && DAY <= 9
+	RETURN 1
+
+@TROPHY_200_18
+RESULTS:0 = 골드
+RESULTS:1 = 질풍신뢰!!
+RESULTS:2 = 5일 이내에 클리어
+;달성 판정
+SIF (FLAG:5 & 2) && DAY <= 4
+	RETURN 1
+
+@TROPHY_200_19
+RESULTS:0 = 골드
+RESULTS:1 = 신풍!
+RESULTS:2 = 2일 이내에 클리어
+;달성 판정
+SIF (FLAG:5 & 2) && DAY <= 1
+	RETURN 1
+
+;--------------------------------------------------
+;판정(GLOBAL:201)
+;--------------------------------------------------
+@TROPHY_CHECK_201(ARG, ARG:1)
+LOADGLOBAL
+
+;ARG　4：사중절정, 5：오중절정
+;ARG:1　4：최강사중절정, 5：최강오중절정
+SIF ARG == 4
+	GLOBAL:201 |= 1p1
+SIF ARG:1 == 4
+	GLOBAL:201 |= 1p2
+
+VARSET LOCAL, 0
+FOR LOCAL, 0, 14
+	;조건을 클리어했는가
+	TRYCALLFORM TROPHY_201_{LOCAL}
+	SIF RESULT == 1
+		SETBIT GLOBAL:201, LOCAL
+NEXT
+
+SAVEGLOBAL
+
+;--------------------------------------------------
+;실적(GLOBAL:201)
+;조교 중에 판정하는 실적
+;--------------------------------------------------
+;예
+;@TROPHY_201_X
+;RESULTS:0 = 실적의 랭크
+;RESULTS:1 = 실적명
+;RESULTS:2 = 설명문
+;;달성 판정(조건을 달성했으면 RETURN 1)
+;SIF 1
+;	RETURN 1
+
+@TROPHY_201_0
+RESULTS:0 = 플래티넘
+RESULTS:1 = 우후후 마스터
+RESULTS:2 = 우후후 관련의 실적 모두 달성
+;달성 판정은 일괄
+
+@TROPHY_201_1
+RESULTS:0 = 실버
+RESULTS:1 = 사중절정!
+RESULTS:2 = 사중절정을 달성하기
+FLAG:2201 += 1
+;달성 판정은 일괄
+
+@TROPHY_201_2
+RESULTS:0 = 골드
+RESULTS:1 = 최강 사중절정!
+RESULTS:2 = 최강 사중절정을 달성하기
+FLAG:2201 += 1
+;달성 판정은 일괄
+
+@TROPHY_201_3
+RESULTS:0 = 브론즈
+RESULTS:1 = 콩까지마
+RESULTS:2 = C절정 25회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:0 >= 25
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_4
+RESULTS:0 = 실버
+RESULTS:1 = 클리토리스 매니아
+RESULTS:2 = C절정 50회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:0 >= 50
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_5
+RESULTS:0 = 골드
+RESULTS:1 = 클리토리스 마스터
+RESULTS:2 = C절정 100회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:0 >= 100
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_6
+RESULTS:0 = 브론즈
+RESULTS:1 = 고지보딩
+RESULTS:2 = V절정 50회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:1 >= 50
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_7
+RESULTS:0 = 실버
+RESULTS:1 = 바기나 매니아
+RESULTS:2 = V절정 100회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:1 >= 100
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_8
+RESULTS:0 = 골드
+RESULTS:1 = 바기나 마스터
+RESULTS:2 = V절정 200회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:1 >= 200
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_9
+RESULTS:0 = 브론즈
+RESULTS:1 = 비누줍기
+RESULTS:2 = A절정 30회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:2 >= 30
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_10
+RESULTS:0 = 실버
+RESULTS:1 = 애널 매니아
+RESULTS:2 = A절정 70회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:2 >= 70
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_11
+RESULTS:0 = 골드
+RESULTS:1 = 애널 마스터
+RESULTS:2 = A절정 100회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:2 >= 100
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_12
+RESULTS:0 = 브론즈
+RESULTS:1 = 가슴이 시킨다
+RESULTS:2 = B절정 25회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:3 >= 25
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_13
+RESULTS:0 = 실버
+RESULTS:1 = 가슴 매니아
+RESULTS:2 = B절정 50회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:3 >= 50
+FLAG:2201 += 1
+	RETURN 1
+
+@TROPHY_201_14
+RESULTS:0 = 골드
+RESULTS:1 = 가슴 마스터
+RESULTS:2 = B절정 100회 이상 달성
+;달성 판정
+SIF TARGET > 0 && EX:3 >= 100
+FLAG:2201 += 1
+	RETURN 1
+
+;--------------------------------------------------
+;동료의 실적 판정
+;--------------------------------------------------
+;テンプレート
+;X番が居るかどうかの判定
+;GETCHARA X
+;エラー回避(これがないとキャラがいない時-1でエラーが出る)
+;SIF RESULT < 0
+;	RESULT = 0
+;最初に選んだのかとクリアしているかの判定
+;SIF (FLAG:5 & 2) > 0 && FLAG:6500 == X
+;	GLOBAL:202 |= 1pXX
+;最初に選んだのかとLUNATICでクリアしているかの判定
+;SIF FLAG:5 == 3 && (FLAG:5 & 2) > 0 && FLAG:6500 == X
+;	GLOBAL:202 |= 1pXX
+;GETCHARAに取得した番号で親愛・相愛を取得しているかの判定
+;SIF TALENT:(RESULT):88 == 1 && TALENT:(RESULT):89 == 1
+;	GLOBAL:202 |= 1pXX
+;GETCHARAに取得した番号で淫乱・親愛を取得しているかの判定
+;SIF TALENT:(RESULT):76 == 1 && TALENT:(RESULT):88 == 1
+;	GLOBAL:202 |= 1pXX
+;1pXXは被らないようにお願いします
+;後は下のほうで1pXX番の実績を追加するだけです
+
+@GETCHARA_NUMVER
+GETCHARA 4
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 4
+	GLOBAL:202 |= 1p1
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 4
+	GLOBAL:202 |= 1p2
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p3
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p4
+
+GETCHARA 10
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 10
+	GLOBAL:202 |= 1p5
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 10
+	GLOBAL:202 |= 1p6
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p7
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p8
+
+GETCHARA 13
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 13
+	GLOBAL:202 |= 1p9
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 13
+	GLOBAL:202 |= 1p10
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p11
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p12
+
+GETCHARA 22
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 22
+	GLOBAL:202 |= 1p13
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 22
+	GLOBAL:202 |= 1p14
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p15
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p16
+
+GETCHARA 30
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 30
+	GLOBAL:202 |= 1p17
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 30
+	GLOBAL:202 |= 1p18
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p19
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p20
+
+GETCHARA 36
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 36
+	GLOBAL:202 |= 1p21
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 36
+	GLOBAL:202 |= 1p22
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p23
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p24
+
+GETCHARA 40
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 40
+	GLOBAL:202 |= 1p25
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 40
+	GLOBAL:202 |= 1p26
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p27
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p28
+
+GETCHARA 43
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 43
+	GLOBAL:202 |= 1p29
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 43
+	GLOBAL:202 |= 1p30
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p31
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p32
+
+GETCHARA 52
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 52
+	GLOBAL:202 |= 1p33
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 52
+	GLOBAL:202 |= 1p34
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p35
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p36
+
+GETCHARA 53
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 53
+	GLOBAL:202 |= 1p37
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 53
+	GLOBAL:202 |= 1p38
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p39
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p40
+
+GETCHARA 54
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 54
+	GLOBAL:202 |= 1p41
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 54
+	GLOBAL:202 |= 1p42
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p43
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p44
+
+GETCHARA 63
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 63
+	GLOBAL:202 |= 1p45
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 63
+	GLOBAL:202 |= 1p46
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p47
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p48
+
+GETCHARA 77
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 77
+	GLOBAL:202 |= 1p49
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 77
+	GLOBAL:202 |= 1p50
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p51
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p52
+
+GETCHARA 101
+SIF RESULT < 0
+	RESULT = 0
+SIF (FLAG:5 & 2) > 0 && FLAG:250 == 101
+	GLOBAL:202 |= 1p53
+SIF FLAG:3 == 4 && (FLAG:5 & 2) && FLAG:250 == 101
+	GLOBAL:202 |= 1p54
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:153 == 1
+	GLOBAL:202 |= 1p55
+SIF TALENT:RESULT:152 == 1 && TALENT:RESULT:170 == 1
+	GLOBAL:202 |= 1p56
+
+;최후의 실적 판정
+SIF GLOBAL:202 == 144115188075855870
+	GLOBAL:202 |= 1p0
+
+RETURN 1
+
+;--------------------------------------------------
+;실적（GLOBAL:202）
+;조교 대상 관계
+;--------------------------------------------------
+@TROPHY_202_0
+RESULTS:0 = 플래티넘
+RESULTS:1 = PARTNER COMPLETE
+RESULTS:2 = 조교대상 관련의 실적 모두 달성
+
+@TROPHY_202_1
+RESULTS:0 = 실버
+RESULTS:1 = 유명요정
+RESULTS:2 = 처음에 대요정을 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_2
+RESULTS:0 = 골드
+RESULTS:1 = 대요정
+RESULTS:2 = 처음에 대요정을 선택하여 LUNATIC 클리어
+;달성 판정은 동일
+
+@TROPHY_202_3
+RESULTS:0 = 골드
+RESULTS:1 = eradaichan J
+RESULTS:2 = 대요정에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_4
+RESULTS:0 = 골드
+RESULTS:1 = erodaichan J
+RESULTS:2 = 대요정에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_5
+RESULTS:0 = 실버
+RESULTS:1 = 스칼렛 매직
+RESULTS:2 = 처음에 레밀리아를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_6
+RESULTS:0 = 골드
+RESULTS:1 = 스칼렛 심포니
+RESULTS:2 = 처음에 레밀리아를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_7
+RESULTS:0 = 골드
+RESULTS:1 = eraremiria J
+RESULTS:2 = 레밀리아에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_8
+RESULTS:0 = 골드
+RESULTS:1 = eroremiria J
+RESULTS:2 = 레밀리아에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_9
+RESULTS:0 = 실버
+RESULTS:1 = 란의 제자
+RESULTS:2 = 처음에 첸을 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_10
+RESULTS:0 = 골드
+RESULTS:1 = 란의 사랑의 라이벌
+RESULTS:2 = 처음에 첸을 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_11
+RESULTS:0 = 골드
+RESULTS:1 = eracheeeeeeeeeen J
+RESULTS:2 = 첸에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_12
+RESULTS:0 = 골드
+RESULTS:1 = erocheeeeeeeeeen J
+RESULTS:2 = 첸에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_13
+RESULTS:0 = 실버
+RESULTS:1 = 대요괴의 애인
+RESULTS:2 = 처음에 유카리를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_14
+RESULTS:0 = 골드
+RESULTS:1 = 대요괴의 서방님
+RESULTS:2 = 처음에 유카리를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_15
+RESULTS:0 = 골드
+RESULTS:1 = erayukari J
+RESULTS:2 = 유카리에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_16
+RESULTS:0 = 골드
+RESULTS:1 = eroyukari J
+RESULTS:2 = 유카리에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_17
+RESULTS:0 = 실버
+RESULTS:1 = 난제를 푼 자
+RESULTS:2 = 처음에 카구야를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_18
+RESULTS:0 = 골드
+RESULTS:1 = 신난제를 푼 자
+RESULTS:2 = 처음에 카구야를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_19
+RESULTS:0 = 골드
+RESULTS:1 = eratohoPMJ
+RESULTS:2 = 카구야에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_20
+RESULTS:0 = 골드
+RESULTS:1 = erotohoPMJ
+RESULTS:2 = 카구야에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_21
+RESULTS:0 = 실버
+RESULTS:1 = 승소!
+RESULTS:2 = 처음에 시키 님을 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_22
+RESULTS:0 = 골드
+RESULTS:1 = 새로운 재판장
+RESULTS:2 = 처음에 시키 님을 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_23
+RESULTS:0 = 골드
+RESULTS:1 = erasiki J
+RESULTS:2 = 시키 님에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_24
+RESULTS:0 = 골드
+RESULTS:1 = erosiki J
+RESULTS:2 = 시키 님에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_25
+RESULTS:0 = 실버
+RESULTS:1 = 인간의 맹우
+RESULTS:2 = 처음에 니토리를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_26
+RESULTS:0 = 골드
+RESULTS:1 = 얼티메이트 큐컴버
+RESULTS:2 = 처음에 니토리를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_27
+RESULTS:0 = 골드
+RESULTS:1 = eranitori J
+RESULTS:2 = 니토리에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_28
+RESULTS:0 = 골드
+RESULTS:1 = eronitori J
+RESULTS:2 = 니토리에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_29
+RESULTS:0 = 실버
+RESULTS:1 = 마운틴 오브 페이스
+RESULTS:2 = 처음에 카나코를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_30
+RESULTS:0 = 골드
+RESULTS:1 = 마운틴 오브 갓
+RESULTS:2 = 처음에 카나코를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_31
+RESULTS:0 = 골드
+RESULTS:1 = erakanako J
+RESULTS:2 = 카나코에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_32
+RESULTS:0 = 골드
+RESULTS:1 = erokanako J
+RESULTS:2 = 카나코에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_33
+RESULTS:0 = 실버
+RESULTS:1 = 텐시 사랑해
+RESULTS:2 = 처음에 텐시를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_34
+RESULTS:0 = 골드
+RESULTS:1 = 텐코 사랑해
+RESULTS:2 = 처음에 텐시를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_35
+RESULTS:0 = 골드
+RESULTS:1 = eratenko J
+RESULTS:2 = 텐시에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_36
+RESULTS:0 = 골드
+RESULTS:1 = erotenko J
+RESULTS:2 = 텐시에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_37
+RESULTS:0 = 실버
+RESULTS:1 = 스모모도 모모도 모모다
+RESULTS:2 = 처음에 토요히메를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_38
+RESULTS:0 = 골드
+RESULTS:1 = 모모도 스모모도 모모다
+RESULTS:2 = 처음에 토요히메를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_39
+RESULTS:0 = 골드
+RESULTS:1 = eratoyohime J
+RESULTS:2 = 토요히메에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_40
+RESULTS:0 = 골드
+RESULTS:1 = erotoyohime J
+RESULTS:2 = 토요히메에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_41
+RESULTS:0 = 실버
+RESULTS:1 = 토요히메무쌍
+RESULTS:2 = 처음에 요리히메를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_42
+RESULTS:0 = 골드
+RESULTS:1 = 욧짱무쌍
+RESULTS:2 = 처음에 요리히메를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_43
+RESULTS:0 = 골드
+RESULTS:1 = erayochan J
+RESULTS:2 = 요리히메에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_44
+RESULTS:0 = 골드
+RESULTS:1 = eroyochan J
+RESULTS:2 = 토요히메에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_45
+RESULTS:0 = 실버
+RESULTS:1 = 마음도 몸도 멜트다운
+RESULTS:2 = 처음에 우츠호를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_46
+RESULTS:0 = 골드
+RESULTS:1 = 우뉴?
+RESULTS:2 = 처음에 우츠호를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_47
+RESULTS:0 = 골드
+RESULTS:1 = erautuho J
+RESULTS:2 = 우츠호에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_48
+RESULTS:0 = 골드
+RESULTS:1 = eroutuho J
+RESULTS:2 = 우츠호에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_49
+RESULTS:0 = 실버
+RESULTS:1 = 새로운 대마법사
+RESULTS:2 = 처음에 히지리를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_50
+RESULTS:0 = 골드
+RESULTS:1 = 나무삼!
+RESULTS:2 = 처음에 히지리를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_51
+RESULTS:0 = 골드
+RESULTS:1 = erahijiri J
+RESULTS:2 = 히지리에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_52
+RESULTS:0 = 골드
+RESULTS:1 = erohijiri J
+RESULTS:2 = 히지리에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_53
+RESULTS:0 = 실버
+RESULTS:1 = 전차소녀가 꾸는 꿈
+RESULTS:2 = 처음에 리카를 선택하여 클리어
+;달성 판정은 동일
+
+@TROPHY_202_54
+RESULTS:0 = 골드
+RESULTS:1 = 엑스트라 러브
+RESULTS:2 = 처음에 리카를 선택하여 LUNATIC을 클리어
+;달성 판정은 동일
+
+@TROPHY_202_55
+RESULTS:0 = 골드
+RESULTS:1 = erarika J
+RESULTS:2 = 리카에게 상애·친애를 붙인다
+;달성 판정은 동일
+
+@TROPHY_202_56
+RESULTS:0 = 골드
+RESULTS:1 = erorika J
+RESULTS:2 = 리카에게 친애·음란을 붙인다
+;달성 판정은 동일
+
+;--------------------------------------------------
+;특수 능력 취득
+;--------------------------------------------------
+@TROPHY_FEAT_GET
+CALL TROPHY_CHECK_200
+
+DRAWLINE
+PRINTFORML 취득 조건을 충족한 특수 능력을 습득할 수 있습니다
+PRINTL 
+PRINTFORML 　　　【특수능력】　　　　【취득조건】
+PRINTL 
+VARSET LOCALS, ""
+;LOCALS:0 = 지옥의훈장
+;LOCALS:1 = 蓬莱人
+;LOCALS:2 = 舌使い
+;LOCALS:3 = 針さばき
+;LOCALS:4 = 調合知識
+;LOCALS:5 = 妖精知識
+;LOCALS:6 = 淫具知識
+;LOCALS:7 = 治療
+;LOCALS:8 = 魅惑
+;LOCALS:9 = 小悪魔
+;LOCALS:10 = 大乳導
+;LOCALS:11 = つるぺた堕し
+;LOCALS:12 = 日光浴
+;LOCALS:13 = 月光浴
+;LOCALS:14 = 家電使役知識
+;LOCALS:15 = 超常目算
+
+LOCALS:0 = 지옥의훈장
+LOCALS:1 = 봉래인
+LOCALS:2 = 혀놀림
+LOCALS:3 = 바느질
+LOCALS:4 = 조합지식
+LOCALS:5 = 요정지식
+LOCALS:6 = 음구지식
+LOCALS:7 = 치료
+LOCALS:8 = 매혹
+LOCALS:9 = 소악마
+LOCALS:10 = 대유도
+LOCALS:11 = 절벽가슴격추왕
+LOCALS:12 = 일광욕
+LOCALS:13 = 월광욕
+LOCALS:14 = 가전제품지식
+LOCALS:15 = 공작명인
+LOCALS:16 = 초상계산
+
+FOR LOCAL, 0, 17
+	TRYCALLFORM TROPHY_FEAT_GET_%LOCALS:LOCAL%
+	IF RESULT
+		SIF TALENT:MASTER:(LOCALS:LOCAL)
+			SETCOLOR 0xFFFFF
+		LOCALS:99 = 【%LOCALS:LOCAL%】
+	ELSE
+		SETCOLOR 105, 105, 105
+		LOCALS:99 = 【？？？】
+	ENDIF
+	PRINTFORML [{LOCAL,3}] %LOCALS:99,21,LEFT%%RESULTS:2%
+	RESETCOLOR
+NEXT
+PRINTL 
+DRAWLINE
+PRINTL [99] 취득할 수 있는 모든 특수 능력 습득
+PRINTL [100] 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+;새 게임을 시작할 때마다 특수 능력을 활성화하는 게 귀찮아서 한번에 모든 능력을 활성화하는 걸 만들었습니다. T
+ELSEIF RESULT == 99
+	FOR LOCAL, 0, 17
+		TRYCALLFORM TROPHY_FEAT_GET_%LOCALS:LOCAL%
+		SIF RESULT
+			TALENT:MASTER:(LOCALS:LOCAL) = 1
+	NEXT
+	PRINTW 취득할 수 있는 모든 특수 능력을 습득했습니다
+	RETURN 0
+ELSEIF RESULT >= 100 || LOCALS:RESULT == ""
+	PRINTFORML 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP
+ENDIF
+
+LOCAL = RESULT
+RESULT = 0
+TRYCALLFORM TROPHY_FEAT_GET_%LOCALS:LOCAL%
+
+IF RESULT && TALENT:MASTER:(LOCALS:LOCAL)
+	PRINTFORML 이미 취득했습니다.
+	PRINTFORML 【%LOCALS:LOCAL%】%조사만처리(LOCALS:LOCAL,"를")% 봉인하겠습니까?
+	PRINTFORML [0] 예
+	PRINTFORML [1] 아니오
+	$INPUT_LOOP1
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW 【%LOCALS:LOCAL%】%조사만처리(LOCALS:LOCAL,"를")% 봉인했습니다.
+		TALENT:MASTER:(LOCALS:LOCAL) = 0
+		RESTART
+	ELSEIF RESULT == 1
+		RESTART
+	ELSE
+		PRINTFORML 올바른 값을 입력해 주세요.
+		GOTO INPUT_LOOP1
+	ENDIF
+	RESTART
+ELSEIF RESULT
+	;효과 설명
+	PRINTFORML %RESULTS:3%
+	PRINTFORML 【%LOCALS:LOCAL%】%조사만처리(LOCALS:LOCAL,"를")% 취득하겠습니까?
+	PRINTL [0] 예
+	PRINTL [1] 아니오
+	$INPUT_LOOP2
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW 【%LOCALS:LOCAL%】%조사만처리(LOCALS:LOCAL,"를")% 취득했습니다.
+		TALENT:MASTER:(LOCALS:LOCAL) = 1
+		RESTART
+	ELSEIF RESULT == 1
+		RESTART
+	ELSE
+		PRINTFORML 올바른 값을 입력해 주세요.
+		GOTO INPUT_LOOP2
+	ENDIF
+	RESTART
+ELSE
+	PRINTFORMW 취득 조건이 충족되지 않았습니다.
+	RESTART
+ENDIF
+
+@TROPHY_FEAT_GET_지옥의훈장
+;전 실적 달성
+CALL TROPHY_200_0
+RESULTS:3 = 지옥을 헤쳐나온 증거입니다. 특수 캐릭터의 구입이 가능해집니다.
+SIF GLOBAL:200 & 1p0
+	RETURN 1
+
+@TROPHY_FEAT_GET_봉래인
+;카구야에게 상애 · 친애를 붙인다
+CALL TROPHY_202_19
+RESULTS:3 = 사망시 소생하고 체력 회복량이 많아집니다.
+SIF GLOBAL:202 & 1p19
+	RETURN 1
+
+@TROPHY_FEAT_GET_혀놀림
+;C絶頂100回以上を達成する
+CALL TROPHY_201_5
+RESULTS:3 = 펠라 계열 조교의 효과가 높아집니다.
+SIF GLOBAL:201 & 1p5
+	RETURN 1
+
+@TROPHY_FEAT_GET_바느질
+;難易度hardをクリア(周回プレイ禁止)
+CALL TROPHY_200_15
+RESULTS:3 = 커맨드 「바늘」의 효과가 높아집니다.
+SIF GLOBAL:200 & 1p15
+	RETURN 1
+
+@TROPHY_FEAT_GET_조합지식
+;最初に四季様を選んでLUNATICをクリア
+CALL TROPHY_202_22
+RESULTS:3 = 특수 아이템을 구입할 수 있고 커맨드 「미약」의 체력과 기력 소비가 줄어듭니다.
+SIF GLOBAL:202 & 1p22
+	RETURN 1
+
+@TROPHY_FEAT_GET_요정지식
+;10일 이내에 클리어
+CALL TROPHY_200_17
+RESULTS:3 = 조교자일 때 상대가 [요정]일 경우 효과적으로 조교할 수 있습니다.
+SIF GLOBAL:200 & 1p17
+	RETURN 1
+
+@TROPHY_FEAT_GET_음구지식
+;四重絶頂を達成する
+CALL TROPHY_201_1
+RESULTS:3 = 도구를 사용한 커맨드의 효과가 상승합니다.
+SIF GLOBAL:201 & 1p1
+	RETURN 1
+
+@TROPHY_FEAT_GET_치료
+;難易度LUNATICをクリア(周回プレイ禁止)
+CALL TROPHY_200_16
+RESULTS:3 = 주인 또는 조수일 때 체력 회복량이 상승합니다.
+SIF GLOBAL:200 & 1p16
+	RETURN 1
+
+@TROPHY_FEAT_GET_매혹
+;最強四重絶頂を達成する
+CALL TROPHY_201_2
+RESULTS:3 = 커맨드를 실행하기 쉬워지고 파라미터가 전체적으로 상승하기 쉬워집니다.
+SIF GLOBAL:201 & 1p2
+	RETURN 1
+
+@TROPHY_FEAT_GET_소악마
+;호감도 50000 이상
+CALL TROPHY_200_10
+RESULTS:3 = 조교사일 때 커맨드를 실행하기 쉬워집니다.
+SIF GLOBAL:200 & 1p10
+	RETURN 1
+
+@TROPHY_FEAT_GET_대유도
+;히지리에게 상애 · 친애를 붙인다
+CALL TROPHY_202_51
+RESULTS:3 = 조교 대상이 거유·폭유일 때 조교의 효과가 높아집니다. 대신 빈유·절벽일 때 약간 내려갑니다.
+SIF GLOBAL:202 & 1p51
+	RETURN 1
+
+@TROPHY_FEAT_GET_절벽가슴격추왕
+;大妖精에게 상애 · 친애를 붙인다
+CALL TROPHY_202_3
+RESULTS:3 = 조교 대상이 빈유·절벽일 때 조교의 효과가 높아집니다. 대신 거유·폭유일 때 약간 내려갑니다.
+SIF GLOBAL:202 & 1p3
+	RETURN 1
+
+@TROPHY_FEAT_GET_일광욕
+;ゴールドトロフィー取得
+CALL TROPHY_COUNT
+RESULTS:2 = 골드 트로피를 획득 
+RESULTS:3 = 낮의 휴식 시에 체력과 기력의 회복량이 상승합니다.
+SIF G:1
+	RETURN 1
+
+@TROPHY_FEAT_GET_월광욕
+;最初にレミリアを選んでクリア
+CALL TROPHY_202_5
+RESULTS:3 = 밤의 휴식 시에 체력과 기력의 회복량이 상승합니다.
+SIF GLOBAL:202 & 1p5
+	RETURN 1
+
+@TROPHY_FEAT_GET_회복빠름
+;5일 이내에 클리어
+CALL TROPHY_200_18
+RESULTS:3 = 체력 회복량이 증가합니다.
+SIF GLOBAL:200 & 1p18
+	RETURN 1
+
+@TROPHY_FEAT_GET_가전제품지식
+;리카에게 상애 · 친애를 붙인다
+CALL TROPHY_202_55
+RESULTS:3 = 조금 복잡한 전기 제품도 사용 방법이라면 이해할 수 있습니다.
+SIF GLOBAL:202 & 1p55
+	RETURN 1
+
+@TROPHY_FEAT_GET_공작명인
+;니토리에게 상애 · 친애를 붙인다；
+CALL TROPHY_202_27
+RESULTS:3 = 공방 작업을 할 수 있습니다.
+SIF GLOBAL:202 & 1p27
+	RETURN 1
+
+@TROPHY_FEAT_GET_초상계산
+;所持金$999999999999999999(最大値)達成
+CALL TROPHY_200_7
+RESULTS:3 = 보통 사람은 측정하지 못하는 수치를 볼 수 있습니다.
+SIF GLOBAL:200 & 1p7
+	RETURN 1
+

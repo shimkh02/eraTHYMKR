@@ -1,0 +1,3757 @@
+﻿;=============================================================================
+;토리코모드용 기본 함수들.
+;130822~ BY V.K
+;=============================================================================
+
+
+;-----------------------------------------------------------------------------
+; 게임 시작시 모드셋.
+@CONFIGURATION_TORIKOMODE_BASIC
+;토리코모드 기본세트
+FLAG:10 = 1
+FLAG:11 = 2
+FLAG:12 = 131583
+FLAG:13 = 1027
+FLAG:14 = 115
+FLAG:15 = 131071
+FLAG:21 = 3
+FLAG:1200 = 2
+FLAG:1700 = 1
+FLAG:3998 = 1
+FLAG:5000 = 1032
+FLAG:5001 = 3
+FLAG:5010 = 2
+
+@CONFIGURATION_TORIKOMODE_ON
+;위키셋 + 일상생활, 밤이벤트확장,  얀데레, 창관
+FLAG:10 = 1
+FLAG:12 = 16767
+FLAG:13 = 1204
+FLAG:14 = 68
+FLAG:15 = 15
+;사정장소 선택
+FLAG:19 = 9
+;토리코모드
+FLAG:5000 = 2047
+;토리코모드- 칼라
+FLAG:5001 = 4
+;토리코모드 - 임신&딸조교 쉽게
+FLAG:5005 = 1
+;실신모드
+FLAG:1200 = 2
+;임신 - 임신회란가능.
+FLAG:18 = 6
+;딸조교
+FLAG:1300 = 1
+;실신패치
+FLAG:3999 = 1
+;의뢰소
+FLAG:5010 = 2
+;커맨드전부사용
+FLAG:15 = 131071
+
+@CONFIGURATION_TORIKOMODE_GUARD
+;토리코모드 세트 + 경비 시스템 추가
+;위키셋 + 일상생활, 밤이벤트확장,  얀데레, 창관
+FLAG:10 = 1
+FLAG:12 = 16767
+FLAG:13 = 1204
+FLAG:14 = 68
+FLAG:15 = 15
+;사정장소 선택
+FLAG:19 = 9
+;토리코모드
+FLAG:5000 = 2047
+;토리코모드- 칼라
+FLAG:5001 = 4
+;토리코모드 - 경비시스템
+FLAG:5003 = 3
+;토리코모드 - 임신&딸조교 쉽게
+FLAG:5005 = 1
+;실신모드
+FLAG:1200 = 2
+;임신 - 임신회란가능.
+FLAG:18 = 6
+;딸조교
+FLAG:1300 = 1
+;실신패치
+FLAG:3999 = 1
+;의뢰소
+FLAG:5010 = 2
+;커맨드전부사용
+FLAG:15 = 131071
+
+;만약 이로인해 만복도 모드가 켜지면, 지금 만복도 시스템 정보가 없는 캐릭터들을 일괄 세팅 해 준다.
+SIF FLAG:5000 & 32 
+	CALL INIT_HUNGERSYSTEM_TORIKOMODE
+;경비시스템을 처음으로 켠 경우에 한해 한해, 무료 경비원을 지급한다.
+SIF FLAG:5004 == 0
+	CALL INIT_GUARDSMAN_TORIKOMODE
+PRINTL
+PRINTFORML <토리코 모드를 선택 해 주셔서 감사합니다!>
+PRINTFORML 간단한 설명을 보시겠습니까?
+$INPUT_LOOP_0
+PRINTL [0] 설명 따위!!
+PRINTL [1] …한 번 정도는 들어볼까?
+INPUT
+IF RESULT == 1
+	CALL HELP_TORIKOMODE
+PRINTFORML 
+SETCOLOR 250, 150, 250
+PRINTFORML "노예를 괴롭혀주세요. 노예를 아껴주세요…."
+RESETCOLOR
+PRINTFORML
+PRINTFORMW ......................................................BY V.K
+	
+ELSE
+ENDIF
+;-----------------------------------------------------------------------------
+; 조교커맨드 사용시 소비되는 체력&기력 출력
+;-----------------------------------------------------------------------------
+; 게임의 현장감을 높이기 위해
+; 기존과 달리, 체력/기력의 소모량을 정확한 수치가 아니라 러프하게 표시한다.
+; 캐릭터 기본 체력 최대의 1/4 를 한번에 소모하면 극대 멘트를, 1/8을 소모하면 대 멘트를 표시한다. (체력 2천 기준으로 500, 250 정도 수치이다)
+; 캐릭터 기본 기력 최대의 1/3 를 한번에 소모하면 극대 멘트를, 1/6 을 소모하면 대 멘트를 표시한다. (기력이 좀 더 덜 위험한 수치니까)
+; 소모가 클 때는 빨간색 볼드로 표시해서 강조함.
+; 소모가 적을 때는 굳이 표시하지 않음으로서 플레이를 편하게 한다...
+@PRINT_USEDLIFEVITAL_TORIKOMODE
+
+FONTBOLD
+;노예의 체력소비
+IF DOWNBASE:0 > MAXBASE:0 /4
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINTFORML	이 조교는 %CALLNAME:TARGET%에겐 너무나도 가혹한 것 같다…. (체력 소모 극대)
+	RESETCOLOR
+ELSEIF DOWNBASE:0 > MAXBASE:0 /8
+	PRINTFORML	이 조교는 %CALLNAME:TARGET%에겐 조금 힘든 것 같다. (체력 소모 대)
+ELSE
+ENDIF
+
+;노예의 기력소비
+IF DOWNBASE:1 > MAXBASE:1 / 3
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINTFORML	이 조교는 %CALLNAME:TARGET%에게 트라우마가 새길 정도로 충격이 큰 것 같다…. (기력 소모 극대)
+	RESETCOLOR
+ELSEIF DOWNBASE:1 > MAXBASE:1 / 6
+	PRINTFORML	이 조교는 %CALLNAME:TARGET%에게 스트레스를 주는 것 같다…. (기력 소모 대)
+ELSE
+ENDIF
+
+;마스터의 체력소비
+IF DOWNBASE:MASTER:0 > MAXBASE:MASTER:0 / 4
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINTFORML	아무리 %조사처리(CALLNAME:MASTER,"라")%고 해도 이런 조교는 힘든 것이다…. (체력 소모 극대)
+	RESETCOLOR
+ELSEIF DOWNBASE:MASTER:0 > MAXBASE:MASTER:0 / 8
+	PRINTFORML	[아나타는] 약간 살짝 이마의 땀을 닦아냈다. (체력 소모 대)
+ELSE
+ENDIF
+
+; 조수가 있을 경우에만 처리.
+IF ASSI >= 0 
+	;조수의 체력소비
+	IF DOWNBASE:ASSI:0 > MAXBASE:ASSI:0 / 4
+		CALL SETCOLOR_TORIKOMODE, "RED", 4
+		PRINTFORML	이 조교는 %CALLNAME:ASSI%에게도 가혹한 것 같다…. (체력 소모 극대)
+		RESETCOLOR
+	ELSEIF DOWNBASE:ASSI:0 > MAXBASE:ASSI:0 /8
+		PRINTFORML	이 조교는 %CALLNAME:ASSI%에게도 조금 힘든 것 같다. (체력 소모 대)
+	ELSE
+	ENDIF
+
+	;조수의 기력소비
+	IF DOWNBASE:ASSI:1 > MAXBASE:ASSI:1 / 3
+		CALL SETCOLOR_TORIKOMODE, "RED", 4
+		PRINTFORML	이 조교는 %CALLNAME:ASSI%에게도 죄책감을 느낄 정도로 가혹한 것 같다…. (기력 소모 극대)
+		RESETCOLOR
+	ELSEIF DOWNBASE:ASSI:1 > MAXBASE:ASSI:1 / 6
+		PRINTFORML	이 조교는 %CALLNAME:ASSI%에게도 스트레스를 주는 것 같다…. (기력 소모 대)
+	ELSE
+	ENDIF
+ELSE
+ENDIF
+
+FONTREGULAR
+
+
+;-----------------------------------------------------------------------------
+; 판정 오차 생성기
+;-----------------------------------------------------------------------------
+; 아나타의 기량에 따라, 판정문의 오차를 생성해낸다.
+; 일단은 걍 랜덤으로 두자... 공부가 더 필요해...
+; 130821 BY V.K
+
+@GET_CHECKTARGET_MODIFIER_TORIKOMODE
+
+LOCAL:1 =RAND:30+1
+LOCAL:2 =RAND:2
+	IF LOCAL:2 == 1
+		LOCAL:1 =  -1 * LOCAL:1
+	ELSE
+	ENDIF
+
+; 퍼센트 체크를 위해, 100을 더해준다. (소숫점 처리를 할 줄 몰라서 이렇게 만듬)
+LOCAL:1 = LOCAL:1+100
+
+RETURN LOCAL:1
+
+
+;-----------------------------------------------------------------------------
+; 절정回数表示 토리코모드
+; 절정회수 출력을 도와준다.  SHOW_ORGASM을 참고했다.
+; 130821 BY V.K
+;-----------------------------------------------------------------------------
+@SHOW_ORGASM_TORIKOMODE
+FOR LOCAL, 0, 14
+	SIF STRLENS(EXNAME:LOCAL) && EX:LOCAL
+		PRINTFORM %EXNAME:LOCAL, 6%:{EX:LOCAL}회
+NEXT
+
+;출력을 1회라도 했다면 1줄 띄우기...
+FOR LOCAL, 0, 14
+	SIF STRLENS(EXNAME:LOCAL) && EX:LOCAL
+		PRINTL
+		RETURN 0
+NEXT
+
+
+;-----------------------------------------------------------------------------
+; 파라메터 표시 토리코모드
+;-----------------------------------------------------------------------------
+; 파라메터 표시 개조. BY V.K
+; 게임의 몰입도를 높이기 위해,
+; 조교중에는 각종 수치를 숨기고, 대신 노예의 '반응'을 표시한다. 
+; 육체적 반응은 어느정도 힌트로 알 수 있으나, 심리적 반응은 알 수 없다.
+; 특히 순종등은 절대 알 수 없다. 독심술사도 아니고...
+; BY V.K
+@PRINT_PALAM_TORIKOMODE
+; 판정을 받을 변수 설정
+; 쾌 C,A,V 용 판정값
+;	1단계 LOCAL 901 2단계 LOCAL 902 3단계 LOCAL 903
+; 윤활 욕정 치정 고통 공포
+;	1단계 LOCAL 911 2단계 LOCAL 912 3단계 LOCAL 913  4단계 LOCAL 914
+; 반감  불쾌  억울
+;	1단계 LOCAL 921 2단계 LOCAL 922 3단계 LOCAL 923  4단계 LOCAL 924
+
+;오리지날 모드의 게이지들의 토리코모드식 처리. 기존의 처리하고 출력하는 함수들을, 처리만 하고 출력은 하지 않는 함수로 수정해 사용함.
+;奴隷の酔いゲージを計算
+CALL CALC_GAUGE8_TORIKOMODE, TARGET, 1
+;奴隷の射精ゲージを表示
+SIF TALENT:120 || TALENT:121
+	CALL CALC_GAUGE2_SLAVE_TORIKOMODE
+;奴隷の噴乳ゲージを表示
+SIF TALENT:134
+	CALL CALC_GAUGE3_SLAVE_TORIKOMODE, TARGET, 0
+;奴隷の尿意ゲージを表示
+SIF TEQUIP:12 || TEQUIP:32 || TALENT:45 || EXP:6
+	CALL CALC_GAUGE4_SLAVE_TORIKOMODE, TARGET, 0
+;奴隷の精飲절정ゲージを表示
+SIF TALENT:66 && FLAG:1200 & 2
+	CALL CALC_GAUGEX_SLAVE_TORIKOMODE
+;助手の射精ゲージを表示
+SIF ASSI >= 0 && (TALENT:ASSI:120 || TALENT:ASSI:121)
+	CALL CALC_GAUGE2_ASSI_TORIKOMODE
+;その他キャラの射精ゲージ
+;イベントや機能によりゲージの最大値が変化することもありうるので表示と定義は各装着具毎に設定
+SIF TEQUIP:90 || TEQUIP:55 == 1
+	CALL CALC_GAUGE2_OTHERS_TORIKOMODE
+;촉수기생
+IF FLAG:15 & 4096 && TALENT:146
+	CALL CALC_TENTACLE_GAUGE
+	;PRINTFORM 촉수기생LV（%CALLNAME:TARGET%）
+	;BAR BASE:6,MAXBASE:6,32
+	;PRINTFORML ({BASE:6, 5}/{MAXBASE:6, 5})
+ENDIF
+
+;대사 나올 판정용 변수들
+LOCAL : 901 = 1000
+LOCAL : 902 = 4000
+LOCAL : 903 = 8000
+
+LOCAL : 911 = 100
+LOCAL : 912 = 500
+LOCAL : 913 = 3000
+LOCAL : 914 =10000
+
+LOCAL : 921 = 150
+LOCAL : 922 = 750
+LOCAL : 923 = 4500
+LOCAL : 924 = 15000
+
+;난수 받을 녀석을 초기화
+LOCAL:999 =0
+
+;조교대상 이름출력
+PRINTL
+FONTBOLD
+PRINTFORML %조사처리(CALLNAME:TARGET,"는")%...
+FONTREGULAR
+
+; 상태표시문 출력
+
+;난수 생성.
+CALL GET_CHECKTARGET_MODIFIER_TORIKOMODE
+LOCAL:999 = RESULT:0
+
+; 조교 시작시 상태 표시. 첫 턴에만 1회 출력.
+IF TFLAG:107 == 1
+	;반발각인 3이상
+	IF MARK:9 >=3
+		PRINTFORML 어떻게든 조교를 받지 않으려고 도망칠 곳을 찾고 있다….
+	;그 외에, 봉사정신이 4이상
+	ELSEIF ABL:13 >=4
+		PRINTFORML 조교실을 깨끗이 치워두고 조교를 기다리고 있다.
+	;그 외에, 순종이 3이상
+	ELSEIF 	ABL:10 >=3
+		PRINTFORML 조교를 받을 준비를 마친 모양이다….
+	ELSE
+		PRINTFORML 당신을 보고 놀란 표정을 짓고 있다….	
+	ENDIF
+ENDIF
+
+;C, A, 바기나, B 처리. 칼라는 핑크. 수치는 레벨이 아니라 일정량의 수치를 사용한다. (수정될 수 있음)
+
+IF PALAM:0 >= LOCAL:901 * LOCAL:999 /100
+	IF PALAM:0 >= LOCAL:903 * LOCAL:999 /100
+		FONTBOLD
+		CALL SETCOLOR_TORIKOMODE, "PINK", 5
+		PRINTFORML C로 가버리기 직전이다….
+		RESETCOLOR
+		FONTREGULAR
+	ELSEIF PALAM:0 >= LOCAL:902 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML C로 매우 흥분하고 있다.
+		RESETCOLOR
+	ELSEIF PALAM:0 >= LOCAL:901 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 0
+		PRINTFORML C로 흥분하기 시작한 것 같다.
+		RESETCOLOR
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+IF PALAM:1 >= LOCAL:901 * LOCAL:999 /100
+	IF PALAM:1 >=  LOCAL:903 * LOCAL:999 /100
+		FONTBOLD
+		CALL SETCOLOR_TORIKOMODE, "PINK", 5
+		PRINTFORML V로 가버리기 직전이다….
+		RESETCOLOR
+		FONTREGULAR
+	ELSEIF PALAM:1 >=  LOCAL:902 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML V로 매우 흥분하고 있다.
+		RESETCOLOR
+	ELSEIF PALAM:1 >=  LOCAL:901 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 0
+		PRINTFORML V로 흥분하기 시작한 것 같다.
+		RESETCOLOR
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+IF PALAM:2 >= LOCAL:901 * LOCAL:999 /100
+	IF PALAM:2 >=  LOCAL:903 * LOCAL:999 /100
+		FONTBOLD
+		CALL SETCOLOR_TORIKOMODE, "PINK", 5
+		PRINTFORML A로 가버리기 직전이다….
+		RESETCOLOR
+		FONTREGULAR
+	ELSEIF PALAM:2 >=  LOCAL:902 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML A로 매우 흥분하고 있다.
+		RESETCOLOR
+	ELSEIF PALAM:2 >=  LOCAL:901 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 0
+		PRINTFORML A로 흥분하기 시작한 것 같다.
+		RESETCOLOR
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+IF PALAM:3 >= LOCAL:901 * LOCAL:999 /100
+	IF PALAM:3 >=  LOCAL:903 * LOCAL:999 /100
+		FONTBOLD
+		CALL SETCOLOR_TORIKOMODE, "PINK", 5
+		PRINTFORML B로 가버리기 직전이다….
+		RESETCOLOR
+		FONTREGULAR
+	ELSEIF PALAM:3 >=  LOCAL:902 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML B로 매우 흥분하고 있다.
+		RESETCOLOR
+	ELSEIF PALAM:3 >=  LOCAL:901 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PINK", 0
+		PRINTFORML B로 흥분하기 시작한 것 같다.
+		RESETCOLOR
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+;윤활. 10. 화이트블루, 4레벨로 표시. 4레벨 이상은 4레벨로 고정.
+
+IF PALAM:10 >=  LOCAL:911 * LOCAL:999 /100
+	IF PALAM:10 >= LOCAL:914 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 5
+		FONTBOLD
+		PRINTFORML 완전히 젖어 미끌거린다….
+		FONTREGULAR
+		RESETCOLOR 
+	ELSEIF PALAM:10 >= LOCAL:913 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+		PRINTFORML 흠뻑 젖어있다.
+		RESETCOLOR 
+	ELSEIF PALAM:10 >= LOCAL:912 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORML 촉촉히 젖어있다.
+		RESETCOLOR 
+	ELSEIF PALAM:10 >=  LOCAL:911 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 0
+		PRINTFORML 젖기 시작했다.
+		RESETCOLOR 
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+;욕정. 13. 노랑~주황 사이. 4레벨로 표시. 4레벨 이상은 4레벨로 고정.
+;욕정 레벨이 높으면 약간 표현이 바뀜.
+
+IF PALAM:13 >=  LOCAL:911* LOCAL:999 /100
+	IF PALAM:13 >= LOCAL:914 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "MAGENTA", 4
+		FONTBOLD
+			IF ABL:11 >=4
+				PRINTFORML 욕정 그 자체가 되어 가쁜 숨을 몰아쉬며 발정하고 있다….
+			ELSE
+				PRINTFORML 욕정에 완전히 사로잡혀 가쁜 숨을 몰아쉬고 있다….
+			ENDIF
+		FONTREGULAR
+		RESETCOLOR 
+	ELSEIF PALAM:13 >= LOCAL:913 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+			IF ABL:11 >=3
+				PRINTFORML 욕정에 참을 수 없는 듯, 숨을 헐떡이고 있다….
+			ELSE
+				PRINTFORML 욕정에 사로잡혀 숨을 헐떡이고 있다.
+			ENDIF
+		RESETCOLOR 
+	ELSEIF PALAM:13 >= LOCAL:912 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "MAGENTA", 1
+		PRINTFORML 흥분한 건지, 숨소리가 크게 들린다.
+		RESETCOLOR 
+	ELSEIF PALAM:13 >= LOCAL:911 * LOCAL:999 /100
+		PRINTFORML 살짝 숨이 거칠어 진 것 같다.
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+;한줄 띄워준다...
+PRINTL
+
+; 치정15, 고통16, 공포17 
+; 칼라는 어두운 녹색?
+;치정. 노출증이 있으면 상태가 변함.(3레벨에서3, 4레벨에서4필요) 치욕각인 3이상일때 상태가 약간 변함.
+IF PALAM:15 >=  LOCAL:911* LOCAL:999 /100
+	IF PALAM:15 >= LOCAL:914 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "GRASS", 4
+		FONTBOLD
+			IF ABL:14 >=4 
+				PRINTFORML 엄청난 부끄러움에 발정하고 있다….
+			ELSEIF MARK:4 >= 3
+				PRINTFORML 극심한 치욕감에 어께를 들썩이며 흐느끼고 있다….
+			ELSE
+				PRINTFORML 극심한 부끄러움에 얼굴을 가리고 흐느끼고 있다….
+			ENDIF
+		FONTREGULAR
+		RESETCOLOR 
+	ELSEIF PALAM:15 >= LOCAL:913 * LOCAL:999 /100
+			CALL SETCOLOR_TORIKOMODE, "GRASS", 2
+			IF ABL:14 >=3
+				PRINTFORML 부끄러움에 흥분하기 시작했다….
+			ELSEIF MARK:4 >= 3
+				PRINTFORML 부끄러움에 얼굴은 홍당무처럼 붉어졌고 눈가엔 눈물이 맺혔다.
+			ELSE
+				PRINTFORML 부끄러움에 얼굴이 홍당무처럼 붉어졌다.
+			ENDIF
+		RESETCOLOR 
+	ELSEIF PALAM:15 >= LOCAL:912 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "GRASS", 1
+		PRINTFORML 얼굴을 붉게 물들이고 있다.
+		RESETCOLOR 
+	ELSEIF PALAM:15 >= LOCAL:911 * LOCAL:999 /100
+		PRINTFORML 살짝 얼굴이 붉어진 것 같다.
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+;고통.마조끼가 있으면 상태가 변함(3레벨에서3, 4레벨에서4필요. 또한 새드끼가 낮아야 함.) . 고통각인 3레벨 이상일시 상태가 약간 변함. 
+IF PALAM:16  >=  LOCAL:911 * LOCAL:999 /100
+	IF PALAM:16 >= LOCAL:914* LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "GRASS", 4
+		FONTBOLD
+			IF ABL:21 >=4 && ABL:20 <=2
+				PRINTFORML 지독한 고통에 미친듯이 기뻐하며 더욱 큰 고통을 애원하고 있다….
+			ELSEIF MARK:0 >= 3
+				PRINTFORML 온 몸을 찢어내는 듯한 고통에 비명을 질러대며 광란하고 있다….
+			ELSE
+				PRINTFORML 너무나 아픈 나머지 도망칠 곳을 찾고 있다….
+			ENDIF
+		FONTREGULAR
+		RESETCOLOR 
+	ELSEIF PALAM:16 >= LOCAL:913 * LOCAL:999 /100
+			CALL SETCOLOR_TORIKOMODE, "GRASS", 2
+			IF ABL:21 >=3 && ABL:20 <=1
+				PRINTFORML 고통을 느낄 때 마다 희열이 섞인 신음소리를 내고 있다….
+			ELSEIF MARK:0 >= 3
+				PRINTFORML 아파서 비명을 질러대고 있다.
+			ELSE
+				PRINTFORML 아파서 신음소리를 내고 있다.
+			ENDIF
+		RESETCOLOR 
+	ELSEIF PALAM:16 >= LOCAL:912 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PURPLE", 1
+		PRINTFORML 아픔을 느낀건지, 얼굴을 찡그리고 있다.
+		CALL SETCOLOR_TORIKOMODE, "GRASS", 1
+	ELSEIF PALAM:16 >= LOCAL:911 * LOCAL:999 /100
+		PRINTFORML 얼굴을 찡그리고 있는 것 같다.
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+; 공포. 
+; 순종이 4이상이라면 살짝 상태가 변한다.
+; 공포각인 3레벨 이상일시 상태가 약간 변함.
+IF PALAM:17 >=  LOCAL:911 * LOCAL:999 /100
+	IF PALAM:17 >= LOCAL:914 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "GRASS", 4
+		FONTBOLD
+			IF  ABL:10 >=4
+				PRINTFORML 두려움에 몸을 떨고 있지만, 눈동자에는 일말의 믿음같은 것이 보인다….
+			ELSEIF MARK:8 >= 3
+				PRINTFORML 극심한 공포에 사로잡혀, 머리를 쥐어뜯으며 비명을 지르고 있다….
+			ELSE
+				PRINTFORML 극심한 공포에 온 몸을 사시나무 떨듯이 떨고 있다….
+			ENDIF
+		FONTREGULAR
+		RESETCOLOR 
+	ELSEIF PALAM:17 >= LOCAL:913 * LOCAL:999 /100
+			CALL SETCOLOR_TORIKOMODE, "GRASS", 2
+			IF MARK:8 >= 3
+				PRINTFORML 무서워서 팔다리를 후들대고, 눈가엔 눈물이 맺히고 있다….
+			ELSE
+				PRINTFORML 무서워 팔 다리를 후들거리고 있다….
+			ENDIF
+		RESETCOLOR 
+	ELSEIF PALAM:17 >= LOCAL:912 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "GRASS", 1
+		PRINTFORML 두려움을 느낀 건지, 손 끝이 미묘하게 떨린다.
+		RESETCOLOR 
+	ELSEIF PALAM:17 >= LOCAL:911 * LOCAL:999 /100
+		PRINTFORML 살짝 어두운 표정이 되었다.
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+
+; 노예의 부정적인 감정을 섞어서 표현한다.
+; 반감20, 불쾌21, 억울22 을 합쳐서 일정 수치 이상이면 출력한다. 
+; 근데 합쳐서 출력하니 좀 그런데? 뭔가 애매한 느낌~
+; 반감이 100을 넘을 때만 출력한다. (반복출력을 막기 위해)
+; 다 출력해도 상관 없겠지만, 너무 길어지는 문제가 있으니까...
+; 칼라는 어두운 청색?
+; 반발각인이 3이상이고 굴복각인이 2 이하라면 상태가 변한다. 순종이 높으면 좋은 쪽으로 표현이 바뀔 법도 하지만, 애초에 순종이 높으면 조교중에 반감이 잘 안 쌓이므로 패스.
+; 아이마스크 상태라면 무조건 표정을 읽을 수 없게 된다. (벗겼을 때의 긴박감을 위한 장치)
+; 개구기, 볼개그 상태라면 표정을 읽을 수 없다... (실제로는 있지만, 긴박감을 위해)
+
+IF TEQUIP:41 == 1
+	PRINTFORML 아이마스크를 쓰고 있어 표정을 읽기 어렵다….
+ELSEIF TEQUIP:42 == 1
+	PRINTFORML 입이 부자연스러워 무슨 표정을 짓고 있는건지 잘 모르겠다….
+ELSEIF PALAM:20 >= LOCAL:921 * LOCAL:999 /100
+	IF PALAM:20 + PALAM:21 + PALAM:22  >= LOCAL:924 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PURPLE", 4
+		FONTBOLD
+			IF MARK:9 >= 3 && MARK:2 <= 2
+				PRINTFORML 복수심에 사로잡혀 이를 악물고, 죽여버리겠다는 표정으로 이쪽을 노려보고 있다….
+			ELSE
+				PRINTFORML 마치 혐오스러운 것을 보듯이 이쪽을 노려보고 있다….
+			ENDIF
+		FONTREGULAR
+		RESETCOLOR 
+	ELSEIF PALAM:20 + PALAM:21 + PALAM:22 >= LOCAL:923 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PURPLE", 2
+			IF MARK:9 >= 3 && MARK:2 <= 2
+				PRINTFORML 미간을 찌푸리고 이쪽을 째려보며 이를 갈고 있다….
+			ELSE
+				PRINTFORML 미간을 찌푸리고 이쪽을 째려보고 있다.
+			ENDIF
+		RESETCOLOR 
+	ELSEIF PALAM:20 + PALAM:21 + PALAM:22 >= LOCAL:922 * LOCAL:999 /100
+		CALL SETCOLOR_TORIKOMODE, "PURPLE", 1
+			IF MARK:9 >= 3 && MARK:2 <= 2
+				PRINTFORML 기분이 나쁜지, 가끔 빠득거리며 이를 가는 소리가 들린다.
+			ELSE
+				PRINTFORML 기분이 나쁜지, 아랫입술을 질끈 깨물고 있다.
+			ENDIF
+		RESETCOLOR 
+	ELSEIF PALAM:20 + PALAM:21 + PALAM:22 >= LOCAL:921 * LOCAL:999 /100
+		PRINTFORML 가끔 이쪽을 힐끔거린다….
+	ELSE 
+	ENDIF
+ELSE
+ENDIF
+
+
+
+; 체력 기력의 출력.
+; 체력 기력이 1/2, 1/3, 1/4 일 때 띄워준다.  물론 오차는 적용한다.
+
+; 만약 출력할 게 있다면 1줄 띄워줄 것.
+SIF BASE:1 == 0 || BASE:0 <= MAXBASE:0 / 2 * LOCAL:999 /100
+	PRINTL
+
+IF BASE:1 == 0
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	FONTBOLD
+	PRINTFORML 기력이 바닥 나 버렸다….
+	FONTREGULAR
+	RESETCOLOR 
+ELSE 
+ENDIF
+
+IF BASE:0 <= MAXBASE:0 / 4 * LOCAL:999 /100
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	FONTBOLD
+	PRINTFORML 쓰러지기 일보 직전이다…!
+	FONTREGULAR
+	RESETCOLOR
+ELSEIF BASE:0 <= MAXBASE:0 / 3 * LOCAL:999 /100
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINTFORML 가쁜 숨을 몰아쉬고 있다….
+	RESETCOLOR
+ELSE 
+ELSEIF BASE:0 <= MAXBASE:0 / 2 * LOCAL:999 /100
+	PRINTFORML 조금 지친 것 같이 보인다.
+ELSE 
+ENDIF
+
+;지금까지 절정회수 출력
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+CALL SHOW_ORGASM_TORIKOMODE		
+RESETCOLOR
+PRINTL
+
+;장비템, 상황을 보여주기 전에 1라인 띄운다.
+;DRAWLINE
+
+;더러움 표시. 컨피그 따라감.
+SIF FLAG:5000 & 4
+	CALL STAIN_INFO_TORIKOMODE
+
+;소질 표시. 뭔가 위치가 영 좃치않타....
+; 컨피그 따라감.
+IF FLAG:5000 & 8
+	SETCOLOR 140, 140, 140
+	CALL SHOW_INFO_TALENT, TARGET
+	RESETCOLOR
+ELSE
+ENDIF
+
+DRAWLINE
+
+;장비템, 상황 출력.
+CALL SHOW_EQUIP_1
+CALL SHOW_EQUIP_2
+
+
+;디버그용
+;PRINTFORML {CFLAG:TARGET:4000}  메뉴
+;PRINTFORML {CFLAG:TARGET:4001}  현재만복도
+;PRINTFORML {CFLAG:TARGET:4002}  최대만복도
+;PRINTFORML {CFLAG:TARGET:4003}  현재영양도
+;PRINTFORML {CFLAG:TARGET:4004}  최대영양도
+
+;-------------------------------------------------
+;토리코모드용 체력 표시 함수
+; 체력을 바(BAR)로 표시하지 않고, 80%, 50%, 그 이하의 3단계로 표시한다.
+;-------------------------------------------------
+@LIFE_BAR_TORIKOMODE, ARG
+
+;디버그
+;PRINTFORML %CALLNAME:ARG%를 체크하는 중입니다...@LIFE_BAR_TORIKOMODE, ARG
+
+BASE:ARG:0 = LIMIT(BASE:ARG:0, 0, MAXBASE:ARG:0)
+PRINT 체력:
+	IF (BASE:ARG:0 / MAXBASE:ARG:0) *100 >= 80 
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+		PRINT 건강
+		RESETCOLOR
+	ELSEIF (BASE:ARG:0 / MAXBASE:ARG:0) *100 >= 50
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+		PRINT 보통
+		RESETCOLOR
+	ELSE 
+		CALL SETCOLOR_TORIKOMODE, "RED", 4
+		PRINT 지침
+		RESETCOLOR
+	ENDIF
+PRINTFORM (최대/{MAXBASE:ARG:0}) 
+
+
+;-------------------------------------------------
+;토리코모드용 기력 표시 함수
+;기력을 바(BAR)로 표시하지 않고, 80%, 50%, 그 이하의 3단계로 표시한다.
+;-------------------------------------------------
+@VITALITY_BAR_TORIKOMODE, ARG
+
+;디버그
+;PRINTFORML %CALLNAME:ARG%를 체크하는 중입니다...@VITALITY_BAR_TORIKOMODE, ARG
+
+BASE:ARG:1 = LIMIT(BASE:ARG:1, 0, MAXBASE:ARG:1)
+PRINT 기력:
+	IF (BASE:ARG:1 / MAXBASE:ARG:1) *100 >= 80
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+		PRINT 안정
+		RESETCOLOR
+	ELSEIF (BASE:ARG:1 / MAXBASE:ARG:1) *100 >= 50
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+		PRINT 보통
+		RESETCOLOR
+	ELSE 
+		CALL SETCOLOR_TORIKOMODE, "RED", 4
+		PRINT 지침
+		RESETCOLOR
+	ENDIF
+PRINTFORM (최대/{MAXBASE:ARG:1}) 
+
+;-------------------------------------------------
+;토리코모드용 만복도 표시 함수
+;기력을 바(BAR)로 표시하지 않고, 95%, 80%, 40%,20%,그 이하의 5단계로 표시한다.
+;-------------------------------------------------
+@HUNGER_BAR_TORIKOMODE, ARG
+;우선 만복도 정보가 있는지부터 체크해본다. 정보가 없으면 세텡할 것. (이렇게 하지 않으면  /0 연산으로 뻗어버리는 수가 있다)
+SIF CFLAG:ARG:4002 == 0
+	CALL INIT_HUNGERSYSTEM_TORIKOMODE
+
+;최저최대값 세팅.
+CFLAG:ARG:4001 = LIMIT(CFLAG:ARG:4001, 0, CFLAG:ARG:4002)
+;계산, 출력. CFLAG 라서 바로 계산하지 못하고 로칼변수에 대입해서 계산.
+LOCAL:1 = CFLAG:ARG:4001
+LOCAL:2 = CFLAG:ARG:4002
+LOCAL:3 = (LOCAL:1 *100 / LOCAL:2)
+
+;디버그
+;PRINTFORML %CALLNAME:ARG%를 체크하는 중입니다...@HUNGER_BAR_TORIKOMODE, ARG
+;PRINTFORML {LOCAL:3}LOCAL:3
+
+;표시방식이 토리코식이면,
+IF FLAG:5000 & 1
+	PRINT 만복:
+		IF LOCAL:3 >= 95
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+			PRINT 폭식
+			RESETCOLOR
+		ELSEIF LOCAL:3 >= 80
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+			PRINT 과식 
+			RESETCOLOR
+		ELSEIF LOCAL:3 >= 40
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+			PRINT 보통
+			RESETCOLOR
+		ELSEIF LOCAL:3 >= 20
+			CALL SETCOLOR_TORIKOMODE, "MAGENTA", 4
+			PRINT 허기
+			RESETCOLOR
+		ELSE 
+			CALL SETCOLOR_TORIKOMODE, "RED", 5
+			PRINT 텅빔
+			RESETCOLOR
+		ENDIF
+	PRINTFORM (최대/{CFLAG:ARG:4002}) 
+ELSE
+	PRINTFORM  만복:({CFLAG:ARG:4001}/{CFLAG:ARG:4002}) 
+ENDIF
+
+;디버그
+;LOCAL:0 = LOCAL:3*100
+;PRINTFORML {LOCAL:0}LOCAL:0
+;LOCAL:1 = CFLAG:ARG:4001
+;PRINTFORML {LOCAL:1}LOCAL:1
+;LOCAL:2 = CFLAG:ARG:4002
+;PRINTFORML {LOCAL:2}LOCAL:2
+;LOCAL:3 = LOCAL:1 *100 / LOCAL:2
+;PRINTFORML {LOCAL:3}LOCAL:3
+;PRINTFORM (현재:{CFLAG:ARG:4001}) 
+
+
+
+;-------------------------------------------------
+;토리코모드용 영양도 표시 함수
+;기력을 바(BAR)로 표시하지 않고, 95%, 80%, 40%,20%,그 이하의 5단계로 표시한다.
+;-------------------------------------------------
+@NUTRITION_BAR_TORIKOMODE, ARG
+;우선 영양도 정보가 있는지부터 체크해본다. 정보가 없으면 세텡할 것. (이렇게 하지 않으면  /0 연산으로 뻗어버리는 수가 있다)
+SIF CFLAG:ARG:4004 == 0
+	CALL INIT_HUNGERSYSTEM_TORIKOMODE
+
+;최저최대값 세팅.
+CFLAG:ARG:4003 = LIMIT(CFLAG:ARG:4003, 0, CFLAG:ARG:4004)
+
+
+;디버그
+;PRINTFORML %CALLNAME:ARG%를 체크하는 중입니다...@NUTRITION_BAR_TORIKOMODE, ARG
+
+;계산. CFLAG 라서 바로 계산하지 못하고 로칼변수에 대입해서 계산.
+LOCAL:1 = CFLAG:ARG:4003
+LOCAL:2 = CFLAG:ARG:4004
+LOCAL:3 = (LOCAL:1 *100 / LOCAL:2)
+
+;표시방식이 토리코식이면,
+IF FLAG:5000 & 1
+;계산, 출력
+	PRINT 영양:
+		IF LOCAL:3 >= 95
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+			PRINT 넘침
+			RESETCOLOR
+		ELSEIF LOCAL:3 >= 80
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+			PRINT 충분
+			RESETCOLOR
+		ELSEIF LOCAL:3 >= 40
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+			PRINT 보통
+			RESETCOLOR
+		ELSEIF LOCAL:3 >= 20
+			CALL SETCOLOR_TORIKOMODE, "MAGENTA", 4
+			PRINT 기아
+			RESETCOLOR
+		ELSE 
+			CALL SETCOLOR_TORIKOMODE, "RED", 5
+			FONTBOLD
+			PRINT 아사
+			FONTREGULAR
+			RESETCOLOR
+		ENDIF
+	PRINTFORM (최대/{CFLAG:ARG:4004}) 
+ELSE
+	PRINTFORM 영양/({CFLAG:ARG:4003}/{CFLAG:ARG:4002}) 
+ENDIF
+
+
+;-------------------------------------------------
+;토리코모드용 할당된 식단 표시 함수
+;-------------------------------------------------
+@FEEDMENU_BAR_TORIKOMODE, ARG
+;메뉴의 가격을 불러온다.
+CALL CALC_PRICE_MENU_TORIKOMODE
+
+PRINT 방침:
+IF CFLAG:ARG:4000 == 0
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINT 굶긴다 
+	PRINTFORM {RESULT:0}원/日
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4000 == 1
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 4
+	PRINT 싸구려 
+	PRINTFORM {RESULT:1}원/日
+	RESETCOLOR
+
+ELSEIF CFLAG:ARG:4000 == 2
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+	PRINT 일반식 
+	PRINTFORM {RESULT:2}원/日
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4000 == 3
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+	PRINT 영양식 
+	PRINTFORM {RESULT:3}원/日
+	RESETCOLOR
+ELSE  CFLAG:ARG:4000 == 4
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+	PRINT 특제식 
+	PRINTFORM {RESULT:4}원/日
+	RESETCOLOR
+ENDIF
+
+
+;-------------------------------------------------
+;토리코모드용 굶은회수 표시 함수
+;-------------------------------------------------
+@STARVE_BAR_TORIKOMODE, ARG
+;계산, 출력
+IF CFLAG:ARG:4005 >= 5
+	CALL SETCOLOR_TORIKOMODE, "RED", 5
+	FONTBOLD
+	PRINTFORML ......계속 계속 굶고 있다...... ({CFLAG:ARG:4005}끼)
+	FONTREGULAR
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4005 == 4
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINTL ...이틀 동안 아무것도 먹지 못했다...
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4005 == 3
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTL ...3끼 연속 아무것도 먹지 못했다...
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4005 == 2
+	CALL SETCOLOR_TORIKOMODE, "RED", 1
+	PRINTL ...하룻동안 아무것도 먹지 못했다...
+	RESETCOLOR
+ELSEIF  CFLAG:ARG:4005 == 1
+	PRINTL ...1끼 굶었다.
+ELSEIF  CFLAG:ARG:4005 == 0
+	PRINTL ...맛있게 먹고 있는 듯 하다.
+ELSE
+	PRINTL 에러발생!!!
+ENDIF
+
+
+;-------------------------------------------------
+; 캐릭터 리스트 출력. 이래저래 기존 내용의 수정이 많아서 별도로 제작함.
+;-------------------------------------------------
+@CHARADATA_LIST_TORIKOMODE, ARG, ARG:2
+LOCAL:3 = 0
+
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+	;주인공 배제
+	SIF LOCAL == 0
+		CONTINUE
+	;실종 중 캐릭터 배제
+	SIF CFLAG:LOCAL:4 == 1
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF CFLAG:LOCAL:4 == 4
+		PRINT ◆
+		LOCAL:3 |= 1
+	ELSEIF CFLAG:LOCAL:4 == 8
+		PRINT ▲
+		LOCAL:3 |= 2
+	ELSEIF CFLAG:LOCAL:4 == 16
+		PRINT ■
+		LOCAL:3 |= 4
+	ELSEIF CFLAG:LOCAL:4 & 1024
+		PRINT ▼
+		LOCAL:3 |= 16
+	ELSEIF CFLAG:LOCAL:4 == 2048 || CFLAG:LOCAL:4 == 4096
+		PRINT ▽
+		LOCAL:3 |= 8
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT ●
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	;줄바꿈
+	;PRINTL
+	;스케쥴 모드 사용중일때
+	SIF FLAG:5000 & 1024
+		CALL ARRANGE_SCHEDULE_TORIKOMODE, LOCAL
+	;스트레스 모드 사용 중일때
+	IF FLAG:5000 & 64
+		PRINT  ♨스트레스:
+		CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:LOCAL:65
+	ENDIF
+	;줄바꿈
+	PRINTL 
+	PRINT 　
+	CALL ARRANGE_CHARALIFE, LOCAL
+		PRINT 　
+	;토리코모드로 1줄추가
+	;PRINTL
+	CALL ARRANGE_CHARATALENT, LOCAL
+	PRINTL 
+	;한마디 호출
+	;SIF FLAG:1200 & 4
+	;	CALL IMPRESSION_MAIN, LOCAL
+	;토리코모드로 1줄추가
+	;DRAWLINE
+REND
+;IF ARG:2 >= 1
+;	PRINT 　　　☆:조교중 ★:조수 ○:조수가 ●:전 조수
+;	SIF FLAG:15 & 4096 && FLAG:75 & 32768 && LOCAL:3 & 1
+;		PRINT  ◆:촉수 유폐중
+;	SIF FLAG:73 & 1 && LOCAL:3 & 4
+;		PRINT  ■:뇌수감중
+;;	SIF FLAG:15 & 4096 && LOCAL:3 & 2
+;;		PRINT  ▲:우리 유폐중
+;	SIF FLAG:79 & 1 && LOCAL:3 & 8
+;		PRINT  ▽:허브 작업중
+;	PRINTL 　(을)를 나타내고 있습니다
+;ENDIF
+
+
+
+;-------------------------------------------------
+;토리코모드용 조교중 식사시킨다 [899] 처리함수
+;-------------------------------------------------
+; 1 - 저렴한 식사
+; 2 - 일반적인 식사
+; 3 - 영양만점 식사
+; 4 - 특제개별 식사
+
+@FEED_IN_TRAIN_TORIKOMODE
+;선택한 메뉴
+LOCAL:0 = 0
+;선택한 식사방식
+LOCAL:1 = 0
+;현재의 식사 보정치 합계
+LOCAL:2 = 0
+;결과적으로 먹었나 안 먹었나? (마지막에 식사효과 발동시킬 때 씀)
+LOCAL:3 = 0
+;강제로 먹었나?
+LOCAL:4 = 0
+;식비
+LOCAL:10 = 0
+;.................................................................................
+;PHASE0 : 상태출력
+PRINTFORM 현재 %CALLNAME:TARGET%의 상태  > 
+CALL HUNGER_BAR_TORIKOMODE, TARGET
+CALL NUTRITION_BAR_TORIKOMODE, TARGET
+WAIT
+PRINTFORMW 어떤 걸 먹일까…?
+
+;.................................................................................
+;PHASE1 : 메뉴선택
+;가격을 계산해서 불러온다.
+CALL CALC_PRICE_MENU_TORIKOMODE
+
+PRINTL (메뉴의 가격은 보유 노예수와 난이도에 따라 상승합니다)
+
+PRINT [1] 저렴한 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:1}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양상승 小
+
+PRINT [2] 일반적인 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:2}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양 中
+
+PRINT [3] 영양만점 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:3}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양상승 大
+
+PRINT [4] 특제개별 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:4}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양상승 特大
+
+PRINTL [999] 그만둔다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	IF MONEY >= RESULT:1
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"를")% 굶어 죽지 않을 정도로 먹입니다.
+		LOCAL:0 = 1
+		LOCAL:10 = RESULT:1
+	ELSE
+		PRINTFORMW 돈이 부족합니다. (현재 잔고:{MONEY})
+		RETURN 0
+	ENDIF
+ELSEIF RESULT == 2
+	IF MONEY >= RESULT:2
+		PRINTFORMW %CALLNAME:TARGET%에게 일반적인 식사를 제공합니다. 후식은 없음.
+		LOCAL:0 = 2
+		LOCAL:10 = RESULT:2
+	ELSE
+		PRINTFORMW 돈이 부족합니다. (현재 잔고:{MONEY})
+		RETURN 0
+	ENDIF
+ELSEIF RESULT == 3
+	IF MONEY >= RESULT:3
+		PRINTFORMW %CALLNAME:TARGET%에게 영양만점의 식사를 제공합니다. 후식은 파르페.
+		LOCAL:0 = 3
+		LOCAL:10 = RESULT:3
+	ELSE
+		PRINTFORMW 돈이 부족합니다. (현재 잔고:{MONEY})
+		RETURN 0
+	ENDIF
+ELSEIF RESULT == 4
+	IF MONEY >= RESULT:4
+		PRINTFORMW %CALLNAME:TARGET%의 식성에 맞는 영양만점의 식사를 제공합니다. 후식은 초이스 가능.
+		LOCAL:0 = 4
+		LOCAL:10 = RESULT:4
+	ELSE
+		PRINTFORMW 돈이 부족합니다. (현재 잔고:{MONEY})
+		RETURN 0
+	ENDIF
+ELSEIF RESULT == 999
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;.................................................................................
+;PHASE2 : 식사방법 설정
+;어떤 식으로 먹을지를 결정한다.
+;1 먹게둔다
+;2 개처럼 먹게한다
+;3 먹여준다
+;4 특수한 소스(주인)
+;5 특수한 소스(조수)
+
+$INPUT_LOOP2
+PRINTL
+PRINTL 어떤 식으로 먹게 할까?
+PRINTL [1] 그냥 먹게 한다.
+PRINTL [2] 개처럼 먹게 한다.
+PRINTL [3] 먹여준다.
+PRINTL [4] 특수한 소스를 뿌린다. (주인)
+PRINTL [5] 특수한 소스를 뿌린다. (조수)
+
+INPUT
+IF RESULT == 1
+	LOCAL:1 == 1
+ELSEIF RESULT == 2
+	LOCAL:1 == 2
+ELSEIF RESULT == 3
+	LOCAL:1 == 3
+ELSEIF RESULT == 4
+	;사정게이지 1/3이상일 때만 사용가능. 그리고 주인이 남자거나 후타나리여야 함.
+	;디버그
+	;PRINTFORM TALENT:MASTER:120 {TALENT:MASTER:120} TALENT:MASTER:121{TALENT:MASTER:121}
+	IF (TALENT:MASTER:120 == 1) || (TALENT:MASTER:121 == 1)
+		IF BASE:MASTER:2 > MAXBASE:MASTER:2 / 3
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 몇 번 페니스를 훑으며 허리를 움찔움찔 하더니, 비릿한 냄새의 뜨끈한 흰 소스를 요리 위에 흩뿌리기 시작했다….
+			LOCAL:1 == 4
+			BASE:MASTER:2 = 0
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 몇 번 페니스를 훑어보았지만, 사정하기엔 아직 흥분이 부족한 것 같다….
+			GOTO INPUT_LOOP2
+		ENDIF
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그런 행동을 할 수가 없다…. (페니스가 없다)
+		GOTO INPUT_LOOP2
+	ENDIF
+
+ELSEIF RESULT == 5
+	;조수가 있을때만
+	IF ASSI > 0
+		;조수가 남자가 아니거나 고추가 없다.
+		IF (TALENT:ASSI:120 == 0) && (TALENT:ASSI:121 == 0)
+			PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 그런 행동을 할 수가 없다…. (페니스가 없다)
+			GOTO INPUT_LOOP2
+		;조수의 사정 게이지가 부족하다.
+		ELSEIF  (BASE:ASSI:2) < (MAXBASE:ASSI:2 /2)
+			PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 몇 번 페니스를 훑어보았지만, 사정하기엔 아직 흥분이 부족한 것 같다….
+			GOTO INPUT_LOOP2
+		;조수가 후타나리나 남자이고, 사정게이지가 1/3  이상일 때. 사용가능.
+		ELSEIF (BASE:ASSI:2) > (MAXBASE:ASSI:2 /2) && ((TALENT:ASSI:120 ==1) || (TALENT:ASSI:121 ==1))
+			PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 몇 번 페니스를 훑더니, 움찔움찔 하며 끈적하고 흰 소스를 요리 위에 흩뿌렸다….
+			LOCAL:1 == 5
+			BASE:ASSI:2 =0
+		ELSE
+		ENDIF
+	;조수가 없다...
+	ELSE
+		PRINTFORMW 소스를 뿌릴 조수가 없다….
+		GOTO INPUT_LOOP2
+	ENDIF
+ELSE
+ENDIF
+
+;.................................................................................
+;PHASE3 : 먹을지 말지 체크
+;자율식사 보정을 한다. 단! 여기서는 인수를 1개 더 써서 메뉴에 따른 보정을 따로한다!! (고작 이거때문에 함수1개 더 만들수는 없는 노릇이고~)
+CALL CALC_EAT_SELF_TORIKOMODE, TARGET, LOCAL:0
+LOCAL:2 += RESULT:0
+;디버그
+;PRINTFORMW ＃자율식사 시점에서의 먹을 확률 : {LOCAL:2}퍼센트.
+;먹이는 방식에 따른 보정을 한다
+CALL CALC_EAT_TRAINING_TORIKOMODE, LOCAL:1
+LOCAL:2 += RESULT:0
+;디버그
+;PRINTFORMW ＃먹이는 방법에 따라 먹을 확률이 : {LOCAL:2}퍼센트가 되었습니다.
+;디버그
+;PRINTFORMW LOCAL:2 {LOCAL:2}
+;PRINTFORMW ＃그래서 최종 먹을 확률은... {LOCAL:2}퍼센트 입니다.
+;먹을지 말지 체크
+CALL CHECK_EAT_OR_NOT_TORIKOMODE, LOCAL:2
+
+;.................................................................................
+;PHASE4 : 식사처리
+;노예가 먹기로 했다면
+IF RESULT:0 == 1
+	LOCAL:3 = 1
+
+;노예가 먹지 않기로 했다면, 강제로 먹이는 시도를 한다.
+ELSEIF RESULT:0 == 0
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 건방지게도 이쪽의 성의를 거부했다.
+	WAIT
+	$LOOP_SELECT_TOFORCE
+	PRINTL
+	PRINTFORML 어떻게 할까?
+	PRINTL [1] 강제로 먹인다. (스트레스 상승)
+	PRINTL [2] 관둔다. (음식이 버려짐)
+	TINPUT 3000, 100, 1
+	IF RESULT == 1
+		PRINTFORM %조사처리(CALLNAME:PLAYER,"는")% 싫다고 바둥거리는 %CALLNAME:TARGET%의 입을 열고, 억지로 
+		SIF (LOCAL:1 == 4 || LOCAL:1 == 5) 
+		PRINTFORM 정액으로 더러워진 
+		PRINTFORMW 음식을 쑤셔넣었다….
+		PRINTW ........
+		PRINTW ........
+		LOCAL:3 = 1
+		LOCAL:4 = 1
+	ELSEIF RESULT == 2
+		PRINTFORMW 때로는 저쪽의 의견도 존중할 필요가 있을 것이다. 식비는 아깝지만…. %조사처리(CALLNAME:PLAYER,"는")% 강제로 먹이는 걸 포기했다….
+		LOCAL:3 = 0
+		;식비차감
+		MONEY -=LOCAL:10
+		PRINTFORML 식비:-{LOCAL:10} / 현재 잔고:{MONEY}
+	;잘못된 값을 넣거나 시간제한.
+	ELSE
+		PRINTFORMW 결정을 내리지 못한 %조사처리(CALLNAME:PLAYER,"는")% 강제로 먹이는 걸 포기했다….
+		LOCAL:3 = 0
+		;식비차감
+		MONEY -=LOCAL:10
+		PRINTFORML 식비:-{LOCAL:10} / 현재 잔고:{MONEY}
+	ENDIF
+ELSE
+	PRINTFORML 오류발생. PHASE4 : 식사처리
+ENDIF
+
+;결과적으로 노예가 먹었다면.
+IF LOCAL:3 ==1
+	CALL CALC_EAT_FEED_TORIKOMODE, LOCAL:0
+	;만복영양 상승.
+	;디버그용
+	;PRINTFORML {RESULT:1} 메뉴의 만복도
+	;PRINTFORML {RESULT:2} 메뉴의 영양도
+	CFLAG:TARGET:4001 += RESULT:1
+	CFLAG:TARGET:4003 += RESULT:2
+	;수치 정리.
+	CFLAG:TARGET:4001 = LIMIT(CFLAG:TARGET:4001, 0, CFLAG:TARGET:4002)
+	CFLAG:TARGET:4003 = LIMIT(CFLAG:TARGET:4003, 0, CFLAG:TARGET:4004)
+
+	;식사 멘트 출력. 식사 상태에 따라 약간의 추가 표현.
+	PRINTFORM %조사처리(CALLNAME:TARGET,"는")% 
+	;강제로 먹였다면
+	IF LOCAL:4 == 1
+		PRINTFORM 벌려진 입을 닫지 못하고 콜록거리며, 
+		SIF LOCAL:1 == 4 || LOCAL:1 == 5
+			PRINTFORM %CALLNAME:PLAYER%의 비릿한 정액으로 더러워진 
+	;노예가 스스로 먹었다면
+	ELSE 
+		;노예의 반응 (판정치로 체크)
+		IF LOCAL:2 >=80
+			PRINTFORM 기다렸다는 듯이 매우 기뻐하며, 
+		ELSEIF LOCAL:2 >=60
+			PRINTFORM 기쁜 듯한 표정을 지으며, 
+		ELSEIF LOCAL:2 >=40
+			PRINTFORM 그다지 내키지 않아하며, 
+		ELSEIF LOCAL:2 >=20
+			PRINTFORM 싫지만 마지못해하며, 
+		ELSEIF LOCAL:2 >=0
+			PRINTFORM 결국 몸의 요구에 굴복하여 얼굴을 찡그리고, 
+		ELSE
+		ENDIF
+
+		;먹는 방식
+		IF LOCAL:1 == 1
+			;그냥 먹기
+		ELSEIF LOCAL:1 == 2
+			PRINTFORM 개처럼 기어가 밥그릇에 입을 묻고 
+		ELSEIF LOCAL:1 == 3
+			PRINTFORM %조사처리(CALLNAME:PLAYER,"가")% 떠주는 걸 한입 한입 받아먹으며 
+		ELSEIF LOCAL:1 == 4
+			PRINTFORM %CALLNAME:PLAYER%의 비릿한 정액이 뿌려진 
+		ELSEIF LOCAL:1 == 5
+			PRINTFORM %CALLNAME:PLAYER%의 뜨끈한 정액이 뿌려진 
+		ELSE
+		ENDIF
+	ENDIF
+		
+	; 음식이름
+	CALL CALC_EATEN_FOOD_TORIKOMODE, LOCAL:0, NO:TARGET
+	PRINTFORML 먹었다….
+	;식사 멘트 종료
+
+	PRINTFORM %CALLNAME:TARGET%의 상태  > 
+	CALL HUNGER_BAR_TORIKOMODE, TARGET
+	CALL NUTRITION_BAR_TORIKOMODE, TARGET
+	WAIT
+	;식비차감
+	MONEY -=LOCAL:10
+	PRINTFORML 식비:-{LOCAL:10} / 현재 잔고:{MONEY}
+	;배가 가득찼는지 알려줌. (더 못 먹이게)
+	IF CFLAG:TARGET:4001 == CFLAG:TARGET:4002
+		PRINTL
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 5
+		PRINTFORML %CALLNAME:TARGET%의 배가 가득 찼다….
+		RESETCOLOR
+	ENDIF
+	;굶은 회수 초기화
+	CFLAG:TARGET:4005 = 0
+;안 먹었다면
+ELSE
+ENDIF
+
+WAIT
+
+;.................................................................................
+;PHASE5 : 보상처리
+;변수 설정
+;애정경험상승치
+LOCAL:10 = 0
+;정액경험 상승치
+LOCAL:11 = 0
+;파라메터
+;순종
+LOCAL:12 = 0
+;반감
+LOCAL:13 = 0
+;굴복
+LOCAL:14 = 0
+;억울
+LOCAL:15 = 0
+;스트레스
+LOCAL:16 = 0
+
+;노예가 자진해서 먹었다.
+IF LOCAL:4 == 0 && LOCAL:3 ==1
+	IF LOCAL:1 == 1
+		LOCAL:12 = 2000
+		LOCAL:14 = 2000
+	ELSEIF LOCAL:1 == 2
+		LOCAL:12 = 10000
+		LOCAL:14 = 15000
+	ELSEIF LOCAL:1 == 3
+		LOCAL:12 = 10000
+		LOCAL:14 = 5000
+		LOCAL:10 = 10
+	ELSEIF LOCAL:1 == 4 || LOCAL:1 == 5
+		LOCAL:12 = 25000
+		LOCAL:14 = 30000
+		LOCAL:11 = 4
+		;정애미각이 있을 시
+		SIF TALENT:TARGET:66 ==1
+			LOCAL:10 = 20
+	ELSE
+		PRINTL 오류발생 FEED_IN_TRAIN_TORIKOMODE
+	ENDIF
+;강제로 먹였다.
+ELSEIF LOCAL:4 == 1 && LOCAL:3 ==1
+	IF LOCAL:1 == 1
+		LOCAL:13 = 100
+		LOCAL:14 = 100
+		LOCAL:22 = 100
+		LOCAL:16 = 50
+	ELSEIF LOCAL:1 == 2
+		LOCAL:13 = 1000
+		LOCAL:14 = 500
+		LOCAL:22 = 1000
+		LOCAL:16 = 100
+	ELSEIF LOCAL:1 == 3
+		LOCAL:13 = 500
+		LOCAL:14 = 200
+		LOCAL:22 = 500
+		LOCAL:16 = 50
+	ELSEIF LOCAL:1 == 4 || LOCAL:1 == 5
+		LOCAL:13 = 5000
+		LOCAL:14 = 1000
+		LOCAL:11 = 2
+		LOCAL:22 = 2500
+		LOCAL:16 = 250
+	ELSE
+		PRINTL 오류발생 FEED_IN_TRAIN_TORIKOMODE
+	ENDIF
+;거부했지만 포기하고 먹이지 않았다.
+ELSEIF LOCAL:4 == 0 && LOCAL:3 ==0
+	;처리없음.
+ELSE
+	PRINTL 오류발생 FEED_IN_TRAIN_TORIKOMODE
+ENDIF
+
+;파라미터 등의 상승
+EXP:TARGET:21 += LOCAL:10
+EXP:TARGET:4 += LOCAL:11
+PALAM:TARGET:12 += LOCAL:12
+PALAM:TARGET:20 += LOCAL:13
+PALAM:TARGET:14 += LOCAL:14
+PALAM:TARGET:22 += LOCAL:15
+CFLAG:TARGET:65 += LOCAL:16
+
+PRINTL
+PRINTFORML 애정경험 + {LOCAL:10}
+PRINTFORML 정액경험 + {LOCAL:11}
+PRINTFORML 순종 + {LOCAL:12}
+PRINTFORML 반감 + {LOCAL:13}
+PRINTFORML 굴복 + {LOCAL:14}
+PRINTFORML 억울 + {LOCAL:15}
+PRINTFORML 스트레스 + {LOCAL:16}
+
+WAIT
+
+;………………………………………………
+; 파라메터를 처리하되, 출력하지 않는 함수.
+; 에라 자체 명령어인 UPCHECK 를 대체.
+; 130821 BY V.K
+;………………………………………………
+@UPCHECK_TORIKOMODE
+
+;UPSIZE / DOWNSIZE 만큼 반복한다
+REPEAT 1000
+
+	;UP이나 DOWN에 값이 들어가 있다
+	IF UP:COUNT > 0 || DOWN:COUNT > 0
+
+		;실제 가산, 감산 처리
+		PALAM:COUNT += UP:COUNT
+		PALAM:COUNT -= DOWN:COUNT
+
+	ENDIF
+	
+	;UP, DOWN 값의 초기화
+	UP:COUNT = 0
+	DOWN:COUNT = 0
+
+REND
+
+
+
+;-------------------------------------------------
+;더러움표시 토리코모드
+;-------------------------------------------------
+; 노예의 더러움만 표시한다. 마스터와 조수는 표시하지 않는다.
+; 8개소나 되는 정보를 다 표시하는 건 어렵다. 적당한 선에서 타협해야 한다.
+; 일단은 구조를 짜야 하니까, 일일이 다 표시 해 보자.
+; 특히 카우퍼액의 문제인데... 카우퍼액은 들어가면 표현이 애매하니까 빼도록 하자...(이로서 1단계의 더러움이 줄어들게 된다...)
+@STAIN_INFO_TORIKOMODE
+
+;부위를 저장하는 변수 설정
+;VARSET LOCALS,""
+LOCALS:0 = 입이
+LOCALS:1 = 손이
+LOCALS:2 = 페니스가
+LOCALS:3 = 음부가
+LOCALS:4 = 애널이
+LOCALS:5 = 가슴이
+LOCALS:6 = 다리가
+LOCALS:7 = 발이
+
+;더러움 레벨을 저장하는 지역변수 설정
+LOCAL:99 = 0
+
+;무엇으로 더러워졌나를 저장하는 변수 설정.
+LOCALS:99 = 
+
+REPEAT 8
+	;입. 정보가 없으면 출력하지 않는다.
+	SIF COUNT == 0 && STAIN:COUNT  == 0
+		CONTINUE
+	;손. 기본값이면 출력하지 않는다.
+	SIF COUNT == 1 && STAIN:COUNT  == 0
+		CONTINUE
+	;꼬추. 남자나 후타나리가 아니면 P는 출력하지 않는다. 또는 기본값이라도 출력하지 않는다.
+	SIF COUNT == 2 && TALENT:120 == 0 && TALENT:121 == 0 || STAIN:COUNT  == 2
+		CONTINUE
+	;V. 기본 값이면 출력하지 않는다. 또는 남자라면 출력하지 않는다.
+	SIF COUNT == 3 && STAIN:COUNT  == 1 || TALENT:120
+		CONTINUE
+	;A. 기본 값이면 출력하지 않는다.
+	SIF COUNT == 4 && STAIN:COUNT  == 8
+		CONTINUE
+	;B 남자라면 출력하지 않는다 가슴이 없다. 또는 기본값이면 출력하지 않는다.
+	SIF COUNT == 5 && TALENT:120 || STAIN:COUNT  == 0
+		CONTINUE
+	;다리. 기본값이면 출력하지 않는다.
+	SIF COUNT == 6 && STAIN:COUNT  == 0
+		CONTINUE
+	;발. 기본값이면 출력하지 않는다.
+	SIF COUNT == 7 && STAIN:COUNT  == 0
+		CONTINUE
+
+	;더러움 레벨 초기화. 더러움 내용 초기화.
+	LOCAL:99 = 0
+	LOCALS:99 =
+	
+	;무엇으로 더러운지 출력. 여러개가 동시에 적용될 때, 문장 생성을 어떻게 해야 할 지 모르겠다. 부자연스럽지 아무래도. 
+	IF STAIN:COUNT & 1
+		LOCALS:99 =%LOCALS:99% 음액으로
+		LOCAL:99 +=1
+	ENDIF
+	IF STAIN:COUNT & 2
+		;카우퍼액 (또는 페니스로 인한 더러움) 은 표현이 애매해서 뺐다. 주석만 풀면 언제든 살릴 수 있음. (더러움 레벨도 올라감)
+		;LOCALS:99 =%LOCALS:99% 카우퍼액으로
+		;LOCAL:99 +=1
+	ENDIF
+	IF STAIN:COUNT & 4
+		LOCALS:99 =%LOCALS:99% 정액으로
+		LOCAL:99 +=1
+	ENDIF			
+	IF STAIN:COUNT & 8
+		LOCALS:99 =%LOCALS:99% 장액으로
+		LOCAL:99 +=1
+	ENDIF
+	IF STAIN:COUNT & 16
+		LOCALS:99 =%LOCALS:99% 모유로
+		LOCAL:99 +=1
+	ENDIF
+	IF STAIN:COUNT & 32
+		LOCALS:99 =%LOCALS:99% 선명한 붉은색의 처녀혈로
+		LOCAL:99 +=1
+	ENDIF
+	IF STAIN:COUNT & 64
+		LOCALS:99 =%LOCALS:99% 미끌대는 점액으로
+		LOCAL:99 +=1
+	ENDIF
+
+	;더러움 정도에 따른 표현. 더러울 수록 색이 짙어지지만, 처녀혈 상태일때는 무조건 시뻘건색!
+	IF LOCAL:99 >= 4
+		SETCOLOR 140,140,0
+		CALL SETCOLOR_TORIKOMODE, "OLIVE", 5
+			SIF STAIN:COUNT & 32
+			CALL SETCOLOR_TORIKOMODE, "RED", 5
+		PRINTFORML %LOCALS:COUNT%%LOCALS:99% 엉망진창이 되어, 시큼한 냄새가 날 정도로 더러운 모습이다….
+		RESETCOLOR
+		
+	ELSEIF LOCAL:99 >= 3
+		CALL SETCOLOR_TORIKOMODE, "OLIVE", 3
+			SIF STAIN:COUNT & 32
+			CALL SETCOLOR_TORIKOMODE, "RED", 5
+		PRINTFORML %LOCALS:COUNT%%LOCALS:99% 마구 뒤섞여 더러워져 있다….
+		RESETCOLOR
+	ELSEIF LOCAL:99 >= 2
+		CALL SETCOLOR_TORIKOMODE, "OLIVE", 2
+			SIF STAIN:COUNT & 32
+			CALL SETCOLOR_TORIKOMODE, "RED", 5
+		PRINTFORML %LOCALS:COUNT%%LOCALS:99% 미끌미끌거린다.
+		RESETCOLOR
+	ELSEIF LOCAL:99 >= 1
+		CALL SETCOLOR_TORIKOMODE, "OLIVE", 1
+			SIF STAIN:COUNT & 32
+			CALL SETCOLOR_TORIKOMODE, "RED", 5
+		PRINTFORML %LOCALS:COUNT%%LOCALS:99% 지저분해졌다.
+		RESETCOLOR
+	ELSE
+	ENDIF
+	
+REND
+
+
+;디버그용 출력
+;SETCOLOR 255,0,0
+;PRINTFORML {STAIN:0}입
+;PRINTFORML {STAIN:1}손
+;PRINTFORML {STAIN:2}페
+;PRINTFORML {STAIN:3}보
+;PRINTFORML {STAIN:4}애
+;PRINTFORML {STAIN:5}바
+;PRINTFORML {STAIN:6}다리
+;PRINTFORML {STAIN:7}발
+;RESETCOLOR
+;
+;CALL STAIN_INFO
+
+
+
+;===========================================================================
+;만복도 시스템 관련 함수들
+;===========================================================================
+
+;………………………………………………
+;만복도, 영양도 설정. 메뉴, 굶은회수 설정. 노예 구매시 불려지는 함수들이다.
+;………………………………………………
+@SET_DEAFAULT_MENU_TORIKOMODE , ARG
+	CFLAG:ARG:4000 = 1
+
+@SET_DEAFAULT_HUNGER_TORIKOMODE , ARG
+;위장 크기의 기본값은 2000이며, 소질<덩치>에 따라 변한다.
+LOCAL = 2000
+;소질<덩치>에 따른 보정
+	;거구 1.5배
+	IF TALENT:ARG:129 == 1
+		TIMES LOCAL , 1.5
+	; 작은체형 0.75배
+	ELSEIF TALENT:ARG:128 == 1
+		TIMES LOCAL , 0.75
+	; 소인체형 0.6배
+	ELSEIF TALENT:ARG:127 == 1
+		TIMES LOCAL , 0.6
+	ELSE
+	ENDIF
+;위장크기 세팅
+CFLAG:ARG:4002 = LOCAL
+
+;위장의 50%만 채워서 만복도로 세팅.
+CFLAG:ARG:4001 = CFLAG:ARG:4002 / 2
+
+@SET_DEAFAULT_NUTRITION_TORIKOMODE , ARG
+;초기 영양도는 모든 캐릭 공히 1500/3000이다.
+	CFLAG:ARG:4003 = 1500
+	CFLAG:ARG:4004 = 3000
+
+@SET_DEAFAULT_STARVE_TORIKOMODE , ARG
+	CFLAG:ARG:4005 = 0
+
+;………………………………………………
+;만복도 감소량 계산 함수
+;………………………………………………
+@CALC_DEGRADE_HUNGER_TORIKOMODE , ARG
+
+;디버그
+;PRINTFORML 현재 %CALLNAME:ARG%를 체크하고 있습니다...@CALC_DEGRADE_HUNGER_TORIKOMODE , ARG
+
+;턴 종료시 기본 삭감. -400
+;남은 체력이 적으면 만복도 삭감량 UP  *2.5
+;남은 체력이 많으면 만복도 삭감량 DOWN *1
+;129,거구 *1.25
+;127,소인체형 *0.6
+;128,작은체형 *0.75
+;140,임신 *1.25
+;143,포란중 *1.25
+;205,흡혈귀 *1.25
+
+;기본소모량
+LOCAL:0 = 400
+
+;체력보정 계산 (100배값)
+LOCAL:1 = 250 - ((BASE:ARG:0/MAXBASE:ARG:0) *150)
+
+;디버그
+;PRINTFORML LOCAL:1 {LOCAL:1}
+
+;남은체력 체크. 
+	LOCAL:0 = (LOCAL:0 * LOCAL:1)
+;소질체크
+	SIF TALENT:ARG:127 == 1
+		TIMES LOCAL:0, 0.6
+	SIF TALENT:ARG:128 == 1
+		TIMES LOCAL:0, 0.75
+	SIF TALENT:ARG:129 == 1
+		TIMES LOCAL:0, 1.25
+	SIF TALENT:ARG:140 == 1
+		TIMES LOCAL:0, 1.25
+	SIF TALENT:ARG:143 == 1
+		TIMES LOCAL:0, 1.25
+	SIF TALENT:ARG:205 == 1
+		TIMES LOCAL:0, 1.25
+;계산의 마지막에, 뻥튀기한 100배를 다시 나눠준다. 이로서 오차가 줄어듬.
+RESULT:1 = LOCAL:0 /100
+RETURN 1
+
+;………………………………………………
+;영양도 감소량 계산 함수
+;………………………………………………
+@CALC_DEGRADE_NUTRITION_TORIKOMODE, ARG
+
+;디버그
+;PRINTFORML 현재 %CALLNAME:ARG%를 체크하고 있습니다...@CALC_DEGRADE_NUTRITION_TORIKOMODE, ARG
+
+;하루에 일정량 소비. -200
+;;>만복보정
+;만복 100 일때 영양감소 0.75 배
+;만복 0일때 영양감소 1.25 배
+;;>소질보정
+;127,소인체형 *0.6
+;129,거구 *1.25
+;128,작은체형 *0.75
+;140,임신 *1.25
+;143,포란중 *1.25
+;205,흡혈귀 *1.25
+
+;만복보정 계산 (100배값)
+LOCAL:0 = 200
+LOCAL:1 = CFLAG:ARG:4001
+LOCAL:2 = CFLAG:ARG:4002
+LOCAL:3 = 125 - (LOCAL:1 * 50 /LOCAL:2)
+LOCAL:0 = LOCAL:0 * LOCAL:3
+
+;소질체크
+	SIF TALENT:ARG:127 == 1
+		TIMES LOCAL:0, 0.6
+	SIF TALENT:ARG:128 == 1
+		TIMES LOCAL:0, 0.75
+	SIF TALENT:ARG:129 == 1
+		TIMES LOCAL:0, 1.25
+	SIF TALENT:ARG:140 == 1
+		TIMES LOCAL:0, 1.25
+	SIF TALENT:ARG:143 == 1
+		TIMES LOCAL:0, 1.25
+	SIF TALENT:ARG:205 == 1
+		TIMES LOCAL:0, 1.25
+
+;계산의 마지막에, 뻥튀기한 100배를 다시 나눠준다. 이로서 오차가 줄어듬.
+RESULT:1 = LOCAL:0 /100
+RETURN 1
+
+
+;………………………………………………
+;토리코모드 엔드턴 처리
+;………………………………………………
+@EVENTTURNEND
+#PRI
+
+;경비 시스템 이벤트 처리
+SIF FLAG:5003 & 1
+	CALL EVENT_KANKIN_MAIN_TORIKOMODE
+
+;스케쥴의 실행. 기본적으로 낮에 결과 출력. (식사 버프를 받기 위해 이쪽으로 뺌)
+SIF TIME == 1 && FLAG:5000 & 1024
+	CALL MAIN_SCHEDULE_TORIKOMODE
+
+;밤. 스트레스 이벤트 처리. 스트레스 시스템 사용중일때만 켜짐
+SIF FLAG:5000 & 64 && TIME == 0
+	CALL EVENT_STRESS_TORIKOMODE
+
+;의뢰소 개설을 알리는 텐구의 등장. 의뢰소 시스템 사용중일때만 켜짐
+IF FLAG:5010 == 2 && TIME == 0
+	;대텐구 만나기 플래그를 켠다.
+	FLAG:5010 = 3
+	PRINTFORMW .........................
+	PRINTFORMW ............
+	PRINTFORMW .....
+	PRINTFORMW #쾅쾅쾅#
+	PRINTFORMW ...늦은 시간에 무슨 일이지.
+	PRINTFORMW 
+	PRINTFORMW 밖에 나가보니 웬 젊은 텐구가 하나 서 있었다.
+	PRINTFORMW "엣헴! 주인 되심까?"
+	PRINTFORMW 차림새를 보아하니 그리 높은 수준의 텐구는 아닌 것 같다. 
+	PRINTFORMW 들기름이라도 바른건지, 옆으로 납작하게 빗어넘긴 머리스타일을 보니 괜히 웃음이 나왔다.
+	PRINTFORMW "이 마을에 새로운 조교사가 들어왔다는 소식을 듣고 왔습죠!"
+	PRINTFORMW …소문이 빠르군.
+	PRINTFORMW "돈이 필요하면 마을로 찾아오라는 대텐구님의 전언을 알려드리려 왔슴다!"
+	PRINTFORMW …대텐구?
+	PRINTFORMW "그럼 전 이만 가보겠슴다!"
+	PRINTFORMW #휘익#
+	PRINTFORMW 누구냐고 물어보기도 전에 젊은 텐구는 휭하니 가버렸다.
+	PRINTFORMW 역시 텐구들은 제 할말만 하는군….
+	PRINTFORMW 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+	PRINTFORMW [ <의뢰소> 에 갈 수 있게 되었습니다. ]
+	RESETCOLOR
+	DRAWLINE
+ENDIF
+
+;밤에만 발동. 대출 날자의 감산. 0 이하로는 줄지 않는다. 만약 0 이 되면 돈 갚으라고 텐구가 쳐들어옴...
+SIF FLAG:5030 > 0 && TIME == 0
+	CALL DEGRADE_DAY_ROAN_TORIKOMODE, FLAG:5030
+
+;밤에만 발동. 의뢰 날자의 감산. 0 이하로는 줄지 않음에 주의. 의뢰 사용가능 상태일때만 처리한다.
+IF FLAG:5010 ==4 && TIME == 0
+	IF FLAG:5021 > 0
+		CALL DEGRADE_MISSION_DATE_TORIKOMODE, FLAG:5021
+		FLAG:5021 = RESULT:0
+	ENDIF
+	IF FLAG:5022 > 0
+		CALL DEGRADE_MISSION_DATE_TORIKOMODE, FLAG:5022
+		FLAG:5022 = RESULT:0
+	ENDIF
+	IF FLAG:5023 > 0
+		CALL DEGRADE_MISSION_DATE_TORIKOMODE, FLAG:5023
+		FLAG:5023 = RESULT:0
+	ENDIF
+	IF FLAG:5026 > 0
+		CALL DEGRADE_MISSION_DATE_TORIKOMODE, FLAG:5026
+		FLAG:5026 = RESULT:0
+	ENDIF
+	IF FLAG:5027 > 0
+		CALL DEGRADE_MISSION_DATE_TORIKOMODE, FLAG:5027
+		FLAG:5027 = RESULT:0
+	ENDIF
+	IF FLAG:5028 > 0
+		CALL DEGRADE_MISSION_DATE_TORIKOMODE, FLAG:5028
+		FLAG:5028 = RESULT:0
+	ENDIF
+
+ENDIF
+;의뢰소에 새로운 의뢰를 발생시킨다.
+IF FLAG:5010 == 4 && TIME == 0
+	CALL GENERATE_MISSION_SLAVE_TORIKOMODE
+	FLAG:5011 = RESULT:0
+	CALL GENERATE_MISSION_SLAVE_TORIKOMODE
+	FLAG:5012 = RESULT:0
+	CALL GENERATE_MISSION_SLAVE_TORIKOMODE
+	FLAG:5013 = RESULT:0
+	;노예 캐릭터가 없다면 상품의뢰는 발생하지 않는다.
+	IF CHARANUM >= 2
+		CALL GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+		FLAG:5016 = RESULT:0
+		CALL GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+		FLAG:5017 = RESULT:0
+		CALL GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+		FLAG:5018 = RESULT:0
+	ENDIF
+	DRAWLINE
+	PRINTFORML <<의뢰소에 새로운 의뢰가 들어왔습니다.>>
+	PRINTL
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5011
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5012
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5013
+	PRINTL
+	;노예 캐릭터가 없다면 상품의뢰는 발생하지 않기 때문에, 출력하지 않는다.
+	IF CHARANUM >= 2
+		CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5016
+		CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5017
+		CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5018
+	ENDIF
+	PRINTL
+	WAIT
+
+ENDIF
+
+;만복도 시스템 사용중일때만 켜짐. 낮에만 밥을 먹는다.
+IF (FLAG:5000 & 32) && TIME == 1
+	;혹시 캐릭터가 추가되던지 할 경우를 대비해, 여기서 한번 더 체크해보고, 정보 없는 캐릭은 세팅 해 준다.
+	CALL INIT_HUNGERSYSTEM_TORIKOMODE
+
+	;PHASE1 배가 꺼지는 턴.
+	PRINTFORMW ……시간이 지나, 다들 배가 고파졌습니다.
+
+	;PHASE2 밥을 먹는 턴이다.
+	PRINTFORMW <식사시간!!>
+	WAIT
+
+	;밥을 먹고 회복하고 식비를 지출하고....등등 여기서 다 처리됨.
+	CALL SHOW_LIST_EATEN_TORIKOMODE
+	WAIT
+
+	;굶어죽는 엔딩을 체크한다.
+	CALL CALC_STARVE_END_TORIKOMODE
+ELSE
+ENDIF
+
+;오토세이브 기능이 켜져있거나 노모어글레이즈 옵션이라면 세이브한다.
+CALL DECODE_SAVEINFO_TORIKOMODE
+SIF RESULT:1 == 1 || RESULT:0 == 1
+	CALL SAVEGAME_AUTO_TORIKOMODE, RESULT:2
+
+;-------------------------------------------------
+;알아서 밥 먹는거 리스트 출력.
+;-------------------------------------------------
+@SHOW_LIST_EATEN_TORIKOMODE
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+;CHARADATA_LISTのために待避
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;主人は除外
+	SIF COUNT == MASTER
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+MARK:MASTER:98 = 1
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 오늘의 식사결과는 다음과 같습니다.＜page.{LOCAL+1}＞
+
+	;식사결과 처리, 출력
+	CALL CALC_EATEN_TORIKOMODE, LOCAL, LOCAL:99
+	;총 식비 출력
+	PRINTFORML {CHARANUM-1}명의 식비로 총 {RESULT:0}원이 지출되었습니다. 현재 잔고 {MONEY}원.
+
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 확인 종료
+PRINTFORMLC \@(LOCAL >= LOCAL:2 / 20) ? %" " * 16% # [1009] 다음페이지\@
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_1
+ELSE
+ENDIF
+
+RESTART
+
+
+;-------------------------------------------------
+; 자율식사 처리함수
+;-------------------------------------------------
+@CALC_EATEN_TORIKOMODE, ARG, ARG:2
+;총 소비 식비 저장, 출력.
+LOCAL:999 = 0
+LOCAL:3 = 0
+;반복자
+LOCAL:99 = 0
+
+DO
+	LOCAL = GET_LIST((LOCAL:99) + ARG * 20)
+	;주인공은 제외
+	IF LOCAL == 0
+		;
+	ELSE
+		CALL EATEN_TORIKOMODE, LOCAL
+
+		;EATEN_TORIKOMODE 에서 각각이 소비한 식비를 받아온다.
+		LOCAL:999 += RESULT:0
+
+		;먹인 후의 캐릭터들의 상태를 출력하는 것이므로, 여기에 놓임
+		CALL ARRANGE_CHARALIFE, LOCAL
+
+		DRAWLINE
+	ENDIF
+	LOCAL:99+= 1
+LOOP LOCAL:99 <21
+
+;총 소비 식비 반환
+RETURN LOCAL:999
+
+;-------------------------------------------------
+; 굶어죽기 엔딩 판정.
+;-------------------------------------------------
+@CALC_STARVE_END_TORIKOMODE
+;토리코모드 굶어죽기(아사) 엔드
+;보유 노예중 1명이라도, 만복0과 영양0 상태라면 아사엔드로.
+;만복도 모드가 켜져있을 때만 체크함. (아마 이 함수가 불려지는 상황에서는 켜져있을테지만)
+;단. 이 캐릭이 '봉래인' 일 경우에는. 부활하며 만복 영양이 최대로 뛰어오름.
+IF FLAG:5000 & 32
+	REPEAT CHARANUM
+
+		;주인은 제외
+		SIF COUNT == 0
+			CONTINUE
+
+		;디버그 
+		;PRINTFORML COUNT %CALLNAME:COUNT% {COUNT}
+		;PRINTFORML CFLAG:COUNT:4001 {CFLAG:COUNT:4001}
+		;PRINTFORML CFLAG:COUNT:4003 {CFLAG:COUNT:4003}
+
+		IF CFLAG:COUNT:4001 == 0 && CFLAG:COUNT:4003 == 0
+			;디버그
+			;PRINTFORML {TALENT:COUNT:49} TALENT:COUNT:49
+			;PRINTFORML {TALENT:TARGET:49} TALENT:TARGET:49
+			;PRINTFORML {NO:TARGET}NO:TARGET   {COUNT} COUNT
+			;봉래인이라면 특수판정.
+			IF TALENT:COUNT:49 == 1
+				PRINTW ..........................................................
+				PRINTW ..........................
+				PRINTW .........
+				PRINTFORMW %조사처리(CALLNAME:COUNT,"는")% 계속해서 굶어… 결국 죽어버렸다.
+				PRINTFORMW 대체 이게 무슨 일이란 말인가....
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 눈 앞의 사태에 할 말을 잊고 망연자실할 뿐이었다.
+				PRINTW .........
+				PRINTW ..........................
+				PRINTW ..........................................................
+				CALL SETCOLOR_TORIKOMODE, "RED", 5
+				PRINTW <리저렉션>
+				RESETCOLOR
+				PRINTFORMW …죽은 줄로만 알았던 %조사처리(CALLNAME:COUNT,"는")% 살짝 손가락을 꿈틀거리더니, 잠시 뒤 스르르 깨어났다.
+				PRINTFORMW …이것이 '봉래인'….
+				PRINTFORMW 놀라서 말을 잊은 %조사처리(CALLNAME:MASTER,"를")%,  %조사처리(CALLNAME:COUNT,"는")% 노려보고 있다.
+				PRINTFORMW 아마도 상당히 불만을 가지고 있겠지….
+				PRINTFORMW <%CALLNAME:COUNT%의 만복, 영양도가 최대가 되었습니다.>
+				PRINTFORMW <%CALLNAME:COUNT%의 스트레스가 대폭 상승했습니다.>
+				CFLAG:COUNT:4001 = CFLAG:COUNT:4002
+				CFLAG:COUNT:4003 = CFLAG:COUNT:4004
+				CFLAG:COUNT:65 += 5000
+			;아니라면 죽는다.
+			ELSE
+				CALL BADEND_13, COUNT
+			ENDIF
+		ELSE
+		ENDIF
+	REND
+ELSE
+ENDIF
+
+;-------------------------------------------------
+; 예상식비 계산 함수
+;-------------------------------------------------
+@CALC_FEEN_UPKEEP_TORIKOMODE
+;예상식비
+LOCAL:0 =0
+;반복자
+LOCAL:99 =0
+
+CALL CALC_PRICE_MENU_TORIKOMODE
+IF FLAG:5000 & 32
+	DO
+		;주인은 공짜.
+		IF (LOCAL:99) == 0
+			;
+		ELSE
+		;할당된 메뉴로 식를 더해간다.
+			IF CFLAG:(LOCAL:99):4000 == 0
+				LOCAL:0 += RESULT:0
+			ELSEIF CFLAG:(LOCAL:99):4000 == 1
+				LOCAL:0 += RESULT:1
+			ELSEIF CFLAG:(LOCAL:99):4000 == 2
+				LOCAL:0 += RESULT:2
+			ELSEIF CFLAG:(LOCAL:99):4000 == 3
+				LOCAL:0 += RESULT:3
+			ELSEIF CFLAG:(LOCAL:99):4000 == 4
+				LOCAL:0 += RESULT:4
+			ELSE
+			ENDIF
+		ENDIF
+		LOCAL:99 += 1
+	LOOP LOCAL:99 < CHARANUM
+ELSE
+ENDIF
+
+PRINTFORML 예상 식비는 {LOCAL:0}원/하루 입니다. 현재 잔고 {MONEY}원.
+
+;-------------------------------------------------
+; 만복도 시스템 켜질 때, 정보 없는 캐릭터 초기값 부여 함수
+;-------------------------------------------------
+;판정은 최대 만복도가 0 인지로 판정한다. 이 수치는 모드를 켠 후 구매시 부여받지 않으면 무조건 0이기 때문이다.
+@INIT_HUNGERSYSTEM_TORIKOMODE
+REPEAT CHARANUM
+	IF CFLAG:COUNT:4002 == 0
+		PRINTFORMW 시스템 체크중.........
+		PRINTFORMW ....
+		PRINTFORMW %CALLNAME:COUNT% 의 만복도 정보를 찾지 못했습니다.
+		PRINTFORML %CALLNAME:COUNT%의 만복도 정보를 세팅합니다.
+		CALL SET_DEAFAULT_HUNGER_TORIKOMODE , COUNT
+		CALL SET_DEAFAULT_NUTRITION_TORIKOMODE , COUNT
+		CALL SET_DEAFAULT_MENU_TORIKOMODE , COUNT
+		;디버그용
+		;PRINTFORML {CFLAG:COUNT:4000}  메뉴
+		;PRINTFORML {CFLAG:COUNT:4001}  현재만복도
+		;PRINTFORML {CFLAG:COUNT:4002}  최대만복도
+		;PRINTFORML {CFLAG:COUNT:4003}  현재영양도
+		;PRINTFORML {CFLAG:COUNT:4004}  최대영양도
+	ELSE
+	ENDIF
+REND
+
+;그리고 주인의 정보를 세팅한다.
+IF CFLAG:MASTER:4002 == 0
+	PRINTFORMW 시스템 체크중.........
+	PRINTFORMW ....
+	PRINTFORMW %CALLNAME:MASTER% 의 만복도 정보를 찾지 못했습니다.
+	PRINTFORMW %CALLNAME:MASTER%의 만복도 정보를 세팅합니다.
+	CALL SET_DEAFAULT_HUNGER_TORIKOMODE , MASTER
+	CALL SET_DEAFAULT_NUTRITION_TORIKOMODE , MASTER
+	CALL SET_DEAFAULT_MENU_TORIKOMODE , MASTER
+	;디버그용
+	;PRINTFORMW 만복도 정보가 세팅 완료 되었습니다.
+	;PRINTFORML {CFLAG:MASTER:4000}  메뉴
+	;PRINTFORML {CFLAG:MASTER:4001}  현재만복도
+	;PRINTFORML {CFLAG:MASTER:4002}  최대만복도
+	;PRINTFORML {CFLAG:MASTER:4003}  현재영양도
+	;PRINTFORML {CFLAG:MASTER:4004}  최대영양도
+ELSE
+ENDIF
+
+
+;-------------------------------------------------
+; 개별 캐릭터 밥먹기 처리. (자율식사)
+;-------------------------------------------------
+@EATEN_TORIKOMODE, ARG
+;음식값을 저장하는 변수
+LOCAL:0 = 0
+
+
+;디버그...
+;PRINTFORML NO:ARG{NO:ARG} ARG{ARG} %CALLNAME:ARG%...@EATEN_TORIKOMODE, ARG 체크중
+
+;PHASE1. 일반 배를 꺼트린다.
+;만복하락
+CALL CALC_DEGRADE_HUNGER_TORIKOMODE, ARG
+CFLAG:ARG:4001 -= RESULT:1
+;디버그
+;PRINTFORML %CALLNAME:ARG%의 배가 {RESULT:1} 만큼 고파졌다... 라고 해도 0 이하로는 떨어지지 않지롱
+;영양하락
+CALL CALC_DEGRADE_NUTRITION_TORIKOMODE, ARG
+CFLAG:ARG:4003 -= RESULT:1
+;디버그
+;PRINTFORML %CALLNAME:ARG%의 영양도가 {RESULT:1} 만큼 떨어졌다...라고 해도 0 이하로는 떨어지지 않지롱
+;수치정리
+CFLAG:ARG:4001 = LIMIT(CFLAG:ARG:4001, 0, CFLAG:ARG:4002)
+CFLAG:ARG:4003 = LIMIT(CFLAG:ARG:4003, 0, CFLAG:ARG:4004)
+
+;PHASE2. 밥을 먹는다.
+;자율식사 보정치 생성. ARG에 캐릭터번호가 들어간다.
+CALL CALC_EAT_SELF_TORIKOMODE , ARG
+;식사 판정. 보정치를 받아서 수치를 만들어낸다. (위 함수의 결과값을 받아와서 ARG로 사용함)
+;디버그
+;PRINTFORML CALC_EAT_SELF_TORIKOMODE의 결과값은 {RESULT:0}
+;먹을지 말지를 체크해서 RESULT:1 에 반환.
+CALL CHECK_EAT_OR_NOT_TORIKOMODE, RESULT:0
+;굶길경우엔 별도의 RESUL:1 생성
+SIF CFLAG:ARG:4000 == 0
+	RESULT:0 = 2
+
+
+;밥을 안 먹으려 한다면.
+IF RESULT:0 == 0
+	;밥을 왜 안먹는지 알려줘야 함. 일단은 간단히 표시.
+	CALL SETCOLOR_TORIKOMODE, "RED", 5
+	PRINTFORML %조사처리(CALLNAME:ARG,"는")%… 밥 먹기를 거부했다….
+	RESETCOLOR
+	;굶은회수1회 증가
+	CFLAG:ARG:4005 += 1
+
+;밥을 먹기로 했다면
+ELSEIF RESULT:0 == 1
+	;인원수에 따른 메뉴의 가격을 계산한다.
+	CALL CALC_PRICE_MENU_TORIKOMODE
+	;디버그
+		;PRINTFORML CHARANUM {CHARANUM}
+		;PRINTFORML RESULT:1 {RESULT:1}
+		;PRINTFORML RESULT:2 {RESULT:2}
+		;PRINTFORML RESULT:3 {RESULT:3}
+		;PRINTFORML RESULT:4 {RESULT:4}
+		;PRINTFORML RESULT:5 {RESULT:5}
+	;이 캐릭터에 할당된 메뉴를 참조해서, 음식 값을 정한다.
+	IF CFLAG:ARG:4000 == 0
+		LOCAL:0 = RESULT:0
+	ELSEIF CFLAG:ARG:4000 == 1
+		LOCAL:0 = RESULT:1
+	ELSEIF CFLAG:ARG:4000 == 2
+		LOCAL:0 = RESULT:2
+	ELSEIF CFLAG:ARG:4000 == 3
+		LOCAL:0 = RESULT:3
+	ELSEIF CFLAG:ARG:4000 == 4
+		LOCAL:0 = RESULT:4
+	ELSE
+	ENDIF
+	;디버그
+	;PRINTFORML LOCAL:0 {LOCAL:0}
+	;지불할 수 있는지 체크한다.
+	;지불할 돈이 있으면 밥을 먹인다.
+	IF MONEY >= LOCAL:0
+		;디버그
+		;PRINTFORML 밥 먹기전 스트레스 CFLAG:ARG:65 {CFLAG:ARG:65}
+		;밥을 먹인다
+		CALL CALC_EAT_MENU_TORIKOMODE, ARG
+		;만복영양 상승.
+		;디버그용
+		;PRINTFORML {RESULT:1} 메뉴의 만복도
+		;PRINTFORML {RESULT:2} 메뉴의 영양도
+		;PRINTFORML {RESULT:3} 메뉴의 스트레스
+		CFLAG:ARG:4001 += RESULT:1
+		CFLAG:ARG:4003 += RESULT:2
+		CFLAG:ARG:65 += RESULT:3
+		;디버그용
+		;PRINTFORML CFLAG:ARG:4001 {CFLAG:ARG:4001}
+		;PRINTFORML CFLAG:ARG:4003 {CFLAG:ARG:4003}
+		;PRINTFORML 밥 먹기은 후 스트레스 CFLAG:ARG:65 {CFLAG:ARG:65}
+		;수치 정리.
+		CFLAG:ARG:4001 = LIMIT(CFLAG:ARG:4001, 0, CFLAG:ARG:4002)
+		CFLAG:ARG:4003 = LIMIT(CFLAG:ARG:4003, 0, CFLAG:ARG:4004)
+		CFLAG:ARG:65 = LIMIT(CFLAG:ARG:65, 0, 999999)
+		;식사 멘트 출력
+		PRINTFORM %조사처리(CALLNAME:ARG,"는")% 
+		CALL CALC_EATEN_FOOD_TORIKOMODE, CFLAG:ARG:4000, NO:ARG
+		PRINTFORML 먹었습니다.
+		;식비차감
+		MONEY -=LOCAL:0
+		;디버그용
+			;PRINTFORML 식비로 {LOCAL:0} 만큼 차감되었음. 현재 돈 {MONEY}
+		;디버그용
+		;CALL HUNGER_BAR_TORIKOMODE,  ARG
+		;CALL NUTRITION_BAR_TORIKOMODE,  ARG
+		;디버그용
+		;PRINTFORML {CFLAG:ARG:4001} 현재 만복
+		;PRINTFORML {CFLAG:ARG:4003} 현재 영양
+		;굶은 회수 초기화
+		CFLAG:ARG:4005 = 0
+		;밥을 먹었을 경우, 소비한 밥값을 보고한다.
+		RETURN LOCAL:0
+
+	;돈이 없어서 밥을 못 먹을 때
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORML 식비가 떨어져, %조사처리(CALLNAME:ARG,"는")% 굶어야만 했습니다….
+		RESETCOLOR
+		;굶은회수1회 증가
+		CFLAG:ARG:4005 += 1
+	ENDIF
+		
+;메뉴가 굶어라 일 때는...
+ELSEIF RESULT:0 == 2
+	;스트레스 상승
+	CALL CALC_EAT_MENU_TORIKOMODE, ARG
+	CFLAG:ARG:65 += RESULT:3
+	CFLAG:ARG:65 = LIMIT(CFLAG:ARG:65, 0, 999999)
+	;굶은회수1회 증가
+	CFLAG:ARG:4005 += 1
+	;상태출력
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINTFORML %조사처리(CALLNAME:ARG,"는")% 아무것도 먹지 못하고 굶어야 했습니다…. (스트레스 상승)
+	RESETCOLOR
+
+ENDIF
+
+;………………………………………………
+;전체 캐릭터 메뉴 설정 리스트 불러내기
+;………………………………………………
+@LIST_FEED_MENU_TORIKOMODE
+
+;노예들의 리스트 출력.
+CALL SHOW_FEEDINGDATA_TORIKOMODE
+
+
+;-------------------------------------------------
+;식단 선택용 리스트 출력
+;-------------------------------------------------
+@SHOW_FEEDINGDATA_TORIKOMODE
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+;CHARADATA_LISTのために待避
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;主人は除外
+	SIF COUNT == MASTER
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+MARK:MASTER:98 = 1
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 방침을 바꾸고 싶은 캐릭터를 선택해 주세요.＜page.{LOCAL+1}＞
+;토리코모드
+CALL CHARADATA_LIST_TORIKOMODE, LOCAL, LOCAL:99
+;예상 식비를 계산, 출력한다.
+CALL CALC_FEEN_UPKEEP_TORIKOMODE
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:2 / 20) ? %" " * 16% # [1009] 다음페이지\@
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_1
+ELSE
+	CALL SELECT_FEED_MENU_TORIKOMODE, RESULT
+ENDIF
+
+RESTART
+
+;………………………………………………
+;개별 캐릭터 메뉴 설정 CFLAG:4002
+;………………………………………………
+; 0 - 굶긴다
+; 1 - 저렴한 식사
+; 2 - 일반적인 식사
+; 3 - 영양만점 식사
+; 4 - 특제개별 식사
+@SELECT_FEED_MENU_TORIKOMODE, ARG
+PRINTFORML 메뉴를 골라주세요. (메뉴의 가격은 보유 노예수와 난이도에 따라 상승합니다)
+
+;가격을 계산해서 불러온다.
+CALL CALC_PRICE_MENU_TORIKOMODE
+
+;디버그
+;PRINTFORML CHARANUM {CHARANUM}
+;PRINTFORML RESULT:1 {RESULT:1}
+;PRINTFORML RESULT:2 {RESULT:2}
+;PRINTFORML RESULT:3 {RESULT:3}
+;PRINTFORML RESULT:4 {RESULT:4}
+;PRINTFORML RESULT:5 {RESULT:5}
+
+PRINTL 
+
+PRINT [0] 굶긴다 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:0}
+RESETCOLOR
+PRINTL 원 / 만복도 X / 영양 X / 스트레스 小 상승
+
+PRINT [1] 저렴한 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:1}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양상승 小
+
+PRINT [2] 일반적인 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:2}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양 中
+
+PRINT [3] 영양만점 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:3}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양상승 大
+
+PRINT [4] 특제개별 식사 / 가격:
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+PRINTFORM {RESULT:4}
+RESETCOLOR
+PRINTL 원 / 만복도 UP / 영양상승 特大 / 스트레스 中 하락
+
+PRINTL [999] 메뉴 선택 종료
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW %조사처리(CALLNAME:ARG,"를")% 굶깁니다.
+	CFLAG:ARG:4000 = 0
+ELSEIF RESULT == 1
+	PRINTFORMW %조사처리(CALLNAME:ARG,"를")% 굶어 죽지 않을 정도로 먹입니다.
+	CFLAG:ARG:4000 = 1
+ELSEIF RESULT == 2
+	PRINTFORMW %CALLNAME:ARG%에게 일반적인 식사를 제공합니다. 후식은 없음.
+	CFLAG:ARG:4000 = 2
+ELSEIF RESULT == 3
+	PRINTFORMW %CALLNAME:ARG%에게 영양만점의 식사를 제공합니다. 후식은 파르페.
+	CFLAG:ARG:4000 = 3
+ELSEIF RESULT == 4
+	PRINTFORMW %CALLNAME:ARG%의 식성에 맞는 영양만점의 식사를 제공합니다. 후식은 초이스 가능.
+	CFLAG:ARG:4000 = 4
+ELSEIF RESULT == 999
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;………………………………………………
+;식단(메뉴) 별 가격 계산
+;………………………………………………
+; 보유한 노예가 많을수록(CHARANUM) 가격상승.  (단, 최대 10명까지만)
+; 난이도에 따라 가격 상승.
+@CALC_PRICE_MENU_TORIKOMODE
+;식구 수 계산. 주인은 뺀다. 1명까지는 기본가격.
+CALL CALC_CHARANUM_INHOUSE_TORIKOMODE
+LOCAL:99 = RESULT-1
+;최대 10명
+LOCAL:99 = LIMIT(LOCAL:99, 0, 10)
+;난이도보정
+LOCAL:10 = FLAG:3
+LOCAL:10 = LIMIT(LOCAL:10, 1, 7)
+;굶긴다
+LOCAL:0 = 0
+;저렴한식사
+LOCAL:1 = 0 + (LOCAL:99 + LOCAL:10) *20  -20
+;일반적인 식사
+LOCAL:2 = 10 + (LOCAL:99 + LOCAL:10)*100  -100
+;영양만점 식사
+LOCAL:3 = 50 + (LOCAL:99 + LOCAL:10)*200  -200
+;특제개별 식사
+LOCAL:4 = 100 + (LOCAL:99 + LOCAL:10)*300  -300
+
+;음식값은 음수가 될 수 없다...
+LOCAL:0 = LIMIT (LOCAL:0, 0, 99999)
+LOCAL:1 = LIMIT (LOCAL:1, 0, 99999)
+LOCAL:2 = LIMIT (LOCAL:2, 0, 99999)
+LOCAL:3 = LIMIT (LOCAL:3, 0, 99999)
+LOCAL:4 = LIMIT (LOCAL:4, 0, 99999)
+
+RESULT:0 = LOCAL:0
+RESULT:1 = LOCAL:1
+RESULT:2 = LOCAL:2
+RESULT:3 = LOCAL:3
+RESULT:4 = LOCAL:4
+
+
+;………………………………………………
+;메뉴에 따른 식사효과 계산. ARG = 캐릭터번호
+;………………………………………………
+@CALC_EAT_MENU_TORIKOMODE, ARG
+;만복 RESULT:1
+;영양 RESULT:2
+; 0 - 굶긴다
+; 1 - 저렴한 식사
+; 2 - 일반적인 식사
+; 3 - 영양만점 식사
+; 4 - 특제개별 식사
+
+;디버그
+;PRINTFORML 현재 %CALLNAME:ARG%를 체크하고 있습니다...@CALC_EAT_MENU_TORIKOMODE, ARG
+
+IF CFLAG:ARG:4000 == 0
+	RESULT:1 = 0
+	RESULT:2 = 0
+	RESULT:3 = 100
+ELSEIF CFLAG:ARG:4000 == 1
+	RESULT:1 = 1000
+	RESULT:2 = 250
+	RESULT:3 = 0
+ELSEIF CFLAG:ARG:4000 == 2
+	RESULT:1 = 1000
+	RESULT:2 = 500
+	RESULT:3 = 0
+ELSEIF CFLAG:ARG:4000 == 3
+	RESULT:1 = 1000
+	RESULT:2 = 700
+	RESULT:3 = 0
+ELSEIF CFLAG:ARG:4000 == 4
+	RESULT:1 = 1000
+	RESULT:2 = 1000
+	RESULT:3 = -200
+ELSE
+	PRINTL 에러 발생!!
+ENDIF
+
+
+
+;………………………………………………
+;조교중 식사효과 계산. ARG = 메뉴번호
+;………………………………………………
+@CALC_EAT_FEED_TORIKOMODE, ARG
+;만복 RESULT:1
+;영양 RESULT:2
+;조교중 식사는 스트레스를 변동시키지 않는 것에 유의 (그러나 강제로 먹이면 스트레스 상승함)
+; 1 - 저렴한 식사
+; 2 - 일반적인 식사
+; 3 - 영양만점 식사
+; 4 - 특제개별 식사
+
+IF ARG == 1
+	RESULT:1 = 500
+	RESULT:2 = 100
+ELSEIF ARG == 2
+	RESULT:1 = 500
+	RESULT:2 = 200
+ELSEIF ARG == 3
+	RESULT:1 = 500
+	RESULT:2 = 400
+ELSEIF ARG == 4
+	RESULT:1 = 500
+	RESULT:2 = 500
+ELSE
+	PRINTL 에러 발생!!
+ENDIF
+
+RETURN RESULT:1
+RETURN RESULT:2
+
+;………………………………………………
+;노예의 자율식사의 보정치를 계산 하는 함수. 두번째 ARG는 조교시에만 받아서 씀.
+;………………………………………………
+@CALC_EAT_SELF_TORIKOMODE, ARG, ARG:1
+
+;디버그
+;PRINTFORML 현재 %CALLNAME:ARG%를 체크하고 있습니다...@CALC_EAT_SELF_TORIKOMODE, ARG, ARG:1
+
+
+;기본치
+LOCAL:0 = 50
+
+;디버그
+;PRINTFORML {LOCAL:0} 기본값
+
+;만복도 보정. 50%를 기준으로 적으면 +100까지. 많으면 -100까지. (배부르면 먹기 싫다는 뜻)
+LOCAL:1 = CFLAG:ARG:4001
+LOCAL:2 = CFLAG:ARG:4002
+LOCAL:3 = (100 * LOCAL:1) / LOCAL:2
+LOCAL:0 += 100 - (LOCAL:3 *2)
+
+;디버그
+;PRINTFORML LOCAL:1 {LOCAL:1}
+;PRINTFORML LOCAL:2 {LOCAL:2}
+;PRINTFORML LOCAL:3 {LOCAL:3}
+
+;디버그
+;PRINTFORML {LOCAL:0} 만복보정 받은 직후
+
+;메뉴 레벨 보정. 레벨당 +20 (맛있는 것일수록 잘 먹는다)
+;조교중식사 (ARG:1 > 0) 일 때는 따로 계산
+	IF ARG:1 > 0
+		LOCAL:0 += ARG:1 * 20
+	ELSE
+		LOCAL:0 += CFLAG:ARG:4000 * 20
+	ENDIF
+
+;디버그
+;PRINTFORML {LOCAL:0} 메뉴보정 받은 직후
+
+;스트레스 보정
+IF CFLAG:ARG:65 < 100
+	LOCAL:0 -= 0
+;ちょっと気が重い
+ELSEIF CFLAG:ARG:65 < 250
+	LOCAL:0 -= 10
+;ある程度重い
+ELSEIF CFLAG:ARG:65 < 500
+	LOCAL:0 -= 20
+;結構参ってる
+ELSEIF CFLAG:ARG:65 < 1000
+	LOCAL:0 -= 30
+;明らかに様子がおかしい
+ELSEIF CFLAG:ARG:65 < 3000
+	LOCAL:0 -= 50
+;重症
+ELSEIF CFLAG:ARG:65 < 6000
+	LOCAL:0 -= 100
+;짜증폭발!
+ELSE
+	LOCAL:0 -= 150
+ENDIF
+
+;디버그
+;PRINTFORML {LOCAL:0} 스트레스 보정 받은 직후
+
+;각인보정
+;굴복각인 레벨당 20
+SIF MARK:ARG:2 >= 1
+	LOCAL:0 += MARK:ARG:2 *20
+;반발각인 레벨당 -20
+SIF MARK:ARG:9 >= 1
+	LOCAL:0 -= MARK:ARG:2 *20
+
+;디버그
+;PRINTFORML {LOCAL:0} 각인보정 받은 직후
+
+;어빌보정
+;순종 레벨당 10
+SIF ABL:ARG:10 >=1
+	LOCAL:0 += MARK:ARG:2 *10
+
+;디버그
+;PRINTFORML {LOCAL:0} 순종레벨 받은 직후
+
+;소질보정+
+;꿋꿋함
+SIF TALENT:ARG:12
+	LOCAL:0 += 30
+; 프라이드 낮음
+SIF TALENT:ARG:17
+	LOCAL:0 += 50
+; 낙관
+SIF TALENT:ARG:25
+	LOCAL:0 += 20
+;약점
+SIF TALENT:ARG:39
+	LOCAL:0 += 30
+;임신
+SIF TALENT:ARG:140
+	LOCAL:0 += 50
+;포란
+SIF TALENT:ARG:143
+	LOCAL:0 += 50
+;회란
+SIF TALENT:ARG:150
+	LOCAL:0 += 30
+;연모
+SIF TALENT:ARG:151
+	LOCAL:0 += 50
+;망신
+SIF TALENT:ARG:152
+	LOCAL:0 += 70
+;상애
+SIF TALENT:ARG:153
+	LOCAL:0 += 100
+;복종
+SIF TALENT:ARG:160
+	LOCAL:0 += 50
+;예속
+SIF TALENT:ARG:162
+	LOCAL:0 += 100
+;괴뢰
+SIF TALENT:ARG:168
+	LOCAL:0 +=200
+;괴조인격
+SIF TALENT:ARG:169
+	LOCAL:0 += 200
+;흡혈귀
+SIF TALENT:ARG:205
+	LOCAL:0 += 20
+
+;디버그
+;PRINTFORML {LOCAL:0} 소질보정 + 받은 후
+
+;소질보정-
+;반항적
+SIF TALENT:ARG:11
+	LOCAL:0 -= 30
+;건방짐
+SIF TALENT:ARG:15
+	LOCAL:0 -= 30
+;프라이드 높음
+SIF TALENT:ARG:16
+	LOCAL:0 -= 50
+;자제심
+SIF TALENT:ARG:20
+	LOCAL:0 -= 15
+;비관적
+SIF TALENT:ARG:26
+	LOCAL:0 -= 10
+;억압
+SIF TALENT:ARG:32
+	LOCAL:0 -= 20
+;저항
+SIF TALENT:ARG:34
+	LOCAL:0 -= 30
+;유아퇴행
+SIF TALENT:ARG:159
+	LOCAL:0 -= 10
+
+;디버그
+;PRINTFORML {LOCAL:0} 소질보정 - 받은 후
+
+;캐릭터 보정
+;식신 유유코사마
+SIF NO:ARG == 20
+	LOCAL:0 += 400
+
+;디버그
+;PRINTFORML {LOCAL:0} 캐릭터보정 받은 후
+
+;디버그
+;PRINTFORML 자율식사의 식사확률은 {LOCAL:0}퍼센트
+
+RETURN LOCAL:0
+
+
+;………………………………………………
+; 노예의 트레이닝 중 먹이는 방법에 따른 식사 보정치 계산
+@CALC_EAT_TRAINING_TORIKOMODE, ARG
+
+;디버그
+;PRINTFORML 현재 %CALLNAME:ARG%를 체크하고 있습니다...@CALC_EAT_TRAINING_TORIKOMODE, ARG
+
+;1 먹게둔다 : 보정없다.
+;2 개처럼 먹게한다 : 굴욕적인 행태라서 반발이 크지만 마조끼가 높으면 오히려 좋아함.
+;3 먹여준다 : 굴욕적이진 않지만 관계가 중요함.
+;4 특수한 소스(주인) : 매우 굴욕적. 주인 보정치를 본다.
+;5 특수한 소스(조수) : 매우 굴욕적이며. 보정치를 본다. 
+;결과값
+LOCAL:0 = 0
+
+;먹게한다.
+IF ARG == 1
+	LOCAL:0 = 0
+;개처럼 먹게한다.
+ELSEIF ARG == 2
+	;  굴복각인 레벨당 20, 순종 레벨당 10, 마조끼 레벨당 20 반발각인 레벨당 -30,
+	LOCAL:0 =  + (MARK:TARGET:2 *20) + (ABL:TARGET:10 *10) + (ABL:TARGET:21 *20) -(MARK:TARGET:9 * 30)
+;먹여준다.
+ELSEIF ARG == 3
+	; 주인이 플레이 중이라면
+	IF PLAYER == MASTER
+		;디버그
+		;PRINTFORML 마스터가 먹여준다.
+		;순종 레벨당 10, 호감도10 당 1, 반발각인 레벨당 -30, 그리고 50점을 무조건 뺌 (시작 호감도가 0이므로 보정함)
+		LOCAL:0 =(ABL:TARGET:10 *10) + (CFLAG:TARGET:2 /10) -(MARK:TARGET:9 * 30) -50
+	; 조수 플레이 중이라면
+	ELSEIF PLAYER == ASSI
+		;디버그
+		;PRINTFORML %CALLNAME:ASSi% 가 먹여준다.
+		;순종 레벨당 10,  반발각인 레벨당 -30, 그리고 기본보정 -30
+		LOCAL:0 = (ABL:TARGET:10 *10) - (MARK:TARGET:9 * 30) -30
+		;노예가 조수에게 상성이 있다면, 상성 보정을 한다. 0일 때 -20, 200일때 +20...
+		SIF  RELATION:TARGET:(NO:ASSI) != 0
+			LOCAL:0 += (RELATION:TARGET:(NO:ASSI)-100) / 5
+	ELSE
+	ENDIF
+;특수한 소스를 뿌린다 : 주인
+ELSEIF ARG == 4
+	;  냄새둔감+30, 냄새민감-30에 영향 받고, 정애미각 +100점 , 순종 레벨당 10, 반발각인 레벨당 -30, 그리고 기본 보정 -100점이 붙는다.
+	LOCAL:0 =  (TALENT:TARGET:61 *30) - (TALENT:TARGET:62 *30) + (TALENT:TARGET:64 *100) + (ABL:TARGET:10 *10) - (MARK:TARGET:9 * 30) -100
+	;디버그
+	;PRINTFORML ＃먹이는 방법에 따른 보정 {LOCAL:0}퍼센트
+	;그리고 상성만큼의 +- 보정
+	SIF RELATION:TARGET:(NO:PLAYER) != 0
+		LOCAL:0 += RELATION:TARGET:(NO:PLAYER) -100
+	;디버그
+	;PRINTFORML ＃상성 체크 후 보정치는 {LOCAL:0}퍼센트가 되었습니다.
+;특수한 소스를 뿌린다 : 조수
+ELSEIF ARG == 5
+	; 반발각인 레벨당 -30, 냄새둔감+30, 냄새민감-30에 영향 받고, 정애미각 +100점 , 순종 레벨당 10, 그리고 관계치/10 만큼의 +보정.그리고 기본 보정 -100점이 붙는다.
+	LOCAL:0 =  (TALENT:TARGET:61 *30) - (TALENT:TARGET:62 *30) + (TALENT:TARGET:64 *100) + (ABL:TARGET:10 *10) - (MARK:TARGET:9 * 30) -100
+	;디버그
+	;PRINTFORML ＃먹이는 방법에 따른 보정은 {LOCAL:0}퍼센트
+	;그리고 상성만큼의 +- 보정
+	SIF RELATION:TARGET:(NO:PLAYER) != 0
+		LOCAL:0 += RELATION:TARGET:(NO:PLAYER) -100
+	;디버그
+	;PRINTFORML ＃상성 체크 후 보정치는 {LOCAL:0}퍼센트가 되었습니다. 상성은 RELATION:TARGET:(NO:PLAYER) ={RELATION:TARGET:(NO:PLAYER)} 입니다.
+ELSE
+	;PRINTL 범위밖의 값입니다. 버그를 제보 해 주세요.
+ENDIF
+
+;디버그
+;PRINTFORML #먹이는 방법은 ARG {ARG} 입니다.
+;PRINTFORML #먹이는 방법에 의한 보정치는 {LOCAL:0}퍼센트 입니다.
+
+;값 반환
+RESULT:0 = LOCAL:0
+RETURN RESULT:0
+;………………………………………………
+; 식사 체크 함수. 이런 저런 보정값을 받아서 100면체 굴려서 체크한 후 0,1,2 를 돌려준다.
+@CHECK_EAT_OR_NOT_TORIKOMODE, ARG
+;판정
+IF ARG > RAND:100
+	;먹는다
+	LOCAL:0 = 1
+ELSE
+	;안 먹는다
+	LOCAL:0 = 0
+ENDIF
+
+;디버그
+;PRINTFORML LOCAL:0, ARG {LOCAL:0} {ARG}  IN @CHECK_EAT_OR_NOT_TORIKOMODE
+
+RETURN LOCAL:0
+
+
+;………………………………………………
+;요리를 한다/먹인다 등으로 발동되는 식사효과를 계산/출력
+;………………………………………………
+@CALC_EAT_COOKING_TORIKOMODE, ARG:0 , ARG:1
+; ARG:0 로 요리의 퀄리티를 받아와, 내부에서 메뉴를 연산. 처리한다.
+; ARG:1 로 관계자를 확인해, 누구에게 효과를 적용할지를 결정한다.
+; LOCAL:0 = 요리의 품질(메뉴)
+;
+;요리의 퀄리티에 따른 품질결정. 퀄리티는 체력회복량이다.
+IF ARG:0 *5 > 1500
+	LOCAL:0 = 4
+ELSEIF ARG:0 *5 > 1000
+	LOCAL:0 = 3
+ELSEIF ARG:0 *5 > 500
+	LOCAL:0 = 2
+ELSEIF ARG:0 *5 >= 0
+	LOCAL:0 =1 
+ELSE
+ENDIF
+
+;메뉴에 따른 효과 설명 (공통)
+PRINTFORM 그리고, 
+IF LOCAL:0 ==1
+	PRINTFORM 영양이 부족한 음식을 먹은 
+ELSEIF LOCAL:0 == 2
+	PRINTFORM 그럭저럭 괜찮은 음식을 먹은 
+ELSEIF LOCAL:0 == 3
+	PRINTFORM 영양만점의 요리를 먹은 
+ELSEIF LOCAL:0 == 4
+	PRINTFORM 그야말로 명품이라 할 만한 요리를 먹은 
+ELSE
+	PRINTFORM 오류발생. 뭘 먹었는지 모르겠습니다.
+ENDIF
+
+;노예가 먹은 경우
+IF ARG:1 == TARGET
+	;식전 상태 표시
+	PRINTFORML %CALLNAME:TARGET%의 만복과 영양이
+	CALL HUNGER_BAR_TORIKOMODE, TARGET
+	CALL NUTRITION_BAR_TORIKOMODE, TARGET
+	PRINTFORM 에서, 
+	;식후 상태 표시
+	CALL CALC_EAT_FEED_TORIKOMODE, LOCAL:0
+	;만복영양 상승.
+	;단, 일반적인 메뉴의 2배를 상승시킨다! 이렇게 하는 이유는 요리를 1턴에 여러번 시킬 수 없기 때문이다.
+	;디버그용
+	;PRINTFORM {RESULT:1} 메뉴의 만복도
+	;PRINTFORM {RESULT:2} 메뉴의 영양도
+	CFLAG:TARGET:4001 += RESULT:1*2
+	CFLAG:TARGET:4003 += RESULT:2*2
+	;수치 정리.
+	CFLAG:TARGET:4001 = LIMIT(CFLAG:TARGET:4001, 0, CFLAG:TARGET:4002)
+	CFLAG:TARGET:4003 = LIMIT(CFLAG:TARGET:4003, 0, CFLAG:TARGET:4004)
+
+	CALL HUNGER_BAR_TORIKOMODE, TARGET
+	CALL NUTRITION_BAR_TORIKOMODE, TARGET
+	PRINTFORMW 으로 상승했다.
+ELSE IF ARG:1 == ASSI
+	PRINTFORML %CALLNAME:ASSI%의 만복과 영양이
+	CALL HUNGER_BAR_TORIKOMODE, ASSI
+	CALL NUTRITION_BAR_TORIKOMODE, ASSI
+	PRINTL 에서, 
+	;식후 상태 표시
+	CALL CALC_EAT_FEED_TORIKOMODE, LOCAL:0
+	;만복영양 상승.
+	;단, 일반적인 메뉴의 2배를 상승시킨다! 이렇게 하는 이유는 요리를 1턴에 여러번 시킬 수 없기 때문이다.
+	;디버그용
+	;PRINTFORM {RESULT:1} 메뉴의 만복도
+	;PRINTFORM {RESULT:2} 메뉴의 영양도
+	CFLAG:ASSI:4001 += RESULT:1*2
+	CFLAG:ASSI:4003 += RESULT:2*2
+	;수치 정리.
+	CFLAG:ASSI:4001 = LIMIT(CFLAG:ASSI:4001, 0, CFLAG:ASSI:4002)
+	CFLAG:ASSI:4003 = LIMIT(CFLAG:ASSI:4003, 0, CFLAG:ASSI:4004)
+
+	CALL HUNGER_BAR_TORIKOMODE, ASSI
+	CALL NUTRITION_BAR_TORIKOMODE, ASSI
+	PRINTFORMW 으로 상승했다.
+ELSE
+	PRINTFORMW 에러 발생. 누가 먹었는지를 모르겠습니다.
+ENDIF
+
+
+;………………………………………………
+; UPCHECK  커스텀
+; 에라 자체 명령어인 UPCHECK 를 대체하는 함수.
+; 렌렌님께 받았습니다. 감사합니다.
+; 이 함수는 참고용이며, 토리코모드에서 사용되지 않습니다.
+;………………………………………………
+;@UPCHECK_CUSTOM
+;REPEAT 1000
+;;UPSIZE / DOWNSIZE 만큼 반복한다
+;	IF UP:COUNT > 0 || DOWN:COUNT > 0
+;		;UP이나 DOWN에 값이 들어가 있다
+;		
+;		;출력한다
+;		;현재값
+;		PRINTFORM %PALAMNAME:COUNT% 
+;		PRINTFORM {PALAM:COUNT}
+;		;플러스되는 값
+;		IF UP:COUNT > 0
+;			PRINTFORM +
+;			PRINTFORM {UP:COUNT}
+;		ENDIF
+;		;마이너스 되는 값
+;		IF DOWN:COUNT > 0
+;			PRINTFORM -
+;			PRINTFORM {DOWN:COUNT}
+;		ENDIF
+;		;결과값
+;		PRINTFORM =
+;		PRINTFORML {PALAM:COUNT + UP:COUNT - DOWN:COUNT}
+;		
+;		;실제 가산, 감산 처리
+;		PALAM:COUNT += UP:COUNT
+;		PALAM:COUNT -= DOWN:COUNT
+;
+;	ENDIF
+;	
+;	;UP, DOWN 값의 초기화
+;	UP:COUNT = 0
+;	DOWN:COUNT = 0
+;REND
+;
+;
+
+;………………………………………………
+; 색 컨피그 함수. 컨피그 메뉴에서 쓰인다.
+;………………………………………………
+@CONFIG_SETCOLOR_TORIKOMODE
+PRINTFORML 원하는 색의 농도를 입력 해 주세요. 0 :흑백 1:가장 연하게 >>> 5:매우 진하게 >>> 아이쿠 내 눈!!
+INPUT
+FLAG:5001 = RESULT:0
+
+;………………………………………………
+; SETCOLOR 커스텀
+;………………………………………………
+; 에라 자체 명령어인 SETCOLOR 를 대체하는 함수.
+; 옵션을 통해 토리코모드 내 전체 칼라를 변경 가능하게 하기 위해 제작.
+; ARGS = 문자열. 색의 이름을 쓴다. ARG 색의 레벨. 1~5까지 있으며 높을수록 진해짐. 0으로 두면 시스템 기본 칼라로 나온다고 보면 된다.
+
+@SETCOLOR_TORIKOMODE, ARGS, ARG
+
+; 디폴트 값 (시스템칼라)
+LOCAL:0 = 192
+LOCAL:1 = 192
+LOCAL:2 = 192
+
+;색 설정에 따른 농도변화
+LOCAL:3 = FLAG:5001*3
+LOCAL:4 = FLAG:5001*3
+LOCAL:5 = FLAG:5001*3
+
+;색 생성
+;원색
+IF ARGS == "RED"
+	LOCAL:0 = LOCAL:0 + (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*3)
+ELSEIF ARGS == "GREEN"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 + (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*3)
+ELSEIF ARGS == "BLUE"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 + (LOCAL:4*ARG*3)
+;1차색
+ELSEIF ARGS == "SKYBLUE"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 + (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 + (LOCAL:4*ARG*3)
+ELSEIF ARGS == "PINK"
+	LOCAL:0 = LOCAL:0 + (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:1 + (LOCAL:4*ARG*3)
+ELSEIF ARGS == "YELLOW"
+	LOCAL:0 = LOCAL:0 + (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 + (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*3)
+;2차색
+ELSEIF ARGS == "MAGENTA"
+	LOCAL:0 = LOCAL:0 + (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2
+ELSEIF ARGS == "JADE"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 + (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2
+ELSEIF ARGS == "GRASS"
+	LOCAL:0 = LOCAL:0
+	LOCAL:1 = LOCAL:1 + (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*3)
+ELSEIF ARGS == "PURPLE"
+	LOCAL:0 = LOCAL:0
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 + (LOCAL:4*ARG*3)
+ELSEIF ARGS == "SEA"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1
+	LOCAL:2 = LOCAL:2 + (LOCAL:4*ARG*3)
+ELSEIF ARGS == "ORENGE"
+	LOCAL:0 = LOCAL:0 + (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*3)
+;무채색. 블랙은 사용상 주의 필요. 화면에서 안 보일 우려 있음.
+ELSEIF ARGS == "WHITE"
+	LOCAL:0 = LOCAL:0 + (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 + (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 + (LOCAL:4*ARG*3)
+ELSEIF ARGS == "BLACK"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*3)
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*3)
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*3)
+
+;기타칼라
+ELSEIF ARGS == "OLIVE"
+	LOCAL:0 = LOCAL:0 - (LOCAL:3*ARG*4)
+	LOCAL:1 = LOCAL:1 - (LOCAL:4*ARG*4)
+	LOCAL:2 = LOCAL:2 - (LOCAL:4*ARG*8)
+
+ELSE
+	PRINTFORML 에러 발생. 지원하지 않는 색상명입니다.
+ENDIF
+
+;수치정리 (최소0, 최대255)
+LOCAL:0 = MIN(LOCAL:0, 255)
+LOCAL:1 = MIN(LOCAL:1, 255)
+LOCAL:2 = MIN(LOCAL:2, 255)
+LOCAL:0 = MAX(LOCAL:0, 0)
+LOCAL:1 = MAX(LOCAL:1, 0)
+LOCAL:2 = MAX(LOCAL:2, 0)
+
+;디버그용출력
+;PRINTFORML 색상명 %ARGS% R {LOCAL:0} G{LOCAL:1} B {LOCAL:2}
+
+;색 설정완료.
+SETCOLOR LOCAL:0, LOCAL:1, LOCAL:2
+
+
+;………………………………………………
+; 조교시간의 턴을 난이도에 따라 변경 체크하는 함수.
+; FLAG:3 = 난이도 , TFLAG:107 = 조교후 경과시간
+;………………………………………………
+@CHECK_TIMEOUT_TORIKOMODE
+
+IF FLAG:3 == 1
+	SIF TFLAG:107 > 50
+		CALL EVENT_TIMEOUT
+ELSEIF FLAG:3 == 2
+	SIF TFLAG:107 > 50
+		CALL EVENT_TIMEOUT
+ELSEIF FLAG:3 == 3
+	SIF TFLAG:107 > 50
+		CALL EVENT_TIMEOUT
+ELSEIF FLAG:3 == 4
+	SIF TFLAG:107 > 50
+		CALL EVENT_TIMEOUT
+ELSEIF FLAG:3 == 5
+	SIF TFLAG:107 > 50
+		CALL EVENT_TIMEOUT
+ELSE
+ENDIF
+
+
+
+
+
+;-------------------------------------------------
+;奴隷の射精ゲージ計算・表示処理
+;-------------------------------------------------
+;ふたなりは射精しにくいということで[オトコ]よりも高めに設置
+@CALC_GAUGE2_SLAVE_TORIKOMODE
+MAXBASE:2 = CALC_GAUGE2_COMMON(TARGET)
+;PRINT 사정
+;BAR BASE:2,MAXBASE:2,32
+;PRINTFORML ({BASE:2, 5}/{MAXBASE:2, 5})
+
+;-------------------------------------------------
+;助手の射精ゲージ計算・表示処理
+;의 토리코모드식 처리. (처리는 하되 출력은 하지 않게 수정)
+;-------------------------------------------------
+;ふたなりは射精しにくいということで[オトコ]よりも高めに設置
+@CALC_GAUGE2_ASSI_TORIKOMODE
+MAXBASE:ASSI:2 = CALC_GAUGE2_COMMON(ASSI)
+;PRINT 사정（조수）
+;BAR BASE:ASSI:2,MAXBASE:ASSI:2,32
+;PRINTFORM ({BASE:ASSI:2, 5}/{MAXBASE:ASSI:2, 5})
+IF FLAG:18 & 1 && TALENT:MASTER:120 == 0 && TALENT:MASTER:121 == 0
+	;PRINT 사정선택:
+	;CALL CHECK_SAMEN_PLACE
+ENDIF
+PRINTL 
+
+;-------------------------------------------------
+;他者の射精ゲージ計算・表示処理
+;의 토리코모드식 처리. (처리는 하되 출력은 하지 않게 수정)
+;-------------------------------------------------
+@CALC_GAUGE2_OTHERS_TORIKOMODE
+IF TEQUIP:90
+	;촉수용
+	LOCAL = 10000
+	TFLAG:998 = LOCAL
+	;PRINT 사정(촉수)
+ELSEIF TEQUIP:55 == 1
+	;충목욕탕용
+	LOCAL = 10000
+	TFLAG:998 = LOCAL
+	;PRINT 사정(벌레)
+ENDIF
+;BAR TFLAG:997,LOCAL,32
+;PRINTFORML ({TFLAG:997, 5}/{TFLAG:998, 5})
+
+;-------------------------------------------------
+;奴隷の噴乳ゲージ計算・表示処理
+;의 토리코모드식 처리. (처리는 하되 출력은 하지 않게 수정)
+;-------------------------------------------------
+;ARG …　誰の噴乳ゲージを計算・表示するのか？
+;ARG:1 …　立っているとゲージそのものは表示しない.
+@CALC_GAUGE3_SLAVE_TORIKOMODE, ARG, ARG:1
+LOCAL = 10000
+SIF TALENT:ARG:174
+	LOCAL /= 2
+MAXBASE:ARG:3 = LOCAL
+IF !ARG:1
+	;PRINT 모유
+	;BAR BASE:ARG:3, MAXBASE:ARG:3, 32
+	;PRINTFORML ({BASE:ARG:3, 5}/{MAXBASE:ARG:3, 5})
+ENDIF
+
+;-------------------------------------------------
+;奴隷の放尿ゲージ計算・表示処理
+;의 토리코모드식 처리. (처리는 하되 출력은 하지 않게 수정)
+;-------------------------------------------------
+;ARG …　誰の放尿ゲージを計算・表示するのか？
+;ARG:1 …　立っているとゲージそのものは表示しない.
+@CALC_GAUGE4_SLAVE_TORIKOMODE, ARG, ARG:1
+LOCAL = 20000
+IF TALENT:ARG:132
+	LOCAL /= 2
+ELSEIF TALENT:ARG:133
+	LOCAL *= 2
+ENDIF
+SIF TALENT:ARG:45
+	LOCAL /= 2
+SIF TALENT:ARG:175
+	LOCAL /= 2
+MAXBASE:ARG:4 = LOCAL
+IF !ARG:1
+	;PRINT 요의
+	;BAR BASE:ARG:4, MAXBASE:ARG:4, 32
+	;PRINTFORML ({BASE:ARG:4, 5}/{MAXBASE:ARG:4, 5})
+ENDIF
+
+;-------------------------------------------------
+;취기 게이지 계산 처리
+;의 토리코모드식 처리. (처리는 하되 출력은 하지 않게 수정)
+;-------------------------------------------------
+;強いとその分だけゲージ増加
+;酔いのレベルが80％以上、120％未満で酩酊とする
+;ARG:1が0のとき酔いの深度を非表示、1の時は表示されるように
+@CALC_GAUGE8_TORIKOMODE, ARG, ARG:1
+LOCAL:1 = 10000
+IF TALENT:ARG:214
+	LOCAL:1 *= 2
+ELSEIF TALENT:ARG:210 || TALENT:ARG:215
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:ARG:221
+	LOCAL:1 *= 2
+ENDIF
+MAXBASE:ARG:8 = LOCAL:1
+IF ARG:1 == 1
+	LOCAL = (BASE:ARG:8 *100) / LOCAL:1
+;	IF LOCAL == 0
+;		PRINT ＜멀쩡함＞
+;	ELSEIF LOCAL < 40
+;		PRINT ＜약간취함＞
+;	ELSEIF LOCAL < 80
+;		PRINT ＜반쯤취함＞
+;	ELSEIF LOCAL < 120
+;		PRINT ＜만취＞
+;	ELSEIF LOCAL < 160
+;		PRINT ＜미친듯이취함＞
+;	ELSE
+;		PRINT ＜극한으로취함＞
+;	ENDIF
+;	PRINTFORML (심도 :Lv{LOCAL})
+ENDIF
+
+;-------------------------------------------------
+;노예의 정음절정 게이지 표시 처리
+;의 토리코모드식 처리. (처리는 하되 출력은 하지 않게 수정)
+;-------------------------------------------------
+@CALC_GAUGEX_SLAVE_TORIKOMODE
+LOCAL = 1000
+;PRINT 정음
+;BAR CFLAG:64,LOCAL,32
+;PRINTFORML  ({CFLAG:64, 4}/{LOCAL, 4})
+
+;-------------------------------------------------
+;오토세이브 옵션. 디코드 된 위치값을 받아서 알아서 저장한다.
+; ARG  저장파일 위치값
+@SAVEGAME_AUTO_TORIKOMODE, ARG
+LOCAL = 0
+LOCAL:1 = ARG
+GLOBAL:0 = GLOBAL:0 / 100 * 100 + LOCAL:1
+SAVEGLOBAL
+SAVEDATA LOCAL:1, SAVEINFO_EX()
+DRAWLINE
+PRINTFORML <자동저장 완료>
+DRAWLINE
+
+
+;-------------------------------------------------
+; 노 모어 글레이즈 모드로 게임오버한 데이터를 읽을 시, SHOP 대신 여기로 온다.
+@GAMEOVER_NOMOREGLAZE_TORIKOMODE
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL ……텅 빈 조교관엔 더 이상 아무도 살지 않는다…….
+PRINTL ……그저 바람만이 무심히 지나갈 뿐…….
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+DRAWLINE
+PRINTL (게임 오버된 파일입니다)
+PRINTW 
+PRINTL [0] 이번에야말로…
+PRINTL [1] 불러오기
+PRINTL [2] 게임 종료
+
+$LOOP_SELECT_LODETYPE
+INPUT
+IF RESULT == 0
+	;RESETDATA
+	BEGIN TITLE
+ELSEIF RESULT ==1
+	call LOADGAME_EX
+ELSEIF RESULT ==2
+	QUIT
+ELSE
+ENDIF
+
+;무한히 돌린다.
+GOTO LOOP_SELECT_LODETYPE
+
+
+
+;-------------------------------------------------
+; 오토세이브 옵션을 파싱한다. 
+; FLAG:5002 = X_Y_ZZ
+; 입력 : 없다
+; 반환 : 오토세이브 옵션값
+@DECODE_SAVEINFO_TORIKOMODE
+LOCAL:0 = FLAG:5002 / 1000
+LOCAL:1 = (FLAG:5002 % 1000) /100
+LOCAL:2 = (FLAG:5002 % 100)
+RESULT:0 = LOCAL:0
+RESULT:1 = LOCAL:1
+RESULT:2 = LOCAL:2
+RETURN RESULT:0
+RETURN RESULT:1
+RETURN RESULT:2
+;-------------------------------------------------
+; 노모어글레이즈 옵션이 켜져있을 때, 첫 저장위치를 잡아준다
+; FLAG:5002 = X_Y_ZZ
+@SAVEGAME_EX_NOMOREGLAZE_TORIKOMODE
+LOCAL = 0
+
+$LIST_LOOP
+PRINTL 어디에 저장하시겠습니까? 
+IF FLAG:5002 >= 1000
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINTL (주의! 이 모드에서는 저장위치를 정하면 바꿀 수 없습니다)
+	RESETCOLOR
+ENDIF
+CALL PRINT_SAVEDATA, LOCAL, 0
+
+PRINTL [101] 이전 페이지  [102] 다음 페이지
+
+$INPUT_LOOP
+INPUT
+
+IF (RESULT == 100)
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 101 || RESULT == 102
+	IF RESULT == 101
+		LOCAL -= 1
+		SIF LOCAL < 0
+			LOCAL = 8
+	ELSE
+		LOCAL += 1
+		SIF LOCAL > 8
+			LOCAL = 0
+	ENDIF
+	GOTO LIST_LOOP
+ELSEIF RESULT < LOCAL * 10 || RESULT >= (LOCAL + 1) * 10
+	REUSELASTLINE 
+	GOTO INPUT_LOOP
+ELSE
+	LOCAL:1 = RESULT
+	CHKDATA LOCAL:1
+	;RESULT == 1は"파일이 없음"
+	IF RESULT != 1
+		PRINTL 이미 데이터가 존재합니다. 덮어쓰겠습니까?
+		PRINTLC [0] 예
+		PRINTLC [1] 아니오
+		PRINTL
+		$INPUT_LOOP_2
+		INPUT
+		IF RESULT == 1
+			GOTO LIST_LOOP
+		ELSEIF RESULT != 0
+			GOTO INPUT_LOOP_2
+		ENDIF
+	ENDIF
+	GLOBAL:0 = GLOBAL:0 / 100 * 100 + LOCAL:1
+	SAVEGLOBAL
+	SAVEDATA LOCAL:1, SAVEINFO_EX()
+	
+	;토리코모드용 추가부분---------------------
+	;현재의 오토세이브 옵션을 불러온다.
+	CALL DECODE_SAVEINFO_TORIKOMODE
+	;오토세이브가 켜져있다면
+	IF RESULT:1 == 1
+		;저장위치를 바꿔준다.
+		FLAG:5002 = FLAG:5002 - (FLAG:5002 % 100) + LOCAL:1
+		PRINTFORMW <<오토세이브 작동중 : 앞으로 [{LOCAL:1}]번 슬롯에 자동 저장됩니다.>>
+	ELSE
+	ENDIF
+	;추가부분 종료---------------------
+
+ENDIF
+
+;-------------------------------------------------
+; 노모어글레이즈 옵션을 켤지 말지 물어보고 확인받는다.
+@SELECT_MODE_NOMOREGLAZE_TORIKOMODE
+$LOOP_SELECT_NOMOREGLAZE
+DRAWLINE
+PRINTL "노 모어 글레이즈" 모드를 선택할 수 있습니다. 어떻게 하시겠습니까?
+PRINT
+PRINTL [0] 선택하지 않는다.
+PRINTL [1] 선택한다.
+PRINTL [2] …그게 뭐야?
+PRINTL
+INPUT
+IF RESULT == 0
+	PRINTW 일반 모드로 플레이합니다.
+ELSEIF RESULT == 1
+	FLAG:5002 = 1000
+	CALL SETCOLOR_TORIKOMODE, "RED", 5
+	FONTBOLD
+	PRINTL
+	PRINTL << !!!WARNING!!! NO MORE GLAZE SYSTEM ONLINE !!!WARNING!!! >>
+	PRINTW
+	RESETCOLOR
+	FONTREGULAR
+	PRINTL 저장 위치를 설정해 주세요.
+	CALL SAVEGAME_EX_NOMOREGLAZE_TORIKOMODE
+	PRINTL 
+	PRINTW 이 모드에서 게임오버가 되면 영원히 되돌릴 수 없습니다.
+	PRINTW 당신에게 ZUN신의 가호가 있기를….
+	PRINTL 
+ELSEIF RESULT == 2
+	PRINTW "노 모어 글레이즈" 모드에서 게임 오버가 되면 영원히 되돌릴 수 없습니다.
+	PRINTW 모든 세이브는 턴 종료시 자동으로 이루어지며, "저장한다" 커맨드가 사라집니다. (불러오기는 가능합니다)
+	PRINTW 게임 오버가 될 때, 해당 세이브 파일로는 더 이상 조교를 진행할 수 없게 됩니다.
+	PRINTW 때문에 조교 1턴 1턴을 신중히 플레이할 필요가 있습니다.
+	PRINTW 그러나 그 외의 변경 부분은 없으니, 게임에 충분히 익숙해졌다고 생각되면 도전해 주세요.
+	GOTO LOOP_SELECT_NOMOREGLAZE
+ELSE
+	GOTO LOOP_SELECT_NOMOREGLAZE
+ENDIF
+
+
+;-------------------------------------------------
+; 에라sqn 의 하트마크 함수들. 일단은 걍 둠. 
+@HEARTMARK
+GETFONT
+CHKFONT "Times New Roman"
+SIF RESULT
+	SETFONT "Times New Roman"
+PRINTFORM %UNICODE(0x2665)%
+SETFONT RESULTS
+
+;대사 마지막 때 등에 적합하다
+@HEARTMARK_E
+GETFONT
+CHKFONT "Times New Roman"
+SIF RESULT
+	SETFONT "Times New Roman"
+PRINTFORM %UNICODE(0x2665)%
+SETFONT RESULTS
+PRINTFORMW 」
+
+;개행판
+@HEARTMARK_L
+GETFONT
+CHKFONT "Times New Roman"
+SIF RESULT
+	SETFONT "Times New Roman"
+PRINTFORM %UNICODE(0x2665)%
+SETFONT RESULTS
+PRINTFORML 」
+
+
+;※eraMegaten 에서 빌려왔습니다
+;-------------------------------------------------------------------------------
+;    BARの色違え版
+;-------------------------------------------------------------------------------
+;ARG:0	現在値
+;ARG:1	最大値
+;ARG:2	目盛数
+;ARG:3	バー色
+;ARG:4	バー背景色
+;ARGS:0	バー文字（省略時 UNICODE(0x2586)）
+;ARGS:1	バー背景文字（省略時 UNICODE(0x2585)）
+;===============================================================================
+@PRINT_COLORBAR(ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARGS:0 = "", ARGS:1 = "")
+#LOCALSIZE 5
+VARSET LOCAL
+;文字省略時、UNICODEに読み替える
+IF ARGS:0 == ""
+	ARGS:0 = %UNICODE(0x2586)%
+ENDIF
+IF ARGS:1 == ""
+	ARGS:1 = %UNICODE(0x2585)%
+ENDIF
+
+LOCAL:1 = ARG:0 * ARG:2 / ARG:1
+LOCAL:2 = GETCOLOR()
+FOR LOCAL, 1, ARG:2 + 1
+	IF LOCAL:1 >= LOCAL
+		IF !LOCAL:3
+			SETCOLOR ARG:3
+			LOCAL:3 = 1
+		ENDIF
+		PRINTFORM %ARGS:0%
+	ELSE
+		IF !LOCAL:4
+			SETCOLOR ARG:4
+			LOCAL:4 = 1
+		ENDIF
+		PRINTFORM %ARGS:1%
+	ENDIF
+NEXT
+SETCOLOR LOCAL:2
+VARSET LOCAL
+
+;※eraMegaten 으로부터 빌려왔습니다
+;-------------------------------------------------
+;커스텀 바 용 색깔 세트 함수@BARCOLORSET
+;PRINT_COLORBAR의 ARG:3에 이용해, ARG;4에 RESULT를 사용한다
+;-------------------------------------------------
+@BARCOLORSET, ARGS
+#FUNCTION
+ ;LOCALに色を代入
+SELECTCASE ARGS
+	CASE "赤"
+		RESULT:1 = 0x702020
+		RETURNF 0xE02020
+	CASE "薄赤"
+		RESULT:1 = 0x803040
+		RETURNF 0xF07090
+	CASE "青"
+		RESULT:1 = 0x202070
+		RETURNF 0x2070FF
+	CASE "薄青"
+		RESULT:1 = 0x204080
+		RETURNF 0x50C0FF
+	CASE "緑"
+		RESULT:1 = 0x207020
+		RETURNF 0x70FF70
+	CASE "紫"
+		RESULT:1 = 0x702070
+		RETURNF 0xFF70FF
+	CASE "黄"
+		RESULT:1 = 0x707020
+		RETURNF 0xFFFF70
+	CASE "青緑"
+		RESULT:1 = 0x207070
+		RETURNF 0x70FFFF
+	 ;白
+	CASEELSE
+		RESULT:1 = 0x202020
+		RETURNF 0xC0C0C0
+ENDSELECT
+
+;---------------------------------
+;현재의 난이도를 문자열로 반환하는 함수.
+;여기저기 난이도 보정이 걸리는 곳에서 출력용으로 쓴다.
+@PRINT_DIFFIICULT_TORIKOMODE
+IF FLAG:3 == 1
+	LOCALS:0 = EASY
+ELSEIF FLAG:3 == 2
+	LOCALS:0 = NORMAL
+ELSEIF FLAG:3 == 3
+	LOCALS:0 = HARD
+ELSEIF FLAG:3 == 4
+	LOCALS:0 = LUNATIC
+ELSEIF FLAG:3 == 5
+	LOCALS:0 = PHANTASM
+ELSEIF FLAG:3 == 6
+	LOCALS:0 = PRO
+ELSEIF FLAG:3 == 7
+	LOCALS:0 = ULTRA
+ELSE
+	LOCALS:0 = UNKNOWN
+ENDIF
+;반환
+RESULTS:0 = %LOCALS:0%
+
+;---------------------------------
+;토리코모드의 설명
+@HELP_TORIKOMODE
+$SELECT_LIST
+DRAWLINE
+PRINTFORMW 설명을 듣고 싶은 항목을 골라주세요.
+PRINTFORML [0] 소개
+PRINTFORML [1] 만복도
+PRINTFORML [2] 의뢰소
+PRINTFORML [3] 노예 몸값의 변동
+PRINTFORML [4] 인터럽트 시스템
+PRINTFORML [5] 스케쥴?
+PRINTFORML [6] 스트레스!
+PRINTFORML [7] 경비 시스템
+PRINTFORML [999] 충분히 들었다.
+INPUT
+IF RESULT == 0	
+	PRINTFORML 토리코 모드는 과거 명작게임 '토리코'를 모티프로 만든 에라토호YM의 확장 모드로,
+	PRINTFORML '조교사'로서의 리얼리티를 조금 더 강조하기 위해, 게임의 여러 부분을 수정/추가하였습니다.
+	PRINTFORML 대표적으로, 체력, 기력, 쾌C 등등의 수치를 볼 수 없기에 노예의 반응에 좀 더 신경을 써야 합니다.
+	PRINTFORML 그리고 기존 통합본과 세이브 연동이 되므로, 기존에 키우던 걸 가져와도 좋습니다.
+	PRINTFORML (그러나 완벽하진 않으니까 백업을 해 두시길 추천합니다^^)
+	PRINTFORML 버그 제보와 아이디어는 감사히 받고 있습니다. 동방 인사이드로 와 주시거나, 여의치 않으면 메일주세요
+	PRINTFORML RAVENERKR@GMAIL.COM
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 1
+	PRINTFORML <만복도 시스템>
+	PRINTFORML 만복도 시스템을 켜면, 노예가 주기적으로 뭔가를 먹어야만 합니다. (만복과 영양이 0이 되면 사망합니다)
+	PRINTFORML 음식을 먹으면 배를 채우고(만복도 상승), 음식의 질에 따라 영양도가 상승합니다.
+	PRINTFORML 그리고 노예의 영양상태가 좋으면 체력회복 속도가 평소보다 상승! 합니다. (그 반대도 마찬가지)
+	PRINTFORML 그렇지만 배가 가득차면(만복도 최대) 음식을 더 이상 먹을 수 없어요. 그러니 음식의 '질'도 중요합니다. (헛배만 불려봤자 헛수고란 말)
+	PRINTFORML 음식에는 식비가 필요하고, 식비는 난이도와 현재 노예수에 따라 상승하죠…. 그래서 돈도 필요합니다.
+	PRINTFORML 하지만 1명만 키울 때는 보통메뉴도 0원이니까, 너무 걱정하실 필요는 없어요!
+	PRINTFORML 노예들은 성격과 스트레스, 현재의 만복도에 따라 밥을 먹기도 하고 거부하기도 합니다.
+	PRINTFORML 꼭 먹여야겠다면 비싼 메뉴로 방침을 바꿔주던지, 조교중에 '식사를 한다'를 선택해서 먹여주세요.
+	PRINTFORML 아니면 '요리를 하게 한다'도 성능이 좋습니다. (요리는 돈이 안 듭니다!)
+	PRINTFORML 그런데 조교중에 기껏 식사를 준비해줬는데 노예가 거부한다면? 글쎄요. 강제로라도 먹여야 할까요? 아니면…?
+	PRINTFORML 세상에는 자존심이 강한 노예를 일부러 굶겨서 먹을 것을 갈망하게 한 후, 굴욕적인 식사로 함락시키는 분도 있다고 들었습니다만….
+	PRINTFORML …그런 건 조교사 여러분들의 선택!
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 2
+	PRINTFORML <의뢰 시스템>
+	PRINTFORML 의뢰 시스템을 켜면, 밤에 텐구가 찾아옵니다. 그리고 의뢰소에 갈 수가 있게 되는데요.
+	PRINTFORML 의뢰소에 노예나 상품을 납품해서 돈을 벌 수가 있습니다.
+	PRINTFORML 특히 판매준비가 되지 않은 노예라도 조건만 맞으면 납품할 수가 있으니까,
+	PRINTFORML 공략이 어렵거나 돈이 모자랄 때는 잘 활용 해 주세요.
+	PRINTFORML 초반에 처녀혈이나 음모 같이 구하기 쉬운 상품을 납품하면 초반 진행이 많이 수월해집니다.
+	PRINTFORML 비디오나 사진 같은 것도 꾸준히 납품하면 좋은 수익을 낼 수 있습니다.
+	PRINTFORML 그리고 돈이 급히 필요하면 빌릴 수도 있어요! (뒷일은 책임 못지지만…)
+	PRINTFORML 첫 방문에 한해, 대텐구로부터 약간의 돈을 받을 수 있습니다. 초반에 도움이 될지도?
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 3
+	PRINTFORML <소질개화 (판매가 밸런싱) 시스템>
+	PRINTFORML 기존의 언밸런스했던 노예 판매 공식을 수정하여, 어느 정도 평준화되게 됩니다.
+	PRINTFORML 과거처럼 어떤 노예가 어떤 소질을 가지고 있기 때문에 비싸다! 가 아니라,
+	PRINTFORML 어떤 소질을 가지고 있으니 그걸 개화하면 몸값이 오른다! 라는 개념입니다.
+	PRINTFORML 소질을 많이 가진 캐릭터일수록, 미개화 상태에서는 마이너스 보정을 받아 오히려 몸값이 떨어집니다.
+	PRINTFORML 때문에 소질을 적게 가진 캐릭터를 빠르게 육성해서 파는 것도 괜찮은 전략이 됩니다.
+	PRINTFORML 노예의 몸값과 소질 개화에 필요한 경험들은 [매각조사]에서 볼 수 있습니다. 방향을 잡고 조교해 주세요.
+	PRINTFORML 또한, 이 옵션을 켜면 비디오 가격이 1/5가 됩니다. 비디오로 클리어하고 싶으신 분은 이 옵션을 꺼 주세요.
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 4
+	PRINTFORML  <인터럽트/강제로 하기 시스템>
+	PRINTFORML 노예나 조수가 욕정할 경우, 조교에 끼어듭니다.
+	PRINTFORML 욕정할 확률은 상성과 욕망 레벨 등 여러가지 요소에 따라 달라집니다.
+	PRINTFORML 연모나 음란을 단 상태로 조교중이면, 봉사를 받을 수도 있습니다.
+	PRINTFORML 인터럽트를 받으면 호감도가 오르고 스트레스가 줄어드는 등, 좋은 점도 많습니다.
+	PRINTFORML 또한, 이 옵션을 켜면 노예가 조교중 명령을 거부할 때 강제로 할 수도 있습니다.
+	PRINTFORML 요구치와 실행치의 차이에 따라 강제로 하는 게 성공/실패하기도 합니다.
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 5
+	PRINTFORML <스케쥴 시스템>
+	PRINTFORML 이 옵션을 켜면, 특정 조건을 만족하는 노예를 독자적으로 활동하게 할 수 있습니다.
+	PRINTFORML 도시락을 만들게 해 돈을 벌 수도 있고, 노래를 가르쳐 공연을 할 수도 있습니다.
+	PRINTFORML 또한 스트레스가 많이 쌓인 노예에게는 하루 동안의 휴식을 주는 것도 가능합니다.
+	PRINTFORML 노예 수가 많아지면 스케쥴을 적절히 사용해서 돈을 벌면서 진행해 주세요.
+	PRINTFORML 스케쥴의 종류는 앞으로 계속 늘어날 예정입니다.
+	PRINTFORML 창관에 보낸 노예는 데려오지 않으면 스케쥴 변경을 못하는 것도 잊지 마세요.
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 6
+	PRINTFORML <스트레스 시스템>
+	PRINTFORML 이 옵션을 켜면, 노예들이 스스로 스트레스를 해결하려 합니다.
+	PRINTFORML 스트레스가 적을 때는 자위를 한다거나 살짝 히스테리를 부리는 걸로 끝이지만,
+	PRINTFORML 극도로 스트레스가 쌓이면 자해를 시도하니 각별히 주의 해 주세요.
+	PRINTFORML 또한 이 옵션을 켜면 스트레스 수치가 숫자가 아니라 문자로 표시되는 점도 있습니다.
+	PRINTFORML 너무 어렵다고 생각되면 끄는 걸 추천합니다.
+	PRINTFORML 자해를 할 때 막을 수 있으며, 막는 데 성공하면 약간 서로에 대한 마음이 열리게 될 지도…?
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 7
+	PRINTFORML <경비 시스템>
+	PRINTFORML 이 옵션을 켜면, 노예들이 탈출하거나, 구출자가 오거나 합니다.
+	PRINTFORML 경비를 고용해서 노예의 탈출을 막거나, 문을 잠그거나 밧줄로 묶는 등으로 구속하는 방법도 있습니다.
+	PRINTFORML 특히 구출자가 오면 전투가 발생할 수 있는데, 여기서 이기면 구출자를 노예로 획득할 수도 있습니다.
+	PRINTFORML 경비대장을 세워서 싸울 수도 있습니다. (함락된 노예가 필요합니다. 경비대장은 호감도와 기력으로 강해짐)
+	PRINTFORML 이 옵션을 켜면 게임의 난이도가 전반적으로 오릅니다.
+	PRINTFORML 너무 어렵다고 생각되면 끄는 걸 추천합니다.
+	PRINTFORML 포획으로 돈을 번다거나, 윤간을 한다거나 하는 재미요소도 있지만… YM 초보자 분들에게는 벅찰 거예요. 아마도.
+	PRINTFORMW 
+	GOTO SELECT_LIST
+ELSEIF RESULT == 999
+	RETURN 0
+ELSE
+	GOTO SELECT_LIST
+ENDIF
+
+
+
+;--------------------------------------------------------------------------
+;간이 지시문출력기. 여러곳에 쓰인다.
+;그냥 말만 출력함. 처리하는 것은 없다.
+; ARG = 캐릭터, ARG:1 = 조교커맨드 번호
+;--------------------------------------------------------------------------
+@MESSAGE_JUSTSAY_TORIKOMODE, ARG, ARG:1
+;타겟대피
+LOCAL:0 = TARGET
+;타겟치환
+TARGET = ARG
+
+;TEQUIP 세팅. CFLAG:4010를 체크
+;밧줄
+SIF CFLAG:4010 & 2
+	TEQUIP:40 =1
+;볼재갈
+SIF CFLAG:4010 & 8
+	TEQUIP:42 =1
+;아이마스크
+SIF CFLAG:4010 & 16
+	TEQUIP:41 =1
+;V로터삽입. 어째서인지는 모르겠으나, 3을 넣어줘야 지시문이 제대로 출력됨 -_-
+SIF CFLAG:4010 & 32
+	TEQUIP:20 =3
+;A비즈
+SIF CFLAG:4010 & 64
+	TEQUIP:25 =1
+;C캡
+SIF CFLAG:4010 & 128
+	TEQUIP:30 =1
+;B캡
+SIF CFLAG:4010 & 256
+	TEQUIP:35 =1
+
+;지시문 출력
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+TRYCALLFORM TRAIN_MESSAGE_COM{ARG:1}
+RESETCOLOR
+
+;TEQUIP 초기화 .TEQUIP 은 조교 시작시에서도 초기화 된다. (1차원 변수임)
+;이상하게도, 루프로 초기화가 되지 않는다. 1차원변수라서 인가?
+TEQUIP:20 = 0
+TEQUIP:25 = 0
+TEQUIP:30 = 0
+TEQUIP:35 = 0
+TEQUIP:40 = 0
+TEQUIP:41 = 0
+TEQUIP:42 = 0
+
+;타겟복구
+TARGET = LOCAL:0
+
+;--------------------------------------------------------------------------
+;간이 구상출력기. 여러곳에 쓰인다.
+;그냥 말만 출력함. 처리하는 것은 없다.
+; ARG = 캐릭터, ARG:1 = 구상번호
+;--------------------------------------------------------------------------
+@KOJO_JUSTSAY_TORIKOMODE, ARG, ARG:1
+
+;타겟대피
+LOCAL:0 = TARGET
+;타겟치환
+TARGET = ARG
+
+;TEQUIP 세팅. CFLAG:4010를 체크
+;밧줄
+SIF CFLAG:4010 & 2
+	TEQUIP:40 =1
+;볼재갈
+SIF CFLAG:4010 & 8
+	TEQUIP:42 =1
+;아이마스크
+SIF CFLAG:4010 & 16
+	TEQUIP:41 =1
+;V로터
+SIF CFLAG:4010 & 32
+	TEQUIP:20 =1
+;A비즈
+SIF CFLAG:4010 & 64
+	TEQUIP:25 =1
+;C캡
+SIF CFLAG:4010 & 128
+	TEQUIP:30 =1
+;B캡
+SIF CFLAG:4010 & 256
+	TEQUIP:35 =1
+
+;구상 부르기
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+SELECTCOM = ARG:1
+TRYCALLFORM KOJO_MESSAGE_COM_{NO:TARGET}
+RESETCOLOR
+
+;TEQUIP 초기화 .TEQUIP 은 조교 시작시에서도 초기화 된다. (1차원 변수임)
+TEQUIP:20 = 0
+TEQUIP:25 = 0
+TEQUIP:30 = 0
+TEQUIP:35 = 0
+TEQUIP:40 = 0
+TEQUIP:41 = 0
+TEQUIP:42 = 0
+;>;이상하게도, 루프로 초기화가 되지 않는다. 1차원변수라서 인가?
+;;TEQUIP 초기화 .TEQUIP 은 조교 시작시에서도 초기화 된다. (1차원 변수임)
+;;디버그용
+;LOCAL:99 = 0
+;DO 
+;	EQUIP:(LOCAL:99) = -1
+;
+;	PRINTFORM TEQUIP:{LOCAL:99}={TEQUIP:(LOCAL:99)}
+;	SIF LOCAl:99%5 == 0
+;		PRINTL
+;	LOCAL:99 += 1
+;LOOP LOCAL:99 < 99
+
+;타겟복구
+TARGET = LOCAL:0
+
+
+;--------------------------------------------
+;실종자를 제외한 식구수를 반환하는 함수.
+;밥값계산과 탈주율 계산등에 쓰인다.
+@CALC_CHARANUM_INHOUSE_TORIKOMODE
+;식구 수
+LOCAL:0 = 0
+;카운터
+LOCAL:99 = 0
+DO 
+	;주인이나 실종중 캐릭터는 뺀다
+	IF LOCAL:99 == 0 || CFLAG:(LOCAL:99):4 == 1
+		;
+	;식구 수를 늘린다.
+	ELSE
+		LOCAL:0 += 1
+	ENDIF
+	LOCAL:99 += 1
+LOOP LOCAL:99 < CHARANUM
+;반환
+RESULT = LOCAL:0
+RETURN RESULT
+;디버그
+;PRINTFORML #이 집에는 지금 {RESULT}명의 노예가 존재합니다. (주인, 실종은 제외)
+
+
+;--------------------------------------------
+;아나타의 이름을 변경할 수 있다.
+@CHANGE_NAME_ANATA_TORIKOMODE
+;입력 이름 저장
+LOCALS = ""
+
+PRINTL
+$INPUT_NAME
+PRINTFORML 당신의 이름을 알려주세요. (5자까지)
+INPUTS
+STRLENS RESULTS
+IF RESULT > 10
+	PRINTFORMW  이름이 너무 깁니다. 
+	GOTO INPUT_NAME
+ELSEIF RESULTS == ""
+	MASTERNAME:MASTER = 당신
+	CALLNAME:MASTER = 당신
+	PRINTFORMW "당신"으로 정해졌습니다.
+	PRINTFORMW (이름은 언제든 CONFIG에서 변경할 수 있습니다)
+	RETURN 0
+ELSE
+	LOCALS = %RESULTS%
+	PRINTFORML 「%LOCALS%」%조사만처리(LOCALS,"로")% 좋습니까?
+	PRINTFORML [0] 멋진 이름이다.
+	PRINTFORML [1] 한 번 더 생각해보자….
+	PRINTFORML [2] 귀찮아.
+	INPUT
+	IF RESULT == 0
+		MASTERNAME:MASTER = %LOCALS%
+		CALLNAME:MASTER = %LOCALS%
+		PRINTFORMW 「%LOCALS%」%조사만처리(LOCALS,"로")% 정해졌습니다.
+		PRINTFORMW (이름은 언제든 CONFIG에서 변경할 수 있습니다)
+	ELSEIF RESULT == 2
+		MASTERNAME:MASTER = 당신
+		CALLNAME:MASTER = 당신
+		PRINTFORMW "당신"으로 정해졌습니다.
+		PRINTFORMW (이름은 언제든 CONFIG에서 변경할 수 있습니다)
+	ELSE
+		GOTO INPUT_NAME
+	ENDIF
+ENDIF
+
+RETURN 0

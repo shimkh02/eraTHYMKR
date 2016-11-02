@@ -1,0 +1,546 @@
+﻿;=============================================================================
+;육변기 플레이
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE106
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:106 > 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;公衆肉便器プレイの場合は아이템｢プラカード｣を持っているか, 아이템なし設定でないとダメ
+SIF TEQUIP:52 && ITEM:43 == 0 && NOITEM == 0
+	RETURN 0
+;조교자가 주인이 아니면 불가
+SIF PLAYER != MASTER
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;공중육변기플레이를 실행할 경우, 낙인을 찍었거나 괴조인격이 아니면 안됨
+IF TALENT:161 == 0 && TALENT:169 == 0 && TEQUIP:52
+	RETURN 0
+;육변기플레이를 실행할 경우, 대상에게 붉은 목걸이를 주었거나 낙인을 찍었거나 괴조인격이 아니면 안됨
+ELSEIF TALENT:161 == 0 && TALENT:162 == 0 && TALENT:169 == 0
+	;ただし주인이 狂気持ちで対象が反発刻印Lv3または精神崩壊, 망신, 傀儡のどれかなら実行可能
+	SIF TALENT:MASTER:158 == 0 || (MARK:9 < 3 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:151 == 0)
+		RETURN 0
+ENDIF
+IF TALENT:128
+	;작은 체형なら순종이 4이상かつ마조끼が4이상かつ확장경험10이상じゃないと実行できない
+	SIF ABL:10 <= 3 || ABL:21 <= 3 || EXP:32 < 10 || EXP:33 < 10
+		RETURN 0
+ELSEIF TALENT:127
+	;조교 대상이 소인체형の場合, 上の条件に加え주인이 금단의 지식 보유자가 아니면 불가
+ 	SIF TALENT:MASTER:56 == 0 || ABL:10 <= 3 || ABL:21 <= 3 || EXP:32 < 10 || EXP:33 < 10
+		RETURN 0
+ELSE
+	;그 외의 경우, 순종と마조끼が3이상 없으면 안 됨
+	SIF ABL:10 < 3 || ABL:21 < 3
+		RETURN 0
+ENDIF
+;체력이 1000미만では使用不可
+SIF BASE:0 < 1000
+	RETURN 0
+;기력이 0일 때는 불가
+SIF BASE:1 <= 0
+	RETURN 0
+;일정의 Ｖ · Ａ경험이 필요
+SIF EXP:0 < 20 || EXP:1 < 20
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;시체는 안됨
+SIF TALENT:226 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;야외 플레이라면 공중육 변기 플레이, 그 이외라면 육변기 플레이에
+@COM106
+IF TEQUIP:52
+	JUMP COM106_OUT
+ELSE
+	JUMP COM106_IN
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;육변기 플레이
+;-------------------------------------------------
+@COM106_IN
+;육변기 플레이
+PRINTL 육변기 플레이
+TSTR:0 = 육변기 플레이
+CALL TRAIN_MESSAGE_COM106_IN
+
+DOWNBASE:0 += 750
+DOWNBASE:1 += 850
+
+;↓나전용의 구멍
+LOCAL:3 = (ABL:11+ABL:13+ABL:14+ABL:31)
+LOCAL:2 = 2+RAND:(LOCAL:3)
+LOCAL:1 = 1+RAND:(LOCAL:3)
+SOURCE:1 += 250*LOCAL:2
+SOURCE:2 += 150*LOCAL:1
+SOURCE:15 += 125*(LOCAL:2 + LOCAL:1)
+SOURCE:24 += 250*(LOCAL:2 + LOCAL:1)
+SOURCE:30 += 100*(LOCAL:2 + LOCAL:1)
+SOURCE:19 += 125*(LOCAL:2 + LOCAL:1)
+SOURCE:18 += 150*(LOCAL:2 + LOCAL:1)
+SOURCE:12 += 100*(LOCAL:2 + LOCAL:1)
+SOURCE:22 += 200*LOCAL:1
+SOURCE:31 += 400*(LOCAL:2 + LOCAL:1)
+SOURCE:23 += 150*(LOCAL:2 + LOCAL:1)
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+SIF TALENT:0 && TALENT:150 && ASSIPLAY == 0
+	TFLAG:2 = TALENT:0
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 500
+ELSEIF ABL:12 == 1
+	LOCAL = 600
+ELSEIF ABL:12 == 2
+	LOCAL = 800
+ELSEIF ABL:12 == 3
+	LOCAL = 1000
+ELSEIF ABL:12 == 4
+	LOCAL = 1400
+ELSE
+	LOCAL = 2000
+ENDIF
+
+;욕망을 본다
+LOCAL = EJACULATIONCHECK_ABL_11_1(TARGET, LOCAL)
+;욕정을 본다
+LOCAL = EJACULATIONCHECK_PALAM_13_2(TARGET, LOCAL)
+;윤활을 본다
+LOCAL = EJACULATIONCHECK_PALAM_10_2(TARGET, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+;사정시의 처리(잠정적으로 정상위와 같은 처리)
+IF TFLAG:91 >= 1
+	;사정처 타입의 설정
+	TFLAG:703 = 20
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;노예의 A⇔조교자의 P의 불결이 이동
+STAIN:4 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:4
+;노예의 V⇔조교자의 P의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:3
+;노예의 A⇔손가락의 불결이 이동
+STAIN:4 |= STAIN:1
+STAIN:1 |= STAIN:4
+;노예의 V⇔손가락의 불결이 이동
+STAIN:3 |= STAIN:1
+STAIN:1 |= STAIN:3
+;노예의 지⇒구의 불결이 이동
+IF NOWEX:MASTER:5 > 0
+	STAIN:1 |= STAIN:3
+	STAIN:1 |= STAIN:4
+ENDIF
+
+;V경험
+TCVAR:0 += LOCAL:1
+;V조율 경험
+TCVAR:42 += (PLAYER == MASTER) ?  LOCAL:1 # 0
+;A경험
+TCVAR:1 += LOCAL:2
+IF ASSIPLAY == 0 && (TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1)
+	CFLAG:173 += LOCAL:1
+	CFLAG:174 += LOCAL:2
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지(육변기 플레이)
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM106_IN
+IF CFLAG:99 == 1
+	CALL SELF_KOJO, TARGET, 5
+	RETURN 0
+ELSEIF FLAG:10 == 0
+	RETURN 0
+ENDIF
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%의 배에 매직으로 「↓나 전용 구멍」이라고 썼다.
+PRINTFORMW …이제, %CALLNAME:TARGET%의 육변기를 시험해 볼까…….
+CALL SELF_KOJO, TARGET, 5
+PRINTW     ·
+PRINTW     ·
+PRINTW     ·
+PRINTW     ·
+PRINTW     ·
+PRINTW     ·
+PRINTFORMW %CALLNAME:TARGET%의 육변기의 사용 결과는 뛰어났다.
+PRINTFORML 지금 완전하게 %CALLNAME:MASTER%의 물건이 된 %조사선택(CALLNAME:TARGET, "는")%
+PRINTL 일이 끝났지만 황홀한 표정을 지으며
+IF NOWEX:MASTER:5 > 0
+	PRINTL 흰 액체 투성이가 된 자신의 보지나 항문을 내려다 보고,
+	PRINTW 넘쳐서 새어 나오는 정액을 손가락으로 휘저으며 구멍에 돌려 넣거나 혀로 빨고 있다.
+ELSE
+	PRINTFORML %CALLNAME:MASTER%의 오줌으로 가득 찬 자신의 보지와 항문을 보며
+	PRINTW 손가락을 마개 삼아 질과 장에 모인 이물감을 즐기고 있다….
+ENDIF
+
+;-------------------------------------------------
+;공중육 변기 플레이
+;-------------------------------------------------
+;조교 대상라면 「전세계 공중육 변기」, 천자라면 「전인류의 공중육 변기」에
+@COM106_OUT
+PRINTL 공중 변소 플레이
+PRINTL 어디로 갈까?
+DRAWLINE
+PRINTL [0] - 마을 교외
+PRINTL [1] - 마법의 숲
+PRINTL [2] - 대나무 밭
+PRINTL [3] - 요괴의 산
+PRINTL [100] - 그만두자….
+DRAWLINE
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	LOCAL:2 = 0
+ELSEIF RESULT == 1
+	LOCAL:2 = 1
+ELSEIF RESULT == 2
+	LOCAL:2 = 2
+ELSEIF RESULT == 3
+	LOCAL:2 = 3 + RAND:3
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+LOCAL:1 = 0
+IF NO:TARGET == 10
+	PRINTL 전세계 공중 육변기
+	TSTR:0 = 전세계 공중 육변기
+	LOCAL:1 = 1
+ELSEIF NO:TARGET == 52
+	PRINTL 전인류의 공중 육변기
+	TSTR:0 = 전인류의 공중 육변기
+	LOCAL:1 = 2
+;가 EX화하지 않은 것이 조건
+ELSEIF NO:TARGET == 63 && CFLAG:0 == 0
+	PRINTL 핵융합 공중 육변기
+	TSTR:0 = 핵융합 공중 육변기
+	LOCAL:1 = 3
+ELSE
+	PRINTL 공중 육변기 플레이
+	TSTR:0 = 공중 육변기 플레이
+ENDIF
+
+DOWNBASE:0 += 850
+DOWNBASE:1 += 1000
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+LOCAL:3 = (RAND:10 + 1) * 10
+LOCAL:4 = RAND:10 + 1
+LOCAL:5 = RAND:10 + 11
+LOCAL:6 = RAND:5 + 6
+LOCAL:7 = 0
+
+;보정 여러가지
+;처녀
+IF TALENT:0
+	TIMES LOCAL:5 , 1.50
+	TIMES LOCAL:6 , 0.80
+ENDIF
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:5 , 1.50
+;반항적
+SIF TALENT:11
+	TIMES LOCAL:5 , 1.50
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL:5 , 1.50
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL:6 , 1.20
+ENDIF
+;무관심
+IF TALENT:21
+	TIMES LOCAL:5 , 0.50
+	TIMES LOCAL:6 , 0.50
+ENDIF
+;감정결여
+IF TALENT:22
+	TIMES LOCAL:5 , 0.80
+	TIMES LOCAL:6 , 0.80
+ENDIF
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:5 , 1.50
+;남자 싫다
+IF TALENT:37
+	TIMES LOCAL:5 , 0.80
+	TIMES LOCAL:6 , 0.80
+ENDIF
+;도착적
+IF TALENT:80
+	TIMES LOCAL:5 , 1.25
+	TIMES LOCAL:6 , 1.25
+ENDIF
+;매혹
+SIF TALENT:91
+	TIMES LOCAL:5 , 1.50
+;수수께끼의 매력
+SIF TALENT:92
+	TIMES LOCAL:5 , 1.50
+;인기
+SIF TALENT:94
+	TIMES LOCAL:5 , 1.50
+;음 단지
+SIF TALENT:172
+	TIMES LOCAL:6 , 0.90
+;음고
+SIF TALENT:173
+	TIMES LOCAL:6 , 1.50
+
+;ABL:정액 중독을 본다
+IF ABL:31 == 0
+	TIMES LOCAL:4 , 0.90
+ELSEIF ABL:31 == 1
+	TIMES LOCAL:4 , 1.00
+ELSEIF ABL:31 == 2
+	TIMES LOCAL:4 , 1.20
+ELSEIF ABL:31 == 3
+	TIMES LOCAL:4 , 1.50
+ELSEIF ABL:31 == 4
+	TIMES LOCAL:4 , 1.80
+ELSE
+	TIMES LOCAL:4 , 2.40
+ENDIF
+
+;마을 교외라면 전인류 공중육 변기로 습격당하는 회수 업
+IF LOCAL:1 == 2 && LOCAL:2 == 0
+	TIMES LOCAL:5 , 1.50
+	TIMES LOCAL:6 , 1.50
+;전세계 공중육 변기는 어디에 있어도 습격당하는 회수 업(보정은 전인류보다 조금 낮다)
+ELSEIF LOCAL:1 == 1
+	TIMES LOCAL:5 , 1.20
+	TIMES LOCAL:6 , 1.20
+ENDIF
+
+;회수 제한
+LOCAL:5 = TABLE_CALC(LOCAL:5, 20, 2)
+LOCAL:5 = TABLE_CALC(LOCAL:5, 40, 4)
+LOCAL:5 = TABLE_CALC(LOCAL:5, 60, 6)
+
+IF LOCAL:2 == 0
+	PRINTFORML 마을 교외에 도착하자 %조사선택(CALLNAME:TARGET, "를")% 적당한 그루터기 위에서
+ELSEIF LOCAL:2 == 1
+	PRINTFORML 마법의 숲에 도착하자 %조사선택(CALLNAME:TARGET, "를")% 적당한 나무의 앞에서
+ELSEIF LOCAL:2 == 2
+	PRINTFORML 지저에 도착하자 %조사선택(CALLNAME:TARGET, "를")% 적당한 대나무 앞에서
+ELSEIF LOCAL:2 >= 3
+	PRINTFORML 요괴의 산에 도착하자 %조사선택(CALLNAME:TARGET, "를")% 적당한 돌 위에서
+ENDIF
+PRINTL 가랑이를 쩍 벌린 자세로 앉히고, 손에는
+IF TALENT:0 == 1
+	;조건에서는 V경험이 일정수 필요하고 있지만, 일단 숫처녀의 처리도 작성
+	PRINTL 　　　　　　         　「☆ 첫 회 5만원 ☆」
+	LOCAL:7 += 50000
+	SOURCE:31 = (EXP:0 <= 0) ?  7500000 # 5000000
+ELSEIF TALENT:0
+	PRINTL 　　　　　　         　「☆ 첫 회 2만원 ☆」
+	LOCAL:7 += 20000
+	SOURCE:31 = (EXP:0 <= 0) ?  1200000 # 1000000
+ENDIF
+PRINTFORML 　　　　　   「♡ 1회 {LOCAL:3}원·질 내 사정＋{LOCAL:3*2}원 ♡」
+PRINTW …이라고 쓰여진 플랜카드를 들게 했다.
+PRINTFORMW 그리고 %CALLNAME:TARGET%의 배에 매직으로 「↓공중 변소」라고 쓴뒤, 거기서 대기하도록 명령했다.
+CALL SELF_KOJO, TARGET, 5, LOCAL:2
+PRINTW     ·
+PRINTW     ·
+PRINTW     ·
+;노예의 A, V, 입에 정액 더러움
+STAIN:0 |= 4
+STAIN:3 |= 4
+STAIN:4 |= 4
+TCVAR:0 += LOCAL:5-LOCAL:6
+TCVAR:1 += LOCAL:6
+TCVAR:4 += LOCAL:4
+PRINTW     ·
+PRINTW     ·
+PRINTW     ·
+PRINTFORM 아무래도 %CALLNAME:TARGET%의 육변기는 
+IF LOCAL:2 == 0
+	PRINT 마을의 인간들
+	LOCAL:8 = 1
+ELSEIF LOCAL:2 == 1
+	PRINT 숲의 요정들
+	LOCAL:8 = 2
+ELSEIF LOCAL:2 == 2
+	PRINT 죽림의 토끼들
+	LOCAL:8 = 3
+ELSEIF LOCAL:2 == 3
+	PRINT 산에 사는 캇파들
+	LOCAL:8 = 4
+ELSEIF LOCAL:2 >= 4
+	PRINT 산에 사는 텐구들
+	LOCAL:8 = 5
+ENDIF
+PRINTW 에게 대호평이었던 것 같다….
+
+SOURCE:1 += 250*(LOCAL:5-LOCAL:6)
+SOURCE:2 += 150*LOCAL:6
+SOURCE:15 += 125*LOCAL:5
+SOURCE:24 += 250*LOCAL:5
+SOURCE:30 += 100*LOCAL:5
+SOURCE:19 += 125*LOCAL:5
+SOURCE:18 += 150*LOCAL:5
+SOURCE:12 += 100*LOCAL:5
+SOURCE:22 += 225*LOCAL:5
+SOURCE:31 += 400*LOCAL:5
+SOURCE:23 += 175*LOCAL:5
+
+;마을 출신은 조교의 효과 상승
+IF LOCAL:2 == 0 && (NO:TARGET == 26 || NO:TARGET == 48 || NO:TARGET == 271)
+	TIMES SOURCE:12 , 2.00
+	SOURCE:19 += 1000
+	SOURCE:22 += 1000
+	SOURCE:23 += 1000
+;영원정조는 조교의 효과 상승
+ELSEIF LOCAL:2 == 2 && (NO:TARGET == 27 || NO:TARGET == 28 || NO:TARGET == 29 || NO:TARGET == 30 || NO:TARGET == 270)
+	TIMES SOURCE:12 , 2.00
+	SOURCE:19 += 1000
+	SOURCE:22 += 1000
+	SOURCE:23 += 1000
+;대상이 텐구, 갓빠, 귀신이라면 조교의 효과 상승(유명 캐릭터는 종족 빗나가도 해당, 그 이외는 TALENT로 판단)
+ELSEIF LOCAL:2 >= 3 && (NO:TARGET == 23 || NO:TARGET == 32 || NO:TARGET == 40 || NO:TARGET == 41 || NO:TARGET == 79 || TALENT:210 || TALENT:214 || TALENT:215)
+	TIMES SOURCE:12 , 2.00
+	SOURCE:19 += 1000
+	SOURCE:22 += 1000
+	SOURCE:23 += 1000
+ENDIF
+
+;삽입 회수×설정 요금
+IF TALENT:0
+	LOCAL:7 += LOCAL:3 * (LOCAL:5 + LOCAL:6 - 1)
+ELSE
+	LOCAL:7 += LOCAL:3 * (LOCAL:5 + LOCAL:6)
+ENDIF
+;질내사정 회수분만큼 추가
+LOCAL:7 += LOCAL:4 * LOCAL:3 * 2
+
+;전세계 공중육 변기 수정
+IF LOCAL:1 == 1
+	TIMES SOURCE:24 , 1.50
+	TIMES SOURCE:22 , 2.00
+	TIMES LOCAL:7 , 3.00
+;전인류의 공중육 변기 수정
+ELSEIF LOCAL:1 == 2
+	TIMES SOURCE:18 , 1.50
+	TIMES SOURCE:12 , 2.00
+	TIMES LOCAL:7 , 2.50
+;열핵공중육 변기 수정
+ELSEIF LOCAL:1 == 3
+	TIMES SOURCE:31 , 1.20
+	TIMES LOCAL:7 , 1.50
+ENDIF
+PRINTL
+PRINTL 그들이 떠난 자리에는 금화가 남아 있었다.
+MONEY:1 = LOCAL:7
+CALL SHOW_MONEY_INCREACE
+;--------------------------------------------------
+;육변기 플레이로 번 최고 금액 판정 처리
+SIF MONEY:1 > MONEY:974
+	CALL NEW_HIGH_INCOME_ALL, 974
+SIF MONEY:1 > CFLAG:86
+	CALL NEW_HIGH_INCOME_SLAVE, 86
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+WAIT
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+;조교 대상의 공중육 변기 플레이 실행 회수
+CFLAG:54 += 1
+
+RETURN 1

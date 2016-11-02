@@ -1,0 +1,518 @@
+﻿;=============================================================================
+;목덜미귀고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE328
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:328 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;直前が助手によるセックス系でありかつその조수가 オトコではない場合
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && TFLAG:102 && ASSIPLAY && TALENT:PLAYER:120 == 0
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼)3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM328
+;직전이 정상위의 경우, 정상위 목덜미귀고문에 파생
+IF TFLAG:102 && PREVCOM == 20 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTL 정상위 목덜미귀고문
+	TSTR:0 = 정상위 목덜미귀고문
+	LOCAL:1 = 1
+;직전이 후배위의 경우, 대면좌위 목덜미귀고문에 파생
+ELSEIF TFLAG:102 && PREVCOM == 21 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTL 후배위 목덜미귀고문
+	TSTR:0 = 후배위 목덜미귀고문
+	LOCAL:1 = 2
+;직전이 대면좌위의 경우, 대면좌위 목덜미귀고문에 파생
+ELSEIF TFLAG:102 && PREVCOM == 22 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTL 대면좌위 목덜미귀고문
+	TSTR:0 = 대면좌위 목덜미귀고문
+	LOCAL:1 = 3
+;직전이 배면좌위의 경우, 배면좌위 목덜미귀고문에 파생
+ELSEIF TFLAG:102 && PREVCOM == 23 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTL 배면좌위 목덜미귀고문
+	TSTR:0 = 배면좌위 목덜미귀고문
+	LOCAL:1 = 4
+;주인 조교시에 직전이 조수의 목덜미귀고문의 경우, 또는
+;조수 조교시에 직전이 주인의 목덜미귀고문의 경우, 더블 목덜미귀고문에 파생
+ELSEIF PREVCOM == 328 && ((ASSIPLAY == 0 && TFLAG:133) || (ASSIPLAY && TFLAG:133 == 0))
+	CALL COM_ABLE337
+	SIF RESULT == 1
+		JUMP COM337
+;통상의 목덜미귀고문
+ELSE
+	PRINTL 목덜미귀고문
+	TSTR:0 = 목덜미귀고문
+	LOCAL:1 = 0
+ENDIF
+;말용
+TFLAG:99 = LOCAL:1
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+IF LOCAL:1 > 0
+	LOCAL = 0
+
+	;ABL:기교를 본다
+	IF ABL:12 == 0
+		LOCAL = 1500
+	ELSEIF ABL:12 == 1
+		LOCAL = 1600
+	ELSEIF ABL:12 == 2
+		LOCAL = 1800
+	ELSEIF ABL:12 == 3
+		LOCAL = 2000
+	ELSEIF ABL:12 == 4
+		LOCAL = 2400
+	ELSE
+		LOCAL = 3000
+	ENDIF
+
+	;순종을 본다
+	LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+	;욕망을 본다
+	LOCAL = EJACULATIONCHECK_ABL_11_1(TARGET, LOCAL)
+	;윤활을 본다
+	LOCAL = EJACULATIONCHECK_PALAM_10_1(TARGET, LOCAL)
+
+	;조교자의 C감각을 본다
+	LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+	SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		BASE:PLAYER:2 += LOCAL
+ENDIF
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:1 += 40
+
+;쾌C
+SOURCE:0 = 0
+;쾌V
+SOURCE:1 = 0
+;사랑
+SOURCE:11 = 100
+;성행동
+SOURCE:15 = 50
+;아픔
+SOURCE:20 = 0
+;접촉
+SOURCE:10 = 200
+;액체 추가
+SOURCE:19 = 50
+;욕정 추가
+SOURCE:18 = 80
+;일탈
+SOURCE:31 = 0
+;반감 추가
+SOURCE:32 = 0
+;순종 추가
+SOURCE:17 = 50
+;쾌B
+SOURCE:3 = 0
+
+;커맨드 파생을 본다
+;정상위
+IF LOCAL:1 == 1
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:19 , 2.00
+	TIMES SOURCE:18 , 2.00
+	TIMES SOURCE:17 , 2.00
+;후배위
+ELSEIF LOCAL:1 == 2
+	TIMES SOURCE:11 , 1.50
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:19 , 2.00
+	TIMES SOURCE:18 , 2.00
+	TIMES SOURCE:17 , 1.50
+;대면좌위
+ELSEIF LOCAL:1 == 3
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:19 , 2.00
+	TIMES SOURCE:18 , 2.00
+	TIMES SOURCE:17 , 2.00
+;배면좌위
+ELSEIF LOCAL:1 == 4
+	TIMES SOURCE:11 , 1.50
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:19 , 2.00
+	TIMES SOURCE:18 , 2.00
+	TIMES SOURCE:17 , 1.50
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:19 , 1.00
+	TIMES SOURCE:18 , 1.00
+	TIMES SOURCE:17 , 1.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:19 , 1.40
+	TIMES SOURCE:18 , 1.40
+	TIMES SOURCE:17 , 1.10
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:19 , 2.20
+	TIMES SOURCE:18 , 2.20
+	TIMES SOURCE:17 , 1.30
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:11 , 2.20
+	TIMES SOURCE:19 , 3.40
+	TIMES SOURCE:18 , 3.40
+	TIMES SOURCE:17 , 1.60
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:11 , 3.00
+	TIMES SOURCE:19 , 5.00
+	TIMES SOURCE:18 , 5.00
+	TIMES SOURCE:17 , 2.00
+ELSE
+	TIMES SOURCE:11 , 4.00
+	TIMES SOURCE:19 , 7.00
+	TIMES SOURCE:18 , 7.00
+	TIMES SOURCE:17 , 2.50
+ENDIF
+
+;ABL:욕망을 본다
+IF ABL:11 == 0
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:19 , 1.00
+	TIMES SOURCE:18 , 1.00
+ELSEIF ABL:11 == 1
+	TIMES SOURCE:11 , 1.10
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:19 , 1.10
+	TIMES SOURCE:18 , 1.10
+ELSEIF ABL:11 == 2
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:19 , 1.30
+	TIMES SOURCE:18 , 1.30
+ELSEIF ABL:11 == 3
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:15 , 2.20
+	TIMES SOURCE:19 , 1.60
+	TIMES SOURCE:18 , 1.60
+ELSEIF ABL:11 == 4
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:15 , 3.00
+	TIMES SOURCE:19 , 2.00
+	TIMES SOURCE:18 , 2.00
+ELSE
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:15 , 4.00
+	TIMES SOURCE:19 , 2.50
+	TIMES SOURCE:18 , 2.50
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 >= 3
+	TIMES SOURCE:18 , 1.50
+	TIMES SOURCE:17 , 1.50
+ENDIF
+
+;TALENT:음란을 본다
+IF TALENT:174
+	TIMES SOURCE:19 , 1.50
+	TIMES SOURCE:18 , 1.20
+ENDIF
+
+;조교자의 TALENT:혀사용을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:19 , 1.20
+	TIMES SOURCE:18 , 1.50
+ENDIF
+
+;미약에 의한 욕정 보너스
+SIF TEQUIP:11
+	TIMES SOURCE:18 , 1.50
+
+;삽입 시한정의 처리
+IF LOCAL:1 > 0
+	;ABL:V감각을 본다
+	IF ABL:1 == 0
+		SOURCE:1 = 50
+		SOURCE:11 += 50
+	ELSEIF ABL:1 == 1
+		SOURCE:1 = 150
+		SOURCE:11 += 100
+	ELSEIF ABL:1 == 2
+		SOURCE:1 = 300
+		SOURCE:11 += 200
+	ELSEIF ABL:1 == 3
+		SOURCE:1 = 600
+		SOURCE:11 += 300
+	ELSEIF ABL:1 == 4
+		SOURCE:1 = 1000
+		SOURCE:11 += 500
+	ELSE
+		SOURCE:1 = 1500
+		SOURCE:11 += 700
+	ENDIF
+
+	;EXP:V경험을 본다
+	IF EXP:0 < EXPLV:1
+		TIMES SOURCE:1 , 0.20
+		SOURCE:20 = 3500
+		SIF ASSIPLAY && TALENT:PLAYER:120 == 0
+			TCVAR:50 += 1
+	ELSEIF EXP:0 < EXPLV:2
+		TIMES SOURCE:1 , 0.60
+		SOURCE:20 = 250
+	ELSEIF EXP:0 < EXPLV:3
+		TIMES SOURCE:1 , 1.00
+		SOURCE:20 = 50
+	ELSEIF EXP:0 < EXPLV:4
+		TIMES SOURCE:1 , 1.10
+		SOURCE:20 = 10
+	ELSEIF EXP:0 < EXPLV:5
+		TIMES SOURCE:1 , 1.20
+		SOURCE:20 = 0
+	ELSE
+		TIMES SOURCE:1 , 1.30
+		SOURCE:20 = 0
+	ENDIF
+
+	;정상위 목덜미귀고문
+	IF LOCAL:1 == 1
+		;쾌V에 보너스
+		TIMES SOURCE:1 , 1.50
+	;후배위 목덜미귀고문
+	ELSEIF LOCAL:1 == 2
+		;쾌B가 들어간다
+		;ABL:B감각을 본다
+		IF ABL:3 == 0
+			SOURCE:3 = 40
+			SOURCE:11 += 50
+		ELSEIF ABL:3 == 1
+			SOURCE:3 = 150
+			SOURCE:11 += 200
+		ELSEIF ABL:3 == 2
+			SOURCE:3 = 400
+			SOURCE:11 += 400
+		ELSEIF ABL:3 == 3
+			SOURCE:3 = 700
+			SOURCE:11 += 600
+		ELSEIF ABL:3 == 4
+			SOURCE:3 = 1000
+			SOURCE:11 += 1000
+		ELSE
+			SOURCE:3 = 1600
+			SOURCE:11 += 1400
+		ENDIF
+	;대면좌위 목덜미귀고문
+	ELSEIF LOCAL:1 == 3
+		;쾌C가 들어간다
+		;ABL:C감각을 본다
+		IF ABL:0 == 0
+			SOURCE:0 = 40
+		ELSEIF ABL:0 == 1
+			SOURCE:0 = 160
+		ELSEIF ABL:0 == 2
+			SOURCE:0 = 500
+		ELSEIF ABL:0 == 3
+			SOURCE:0 = 900
+		ELSEIF ABL:0 == 4
+			SOURCE:0 = 1400
+		ELSE
+			SOURCE:0 = 2100
+		ENDIF
+	;배면좌위 목덜미귀고문
+	ELSEIF LOCAL:1 == 4
+		;쾌B가 들어간다
+		;ABL:B감각을 본다
+		IF ABL:3 == 0
+			SOURCE:3 = 50
+			LOCAL:2 = 50
+		ELSEIF ABL:3 == 1
+			SOURCE:3 = 200
+			LOCAL:2 = 150
+		ELSEIF ABL:3 == 2
+			SOURCE:3 = 500
+			LOCAL:2 = 250
+		ELSEIF ABL:3 == 3
+			SOURCE:3 = 900
+			LOCAL:2 = 350
+		ELSEIF ABL:3 == 4
+			SOURCE:3 = 1300
+			LOCAL:2 = 600
+		ELSE
+			SOURCE:3 = 1800
+			LOCAL:2 = 850
+		ENDIF
+
+		;TALENT:음유를 본다
+		IF TALENT:174
+			TIMES SOURCE:3 , 1.20
+			TIMES LOCAL:2 , 1.20
+		ENDIF
+		SOURCE:11 += LOCAL:2
+	ENDIF
+
+	;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+	TFLAG:1 = 1
+	SIF TALENT:0 && TALENT:150 && ASSIPLAY == 0
+		TFLAG:2 = TALENT:0
+
+	TCVAR:0 += 1
+	IF PLAYER == MASTER
+		TCVAR:42 += 1
+		SIF TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1
+			CFLAG:173 += 1
+	ENDIF
+
+	;-------------------------------------------------
+	;사정 체크
+	;-------------------------------------------------
+	TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+	;사정시의 처리
+	IF TFLAG:91 >= 1
+		IF ABL:10 >= 3 && ABL:11 >= 3 && FLAG:10
+			IF LOCAL:1 == 1 || LOCAL:1 == 2
+				PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 어깨로 해가 보고 붙도록 달라붙어 왔다….
+			ELSE
+				PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 등을 뒤로 돌려 젖히고, %CALLNAME:PLAYER%에게 몸을 기댔다….
+			ENDIF
+		PRINTL
+		ENDIF
+ 
+		;사정처 타입의 설정
+		TFLAG:703 = 1
+		;사정처 선택의 가능·불가
+		TFLAG:704 = 0
+		;범용적인 처리는 이 함수로 실시한다
+		;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+		CALL SAMEN_SHOOT
+	ENDIF
+
+	;사정에 관계없이 행해지는 처리는 여기로부터
+	;노예의 V⇔조교자의 P의 불결이 이동
+	STAIN:3 |= STAIN:PLAYER:2
+	STAIN:PLAYER:2 |= STAIN:3
+ENDIF
+
+;반발 각인에 의한 패널티
+IF MARK:9 >= 2
+	TIMES SOURCE:11 , 0.50
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:32 , 2.00
+	TIMES SOURCE:17 , 0.20
+ENDIF
+
+;조교시 메시지 표시
+CALL TRAIN_MESSAGE_COM328
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM328
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+;정상위
+IF TFLAG:99 == 1
+	IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINT 페니스를 
+	ELSE
+		PRINT 페니스 밴드를 
+	ENDIF
+	PRINTFORML 삽입한 채로 엎어지듯이 하며, %CALLNAME:TARGET%의 목덜미에 입맞추고
+	PRINTFORM 허리를 천천히 움직이면서 %CALLNAME:TARGET%의 
+	IF MARK:2 >= 2 || MARK:9 < 2 || TALENT:150
+		PRINTW 귓전에 달콤하게 속삭였다….
+	ELSE
+		PRINTW 귓구멍에 살그머니 혀끝을 가져갔다….
+	ENDIF
+;후배위
+ELSEIF TFLAG:99 == 2
+	IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINT 페니스를 
+	ELSE
+		PRINT 페니스 밴드를 
+	ENDIF
+	PRINTFORML 삽입한 채로 뒤로부터 껴안아 %CALLNAME:TARGET%의 목덜미에 입맞추고,
+	PRINTFORM 허리를 천천히 움직이면서 %CALLNAME:TARGET%의 
+	IF TALENT:112 || TALENT:113
+		PRINT 손바닥으로 감싸기 힘들 정도로 같은 큰 가슴을 비볐다….
+	ELSEIF TALENT:111
+		PRINT 작게 흔들리는 가슴의 끄트머리를 손가락으로 잡고 돌렸다….
+	ELSEIF TALENT:110
+		PRINT 평평한 가슴의 작은 돌기를 손가락으로 튕겼다….
+	ELSE
+		PRINT 부드러운 가슴을 양손바닥으로 어루만지고 돌렸다….
+	ENDIF
+	PRINTW
+;대면좌위
+ELSEIF TFLAG:99 == 3
+	IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINT 페니스를 
+	ELSE
+		PRINT 페니스 밴드를 
+	ENDIF
+	PRINTFORML 삽입한 채로 %조사선택(CALLNAME:TARGET, "를")% 꼭 안으며,
+	PRINTFORMW 허리를 움직이면서 %CALLNAME:TARGET%의 목덜미에 달라붙어, 귀의 뒤를 핥아 올렸다….
+;배면좌위
+ELSEIF TFLAG:99 == 4
+	IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINT 페니스를 
+	ELSE
+		PRINT 페니스 밴드를 
+	ENDIF
+	PRINTFORML 삽입한 채로 %조사선택(CALLNAME:TARGET, "를")% 꼭 껴안아,
+	IF TALENT:112 || TALENT:113
+		PRINT 손바닥으로 감싸기 힘들 정도로 같은 큰 가슴을 비비고, 
+	ELSEIF TALENT:111
+		PRINT 작게 흔들리는 가슴의 끄트머리를 손가락으로 집어 짜며, 
+	ELSEIF TALENT:110
+		PRINT 평평한 가슴의 작은 돌기를 손가락으로 튕기며, 
+	ELSE
+		PRINT 부드러운 가슴을 양손바닥으로 어루만지고 돌리며, 
+	ENDIF
+	PRINTW 허리를 움직이면서 목덜미와 귓불의 뒤에 몇 번이나 키스를 했다….
+;통상
+ELSE
+	IF MARK:2 >= 2 || MARK:9 < 2 || TALENT:150
+		PRINTFORM %조사선택(CALLNAME:TARGET, "를")% 껴안아 
+	ELSE
+		PRINTFORM 날뛰는 %조사선택(CALLNAME:TARGET, "를")% 억눌러 
+	ENDIF
+	PRINTW 목덜미를 살짝 핥아 올리고 귓불을 달콤하게 물었다….
+ENDIF

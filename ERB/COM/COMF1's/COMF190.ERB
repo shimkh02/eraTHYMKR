@@ -1,0 +1,109 @@
+﻿;=============================================================================
+;유두 로터
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE190
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:190 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:0 == 0 && NOITEM == 0
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM190
+TSTR:7 = 로터
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 0
+	CALL NAMECHECK_CUSTOMTOOL
+	IF TSTR:8 != "로터"
+		PRINTFORML 유두 %TSTR:8%
+	ELSE
+		PRINTL 유두 로터
+	ENDIF 
+ELSE
+	TSTR:9 = %TSTR:7%
+	PRINTL 유두 로터
+ENDIF
+TSTR:0 = 유두 로터
+CALL TRAIN_MESSAGE_COM190
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 80
+
+SOURCE:12 = 120
+SOURCE:31 = 70
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 150
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 360
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 840
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1500
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 2200
+ELSE
+	SOURCE:3 = 2800
+ENDIF
+
+;음유
+SIF TALENT:174
+	TIMES SOURCE:3 , 1.40
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 0
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:3
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:3 = FLAG:1120
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM190
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+SIF TALENT:134
+	PRINT 모유가 방울져 떨어지는 
+SIF PALAM:13 >= PALAMLV:3
+	PRINT 기대에 딱딱하게 솟은 
+IF TEQUIP:68
+	PRINTFORMW 유두의 주위를 %조사선택(TSTR:9, "로")% 위를 덧썼다….
+ELSE
+	PRINTFORMW 유두에 진동하는 %조사선택(TSTR:9, "를")% 꽉 눌렀다….
+ENDIF

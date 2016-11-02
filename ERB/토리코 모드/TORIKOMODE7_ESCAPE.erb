@@ -1,0 +1,772 @@
+﻿;=============================================================================
+;7.경비 시스템 관련 - 탈출 관련 함수들
+;노예가 탈주하고 그걸 막기 위해 구속하고 등의 함수들.
+;=============================================================================
+;--------------------------------------------
+;탈출확률 계산함수. 
+;ARG : 캐릭터등록번호
+;반환 : 탈출확률(%)
+@CALC_ESCAPE_PERCENT_TORIKOMODE, ARG
+;기본 탈출확률은 10 이다.
+LOCAL = 10
+;경비력에 의한 가감변수
+LOCAL:1 = 0
+;체력보정치
+LOCAL:2 = 0
+;기력보정
+LOCAL:3 = 0
+;노예수보정.
+LOCAL:4 = 0
+;.................................................................
+;보정시작
+
+;체력보정. 1500 기준으로 +-  (+5~-5)
+LOCAL:2 = (BASE:ARG:0 -1500)/200
+LOCAL:2 = LIMIT(LOCAL:2, -5, 5)
+LOCAL:0 += LOCAL:2
+;기력보정. 1000 기준으로 +-  (+5~-5)
+LOCAL:3 = (BASE:ARG:1 -1000)/200
+LOCAL:3 = LIMIT(LOCAL:3, -5, 5)
+LOCAL:0 += LOCAL:3
+;디버그
+;PRINTFORML #기력체력 보정후 탈출확률은 {LOCAL}
+
+;스트레스에 따라 +(소량. 0~12)
+CALL CALC_STRESS_LEVEL_TORIKOMODE, ARG
+LOCAL += RESULT:0*2
+;디버그
+;PRINTFORML #스트레스 보정후 탈출확률은 {LOCAL}
+
+;현재 보유 노예수에 따라 + (대량. 노예가 많을수록 감시가 허술해진다는 의미. 본인은 제외. 최대 50
+CALL CALC_CHARANUM_INHOUSE_TORIKOMODE
+LOCAL:4 = ((RESULT)-1)*10
+LOCAL:4 = LIMIT(LOCAL:4, 0, 50)
+LOCAL:0 += LOCAL:4
+;디버그
+;PRINTFORML #노예수 보정후 탈출확률은 {LOCAL} 
+
+;스킬과 각인에 따른 보정.
+;10,순종. 당 2점 하락
+;0,고통각인. 당 1점 하락
+;1,쾌락각인. 당 2점 하락
+;2,굴복각인. 당 3점 하락
+;4,치욕각인. 당 1점 하락
+;8,공포각인. 당 2점 하락
+;9,반발각인. 당 8점 상승
+LOCAL += - (ABL:ARG:10)*2 - (MARK:ARG:0) - (MARK:ARG:1)*2 - (MARK:ARG:2)*3 - (MARK:ARG:4) - (MARK:ARG:8)*2 + (MARK:ARG:9)*8
+;디버그
+;PRINTFORML #소질각인 보정후 탈출확률은 {LOCAL} 
+
+;소질보정
+	;10겁쟁이
+	SIF TALENT:ARG:10
+		LOCAL -= 3
+	;11반항적
+	SIF TALENT:ARG:11
+		LOCAL += 3
+	;12꿋꿋함
+	SIF TALENT:ARG:12
+		LOCAL += 2
+	;13솔직함
+	SIF TALENT:ARG:13
+		LOCAL -= 2
+	;15건방짐
+	SIF TALENT:ARG:15
+		LOCAL += 2
+	;16프라이드높음
+	SIF TALENT:ARG:16
+		LOCAL += 3
+	;17프라이드낮음
+	SIF TALENT:ARG:17
+		LOCAL -= 3
+	;20자제심
+	SIF TALENT:ARG:20
+		LOCAL -= 3
+	;23호기심
+	SIF TALENT:ARG:23
+		LOCAL -= 2
+	;25낙관적
+	SIF TALENT:ARG:25
+		LOCAL -= 3
+	;26비관적
+	SIF TALENT:ARG:26
+		LOCAL += 3
+	;28눈에띄고싶어함
+	SIF TALENT:ARG:28
+		LOCAL -= 3
+	;127소인체형
+	SIF TALENT:ARG:127
+		LOCAL += 3
+	;128작은체형
+	SIF TALENT:ARG:128
+		LOCAL += 5
+	;129거구
+	SIF TALENT:ARG:129
+		LOCAL -= 10
+	;139변환자재
+	SIF TALENT:ARG:139
+		LOCAL += 4
+	;140임신
+	SIF TALENT:ARG:140
+		LOCAL -= 20
+	;141육아중
+	SIF TALENT:ARG:141
+		LOCAL -= 100
+	;143포란중
+	SIF TALENT:ARG:143
+		LOCAL -= 30
+	;150연모
+	SIF TALENT:ARG:150
+		LOCAL -= 999
+	;160복종
+	SIF TALENT:ARG:160
+		LOCAL -= 999
+	;170음란
+	SIF TALENT:ARG:170
+		LOCAL -= 999
+;디버그
+;PRINTFORML #소질 보정후 탈출확률은 {LOCAL}
+
+;구속구 보정 (*)
+	;문
+	SIF CFLAG:ARG:4010 & 1
+		TIMES LOCAL, 0.85
+		LOCAL -= 4
+	;밧줄
+	SIF CFLAG:ARG:4010 & 2
+		TIMES LOCAL, 0.85
+		LOCAL -= 4
+	;볼재갈
+	SIF CFLAG:ARG:4010 & 4
+		TIMES LOCAL, 0.95
+		LOCAL -= 2
+	;옷
+	SIF CFLAG:ARG:4010 & 8
+		TIMES LOCAL, 0.9
+		LOCAL -= 4
+	;아이마스크
+	SIF CFLAG:ARG:4010 & 16
+		TIMES LOCAL, 0.95
+		LOCAL -= 2
+	;로터
+	SIF CFLAG:ARG:4010 & 32
+		TIMES LOCAL, 0.95
+		LOCAL -= 2
+	;애널비즈
+	SIF CFLAG:ARG:4010 & 64
+		TIMES LOCAL, 0.95
+		LOCAL -= 2
+	;클리캡
+	SIF CFLAG:ARG:4010 & 128
+		TIMES LOCAL, 0.95
+		LOCAL -= 2
+	;니플캡
+	SIF CFLAG:ARG:4010 & 256
+		TIMES LOCAL, 0.95
+		LOCAL -= 2
+;디버그
+;PRINTFORML #구속구 보정후 탈출확률은 {LOCAL}
+
+;경비대장이 있을때, 상성에 따라 +-
+	; 미작성
+;구출자가 있을 때, 상성에 따라 +-
+	; 미작성
+
+;친자식일때, 탈출확률은 0에 수렴한다.
+SIF CFLAG:ARG:3105 == CFLAG:MASTER:3109 || CFLAG:ARG:3107 == CFLAG:MASTER:3109
+	LOCAL = 0
+
+;감시력에 따라 가감. 감시력 50당 10%씩 지수로 낮아짐.
+CALL CALC_OUTLOOK_POWER_TORIKOMODE
+LOCAL:1 = RESULT
+WHILE LOCAL:1 > 0
+	LOCAL = LOCAL * 90 /100
+	LOCAL:1 -= 50
+WEND 
+;디버그
+;PRINTFORML #감시력 보정후 탈출확률은 {LOCAL}
+
+;최소최대보정. 0~95%
+LOCAL = LIMIT(LOCAL, 0, 95)
+;디버그
+;PRINTFORML #최대최소 보정후 탈출확률은 {LOCAL}
+
+;반환
+RESULT = LOCAL
+
+RETURN RESULT
+
+
+;--------------------------------------------
+;탈출시도 체크
+;ARG : 캐릭터등록번호
+;RESULT (1 시도한다 0 시도하지 않는다)
+@CHECK_ESCAPE_TRYORNOT_TORIKOMODE, ARG
+;탈출확률을 받아온다.
+CALL CALC_ESCAPE_PERCENT_TORIKOMODE, ARG
+LOCAL = RESULT
+IF LOCAL > RAND:100
+	RESULT = 1
+ELSE
+	RESULT = 0
+ENDIF
+;디버그
+;PRINTFORML #%CALLNAME:ARG%의 탈출확률={LOCAL}퍼센트. 탈출시도결과는 {RESULT} 이다.
+
+RETURN RESULT
+
+
+
+;--------------------------------------------
+;탈출시도시 구속풀기 시도.
+;ARG : 캐릭터등록번호
+@PREPARE_ESCAPE_TORIKOMODE, ARG
+;탈출 진행상태 체크
+;1:실행중  0:실패
+LOCAL:0 = 1
+
+;밧줄해제
+IF (CFLAG:ARG:4010 & 2) &&LOCAL:0 == 1
+	IF RAND:100 > 10
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 밧줄의 느슨한 부분을 찾아 겨우겨우 풀어냈다.
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 밧줄을 풀려고 발버둥 쳤지만, 그럴 수록 더욱 더 밧줄이 조여와 움직일 수가 없다.
+		LOCAL:0 = 0
+	ENDIF
+ENDIF
+;알몸해제
+IF (CFLAG:ARG:4010 & 8)  &&LOCAL:0 == 1
+	IF RAND:100 > 10
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 이불을 벗겨 알몸을 감쌌다.
+	ELSEIF
+		PRINTFORMW %조사처리(CALLNAME:ARG,"가")% 알몸을 가릴 만한 물건을 찾아봤지만, 깨끗이 치워진 방안에는 아무것도 없다...
+		PRINTFORMW 이런 모습으로는 멀리 가지 못할 것이라고 생각한 %조사처리(CALLNAME:ARG,"는")% 다음 기회를 노리기로 했다.
+		LOCAL:0 = 0
+	ENDIF
+ENDIF
+;철문해제
+IF (CFLAG:ARG:4010 & 1) &&LOCAL:0 == 1
+	IF RAND:100 > 10
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 잠궈놓은 문을 머리핀으로 여는 데 성공했다.
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 잠긴 문을 어떻게든 열어보려 했으나, 굳게 닫힌 문은 움직일 생각을 하지 않는다...
+		LOCAL:0 = 0
+	ENDIF
+ENDIF
+
+;스케쥴, 구속구 처리.
+IF LOCAL:0 == 1
+	;남은 구속구가 있다면 모두 해방한다!
+	IF CFLAG:ARG:4010 >0 && LOCAL:0 == 1
+		CFLAG:ARG:4010 = 0
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%조사처리(CALLNAME:ARG,"는")% 구속에서 풀려났다>
+		RESETCOLOR
+	ENDIF
+	;스케쥴을 취소한다!
+	IF CFLAG:ARG:4 > 1
+		CFLAG:ARG:4 = 0
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW <%CALLNAME:ARG%에게 부여된 스케쥴은 무효가 되었다>
+		RESETCOLOR
+	ENDIF
+	RESULT = 1
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+	PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 탈출을 포기했다...
+	PRINTL
+	RESETCOLOR
+	RESULT = 0
+ENDIF
+
+;반환
+RETURN RESULT
+
+;--------------------------------------------
+;탈출력 계산
+@CALC_ESCAPE_POWER_TORIKOMODE, ARG
+;기본 탈출력은 50이다.
+LOCAL = 50
+;체력보정. 1500 기준으로 +-  (+15~-15)
+LOCAL += (BASE:ARG:0 -1500)/100
+;기력보정. 1000 기준으로 +-  (+10~-10)
+LOCAL += (BASE:ARG:1 -1000)/100
+;경비대장이 있을때, 상성에 따라 +-
+	; 미작성
+;구출자가 있을 때, 상성에 따라 +-
+	; 미작성
+;반환
+RESULT = LOCAL
+RETURN RESULT
+
+;--------------------------------------------
+;감시력 계산 (탈출체크용)
+@CALC_OUTLOOK_POWER_TORIKOMODE
+;기본 감시력은 100이다. (경비 미고용시를 위한 가산치)
+LOCAL = 100
+;보유한 경비원에 따라 감시력 변동
+CALL CALC_SECURITY_POWER_TORIKOMODE
+LOCAL += FLAG:5041
+
+;보유한 경비대장에 따라 감시력 변동
+	;미개발
+
+;디버그
+;PRINTFORML 현재의 총 감시력은 {LOCAL} 입니다. 기본 감시력 100 +  FLAG:5041({ FLAG:5041})
+;반환
+RESULT = LOCAL
+RETURN RESULT
+
+;--------------------------------------------
+;탈출시도시, 감시에 걸릴 것인지 체크. 대략 감시력100일때 1/2, 200일때 1/4, 300일때 1/6 정도로 생각하면 된다. 
+@CHECK_ESCAPE_DETECTORNOT_TORIKOMODE, ARG
+;탈출력 계산
+CALL CALC_ESCAPE_POWER_TORIKOMODE, ARG
+LOCAL:0 = RESULT:0
+LOCAL:1 = RAND(LOCAL:0)
+;감시력 계산
+CALL CALC_OUTLOOK_POWER_TORIKOMODE
+LOCAL:2 = RESULT:0
+LOCAL:3 = RAND(LOCAL:2)
+;감시력과 비교
+IF LOCAL:1 >= LOCAL:3
+	RESULT = 1
+ELSE
+	RESULT = 0
+ENDIF
+;디버그
+;PRINTFORML #최대 감시력={LOCAL:2} 현재감시력={LOCAL:3} 최대탈출력={LOCAL:0}. 현재탈출력={LOCAL:1}. 탈출결과는 {RESULT} 이다.
+;반환
+RETURN RESULT
+
+;--------------------------------------------
+;노예의 구속상태를 표시한다.
+@ARRANGE_RESTRICTION_TORIKOMODE, ARG
+IF CFLAG:ARG:4010 == 0
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+	PRINTFORM <없음>
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&1
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+	PRINTFORM <감금>
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&2
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+	PRINTFORM <밧줄구속>
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&4
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+	PRINTFORM <알몸> 
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&8
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORM <볼재갈>
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&16
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORM <아이마스크> 
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&32
+	CALL SETCOLOR_TORIKOMODE, "PINK", 1
+	IF TALENT:ARG:120
+		PRINTFORM <로터부착>
+	ELSE
+		PRINTFORM <로터삽입>
+	ENDIF
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&64
+	CALL SETCOLOR_TORIKOMODE, "PINK", 1
+	PRINTFORM <애널비즈>
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&128
+	CALL SETCOLOR_TORIKOMODE, "PINK", 1
+	PRINTFORM <클리캡>
+	RESETCOLOR
+ENDIF
+IF CFLAG:ARG:4010&256
+	CALL SETCOLOR_TORIKOMODE, "PINK", 1
+	PRINTFORM <니플캡>
+	RESETCOLOR
+ENDIF
+
+;--------------------------------------------
+;노예를 풀어준다. 모두 풀어주는 건 아니고 <구속구> 만 풀어준다.
+;로터등은 그대로 달고있음에 주의.
+;ARG:노예번호
+;ARGS:풀 도구
+@RESTRICTION_RELEASE, ARG
+IF CFLAG:ARG:4010&2 > 0
+	;문
+	SIF CFLAG:ARG:4010 & 1 
+	CFLAG:ARG:4010 -= 1
+	;밧줄
+	SIF CFLAG:ARG:4010 & 2
+	CFLAG:ARG:4010 -= 2
+	;알몸
+	SIF CFLAG:ARG:4010 & 4
+	CFLAG:ARG:4010 -= 4
+	;볼재갈
+	SIF CFLAG:ARG:4010 & 8
+	CFLAG:ARG:4010 -= 8
+	;아이마스크
+	SIF CFLAG:ARG:4010 & 16
+	CFLAG:ARG:4010 -= 16
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+	PRINTFORMW <%CALLNAME:ARG%의 구속을 풀고 옷을 입혔다>
+	RESETCOLOR
+ELSE
+	;
+ENDIF
+
+;--------------------------------------------
+;노예를 묶는다.
+;ARG:노예번호
+;ARGS:묶을 도구
+@RESTRICTION_BIND, ARG
+IF CFLAG:ARG:4010 & 2
+	;
+ELSE
+	CFLAG:ARG:4010 ^= 2
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORMW <%CALLNAME:ARG%를 밧줄로 구속했다>
+	RESETCOLOR
+ENDIF
+
+
+;--------------------------------------------------
+;실종 포인트 계산 함수.
+;실종포인트를 계산해서 플래그에 저장한다.
+;실종포인트 계산식 = 반발각인 + 랜덤수치 + 보유 노예수 보정치.
+;소질보정은 딱히 넣을 게 없지만, 함락상태의 보정은 존재함.그래서 빨리 돌아오게 된다는 식
+@CALC_MISSINGPOWER_TORIKOMODE, ARG
+;실종포인트 변수
+LOCAL:0 = 0
+
+;초기치 랜덤. 300~500
+LOCAL:0 = RAND:300 + 200
+;반발각인 보정. 렙당 100점.
+LOCAL:0 += MARK:ARG:9 * 100
+;함락상태면 -100점
+SIF TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170
+	LOCAL:0 -= 100
+;남은 식구수만큼 보정
+CALL CALC_CHARANUM_INHOUSE_TORIKOMODE
+LOCAL:0 += RESULT*50
+;플래그에 저장한다.
+CFLAG:ARG:4011 = LOCAL:0
+
+
+
+;--------------------------------------------------
+;노예 수색 확률 계산 함수
+@CALC_SEARCH_TORIKOMODE, ARG
+;경비력 계산.
+CALL CALC_SECURITY_POWER_TORIKOMODE
+;실종 포인트와 비교해서 계산한다.
+LOCAL:0 =  FLAG:5043*100 / ((FLAG:5043) + (CFLAG:ARG:4011))
+;보정
+LOCAL:0 = LIMIT (LOCAL:0, 1, 95)
+RESULT = LOCAL:0
+;디버그
+;PRINTFORML %CALLNAME:ARG%의 실종력은 {CFLAG:ARG:4011}
+;PRINTFORML 수색력은 {FLAG:5043}
+;PRINTFORML LOCAL:0 ={LOCAL:0}
+RETURN RESULT
+
+
+;--------------------------------------------------
+;구속구에 의한 효과처리. 확률발동한다.
+;ARG = 캐릭터등록번호
+;ARG:1 = 함수 작동 모드. 1 = 턴 또는 하루 종료시 전반적인 효과를 처리. 2 = 스케쥴에 미치는 영향을 처리.
+@EFFECT_BY_RESTRICTION_TORIKOMODE, ARG, ARG:1
+;스케쥴 방해수치. 
+LOCAL:0 = 0
+;..................................................................................
+;모드1: 턴종료시의 처리.
+IF ARG:1 == 1
+	;감금
+	IF CFLAG:ARG:4010&1
+		IF RAND:100 > 10
+			PRINTFORML %조사처리(CALLNAME:ARG,"는")% 감금당한 것에 불만을 품는 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 기력↓, 스트레스↑, 부정의구슬+
+			RESETCOLOR
+			;기력감소
+			BASE:ARG:1 -= RAND:100+50
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;부정의 구슬+ (반발각인에 따라 제곱상승)
+			JUEL:ARG:100 += 5*(MARK:ARG:9)*(MARK:ARG:9) +5
+		ENDIF
+	ENDIF
+	;밧줄
+	IF CFLAG:ARG:4010&2
+		IF RAND:100 > 90
+			;구상출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 224
+			PRINTFORML %조사처리(CALLNAME:ARG,"를")% 묶어둔 것이 효과를 낸 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓, 스트레스↑, 긴박경험+, 고통의구슬+
+			RESETCOLOR
+			;체력감소
+			BASE:ARG:0 -= RAND:100+50
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;긴박경험+(21,마조끼에 따라 곱상승)
+			EXP:ARG:31 += 5*(ABL:ARG:21) +5
+			;고통의 구슬+ (21,마조끼에 따라 제곱상승)
+			JUEL:ARG:16 += 3*(ABL:ARG:21)*(ABL:ARG:21) +5
+		ENDIF
+	ENDIF
+	;알몸
+	IF CFLAG:ARG:4010&4
+		IF RAND:100 > 90
+			PRINTFORML %조사처리(CALLNAME:ARG,"를")% 벗겨둔 것이 효과를 낸 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 기력↓, 스트레스↑, 노출쾌락경험+, 치정의구슬+
+			RESETCOLOR
+			;기력감소
+			BASE:ARG:1 -= RAND:100+50
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;노출쾌락경험+(14,노출증에 따라 상승)
+			EXP:ARG:14 += 2*(ABL:ARG:14) + 3
+			;치정의 구슬+ (14,노출증에 따라 제곱상승)
+			JUEL:ARG:15 += 5*(ABL:ARG:14)*(ABL:ARG:14) +5
+		ENDIF
+	ENDIF
+	;볼개그
+	IF CFLAG:ARG:4010&8
+		IF RAND:100 > 90
+			;구상출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 226
+			PRINTFORML %CALLNAME:ARG%에게 볼개그를 끼워둔 것이 효과가 난 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 기력↓, 스트레스↑, 부정의구슬+
+			RESETCOLOR
+			;기력감소
+			BASE:ARG:1 -= RAND:100+50
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;부정의 구슬+ (반발각인에 따라 제곱상승)
+			JUEL:ARG:100 += 5*(MARK:ARG:9)*(MARK:ARG:9) +5
+		ENDIF
+	ENDIF
+	;아이마스크
+	IF CFLAG:ARG:4010&16
+		IF RAND:100 > 90
+			;구상출력
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 225
+			PRINTFORML %CALLNAME:ARG%의 눈을 가려둔 것이 효과가 난 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 기력↓, 스트레스↑, 공포의구슬+		
+			RESETCOLOR
+			;기력감소
+			BASE:ARG:1 -= RAND:100+50
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;공포의 구슬 + (마조끼에 따라 점점 획득량이 줄어듬.)
+			JUEL:ARG:17 += 100 - (ABL:ARG:21*20) + 1
+			;출력 (5%확률로)
+		ENDIF
+	ENDIF
+	;로터
+	IF CFLAG:ARG:4010&32
+		IF RAND:100 > 90
+			;구상
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 10
+			PRINTFORML %CALLNAME:ARG%의 보지에 넣은 로터가 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌C의 구슬+, C조율경험+
+			RESETCOLOR
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌V의 구슬 + (V감각의 3 제곱으로 올라감)
+			JUEL:ARG:1 += (ABL:ARG:1)*(ABL:ARG:1)*(ABL:ARG:1)*10 + 1
+			;V경험 +
+			EXP:ARG:0 += 5
+		ENDIF
+	ENDIF
+	;애널비즈
+	IF CFLAG:ARG:4010&64
+		IF RAND:100 > 90
+			;구상
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 172
+			PRINTFORML %CALLNAME:ARG%의 애널에 달린 비즈가 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌A의 구슬+, Ａ경험+
+			RESETCOLOR
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌A의 구슬 + (A감각의 3 제곱으로 올라감)
+			JUEL:ARG:2 += (ABL:ARG:2)*(ABL:ARG:2)*(ABL:ARG:2)*10 + 1
+			;A경험 +
+			EXP:ARG:1 += 5
+		ENDIF
+	ENDIF
+	;클리캡
+	IF CFLAG:ARG:4010&128
+		IF RAND:100 > 90
+			;클리
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 14
+			PRINTFORML %CALLNAME:ARG%의 클리토리스에 달린 캡이 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌C의 구슬+, C조율경험+
+			RESETCOLOR
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌Ｃ의 구슬 + (C감각의 3 제곱으로 올라감)
+			JUEL:ARG:0 += (ABL:ARG:0)*(ABL:ARG:0)*(ABL:ARG:0)*10 + 1
+			;C경험 +
+			EXP:ARG:41 += 5
+		ENDIF
+	ENDIF
+	;니플캡
+	IF CFLAG:ARG:4010&256
+		IF RAND:100 > 90
+			;니플
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 15
+			PRINTFORML %CALLNAME:ARG%의 유두에 달린 캡이 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌C의 구슬+, Ｂ쾌락경험+
+			RESETCOLOR
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌B의 구슬 + (B감각의 3 제곱으로 올라감)
+			JUEL:ARG:3 += (ABL:ARG:3)*(ABL:ARG:3)*(ABL:ARG:3)*10 + 1
+			;B쾌락경험 +
+			EXP:ARG:44 += 5
+		ENDIF
+	ENDIF
+;..................................................................................
+;모드2: 스케쥴 중의 처리.
+;결과값을 돌려주며, 결과에 따라 스케쥴을 실패하기도 한다.
+ELSEIF ARG:1 == 2
+	;로터
+	IF CFLAG:ARG:4010&32
+		IF RAND:100 > 80
+			;구상
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 10
+			PRINTFORML %CALLNAME:ARG%의 보지에 넣은 로터가 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌C의 구슬+, C조율경험+
+			RESETCOLOR
+			PRINTL
+			WAIT
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌V의 구슬 + (V감각의 3 제곱으로 올라감)
+			JUEL:ARG:1 += (ABL:ARG:1)*(ABL:ARG:1)*(ABL:ARG:1)*10 + 1
+			;V경험 +
+			EXP:ARG:0 += 5
+			;스케쥴 방해수치 증가
+			LOCAL:0 += RAND:100
+		ENDIF
+	ENDIF
+	;애널비즈
+	IF CFLAG:ARG:4010&64
+		IF RAND:100 > 80
+			;구상
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 172
+			PRINTFORML %CALLNAME:ARG%의 애널에 달린 비즈가 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌A의 구슬+, Ａ경험+
+			RESETCOLOR
+			PRINTL
+			WAIT
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌A의 구슬 + (A감각의 3 제곱으로 올라감)
+			JUEL:ARG:2 += (ABL:ARG:2)*(ABL:ARG:2)*(ABL:ARG:2)*10 + 1
+			;A경험 +
+			EXP:ARG:1 += 5
+			;스케쥴 방해수치 증가
+			LOCAL:0 += RAND:100
+		ENDIF
+	ENDIF
+	;클리캡
+	IF CFLAG:ARG:4010&128
+		IF RAND:100 > 80
+			;클리
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 14
+			PRINTFORML %CALLNAME:ARG%의 클리토리스에 달린 캡이 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌C의 구슬+, C조율경험+
+			RESETCOLOR
+			PRINTL
+			WAIT
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌Ｃ의 구슬 + (C감각의 3 제곱으로 올라감)
+			JUEL:ARG:0 += (ABL:ARG:0)*(ABL:ARG:0)*(ABL:ARG:0)*10 + 1
+			;C경험 +
+			EXP:ARG:41 += 5
+			;스케쥴 방해수치 증가
+			LOCAL:0 += RAND:100
+		ENDIF
+	ENDIF
+	;니플캡
+	IF CFLAG:ARG:4010&256
+		IF RAND:100 > 80
+			;니플
+			CALL KOJO_JUSTSAY_TORIKOMODE, ARG, 15
+			PRINTFORML %CALLNAME:ARG%의 유두에 달린 캡이 효과를 발휘한 것 같다...
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORML 체력↓↓, 스트레스↑, 쾌C의 구슬+, Ｂ쾌락경험+
+			PRINTL
+			WAIT
+			RESETCOLOR
+			;체력감소(중)
+			BASE:ARG:0 -= RAND:100+100
+			BASE:ARG:0 = MAX(BASE:ARG:0, 300)
+			;스트레스상승
+			CFLAG:ARG:65  += RAND:20+10
+			;쾌B의 구슬 + (B감각의 3 제곱으로 올라감)
+			JUEL:ARG:3 += (ABL:ARG:3)*(ABL:ARG:3)*(ABL:ARG:3)*10 + 1
+			;B쾌락경험 +
+			EXP:ARG:44 += 5
+			;스케쥴 방해수치 증가
+			LOCAL:0 += RAND:100
+		ENDIF
+	ENDIF
+	;스케쥴 실패여부를 계산, 반환한다.
+	;너무 큰 쾌감에 실패. 단. 이 수치는 욕망에 따라 내려간다. (즉 욕정에 쩔어 있을수록 작은 자극에도 실패해버린단 소리)
+	IF LOCAL:0 > 150 - (ABL:ARG:11)*15
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 몸에 달린것들 때문에 집중할 수가 없었다... (욕망레벨:{ABL:ARG:11}LV)
+		PRINTL
+		RESULT = 1
+		RETURN RESULT
+	ELSEIF LOCAL:0 > 0
+		PRINTFORMW 그러나 %조사처리(CALLNAME:ARG,"는")% 겨우 겨우 참아냈다...
+		PRINTL
+	ENDIF
+ENDIF

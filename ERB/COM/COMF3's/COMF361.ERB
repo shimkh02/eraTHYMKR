@@ -1,0 +1,516 @@
+﻿;=============================================================================
+;뱀장어 목욕탕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE361
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:361 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 2) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;一度も鰻風呂に入ったことが無い場合, もしくはＶ경험レベルが0일 경우
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && ( EXP:0 < EXPLV:1 || (CFLAG:23 & 2) == 0 )
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 2
+	RETURN 1
+;조교자가 ミスティアまたは衣玖さんまたは금단의 지식을 갖고 있지 않으면 불가
+SIF TALENT:PLAYER:56 == 0 && NO:PLAYER != 25 && NO:PLAYER != 51
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 2
+	RETURN 0
+;緊縛中じゃないとダメ
+SIF TEQUIP:40 == 0
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM361
+IF TEQUIP:55 == 0
+	IF NO:PLAYER == 25 || (ASSI >= 0 && NO:ASSI == 25)
+		TFLAG:155 = 1
+	ELSEIF NO:PLAYER == 51 || (ASSI >= 0 && NO:ASSI == 51)
+		TFLAG:155 = 2
+	ELSE
+		TFLAG:155 = 0
+	ENDIF
+ENDIF
+LOCALS:0 = 뱀장어 목욕탕
+LOCALS:1 = 칠성장어 목욕탕
+LOCALS:2 = 전기뱀장어 목욕탕
+PRINTFORML %LOCALS:(TFLAG:155)%
+TSTR:0 = %LOCALS:(TFLAG:155)%
+
+TFLAG:147 = 0
+;남자
+SIF TALENT:120
+	TFLAG:147 |= 1
+;바이브래이터등의 기구를 삽입하고 있다
+SIF TEQUIP:20 || TEQUIP:21
+	TFLAG:147 |= 1
+;애널 바이브래이터등의 기구를 삽입하고 있다
+SIF TEQUIP:25 || TEQUIP:26
+	TFLAG:147 |= 2
+
+CALL TRAIN_MESSAGE_COM361
+
+IF TEQUIP:55 == 2
+	TEQUIP:55 = 0
+	TFLAG:155 = 0
+	RETURN 1
+ENDIF
+
+;뱀장어 목욕탕 입욕
+TEQUIP:55 = 2
+IF (TFLAG:147 & 1) == 0
+	;ABL:V감각을 본다
+	IF ABL:1 == 0
+		SOURCE:1 = 50
+	ELSEIF ABL:1 == 1
+		SOURCE:1 = 200
+	ELSEIF ABL:1 == 2
+		SOURCE:1 = 400
+	ELSEIF ABL:1 == 3
+		SOURCE:1 = 800
+	ELSEIF ABL:1 == 4
+		SOURCE:1 = 1200
+	ELSE
+		SOURCE:1 = 1600
+	ENDIF
+	;EXP:V경험을 본다
+	IF EXP:0 < EXPLV:1
+		TIMES SOURCE:1 , 0.20
+		SOURCE:20 += 5000
+		TCVAR:50 += 1
+	ELSEIF EXP:0 < EXPLV:2
+		TIMES SOURCE:1 , 0.60
+		SOURCE:20 += 200
+	ELSEIF EXP:0 < EXPLV:3
+		TIMES SOURCE:1 , 1.00
+		SOURCE:20 += 50
+	ELSEIF EXP:0 < EXPLV:4
+		TIMES SOURCE:1 , 1.20
+		SOURCE:20 += 10
+	ELSEIF EXP:0 < EXPLV:5
+		TIMES SOURCE:1 , 1.40
+		SOURCE:20 += 0
+	ELSE
+		TIMES SOURCE:1 , 1.60
+		SOURCE:20 += 0
+	ENDIF
+ENDIF
+IF (TFLAG:147 & 2) == 0
+	;ABL:A감각을 본다
+	IF ABL:2 == 0
+		SOURCE:2 = 50
+		SOURCE:22 = 200
+	ELSEIF ABL:2 == 1
+		SOURCE:2 = 200
+		SOURCE:22 = 600
+	ELSEIF ABL:2 == 2
+		SOURCE:2 = 400
+		SOURCE:22 = 1000
+	ELSEIF ABL:2 == 3
+		SOURCE:2 = 800
+		SOURCE:22 = 1400
+	ELSEIF ABL:2 == 4
+		SOURCE:2 = 1200
+		SOURCE:22 = 1800
+	ELSE
+		SOURCE:2 = 1600
+		SOURCE:22 = 2100
+	ENDIF
+	;EXP:A경험을 본다
+	IF EXP:1 < EXPLV:1
+		TIMES SOURCE:2 , 0.50
+		SOURCE:20 += 1500
+	ELSEIF EXP:1 < EXPLV:2
+		TIMES SOURCE:2 , 1.00
+		SOURCE:20 += 200
+	ELSEIF EXP:1 < EXPLV:3
+		TIMES SOURCE:2 , 1.10
+		SOURCE:20 += 50
+	ELSEIF EXP:1 < EXPLV:4
+		TIMES SOURCE:2 , 1.20
+		SOURCE:20 += 10
+	ELSEIF EXP:1 < EXPLV:5
+		TIMES SOURCE:2 , 1.40
+		SOURCE:20 += 0
+	ELSE
+		TIMES SOURCE:2 , 1.60
+		SOURCE:20 += 0
+	ENDIF
+ENDIF
+IF (TFLAG:147 & 1) == 0 || (TFLAG:147 & 2) == 0
+	;PALAM:윤활을 본다
+	IF PALAM:10 < PALAMLV:1
+		TIMES SOURCE:1 , 0.10
+		TIMES SOURCE:2 , 0.40
+		SOURCE:20 += 700
+	ELSEIF PALAM:10 < PALAMLV:2
+		TIMES SOURCE:1 , 0.40
+		TIMES SOURCE:2 , 0.80
+		SOURCE:20 += 400
+	ELSEIF PALAM:10 < PALAMLV:3
+		TIMES SOURCE:1 , 1.00
+		TIMES SOURCE:2 , 1.00
+		SOURCE:20 += 200
+	ELSEIF PALAM:10 < PALAMLV:4
+		TIMES SOURCE:1 , 1.40
+		TIMES SOURCE:2 , 1.40
+		SOURCE:20 += 100
+	ELSE
+		TIMES SOURCE:1 , 1.80
+		TIMES SOURCE:2 , 1.80
+		SOURCE:20 += 50
+	ENDIF
+ENDIF
+
+LOCAL:1 = 100
+;EXP:이상 경험을 본다
+IF EXP:50 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:50 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:50 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:50 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:50 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 30
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 150
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 600
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1200
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1800
+ELSE
+	SOURCE:0 = 2500
+ENDIF
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 20
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 100
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 500
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1000
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1500
+ELSE
+	SOURCE:3 = 2000
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;소인 체형
+SIF TALENT:127
+	TIMES SOURCE:20 , 1.80
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 1.20
+
+DOWNBASE:0 += LOCAL:1 / 4
+DOWNBASE:1 += LOCAL:1 / 2
+
+SOURCE:25 += LOCAL:1 * (1 + TFLAG:155)
+SOURCE:31 += LOCAL:1 * 3
+IF TFLAG:155 == 1
+	SOURCE:20 += LOCAL:1
+	SOURCE:19 += LOCAL:1 * 2
+	SOURCE:12 = LOCAL:1
+ELSEIF TFLAG:155 == 2
+	SOURCE:24 = LOCAL:1
+	SOURCE:19 += LOCAL:1 * 2
+	SOURCE:18 += LOCAL:1
+ENDIF
+
+IF (TFLAG:147 & 2) == 0
+	TFLAG:167 = 1
+	STAIN:4 = 72
+ENDIF
+IF (TFLAG:147 & 1) == 0
+	TFLAG:166 = 1
+	STAIN:3 = 65
+ENDIF
+IF (CFLAG:23 & 2) == 0
+	TCVAR:50 += 1
+	CFLAG:23 |= 2
+ENDIF
+
+STAIN:1 = 64
+STAIN:2 = 66
+STAIN:5 = 64
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;--------------------------------------------------
+;뱀장어 목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM361
+PRINTL <뱀장어 목욕탕 입욕 중>
+
+LOCAL:4 = (TALENT:120 || TEQUIP:20 || TEQUIP:21) ?  0 # 1
+LOCAL:5 = (TEQUIP:25 || TEQUIP:26) ?  0 # 1
+TFLAG:147 = 0
+;남자
+SIF TALENT:120
+	TFLAG:147 |= 1
+;바이브래이터등의 기구를 삽입하고 있다
+SIF TEQUIP:20 || TEQUIP:21
+	TFLAG:147 |= 1
+;애널 바이브래이터등의 기구를 삽입하고 있다
+SIF TEQUIP:25 || TEQUIP:26
+	TFLAG:147 |= 2
+IF (TFLAG:147 & 1) == 0 || TFLAG:166 == 1
+	;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+	TFLAG:1 = 1
+	;ABL:V감각을 본다
+	IF ABL:1 == 0
+		LOCAL:1 = 20
+	ELSEIF ABL:1 == 1
+		LOCAL:1 = 40
+	ELSEIF ABL:1 == 2
+		LOCAL:1 = 80
+	ELSEIF ABL:1 == 3
+		LOCAL:1 = 160
+	ELSEIF ABL:1 == 4
+		LOCAL:1 = 320
+	ELSE
+		LOCAL:1 = 640
+	ENDIF
+	
+	SIF TFLAG:166 == 1 && LOCAL:4 == 0
+		TIMES LOCAL:1 , 0.80
+	
+	SOURCE:1 += LOCAL:1
+ENDIF
+IF (TFLAG:147 & 2) == 0 || TFLAG:167 == 1
+	;ABL:A감각을 본다
+	IF ABL:2 == 0
+		LOCAL:2 = 15
+	ELSEIF ABL:2 == 1
+		LOCAL:2 = 30
+	ELSEIF ABL:2 == 2
+		LOCAL:2 = 60
+	ELSEIF ABL:2 == 3
+		LOCAL:2 = 120
+	ELSEIF ABL:2 == 4
+		LOCAL:2 = 240
+	ELSE
+		LOCAL:2 = 600
+	ENDIF
+	
+	SIF TFLAG:167 == 1 && LOCAL:5 == 0
+		TIMES LOCAL:2 , 0.80
+	
+	SOURCE:2 += LOCAL:2
+	SOURCE:22 += LOCAL:2
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 += 30
+ELSEIF ABL:0 == 1
+	SOURCE:0 += 50
+ELSEIF ABL:0 == 2
+	SOURCE:0 += 100
+ELSEIF ABL:0 == 3
+	SOURCE:0 += 200
+ELSEIF ABL:0 == 4
+	SOURCE:0 += 400
+ELSE
+	SOURCE:0 += 800
+ENDIF
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 += 20
+ELSEIF ABL:3 == 1
+	SOURCE:3 += 40
+ELSEIF ABL:3 == 2
+	SOURCE:3 += 80
+ELSEIF ABL:3 == 3
+	SOURCE:3 += 160
+ELSEIF ABL:3 == 4
+	SOURCE:3 += 320
+ELSE
+	SOURCE:3 += 640
+ENDIF
+
+LOCAL = 100
+;EXP:이상 경험을 본다
+IF EXP:50 < EXPLV:1
+	TIMES LOCAL , 3.00
+ELSEIF EXP:50 < EXPLV:2
+	TIMES LOCAL , 2.50
+ELSEIF EXP:50 < EXPLV:3
+	TIMES LOCAL , 2.00
+ELSEIF EXP:50 < EXPLV:4
+	TIMES LOCAL , 1.00
+ELSEIF EXP:50 < EXPLV:5
+	TIMES LOCAL , 0.80
+ELSE
+	TIMES LOCAL , 0.60
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.60
+;소인 체형
+SIF TALENT:127
+	TIMES LOCAL , 1.80
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL , 1.20
+
+DOWNBASE:0 += LOCAL / 2
+DOWNBASE:1 += LOCAL / 3
+
+SOURCE:25 += LOCAL * 5
+SOURCE:30 += LOCAL * 5
+SOURCE:19 += 1000
+SOURCE:31 += LOCAL * (1 + TFLAG:155) / 2
+IF TFLAG:155 == 1
+	SOURCE:20 += LOCAL
+	SOURCE:12 += LOCAL
+	SOURCE:19 += LOCAL * 2
+ELSEIF TFLAG:155 == 2
+	SOURCE:24 += LOCAL
+	SOURCE:19 += LOCAL * 2
+	SOURCE:18 += LOCAL
+ENDIF
+
+STAIN:1 = 64
+STAIN:2 = 66
+STAIN:5 = 64
+STAIN:6 = 64
+STAIN:7 = 64
+TIMES SOURCE:20 , 1.20
+IF (TFLAG:147 & 1) == 0
+	TCVAR:0 += 2
+	STAIN:3 = 65
+ENDIF
+IF (TFLAG:147 & 2) == 0
+	TCVAR:1 += 2
+	STAIN:4 = 72
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM361
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 2
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 뱀장어 속에서 끌어내자, 안심한 것 같은 얼굴을 하고 있었다.
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 무수한 
+	SIF TFLAG:155 == 1
+		PRINT 칠성 
+	SIF TFLAG:155 == 2
+		PRINT 전기 
+	PRINTL 뱀장어들이 북적대고 있는 목욕탕 안에 빠뜨렸다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 몸 위를 미끄러져 가는 이상한 감각에 참지 못하고 절규했다….
+	IF (TFLAG:147 & 2) == 0
+		PRINTL
+		PRINTFORML 몇 마리의 뱀장어는 %CALLNAME:TARGET%의 애널이 비어있는 걸 알아채고 그 안에 기어들어갔다.
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 반사적으로 엉덩이에 힘을 써 이물질을 토하려 했지만,
+		PRINTW 결국 쓸데없이 힘만 빼고 있는 것이다….
+	ENDIF
+	IF (TFLAG:147 & 1) == 0
+		PRINTL
+		PRINTFORML 몇 마리의 뱀장어는 %CALLNAME:TARGET%의 질구가 비어있는 걸 알아채고 그 안에 기어들어갔다.
+		IF TALENT:0
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 눈에 눈물을 머금고 반미치광이가 되어 뱀장어를 질안에서 잡아 끌어내려 했지만,
+			PRINTW 뱀장어들이 분비하는 점액에 의해 별다른 저항도 하지 못한 채 처녀의 증거를 찢겨 먹혀버렸다….
+			;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+			TFLAG:1 = 1
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 뱀장어가 질 벽과 자궁구를 찔러대는 감촉에 몹시 놀라고 있다….
+		ENDIF
+	ENDIF
+ENDIF

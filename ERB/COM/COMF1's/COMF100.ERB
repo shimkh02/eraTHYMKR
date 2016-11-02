@@ -1,0 +1,248 @@
+﻿;=============================================================================
+;비디오 카메라
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE100
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:100 > 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:50
+	RETURN 1
+;조수가 使う場合, 「あなた」か, [家電사역知識]か[工作名人]か[報道者]のいずれかを取得している, 撮影경험＋工作경험＋教育경험의 합계가 200이상なら問題なし
+IF ASSIPLAY && NO:PLAYER != 0 && TALENT:PLAYER:189 == 0 && TALENT:PLAYER:195 == 0 && TALENT:PLAYER:196 == 0 && (EXP:PLAYER:71 + EXP:PLAYER:74 + EXP:PLAYER:75) < 200
+	;주인이 「あなた」か, [家電사역知識]か[工作名人]か[報道者]のいずれかを取得している, 撮影경험＋工作경험＋教育경험의 합계가 200이상なら助手に使い方を教えられる
+	SIF NO:MASTER != 0 && TALENT:MASTER:189 == 0 && TALENT:MASTER:195 == 0 && TALENT:MASTER:196 == 0 && (EXP:MASTER:71 + EXP:MASTER:74 + EXP:MASTER:75) < 200
+		RETURN 0
+	;この場合, 기교가 3이상 필요
+	SIF ABL:PLAYER:12 < 3
+		RETURN 0
+ENDIF
+;ビデオカメラとビデオテープの아이템を持っているか, 아이템なし設定でないとダメ
+SIF (ITEM:50 == 0 || ITEM:75 == 0 ) && NOITEM == 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM100
+PRINTL 비디오 카메라
+TSTR:0 = 비디오 카메라
+PRINTFORMW ★★★비디오 촬영을 \@(TEQUIP:50) ? 종료 # 개시\@합니다★★★
+
+;비디오 촬영이 되고 있으면 종료시킨다
+IF TEQUIP:50
+	TEQUIP:50 = 0
+	;테이프는 종료시에 수를 줄인다
+	IF NOITEM == 0
+		ITEM:75 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:75
+			CALL FILL_PLURAL_ITEM, 75
+	ENDIF
+;비디오 촬영하고 있지 않으면 초기화해 개시
+ELSE
+	DOWNBASE:1 += 10
+	TEQUIP:50 = 1
+	TFLAG:121 = 0
+	;카운트는 10회로 합니다
+	REPEAT 10
+		FLAG:(COUNT+40) = 0
+	REND
+	;콘피그로 촬영 확장의 기능을 유효하게 하고 있을지 어떨지로 변화
+	IF FLAG:15 & 128 && ASSI >= 0
+		CALL SET_VIDEO
+	ELSE
+		FLAG:61 = 0
+	ENDIF
+	TFLAG:140 |= 128
+ENDIF
+CALL TRAIN_MESSAGE_COM100
+RETURN 1
+
+;-------------------------------------------------
+;촬영자 설정(촬영 확장 유효 시한정)
+;-------------------------------------------------
+@SET_VIDEO
+PRINTL 촬영자를 선택해 주세요. 도중 변경은 할 수 없습니다.
+PRINTL (촬영자를 변경할 경우, 한 번 촬영을 종료해 주세요)
+PRINTL
+PRINTFORML [0] %CALLNAME:MASTER%
+PRINTFORML [1] %CALLNAME:ASSI%
+PRINTL
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	FLAG:61 = 1
+	PRINTFORML 촬영자는 %CALLNAME:MASTER%입니다.
+ELSEIF RESULT == 1
+	FLAG:61 = 2
+	PRINTFORML 촬영자는 %CALLNAME:ASSI%입니다.
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;-------------------------------------------------
+;비디오 촬영중
+;-------------------------------------------------
+@EQUIP_COM100
+;카운트는 10회로 합니다
+LOCAL:5 = 10
+
+IF TFLAG:121 == 0
+;첫회는 카운트에 넣지 않는다
+	TFLAG:121 += 1
+ELSEIF TFLAG:121 > 0 && TFLAG:121 <= LOCAL:5
+	LOCAL = TFLAG:121 + 39
+	IF TFLAG:122 >= 1
+		FLAG:LOCAL = TFLAG:122
+		TFLAG:122 = 0
+	ELSE
+		FLAG:LOCAL = SELECTCOM
+	ENDIF
+	;TODO 장비 상태나 조수에 의한 조교의 기록을 어떻게 할까?
+	PRINTFORML <비디오 촬영 중{TFLAG:121}/{LOCAL:5}>
+	TFLAG:121 += 1
+
+	;파라미터 변화
+	;TODO 밸런스 조정(비디오에 의한 파라미터 변화는 고려하지 않는가? )
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 50
+
+	;촬영자는 신경을 쓴다
+	IF FLAG:61 == 1
+		DOWNBASE:MASTER:1 += 5
+	ELSEIF FLAG:61 == 2
+		DOWNBASE:ASSI:1 += 5
+	ENDIF
+
+	LOCAL:1 = 370
+	LOCAL:2 = 1750
+	LOCAL:3 = 700
+
+	;PALAM:욕정을 본다
+	IF PALAM:13 < PALAMLV:1
+		TIMES LOCAL:1 , 0.80
+	ELSEIF PALAM:13 < PALAMLV:2
+		TIMES LOCAL:1 , 0.90
+	ELSEIF PALAM:13 < PALAMLV:3
+		TIMES LOCAL:1 , 1.00
+	ELSEIF PALAM:13 < PALAMLV:4
+		TIMES LOCAL:1 , 1.10
+	ELSE
+		TIMES LOCAL:1 , 1.20
+	ENDIF
+
+	;ABL:순종을 본다
+	IF ABL:10 == 0
+		TIMES LOCAL:1 , 0.40
+	ELSEIF ABL:10 == 1
+		TIMES LOCAL:1 , 0.60
+	ELSEIF ABL:10 == 2
+		TIMES LOCAL:1 , 0.80
+	ELSEIF ABL:10 == 3
+		TIMES LOCAL:1 , 1.00
+	ELSEIF ABL:10 == 4
+		TIMES LOCAL:1 , 1.10
+	ELSE
+		TIMES LOCAL:1 , 1.20
+	ENDIF
+
+	;ABL:노출벽을 본다
+	IF ABL:14 == 0
+		TIMES LOCAL:1 , 0.80
+		TIMES LOCAL:3 , 2.00
+	ELSEIF ABL:14 == 1
+		TIMES LOCAL:1 , 1.00
+		TIMES LOCAL:3 , 1.70
+	ELSEIF ABL:14 == 2
+		TIMES LOCAL:1 , 1.30
+		TIMES LOCAL:3 , 1.40
+	ELSEIF ABL:14 == 3
+		TIMES LOCAL:1 , 1.60
+		TIMES LOCAL:3 , 1.00
+	ELSEIF ABL:14 == 4
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:3 , 0.80
+	ELSE
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:3 , 0.60
+	ENDIF
+
+	;도착적
+	SIF TALENT:80
+		TIMES LOCAL:1 , 2.00
+	;튀고 싶어함
+	SIF TALENT:28
+		TIMES LOCAL:1 , 1.50
+	;겁쟁이
+	SIF TALENT:10
+		TIMES LOCAL:3 , 1.70
+
+	SOURCE:18 += LOCAL:1
+	SOURCE:19 += LOCAL:1
+	SOURCE:12 += LOCAL:2
+	SOURCE:25 += LOCAL:3
+	SOURCE:31 += LOCAL:3
+ENDIF
+
+;테이프 잔량이 없어지면(자) 강제적으로 EQUIP 플래그를 제외한다
+IF TFLAG:121 <= 0 || TFLAG:121 > LOCAL:5
+	TEQUIP:50 = 0
+	IF NOITEM == 0
+		ITEM:75 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:75
+			CALL FILL_PLURAL_ITEM, 75
+	ENDIF
+	PRINTL <테이프의 용량이 꽉 찼습니다. 비디오 촬영을 종료합니다>
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:14 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM100
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;촬영 개시
+IF TEQUIP:50
+	;비디오 확장 OFF
+	IF FLAG:61 == 0
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 부끄러운 모습을
+		PRINTW 비디오로 찍어 두기로 했다….
+	;촬영자가 주인
+	ELSEIF FLAG:61 == 1
+		PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% 스스로 %CALLNAME:TARGET%의 조교 장면을 비디오에 담기로 했다.
+	;촬영자가 조수
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:ASSI%에게
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 조교하는 걸 비디오에 확실히 찍도록 명령했다….
+	ENDIF
+;촬영 종료
+ELSE
+	;비디오 확장 OFF
+	IF FLAG:61 == 0
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 비디오 촬영을 그만두었다….
+		;촬영자가 주인이었다
+	ELSEIF FLAG:61 == 1
+		PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% 비디오 촬영을 그만두기로 했다….
+	;촬영자가 조수였다
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:ASSI%에게 비디오 촬영을 그만두도록 명령했다….
+	ENDIF
+ENDIF

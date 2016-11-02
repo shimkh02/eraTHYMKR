@@ -1,0 +1,124 @@
+﻿;=============================================================================
+;말뚝
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE243
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:243 > 0
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;初体験のときは이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF (CFLAG:22 & 4) == 0 && FLAG:2 & 4
+	RETURN 0
+;杭を購入(開発?)していないとダメ
+SIF (FLAG:73 & 4) == 0
+	RETURN 0
+;조교자가 새드か狂気을 갖고 있지 않으면 불가
+SIF TALENT:PLAYER:81 == 0 && TALENT:PLAYER:158 == 0
+	RETURN 0
+;助手調教の場合, 순종이 4이상이 아니면 불가
+IF ASSIPLAY
+	SIF ABL:PLAYER:10 < 4
+		RETURN 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;말뚝은 찌르는 것이지만 여기에서는, 찔러 고정하는 것이 아니라
+;찔러 뽑은 반복을 상정하고 있다
+@COM243
+PRINTL 말뚝
+TSTR:0 = 말뚝
+CALL TRAIN_MESSAGE_COM243
+
+;흡혈귀에게는 효과 발군이다!
+DOWNBASE:0 += (TALENT:205) ?  40 # 10
+DOWNBASE:1 += (TALENT:205) ?  420 # 333
+
+SOURCE:31 = 6666
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 8000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 8500
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 9000
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 10000
+ELSE
+	SOURCE:20 = 10500
+ENDIF
+
+;사라시 장착하고 있는 경우 고통 소스 경감도 사라시 파손
+IF TEQUIP:36
+	SOURCE:20 -= 200
+	TEQUIP:36 = 0
+	ITEM:24 = 0
+ENDIF
+;의상을 장착하고 있는 경우 고통 소스 경감도 앞치마와 학교수영복 파손
+IF TEQUIP:59
+	SOURCE:20 -= 100
+	SIF TEQUIP:59 == 1
+		ITEM:44 = 0
+	SIF TEQUIP:59 == 2
+		ITEM:45 = 0
+	TEQUIP:59 = 0
+ENDIF
+
+;흡혈귀에게는 효과 발군이다!
+IF TALENT:205
+	TIMES SOURCE:20 , 1.20
+	SOURCE:25 = 6666
+ENDIF
+
+;말뚝에서 찔리는 것은 이상 경험이므로 점을 넣는다
+IF (CFLAG:22 & 4) == 0
+	TCVAR:50 += 1
+	CFLAG:22 |= 4
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;커맨드 속성：도구(조교자)
+SIF TEQUIP:90 == 0
+	TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM243
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TEQUIP:59
+	PRINTFORM %조사선택(CALLNAME:TARGET, "가")% 입고 있던 
+	IF TEQUIP:59 == 1
+		PRINTFORM 앞치마\@ TEQUIP:36 ? 와 # 를 \@ 
+	ELSEIF TEQUIP:59 == 2
+		PRINTFORM 학교 수영복\@ TEQUIP:36 ? 과 # 을 \@ 
+	ELSE
+		PRINTFORM 의상\@ TEQUIP:36 ? 과 # 을 \@ 
+	ENDIF
+	SIF TEQUIP:36
+		PRINT 가슴에 감겨 있는 사라시를 
+ELSEIF TEQUIP:36
+	PRINTFORM %CALLNAME:TARGET%의 가슴에 감겨 있는 사라시를 
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 부드러운 살갗을 
+ENDIF
+PRINTW 큰 말뚝으로 몇 번이나 찔러 꿰뚫었다.

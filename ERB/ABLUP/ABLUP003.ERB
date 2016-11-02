@@ -1,0 +1,116 @@
+﻿;=============================================================================
+;Ｂ감각
+;=============================================================================
+@ABLUP3
+DRAWLINE
+SIF ABL:3 >= 5
+	JUMP ABLUP_MAX
+
+PRINTFORM [0] - %PALAMNAME:3%의 구슬×{COST3(0)}……
+CALL SHOW_ISABLUP_COMMON, CAN3(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN3(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:3 -= COST3(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:3 += 1
+PRINTFORMW %ABLNAME:3%의 레벨이 %조사처리(ABL:3,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP3
+SIF ABL:3 >= 5
+	RETURN 0
+
+CALLF CALC_COST3, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP3("CHECK")
+
+@COST3(ARG)
+#FUNCTION
+RETURNF CALC_COST3("GET", ARG)
+
+@CALC_COST3(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:3 == 0
+	LOCAL:0 = 1
+ELSEIF ABL:3 == 1
+	LOCAL:0 = 20
+ELSEIF ABL:3 == 2
+	LOCAL:0 = 400
+ELSEIF ABL:3 == 3
+	LOCAL:0 = 5000
+	;一線越えない
+	SIF TALENT:27
+		TIMES LOCAL:0 , 1.50
+ELSEIF ABL:3 == 4
+	LOCAL:0 = 20000
+	;一線越えない
+	SIF TALENT:27
+		TIMES LOCAL:0 , 2.50
+ENDIF
+
+;Ｂ敏感
+IF TALENT:106
+	TIMES LOCAL:0 , 0.80
+;Ｂ鈍感
+ELSEIF TALENT:107
+	TIMES LOCAL:0 , 1.20
+ENDIF
+;オトコ
+IF TALENT:120
+	TIMES LOCAL:0 , 1.20
+;絶壁
+ELSEIF TALENT:110
+	TIMES LOCAL:0 , 0.80
+;貧乳
+ELSEIF TALENT:111
+	TIMES LOCAL:0 , 0.90
+;巨乳
+ELSEIF TALENT:112
+	TIMES LOCAL:0 , 1.10
+;爆乳
+ELSEIF TALENT:113
+	TIMES LOCAL:0 , 1.15
+ENDIF
+;淫乱
+SIF TALENT:170
+	TIMES LOCAL:0 , 0.80
+
+;淫乱無しかつ必要珠数が0以下の場合修正
+SIF TALENT:170 == 0 && LOCAL:0 < 1
+	LOCAL:0 = 1
+
+RETURNF 0
+
+@CAN3(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP3("GET", ARG)
+
+@CAN_ABLUP3(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;快Ｂ의 구슬で上げる
+SIF JUEL:3 < COST3(0)
+	LOCAL:0 |= 1
+
+RETURNF (LOCAL:0 == 0)

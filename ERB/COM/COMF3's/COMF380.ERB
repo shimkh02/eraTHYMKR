@@ -1,0 +1,131 @@
+﻿;=============================================================================
+;버터개플레이
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE380
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:380 > 0
+	RETURN 0
+;獣姦系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8192) == 0
+	RETURN 0
+;動物性愛경험이 1미만의 場合
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:56 < EXPLV:1
+	RETURN 0
+;動物小屋と犬が필요
+SIF (FLAG:72 & 1) == 0 || (FLAG:72 & 2) == 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;커닐링구스를 바탕으로 작성
+@COM380
+PRINTL 버터견 플레이
+TSTR:0 = 버터개플레이
+CALL TRAIN_MESSAGE_COM380
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 75
+
+SOURCE:12 = 220
+SOURCE:19 = 120
+SOURCE:22 = 100
+SOURCE:21 = 200
+SOURCE:30 = 5000
+SOURCE:31 = 15500
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 60
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 240
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 1050
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 2250
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 3600
+ELSE
+	SOURCE:0 = 4950
+ENDIF
+
+;고양이혀 소유는 트라우마와 일탈 증가
+IF TALENT:54
+	TIMES SOURCE:31 , 2.0
+	SOURCE:25 = 800
+ENDIF
+
+;노예의 V에 동물의 더러움을 붙이고 싶은 곳이지만 향후가 과제로 한다
+
+;음란을 가지고 있지 않아서, 동물성사랑 경험이 없었던 경우에는 이상 경험이 증가한다
+SIF EXP:56 == 0 && TALENT:170 == 0
+	TCVAR:50 += 1
+
+TCVAR:56 += 1
+
+;커맨드 속성：수간
+TFLAG:98 = 9
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM380
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 고간에 버터를 바르니, 그 향을 눈치챈 개가 %CALLNAME:TARGET%의 고간을 파고들며, 
+IF TALENT:121 && PALAM:13 >= PALAMLV:3
+	PRINT 발기한 페니스에 혀를 올려 핥아댔다.
+ELSEIF TALENT:121
+	PRINT 페니스의 뿌리를 혀로 핥아댔다….
+ELSEIF PALAM:13 >= PALAMLV:3
+	PRINT 뾰족할 정도로 솟아오른 클리토리스를 혀로 빨아댔다….
+ELSE
+	PRINT 클리토리스를 혀로 빨았다….
+ENDIF
+PRINTW 

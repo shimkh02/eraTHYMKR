@@ -1,0 +1,461 @@
+﻿;=============================================================================
+;나체정식
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE107
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:107 > 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:60
+	RETURN 1
+;아이템｢具材セット｣を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:77 == 0 && NOITEM == 0
+	RETURN 0
+;酒恥肉倫を発生させた場合はダメ
+SIF TFLAG:153 == 99
+	RETURN 0
+;순종이 3이상 없으면 안 됨
+SIF ABL:10 < 3
+	RETURN 0
+;쿠스코 채웠으면 불가
+SIF TEQUIP:21
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;시체는 안됨
+SIF TALENT:226 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM107
+IF TALENT:120
+	PRINTL 나체식탁
+	TSTR:0 = 남체정식
+ELSE
+	PRINTL 나체식탁
+	TSTR:0 = 여체정식
+ENDIF
+
+;나체정식 종료
+IF TEQUIP:60
+	TEQUIP:60 = 0
+	DOWNBASE:0 += 15
+	DOWNBASE:1 += 50
+	SOURCE:18 = ABL:11 * 300
+	SOURCE:12 = ABL:14 * 500
+	PRINTFORML %조사선택(CALLNAME:MASTER, "와")% %조사처리(CALLNAME:ASSI,"는")% %CALLNAME:TARGET%의 위에 올려진 음식을 먹어 치웠다….
+	TFLAG:153 = 0
+	RETURN 1
+ENDIF
+
+;특별 메뉴의 유무를 서치 해 둔다
+TFLAG:153 = 0
+STRLENS CSTR:2
+SIF RESULT >= 1
+	TFLAG:153 = 90
+
+IF FLAG:14 & 8
+	PRINTL 어떤 음식을 올릴까?
+	SIF ABL:PLAYER:70 >= 5 && TFLAG:153 == 90
+		PRINTFORML [0] - %CALLNAME:TARGET%의 %CSTR:2%
+	PRINTFORML [1] - %CALLNAME:TARGET%의 스시 정식
+	PRINTFORML [2] - %CALLNAME:TARGET%의 스위트 케이크
+	PRINTFORML [3] - %CALLNAME:TARGET%의 상큼 샐러드
+	$INPUT_LOOP
+	INPUT
+	IF RESULT >= 1 && RESULT <= 3
+		TFLAG:153 = RESULT
+	ELSEIF RESULT == 0 && ABL:PLAYER:70 >= 5 && TFLAG:153 == 90
+		TFLAG:153 = 90
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ELSE
+	LOCAL:6 = RAND:4
+	SIF LOCAL:6 == 0 && ABL:PLAYER:70 >= 5 && TFLAG:153 == 90
+		LOCAL:6 = 90
+	SIF LOCAL:6 == 0
+		LOCAL:6 = 1+RAND:3
+	TFLAG:153 = LOCAL:6
+ENDIF
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 50
+
+LOCAL:1 = 500
+LOCAL:2 = 500
+LOCAL:3 = ABL:MASTER:12 + ABL:ASSI:12
+LOCAL:4 = ABL:MASTER:70 + ABL:ASSI:70
+LOCAL:5 = MAX(LOCAL:4 /2, 1)
+
+;요리의 종류에 의해 성장하는 소스가 변화
+IF TFLAG:153 == 1
+	TIMES LOCAL:1 , 1.50
+ELSEIF TFLAG:153 == 2
+	TIMES LOCAL:2 , 1.50
+ELSEIF TFLAG:153 == 3
+	TIMES LOCAL:1 , 1.20
+	TIMES LOCAL:2 , 1.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 50
+	SOURCE:19 += 50
+	TIMES LOCAL:1, 1.20
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	TIMES LOCAL:1, 1.40
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 400
+	SOURCE:19 += 400
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 750
+	SOURCE:19 += 750
+	TIMES LOCAL:1, 2.00
+ELSE
+	SOURCE:24 += 1300
+	SOURCE:19 += 1300
+	TIMES LOCAL:1, 3.00
+ENDIF
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1 , 1.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:2 , 2.00
+
+SOURCE:25 += LOCAL:2 /2
+SOURCE:28 += LOCAL:1 /2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:2 , 2.00
+
+SOURCE:12 += LOCAL:1
+SOURCE:31 += LOCAL:2
+SOURCE:17 += LOCAL:1 /2
+
+;관장＋배설 후의 나체정식는…
+SIF TFLAG:140 & 256
+	SOURCE:30 += 6000
+
+CALL TRAIN_MESSAGE_COM107
+
+IF LOCAL:4 > 0
+	IF LOCAL:4 > 8 && ABL:PLAYER:70 >= 4
+		LOCAL:5 = LOCAL:4
+		JUEL:ASSI:11 += 500 * LOCAL:4
+		PRINTFORML 습득의 구슬 (%CALLNAME:ASSI%)＋{500*LOCAL:4}
+	ELSEIF LOCAL:4 > 6 && ABL:PLAYER:90 >= 3
+		JUEL:ASSI:11 += 300 * LOCAL:4
+		PRINTFORML 습득의 구슬 (%CALLNAME:ASSI%)＋{300*LOCAL:4}
+	ELSEIF LOCAL:4 > 4 && ABL:PLAYER:90 >= 2
+		JUEL:ASSI:11 += 200 * LOCAL:4
+		PRINTFORML 습득의 구슬 (%CALLNAME:ASSI%)＋{200*LOCAL:4}
+	ELSE
+		JUEL:ASSI:11 += 100 * LOCAL:4
+		PRINTFORML 습득의 구슬 (%CALLNAME:ASSI%)＋{100*LOCAL:4}
+	ENDIF
+ELSE
+	JUEL:ASSI:11 += 10 * (LOCAL:3 +1)
+	PRINTFORML 습득의 구슬 (%CALLNAME:ASSI%)＋{10*(LOCAL:3 +1)}
+ENDIF
+TCVAR:ASSI:70 += LOCAL:5
+TCVAR:MASTER:70 += LOCAL:5
+
+IF TFLAG:153 >= 93 || TFLAG:153 <= 98
+	SOURCE:24 += 2500
+	SOURCE:30 += 5000
+	SOURCE:12 += 500
+ELSE
+	SOURCE:30 += 2000
+ENDIF
+
+IF NOITEM == 0
+	ITEM:77 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:77
+		CALL FILL_PLURAL_ITEM, 77
+ENDIF
+TEQUIP:60 = 1
+
+RETURN 1
+
+;-------------------------------------------------
+;나체정식안
+;-------------------------------------------------
+@EQUIP_COM107
+LOCAL:2 = RAND:8
+IF FLAG:15 & 256
+	IF (LOCAL:2 == 0 || TFLAG:151 == 4) && TALENT:120 == 0 && TEQUIP:40 && TEQUIP:52 && TFLAG:150
+		;줄로 긴박＋야외 플레이 때 일정 확률로 발생. 다만, 집단시간중은 자동 발생, 안뜰에서는 발생하지 않는다.
+		PRINTL <주치육륜>
+		CALL NYOTAIMORI_PARTY
+		TEQUIP:60 = 0
+		TFLAG:153 = 99
+		;조교 대상의 술치육륜회수
+		CFLAG:58 += 1
+		RETURN 1
+	ENDIF
+ELSE
+	IF LOCAL:2 == 0 && TALENT:120 == 0 && TEQUIP:40 && TEQUIP:52
+		;줄로 긴박＋야외 플레이 때 일정 확률로 발생
+		PRINTL <주치육륜>
+		CALL NYOTAIMORI_PARTY
+		TEQUIP:60 = 0
+		TFLAG:153 = 99
+		;조교 대상의 술치육륜회수
+		CFLAG:58 += 1
+		RETURN 1
+	ENDIF
+ENDIF
+
+IF TALENT:120
+	PRINTL <나체식탁 플레이 중>
+ELSE
+	PRINTL <나체식탁 플레이 중>
+ENDIF
+
+DOWNBASE:0 += 40
+DOWNBASE:1 += 50
+
+LOCAL = 500
+LOCAL:1 = 500
+IF TFLAG:153 == 1
+	TIMES LOCAL , 1.50
+ELSEIF TFLAG:153 == 2
+	TIMES LOCAL:1 , 1.50
+ELSEIF TFLAG:153 == 3
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 50
+	SOURCE:19 += 50
+	TIMES LOCAL, 1.20
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	TIMES LOCAL, 1.40
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 400
+	SOURCE:19 += 400
+	TIMES LOCAL, 1.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 750
+	SOURCE:19 += 750
+	TIMES LOCAL, 2.00
+ELSE
+	SOURCE:24 += 1300
+	SOURCE:19 += 1300
+	TIMES LOCAL, 3.00
+ENDIF
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL , 2.00
+ELSE
+	TIMES LOCAL , 3.00
+ENDIF
+
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL , 1.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:25 += LOCAL:1 /2
+SOURCE:28 += LOCAL/2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:12 += LOCAL
+SOURCE:31 += LOCAL:1
+SOURCE:17 += LOCAL/2
+
+;관장＋배설 후의 나체정식는…
+SIF TFLAG:140 & 256
+	SOURCE:30 += 2000
+
+IF TFLAG:153 >= 93 || TFLAG:153 <= 98
+	SOURCE:24 += 2000
+	SOURCE:30 += 3000
+	SOURCE:12 += 300
+ELSE
+	SOURCE:30 += 1000
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM107
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "를")% 눕히고 그 위에 
+IF TFLAG:153 == 1
+	PRINTL 광어, 도미, 고등어 등 다양한 생선회를 얹었다.
+ELSEIF TFLAG:153 == 2
+	PRINTL 생크림이나 과일 등을 올렸다.
+ELSEIF TFLAG:153 == 3
+	;가슴 위에 양배추를 얹은 캐베트브라를 하고 싶었던 것 뿐으로 s(ry
+	PRINTL 양배추나 토마토를 시작으로 다양한 채소를 올렸다.
+ELSEIF NO:TARGET == 1
+	;영몽의 박려의 여체 신찬 번화가
+	PRINTL 쌀, 소금, 물, 청주, 도미, 해조류, 과일, 야채 등을 상냥하게 담았다….
+ELSEIF NO:TARGET == 2
+	;마리사의 매직컬 버섯 번화가
+	PRINTL 구수한 향기를 발하는 수상한 색의 버섯을 몸 위에 늘어놓은 후, 특제 소스를 떨어뜨렸다….
+ELSEIF NO:TARGET == 11
+	;프란 의 크랜베리 잼 내기 우후후
+	PRINTL 오렌지 잼을 위에 뿌렸다.
+ELSEIF NO:TARGET == 15 || NO:TARGET == 56
+	;초콜렛 크림을 충분히바른 더블 릴리는 맛있을 것 같다!
+	PRINTL 초콜릿을 충분하게 사용하였다.
+ELSEIF NO:TARGET == 21
+	;쪽라고 하면 튀김과 곡신 신씨지요!
+	PRINTL 튀김과 초밥을 적절하게 올렸다.
+ELSEIF NO:TARGET == 23
+	;췌향에 녹은 치즈를 쳐 먹는 요리
+	PRINTL 녹인 치즈를 위에 뿌렸다.
+ELSEIF NO:TARGET == 28
+	;의 흰 피부에 빛나는 흰 우동이 가득!
+	PRINTL 다양한 종류의 우동을 대량으로 올렸다….
+ELSEIF NO:TARGET == 34
+	;합격해 의 가슴에 벌꿀을 걸어 보고 대
+	PRINTL 가자미 위에 도다리를 얹고 그 위에 광어를 얹었다.
+ELSEIF NO:TARGET == 37 || NO:TARGET == 38
+	;가을 자매 위로부터 메이플 시럽~와…
+	PRINTL 어딘지 모르게 기품이 흘러 넘치는 달콤한 향기를 가진 메이플 시럽을 마구 쳤다….
+ELSEIF NO:TARGET == 45
+	;사니의 개기미밀크를 상미해 주십시오!
+	PRINTL 걸쭉한 우유를 마구 뿌렸다.
+ELSEIF NO:TARGET == 49
+	;우사미미련자의 비봉연근 번화가
+	PRINTL 둥글게 자른 연근과 기하학적으로 다듬은 야채를 올린 후, 드레싱을 쳤다….
+ELSEIF NO:TARGET == 51
+	;의구씨이니까 전기…, 덧붙여서 통상은 식용에는 하지 않을 것이지만?
+	PRINTL 전기 메기와 전기 뱀장어 회를 올렸다….
+ELSEIF NO:TARGET == 57 || TARGET == 58
+	;변태 신사 파티시에 「당신」보다 신메뉴, 키스메와 야마메의 흑밀 담그고
+	;지금  기간 한정으로 맛을 볼 수 있습니다
+	PRINTL 흑밀을 마구 끼얹었다….
+ENDIF
+PRINTW

@@ -1,0 +1,3140 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;디버그 모드용의 특수 커맨드
+;以下焼き芋弁当パッチ用のデバッグモードを起動しているときに使える特殊な処理をここで一括で管理
+;大きく分けて調教中に使えるものとメインメニュー(SHOP)が開いているときに使用できるものに分かれる
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;YM Mk-0 rev.5用デバッグモード拡張
+;口上作成用に利用してたデバッグモード拡張をYM Mk-0 rev.5用に移植･統合しました
+;芋の人によるYM付属SYSTEM_DEBUG.ERB、脳味噌ピンクの名無しさんによるeramaker savefile editor
+;よりソースを流用、改変しております
+
+;eratohoYM用 デバッグモード拡張+ ver.3 (for Mk-0 rev.7)
+;上記rev.5用拡張を作成してくださった方とは別の人間が、さらに色々といじったものです。
+;元となるファイル(ソース)の作成者の方々に深く感謝いたします。
+;	ver.3　TFLAGとTEQUIPをいじれるように(いじれることに意味はあまりない。ほぼ確認用)。
+;	ver.2　음모をいじれるように。
+;	ver.1　뇨의と촉수기생 LVをいじれるように。
+
+;YM Mk-0 rev.11用デバッグモード拡張
+;上記rev.5用の拡張を作成した俺が、調教メニュー登録を作った際に培ったemuera拡張文法などを使って
+;快適なテストプレイの為にさらに弄くったものです
+
+;=============================================================================
+;조교중에 사용 가능한 커맨드
+;=============================================================================
+@DEBUG_MENU_TRAIN
+LOCALS:0 = ON
+LOCALS:1 = OFF
+DRAWLINE
+PRINTL 무엇을 하겠습니까?
+PRINTL 
+PRINTLC [  0] - 체력과 기력 회복
+PRINTLC [  1] - 신체 세정
+SIF (PALAM:20 > 0 || PALAM:21 > 0 || PALAM:22 > 0)
+	PRINTLC [  2] - 반발 요소 삭제
+PRINTLC [  3] - 호감도 조작
+PRINTLC [  4] - 스트레스 조작
+PRINTLC [  5] - PALAM/BASE 편집
+PRINTLC [  6] - 캐릭터 편집
+PRINTLC [  7] - 음란계 소질 편집
+PRINTLC [  8] - ITEM 조작
+PRINTLC [  9] - CFLAG 조작
+PRINTLC [ 10] - TFLAG 조작
+PRINTLC [ 11] - FLAG 조작
+PRINTLC [ 12] - TEQUIP 조작
+PRINTLC [ 13] - EQUIP 조작
+PRINTFORMLC [ 14] - 자동 능력 상승 %LOCALS:(TALENT:998)%
+PRINTLC [ 15] - TSTR 조작
+PRINTLC [ 16] - 조교명령보정변경
+PRINTLC [ 99] - 퀵 로드
+PRINTLC [100] - 돌아간다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	CALL TRAIN_HEAL
+ELSEIF RESULT == 1
+	CALL TRAIN_WASHING
+ELSEIF RESULT == 2 && (PALAM:20 > 0 || PALAM:21 > 0 || PALAM:22 > 0)
+	CALL REPULSION_DEL
+ELSEIF RESULT == 3
+	CALL EDIT_FAVORABILITY
+ELSEIF RESULT == 4
+	CALL EDIT_STRESS
+ELSEIF RESULT == 5
+	CALL EDIT_PALAM
+ELSEIF RESULT == 6
+	LOCAL = MASTER
+	LOCAL:1 = TARGET
+	LOCAL:2 = ASSI
+	CALL EDIT_CHARA
+	MASTER = LOCAL
+	TARGET = LOCAL:1
+	ASSI = LOCAL:2
+ELSEIF RESULT == 7
+	CALL TRAIN_TALENT_LEWD
+ELSEIF RESULT == 8
+	CALL EDIT_ITEM
+ELSEIF RESULT == 9
+	CALL EDIT_CFLAG
+ELSEIF RESULT == 10
+	CALL EDIT_TFLAG
+ELSEIF RESULT == 11
+	CALL EDIT_FLAG
+ELSEIF RESULT == 12
+	CALL EDIT_TEQUIP
+ELSEIF RESULT == 13
+	CALL EDIT_EQUIP
+ELSEIF RESULT == 14
+	CALL TRAIN_DEBUG
+ELSEIF RESULT == 15
+	CALL EDIT_TSTR
+ELSEIF RESULT == 16
+	CALL TRAIN_ORDER_DEBUG
+ELSEIF RESULT == 99
+	CALL QUICKLOAD
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;--------------------------------------------------
+;체력 기력 회복
+;--------------------------------------------------
+;주인과 조교 대상의 체력과 기력을 완전회복시킨다. 물론 그렇다고 한방에 안 가는 거 아니다.(봉래인이라면 안 죽겠지만)
+@TRAIN_HEAL
+DRAWLINE
+PRINTL 「에―로 빠와아아―!!」
+BASE:0 = MAXBASE:0
+BASE:1 = MAXBASE:1
+BASE:MASTER:0 = MAXBASE:MASTER:0
+BASE:MASTER:1 = MAXBASE:MASTER:1
+IF ASSI >= 0
+	BASE:ASSI:0 = MAXBASE:ASSI:0
+	BASE:ASSI:1 = MAXBASE:ASSI:1
+ENDIF
+
+;--------------------------------------------------
+;清潔一番
+;--------------------------------------------------
+;調教者、調教対象の全身のヨゴレを洗浄する
+@TRAIN_WASHING
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET%, %조사처리(CALLNAME:PLAYER,"를")% 씻습니다.
+;奴隷の汚れを落とす
+RESET_STAIN TARGET
+;調教者の汚れを落とす
+RESET_STAIN PLAYER
+
+;--------------------------------------------------
+;反発要素(反感・不快・抑鬱のPALAM)をワンタッチで削除
+;--------------------------------------------------
+@REPULSION_DEL
+DRAWLINE
+PRINTFORML 반발요소(반감, 불쾌, 억울 PALAM)을 삭제했습니다.
+PALAM:20 = 0
+PALAM:21 = 0
+PALAM:22 = 0
+
+;--------------------------------------------------
+;好感度変化処理
+;--------------------------------------------------
+;현재 조교 중인 캐릭터의 호감도를 맘대로 바꿉니다. 연모 이벤트 같은 건 조교 종료시에 발동합니다. 너무 욕심내면 에러납니다.
+@EDIT_FAVORABILITY
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET%의 호감도:{CFLAG:2}
+PRINTL 원하시는 호감도 수치를 입력하세요(0-999999/무효값을 넣으면 취소)
+
+INPUT
+SIF RESULT < 0 || RESULT > 999999
+	RETURN 0
+CFLAG:2 = RESULT
+PRINTFORML %CALLNAME:TARGET%의 호감도를 {CFLAG:2}로 바꿨습니다.
+
+;--------------------------------------------------
+;ストレス変化処理
+;--------------------------------------------------
+;현재 조교 중인 캐릭터의 스트레스를 맘대로 바꿉니다. 유아 퇴행 같은 건 조교 종료시에 발동합니다. 물론 욕심내면 에러납니다.
+@EDIT_STRESS
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET%의 스트레스:{CFLAG:65}
+PRINTL 원하시는 스트레스 수치를 입력하세요(0-999999/무효값을 넣으면 취소)
+
+INPUT
+SIF RESULT < 0 || RESULT > 999999
+	RETURN 0
+CFLAG:65 = RESULT
+PRINTFORML %CALLNAME:TARGET%의 스트레스를 {CFLAG:65}로 바꿨습니다.
+
+;--------------------------------------------------
+;淫乱系素質着脱処理
+;--------------------------------------------------
+;현재 조교 중인 캐릭터의 음란계 소질을 바꿉니다.
+@TRAIN_TALENT_LEWD
+LOCALS:0 = 추가
+LOCALS:1 = 제거
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET%에게 부가/삭제할 소질을 선택해주세요.
+PRINTFORML [0] [음란]을 %LOCALS:(TALENT:170)%합니다.
+PRINTFORML [1] [\@(TALENT:120 || TALENT:121) ? 음경 # 음핵\@]을 %LOCALS:(TALENT:171)%합니다
+SIF TALENT:120 == 0
+	PRINTFORML [2] [음호]를 %LOCALS:(TALENT:172)%합니다.
+PRINTFORML [3] [음고]를 %LOCALS:(TALENT:173)%합니다.
+PRINTFORML [4] [음유]를 %LOCALS:(TALENT:174)%합니다.
+PRINTFORML [5] [요도광]을 %LOCALS:(TALENT:175)%합니다.
+PRINTFORML [6] [키스마]를 %LOCALS:(TALENT:176)%합니다.
+PRINTFORML [7] [초Ｓ]를 %LOCALS:(TALENT:177)%합니다.
+PRINTFORML [8] [초Ｍ]을 %LOCALS:(TALENT:178)%합니다.
+PRINTFORML [9] [즉각함락]을 %LOCALS:(TALENT:179)%합니다.
+SIF CFLAG:14 < 15 || CFLAG:15 < 15 || CFLAG:16 < 1023
+	PRINTL [97] 모든 음란 소질을 취득한다.
+SIF (TFLAG:104 & 128) == 0
+	PRINTL [98] 모든 음란 소질 추가 플래그
+SIF (TFLAG:104 & 512) == 0
+	PRINTL [99] [음마] 추가 플래그
+PRINTL [100] 그만둔다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW [음란]을 %LOCALS:(TALENT:170)%합니다.
+	TALENT:170 = (TALENT:170) ? 0 # 1
+ELSEIF RESULT == 1
+	PRINTFORMW [\@(TALENT:120 || TALENT:121) ? 음경 # 음핵\@]을 %LOCALS:(TALENT:171)%합니다.
+	TALENT:171 = (TALENT:171) ? 0 # 1
+ELSEIF RESULT == 2 && TALENT:120 == 0
+	PRINTFORMW [음호]를 %LOCALS:(TALENT:172)%합니다.
+	TALENT:172 = (TALENT:172) ? 0 # 1
+ELSEIF RESULT == 3
+	PRINTFORMW [음고]를 %LOCALS:(TALENT:173)%합니다.
+	TALENT:173 = (TALENT:173) ? 0 # 1
+ELSEIF RESULT == 4
+	PRINTFORMW [음유]를 %LOCALS:(TALENT:174)%합니다.
+	TALENT:174 = (TALENT:174) ? 0 # 1
+ELSEIF RESULT == 5
+	PRINTFORMW [요도광]을 %LOCALS:(TALENT:175)%합니다.
+	TALENT:175 = (TALENT:175) ? 0 # 1
+ELSEIF RESULT == 6
+	PRINTFORMW [키스마]를 %LOCALS:(TALENT:176)%합니다.
+	TALENT:176 = (TALENT:176) ? 0 # 1
+ELSEIF RESULT == 7
+	PRINTFORMW [초Ｓ]를 %LOCALS:(TALENT:177)%합니다.
+	TALENT:177 = (TALENT:177) ? 0 # 1
+ELSEIF RESULT == 8
+	PRINTFORMW [초Ｍ]을 %LOCALS:(TALENT:178)%합니다.
+	TALENT:178 = (TALENT:178) ? 0 # 1
+ELSEIF RESULT == 9
+	PRINTFORMW [즉각함락]을 %LOCALS:(TALENT:179)%합니다.
+	TALENT:179 = (TALENT:179) ? 0 # 1
+ELSEIF RESULT == 97 && (CFLAG:14 < 15 || CFLAG:15 < 15 || CFLAG:16 < 1023)
+	PRINTW 모든 음란 소질을 취득합니다.
+	CFLAG:14 = 15
+	CFLAG:15 = 15
+	CFLAG:16 = 1023
+ELSEIF RESULT == 98 && (TFLAG:104 & 256) == 0
+	PRINTW 모든 음란 소질 추가 플래그를 켭니다.
+	TFLAG:104 |= 256
+ELSEIF RESULT == 99 && (TFLAG:104 & 512) == 0
+	PRINTW [음마] 추가 플래그를 켭니다.
+	TFLAG:104 |= 512
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;--------------------------------------------------
+;매각, 조수 플래그 처리
+;--------------------------------------------------
+;현재 조교 중인 캐릭터의 매각, 조수 가능 여부를 조정합니다.
+@TRAIN_ASSIST_FLAG
+DRAWLINE
+PRINTFORM 현재 %조사처리(CALLNAME:TARGET,"는")% 
+IF CFLAG:1 == 0
+	PRINT 매각 불가
+ELSEIF CFLAG:1 == 1
+	PRINT 매각 가능
+ELSE
+	PRINT 조수 가능
+ENDIF
+PRINTL  상태입니다.
+PRINTL 어떻게 하겠습니까?
+SIF CFLAG:1 != 0
+	PRINTL [0] 매각 불가로 한다
+SIF CFLAG:1 != 1
+	PRINTL [1] 매각 가능으로 한다
+SIF CFLAG:1 != 2
+	PRINTL [2] 조수 가능으로 한다
+PRINTL [100] 그만둔다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0 && CFLAG:1 != 0
+	PRINTFORMW %CALLNAME:TARGET%의 매각이 불가능해졌습니다.
+ELSEIF RESULT == 1 && CFLAG:1 != 1
+	PRINTFORMW %CALLNAME:TARGET%의 매각이 가능해졌습니다.
+ELSEIF RESULT == 2 && CFLAG:1 != 2
+	PRINTFORMW %CALLNAME:TARGET%의 조수 사용이 가능해졌습니다.
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+CFLAG:1 = RESULT
+RESTART
+
+;--------------------------------------------------
+;자동 능력 상승
+;--------------------------------------------------
+;조교 대상에게 Debug를 추가 (삭제) 
+;[Debug]가 추가된 상태에서는 커맨드를 선택할 때마다 어떤 능력이 상승한다 
+;(예의 RR에서 말하는「즉각함락」을 취득한 상태)
+;또한、체력 500이하가되면 자동으로 완쾌(0未満のとき同様)するようになる
+@TRAIN_DEBUG
+DRAWLINE
+TALENT:998 = (TALENT:998) ? 0 # 1
+PRINTFORMW %CALLNAME:TARGET%의 자동 능력 상승 기능을 \@(TALENT:998) ? 유효 # 무효\@로 했습니다.
+
+;--------------------------------------------------
+;조교의 명령 보정 변경 처리
+;--------------------------------------------------
+@TRAIN_ORDER_DEBUG
+LOCALS:0 = 무효
+LOCALS:1 = 성공(＋999)
+LOCALS:2 = 실패(－999)
+TEQUIP:0 = (TEQUIP:0 < 0 || TEQUIP:0 > 2) ? 2 # TEQUIP:0
+DRAWLINE
+PRINTFORML 현재 설정되어있는 조교의 명령 보정은 「%LOCALS:(TEQUIP:0)%」입니다.
+PRINTL 어떻게 하겠습니까? 
+REPEAT 3
+	SIF TEQUIP:0 != COUNT
+		PRINTFORML [{COUNT}] 명령 보정을 「%LOCALS:COUNT%」로 변경
+REND
+PRINTL [100] 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF (RESULT == 0 || RESULT == 1 || RESULT == 2) && TEQUIP:0 != RESULT
+	PRINTFORMW 조교의 명령 보정을 「%LOCALS:RESULT%」로 변경하였습니다.
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+TEQUIP:0 = RESULT
+RESTART
+
+;=============================================================================
+;메인 메뉴로 사용 가능한 커맨드
+;=============================================================================
+@DEBUG_MENU_SHOP
+DRAWLINE
+PRINTFORML {DAY}일째 \@(TIME == 0) ? (낮) # (밤)\@
+IF TARGET >= 0
+	PRINTFORM %CALLNAME:TARGET% 조교중　
+	CALL LIFE_BAR
+ENDIF
+SIF ASSI >= 0
+	PRINTFORM (조수:%CALLNAME:ASSI%)
+PRINTFORML (소지금 {MONEY}원)
+DRAWLINE
+PRINTL 무엇을 하겠습니까?
+PRINTL 
+
+PRINTLC [ 0] - 캐릭터 편집
+PRINTLC [ 1] - 날짜 변경
+PRINTLC [ 2] - 낮과 밤 변경
+PRINTLC [ 3] - 소지금 변경
+PRINTLC [ 4] - FLAG 조작
+PRINTLC [ 5] - ITEM 조작
+PRINTLC [ 6] - 캐릭터 카드 조작
+PRINTLC [ 7] - DITEMTYPE 조작
+PRINTLC [ 8] - 난이도 변경
+PRINTFORMLC [ 9] - \@(FLAG:5 & 1) ? 기한 있음 # 무기한\@으로 변경
+SIF MONEY:998
+	PRINTLC [10] - 수입 RANK 리셋
+SIF FLAG:14 & 4
+	PRINTLC [11] - 얀데레 리셋
+SIF TARGET >= 0
+	PRINTLC [12] - 도시락 테스트
+SIF FLAG:15 & 4096
+	PRINTLC [13] - 촉수 관련 수치변경
+SIF FLAG:12 & 8
+	PRINTLC [14] - 수집품 편집
+PRINTLC [15] - SAVESTR 조작
+SIF FLAG:5 == 0 && (FLAG:4 == 0 || FLAG:4 == 1 || FLAG:4 == 4)
+	PRINTLC [16] - 목표 금액 변경
+PRINTLC [17] - 전원 연모·조수 가능
+PRINTLC [96] - 캐릭터 전부 회복
+PRINTLC [97] - 엔딩 테스트
+PRINTLC [98] - 강하게 뉴 게임
+PRINTLC [99] - 퀵 로드
+PRINTLC [100] - 돌아간다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	LOCAL = MASTER
+	LOCAL:1 = TARGET
+	LOCAL:2 = ASSI
+	CALL EDIT_CHARA
+	MASTER = LOCAL
+	TARGET = LOCAL:1
+	ASSI = LOCAL:2
+ELSEIF RESULT == 1
+	JUMP EDIT_DATE
+ELSEIF RESULT == 2
+	JUMP EDIT_TIME
+ELSEIF RESULT == 3
+	CALL EDIT_MONEY
+ELSEIF RESULT == 4
+	CALL EDIT_FLAG
+ELSEIF RESULT == 5
+	CALL EDIT_ITEM
+ELSEIF RESULT == 6
+	CALL EDIT_CHARACARD
+ELSEIF RESULT == 7
+	CALL EDIT_DITEMTYPE
+ELSEIF RESULT == 8
+	CALL EDIT_GAME_MODE
+ELSEIF RESULT == 9
+	CALL EDIT_ENDLESS_MODE
+ELSEIF RESULT == 10 && MONEY:998
+	CALL EDIT_INCOME_RANKING
+ELSEIF RESULT == 11 && FLAG:14 & 4
+	CALL EDIT_SANITY
+ELSEIF RESULT == 12 && TARGET >= 0
+	CALL EDIT_LUNCH
+ELSEIF RESULT == 13 && FLAG:15 & 4096
+	CALL EDIT_TENTACLE
+ELSEIF RESULT == 14 && FLAG:12 & 8
+	CALL EDIT_COLLECTION_MENU
+ELSEIF RESULT == 15
+	CALL EDIT_SAVESTR
+ELSEIF RESULT == 16 && FLAG:5 == 0 && (FLAG:4 == 0 || FLAG:4 == 1 || FLAG:4 == 4)
+	CALL EDIT_MONEYLIMIT
+ELSEIF RESULT == 17
+	CALL EDIT_ENDINGTESTMODE
+ELSEIF RESULT == 96
+	CALL EDIT_HEAL_ALL
+ELSEIF RESULT == 97
+	CALL EDIT_ENDING_TEST
+	RETURN 1
+ELSEIF RESULT == 98
+	CALL START_NEWGAME
+	RETURN 1
+ELSEIF RESULT == 99
+	CALL QUICKLOAD
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;--------------------------------------------------
+;날짜 변경 처리
+;--------------------------------------------------
+@EDIT_DATE
+DRAWLINE
+PRINTFORML 현재:{DAY}일째 \@(TIME == 0) ? (낮) # (밤)\@
+PRINTL 며칠째로 바꿀 것인지를 입력하세요(0 이하라면 변경하지 않습니다)
+
+INPUT
+SIF RESULT < 1
+	RETURN 0
+DAY = RESULT
+PRINTFORMW 현재 날짜를 {DAY}일째로 변경했습니다.
+TRYCALL CALENDAR_CALC,DAY
+
+;--------------------------------------------------
+;주야 역전 처리
+;--------------------------------------------------
+@EDIT_TIME
+DRAWLINE
+TIME = (TIME == 0) ? 1 # 0
+PRINTFORMW 시간대를 {DAY}일째 \@(TIME == 0) ? 낮 # 밤\@으로 변경했습니다.
+
+;--------------------------------------------------
+;소지금 변경 처리
+;--------------------------------------------------
+@EDIT_MONEY
+DRAWLINE
+PRINTFORML 현재 소지금:{MONEY}원
+PRINTL 원하는 금액을 입력하세요(마이너스 값이라면 변경하지 않습니다)
+
+INPUT
+SIF RESULT < 0
+	RETURN 0
+MONEY = RESULT
+PRINTFORMW 현재 소지금을 {MONEY}원으로 변경했습니다.
+
+;--------------------------------------------------
+;목표 금액 변경 처리
+;--------------------------------------------------
+@EDIT_MONEYLIMIT
+DRAWLINE
+PRINTFORML 현재 목표금액:{MONEY:100}원
+PRINTFORML 대부호 엔딩의 목표금액은 그 10배인 {10*MONEY:100}원입니다.
+PRINTL 원하는 금액을 입력하세요(마이너스 값이라면 변경하지 않습니다)
+
+INPUT
+SIF RESULT < 0
+	RETURN 0
+MONEY:100 = RESULT
+PRINTFORMW 현재 목표금액을 {MONEY:100}원으로 변경했습니다.
+
+;--------------------------------------------------
+;난이도 변경 처리
+;--------------------------------------------------
+@EDIT_GAME_MODE
+VARSET LOCALS,""
+SPLIT "미정의,EASY,NORMAL,HARD,LUNATIC,PHANTASM,PRO,ULTRA,UNDEFINED",",",LOCALS
+SIF FLAG:3 < 1 || FLAG:3 > 7
+	FLAG:3 = 0
+DRAWLINE
+PRINTFORML 현재 난이도는 "%LOCALS:(FLAG:3)%" 입니다.
+PRINTL 변경하고 싶은 난이도를 선택해 주세요.
+DRAWLINE
+PRINTL [0] 이대로 좋은 건가
+PRINTL [1] EASY
+PRINTL [2] NORMAL
+PRINTL [3] HARD
+PRINTL [4] LUNATIC
+PRINTL [5] PHANTASM
+PRINTL [6] PRO 　　(구현중)
+PRINTL [7] ULTRA 　(구현중)
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	RETURN 0
+ELSEIF RESULT >= 1 && RESULT <= 7
+	PRINTFORMW 바뀐 난이도는 "%LOCALS:RESULT%" 입니다.
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+FLAG:3 = RESULT
+
+;--------------------------------------------------
+;엔드리스 모드 변경 처리
+;--------------------------------------------------
+;エンドレス状態を有効あるいは解除する
+;主にエンディングを試すための機能
+@EDIT_ENDLESS_MODE
+DRAWLINE
+PRINT 
+FLAG:5 ^= 1
+PRINTFORMW 엔드리스 에잇을 \@(FLAG:5 & 1) ? 작동 # 해제\@합니다.
+
+;--------------------------------------------------
+;수입 랭킹 초기화 처리
+;--------------------------------------------------
+@EDIT_INCOME_RANKING
+DRAWLINE
+MONEY:800 = 0
+MONEY:801 = 0
+FOR LOCAL, 970, 999
+	MONEY:LOCAL = 0
+NEXT
+PRINTW 수입 랭킹을 초기화합니다.
+
+;--------------------------------------------------
+;얀데레 게이지 리셋 처리
+;--------------------------------------------------
+;ヤンデレモードの嫉妬・狂気・ヤンデレゲージを解除
+;(元から嫉妬・狂気を持っていないなら嫉妬・狂気も解除)
+@EDIT_SANITY
+DRAWLINE
+LOCAL:1 = 0
+FOR LOCAL, 0, CHARANUM
+	IF CFLAG:LOCAL:30
+		CFLAG:LOCAL:30 = 0
+		IF TALENT:LOCAL:157 && CFLAG:LOCAL:12 & 4096
+			TALENT:LOCAL:157 = 0
+			CFLAG:LOCAL:12 -= 4096
+		ENDIF
+		IF TALENT:LOCAL:158 && CFLAG:LOCAL:12 & 1
+			TALENT:LOCAL:158 = 0
+			CFLAG:LOCAL:12 -= 1
+		ENDIF
+		LOCAL:1 += 1
+	ENDIF
+NEXT
+IF LOCAL:1 > 0
+	PRINTW 캐릭터의 질투와 광기를 해제했습니다.
+ELSE
+	PRINTW 질투와 광기를 가진 캐릭터는 없습니다.
+ENDIF
+
+;--------------------------------------------------
+;간이 엔딩 테스트용 전 캐릭터 연모·조수 가능
+;--------------------------------------------------
+;간이 엔딩 테스트용 목적. 
+@EDIT_ENDINGTESTMODE
+DRAWLINE
+LOCAL:1 = 0
+FOR LOCAL, 0, CHARANUM
+	IF CFLAG:LOCAL:1 != 2 || TALENT:LOCAL:150 == 0
+		CFLAG:LOCAL:1 = 2
+		IF TALENT:LOCAL:150 == 0
+			TALENT:LOCAL:150 = 1
+			CFLAG:LOCAL:14 |= 1
+		ENDIF
+		LOCAL:1 += 1
+	ENDIF
+NEXT
+IF LOCAL:1 > 0
+	PRINTW 전 캐릭터를 연모 및 조수 가능 상태로 변경했습니다.
+ELSE
+	PRINTW 이미 전 캐릭터가 연모 및 조수 가능합니다.
+ENDIF
+
+;--------------------------------------------------
+;도시락 테스트 처리
+;--------------------------------------------------
+;弁当パッチの動作、珠入手量、売値の確認用
+@EDIT_LUNCH
+DRAWLINE
+PRINTL 도시락 시식을 거행합니다.
+PRINTL 먹고 싶은 도시락을 골라주세요.
+PRINTL [0] 수제 도시락
+PRINTL [1] 독요리
+PRINTL [2] 질투 초콜릿
+PRINTL [3] 자기가 만든 도시락
+PRINTL [100] 그만둔다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	DRAWLINE
+	PRINTW 수제 도시락을 먹어봅니다.
+	CALL LUNCH_SALE
+ELSEIF RESULT == 1
+	DRAWLINE
+	PRINTW 독요리를 먹어봅니다.
+	CALL POISONED_LUNCH
+ELSEIF RESULT == 2
+	DRAWLINE
+	PRINTW 질투 초콜릿을 먹어봅니다.
+	CALL LUNCH_CHOCOLATE
+ELSEIF RESULT == 3
+	DRAWLINE
+	PRINTW 자기가 만든 도시락을 먹어봅니다.
+	CALL LUNCH_SELF
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;--------------------------------------------------
+;촉수 관련 변경 처리
+;--------------------------------------------------
+@EDIT_TENTACLE
+DRAWLINE
+PRINTL 변경하고 싶은 촉수 항목을 선택하세요.
+PRINTL [0] 촉수 에너지
+PRINTL [1] 촉수의 구슬
+PRINTL [2] 누계 촉수 산제물 수
+PRINTL [3] 촉수 산제물 수
+PRINTL [100] 돌아가기
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	DRAWLINE
+	PRINTFORML 현재 촉수 에너지 ({BASE:MASTER:6}τ)
+	PRINTL 원하는 수치를 입력하세요(마이너스 값이라면 변경하지 않습니다)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	BASE:MASTER:6 = RESULT
+	PRINTFORMW 현재 촉수 에너지를 {BASE:MASTER:6}τ로 변경했습니다.
+ELSEIF RESULT == 1
+	DRAWLINE
+	PRINTFORML 현재 촉수의 구슬({JUEL:MASTER:198}개)
+	PRINTL 원하는 수치를 입력하세요(0-999999)
+	INPUT
+	SIF RESULT < 0 || RESULT >= 1000000
+		RESTART
+	JUEL:MASTER:198 = RESULT
+	PRINTFORMW 현재 촉수의 구슬을 {JUEL:MASTER:198}개로 변경했습니다.
+ELSEIF RESULT == 2
+	DRAWLINE
+	PRINTFORML 현재 누계 촉수 산제물 수 ({FLAG:99}명)
+	PRINTL 원하는 수치를 입력하세요(0-999999)
+	INPUT
+	SIF RESULT < 0 || RESULT >= 1000000
+		RESTART
+	FLAG:99 = RESULT
+	PRINTFORMW 현재 누계 촉수 산제물 수를 {FLAG:99}명으로 수정하였습니다.
+ELSEIF RESULT == 3
+	DRAWLINE
+	PRINTFORML 현재 촉수 산제물 수 ({FLAG:33}명)
+	PRINTL 원하는 수치를 입력하세요(0-999999)
+	INPUT
+	SIF RESULT < 0 || RESULT >= 1000000
+		RESTART
+	FLAG:33 = RESULT
+	PRINTFORMW 현재 촉수 산제물 수를 {FLAG:33}명으로 수정하였습니다.
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;--------------------------------------------------
+;캐릭터 전쾌
+;--------------------------------------------------
+@EDIT_HEAL_ALL
+REPEAT CHARANUM
+	BASE:COUNT:0 = MAXBASE:COUNT:0
+	BASE:COUNT:1 = MAXBASE:COUNT:1
+	BASE:COUNT:8 = 0
+REND
+PRINTW 전원의 체력, 기력, 취기를 회복했습니다.
+
+;--------------------------------------------------
+;캐릭터 편집
+;--------------------------------------------------
+@EDIT_CHARA
+DRAWLINE
+SIF TARGET >= 0
+	PRINTFORML 현재 %CALLNAME:TARGET% 조교중
+SIF ASSI >= 0
+	PRINTFORM (조수:%CALLNAME:ASSI%)
+PRINTL 
+PRINTLC [  0] - 편집 대상 선택        
+IF TARGET >= 0
+	PRINTLC [  1] - 대상 정보
+	PRINTLC [  2] - ABL/MAXBASE 편집
+	PRINTLC [  3] - EXP 편집
+	PRINTLC [  4] - MARK 편집
+	PRINTLC [  5] - TALENT 편집
+	PRINTLC [  6] - JUEL 편집
+	PRINTLC [  7] - RELATION 편집
+	PRINTLC [  8] - CFLAG 조작
+	PRINTLC [  9] - PALAM/BASE 편집
+	PRINTLC [ 10] - EQUIP 조작
+	PRINTLC [ 11] - 매각조사
+	PRINTLC [ 12] - 칭호 편집
+	PRINTLC [ 13] - CSTR 편집
+ELSE
+	PRINTL 
+ENDIF
+PRINTLC [100] - 돌아간다
+
+$INPUT_LOOP
+INPUT
+SIF RESULT == 0
+	CALL SELECT_TARGET
+IF RESULT == 100
+	RETURN 0
+ELSEIF TARGET < 0
+	PRINTW 대상을 선택해주세요.
+	RESTART
+ELSEIF RESULT == 1
+	CALL SHOW_CHARADATA_MENU
+ELSEIF RESULT == 2
+	CALL EDIT_ABL
+ELSEIF RESULT == 3
+	CALL EDIT_EXP
+ELSEIF RESULT == 4
+	CALL EDIT_MARK
+ELSEIF RESULT == 5
+	CALL EDIT_TALENT
+ELSEIF RESULT == 6
+	CALL EDIT_JUEL
+ELSEIF RESULT == 7
+	CALL EDIT_RELATION
+ELSEIF RESULT == 8
+	CALL EDIT_CFLAG
+ELSEIF RESULT == 9
+	CALL EDIT_PALAM
+ELSEIF RESULT == 10
+	CALL EDIT_EQUIP
+ELSEIF RESULT == 11
+	CALL EDIT_RESEARCH_CHARA
+ELSEIF RESULT == 12
+	CALL EDIT_NICKNAME
+ELSEIF RESULT == 13
+	CALL EDIT_CSTR
+ENDIF
+RESTART
+
+@SELECT_TARGET
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+LOCAL:1 = CHARANUM / 20
+
+$PRINT_LIST
+DRAWLINE
+SIF TARGET >= 0
+	PRINTFORML 현재 편집중인 캐릭터:%CALLNAME:TARGET%
+PRINTFORML 누구를 편집하겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+REPEAT CHARANUM
+	SIF COUNT >= LOCAL * 20 && COUNT < (LOCAL+1) * 20
+		PRINTFORML [{COUNT}]%NAME:COUNT%
+REND
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM
+	GOTO INPUT_LOOP
+ENDIF
+
+TARGET = RESULT
+PRINTFORML %CALLNAME:TARGET% 선택했습니다.
+RETURN 0
+
+;--------------------------------------------------
+; PALAM조작
+;--------------------------------------------------
+@EDIT_PALAM
+DRAWLINE
+FOR LOCAL, 0, 100
+	SIF STRLENS(PALAMNAME:LOCAL) == 0
+		CONTINUE
+	PRINTFORMLC [{LOCAL, 3}]%PALAMNAME:LOCAL% ({PALAM:LOCAL}) 
+NEXT
+PRINTFORMLC [100] 현재 체력 ({BASE:0}) 
+PRINTFORMLC [101] 현재 기력 ({BASE:1}) 
+SIF ( TALENT:120 || TALENT:121 )
+	PRINTFORMLC [102] 사정 게이지 ({BASE:2}) 
+SIF TALENT:134
+	PRINTFORMLC [103] 분유 게이지 ({BASE:3}) 
+SIF TALENT:45 && ((FLAG:15 & 4096 && FLAG:75 & 32768) == 0)
+	PRINTFORMLC [104] 요의 게이지 ({BASE:4}) 
+SIF TALENT:65 || CFLAG:36
+	PRINTFORMLC [105] 음모 ({BASE:5}) 
+SIF TALENT:146
+	PRINTFORMLC [106] 촉수기생 LV ({BASE:6})
+SIF TALENT:120 == 0 && TALENT:121 == 0
+	PRINTFORMLC [107] 음핵 성장 상태 ({BASE:7}) 
+PRINTFORMLC [108] 취기 게이지 ({BASE:8}) 
+PRINTLC [199] 패러미터 리셋
+PRINTLC [200] 그만둔다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 200
+	RETURN 0
+ELSEIF RESULT == 199
+	VARSET PALAM, 0
+	PRINTW 패러미터를 전부 리셋했습니다.
+	RESTART
+ELSEIF RESULT == 100
+	DRAWLINE
+	PRINTFORML 체력 변경(현재 {BASE:0})
+	PRINTFORML 수치 입력[0-{MAXBASE:0}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:0
+		BASE:0 = RESULT
+ELSEIF RESULT == 101
+	DRAWLINE
+	PRINTFORML 기력 변경(현재 {BASE:1})
+	PRINTFORML 수치 입력[0-{MAXBASE:1}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:1
+		BASE:1 = RESULT
+ELSEIF RESULT == 102
+	DRAWLINE
+	PRINTFORML 사정 게이지 변경(현재 {BASE:2})
+	PRINTFORML 수치 입력[0-{MAXBASE:2 - 1}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:2 - 1
+		BASE:2 = RESULT
+ELSEIF RESULT == 103
+	DRAWLINE
+	PRINTFORML 분유 게이지 변경(현재 {BASE:3})
+	PRINTFORML 수치 입력[0-{MAXBASE:3 - 1}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:3 - 1
+		BASE:3 = RESULT
+ELSEIF RESULT == 104
+	DRAWLINE
+	PRINTFORML 요의 게이지 변경(현재 {BASE:4})
+	PRINTFORML 수치 입력[0-{MAXBASE:4 - 1}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:4 - 1
+		BASE:4 = RESULT
+ELSEIF RESULT == 105
+	DRAWLINE
+	PRINTFORML 음모 게이지 변경(현재 {BASE:5})
+	PRINTFORML 제모 플레이용、0~50은 반들반들、51~250에서 나기 시작해서、251~1000부터 제모 가능.
+	PRINTFORML 수치 입력[0-1000](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= 1000
+		BASE:5 = RESULT
+ELSEIF RESULT == 106
+	DRAWLINE
+	PRINTFORML 촉수기생 LV 변경(현재 {BASE:6})
+	PRINTFORML 수치 입력[0-{MAXBASE:6}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:6
+		BASE:6 = RESULT
+ELSEIF RESULT == 107
+	SIF TALENT:120 || TALENT:121
+		GOTO INPUT_LOOP
+	DRAWLINE
+	PRINTFORML 음핵 성장 상태 변경(현재 {BASE:7})
+	PRINTL 수치 입력[0-250](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= 250
+		BASE:7 = RESULT
+ELSEIF RESULT == 108
+	DRAWLINE
+	PRINTFORML 취기 게이지 변경(현재 {BASE:8})
+	PRINTFORML 수치 입력[0-{MAXBASE:8 * 3}](무효값으로 취소)
+	INPUT
+	SIF RESULT >= 0 && RESULT <= MAXBASE:8 * 3
+		BASE:8 = RESULT
+ELSEIF RESULT < 0 || RESULT > 99
+	GOTO INPUT_LOOP
+ELSE
+	LOCAL = RESULT
+	SIF STRLENS(PALAMNAME:LOCAL) == 0
+		GOTO INPUT_LOOP
+	DRAWLINE
+	PRINTFORML %PALAMNAME:LOCAL% 변경(현재 {PALAM:LOCAL})
+	PRINTFORML 수치 입력[0-9999999](무효값으로 취소)
+	INPUT
+	SIF RESULT < 0 || RESULT > 9999999
+		RESTART
+	PALAM:LOCAL = RESULT
+ENDIF
+RESTART
+
+;--------------------------------------------------
+; ABL조작
+;--------------------------------------------------
+;ABLの有無をCSVから取得
+@DISP_ABL(ARG)
+#FUNCTION
+RETURNF (STRLENS(ABLNAME:ARG)) ? 1 # 0
+
+;ABL변경
+@EDIT_ABL
+DRAWLINE
+FOR LOCAL, 0, 100
+	SIF DISP_ABL(LOCAL) == 0
+		CONTINUE
+	PRINTFORMLC [{LOCAL, 3}]%ABLNAME:LOCAL% LV ({ABL:LOCAL})  
+NEXT
+PRINTFORMLC [100] 최대 체력 ({MAXBASE:0}) 
+PRINTFORMLC [101] 최대 기력 ({MAXBASE:1}) 
+SIF ( TALENT:120 || TALENT:121 )
+	PRINTFORMLC [102] 최대 사정 게이지 ({MAXBASE:2}) 
+SIF TALENT:134
+	PRINTFORMLC [103] 최대 분유 게이지 ({MAXBASE:3}) 
+SIF TALENT:45 && ((FLAG:15 & 4096 && FLAG:75 & 32768) == 0)
+	PRINTFORMLC [104] 최대 요의 게이지 ({MAXBASE:4}) 
+;PRINTFORML [105] 최대 음모 게이지 ({MAXBASE:5}) 
+SIF TALENT:146
+	PRINTFORMLC [106] 최대 촉수기생 LV ({MAXBASE:6})
+PRINTLC [200] 그만둔다
+
+$INPUT_LOOP
+INPUT
+SIF RESULT == 200
+	RETURN 0
+SIF RESULT < 0 || RESULT > 107
+	GOTO INPUT_LOOP
+IF RESULT == 100
+	DRAWLINE
+	PRINTFORML 최대 체력 변경(현재 {MAXBASE:0})
+	PRINTFORML 수치 입력(마이너스 수치로 취소)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	SIF RESULT < BASE:0
+		BASE:0 = RESULT
+	MAXBASE:0 = RESULT
+ELSEIF RESULT == 101
+	DRAWLINE
+	PRINTFORML 최대 기력 변경(현재 {MAXBASE:1})
+	PRINTFORML 수치 입력(마이너스 수치로 취소)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	SIF RESULT < BASE:1
+		BASE:1 = RESULT
+	MAXBASE:1 = RESULT
+ELSEIF RESULT == 102
+	DRAWLINE
+	PRINTFORML 최대 사정 게이지 변경(현재 {MAXBASE:2})
+	PRINTFORML 수치 입력(마이너스 수치로 취소)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	SIF RESULT < BASE:2
+		BASE:2 = RESULT - 1
+	MAXBASE:2 = RESULT
+ELSEIF RESULT == 103
+	DRAWLINE
+	PRINTFORML 최대 분유 게이지 변경(현재 {MAXBASE:3})
+	PRINTFORML 수치 입력(마이너스 수치로 취소)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	SIF RESULT < BASE:3
+		BASE:3 = RESULT - 1
+	MAXBASE:3 = RESULT
+ELSEIF RESULT == 104
+	DRAWLINE
+	PRINTFORML 최대 요의 게이지 변경(현재 {MAXBASE:4})
+	PRINTFORML 수치 입력(마이너스 수치로 취소)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	SIF RESULT < BASE:4
+		BASE:4 = RESULT - 1
+	MAXBASE:4 = RESULT
+;ELSEIF RESULT == 105
+;	DRAWLINE
+;	PRINTFORML 최대 음모 게이지 변경(현재 {MAXBASE:5})
+;	PRINTFORML 수치 입력[0-1000](무효값으로 취소)
+;	INPUT
+;	SIF RESULT >= 0 && RESULT <= 1000
+;		MAXBASE:5 = RESULT
+ELSEIF RESULT == 106
+	DRAWLINE
+	PRINTFORML 최대 촉수기생 LV 변경(현재 {MAXBASE:6})
+	PRINTFORML 수치 입력(마이너스 수치로 취소)
+	INPUT
+	SIF RESULT < 0
+		RESTART
+	SIF RESULT < BASE:6
+		BASE:6 = RESULT
+	MAXBASE:6 = RESULT
+ELSE
+	LOCAL = RESULT
+	DRAWLINE
+	PRINTFORML %ABLNAME:LOCAL% LV 변경(현재 {ABL:LOCAL})
+	PRINTFORML 수치 입력[0-5](무효값으로 취소)
+	INPUT
+	SIF RESULT < 0 || RESULT > 10
+		RESTART
+	ABL:LOCAL = RESULT
+ENDIF
+
+RESTART
+
+;--------------------------------------------------
+;소질 편집
+;--------------------------------------------------
+@EDIT_TALENT
+LOCAL = 0
+LOCAL:1 = 4
+CALLF CLEAR_LIST
+;表示させる素質を抽出
+REPEAT 1000
+	;主人の[Debug]は外せない
+	SIF COUNT == 998 && TARGET == MASTER
+		CONTINUE
+	;存在しない素質は排除
+	STRLENS TALENTNAME:COUNT
+	SIF RESULT == 0
+		CONTINUE
+
+	CALLF SET_LIST, COUNT, 1
+REND
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 어느 소질을 변경하겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+REPEAT 60
+	LOCAL:2 = COUNT + LOCAL * 60
+	SIF LOCAL:2 == 290
+		LOCAL:2 = 831
+	SIF LOCAL:2 == 291
+		LOCAL:2 = 833
+	SIF LOCAL:2 == 292
+		LOCAL:2 = 834
+	SIF LOCAL:2 == 293 && TARGET != MASTER
+		LOCAL:2 = 998
+	SIF GET_LIST(LOCAL:2) == 0
+		CONTINUE
+	IF TALENT:(LOCAL:2) == 0
+		PRINTFORMLC [{LOCAL:2, 3}]×【%TALENTNAME:(LOCAL:2)%】
+	ELSEIF TALENT:(LOCAL:2) == 1
+		PRINTFORMLC [{LOCAL:2, 3}]◎【%TALENTNAME:(LOCAL:2)%】
+	ELSEIF TALENT:(LOCAL:2) > 1
+		PRINTFORMLC [{LOCAL:2, 3}]○【%TALENTNAME:(LOCAL:2)%】
+	ENDIF
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 1000
+	GOTO INPUT_LOOP
+ELSEIF GET_LIST(RESULT) == 0
+	GOTO INPUT_LOOP
+ENDIF
+
+SIF STRLENS(TALENTNAME:RESULT) == 0
+	GOTO INPUT_LOOP
+DRAWLINE
+IF (RESULT == 0 || RESULT == 213) && TALENT:RESULT == 1
+	PRINTFORMW \@(RESULT == 0) ? 재생 처녀로 합니다. # 마음의 눈을 닫습니다.\@
+	TALENT:RESULT = 2
+ELSEIF (RESULT == 122 || RESULT == 124 || RESULT == 220 || RESULT == 230 ||  RESULT == 265 || RESULT == 833) && TALENT:RESULT == 0
+	CALL EDIT_ADVANCED_TALENT, RESULT
+ELSE
+	PRINTFORMW [%TALENTNAME:RESULT%] 소질을 \@(TALENT:RESULT) ? 삭제 # 부가\@합니다.
+	TALENT:RESULT = (TALENT:RESULT) ? 0 # 1
+ENDIF
+GOTO PRINT_LIST
+
+;………………………………………………
+;소질 변경 보조 처리
+;………………………………………………
+@EDIT_ADVANCED_TALENT, ARG
+PRINTFORML %TALENTNAME:ARG%의 값을 결정해주세요. [0-999] (현재 {TALENT:ARG})
+PRINTL [1000] 그만둔다
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 1000
+	GOTO INPUT_LOOP
+ENDIF
+PRINTFORMW %TALENTNAME:ARG%의 값을 {RESULT}로 했습니다.
+TALENT:ARG = RESULT
+
+;--------------------------------------------------
+; MARK조작
+;--------------------------------------------------
+;MARKの有無をCSVから取得
+@DISP_MARK(ARG)
+#FUNCTION
+RETURNF (STRLENS(MARKNAME:ARG)) ? 1 # 0
+
+;MARK변경
+@EDIT_MARK
+DRAWLINE
+FOR LOCAL, 0, 100
+	SIF DISP_MARK(LOCAL) == 0
+		CONTINUE
+	PRINTFORML [{LOCAL, 3}]%MARKNAME:LOCAL% ({MARK:LOCAL})
+NEXT
+PRINTL [100] 그만둔다
+$INPUT_LOOP
+INPUT
+SIF RESULT == 100
+	RETURN 0
+SIF RESULT < 0 || RESULT > 100
+	GOTO INPUT_LOOP
+LOCAL = RESULT
+SIF DISP_MARK(LOCAL) == 0
+	GOTO INPUT_LOOP
+DRAWLINE
+PRINTFORML %MARKNAME:LOCAL% LV 변경(현재 {MARK:LOCAL})
+PRINTFORML 수치 입력[0-3](무효값으로 취소)
+INPUT
+SIF RESULT < 0 || RESULT >3
+	RESTART
+MARK:LOCAL = RESULT
+
+RESTART
+
+;--------------------------------------------------
+; EXP조작
+;--------------------------------------------------
+;EXPの有無をCSVから取得
+@DISP_EXP(ARG)
+#FUNCTION
+RETURNF (STRLENS(EXPNAME:ARG)) ? 1 # 0
+
+;EXP변경
+@EDIT_EXP
+DRAWLINE
+FOR LOCAL:1, 0, 100
+	LOCAL = LOCAL:1
+	SIF DISP_EXP(LOCAL) == 0
+		CONTINUE
+	PRINTFORMLC [{LOCAL, 3}]%EXPNAME:LOCAL% ({EXP:LOCAL})  
+NEXT
+PRINTL 
+PRINTL [100] 그만둔다
+$INPUT_LOOP
+INPUT
+SIF RESULT == 100
+	RETURN 0
+SIF RESULT < 0 || RESULT > 100
+	GOTO INPUT_LOOP
+LOCAL = RESULT
+SIF DISP_EXP(LOCAL) == 0
+	GOTO INPUT_LOOP
+DRAWLINE
+PRINTFORML %EXPNAME:LOCAL% 변경(현재 {EXP:LOCAL})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+EXP:LOCAL = RESULT
+RESTART
+
+;--------------------------------------------------
+; JUEL조작
+;--------------------------------------------------
+;JUELの有無を指定
+;JUELNAMEは無かった残念！
+@DISP_JUEL(ARG)
+#FUNCTION
+SIF ARG >= 0 && ARG <= 3
+	RETURNF 1
+SIF ARG >= 10 && ARG <= 17
+	RETURNF 1
+;SIF ARG >= 20 && ARG <= 22
+;	RETURNF 1
+SIF ARG >= 30 && ARG <= 32
+	RETURNF 1
+SIF ARG == 100
+	RETURNF 1
+RETURNF 0
+
+;JUEL변경
+@EDIT_JUEL
+DRAWLINE
+FOR LOCAL, 0, 200
+	SIF DISP_JUEL(LOCAL) == 0
+		CONTINUE
+	PRINTFORMLC [{LOCAL, 3}]%PALAMNAME:LOCAL%의 구슬 ({JUEL:LOCAL}) 	
+NEXT
+PRINTL 
+PRINTLC [200] 그만둔다
+$INPUT_LOOP
+INPUT
+SIF RESULT == 200
+	RETURN 0
+SIF RESULT < 0 || RESULT > 200
+	GOTO INPUT_LOOP
+LOCAL = RESULT
+SIF DISP_JUEL(LOCAL) == 0
+	GOTO INPUT_LOOP
+DRAWLINE
+PRINTFORML %PALAMNAME:LOCAL%의 구슬 수 변경(현재 {JUEL:LOCAL})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+JUEL:LOCAL = RESULT
+RESTART
+
+;--------------------------------------------------
+; RELATION조작
+;--------------------------------------------------
+;RERATION 변경
+@EDIT_RELATION
+DRAWLINE
+PRINTL 현재의 상성
+FOR LOCAL, 0, 215
+	SIF RELATION:LOCAL <= 0
+		CONTINUE
+	LOCAL:1 = LOCAL + 100
+	PRINTFORMLC [{LOCAL, 3}]%ITEMNAME:(LOCAL:1)%({RELATION:LOCAL}％)
+NEXT
+PRINTL 
+PRINTL [0-214] 번호에 대응하는 캐릭터와의 상성 변경(무효값으로 취소)
+PRINTLC [1000] 그만둔다
+
+$INPUT_LOOP
+INPUT
+SIF RESULT == 1000
+	RETURN 0
+SIF RESULT < 0 || RESULT > 214
+	GOTO INPUT_LOOP
+LOCAL = RESULT
+LOCAL:1 = RESULT + 100
+DRAWLINE
+PRINTFORML [%ITEMNAME:(LOCAL:1)%]와의 상성 변경(현재 {RELATION:LOCAL})
+PRINTFORML 수치 입력[0-1000](무효값으로 취소)
+INPUT
+SIF RESULT < 0 || RESULT > 1000
+	RESTART
+RELATION:LOCAL = RESULT
+RESTART
+
+;--------------------------------------------------
+; CFLAG조작
+;--------------------------------------------------
+;CFLAG의 설명
+@DEFINE_CFLAG, ARG
+IF ARG == 0
+	PRINT ＳＰ캐릭터 여부 0=SP캐릭터 아님 1이상=SP캐릭터
+ELSEIF ARG == 1
+	PRINT 매각 및 조수 가능 1=매각 가능 2=조수도 가능
+ELSEIF ARG == 2
+	PRINT 호감도
+ELSEIF ARG == 3
+	PRINT 매각 불가 플래그 1=[상애]用 2=[예속] 혹은 [낙인]
+ELSEIF ARG == 4
+	PRINT 현재 위치 플래그 1=실종 2=육아실 4=촉수유폐 1024=창관
+ELSEIF ARG == 5
+	PRINT 종족을 바꾸었던 플래그(1=요정 2=흡혈귀 3=기계, 4=영체 5=인형 6=악마 7=갓파 8=요호 9=반백택 10=주정)
+ELSEIF ARG == 6
+	PRINT 체력 상승 누적분
+ELSEIF ARG == 7
+	PRINT 기력 상승 누적분
+ELSEIF ARG == 8
+	PRINT 신체측정 판정(정보 추가바람)
+ELSEIF ARG == 10
+	PRINT 수집품 채집 판정(1=엉덩이구슬 2=황금수 4=애액 8=혈액 16=파과피 32=팬티 64=사진 128=비디오 256=모유 512=알 1024=음모)
+ELSEIF ARG == 11
+	PRINT Ｖ, Ａ, 이상경험 변동 판정(1=V경험 2=A경험 4=이상 경험)
+ELSEIF ARG == 12
+	PRINT 트라우마 판정(1=광기 2=유아퇴행 4=겁쟁이 8=감정부족 16=비관 32=낙관 64=눈에 띄고 싶어함 128=억압 256=냄새민감 512=냄새둔감 1024=약점 2048=순수 4096=질투 8192=소인 16384=미약중독 32768=정애미각 65535=해방)
+ELSEIF ARG == 13
+	PRINT 이벤트로 소멸하는 소질(1=억압 2=저항 4=무관심 8=반항적 16= 거만함 32=쾌감부정 64=일선 넘지 않음 128=유치 256=정조 관념 512=남자 혐오 1024=여자 혐오 2048=해방)
+ELSEIF ARG == 14
+	PRINT 이벤트 취득 연모계 소질(1=연모 2=망신 4=친애 8=상애 16=숫처녀 이벤트(이것만 판정)
+ELSEIF ARG == 15
+	PRINT 이벤트 취득 복종계 소질(1=복종 2=낙인 4=예속 8=사역마)
+ELSEIF ARG == 16
+	PRINT 이벤트 취득 음란계 소질(1=음란 2=음핵 4=음호 8=음고 16=음유 32=요도광 64=키스마 128=초S 256=초M 512=즉각함락 1024=음마)
+ELSEIF ARG == 17
+	PRINT 이벤트 취득 붕괴계 소질(1=유아퇴행 2=광기 4=정신붕괴 8=괴뢰 16=기억소거약(이것만 판정) 32=괴조인격)
+ELSEIF ARG == 18
+	PRINT 계승 캐릭터 판정
+ELSEIF ARG == 20
+	PRINT 시추에이션 판정(1=정조관념 2=관장 4=알관장(전) 8=알관장(후) 16=해방경험 32=함락경험 64=알출산경험 128=할례경험 256=강제성장 512=성전환 1024=[난생]소거 2048=[요호]효과로 미약 입수)
+ELSEIF ARG == 21
+	PRINT 특수커맨드 첫체험 판정(1=공개자위 2=역레이프 4=조수를 범한다 8=조수를 범하게 한다 16=유선개발+모유체질 32=반신삽입(전) 64=반신삽입(후) 128=배란유발제 256=구속∇으로 처녀상실)
+ELSEIF ARG == 22
+	PRINT 가학 커맨드 첫체험 판정(1=목마로 기절 2=배에 강펀치로 기절 4=말뚝 8=나이프 16=톱날(나타))
+ELSEIF ARG == 23
+	PRINT 목욕탕 커맨드 첫체험 판정(1=벌레목욕탕 2=뱀장어 목욕탕 4=슬라임 목욕탕 8=정액 목욕탕 16=도핑 야고코로 폭발 32=액독 목욕탕)
+ELSEIF ARG == 24
+	PRINT 촉수 커맨드 첫체험 판정(1=촉수 기생 2=유선 삽입 4=촉수 유폐 8=촉수 최면 16=촉수 산란 32=촉수 관통)
+ELSEIF ARG == 25
+	PRINT 수간 커맨드 첫체험 판정(1=개로 범한다 2=개를 범한다 4=돼지로 범한다 8=돼지를 범한다 16=말 자지 펠라 32=말로 범한다)
+ELSEIF ARG == 29
+	PRINT 종족개조 첫체험 판정(정보 추가바람)
+ELSEIF ARG == 30
+	PRINT 질투 포인트
+ELSEIF ARG == 31
+	PRINT 방뇨레벨
+ELSEIF ARG == 32
+	PRINT 미약중독 날짜 카운트、미약중독 레벨
+ELSEIF ARG == 33
+	PRINT 은방울꽃독 사용 횟수
+ELSEIF ARG == 34
+	PRINT 촉수 출산 횟수
+ELSEIF ARG == 35
+	PRINT 임신 혹은 회란 날짜 카운트
+ELSEIF ARG == 36
+	PRINT 음모 성장 판정 1=탈모 2=육모가능
+ELSEIF ARG == 37
+	PRINT 음핵비대 관련 판정(1=음핵 측정을 했다 2=비대 음핵 4=이상한 사이즈 8=사정기능 추가 16=할례 상태)
+ELSEIF ARG == 38
+	PRINT 스트레스 과부하 레벨
+ELSEIF ARG == 39
+	PRINT 촉수유폐 경과시간
+ELSEIF ARG == 40
+	PRINT 꼬리 갯수
+ELSEIF ARG == 41
+	PRINT 촉수 이식
+ELSEIF ARG == 42
+	PRINT 낙인 캐릭터용 특수 장비 플래그(1=클리토리스 링 2=노예 관리용 정조대 4=베리 쥬얼 8=본디지 16=음순 피아스 32=니플 피아스)
+ELSEIF ARG == 43
+	PRINT 범용 대사용 인격 판정(0이라면 다음에 JINKAKU 로딩되면 재설정)
+ELSEIF ARG == 44
+	PRINT 범용 역대사용 인격 판정(0이라면 다음에 JINKAKU_REVERSE 로딩되면 재설정)
+ELSEIF ARG == 46
+	PRINT 마지막 조교 일자
+ELSEIF ARG == 47
+	PRINT 마지막 조수 해임 일자
+ELSEIF ARG == 50
+	PRINT 코스프레 실행 횟수
+ELSEIF ARG == 51
+	PRINT 공개노출 라이브 성공 횟수
+ELSEIF ARG == 52
+	PRINT 공개노출 라이브 실패 횟수
+ELSEIF ARG == 53
+	PRINT 공개노출 라이브 후 범해진 횟수
+ELSEIF ARG == 54
+	PRINT 공중 육변기 횟수
+ELSEIF ARG == 55
+	PRINT 조교중 설교(시키에이키)／강의(케이네) 횟수
+ELSEIF ARG == 56
+	PRINT 파이즈리를 해 준 횟수
+ELSEIF ARG == 57
+	PRINT 파이즈리를 받은 횟수
+ELSEIF ARG == 58
+	PRINT 주치육륜의 대상이 된 횟수
+ELSEIF ARG == 60
+	PRINT Ｃ 개발도
+ELSEIF ARG == 61
+	PRINT Ｖ 개발도
+ELSEIF ARG == 62
+	PRINT Ａ 개발도
+ELSEIF ARG == 63
+	PRINT Ｂ 개발도
+ELSEIF ARG == 64
+	PRINT 강제 정음절정 개발도
+ELSEIF ARG == 65
+	PRINT 스트레스치
+ELSEIF ARG == 66
+	PRINT 타락도(주인 전용)
+ELSEIF ARG == 70
+	PRINT 임신시킨 캐릭터 판정(1=마스터 2= 조수 3=노예)
+ELSEIF ARG == 71
+	PRINT 마스터가 노예 질내 사정 카운트용
+ELSEIF ARG == 72
+	PRINT 조수가 노예 질내 사정 카운트용
+ELSEIF ARG == 73
+	PRINT 노예가 조수 질내 사정 카운트용
+ELSEIF ARG == 74
+	PRINT 정액을 뿌린 장소 판별
+ELSEIF ARG == 75
+	PRINT 사용한 콘돔 판정
+ELSEIF ARG == 76
+	PRINT 임신 분기 보존용
+ELSEIF ARG == 77
+	PRINT 출산예정일
+ELSEIF ARG == 78
+	PRINT 부친 판정
+ELSEIF ARG == 79
+	PRINT 유모 판정
+ELSEIF ARG == 80
+	PRINT 매춘으로 번 최고금액
+ELSEIF ARG == 81
+	PRINT 다인매춘 플레이로 번 최고금액
+ELSEIF ARG == 82
+	PRINT 비디오로 번 최고금액
+ELSEIF ARG == 83
+	PRINT 사진으로 번 최고금액
+ELSEIF ARG == 84
+	PRINT 야외라이브로 번 최고금액
+ELSEIF ARG == 85
+	PRINT 주치육륜으로 번 최고금액
+ELSEIF ARG == 86
+	PRINT 육변기플레이로 번 최고금액
+ELSEIF ARG == 87
+	PRINT 모유로 번 최고금액
+ELSEIF ARG == 88
+	PRINT 성수로 번 최고금액
+ELSEIF ARG == 89
+	PRINT 산란으로 번 최고금액
+ELSEIF ARG == 90
+	PRINT 아스파라거스로 번 최고금액
+ELSEIF ARG == 91
+	PRINT 와인으로 번 최고금액
+ELSEIF ARG == 92
+	PRINT 군고구마로 번 최고금액
+ELSEIF ARG == 93
+	PRINT 도시락으로 번 최고금액
+ELSEIF ARG == 94
+	PRINT 음모부적으로 번 최고금액
+ELSEIF ARG == 95
+	PRINT 애액으로 번 최고금액
+ELSEIF ARG == 96
+	PRINT 전 수입 중에 최고금액
+ELSEIF ARG == 97
+	PRINT 이 노예가 지금까지 벌어온 총 액수
+ELSEIF ARG == 98
+	PRINT 이번 주차로 연모나 음란이나 복종을 붙인 인원수(주인만)
+ELSEIF ARG == 99
+	PRINT 지문 소거 판정 0=대사 표시 1=비표시
+ELSEIF ARG == 100
+	PRINT 캐러크리(비트 연산 1= 2= 정보 추가바람)
+ELSEIF ARG >= 101 && ARG <= 109
+	PRINT 캐러크리 판정(각종 대사의 사용에 검토중)
+ELSEIF ARG == 150
+	PRINT 도시락 관련 경력 판정(1=고유 요리 2=독을 넣음 4=데미지를 줌 8=독 간파 당함 16=독에 데미지를 받음(주인) 32=독 간파(주인) 64=고유 질투 초콜렛 128=질투 초콜렛을 주인이 먹었다 256=질투 초콜렛을 처분당했다 512=질투 초콜렛을 먹음(주인) 1024=질투 초콜렛을 팔았다(주인) 2048=주인의 도시락을 먹음 4096=노예에게 도시락을 만들어 줌(주인) 8192=타인의 독도시락을 먹었다)
+ELSEIF ARG == 151
+	PRINT 라이브 관련 경력 판정(1= 라이브 실패 2=레파토리 피로 4=술 획득 8=트리오 라이브)
+ELSEIF ARG == 152
+	PRINT 일상생활 관련 경력 판정(1=설교 당함 2=군것질 4=귀청소 8=귀청소 받음(주인) 16=등목 32=등목 받음(주인) 64=술잔치 128=담요를 말리다 256=일하는 주인을 무시 512=다른 노예를 씻겨줌 1024=다른 노예가 씻어줌 2048=다른 노예의 편식 극복을 돕다 4096=다른 노예의 응원으로 편식을 극복함 8192=장난감 반지를 받았다)
+ELSEIF ARG == 153
+	PRINT 밤이벤트 관련 경력 판정(1=주인의 처녀를 강간해 뺏음 2=주인에게 밤에 와서 처녀를 바침 4=노예에게 처녀를 뺏김 8=노예에게 처녀를 바침 16=다른 노예가 밤 시중들고 있었다 32=밤 시중 중에 다른 노예가 돌아감 64=주인 폭행 128=노예에게 폭행당함 256=주인을 촉수로 습격 512=노예가 소횐한 촉수에게 습격당함 4096=밤 시중을 놓치고 현장을 목격했다)
+ELSEIF ARG == 154
+	PRINT 아침 이벤트 관련 경력 판정(1=아침 기승위를 한 2=아침 기승위 애널을 한 4=아침 새댁 플레이 8=아침 기승위로 눈을 뜬 16=아침 기승위 애널로 눈을 뜬 32=아침 새댁 플레이를 즐긴 256=아침 3P(노예 및 조수) 512=아침 3P(주인))
+ELSEIF ARG == 155
+	PRINT 상태 경력 판정(1=만취 이상이 된 2=스트레스가 쌓인 4=다른 캐릭터를 잡아왔다) 
+ELSEIF ARG == 156
+	PRINT 칭호 경력 판정(1=상애 관련 칭호 획득)
+ELSEIF ARG == 157
+	PRINT 주인 칭호 경력 판정
+ELSEIF ARG == 160
+	PRINT 술 전용 커맨드[취생몽사]하늘을 나는 탄의 레무리아(1=피처 둘 2=댄싱 어니언 플라이 4=브릴리언트 사바 8=스피리터스 대은하)
+ELSEIF ARG == 161
+	PRINT 밤 이벤트로 노예가 도촬한 횟수
+ELSEIF ARG == 162
+	PRINT 불사각인에 의한 부활 횟수
+ELSEIF ARG == 163
+	PRINT 봉래인에 의한 부활 횟수
+ELSEIF ARG == 164
+	PRINT 주정에 의한 부활 횟수
+ELSEIF ARG == 165
+	PRINT YASAI에 의한 부활 횟수
+ELSEIF ARG == 166
+	PRINT 창관 의료단에 의한 부활 횟수
+ELSEIF ARG == 170
+	PRINT 주인의 속옷을 훔친 횟수
+ELSEIF ARG == 171
+	PRINT 주인에게 받은 선물 횟수
+ELSEIF ARG == 172
+	PRINT 주인과의 조교로 받은 키스 횟수
+ELSEIF ARG == 173
+	PRINT 주인의 페니스로 보지가 범해진 횟수
+ELSEIF ARG == 174
+	PRINT 주인의 페니스로 애널이 범해진 횟수
+ELSEIF ARG == 175
+	PRINT 주인의 보지를 페니스로 범한 횟수
+ELSEIF ARG == 176
+	PRINT 주인의 애널을 페니스로 범한 횟수
+ELSEIF ARG == 180
+	PRINT 이번 주차에 지하감옥에 갇힌 횟수
+ELSEIF ARG == 500
+	PRINT 첫경험의 대상 판정용(캐릭터 번호 +1)
+ELSEIF ARG >= 700 && ARG <= 799
+	PRINT 기사 패치용 범위
+ELSEIF ARG >= 1000 && ARG <= 1499
+	PRINT 임신 패치, 조수⇔노예간의 조교 경험을 카운트(임신시에 사용)
+ELSEIF ARG >= 1500 && ARG <= 1502
+	PRINT S패치용 범위
+ELSEIF ARG >= 1600 && ARG <= 1611
+	PRINT 가필 수정판 일상생활 패치용 범위
+ELSEIF ARG == 3000
+	PRINT 아이를 낳아준 어머니의 캐릭터 번호(자식이 독립하기 전까지)
+ELSEIF ARG == 3001
+	PRINT 부모로서 아이를 낳은 수
+ELSEIF ARG == 3002
+	PRINT 송금을 해오는 아이의 수
+ELSEIF ARG == 3003
+	PRINT 아이를 낳아준 부모의 고유 번호(자식이 독립하기 전까지)
+ELSEIF ARG == 3004
+	PRINT 부친 고유 번호(어머니)
+ELSEIF ARG == 3006
+	PRINT 임산부의 가슴 원래 크기 보존
+ELSEIF ARG == 3011
+	PRINT 현재 육아중인 아이 수(세쌍둥이까지)
+ELSEIF ARG == 3012
+	PRINT 첫째 성별(0=여자,1=남자)
+ELSEIF ARG == 3013
+	PRINT 둘째 성별(0=여자,1=남자)
+ELSEIF ARG == 3014
+	PRINT 셋째 성별(0=여자,1=남자)
+ELSEIF ARG == 3100
+	PRINT 아이를 낳은 어머니의 캐릭터 번호(자식)
+ELSEIF ARG == 3101
+	PRINT 아이를 키워준 어머니의 캐릭터 번호(자식)
+ELSEIF ARG == 3102
+	PRINT 어머니의 몇 번째 자식인가(자식)
+ELSEIF ARG == 3103
+	PRINT 아이 아버지의 캐릭터 번호(자식)
+ELSEIF ARG == 3104
+	PRINT 아버지의 몇 번째 자식인가(자식)
+ELSEIF ARG == 3105
+	PRINT 아이를 낳은 어머니의 고유 번호(자식)
+ELSEIF ARG == 3106
+	PRINT 아이를 키워준 어머니의 고유 번호(자식)
+ELSEIF ARG == 3107
+	PRINT 아이의 아버지의 고유 번호(자식)
+ELSEIF ARG == 3108
+	PRINT 아이의 세대
+ELSEIF ARG == 3109
+	PRINT 캐릭터 고유 번호
+ELSEIF ARG == 3110
+	PRINT 아이의 생일
+ELSEIF ARG == 3111
+	PRINT 노예가 팔려온 날
+ELSEIF ARG == 3112
+	PRINT 노예가 잡혀온 날
+ELSEIF ARG == 3113
+	PRINT 결혼기념일
+ELSEIF ARG == 3114
+	PRINT 계약기념일
+ELSEIF ARG == 3115
+	PRINT 노예가 함락된 날
+ELSEIF ARG == 3116
+	PRINT 첫임신일
+ELSEIF ARG == 3117
+	PRINT 첫조수임명일
+ELSEIF ARG == 3118
+	PRINT 잡아온 캐릭터(캐릭터 ID)
+ELSEIF ARG == 3128
+	PRINT 기념일 조사 판정[참고로 예전엔 CFLAG 3117](1=주인이 사온 날 기념 2=잡혀온 기념 4=생일 8=계약기념일 16=결혼기념일)
+ELSEIF ARG == 3150
+	PRINT 성적 경험점　(경험중 70~ 75,77이외의 전부의 합계)
+ELSEIF ARG == 3151
+	PRINT 기능 경험점　(경험중 70~72의 합계)
+ELSEIF ARG == 3152
+	PRINT ＋계 보주점　(보주중 20~22,100,198을 제외한 전부의 합계)
+ELSEIF ARG == 3153
+	PRINT －계 보주점　(보주중 20~22,100의 합계)
+ELSEIF ARG == 3154
+	PRINT 종합 평가점상의 4 요소 및 호감도로 스트레스로부터 요구되는 것.
+ELSEIF ARG >= 3200 && ARG <= 3399
+	PRINT 종족 유전자의 유전 강도 보존 변수(종족 패치)
+ELSEIF ARG == 3500
+	PRINT 임신에 의한 사이즈 추가 보존용(신체 측정 패치)
+ELSEIF ARG == 4995
+	PRINT 초회시 원 성별 보존
+ELSEIF ARG == 4996
+	PRINT 처녀 정보 보존
+ELSEIF ARG == 4997
+	PRINT 가슴 크기 보존
+ELSEIF ARG == 4998
+	PRINT 후타나리 정보 보존
+ELSEIF ARG == 4999
+	PRINT 모유 체질 정보 보존
+ELSE
+	PRINT 미확인 Cflag
+ENDIF
+
+@EDIT_CFLAG
+LOCAL = 0
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 현재 켜져있는 CFLAG
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+REPEAT 10000
+	SIF COUNT < LOCAL * 50 || COUNT >= (LOCAL + 1) * 50
+		CONTINUE
+	PRINTFORMLC [{COUNT, 4}] CFLAG:{COUNT, 4} = {CFLAG:COUNT}
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 17% # [10001] 앞페이지로\@
+PRINTLC [10000] 그만둔다
+PRINTFORML \@(LOCAL >= 199) ? %" " * 17% # [10009] 다음페이지로\@
+PRINTFORMLC \@(LOCAL <= 9) ? %" " * 17% # [10011] 10페이지 앞으로\@
+PRINTFORMLC %" " * 17%
+PRINTFORMLC \@(LOCAL >= 190) ? %" " * 17% # [10019] 10페이지 뒤로\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 10000
+	RETURN 0
+ELSEIF RESULT == 10001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 10009 && LOCAL < 199
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 10011 && LOCAL > 9
+	LOCAL -= 10
+	GOTO PRINT_LIST
+ELSEIF RESULT == 10019 && LOCAL < 190
+	LOCAL += 10
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 10000
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL:1 = RESULT
+DRAWLINE
+PRINTFORM CFLAG:{LOCAL:1}(
+CALL DEFINE_CFLAG, LOCAL:1
+PRINTFORML ) 변경(현재 {CFLAG:(LOCAL:1)})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+CFLAG:(LOCAL:1) = RESULT
+GOTO PRINT_LIST
+
+;--------------------------------------------------
+;TFLAG 편집
+;--------------------------------------------------
+@DEFINE_TFLAG, ARG
+IF ARG == 0
+	PRINT 처녀상실
+ELSEIF ARG == 1
+	PRINT V경험을 수반하는 커맨드
+ELSEIF ARG == 8
+	PRINT 질내사정 시늉으로 사정(엉덩이, 음부)
+ELSEIF ARG == 9
+	PRINT 애널섹스로 사정
+ELSEIF ARG == 10
+	PRINT 섹스로 사정
+ELSEIF ARG == 11
+	PRINT 입으로 사정
+ELSEIF ARG == 12
+	PRINT 손으로 사정
+ELSEIF ARG == 13
+	PRINT 컨닐링구스로 사정
+ELSEIF ARG == 14
+	PRINT 키스로 사정
+ELSEIF ARG == 15
+	PRINT 가랑이로 사정
+ELSEIF ARG == 16
+	PRINT 머리카락으로 사정
+ELSEIF ARG == 17
+	PRINT 조수를 범하는 것으로 사정
+ELSEIF ARG == 18
+	PRINT 역강간으로 사정
+ELSEIF ARG == 19
+	PRINT 다리로 사정
+ELSEIF ARG == 20
+	PRINT 겨드랑이로 사정
+ELSEIF ARG == 21
+	PRINT 펠라로 사정(정액을 삼킨다)
+ELSEIF ARG == 22
+	PRINT 좆으로 사정
+ELSEIF ARG == 23
+	PRINT 요도로 사정
+ELSEIF ARG == 29
+	PRINT 가슴으로 사정(정액 빨지 않음)
+ELSEIF ARG == 30
+	PRINT 조교 대상이 사정
+ELSEIF ARG == 31
+	PRINT 조교 대상이 분유
+ELSEIF ARG == 32
+	PRINT 조교 대상이 방뇨
+ELSEIF ARG == 33
+	PRINT 조교 대상이 정음절정
+ELSEIF ARG == 35
+	PRINT 주인이 사정
+ELSEIF ARG == 36
+	PRINT 조수가 사정
+ELSEIF ARG == 37
+	PRINT 촉수가 사정
+ELSEIF ARG == 40
+	PRINT 고통각인
+ELSEIF ARG == 41
+	PRINT 쾌락각인
+ELSEIF ARG == 42
+	PRINT 굴복각인
+ELSEIF ARG == 43
+	PRINT 공포각인
+ELSEIF ARG == 44
+	PRINT 반발각인
+ELSEIF ARG == 45
+	PRINT 약물각인
+ELSEIF ARG == 46
+	PRINT 치욕각인
+ELSEIF ARG == 50
+	PRINT 주인 경험?
+ELSEIF ARG == 51
+	PRINT 절정 강도
+ELSEIF ARG == 52
+	PRINT [억압][저항]의 소멸
+ELSEIF ARG == 53
+	PRINT 봉사 쾌락 경험
+ELSEIF ARG == 54
+	PRINT 고통 쾌락 경험
+ELSEIF ARG == 55
+	PRINT SM교육 경험
+ELSEIF ARG == 60
+	PRINT C조율 경험(미사용)
+ELSEIF ARG == 61
+	PRINT V조율 경험(미사용)
+ELSEIF ARG == 62
+	PRINT A쾌락 경험
+ELSEIF ARG == 63
+	PRINT B쾌락 경험
+ELSEIF ARG == 97
+	PRINT 호감도 계산용
+ELSEIF ARG == 98
+	PRINT 커맨드 속성 판정(1=성교, 2=도구, 8=촉수, 9=수간)
+ELSEIF ARG == 99
+	PRINT 지문 분기용
+ELSEIF ARG == 100
+	PRINT 봉사 쾌락 경험 입수 판정용?
+ELSEIF ARG == 101
+	PRINT 이번 조교로 처녀 상실
+ELSEIF ARG == 102
+	PRINT 꽂은 채로 둠
+ELSEIF ARG == 103
+	PRINT 질내 사정 플래그
+ELSEIF ARG == 104
+	PRINT 음란계 소질 판정용
+ELSEIF ARG == 105
+	PRINT 반발 각인의 회피
+ELSEIF ARG == 106
+	PRINT 개발도에 관한 판정
+ELSEIF ARG == 107
+	PRINT 조교 남은 시간
+ELSEIF ARG == 108
+	PRINT 실신 상태
+ELSEIF ARG == 109
+	PRINT 칭호 부여 판정
+ELSEIF ARG == 110
+	PRINT 현자의 피 패치의 C절정 처리의 대신
+ELSEIF ARG == 111
+	PRINT 현자의 피 패치의 V절정 처리의 대신
+ELSEIF ARG == 112
+	PRINT 현자의 피 패치의 A절정 처리의 대신
+ELSEIF ARG == 113
+	PRINT 현자의 피 패치의 B절정 처리의 대신
+ELSEIF ARG == 120
+	PRINT 처녀 상실을 촬영
+ELSEIF ARG == 121
+	PRINT 비디오 촬영 회수
+ELSEIF ARG == 122
+	PRINT 비디오 촬영시의 조교 내용
+ELSEIF ARG == 123
+	PRINT 나머지 감상 회수(최대치=촬영 회수 K)
+ELSEIF ARG == 124
+	PRINT 사진을 매각하는 경우의 가격, 뉴 게임을 선택했을 때의 단체 엔드 회피용
+ELSEIF ARG == 125
+	PRINT 모유 채취 판정
+ELSEIF ARG == 126
+	PRINT 착유중
+ELSEIF ARG == 127
+	PRINT 채뇨중
+ELSEIF ARG == 128
+	PRINT 산란 판정
+ELSEIF ARG == 129
+	PRINT 애액 채집중
+ELSEIF ARG == 130
+	PRINT 3P 때의 주인의 커맨드
+ELSEIF ARG == 131
+	PRINT 3P 때의 조수의 커맨
+ELSEIF ARG == 132
+	PRINT 3P 계속중
+ELSEIF ARG == 133
+	PRINT 전회의 조교자가 조수
+ELSEIF ARG == 134
+	PRINT 바기나 다이빙에서의 캐릭터 판정
+ELSEIF ARG == 135
+	PRINT 애널 다이빙에서의 캐릭터 판정
+ELSEIF ARG == 138
+	PRINT 누가 사정 가능한가 기록(1:당신 2:노예 4:조수)
+ELSEIF ARG == 139
+	PRINT 누가 정액을 끼얹을지 등을 기록
+ELSEIF ARG == 140
+	PRINT 조교 커맨드 실행이 끝난 상태인가 판정(1=아무것도 하지 않는다 2=공개 야외 라이브 4=흡혈 8=엉덩이 구슬 뽑기 16=시간 정지 32=caved! 64=촉수 흡혈 128=비디오 카메라 256=오물 배설)
+ELSEIF ARG == 141
+	PRINT 인형 애무 나머지 사용 가능 회수, 촉수산란의 지문 분기용
+ELSEIF ARG == 142
+	PRINT 거미줄의 강도
+ELSEIF ARG == 143
+	PRINT 조교 중 포윳--! 피버! 사용 횟수
+ELSEIF ARG == 150
+	PRINT 야외 플레이의 조교 장소를 판정
+ELSEIF ARG == 151
+	PRINT 야외 플레이의 상황을 판정
+ELSEIF ARG == 152
+	PRINT 광기의 눈 발동중
+ELSEIF ARG == 153
+	PRINT 나체식탁 종류
+ELSEIF ARG == 154
+	PRINT 야외 라이브 실행 판정용
+ELSEIF ARG == 155
+	PRINT 특수 목욕탕에 사용
+ELSEIF ARG == 156
+	PRINT 미약목욕으로 변동하는 소질 보존, 촉수목욕을 한 캐릭터 번호
+ELSEIF ARG == 157
+	PRINT 샌드위치 판정
+ELSEIF ARG == 158
+	PRINT 시간 정지 사용자 판정
+ELSEIF ARG == 159
+	PRINT 스턴건 사용 플래그
+ELSEIF ARG == 160
+	PRINT 국사무쌍의 약(노예)
+ELSEIF ARG == 161
+	PRINT 국사무쌍의 약(주인)
+ELSEIF ARG == 162
+	PRINT 국사무쌍의 약(조수)
+ELSEIF ARG == 163
+	PRINT 군고구마 삽입 회수, 시간
+ELSEIF ARG == 164
+	PRINT 거봉 삽입 회수, 시간
+ELSEIF ARG == 165
+	PRINT 아스파라거스 삽입 회수, 시간
+ELSEIF ARG == 166
+	PRINT 뱀장어가 질에 침입하고 있다
+ELSEIF ARG == 167
+	PRINT 뱀장어가 애널에 침입하고 있다
+ELSEIF ARG == 168
+	PRINT 뱀장어가 요도에 침입하고 있다
+ELSEIF ARG == 169
+	PRINT 요석을 끼고 있던 턴
+ELSEIF ARG == 170
+	PRINT 애널 요석을 끼고 있던 턴
+ELSEIF ARG == 171
+	PRINT 고드름 고문 사용 회수
+ELSEIF ARG == 172
+	PRINT 관장＋플러그 장착 턴수
+ELSEIF ARG == 173
+	PRINT 카테터 장착 턴수
+ELSEIF ARG == 174
+	PRINT 관장 흘러내리는중(미실장)
+ELSEIF ARG == 196
+	PRINT 범용 역대사에 있어서의 인종별
+ELSEIF ARG == 197
+	PRINT 범용 대사에 있어서의 인종별
+ELSEIF ARG == 198
+	PRINT 하드 SM커맨드로 조교 대상으로 일어난 이벤트(1=약 역류 2=오줌이 새다 4=배설물 역류 8=알 역류 16=기절)
+ELSEIF ARG == 199
+	PRINT 백택화(1=노예 2=주인 4=조수)
+ELSEIF ARG == 200
+	PRINT 이벤트 대사 호출용(상당수의 이벤트에 영향)
+ELSEIF ARG == 201
+	PRINT 단독 엔딩 이중 처리 회피용, 캐릭터 해설용, 랜덤성이 있는 커맨드의 대사용
+ELSEIF ARG == 202
+	PRINT 도시락 패치의 식후 이벤트 판정, 군고구마 패치의 전시실에 있는지를 판정
+ELSEIF ARG == 203
+	PRINT 비디오를 사용했는지 어떠했는지의 판정
+ELSEIF ARG == 204
+	PRINT 조교 메뉴 등록 패치로 사용
+ELSEIF ARG == 205
+	PRINT 후일담 표시 판별 플래그(0:스킵하지 않음 1:스킵한다)
+ELSEIF ARG == 206
+	PRINT 동방 조교전 캐릭터 해설에 사용
+ELSEIF ARG == 210
+	PRINT 밤잠입 이벤트의 캐릭터 보존에 사용
+ELSEIF ARG == 211
+	PRINT 밤 이벤트 확장의 캐릭터 보존에 사용
+ELSEIF ARG == 212
+	PRINT 밤 이벤트 확장의 캐릭터 보존에 사용
+ELSEIF ARG == 222
+	PRINT 임신 판정
+ELSEIF ARG == 223
+	PRINT 범용 대사를 호출할지 말지의 플래그
+ELSEIF ARG >= 250 && ARG <= 299
+	PRINT 시간 멈춤에 사용
+ELSEIF ARG >= 310 && ARG <= 312
+	PRINT 조교 메뉴 등록 패치로 사용
+ELSEIF ARG >= 400 && ARG <= 500
+	PRINT YM용 밤이벤트 확장 패치로 사용
+ELSEIF ARG >= 501 && ARG <= 502
+	PRINT 한마디 대사표시 패치로 사용
+ELSEIF ARG >= 560 && ARG <= 579
+	PRINT YM이식판 자위 들킴 패치로 사용
+ELSEIF ARG == 600
+	PRINT 딸도 패치의 일시적 판정에 사용
+ELSEIF ARG == 698
+	PRINT YM이식판 범해지기 패치로 사용
+ELSEIF ARG == 699
+	PRINT YM이식판 범해지기 패치로 사용
+ELSEIF ARG == 700
+	PRINT 육아실 커맨드를 실행했는가
+ELSEIF ARG == 701
+	PRINT 전회 육아실 커맨드를 실행한 날
+ELSEIF ARG == 702
+	PRINT 전회 육아실 커맨드를 실행한 시간
+ELSEIF ARG == 703
+	PRINT 그대로 사정시의 사정처의 구분
+ELSEIF ARG == 704
+	PRINT 사정처 선택 기능 처리의 유효/무효
+ELSEIF ARG >= 864 && ARG <= 882
+	PRINT 실신중 상태 보존 및 계산용
+ELSEIF ARG >= 883 && ARG <= 894
+	PRINT 실신중의 UP보존
+ELSEIF ARG == 895
+	PRINT 실신했는지 어떠했는지의 판별용
+ELSEIF ARG == 896
+	PRINT 공포를 관리(적어도 1개의 플래그가 2가 되면(자) 실신, 실신하고 있는 동안은 2를 계속)
+ELSEIF ARG == 897
+	PRINT 절정을 관리(적어도 1개의 플래그가 2가 되면(자) 실신, 실신하고 있는 동안은 2를 계속)
+ELSEIF ARG == 898
+	PRINT 고통을 관리(적어도 1개의 플래그가 2가 되면(자) 실신, 실신하고 있는 동안은 2를 계속)
+ELSEIF ARG == 899
+	PRINT 실신중의 커맨드 실행 회수 관리(실신한 커맨드도 카운트 한다, 즉 1이상이라면 실신중)
+ELSEIF ARG == 996
+	PRINT 수집품을 전시실에 반입할지 말지의 판정용(1=엉덩이 구슬 2=황금수 4=애액 8=혈액 16=처녀혈 32=비디오 64=음모)
+ELSEIF ARG == 997
+	PRINT 그 외 캐릭터 사정 게이지(현재가)
+ELSEIF ARG == 998
+	PRINT 그 외 캐릭터 사정 게이지(최대치)
+ELSE
+ENDIF
+@EDIT_TFLAG
+LOCAL = 0
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 현재 서있는 TFLAG
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+REPEAT 1000
+	SIF COUNT < LOCAL * 50 || COUNT >= (LOCAL + 1) * 50
+		CONTINUE
+	PRINTFORMLC [{COUNT, 3}] TFLAG:{COUNT, 3} = {TFLAG:COUNT}
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(LOCAL >= 19) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL [1010] 플래그 싹 다 폭파(요주의)
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < 19
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1010
+	VARSET TFLAG, 0
+	PRINTW 플래그 다 날려버렸습니다.
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 1000
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL:1 = RESULT
+DRAWLINE
+PRINTFORM TFLAG:{RESULT}(
+CALL DEFINE_TFLAG, LOCAL:1
+PRINTFORML ) 변경(현재 {TFLAG:(LOCAL:1)})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+TFLAG:(LOCAL:1) = RESULT
+GOTO PRINT_LIST
+
+;--------------------------------------------------
+;FLAG 편집
+;--------------------------------------------------
+;설명 부여
+@DEFINE_FLAG, ARG
+IF STRLENS(FLAGNAME:ARG) > 0
+	PRINTS FLAGNAME:ARG
+ELSE
+	PRINT 미확인 Flag
+ENDIF
+
+@EDIT_FLAG
+VARSET LOCAL, 0
+LOCAL:1 = 199
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 현재 서있는 FLAG
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+REPEAT 10000
+	SIF COUNT < LOCAL * 50 || COUNT >= (LOCAL + 1) * 50
+		CONTINUE
+	PRINTFORMLC [{COUNT, 4}] FLAG:{COUNT, 4} = {FLAG:COUNT}
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 17% # [10001] 앞페이지로\@
+PRINTLC [10000] 그만둔다
+PRINTFORML \@(LOCAL >= LOCAL:1) ? %" " * 17% # [10009] 다음페이지로\@
+PRINTFORMLC \@(LOCAL/10 <= 0) ? %" " * 17% # [10011] 10페이지 앞으로\@
+PRINTFORMLC %" " * 17%
+PRINTFORMLC \@(LOCAL/10 >= LOCAL:1/10) ? %" " * 17% # [10019] 10페이지 뒤로\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 10000
+	RETURN 0
+ELSEIF RESULT == 10001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 10009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 10011 && LOCAL/10 > 0
+	LOCAL -= 10
+	GOTO PRINT_LIST
+ELSEIF RESULT == 10019 && LOCAL/10 < LOCAL:1/10
+	LOCAL += 10
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 10000
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL:2 = RESULT
+DRAWLINE
+PRINTFORM FLAG:{LOCAL:2}(
+CALL DEFINE_FLAG, LOCAL:2
+PRINTFORML ) 변경(현재 {FLAG:(LOCAL:2)})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+FLAG:(LOCAL:2) = RESULT
+GOTO PRINT_LIST
+
+;--------------------------------------------------
+; TEQUIP 조작
+;--------------------------------------------------
+;TEQUIPのうち除外したい場合は使う
+@DISP_TEQUIP, ARG
+#FUNCTION
+RETURNF (STRLENS(TEQUIPNAME:ARG)) ? 1 # 0
+
+;TEQUIPのうち説明を付与したい場合は使う
+@DEFINE_TEQUIP, ARG
+IF STRLENS(TEQUIPNAME:ARG) > 0
+	PRINTS TEQUIPNAME:ARG
+	IF ARG == 11
+		PRINT  1:미약 2～:미약목욕 특수효과 발휘 시간용
+	ELSEIF ARG == 13
+		PRINT  1:반동종료 2:반동중 3～:효과발휘중
+	ELSEIF ARG == 14
+		PRINT  1:반동종료 2～4:반동중 5～:효과발휘중
+	ELSEIF ARG == 16
+		PRINT  1:배란유발제 2:촉수배란제
+	ELSEIF ARG == 17
+		PRINT  1:긴급피임약 2:촉수피임약
+	ELSEIF ARG == 21
+		PRINT  1:쿠스코 2:촉수 유유코 질경
+	ELSEIF ARG == 41
+		PRINT  1:아이마스크 2:거미의 실
+	ELSEIF ARG == 42
+		PRINT  1:볼재갈 2:촉수구욕 3:강제개구기 4:촉수 강제 음주
+	ELSEIF ARG == 44
+		PRINT  1:코훅 2:촉수 콧구멍 삽입 5:빨래집게
+	ELSEIF ARG == 45
+		PRINT  1:귀마개 2:촉수 귓구멍 삽입
+	ELSEIF ARG == 54
+		PRINT  1:온수 2:냉수 3:열탕
+	ELSEIF ARG == 56
+		PRINT  1:대거울 2:정파리의 거울
+	ELSEIF ARG == 59
+		PRINT  1:나체 에이프런 2:스쿨미즈 3～:코스튬 플레이
+	ELSEIF ARG == 74
+		PRINT  1:독심 2:촉수 독심 고문
+	ELSEIF ARG == 75
+		PRINT  1비트:노예 2비트:주인 4비트:조수
+	ELSEIF ARG == 76
+		PRINT  1비트:노예 2비트:주인 4비트:조수
+	ELSEIF ARG == 77
+		PRINT  1:조종의 실 2:촉수 정신 제어
+	ELSEIF ARG == 91
+		PRINT  1:입 안 2:팔에 주사
+	ENDIF
+ELSE
+	PRINT ――
+ENDIF
+;TEQUIP 변경-----------------------------------------------------------
+@EDIT_TEQUIP
+P = 0
+$PRINT_LIST
+DRAWLINE
+PRINTL 현재 사용중인 장착 도구 상태
+FOR LOCAL, 0, 100
+	LOCAL:1 = DISP_TEQUIP(LOCAL)
+	SIF LOCAL:1 == 0 || TEQUIP:LOCAL == 0
+		CONTINUE
+	PRINTFORMLC [{LOCAL, 3}] TEQUIP:{LOCAL} = {TEQUIP:LOCAL}
+	IF LOCAL:1
+		PRINT (
+		CALL DEFINE_TEQUIP, LOCAL
+		PRINT )
+	ENDIF
+;	PRINTFORML ={TEQUIP:LOCAL}  
+NEXT
+PRINTL 
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{P+1}＞
+DRAWLINE
+REPEAT 1000
+	SIF COUNT < P * 50 || COUNT >= (P + 1) * 50
+		CONTINUE
+	PRINTFORMLC [{COUNT, 2}] TEQUIP:{COUNT, 2} = {TEQUIP:COUNT}
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(P <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(P >= 1) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL [1010] 장비 도구 전부 해제(요주의)
+$INPUT_LOOP
+INPUT
+
+IF RESULT == 1010
+	FOR LOCAL:1, 0, 100
+		SIF RESULT == 0 && TEQUIP:(LOCAL:1) <= 0
+			CONTINUE
+		TEQUIP:(LOCAL:1) = 0
+	NEXT
+	PRINTW 모든 장비계 도구를 해제했습니다.
+	RESTART
+ELSEIF RESULT == 1001 && P > 0
+	P -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && P < 1
+	P += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 1000
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL = RESULT
+DRAWLINE
+PRINTFORM TEQUIP:{LOCAL}
+IF DISP_TEQUIP(LOCAL)
+	PRINT (
+	CALL DEFINE_TEQUIP, LOCAL
+	PRINT )
+ENDIF
+PRINTFORML  변경(현재 {TEQUIP:LOCAL})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+TEQUIP:LOCAL = RESULT
+
+RESTART
+
+;--------------------------------------------------
+; EQUIP 조작
+;--------------------------------------------------
+;EQUIPのうち除外したい場合は使う
+@DISP_EQUIP, ARG
+#FUNCTION
+RETURNF (ARG != 0 && ARG != 1 && ARG != 14) ? 0 # 1
+
+;EQUIP에 설명을 부여하고 싶다면 여길 사용...
+@DEFINE_EQUIP, ARG
+IF ARG == 0
+	PRINT 복숭아색사탕/인계로 EX화 해제 선택
+ELSEIF ARG == 1
+	PRINT 남색사탕/부모에게서 독립하는 시간 단축
+ELSEIF ARG == 14
+	PRINT 수면제
+ELSE
+	PRINT ――
+ENDIF
+
+;EQUIP변경-----------------------------------------------------------
+@EDIT_EQUIP
+P = 0
+$PRINT_LIST
+DRAWLINE
+PRINTL 현재 사용중인 장착계 도구 상태
+FOR LOCAL, 0, 100
+	LOCAL:1 = DISP_EQUIP(LOCAL)
+	SIF LOCAL:1 == 0 || EQUIP:LOCAL == 0
+		CONTINUE
+	PRINTFORMLC [{LOCAL, 3}] EQUIP:{LOCAL} = {EQUIP:LOCAL}
+	IF LOCAL:1
+		PRINT (
+		CALL DEFINE_EQUIP, LOCAL
+		PRINT )
+	ENDIF
+;	PRINTFORML ={EQUIP:LOCAL}  
+NEXT
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{P+1}＞
+DRAWLINE
+REPEAT 1000
+	SIF COUNT < P * 50 || COUNT >= (P + 1) * 50
+		CONTINUE
+	PRINTFORMLC [{COUNT, 2}] EQUIP:{COUNT, 2} = {EQUIP:COUNT}
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(P <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(P >= 1) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL [1010] 장비 도구 전부 해제(요주의)
+$INPUT_LOOP
+INPUT
+
+IF RESULT == 1010
+	FOR LOCAL:1, 0, 100
+		SIF RESULT == 0 && EQUIP:(LOCAL:1) <= 0
+			CONTINUE
+		EQUIP:(LOCAL:1) = 0
+	NEXT
+	PRINTW 장착계 도구를 전부 해제했습니다.
+	RESTART
+ELSEIF RESULT == 1001 && P > 0
+	P -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && P < 1
+	P += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 1000
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL = RESULT
+DRAWLINE
+PRINTFORM EQUIP:{LOCAL}
+IF DISP_EQUIP(LOCAL)
+	PRINT (
+	CALL DEFINE_EQUIP, LOCAL
+	PRINT )
+ENDIF
+PRINTFORML  변경(현재 {EQUIP:LOCAL})
+PRINTFORML 수치 입력(마이너스 수치로 취소)
+INPUT
+SIF RESULT < 0
+	RESTART
+EQUIP:LOCAL = RESULT
+
+RESTART
+
+;--------------------------------------------------
+; ITEM 조작 - 개조중에 군더더기 많이 붙었으니 능력자가 수정 좀.
+;--------------------------------------------------
+@DISP_ITEM, ARG
+#FUNCTION
+;샵에서 안 사면 의미가 없으므로 제외(성이나 토지 같은 거)
+SIF ARG >= 95 && ARG <= 99
+	RETURNF 0
+;캐릭터 카드는 제외
+SIF ARG >= 100 && ARG <= 599
+	RETURNF 0
+;ITEM 유무를 CSV로부터 취득
+RETURNF (STRLENS(ITEMNAME:ARG)) ? 1 # 0
+;ITEM 변경
+@EDIT_ITEM
+CALLF CLEAR_LIST
+;表示させる素質を抽出
+REPEAT 1000
+	SIF COUNT > 83 && COUNT < 600
+		CONTINUE
+	SIF COUNT > 615
+		CONTINUE
+	;존재하지 않는 소질은 배제...파트였으니까 존재하지 않는 아이템이겠지.
+	STRLENS ITEMNAME:COUNT
+	SIF RESULT == 0
+		CONTINUE
+
+	CALLF SET_LIST, COUNT, 1
+REND
+DRAWLINE
+REPEAT 99
+	SIF DISP_ITEM(COUNT) == 0
+		CONTINUE
+	IF ITEM:COUNT == 0
+		PRINTFORMLC [{COUNT, 3}]×【%ITEMNAME:COUNT%】
+	ELSEIF ITEM:COUNT == 1
+		PRINTFORMLC [{COUNT, 3}]○【%ITEMNAME:COUNT%】
+	ELSEIF ITEM:COUNT > 1
+		PRINTFORMLC [{COUNT, 3}]◎【%ITEMNAME:COUNT%】
+	ENDIF
+REND
+FOR LOCAL, 600, 616
+	SIF DISP_ITEM(LOCAL) == 0
+		CONTINUE
+	IF ITEM:LOCAL == 0
+		PRINTFORMLC [{LOCAL, 3}]×【%ITEMNAME:LOCAL%】
+	ELSEIF ITEM:LOCAL == 1
+		PRINTFORMLC [{LOCAL, 3}]○【%ITEMNAME:LOCAL%】
+	ELSEIF ITEM:LOCAL > 1
+		PRINTFORMLC [{LOCAL, 3}]◎【%ITEMNAME:LOCAL%】
+	ENDIF
+NEXT
+PRINTL 
+PRINTLC [1000] 그만둔다
+PRINTL ×…없다 ○…있다 ◎…여러개 있다
+;対応させるのめんどいしべつに一個ありゃテストに充分だし('A')
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF ((RESULT >= 60 && RESULT <= 99) || (RESULT >= 600 && RESULT <= 615)) && ITEM:RESULT == 0
+	JUMP EDIT_ADVANCED_ITEM, RESULT
+ELSEIF (RESULT >= 0 && RESULT < 100) || (RESULT >= 600 && RESULT < 616)
+	LOCAL = RESULT
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+SIF DISP_ITEM(LOCAL) == 0
+	GOTO INPUT_LOOP
+DRAWLINE
+;몇 개를 가지고 있든 0이 되어버려 우후후
+IF ITEM:LOCAL
+	PRINTFORMW [%ITEMNAME:LOCAL%] 잃었습니다.
+	ITEM:LOCAL = 0
+ELSE
+	PRINTFORMW [%ITEMNAME:LOCAL%] 소지합니다.
+	IF (LOCAL >= 60 && LOCAL < 90) || (LOCAL >= 600 && LOCAL < 606)
+		ITEM:LOCAL = 10
+	ELSE
+		ITEM:LOCAL = 1
+	ENDIF
+ENDIF
+RESTART
+;아이템도 개수 조절 정도는 해줘야지.
+@EDIT_ADVANCED_ITEM, ARG
+PRINTFORML %ITEMNAME:ARG%의 값을 결정해주세요. [0-99] (현재 {ITEM:ARG})
+PRINTL [100] 그만둔다.
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+JUMP EDIT_ITEM
+ELSEIF RESULT < 0 || RESULT > 100
+	GOTO INPUT_LOOP
+ENDIF
+PRINTFORMW %ITEMNAME:ARG%의 값을 {RESULT}개로 했습니다.
+ITEM:ARG = RESULT
+CALL EDIT_ITEM
+;--------------------------------------------------
+;캐릭터 카드 조작
+;--------------------------------------------------
+@EDIT_CHARACARD
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+FOR COUNT, 100, 599
+	;존재하지 않는 캐릭터 제외
+	SIF ITEMPRICE:COUNT == 0
+		CONTINUE
+
+	CALLF SET_LIST, COUNT, 1
+	LOCAL:2 += 1
+NEXT
+LOCAL:1 = (LOCAL:2 - 1) / 50
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 어떤 캐릭터 카드를 변경하겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+;キャラクターカードを表示
+LOCAL:2 = 0
+FOR COUNT, 100, 599
+	SIF GET_LIST(COUNT) == 0
+		CONTINUE
+	LOCAL:2 += 1
+	SIF LOCAL:2 >= LOCAL*50 && LOCAL:2 < (LOCAL+1)*50
+		PRINTFORMLC \@(ITEM:COUNT == 0) ? × # ○\@[{COUNT, 3}]%ITEMNAME:COUNT, 14%
+NEXT
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 1000 || GET_LIST(RESULT) == 0
+	GOTO INPUT_LOOP
+ENDIF
+
+PRINTFORMW 【%ITEMNAME:RESULT%】의 캐릭터 카드를 \@(ITEM:RESULT) ? 파기 # 획득\@했습니다.
+ITEM:RESULT = (ITEM:RESULT) ? 0 # 1
+GOTO PRINT_LIST
+
+;--------------------------------------------------
+;DITEMTYPE 조작
+;--------------------------------------------------
+@EDIT_DITEMTYPE
+VARSET LOCAL, 0
+DRAWLINE
+PRINTL 아이템 내역 등을 저장합니다. 바꾸고 싶은 DITEMTYPE의 일차배열(0-999)을 입력하세요. (범위 외라면 취소)
+INPUT
+SIF RESULT < 0 || RESULT > 999
+	RETURN 0
+LOCAL = RESULT
+
+PRINTFORML 변경하고 싶은 DITEMTYPE:{LOCAL}의 이차배열(0-999)을 입력하세요. (범위 외라면 취소)
+INPUT
+SIF RESULT < 0 || RESULT > 999
+	RETURN 0
+LOCAL:1 = RESULT
+
+PRINTFORML 변경하고 싶은 DITEMTYPE:{LOCAL}:{LOCAL:1}의 값을 입력하시오.
+PRINTFORML (현재 값：{DITEMTYPE:LOCAL:(LOCAL:1)}　마이너스 값은 입력하지 않음)
+INPUT
+SIF RESULT < 0
+	RETURN 0
+DITEMTYPE:LOCAL:(LOCAL:1) = RESULT
+PRINTFORMW DITEMTYPE:{LOCAL}:{LOCAL:1}의 값을 {RESULT}로 바꿨습니다.
+
+;--------------------------------------------------
+;TSTR 편집
+;--------------------------------------------------
+@EDIT_TSTR
+LOCAL = 0
+$PRINT_LIST
+DRAWLINE
+PRINTFORML TFLAG의 문자판 입니다. 현재로서는 0번이 전회 조교 커맨드.
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+REPEAT 400
+	SIF COUNT < LOCAL * 20 || COUNT >= (LOCAL + 1) * 20
+		CONTINUE
+	PRINTFORML [{COUNT, 3}] TSTR:{COUNT} = %TSTR:COUNT%
+REND
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(LOCAL >= 19) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL [1010] TSTR 플래그 리셋(요주의)
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < 19
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1010
+	VARSET TSTR
+	PRINTW TSTR 플래그를 리셋했습니다.
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 400
+	GOTO INPUT_LOOP
+ENDIF
+DRAWLINE
+PRINTFORML TSTR:{RESULT} 변경(현재 %TSTR:RESULT%)
+PRINTFORML 문자열을 입력（공백을 입력하면 취소）
+INPUTS
+SIF STRLENS(RESULTS) == 0
+	RETURN 0
+TSTR:RESULT = %RESULTS%
+GOTO PRINT_LIST
+
+;--------------------------------------------------
+;매각 조사용 능력 조작
+;--------------------------------------------------
+@EDIT_RESEARCH_CHARA
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET% 팔고 로드하는 귀찮음을 덜어주는 모드입니다.
+PRINTL 어느 기준에 맞추겠습니까?
+PRINTL [0] 매각가능(순종, 욕망, 기교, 봉사정신, 노출벽, 전 감각 Lv3)
+PRINTL [1] 육성완료(순종, 욕망, 기교, 봉사정신, 노출벽, 전 감각 Lv5)
+SIF CFLAG:1 >= 1
+	PRINTL [2] 현재 판매가 확인
+PRINTL [3] 비디오 판매가 보정 확인
+PRINTL [100] 그만둔다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	CALL EDIT_CHARASALE_ABILITY, 3
+ELSEIF RESULT == 1
+	;토리코모드
+	IF FLAG:5000 & 2
+		CALL EDIT_CHARASALE_ABILITY_TORIKOMODE, 5
+	;일반모드
+	ELSE
+		CALL EDIT_CHARASALE_ABILITY, 5
+	ENDIF
+ELSEIF RESULT == 2 && CFLAG:1 >= 1
+	CALL RESEARCH_CHARASALE_CALC
+ELSEIF RESULT == 3
+	CALL RESEARCH_SELLVIDEO_CALC
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+;………………………………………………
+;매각 조사용 능력 조작 실행 처리
+;………………………………………………
+@EDIT_CHARASALE_ABILITY, ARG
+;매각 가능 플래그
+SIF CFLAG:1 < 1
+	CFLAG:1 = 1
+;従順、欲望、技巧、奉仕精神、露出癖、全感覚 지정 레벨로
+REPEAT 15
+	SIF COUNT >= 4 && COUNT < 10
+		CONTINUE
+	ABL:COUNT = ARG
+REND
+;아다나 남자의 경우 V 경험 없ㅋ엉ㅋ
+SIF TALENT:0 || TALENT:120
+	ABL:1 = 0
+;『매각가능』특수처리
+IF ARG == 3
+	;[해방]에 변화[억압]은 되돌린다. 또 [저항]이 소멸했을 경우, 부활.
+	IF CFLAG:13 & 1 && TALENT:32 == 0
+		TALENT:32 = 1
+		CFLAG:13 -= 1
+		IF CFLAG:12 & 65536 && TALENT:33
+			TALENT:33 = 0
+			CFLAG:12 -= 65536
+		ENDIF
+	ENDIF
+	IF CFLAG:13 & 2 && TALENT:34 == 0
+		TALENT:34 = 1
+		CFLAG:13 -= 2
+	ENDIF
+	;매각에 순종이나 욕망이 레벨4 이상 필요한 경우 인상.
+	SIF TALENT:11 || TALENT:12
+		ABL:10 = 4
+	SIF TALENT:20 || TALENT:32 || TALENT:34
+		ABL:11 = 4
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"를")% 『매각가능』 상태에 맞추었습니다.
+;『육성완료』특수처리
+ELSE
+	;[억압]은 소멸하고[해방]에 변화, [저항]은 소멸했다고 가정.
+	IF TALENT:32
+		TALENT:32 = 0
+		TALENT:33 = 1
+		CFLAG:13 |= 1
+		CFLAG:12 |= 65536
+	ENDIF
+	IF TALENT:34
+		TALENT:34 = 0
+		CFLAG:13 |= 2
+	ENDIF
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"를")% 『육성완료』 상태에 맞추었습니다.
+ENDIF
+
+;………………………………………………
+;매각치 확인
+;………………………………………………
+@RESEARCH_CHARASALE_CALC
+
+;토리코모드 옵션으로 분기.
+IF FLAG:5000 & 2
+	CALL SALE_CHARA_TORIKOMODE, TARGET
+ELSE 
+	CALL SALE_CHARA, TARGET
+ENDIF
+
+
+IF TALENT:158 && (TALENT:153 || ((TALENT:151 || TALENT:157) && TALENT:160 == 0 && TALENT:170 == 0 && ABL:10 < 5))
+	TIMES RESULT , 0.10
+	PRINTFORML 수송 중에 광기 폭주로 실종 ×0.10
+ENDIF
+RESULT = MAX(RESULT, 0)
+PRINTFORML 지금 상태대로 %조사처리(CALLNAME:TARGET,"를")% 매각하면 {RESULT}원에 팔리게 됩니다. \@(RESULT < 1000000) ? 무다다 # 이거 한 방에 엔딩\@!
+
+;토리코모드 옵션으로 분기
+IF FLAG:5000 & 2
+	PRINTFORMW ※{RESULT:1}원(노예 판매가 기초치) × {(RESULT:2)/100}.{(RESULT:2)%100/10}(기초Buy율 보정) × α(그 외의 보정)
+ELSE 
+	PRINTFORMW ※{RESULT:1}원(노예 판매가 기초치) × {(RESULT:2)/10000}\@((RESULT:2)%10000/10 < 100) ? .0 # .\@{((RESULT:2)%10000/10)}(기초Buy율 보정) × α(그 외의 보정)
+ENDIF
+
+;………………………………………………
+;비디오의 매각치 보정 확인
+;………………………………………………
+@RESEARCH_SELLVIDEO_CALC
+LOCAL = VIDEO_TALENT_BONUS(10000)
+LOCAL = MAX(LOCAL, 0)
+PRINTFORML 지금 %조사처리(CALLNAME:TARGET,"는")% 비디오 판매가 배율이 {LOCAL/10000}\@(LOCAL%10000/10 < 100) ? .0 # .\@{(LOCAL%10000/10)}배입니다. \@(LOCAL < 10000) ? 아직 초보군요 # 타고난 AV배우군요\@!
+PRINTFORMW ※비디오는 찍은 장면(+가격 보정), 타이틀 보너스 등 가격을 좌우하는 요소가 많습니다. 처녀 뚫기라던가.
+
+;--------------------------------------------------
+;칭호 편집
+;--------------------------------------------------
+@EDIT_NICKNAME
+$PRINT_LIST
+;본래의 칭호 문자수 보관 유지용 로컬 변수는 리셋
+LOCAL = 0
+DRAWLINE
+STRLENS NICKNAME:TARGET
+IF RESULT > 0
+	PRINTFORML 현재 칭호는 「%NICKNAME:TARGET%」입니다.
+ELSE
+	PRINTL 현재 칭호가 없습니다.
+ENDIF
+CSVNICKNAME NO:TARGET , 0
+STRLENS RESULTS
+LOCAL = RESULT
+PRINTL 칭호를 어떻게 합니까?
+PRINTL [0] 현재 칭호대로 한다.
+SIF LOCAL > 0 && CFLAG:0 == 0
+	PRINTFORML [1] 본래 칭호(%RESULTS%)로 되돌린다.
+PRINTL [2] 칭호를 지운다.
+PRINTL [3] 칭호를 입력한다.
+DRAWLINE
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 변경하지 않았습니다.
+	RETURN 1
+ELSEIF RESULT < 0 || RESULT > 3
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 2
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 지웠습니다.
+	NICKNAME:TARGET = 
+	RETURN 1
+ELSEIF RESULT == 1
+	NICKNAME:TARGET = %RESULTS%
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 원래대로 되돌렸습니다.
+	RETURN 1
+ELSEIF RESULT != 3
+	GOTO INPUT_LOOP
+ENDIF
+PRINTFORML %CALLNAME:TARGET%의 새로운 칭호를 입력해주세요.
+PRINTFORML 공백을 입력할 경우 변경하지 않습니다.
+
+$INPUT_LOOP2
+INPUTS
+SIF STRLENS(RESULTS) == 0
+	RETURN 0
+NICKNAME:TARGET = %RESULTS%
+PRINTFORML %CALLNAME:TARGET%의 칭호를 
+PRINTFORMW 「%NICKNAME:TARGET%」로 바꿨습니다.
+RETURN 1
+
+;--------------------------------------------------
+; CSTR 조작
+;--------------------------------------------------
+;CSTR 중에 제외할 경우
+@DISP_CSTR, ARG
+#FUNCTION
+;SIF ARG != 14 && ARG != 15
+;	RETURN 0
+RETURNF 1
+
+;CSTR에 설명을 붙이고 싶을 경우
+@DEFINE_CSTR, ARG
+IF ARG == 1
+	PRINT 주인일 때 거주중인 집
+ELSEIF ARG == 2
+	PRINT 나체정식 특별 메뉴
+ELSEIF ARG == 3
+	PRINT 어떻게 주인의 수중에 들어왔는가
+ELSEIF ARG == 4
+	PRINT 캐릭터 자택명
+ELSEIF ARG == 5
+	PRINT 첫경험의 대상
+ELSEIF ARG == 11
+	PRINT 범용 대사에서 자신을 부르는 호칭
+ELSEIF ARG == 12
+	PRINT 범용 대사에서 주인을 부르는 호칭
+ELSEIF ARG == 13
+	PRINT 범용 대사에서의 특수어미 1
+ELSEIF ARG == 14
+	PRINT 범용 대사에서의 특수어미 2
+ELSEIF ARG == 15
+	PRINT 범용 대사에서의 어머니
+ELSEIF ARG == 16
+	PRINT 범용 역대사에서의 1인칭
+ELSEIF ARG == 17
+	PRINT 범용 대사에서의 2인칭
+ELSEIF ARG == 18
+	PRINT 범용 역대사에서의 특수어미 1
+ELSEIF ARG == 19
+	PRINT 범용 역대사에서의 특수어미 
+ELSEIF ARG == 20
+	PRINT 범용 역대사에서의 어머니
+ELSEIF ARG == 21
+	PRINT 첫째 아이의 이름
+ELSEIF ARG == 22
+	PRINT 둘째 아이의 이름
+ELSEIF ARG == 23
+	PRINT 셋째 아이의 이름
+ELSEIF ARG == 24
+	PRINT 첫째 아이의 호칭
+ELSEIF ARG == 25
+	PRINT 둘째 아이의 호칭
+ELSEIF ARG == 26
+	PRINT 셋째 아이의 호칭
+ELSEIF ARG == 27
+	PRINT 첫째 아이의 별명
+ELSEIF ARG == 28
+	PRINT 둘째 아이의 별명
+ELSEIF ARG == 29
+	PRINT 셋째 아이의 별명
+ELSEIF ARG == 31
+	PRINT 펑션에서의 이름 표시
+ELSEIF ARG == 32
+	PRINT 펑션에서의 종족 표시(분류)
+ELSEIF ARG == 33
+	PRINT 펑션에서의 종족 표시(상세)
+ELSEIF ARG == 87
+	PRINT 대사 측에서 정의한 고유 초콜릿명
+ELSEIF ARG == 88
+	PRINT 대사 측에서 정의한 고유 요리명
+ELSEIF ARG == 89
+	PRINT 대사 측에서 정의한 레퍼토리명
+ELSEIF ARG > 95
+	PRINT 대사 측에 의한 설정 문자열
+ELSE
+	PRINT ――
+ENDIF
+
+;CSTR 변경-----------------------------------------------------------
+@EDIT_CSTR
+P = 0
+$PRINT_LIST
+DRAWLINE
+PRINTL 해당 캐릭터의 CSTR 상태
+FOR LOCAL, 0, 100
+	LOCAL:1 = DISP_CSTR(LOCAL)
+	SIF LOCAL:1 == 0 || CSTR:LOCAL == ""
+		CONTINUE
+	PRINTFORM [{LOCAL, 3}] CSTR:{LOCAL} = %CSTR:LOCAL%
+	IF LOCAL:1
+		PRINT (
+		CALL DEFINE_CSTR, LOCAL
+		PRINTL )
+	ENDIF
+NEXT
+PRINTFORML 무엇을 바꾸겠습니까? ＜page.{P+1}＞
+DRAWLINE
+REPEAT 1000
+	SIF COUNT < P * 50 || COUNT >= (P + 1) * 50
+		CONTINUE
+	PRINTFORMLC [{COUNT, 2}] EQUIP:{COUNT, 2} = {EQUIP:COUNT}
+REND
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(P <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [200] 그만둔다
+PRINTFORMLC \@(P >= 1) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL [100] CSTR 전부 해제(요주의)
+$INPUT_LOOP
+INPUT
+
+IF RESULT == 100
+	VARSET CSTR
+	PRINTW CSTR을 전부 리셋했습니다.
+	RESTART
+ELSEIF RESULT == 1001 && P > 0
+	P -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && P < 1
+	P += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT > 1000
+	GOTO INPUT_LOOP
+ENDIF
+
+SIF RESULT == 200
+	RETURN 0
+LOCAL = RESULT
+DRAWLINE
+PRINTS CSTR:LOCAL
+IF DISP_CSTR(LOCAL)
+	PRINT (
+	CALL DEFINE_CSTR, LOCAL
+	PRINT )
+ENDIF
+PRINTFORML  변경
+PRINTFORML 문자열을 입력(입력하지 않으면 취소)
+INPUTS
+SIF RESULTS == ""
+	RESTART
+CSTR:LOCAL = %RESULTS%
+
+RESTART
+
+;--------------------------------------------------
+; SAVESTR조작
+;--------------------------------------------------
+;SAVESTR중에 제외하고 싶은 것에 사용
+@DISP_SAVESTR, ARG
+#FUNCTION
+RETURNF (ARG != 1) ? 0 # 1
+
+;SAVESTR에 설명을 부여하는 용도
+@DEFINE_SAVESTR, ARG
+IF ARG == 1
+	PRINT 엔딩 후 주인의 본거지 명칭
+ELSE
+	PRINT ――
+ENDIF
+
+;SAVESTR 변경-----------------------------------------------------------
+@EDIT_SAVESTR
+DRAWLINE
+PRINTL 현재 사용중인 SAVESTR의 상태
+FOR LOCAL, 0, 100
+	LOCAL:1 = DISP_SAVESTR(LOCAL)
+	SIF LOCAL:1 == 0 || SAVESTR:LOCAL == ""
+		CONTINUE
+	PRINTFORM [{LOCAL, 3}] SAVESTR:{LOCAL} = %SAVESTR:LOCAL%
+	IF LOCAL:1
+		PRINT (
+		CALL DEFINE_SAVESTR, LOCAL
+		PRINTL )
+	ENDIF
+NEXT
+PRINTL 
+PRINTL [0-99] 대응하는 번호의 SAVESTR의 상태 변경(무효값으로 취소)
+PRINTL [100] SAVESTR 상태 전부 리셋(요주의)
+PRINTL [200] 그만둔다
+$INPUT_LOOP
+INPUT
+
+IF RESULT == 100
+	VARSET SAVESTR
+	PRINTW SAVESTR의 상태를 전부 리셋했습니다.
+	RESTART
+ENDIF
+
+SIF RESULT == 200
+	RETURN 0
+SIF RESULT < 0 || RESULT > 100
+	GOTO INPUT_LOOP
+LOCAL = RESULT
+DRAWLINE
+PRINTS SAVESTR:LOCAL
+IF DISP_SAVESTR(LOCAL)
+	PRINT (
+	CALL DEFINE_SAVESTR, LOCAL
+	PRINT )
+ENDIF
+PRINTFORML  변경
+PRINTFORML 문자열을 입력(입력하지 않으면 취소)
+INPUTS
+SIF RESULTS == ""
+	RESTART
+SAVESTR:LOCAL = %RESULTS%
+
+RESTART
+
+;=============================================================================
+;엔딩 테스트
+;=============================================================================
+@EDIT_ENDING_TEST
+CALLF CLEAR_LIST
+DRAWLINE
+PRINTL 어느 엔딩을 테스트하겠습니까?
+DRAWLINE
+REPEAT 400
+	SIF COUNT == 0
+		CONTINUE
+	STRLENS STR:(1000+COUNT)
+	SIF RESULT < 1
+		CONTINUE
+	PRINTFORMLC [{COUNT, 2}] %STR:(1000+COUNT)%
+	CALLF SET_LIST, COUNT, 1
+REND
+PRINTL 
+DRAWLINE
+PRINTL [100] 취소
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 999
+	GOTO INPUT_LOOP
+ELSEIF GET_LIST(RESULT) == 1
+	PRINTFORMW %STR:(1000+RESULT)%의 동작 테스트를 실시합니다.
+	PRINTW  
+	CALLFORM ENDING_{RESULT}
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;=============================================================================
+;수집품 편집
+;=============================================================================
+;--------------------------------------------------
+;편집할 수집품의 선택
+;--------------------------------------------------
+@EDIT_COLLECTION_MENU
+VARSET LOCALS,""
+SPLIT "모든 수집품,엉덩이구슬,황금수,애액,혈액,처녀혈,팬티,사진,비디오,모유,알,촉수,음모",",",LOCALS
+TFLAG:0 = 0
+PRINTL 무엇을 하겠습니까?
+DRAWLINE
+REPEAT 13
+	PRINTFORML [{COUNT,2}] \@(COUNT == 0) ? %LOCALS:0% # 귀중품 『%LOCALS:COUNT%』\@ 편집
+REND
+PRINTL [100] 그만둔다
+DRAWLINE
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	CALL COLLECTION_EDIT_RESET
+	RETURN 0
+ELSEIF RESULT >= 0 && RESULT <= 12
+	TSTR:0 = %LOCALS:RESULT%
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+TFLAG:0 = RESULT
+CALL EDIT_COLLECTION_MAIN
+RESTART
+
+;--------------------------------------------------
+;수집품 편집 메인 메뉴
+;--------------------------------------------------
+@EDIT_COLLECTION_MAIN
+;변수 리셋
+LOCAL = 1
+LOCAL:1 = 0
+
+;페이지를 넘겼을 때 등은 여기로
+$PRINT_LIST_PAGE
+CALL PAGE_COLLECTION_EDIT_LIST
+LOCAL:1 = RESULT
+
+DRAWLINE
+PRINTFORML 대상을 선택해주세요. ＜page.{LOCAL}＞
+PRINTFORML 현재 『%TSTR:0%』 선택중
+CALL ARRANGE_COLLECTION_EDIT_LIST, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 1) ? %" " * 16 % # [1001] 앞페이지로\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16 % # [1009] 다음페이지로\@
+
+$INPUT_LOOP_MAIN
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 1
+	LOCAL -= 1
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+ELSEIF RESULT < 1000 && GET_LIST(RESULT) == 1
+	DRAWLINE
+	IF TFLAG:0 == 0
+		CALL COLLECTION_EDIT_0, RESULT
+	ELSE
+		CALL COLLECTION_EDIT_COMMON, RESULT
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP_MAIN
+ENDIF
+GOTO PRINT_LIST_PAGE
+
+;--------------------------------------------------
+;수집품 편집 페이지수 세기
+;--------------------------------------------------
+@PAGE_COLLECTION_EDIT_LIST
+LOCAL = 0
+CALLF CLEAR_LIST
+;캐릭터가 존재하고 있으면 표시 가능 플래그를 세운다.
+REPEAT 500
+	IF ITEMPRICE:(COUNT+100) > 0
+		CALLF SET_LIST, COUNT, 1
+		LOCAL += 1
+	ENDIF
+REND
+IF (LOCAL%30) == 0
+	LOCAL /= 30
+ELSE
+	LOCAL /= 30
+	LOCAL += 1
+ENDIF
+RETURN LOCAL
+
+;--------------------------------------------------
+;수집품 편집 가능 캐릭터의 보조 표시
+;--------------------------------------------------
+@ARRANGE_COLLECTION_EDIT_LIST, ARG
+LOCAL:1 = 0
+REPEAT 500
+	SIF COUNT == 0
+		CONTINUE
+	;표시 불가의 경우 제외
+	SIF GET_LIST(COUNT) == 0
+		CONTINUE
+	LOCAL:1 += 1
+	;어디에서 어디까지를 진열할까
+	SIF LOCAL:1 <= (ARG * 30) && LOCAL:1 > (ARG - 1) * 30
+		PRINTFORMLC [{COUNT, 2}]%ITEMNAME:(COUNT+100)%
+REND
+
+;-----------------------------------------
+;캐릭터별 수집품 편집
+;-----------------------------------------
+@COLLECTION_EDIT_0, ARG
+PRINTFORML %ITEMNAME:(ARG+100)%의 %TSTR:0% 어떻게 하겠습니니까?
+PRINTL [0] 전부 없앤다.
+PRINTL [1] 전부 1개씩 가진다.
+PRINTL [2] 취소
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 0
+	PRINTFORMW %ITEMNAME:(ARG+100)%의 %TSTR:0% 전부 없앴습니다.
+ELSEIF RESULT == 1
+	PRINTFORMW %ITEMNAME:(ARG+100)%의 %TSTR:0% 1개씩 갖고 있도록 했습니다.
+ELSEIF RESULT == 2
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP_0
+ENDIF
+FOR COUNT, 101, 113
+	DITEMTYPE:(ARG+100):COUNT = RESULT
+NEXT
+
+;-----------------------------------------
+;수집품 편집의 범용 처리
+;-----------------------------------------
+@COLLECTION_EDIT_COMMON, ARG
+PRINTFORML 현재 %ITEMNAME:(ARG+100)%의 %TSTR:0% {DITEMTYPE:(ARG+100):(100+TFLAG:0)}개 갖고 있습니다.
+PRINTL 갖고 싶은 갯수를 입력하세요.(최대 999까지이며 무효값으로 취소)
+PRINTLC  [ 0] 소지수   0
+PRINTLC  [ 1] 소지수   1
+PRINTLC  [ 5] 소지수   5
+PRINTLC  [10] 소지수  10
+PRINTLC [999] 소지수 999
+PRINTLC [1000] 그만둔다
+INPUT
+IF RESULT >= 0 && RESULT <= 999
+	PRINTFORMW %ITEMNAME:(ARG+100)%의 %TSTR:0% {RESULT}개 갖고 있도록 했습니다.
+	DITEMTYPE:(ARG+100):(100+TFLAG:0) = RESULT
+ELSE
+	RETURN 0
+ENDIF
+
+;-----------------------------------------
+;수집품 종류 수정 처리
+;-----------------------------------------
+@COLLECTION_EDIT_RESET
+REPEAT 13
+	FLAG:(COUNT+500) = 0
+REND
+REPEAT 500
+	SIF DITEMTYPE:(COUNT+100):101
+		FLAG:501 += 1
+	SIF DITEMTYPE:(COUNT+100):102
+		FLAG:502 += 1
+	SIF DITEMTYPE:(COUNT+100):103
+		FLAG:503 += 1
+	SIF DITEMTYPE:(COUNT+100):104
+		FLAG:504 += 1
+	SIF DITEMTYPE:(COUNT+100):105
+		FLAG:505 += 1
+	SIF DITEMTYPE:(COUNT+100):106
+		FLAG:506 += 1
+	SIF DITEMTYPE:(COUNT+100):107
+		FLAG:507 += 1
+	SIF DITEMTYPE:(COUNT+100):108
+		FLAG:508 += 1
+	SIF DITEMTYPE:(COUNT+100):109
+		FLAG:509 += 1
+	SIF DITEMTYPE:(COUNT+100):110
+		FLAG:510 += 1
+	SIF DITEMTYPE:(COUNT+100):111
+		FLAG:511 += 1
+	SIF DITEMTYPE:(COUNT+100):112
+		FLAG:512 += 1
+REND
+REPEAT 12
+	FLAG:500 += FLAG:(COUNT+501)
+REND
+
+;=============================================================================
+;퀵 로드용 설정
+;=============================================================================
+@QUICKLOAD
+FLAG:1 = 1
+BEGIN SHOP

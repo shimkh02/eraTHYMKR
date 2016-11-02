@@ -1,0 +1,114 @@
+﻿;=============================================================================
+;Ａ감각
+;=============================================================================
+@ABLUP2
+DRAWLINE
+SIF ABL:2 >= 5
+	JUMP ABLUP_MAX
+
+PRINTFORM [0] - %PALAMNAME:2%의 구슬×{COST2(0)}, %EXPNAME:1% {COST2(1)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN2(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN2(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:2 -= COST2(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:2 += 1
+PRINTFORMW %ABLNAME:2%의 레벨이 %조사처리(ABL:2,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP2
+SIF ABL:2 >= 5
+	RETURN 0
+
+CALLF CALC_COST2, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP2("CHECK")
+
+@COST2(ARG)
+#FUNCTION
+RETURNF CALC_COST2("GET", ARG)
+
+@CALC_COST2(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:2 == 0
+	LOCAL:0 = 1
+	LOCAL:1 = 2
+ELSEIF ABL:2 == 1
+	LOCAL:0 = (EXP:1 >= EXPLV:3) ? 20 # 50
+	LOCAL:1 = 10
+ELSEIF ABL:2 == 2
+	LOCAL:0 = (EXP:1 >= EXPLV:4) ? 100 # 600
+	LOCAL:1 = 30
+ELSEIF ABL:2 == 3
+	LOCAL:0 = (EXP:1 >= EXPLV:5) ? 500 # 7000
+	LOCAL:1 = 75
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 1.50
+	ENDIF
+ELSEIF ABL:2 == 4
+	LOCAL:0 = (EXP:1 >= EXPLV:5) ? 8000 # 45000
+	LOCAL:1 = 180
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 2.50
+	ENDIF
+ENDIF
+
+;Ａ敏感
+IF TALENT:104
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+;Ａ鈍感
+ELSEIF TALENT:105
+	TIMES LOCAL:0 , 1.20
+	TIMES LOCAL:1 , 1.10
+ENDIF
+;淫乱
+IF TALENT:170
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+ENDIF
+
+;淫乱無しかつ必要珠数が0以下の場合修正
+SIF TALENT:170 == 0 && LOCAL:0 < 1
+	LOCAL:0 = 1
+
+@CAN2(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP2("GET", ARG)
+
+@CAN_ABLUP2(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;快Ａ의 구슬で上げる
+SIF JUEL:2 < COST2(0)
+	LOCAL:0 |= 1
+;Ａ経験が必要
+SIF EXP:1 < COST2(1)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

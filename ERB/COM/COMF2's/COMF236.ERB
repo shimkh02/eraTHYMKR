@@ -1,0 +1,162 @@
+﻿;=============================================================================
+;경혈 찌르기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE236
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:236 > 0
+	RETURN 0
+;針を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:33 == 0 && NOITEM == 0
+	RETURN 0
+;デバッグモードでない限り連続で使えない
+SIF PREVCOM == 236 && TALENT:MASTER:998 == 0
+	RETURN 0
+;主人の場合기교3이상 없으면 안 됨
+SIF ABL:PLAYER:12 < 3
+	RETURN 0
+;助手の場合, 순종5 · 기교4 · 針さばきでないとダメ
+IF ASSIPLAY
+	SIF ABL:PLAYER:10 < 5 || ABL:PLAYER:12 < 4 || TALENT:PLAYER:53 == 0
+		RETURN 0
+ENDIF
+;순종이 3미만의 ときは緊縛中じゃないとダメ
+SIF ABL:0 < 3 && TEQUIP:40 == 0
+	RETURN 0
+;기력800미만はダメ
+SIF BASE:1 < 800
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;기력은 크게 소모하지만, 그 턴에서의 체력의 소모 상태가 경감, 혹은 회복하는 효과를 가진다(도구 복수 장착시에 위력을 발휘? )
+;조교자가 새드 또는 왕S의 경우, 커맨드가 큰폭으로 약체화 한다
+@COM236
+PRINTL 경혈 찌르기
+TSTR:7 = 바늘
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 33
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:9 = %TSTR:7%
+ENDIF
+TSTR:0 = 경혈 찌르기
+CALL TRAIN_MESSAGE_COM236
+
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	DOWNBASE:1 += 180
+ELSE
+	DOWNBASE:1 += 80
+ENDIF
+
+SOURCE:31 = 800
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 500
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 550
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 800
+ELSE
+	SOURCE:20 = 900
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 33
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+SIF ASSIPLAY
+	TFLAG:55 = 2
+
+;커맨드 속성：도구(조교자)
+SIF TEQUIP:90 == 0
+	TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM236
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;조교자가 새드이 왕S
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 경혈을 %조사선택(TSTR:9, "로")% 자극하기 시작했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 그 격렬한 공격에 비명을 지르고 있다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 경혈을 %조사선택(TSTR:9, "로")% 자극하기 시작했다….
+ENDIF
+
+;--------------------------------------------------
+;경혈 찌르기 소모 감소 처리
+;--------------------------------------------------
+@EQUIP_COM236
+;조교자가 새드 또는 왕S의 경우, 체력 회복의 효과는 없음＋소모의 비율이 감소
+LOCAL = 0
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	TIMES DOWNBASE:0 , 0.80
+	LOCAL = 0
+ELSEIF ABL:PLAYER:12 <= 3
+	DOWNBASE:0 /= 2
+	LOCAL = 100
+ELSEIF ABL:PLAYER:12 == 4
+	DOWNBASE:0 /= 3
+	LOCAL = 150
+	;주인 조교시에 대상이[연모][복종][사용마]의 어느쪽이든을 가지고 있는 경우는 기력의 소모도 조금 경감
+	SIF PLAYER == MASTER && (TALENT:150 || TALENT:160 || TALENT:164)
+		TIMES DOWNBASE:1 , 0.90
+ELSE
+	DOWNBASE:0 = 0
+	LOCAL = 250
+	;주인 조교시에 대상이[연모][복종][사용마]의 어느쪽이든을 가지고 있는 경우는 기력의 소모도 조금 경감
+	SIF PLAYER == MASTER && (TALENT:150 || TALENT:160 || TALENT:164)
+		TIMES DOWNBASE:1 , 0.75
+ENDIF
+
+SIF LOCAL
+	BASE:0 = MIN(BASE:0 + LOCAL, MAXBASE:0)
+
+RETURN 1

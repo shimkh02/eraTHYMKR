@@ -1,0 +1,137 @@
+﻿;=============================================================================
+;애널 핥기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE180
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:180 > 0
+	RETURN 0
+;Ａ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;애널が汚れており, 汚臭敏感で순종5미만의 ASSI일 경우애널舐めはできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+IF STAIN:4 >= 8 && (STAIN:4 != 16 && STAIN:4 != 17) && ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼) 4 미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;조교자가 고양이혀일 경우 고양이 펠라 패치 유효가 아니면 불가
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀일 경우 조교자에게 기교4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM180
+PRINTL 애널 핥기
+TSTR:0 = 애널 핥기
+CALL TRAIN_MESSAGE_COM180
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 300
+SOURCE:19 = 50
+SOURCE:31 = 500
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 5
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 50
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 200
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 500
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1000
+ELSE
+	SOURCE:2 = 1800
+ENDIF
+
+;조교자의 TALENT:혀사용을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:2 , 2.00
+	SOURCE:17 += SOURCE:2 / 20
+ENDIF
+;조교자의 고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:2 , 0.70
+
+TCVAR:1 += 1
+
+;노예의 A⇔조교자의 입의 불결이 이동
+STAIN:4 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:4
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM180
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;고양이혀
+IF TALENT:PLAYER:54
+	PRINTFORM %CALLNAME:TARGET%의 
+		SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINT 항문을 혀끝으로 간질간질 간질였다. 
+	SIF EXP:1 >= 100 && PALAM:13 >= PALAMLV:3 && TEQUIP:68 == 0
+		PRINT 그리고 동그랗게 만 혀를 구멍 안에 꽂아 넣었다….
+	PRINTW
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 
+		SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINT 항문을 상냥하게 핥았다. 
+	SIF EXP:1 >= 100 && PALAM:13 >= PALAMLV:3 && TEQUIP:68 == 0
+		PRINT 그리고, 혀끝을 찔러 넣어 구멍의 속까지 휘저었다.
+	PRINTW
+ENDIF

@@ -1,0 +1,799 @@
+﻿;-------------------------------------------------
+;※勝手にぱるコン！（仮名）ver. 0.97にて変換したファイルです※
+;（RR1317系列用構文をYM用構文に置換したものです）
+;-------------------------------------------------
+;코메이지 사토리 조수 회화　v0.9β　byぱ
+;
+;말이 매우 깁니다. 일부러 자중 안하고 나갔습니다
+;그 대신이라는 건 아니지만 전용 커맨드 「독심」 사용 중일 때밖에 말하지 않습니다
+;-------------------------------------------------
+;※역주: 이 파일은 YM ver.6용 코메이지 사토리 대사 파일(10/07/13 갱신)에 포함된 대사의 번역입니다.
+;-------------------------------------------------
+;口上設定雛形
+;まず, 81と81を助手のキャラ番号に置換してください。
+;ただし, キャラ番号が一桁のキャラの場合, 81は1, 81は01のように変える必要があるので注意が必要です。
+;そしてコマンド内の適当な条件の下のPRINTFORMWの後ろに半角スペースを置いてセリフを追加してください。
+;条件はあくまでも一例です。口上作者さんのリビドーの滾った条件分岐を楽しみに待っています。
+;この口上は助手の時のものですから, セリフは二重かぎ括弧『』でくくると良いでしょう。
+;テンプレートが更新された際には, 新しいテンプレをベースにして, 
+;該等する条件のPRINTFORMWの行をコピー＆ペーストしていくことをお勧めします。（手間はかかるが, エラーは起こりえない）
+;口上を追加したコマンドの『;』をきちんと外しましょう。『;』がついていると条件を満たしても口上がでません
+;逆に, 口上がないコマンドに『;』をつけておくと区別がつけやすく便利です。
+;条件の追加や変更は自由ですが, その際には随時テストをしていくとよいでしょう。（エラーの原因は, ほぼ確実に手を加えた部分にあるため）
+;なお, これ以後要所にコメントによる解説がありますが, 条件の補足などで特記がない場合は助手調教中に喋る口上です。
+;また, 助手調教に関してはコマンドが発生する条件がやや複雑なので, COMABLE.ERBを確認しながら作業すると良いでしょう。
+;-------------------------------------------------
+
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+@EVENTTRAIN
+;조수 대사 파일이 있는가
+IF ASSI > 0
+	SIF ASSINO() == 61
+		CFLAG:ASSI:5799 = 1
+ELSEIF NO:MASTER == 61
+	CFLAG:MASTER:5799 = 1
+ENDIF
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_PLAYERCHANGE 관계
+;조수 조교의 개시/종료시에 출력됩니다.
+;--------------------------------------------------
+@KOJO_MESSAGE_PLAYERCHANGE_61
+;주인→사토리
+IF ASSIPLAY == 0
+	;조교 대상이 남자일 경우에는 대사를 표시하지 않습니다.
+	SIF TALENT:120
+		RETURN 1
+	;조교 내 첫 회
+	;사토리가 연모 달려있지 않으면 표시하지 않습니다
+	IF (CFLAG:ASSI:5762 != DAY || CFLAG:ASSI:5763 != TIME) && NO:MASTER != 61 && TALENT:ASSI:150
+		DRAWLINE
+		A = 5800+NO:TARGET
+		;첫 대면
+		IF CFLAG:ASSI:A == 0
+			PRINTFORML 『다시금…… 인사 드리겠어요, %CALLNAME:TARGET% 씨』
+			PRINTFORML 『앞으로 누구보다도 당신과 친밀하게 될, 사토리라 합니다』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;코이시
+		ELSEIF NO:TARGET == 64
+			PRINTFORML 『설마, 코이시와 이렇게 될 줄은 몰랐는데……』
+			PRINTFORML 『하지만, 미안해』
+			PRINTFORML 『너만은 읽을 수 없어서, 기분 좋게 해줬는지 알지 못하겠어』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;오린이거나 오쿠
+		ELSEIF NO:TARGET == 62 || NO:TARGET == 63
+			PRINTFORML 『어서 오렴, %CALLNAME:TARGET%』
+			PRINTFORML 『착하게 있었던 모양이니, 상을 주도록 할게……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;원작에서 면식 있음
+		ELSEIF CFLAG:ASSI:A == 1
+			PRINTFORML 『뜻하지 않은 곳에서 다 만났네…… 당신은 제 힘을 알고 계시겠죠』
+			PRINTFORML 『아무쪼록 기대하시길. 분명 잊지 못할 기억(트라우마)가 될 거에요』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;저택 내에서 면식 있음
+		ELSEIF CFLAG:ASSI:A == 2 || CFLAG:ASSI:A == 4
+			PRINTFORML 『안녕, %CALLNAME:TARGET% 씨』
+			PRINTFORML 『당신의 마음, 이전부터 보고 싶다고 생각했었어. 기뻐라……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;독심 중 + 노출벽 Lv5 이상
+		ELSEIF TEQUIP:74 && ABL:14 > 4
+			PRINTFORML 『「사토리 씨한테 당하는 거, 창피하지만 좋아」……어머나』
+			PRINTFORML 『하지만 당연한 거야. 자위로밖에 알 수 없는 기분 좋은 포인트가 있고』
+			PRINTFORML 『그 곳을 정확하게, 자위로는 무서워서 하지 못하는 움직임으로, 자극받는 걸……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;독심 경험 있음
+		ELSEIF CFLAG:ASSI:A == 8
+			PRINTFORML 『마음이란 그거랑 닮았어. 가녀린 홍색이고, 탱글탱글 귀여운데다』
+			PRINTFORML 『쓰다듬으면 예민하게 빳빳해져서 떨다가, 고개 내밀어 들여다보면 새빨개져서 수줍어 해……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;그 외
+		ELSE
+			PRINTFORML 『당신의 마음은 어떻게 생겼을까……』
+			PRINTFORML 『그 얼굴은, 알려지고 싶지 않은 것이 있는 얼굴이야. 기대되는 걸』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		ENDIF
+		CFLAG:ASSI:5762 = DAY
+		CFLAG:ASSI:5763 = TIME
+		RETURN 1
+	ENDIF
+	;조교 내 두 번째 이후
+	IF NO:MASTER != 61 && TALENT:ASSI:150
+		DRAWLINE
+		A = 5800+NO:TARGET
+		;코이시
+		IF NO:TARGET == 64
+			PRINTFORML 『코이시, 또 나랑 놀자꾸나』
+			PRINTFORML 『너는 읽지 못하니까, 어디가 기분 좋은지, 똑바로 가르쳐주렴?』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;오린이거나 오쿠
+		ELSEIF NO:TARGET == 62 || NO:TARGET == 63
+			PRINTFORML 『%CALLNAME:TARGET%, 이쪽으로 오렴』
+			PRINTFORML 『또 내가 귀여워해줄게…… 어머, 겁 먹었니?』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;독심 중 + 노출벽 Lv5 이상
+		ELSEIF TEQUIP:74 && ABL:14 > 4
+			PRINTFORML 『「사토리 씨한테 당하는 거, 창피하지만 좋아」……어머나』
+			PRINTFORML 『하지만 당연한 거야. 자위로밖에 알 수 없는 기분 좋은 포인트가 있고』
+			PRINTFORML 『그 곳을 정확하게, 자위로는 무서워서 하지 못하는 움직임으로, 자극받는 걸……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;독심 중
+		ELSEIF TEQUIP:74
+			PRINTFORML 『「또 이 여자랑 바꿨어, 싫어」 ……후후, 미움받았지 뭐야』
+			PRINTFORML 『자기가 먼저 보이고 싶어하게 되는 건 언제쯤일까, 기대되는 걸』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		;그 외
+		ELSE
+			PRINTFORML 『「안심하고 있었는데, 또 이 여자야」 ……후후』
+			PRINTFORML 『읽지 않았어. 얼굴에 써있었을 뿐, 이야』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:ASSI%에게 %CALLNAME:TARGET%의 조교를 맡기기로 했다…….
+		ENDIF
+		RETURN 1
+	ENDIF
+;사토리→주인
+ELSE
+	IF NO:MASTER != 61 && TALENT:ASSI:150
+		DRAWLINE
+		A = 5800+NO:TARGET
+		;한 번도 조교에 참가하지 않았다
+		IF TFLAG:133 == 0
+			PRINTFORML 『어머…… 벌써예요?』
+			PRINTFORML 『모처럼 나섰는데……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"를")% 물리고, %조사처리(CALLNAME:TARGET,"과")% 마주했다…….
+		;코이시
+		ELSEIF NO:TARGET == 64
+			PRINTFORML 『어려워라…… 주인님, 부탁드려요』
+			PRINTFORML 『코이시를, 녹아내릴 때까지 사랑해주셔요……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"를")% 물리고, %조사처리(CALLNAME:TARGET,"과")% 마주했다…….
+		;오린이거나 오쿠
+		ELSEIF NO:TARGET == 62 || NO:TARGET == 63
+			PRINTFORML 『자, 어떠니. %CALLNAME:TARGET%. 만족할 수 있었어?』
+			PRINTFORML 『다음은 주인님께 귀여움받는 거란다. 기뻐하도록 하려무나』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"를")% 물리고, %조사처리(CALLNAME:TARGET,"과")% 마주했다…….
+		;독심 중
+		ELSEIF TEQUIP:74
+			PRINTFORML 『자, 드시지요, 주인님. 발가벗은 %조사처리(CALLNAME:TARGET,"를")% 즐겨주세요』
+			PRINTFORML 『전 이쪽에서, 차분하게 깊은 속내까지, 핥듯이 보고 있도록 할게요』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"를")% 물리고, %조사처리(CALLNAME:TARGET,"과")% 마주했다…….
+		;그 외
+		ELSE
+			PRINTFORML 『어머?　「슬슬 나도 참가하고 싶은데」……인가요』
+			PRINTFORML 『알겠습니다. 주인님, 드시지요……』
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"를")% 물리고, %조사처리(CALLNAME:TARGET,"과")% 마주했다…….
+		ENDIF
+		RETURN 1
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;사정 게이지 기록 등을 리셋
+;-------------------------------------------------
+@EVENTEND
+IF NO:MASTER == 61 && TALENT:MASTER:121
+	CFLAG:MASTER:5764 = 0
+ELSEIF ASSI > 0
+	SIF ASSINO() == 61
+	CFLAG:ASSI:5764 = 0
+ENDIF
+IF NO:MASTER == 61
+	CFLAG:MASTER:5761 = 0
+ELSEIF ASSI > 0
+	SIF ASSINO() == 61
+		CFLAG:ASSI:5761 = 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM関係（81をキャラ番号に置換）
+;コマンド実行時に出力されます
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM_ASSI_61
+;本口上ファイル内に↑関数を配置して迂回処理させています
+@KOJO_MESSAGE_COM_ASSI_61_2
+;-------------------------------------------------
+;射精ゲージの数値保存（手淫・フェラ・パイズリ・イラマチオで参照）
+;調教コマンド後に記録されます
+;調教者（助手かマスター）のCFLAG:5764
+;-------------------------------------------------
+IF NO:MASTER == 61 && TALENT:MASTER:121 == 1
+	CFLAG:MASTER:5764 = BASE:MASTER:2
+ELSEIF ASSI > 0
+	SIF ASSINO() == 61
+		CFLAG:ASSI:5764 = BASE:ASSI:2
+ENDIF
+
+
+;助手の出番がないとき(助手調教時ではないか, この口上の主がマスターではないか, 以下のコマンドではない)は喋らない
+;※「助手を犯す」「3P」「暗闇」
+;SIF ASSIPLAY < 1 || NO:MASTER != 61 || (SELECTCOM != 610 && SELECTCOM != 26 && SELECTCOM != 401)
+
+;動作がおかしい気がしたのでとりあえず調教者番号照合で対応
+SIF (TEQUIP:74 == 0 && NO:PLAYER != 61 && SELECTCOM != 415) && SELECTCOM != 610 && SELECTCOM != 26
+	RETURN 0
+
+;口上主が主人公で助手が調教中か読心してない場合はしゃべらない
+SIF (NO:MASTER == 61 && ASSIPLAY) || (NO:PLAYER == 61 && TEQUIP:74 == 0)
+	RETURN 1
+
+;中の人氏の口上テンプレで助手と調教対象の掛け合いを行っている場合(三月精の助手を犯すシリーズとか), 
+;助手汎用テンプレと競合してしまうのでオミットする必要性があります。
+;編集している助手と掛け合い口上が用意されている調教対象の番号をY1, Y2…に書き, コメントアウトを外してください。
+;この処理は各調教コマンドに対して行ってください。(テンプレにはここにしか置かないので適当にコピペしてください)
+;SIF NO:TARGET == Y1 || NO:TARGET == Y2
+;	RETURN 1
+;↑これここに置けば１つで十分ですよね　byぱ
+
+
+;汚い処理ですが, 簡略化のため主人が口上主なら助手を口上主にし, もとの助手はASSI:100に保存する
+IF NO:MASTER == 61
+	ASSI:100 = ASSI
+	ASSI = MASTER
+ENDIF
+
+CALL KOJO_MESSAGE_COM_ASSI_61_3
+
+IF NO:MASTER == 61
+	ASSI = ASSI:100
+ENDIF
+
+
+@KOJO_MESSAGE_COM_ASSI_61_3
+;-------------------------------------------------
+;コマンド実行時のセリフ CFLAG 800を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;애무
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;주인이 하는 플레이
+	IF NO:PLAYER != 61 && NO:MASTER != 61
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『「뭔가 부족해, 더, 더 기분 좋은 거 해줘」』
+			PRINTFORMW 『라나 봐요. 주인님, 이제 박아주시면 어떠신지?』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAM:15 >= 3000
+			PRINTFORML 『「싫어, 이 눈은 이제 싫어, 너무 창피해서 죽을 것 같아」』
+			PRINTFORML 『그런 것보다 주인님의 손가락에 집중하지 못하겠어』
+			PRINTFORMW 『「집중하면 기분 좋은 게 들켜」 ……그래그래, 그렇게만 해』
+		;조교 대상이 C감각 3 이상+반발각인3
+		ELSEIF ABL:0 > 2 && MARK:9 == 3
+			PRINTFORML 『「기분 나빠, 싫어, 그런데 이 손가락은 기분 좋아」』
+			PRINTFORMW 『노려본들 어쩌란 건지. 당신의 마음이야. 알고 있잖아』
+		;조교 대상이 C감각 3 이상
+		ELSEIF ABL:0 > 2
+			;후타나리 분기
+			SIF TALENT:121
+				PRINTFORML 『「자지 최고, 문질러지는 거 참다 좆물 주륵주륵 싸는 게 최고 좋아」』
+			SIF TALENT:121 == 0
+				PRINTFORML 『「클리 쓰다듬어지는 거 좋아, 키스해서 톡톡 건드리면 저릿저릿해져」』
+			PRINTFORML 『어머, 왜 우는 걸까. 아주 좋아하잖아?』
+			PRINTFORMW 『「엄청 좋아, 기분 좋은데에 져버리겠어」 ……그건 다행이네』
+		;그 외
+		ELSE
+			PRINTFORML 『「이런 녀석한테 만져져도 별로……」』
+			PRINTFORMW 『본심 같네. 주인님, 미약이라도 먹여놓으면 좋지 않을까 해요』
+		ENDIF
+		DRAWLINE
+	;사토리가 하는 플레이
+	ELSE
+		;조교 대상이 욕정 Lv4 이상+마조끼 3 이상
+		IF PALAM:13 >= 10000 && ABL:21 > 2
+			PRINTFORML 『「사토리 씨에게 밟혔으면 좋겠어」 ……하아. 뭐야 그거』
+			;후타나리 분기
+			SIF TALENT:121
+				PRINTFORMW 당황해하면서도 사토리는 맨발로 %CALLNAME:TARGET%의 페니스를 밟아주었다.
+			SIF TALENT:121 == 0
+				PRINTFORMW 당황해하면서도 사토리는 맨발로 %CALLNAME:TARGET%의 바기나를 밟아주었다.
+			PRINTFORML 『이렇게? 이런 식이면 될까. 어머, 느끼고 있니…… 턱없는 변태인 걸』
+			;후타나리 분기
+			SIF TALENT:121
+				PRINTFORMW 사토리의 발가락이 귀두를 사이에 끼우고 주물주물 주무르면서 짓밟는다…….
+			SIF TALENT:121 == 0
+				PRINTFORMW 사토리의 엄지 발가락이 음핵을 잡고, 꾹꾹 구부러뜨리며 짓밟는다…….
+		;조교 대상이 욕정 Lv4 이상
+		ELSEIF PALAM:13 >= 10000
+			PRINTFORML 『「뭔가 부족해, 더, 더 기분 좋은 거 해줘」』
+			PRINTFORML 『머리, 모자란 거 아니니? 뭘 모르나 봐』
+			PRINTFORMW 『애태우고 있는 거야. 더 창피한 생각을 떠올리도록 해』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAM:15 >= 3000
+			PRINTFORML 『「싫어, 이 눈은 이제 싫어, 너무 창피해서 죽을 것 같아」』
+			PRINTFORML 『죽기 전에 즐기도록 해. 자 손가락에 집중해주렴……?』
+			PRINTFORMW 『「지금 거 엄청 기분 좋아」 ……여기구나. 이렇게지? 후후……♪』
+		;조교 대상이 C감각 3 이상+반발각인3+오린·오쿠가 아니다
+		ELSEIF ABL:0 > 2 && MARK:9 == 3 && NO:TARGET != 62 && NO:TARGET != 62
+			PRINTFORML 『「용서 못해, 절대로 용서 못해」 그래. 그래서 어디가 느끼는데?』
+			;후타나리 분기
+			SIF TALENT:121
+				PRINTFORML 『「좆 뒷줄기가 제일 좋아」 이렇게구나. 여기로 사정시키면 용서해주는 거지?』
+			SIF TALENT:121 == 0
+				PRINTFORML 『「클리 꼭지」 알았어. 여기를 이렇게 하면 용서해줄래?』
+			PRINTFORMW 『그래, 질문받으면 머릿속에서 대답하지 않을 수가 없는 법이지』
+		;조교 대상이 C감각 3 이상
+		ELSEIF ABL:0 > 2
+			;후타나리 분기
+			SIF TALENT:121
+				PRINTFORML 『「자지 최고, 문질러지는 거 참다 좆물 주륵주륵 싸는 게 최고 좋아」』
+			SIF TALENT:121 == 0
+				PRINTFORML 『「클리 쓰다듬어지는 거 좋아, 키스해서 톡톡 건드리면 저릿저릿해져」』
+			PRINTFORML 『어머, 왜 우는 걸까. 아주 좋아하잖아?』
+			PRINTFORMW 『「엄청 좋아, 기분 좋은데에 져버리겠어」 ……그건 다행이네』
+		;그 외
+		ELSE
+			PRINTFORML 『「동성이 만져도 느낄 리가 없어」 흐응』
+			PRINTFORMW 『여기는? 약간 좋나보구나. 여기, 응…… 계속해줄게』
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クンニ
+;岩清水
+;クンニの「TEQUIP:56 == 0」条件を消したので同じ口上を表示します
+;-------------------------------------------------
+;クンニ（+岩清水）
+IF SELECTCOM == 1
+	;주인이 하는 플레이
+	IF NO:PLAYER != 61 && NO:MASTER != 61
+		;クンニの匂いイベント終了済み+조교 대상이 レズっ気4以下
+		IF CFLAG:ASSI:9001 > 1 && ABL:22 < 5
+			PRINTFORML 『그러고 보니 %조사처리(CALLNAME:TARGET,"는")% 알고 있으려나』
+			PRINTFORML 『여성기란 보통 하는 식으로 씻는 정도론 완전히 냄새가 가시지 않아』
+			PRINTFORML 『주인님은 코가 비뚤어지겠다 싶으며 핥고 있다고, 감사드리렴』
+			PRINTFORMW 『「창피해」 하지만 그게 기분 좋은 거구나. 「기분 좋아……」』
+		;조교 대상이 욕정 Lv4 이상
+		ELSEIF PALAM:13 >= 10000
+			PRINTFORML 『「혀가 엄청나게 좋아, 가고 싶어 미치겠어, 못 참겠어」』
+			PRINTFORMW 『주인님, 잠깐 쉬게 하죠. 괴로워보이고요』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAM:15 >= 3000
+			PRINTFORML 『「젖어, 젖어버린 거 보고 있어, 창피해」 흐―응』
+			PRINTFORML 『적셔진 것보다 당신의 마음 쪽이 창피스러워. 내 입으로 말해줘버려?』
+			PRINTFORMW 『「창피해지면 젖어, 창피한 거 기분 좋아, 핥는 거 좋아」』
+		;조교 대상이 C감각 3 이상+반발각인3
+		ELSEIF ABL:0 > 2 && MARK:9 == 3
+			PRINTFORML 『주인님, 이 세우고 쮸웁 쮸웁 핥는 게 좋다나 봐요』
+			PRINTFORMW 『……눈매가 못됐는 걸. 솔직하지 않은 누구를 위해서 말하고 있는데』
+		;조교 대상이 C감각 3 이상
+		ELSEIF ABL:0 > 2
+			PRINTFORML 『그렇게 기분 좋아 기분 좋아하고 생각하지 마』
+			PRINTFORML 『아아, 정말…… 어쩐지 부러워지기 시작했어』
+			PRINTFORMW 『주인님의 혀, 기분 좋나봐. 바꿨으면 좋겠어』
+		;그 외
+		ELSE
+			PRINTFORML 『「근질근질하지만 싫지 않아……」라네요』
+			PRINTFORMW 『꼼꼼히 맛보도록 해. 여자라면 누구든 그 감각이 아주 좋아지거든』
+		ENDIF
+		DRAWLINE
+	;사토리가 하는 플레이　조수시
+	ELSEIF ASSIPLAY
+		;クンニの匂いイベント終了済み+조교 대상이 レズっ気4以下
+		IF CFLAG:ASSI:9001 > 1 && ABL:22 < 5
+			PRINTFORML 『그러고 보니 %조사처리(CALLNAME:TARGET,"는")% 알고 있으려나』
+			PRINTFORML 『여성기란 보통 하는 식으로 씻는 정도론 완전히 냄새가 가시지 않아』
+			PRINTFORML 『아아 냄새 지독해라. 쮸, 낼름…… 쯔쯔쯔, 할짝……』
+			PRINTFORMW 『창피하나보구나, 잘됐어. 쮸, 삐쮸……』
+		;조교 대상이 욕정 Lv4 이상
+		ELSEIF PALAM:13 >= 10000
+			PRINTFORML 『응후우…… 푸하. 뭐어니, 「벌써 끝이라니 애달파」?』
+			PRINTFORML 『이쪽은 핥고 있어서 떠들지 못하는데, 창피한 생각이 잔뜩』
+			PRINTFORMW 『흘러들어오는데 있지…… 전부 말해버릴까?』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAMLV:8 > 2
+			PRINTFORML 『……쮸푸, 삐쮸…… 낼르음……』
+			PRINTFORMW 사토리는, 핥으면서 %CALLNAME:TARGET%의 얼굴을 지그시 보고 있다.
+			PRINTFORMW 말없이 마음을 읽히고 있는 부끄러움에, %조사처리(CALLNAME:TARGET,"는")% 그저 뺨을 물들인다…….
+		;그 외
+		ELSE
+			PRINTFORML 『푸아…… 「혀는 근질근질해서 기분 좋아」, 흐―응』
+			PRINTFORMW 『창피한 게 아냐. 핥아지는 건 다들 좋아해』
+		ENDIF
+	;사토리 주인
+	ELSE
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『응후우…… 푸하. 뭐어니, 「벌써 끝이라니 애달파」?』
+			PRINTFORML 『이쪽은 핥고 있어서 떠들지 못하는데, 창피한 생각만 마냥』
+			PRINTFORMW 『잇달아 흘러들어오는데 있지…… 전부 말해버릴까?』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAMLV:8 > 2
+			PRINTFORML 『……쮸푸, 삐쮸…… 낼르음……』
+			PRINTFORMW 사토리는, 핥으면서 %CALLNAME:TARGET%의 얼굴을 지그시 보고 있다.
+			PRINTFORMW 말없이 마음을 읽히고 있는 부끄러움에, %조사처리(CALLNAME:TARGET,"는")% 그저 뺨을 물들인다…….
+		;그 외
+		ELSE
+			PRINTFORML 『푸아…… 「혀는 근질근질해서 기분 좋아」, 흐―응』
+			PRINTFORMW 『창피한 게 아냐. 핥아지는 건 다들 좋아해』
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;アナル愛撫
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;주인이 하는 플레이
+	IF NO:PLAYER != 61 && NO:MASTER != 61
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『「애달파, 뒤에서 재촉해서 흘러나와서 그치질 않아」』
+			PRINTFORMW 『이따금은 제 입으로 말해보지 그래? 자비를 받을지 또 알아』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAM:15 >= 3000
+			PRINTFORML 『「뒤라니, 그런 데를 만져지다니」』
+			PRINTFORML 『덧붙여서 내 쪽에서는 그 구멍이 훤히 보여. 의외로 깨끗히 하고 있는 걸』
+			PRINTFORMW 『「갖고 놀아져도 되도록 정성 들여 씻고 있어」 후후, 귀여운 걸 당신』
+		;조교 대상이 Ａ감각 3 이상
+		ELSEIF ABL:2 > 2
+			PRINTFORML 『「싫은데, 등줄기에 뭔가 기분 좋은 게 타고 올라가」』
+			PRINTFORMW 『축하해, %CALLNAME:ASSI%쨩. 엉덩이에 눈 떴구나』
+		;그 외
+		ELSE
+			PRINTFORML 『「기분 나빠, 이런 곳을 만지다니」 ……순진하구나』
+			PRINTFORMW 『마음과 몸에, 엉덩이의 쾌감을 가르쳐주도록 하죠, 주인님』
+		ENDIF
+		DRAWLINE
+	;사토리가 하는 플레이
+	ELSE
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『「애달파, 뒤에서 불질러서 흘러나와서 그치질 않아」』
+			PRINTFORML 『「더 평범하고, 더 야하고 격한 걸 해줘」』
+			PRINTFORMW 『볼썽사나워라…… 허리가 꾸욱꾸욱 움직이고 있거든』
+		;조교 대상이 치정 Lv3 이상
+		ELSEIF PALAM:15 >= 3000
+			PRINTFORML 『「뒤라니, 그런 데를 만져지다니」』
+			PRINTFORML 『덧붙여서 내 쪽에서는 그 구멍이 훤히 보여. 의외로 깨끗히 하고 있는 걸』
+			PRINTFORMW 『「갖고 놀아져도 되도록 정성 들여 씻고 있어」 후후, 귀여운 걸 당신』
+		;조교 대상이 Ａ감각 3 이상
+		ELSEIF ABL:2 > 2
+			PRINTFORML 『「싫은데, 등골에 뭔가 기분 좋은 게 타고 올라가」』
+			PRINTFORMW 『축하해, %CALLNAME:ASSI%쨩. 엉덩이에 눈 떴구나』
+		;그 외
+		ELSE
+			PRINTFORML 『「기분 나빠, 이런 곳을 만지다니」 흠흠』
+			PRINTFORML 『이건? 「뽑혀나가는 거, 좋을지도」 그래……』
+			PRINTFORMW 『한참 참다가 화장실에 갔을 때의 기억, 상기시켜주도록 할게』
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;독심 자위
+;-------------------------------------------------
+;이 부분은 기합 넣었으므로 무지 대사 깁니다
+IF SELECTCOM == 7 && TEQUIP:54 == 0
+	;상성 검색 함수를 호출
+	CALL RELATION_QUERY,NO:TARGET,0
+	A = 5800+RESULT:1
+	;다이스 롤!
+	B = RAND:6
+	;사토리가 주인
+	IF NO:MASTER == 61
+		;선택 받은 게 사토리 자신
+		;Ｃ감각3이상이라면 1/6, 연모라면 1/3, 상애 · 친애라면 5/6로 이쪽으로 변화
+		IF RESULT:1 == 61 || (TALENT:150 && B < 3) || (ABL:0 > 2 && B == 0) || ((TALENT:152 || TALENT:153) && B < 6)
+			PRINTFORML 『어머…… 뜻밖이어라. 당신, 나를 그런 식으로 생각하고 있었어?』
+			PRINTFORML 자위를 명령받고서 무심코 사토리를 떠올린 %CALLNAME:TARGET%.
+			PRINTFORMW 사토리는 곧바로 그것을 알아차리고 쿡쿡 웃으면서 들볶기 시작한다.
+			PRINTFORML 『그럼, 내가 당신에게 했던 일을 상기시켜줄게…… 이런 건 어때?』
+			PRINTFORML 『어머? %조사처리(CALLNAME:TARGET,"는")%, 이렇게 지독한 짓 당한 기억으로 느끼고 있구나』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….		
+		;선택 받은 게 오린 · 오쿠 · 코이시
+		ELSEIF RESULT:1 == 62 || RESULT:1 == 63 || RESULT:1 == 64
+			PRINTFORML 『헤에…… 당신, 지금 %조사처리(RESULTS,"를")% 떠올렸지』
+			PRINTFORML 자위를 명령받아 가까운 소녀를 생각하자 사토리는 즉시 그것을 꿰뚫어봤다.
+			PRINTFORMW 『조금 뜻밖인데…… 그래, 전부터 흐릿하게 욕망을 품고 있었구나』
+			PRINTFORML 『%RESULTS%도 가엽기도 하지. 이런 데서 %CALLNAME:TARGET%의 망상에 범해지고 있다니』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200 이상의 캐릭터가 있다+Ｃ감각3이상+그 캐릭터와 사토리의 면식이 없다
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:MASTER:A == 0
+			PRINTFORML 『%RESULTS% 씨란 누구신지? 꽤나 뜨거운 마음을 품고 있는데』
+			PRINTFORML 자위를 명령받은 %조사처리(CALLNAME:TARGET,"는")%, 남몰래 마음에 품은 상대를 떠올린다.
+			PRINTFORMW 그러자마자 사토리는 그 이름을 알아맞추고 추궁을 시작했다…….
+			PRINTFORML 『그래, 당신. %RESULTS% 씨를 연모하고 있구나. 아름답기도 해라』
+			PRINTFORMW 『%RESULTS% 씨는 당신에게 그런 짓해주는 거야? 어머, 해주지 않는구나』
+			PRINTFORML 『그건 딱한 걸. 당신은 그렇게나 애달플 만큼, 해주길 바라고 있는데 말이야……♪』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+사토리가 독심 경험 있음
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:MASTER:A == 8
+			PRINTFORML 『%RESULTS% 씨라 하면…… 후후, 기억에 있는 이름이네』
+			PRINTFORML 자위를 명령받아 흥분을 얻기 위해서 %조사처리(CALLNAME:TARGET,"가")% 떠올린 상대는,
+			PRINTFORMW 우연히도, 사토리에게 있어서 기억에 생생한 이름이었다.
+			PRINTFORML 『당신, %RESULTS% 씨를 좋아하는구나. 그래. 후후, 이건 재미있는 걸』
+			PRINTFORMW 『나, %RESULTS% 씨의 마음을 읽은 적이 있거든…… 당신에 대해서도 말이야』
+			PRINTFORML 『어떻게 생각하고 있는지, 알고 싶지 않아? 착하게 굴고 있으면 생각해볼게……♪』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+사토리가 이곳에서 만났다
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:MASTER:A > 2
+			PRINTFORML 『어머, %RESULTS% 씨라면, 저번에 만났더랬지……』
+			PRINTFORML 자위를 명령받은 %조사처리(CALLNAME:TARGET,"는")%, 남몰래 마음에 품은 상대를 떠올린다.
+			PRINTFORMW 그러자마자 사토리는 그 이름을 알아맞추고 추궁을 시작했다…….
+			PRINTFORML 『헤에. %RESULTS% 씨, 당신에게 사랑받고 있었구나. 그것도 이렇게나 뜨겁게』
+			PRINTFORMW 『자위의 딸감으로, 마음 속에선 언제나 맺어지고 싶어서, 생각하기만 해도 가랑이를 적신다』
+			PRINTFORML 『다시 만나면 전해두겠어. 여자로서 이 이상 없는 일인 걸. 분명 기뻐할 거야』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+사토리가 원작에서 알고 있다
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:MASTER:A == 1
+			PRINTFORML 『%RESULTS% 씨라 하면…… 그러네, 만나본 적이 있어』
+			PRINTFORML 자위를 명령받은 %조사처리(CALLNAME:TARGET,"는")%, 남몰래 마음에 품은 상대를 떠올린다.
+			PRINTFORMW 그러자마자 사토리는 그 이름을 알아맞추고 추궁을 시작했다…….
+			PRINTFORML 『헤에. %RESULTS% 씨, 당신에게 사랑받고 있었구나. 그것도 이렇게나 뜨겁게』
+			PRINTFORMW 『%RESULTS% 씨는 당신에게 그런 행위해주고 있어? 어머, 안 해주나 보네』
+			PRINTFORML 『그건 애석해라. 당신은 이렇게 애달플 만큼, 당하고 싶어하고 있는데 말이야……♪』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 100이상의 캐릭터가 있다+Ｃ감각3이상
+		ELSEIF RESULT == 1 && ABL:0 > 2
+			PRINTFORML 『흐―응,  %RESULTS% 씨가 만져주는 상상으로 하고 있구나』
+			PRINTFORMW 지적받고 %조사처리(CALLNAME:TARGET,"는")% 흠칫 어깨를 떨었다.
+			PRINTFORML 『사랑하는 상대……라는 건 아니구나. 귀여우니까 좋아?』
+			PRINTFORMW 『「언제나 떠올려서 한다」 그래, %RESULTS% 씨는 당신의 오나펫이네』
+			PRINTFORML 『너무한 애인 걸. %RESULTS% 씨가 알았다간 경멸하겠지……？』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;그 외
+		ELSE
+			PRINTFORML 『자위는 장기가 아니나 봐. 그렇구나…… 딸감이 있었으면 좋겠어?』
+			PRINTFORML 『당신의, 지금까지 중에서 제일 기분 좋았던 기억을 상기시켜줄게』
+			PRINTFORMW 『자아, 발가벗은 마음을 남김없이 드러내고……. 눈으로, 범해주겠어』
+		ENDIF
+	;사토리가 조수
+	ELSE
+		;이하, 연모 달렸으면 상성 200이상에서 1/3, 상성 100이상에서 1/2, 상성 캐릭터 없다면 확실, 상애 or 친애라면 5/6, 연모 없이 C감각3이상이라면 1/6로
+		;당신이 딸감으로 변화합니다
+		IF (TALENT:150 && RESULT == 2 && B > 4) || (TALENT:150 && RESULT == 1 && B > 2) || (RESULT == 0 && TALENT:150) || ((TALENT:152 || TALENT:153) && B < 6) || (B == 0 && ABL:0 > 2)
+			PRINTFORML 『어머나, 얘 봐. 주인님을 생각하며 자위를 하고 있어』
+			PRINTFORMW 지적받고 %조사처리(CALLNAME:TARGET,"는")% 흠칫 어깨를 떨었다.
+			PRINTFORML 『상기시켜주지, 얼마나 지독한 짓을 당해왔는지…… 후후』
+			;연모 분기
+			SIF TALENT:150
+				PRINTFORMW 『어머 너무해라. 여자를 여자라고도 여기지 않는 소행이네. 그런데도 주인님을 사랑해?』
+			SIF TALENT:150 == 0
+				PRINTFORMW 『어머, 주인님은 싫어하는데, 떠올리면 기분 좋아져버리는구나』
+			PRINTFORML 『턱없는 음란녀인 걸…… 조교의 기억으로 질퍽질퍽하게 젖어있어』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;선택 받은 게 사토리 자신
+		ELSEIF RESULT:1 == 61
+			PRINTFORML 『어머…… 뜻밖이어라. 당신, 나를 그런 식으로 생각하고 있었어?』
+			PRINTFORML 자위를 명령받고서 무심코 사토리를 떠올린 %CALLNAME:TARGET%.
+			PRINTFORMW 사토리는 곧바로 그것을 알아차리고 쿡쿡 웃으면서 들볶기 시작한다.
+			PRINTFORML 『유감이지만 지금의 나는 주인님의 것…… 주인님, 접문을 해요』
+			PRINTFORML 『쪽, 응, 파아…… 어머 %CALLNAME:TARGET%, 흥분했구나. 변태인 걸』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;선택 받은 게 오린 · 오쿠 · 코이시
+		ELSEIF RESULT:1 == 62 || RESULT:1 == 63 || RESULT:1 == 64
+			PRINTFORML 『헤에…… 당신, 지금 %조사처리(RESULTS,"를")% 떠올렸지』
+			PRINTFORML 자위를 명령받아 가까운 소녀를 생각하자 사토리는 즉시 그것을 꿰뚫어봤다.
+			PRINTFORMW 『조금 뜻밖인데…… 그래, 전부터 흐릿하게 욕망을 품고 있었구나』
+			PRINTFORML 『%RESULTS%도 가엽기도 하지. 이런 데서 %CALLNAME:TARGET%의 망상에 범해지고 있다니』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+그 캐릭터와 사토리의 면식이 없다
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:ASSI:A == 0
+			PRINTFORML 『%RESULTS% 씨란 누구신지? 꽤나 뜨거운 마음을 품고 있는데』
+			PRINTFORML 자위를 명령받은 %조사처리(CALLNAME:TARGET,"는")%, 남몰래 마음에 품은 상대를 떠올린다.
+			PRINTFORMW 그러자마자 사토리는 그 이름을 알아맞추고 추궁을 시작했다…….
+			PRINTFORML 『그래, 당신. %RESULTS% 씨를 연모하고 있구나. 아름답기도 해라』
+			PRINTFORMW 『%RESULTS% 씨는 당신에게 그런 짓해주는 거야? 어머, 해주지 않는구나』
+			PRINTFORML 『그건 딱한 걸. 당신은 그렇게나 애달플 만큼, 해주길 바라고 있는데 말이야……♪』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+사토리가 독심 경험 있음
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:ASSI:A == 8
+			PRINTFORML 『%RESULTS% 씨라 하면…… 후후, 기억에 있는 이름이네』
+			PRINTFORML 자위를 명령받아 흥분을 얻기 위해서 %조사처리(CALLNAME:TARGET,"가")% 떠올린 상대는,
+			PRINTFORMW 우연히도, 사토리에게 있어서 기억에 생생한 이름이었다.
+			PRINTFORML 『당신, %RESULTS% 씨를 좋아하는구나. 그래. 후후, 이건 재미있는 걸』
+			PRINTFORMW 『나, %RESULTS% 씨의 마음을 읽은 적이 있거든…… 당신에 대해서도 말이야』
+			PRINTFORML 『어떻게 생각하고 있는지, 알고 싶지 않아? 착하게 굴고 있으면 생각해볼게……♪』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+사토리가 이곳에서 만났다
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:ASSI:A > 2
+			PRINTFORML 『어머, %RESULTS% 씨라면, 저번에 만났더랬지……』
+			PRINTFORML 자위를 명령받은 %조사처리(CALLNAME:TARGET,"는")%, 남몰래 마음에 품은 상대를 떠올린다.
+			PRINTFORMW 그러자마자 사토리는 그 이름을 알아맞추고 추궁을 시작했다…….
+			PRINTFORML 『헤에. %RESULTS% 씨, 당신에게 사랑받고 있었구나. 그것도 이렇게나 뜨겁게』
+			PRINTFORMW 『자위의 딸감으로, 마음 속에선 언제나 맺어지고 싶어서, 생각하기만 해도 가랑이를 적신다』
+			PRINTFORML 『다시 만나면 전해두겠어. 여자로서 이 이상 없는 일인 걸. 분명 기뻐할 거야』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 200이상의 캐릭터가 있다+Ｃ감각3이상+사토리가 원작에서 알고 있다
+		ELSEIF RESULT == 2 && ABL:0 > 2 && CFLAG:ASSI:A == 1
+			PRINTFORML 『%RESULTS% 씨라 하면…… 그러네, 만나본 적이 있어』
+			PRINTFORML 자위를 명령받은 %조사처리(CALLNAME:TARGET,"는")%, 남몰래 마음에 품은 상대를 떠올린다.
+			PRINTFORMW 그러자마자 사토리는 그 이름을 알아맞추고 추궁을 시작했다…….
+			PRINTFORML 『헤에. %RESULTS% 씨, 당신에게 사랑받고 있었구나. 그것도 이렇게나 뜨겁게』
+			PRINTFORMW 『%RESULTS% 씨는 당신에게 그런 행위해주고 있어? 어머, 안 해주나 보네』
+			PRINTFORML 『그건 애석해라. 당신은 이렇게 애달플 만큼, 당하고 싶어하고 있는데 말이야……♪』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;상성 100이상의 캐릭터가 있다+Ｃ감각3이상
+		ELSEIF RESULT == 1 && ABL:0 > 2
+			PRINTFORML 『흐―응,  %RESULTS% 씨가 만져주는 상상으로 하고 있구나』
+			PRINTFORMW 지적받고 %조사처리(CALLNAME:TARGET,"는")% 흠칫 어깨를 떨었다.
+			PRINTFORML 『사랑하는 상대……라는 건 아니구나. 귀여우니까 좋아?』
+			PRINTFORMW 『「언제나 떠올려서 한다」 그래, %RESULTS% 씨는 당신의 오나펫이네』
+			PRINTFORML 『너무한 애인 걸. %RESULTS% 씨가 알았다간 경멸하겠지……？』
+			PRINTFORMW 즐거운 듯이 웃으면서 사토리는 %CALLNAME:TARGET%의 마음을 범해간다…….
+		;그 외
+		ELSE
+			PRINTFORML 『자위는 장기가 아니나 봐. 그렇구나…… 딸감이 있었으면 좋겠어?』
+			PRINTFORML 『당신의, 지금까지 중에서 제일 기분 좋았던 기억을 상기시켜줄게』
+			PRINTFORMW 『자아, 발가벗은 마음을 남김없이 드러내고……. 눈으로, 범해주겠어』
+		ENDIF
+		;주인이 하는 조교라면 선을 긋는다
+;		SIF 
+			DRAWLINE
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;펠라한다(조교 대상이 후타나리/남자만)
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;주인이 하는 플레이
+	IF NO:PLAYER != 61 && NO:MASTER != 61
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『「기, 기분 좋아, 나올 것 같아, 못 참겠어」 흐응……』
+			PRINTFORML 『주인님께서 그런 더러운 걸 핥도록 하고선』
+			PRINTFORMW 『더군다나 더러운 즙을 싸고 기뻐하는구나, %조사처리(CALLNAME:TARGET,"는")%』
+		;조교 대상이 C감각 3 이상+반발각인3
+		ELSEIF ABL:0 > 2 && MARK:9 == 3
+			PRINTFORML 『「싫어하는데, 빨아주면 거스르지 못하겠어, 사정하고 싶어」』
+			PRINTFORMW 『당신, 그곳을 문지르고 부탁하면 뭐든 해줄 것 같네. 바보인 걸』
+		;조교 대상이 C감각 3 이상
+			PRINTFORML 『좋은 얼굴로 울부짖는 걸. 주인님의 입은 기분 좋더니?』
+			PRINTFORML 『「좋아, 좋앗, 나와, 사정해버려」 주인님, 스톱』
+			PRINTFORMW 『이대로 있으면 더러운 걸 삼키게 되어버리겠어요……』
+		;그 외
+		ELSE
+			PRINTFORML 『「기분 좋아」와 「싫어」가 번갈아가며 맴돌고 있어』
+			PRINTFORMW 『거기를 핥아지면 누구든지 그렇게 되는구나. 귀여워라……』
+		ENDIF
+	;사토리가 하는 플레이
+	ELSE
+		;조교 대상이 C감각 3 이상
+		IF ABL:0 > 2
+			PRINTFORML 『쮸뽀, 쮸뿌…… 응, 응, 쮸르르……』
+			PRINTFORML 사토리는 %CALLNAME:TARGET% 마음의 비명을 만끽하면서 쾌락의 요점을
+			PRINTFORMW 혀와 입술로 가차없이 계속 희롱한다…….
+		;조교 대상이 반발각인3
+		ELSEIF MARK:9 == 3
+			PRINTFORML 『슈르르…… 할짝, 할짝, 삐쮸……』
+			PRINTFORML 『후후훗, 페니스 P쨩 아삭아삭 갉아먹기―♪』
+			PRINTFORMW 『……지금, 겁먹었지. 핥으면 느끼고 있어. 귀여워라……』
+		;그 외
+		ELSE
+			PRINTFORML 『푸아…… 「싫은데 엄청 기분 좋아…… 더 해줬으면 좋겠어」?』
+			PRINTFORMW 『후후, 이게 자라나있으면 금세 기분 좋아질 수 있어서 근사하네』
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;가슴 애무
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;주인이 하는 플레이
+	IF NO:PLAYER != 61 && NO:MASTER != 61
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『「가슴만으론 싫어, 배가 꼬일 것 같아, 자궁이 욱신거려」 흐음흐음』
+			PRINTFORMW 『주인님, 양손으로 유두를 마구 간지르길 바라나 봐요』
+		;조교 대상이 Ｂ감각 3 이상
+		ELSEIF ABL:3 > 2
+			PRINTFORML 『「가슴 만지작대는 거 좋아, 유두 어루만져지면 머리가 저릿저릿해」 흐―응』
+			PRINTFORMW 『주인님, 둘이서 가슴 양쪽 다 핥아주지 않겠어요. 귀엽게 짖어줄 것 같아요』
+		;그 외
+		ELSE
+			PRINTFORML 『「가슴 같은데 주물럭거려도 아무것도 안 나와」 ……뭐 그러네』
+			PRINTFORMW 『주인님, 유두를 핥아주면 조금은 느끼는 듯해요』
+		ENDIF
+	;사토리가 하는 플레이
+	ELSE
+		;조교 대상이 욕정 Lv4 이상
+		IF PALAM:13 >= 10000
+			PRINTFORML 『「싫어, 유두만은 싫어, 사타구니가 욱신거려서 미치겠어」』
+			PRINTFORMW 『그러렴, 더 느껴서, 미쳐버릴 듯이 탐내도록 하렴……?』
+		;조교 대상이 Ｂ감각 3 이상
+		ELSEIF ABL:3 > 2
+			PRINTFORML 『「기분 좋아, 더 해줘, 부끄러운 거 잊고 흐트러지게 해줘」 흐―응』
+			PRINTFORMW 『어차피 뻔히 다 보이니까, 그렇게 해버리면 될텐데』
+		;그 외
+		ELSE
+			PRINTFORML 『「근질근질거려, 간지러워」 어머, 그래』
+			PRINTFORMW 『제일 간지러운 곳을 꼼꼼히 해줄게. 아, 여기구나』
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;키스
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;주인이 하는 플레이
+	IF NO:PLAYER != 61 && NO:MASTER != 61
+		;조교 대상이 연모
+		IF TALENT:150
+			PRINTFORML 『「이 사람과의 키스가 좋아, 이 사람이 너무 좋아……」』
+			PRINTFORMW 『마음의, 상당히 표층에서…… 주인님이, 좋다고 좋다고 말하는구나?』
+			PRINTFORML 『마음의 안쪽 밑바닥, 스스로도 볼 수 없는 곳에선 어떻게 생각하고 있어?』
+			PRINTFORMW 『「싫어, 보지 마」라니, 후후, 무서운가 보구나. 애정을 시험당하는 게』
+		;그 외
+		ELSE
+			PRINTFORML 『「싫지만 키스는 조금 기분 좋아……」 그렇겠지』
+			PRINTFORMW 『금방, 싫지 않게 되고 말아…… 나처럼 말이야』
+		ENDIF
+	;사토리가 하는 플레이
+	ELSE
+		;조교 대상이 연모
+		IF TALENT:150
+			PRINTFORML 『응쮸…… 응, 응, 쮸우…… 푸하』
+			PRINTFORMW 『주인님이랑 하는 게 좋았구나. 그런데…… 「여자의 혀, 달콤해서 가슴이 설레여」?』
+		;그 외
+		ELSE
+			PRINTFORML 『할짝…… 삐쮸, 응, 응쮸…… 하암』
+			PRINTFORML 『처음에는 그렇게나 마음 속으로부터 싫어했었는데 그치……?』
+			PRINTFORMW 『나? 당신이 즐거워하는 데만 핥고 있을 뿐, 이야』
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;독심　조수의 CFLAG5800대(면식 변수)로 관리(8이면 독심 완료)
+;-------------------------------------------------
+IF SELECTCOM == 415
+	A = 5800+NO:TARGET
+	;개시시
+	IF TEQUIP:74
+		;첫 회+첫 대면
+		IF CFLAG:ASSI:A == 0
+			PRINTFORML 『나는 사토리…… 마음을 읽는 힘을 갖고 있습니다』
+			PRINTFORMW 『당신의 부끄러운 마음도, 은근한 바람도, 모조리 다 볼 수 있어요』
+			PRINTFORML 『어떠한 도착적인 소망이든, 기억과 경험의 구석구석조차, 감추지는 못합니다』
+			PRINTFORMW 『그렇게 긴장하지 말아요. 아무리 거부해도 훤히 다 보이니…… 말이죠』
+			PRINTFORMW 사토리의 제3의 눈이, 번득 %조사처리(CALLNAME:TARGET,"를")% 빼꼼히 들여다본다…….
+			CFLAG:ASSI:A = 8
+		;첫 회+면식 있음
+		ELSEIF CFLAG:ASSI:A < 8
+			PRINTFORML 『자아, 지금부터가 실전이야. 내 힘을 사용하겠습니다』
+			PRINTFORMW 『어머, 그렇게 싫어하지 말아요. 평상심, 평상심이라니…… 후후, 소용없어요』
+			PRINTFORML 『네, 벌써 엿보고 있어요. 마음의 얇은 막을 헤집고 점점 안쪽을 보고 있지요』
+			PRINTFORMW 『섬세하고 상처입기 쉬운, 제일 부끄러운 부분까지 잘 보여요』
+			PRINTFORMW 『지금이요? 당신의 성경험을 하나씩 하나씩, 세심하게 읽고 있죠…… 왜요?』
+			CFLAG:ASSI:A = 8
+		;그 외
+		ELSE
+			PRINTFORMW 『있지, 당신은 어디가 제일 느껴져?』
+			;느끼는 곳 체크
+			IF ABL:0 < 2 && ABL:1 < 2 && ABL:2 < 2 && ABL:3 < 2
+				PRINTFORMW 『「아직 잘 모르겠어, 흥미는 있어……」 흐음흐음』
+			ELSEIF ABL:0 >= ABL:1 && ABL:0 >= ABL:2 && ABL:0 >= ABL:3 && TALENT:150
+				PRINTFORMW 『「자지 좋아, 정액 싸는 거 최고로 기분 좋아」 흐음흐음』
+			ELSEIF ABL:1 >= ABL:0 && ABL:1 >= ABL:2 && ABL:1 >= ABL:3
+				PRINTFORMW 『그래…… 「질내를 퍽퍽 범해지는 거 너무 좋아」 흐음흐음』
+			ELSEIF ABL:2 >= ABL:0 && ABL:2 >= ABL:3
+				PRINTFORMW 『어머…… 「엉덩이를 갖고 놀아지는 게 미치겠어」 흐음흐음』
+				ELSEIF ABL:0 >= ABL:3
+				PRINTFORMW 『「클리토리스, 주물러지면 금세 갈 것 같아」 흐음흐음』
+			ELSE
+				PRINTFORMW 『흠…… 「유두 비벼지는 거 최고, 애달파서 좋아」 흐음흐음』
+			ENDIF
+			PRINTFORML 『알겠어, 참고로 삼을게. 어머, 창피해?』
+			PRINTFORMW 『누구보다도 당신을 기분 좋게 해줄 수 있건만』
+		ENDIF
+	;종료시
+	;노출벽 · 마조끼 모두 3 이상
+	ELSEIF ABL:14 >2 && ABL:21 > 2
+		PRINTFORML 『어땠어? 마음을 엿봐지는 건 기분 좋았지』
+		PRINTFORML 『「처음에는 싫었는데, 마음을 범해지는 거 기분 좋아」 후후』
+		PRINTFORMW 『설령 강제라도, 부끄러운 비밀을 누가 알아주는 건 쾌감이거든』
+	ELSE
+		PRINTFORML 『자, 마음의 합방은 이걸로 끝. 기분 좋아졌는지 모르겠네』
+		PRINTFORML 『「레이프 주제에」라고? 후후, 그러네. 마음의 강간이야』
+		PRINTFORMW 『나는, %CALLNAME:TARGET%의 마음을 레이프했어. 후후, 근사해라』
+	ENDIF
+ENDIF
+
+

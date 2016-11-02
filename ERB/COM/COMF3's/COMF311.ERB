@@ -1,0 +1,123 @@
+﻿;=============================================================================
+;W스팽킹
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE311
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:311 > 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;노예의 엉덩이를 주인과 조수가 둘이서 펜 펜 합니다
+@COM311
+;특정의 주인과 조수의 편성을 조사한다
+CALL JUDGE_TRAIN_PAIR, MASTER, ASSI
+IF TFLAG:175 == 1
+	LOCALS = 홍마 자매가 함께
+ELSEIF TFLAG:175 == 2
+	LOCALS = 겨드랑이 무녀 두 명이 함께
+ELSEIF TFLAG:175 == 3
+	LOCALS = 가을의 소득을 축하하는 2기둥이 함께
+ELSEIF TFLAG:175 == 4
+	LOCALS = 달의 자매가 함께
+ELSEIF TFLAG:175 == 5
+	LOCALS = 비봉클럽의 두 명이 함께
+ELSEIF TFLAG:175 == 6
+	LOCALS = 춘고정, W릴리가 함께
+ELSEIF TFLAG:175 == 7
+	LOCALS = 사토리 자매가 함께
+ELSEIF TFLAG:175 == 8
+	LOCALS = 몽환 자매가 함께
+ELSEIF TFLAG:175 == 9
+	LOCALS = 유유님과 유카링이 함께
+ELSEIF TFLAG:175 == 10 || TFLAG:175 == 11 || TFLAG:175 == 12
+	LOCALS = 소령 자매가 함께
+ELSE
+	LOCALS = 
+ENDIF
+IF NO:TARGET == 11
+	PRINTFORML %LOCALS% 엉덩이를 둘이서 팡팡 
+	TSTR:0 = %LOCALS% 엉덩이를 둘이서 팡팡
+ELSE
+	PRINTFORML %LOCALS% 엉덩이를 둘이서 때린다
+	TSTR:0 = %LOCALS% 엉덩이를 둘이서 때린다
+ENDIF
+CALL TRAIN_MESSAGE_COM311
+
+DOWNBASE:0 += 140
+DOWNBASE:1 += 70
+
+SOURCE:12 = 200
+SOURCE:31 = 900
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 600
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 1000
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 1600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 2400
+ELSE
+	SOURCE:20 = 3600
+ENDIF
+
+;마스터와 노예 레즈비언 orBL
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 == 1 && TALENT:MASTER:120 == 1
+	TCVAR:13 += 2
+ENDIF
+
+;조수와 노예 레즈비언 orBL
+IF TALENT:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 == 1 && TALENT:ASSI:120 == 1
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 1
+	TFLAG:50 += 1
+;SM교육 경험 플래그
+TFLAG:55 = 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM311
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "와")% %조사선택(CALLNAME:ASSI, "는")% 각각
+PRINTFORML %CALLNAME:TARGET%의 엉덩이를 한쪽씩 맡아, 손바닥으로 강하게 때렸다.
+PRINTFORM 몇 번이나 몇 번이나 얻어맞고 있는 동안에, %CALLNAME:TARGET%의 
+IF ABL:21 >= 2 && TALENT:120 == 0
+	PRINTW 가랑이는 애액으로 젖어들기 시작한다….
+ELSE
+	PRINTW 엉덩이는 새빨갛게 부어 오르고 있다….
+ENDIF

@@ -1,0 +1,183 @@
+﻿;=============================================================================
+;코클립
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE237
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:237 > 0
+	RETURN 0
+;그밖의 鼻装着具사용 중에는 불가
+SIF (TEQUIP:44 && TEQUIP:44 != 5)
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:44 == 5
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:36 == 0 && NOITEM == 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시와 알몸 와이셔츠 외의 코스프레 중에는 안 됨
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 11 && TEQUIP:59 != 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM237
+PRINTL 코클립
+TSTR:0 = 코클립
+CALL TRAIN_MESSAGE_COM237
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 35
+DOWNBASE:1 += 40
+
+IF TEQUIP:44 == 5
+	TEQUIP:44 = 0
+	RETURN 1
+ENDIF
+
+SOURCE:20 = 600
+;TALENT:아픔에 약한을 본다
+IF TALENT:40
+	TIMES SOURCE:20 , 2.00
+;TALENT:아픔에 강한을 본다
+ELSEIF TALENT:41
+	TIMES SOURCE:20 , 0.80
+ENDIF
+;TALENT:소인 체형을 본다
+SIF TALENT:127
+	TIMES SOURCE:20 , 2.00
+;TALENT:작은 몸집 체형을 본다
+SIF TALENT:128
+	TIMES SOURCE:20 , 1.50
+
+SOURCE:31 = 900
+
+TEQUIP:44 = 5
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+RETURN 1
+
+;-------------------------------------------------
+;세탁 바사미(코) 장비중
+;-------------------------------------------------
+@EQUIP_COM237
+PRINTL <빨래집게(코)>
+
+DOWNBASE:0 += 55
+DOWNBASE:1 += 60
+
+LOCAL = 1400
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL:1 = 0
+ELSEIF ABL:21 == 1
+	LOCAL:1 = 120
+ELSEIF ABL:21 == 2
+	LOCAL:1 = 240
+ELSEIF ABL:21 == 3
+	LOCAL:1 = 480
+ELSEIF ABL:21 == 4
+	LOCAL:1 = 960
+ELSE
+	LOCAL:1 = 1920
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.70
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 1.40
+ENDIF
+
+;도착적
+IF TALENT:80
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 1.50
+ENDIF
+;마조
+SIF TALENT:82
+	TIMES LOCAL:1 , 1.20
+;왕M
+SIF TALENT:178
+	TIMES LOCAL:1 , 1.50
+
+SOURCE:18 += LOCAL:1
+SOURCE:20 += LOCAL
+SOURCE:22 += (LOCAL + LOCAL:1)/2
+SOURCE:31 += LOCAL + LOCAL:1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM237
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TEQUIP:44
+	PRINTFORMW %CALLNAME:TARGET%의 코로부터 빨래집게를 벗겨 주었다….
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%의 코를 빨래집게로 집었다….
+ENDIF

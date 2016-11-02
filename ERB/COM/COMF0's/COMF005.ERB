@@ -1,0 +1,161 @@
+﻿;=============================================================================
+;펠라한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE5
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:5 > 0
+	RETURN 0
+;성기가 더러워져 있으면(자) MASTER의 경우 페라하고는 할 수 없다(조교자가 더러운 무시나 애액, P, 모유의 얼룩이라면 OK)
+SIF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && ASSIPLAY == 0 && TALENT:MASTER:64 == 0
+	RETURN 0
+;성기가 더러워져 있어 악취 민감해 순종 4 미만의 ASSI의 경우 페라는 할 수 없다(조교자가 더러운 무시나 애액, P, 모유의 얼룩이라면 OK)
+IF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;순종 4 미만·레즈끼(BL끼) 4 미만의 ASSI의 경우, 조교 대상이 동성이라면 실행할 수 없다(망신이나 복종이 있다면 OK)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;조교자가 고양이혀라면 고양이 페라 패치 유효하지 않으면 안 됨
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀라면 조교자에게 기교 4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;조교 대상으로 페니스가 없으면 안 됨
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;오나홀·전극 오나홀 사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;훈도시 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM5
+
+;전회와 금회의 조교자가 동일
+IF (ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0)
+	;縄使用中でなく前回の調教がフェラチオかクンニ強制かシックスナインだとシックスナインに
+	IF (PREVCOM == 41 || PREVCOM == 300 || PREVCOM == 602) && TEQUIP:40 == 0
+		CALL EXCOM_ABLE602
+		SIF RESULT == 1
+			JUMP COM602
+	ENDIF
+ENDIF
+
+PRINTL 펠라한다
+TSTR:0 = 펠라한다
+CALL TRAIN_MESSAGE_COM005
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 220
+SOURCE:31 = 50
+
+;ABL:Ｃ감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 800
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 1400
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 2000
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 2500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2900
+ELSE
+	SOURCE:0 = 3200
+ENDIF
+
+;조교자의 TALENT:혀놀림을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:0 , 2.00
+	SOURCE:17 += SOURCE:0 / 20
+ENDIF
+;조교자의 고양이혀를 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:0 , 0.70
+
+;노예의 P⇔조교자의 입의 불결이 이동
+STAIN:2 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:2
+
+TCVAR:PLAYER:22 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM005
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;고양이혀
+IF TALENT:PLAYER:54
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 우뚝 솟은 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTW 입에 물고 혀 끝으로 간질였다….
+;애태우기
+ELSEIF TEQUIP:68
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:1
+		PRINT 움찔거리며 작게 떨고 있는 클리토리스에 
+	ELSE
+		SIF EX:30
+			PRINT 끝부분이 끈적하게 되어 
+		PRINT 두근두근 고동치고 있는 페니스에 
+	ENDIF
+	PRINTW 가벼운 입맞춤을 계속했다….
+;노멀
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 우뚝 솟은 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTW 입에 물고 마구 핥았다….
+ENDIF

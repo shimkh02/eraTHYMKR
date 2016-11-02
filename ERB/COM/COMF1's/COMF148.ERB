@@ -1,0 +1,504 @@
+﻿;=============================================================================
+;요도바이브
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE148
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:148 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;요도개발경험이 10이하일 경우 불가
+SIF EXP:46 <= 10
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:32 == 6
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:39 == 0 && NOITEM == 0
+	RETURN 0
+;페니스가 있을 경우 불가
+SIF (TALENT:120 || TALENT:121)
+	RETURN 0
+;ASSI일 경우, 기교4이상이 아니면 쓸 수 없다。
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 4
+		RETURN 0
+ENDIF
+;그밖의 Ｕ계 장착구 사용 중에는 불가
+SIF (TEQUIP:32 && TEQUIP:32 != 6)
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM148
+PRINTL 요도 바이브
+TSTR:0 = 요도바이브
+CALL TRAIN_MESSAGE_COM148
+
+;-------------------------------------------------
+;체력, 기력의 계산
+;-------------------------------------------------
+LOCAL:1 = 200
+
+;EXP:U확장 경험을 본다
+IF EXP:34 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:34 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:34 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:34 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:34 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 2.00
+;요도광
+SIF TALENT:175
+	TIMES LOCAL:1 , 0.90
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1 * 2
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 100
+	SOURCE:22 = 900
+	SOURCE:25 = 3000
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 400
+	SOURCE:22 = 1300
+	SOURCE:25 = 2000
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 900
+	SOURCE:22 = 1600
+	SOURCE:25 = 1500
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1500
+	SOURCE:22 = 2000
+	SOURCE:25 = 1000
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2000
+	SOURCE:22 = 2500
+	SOURCE:25 = 500
+ELSE
+	SOURCE:0 = 3000
+	SOURCE:22 = 3200
+	SOURCE:25 = 250
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:20 = 3500
+	SOURCE:22 += 100
+	SOURCE:30 = 2000
+	SOURCE:31 = 2000
+	SOURCE:32 = 2000
+ELSEIF ABL:21 == 1
+	SOURCE:20 = 3000
+	SOURCE:22 += 500
+	SOURCE:30 = 1500
+	SOURCE:31 = 2000
+	SOURCE:32 = 1000
+ELSEIF ABL:21 == 2
+	SOURCE:20 = 2500
+	SOURCE:22 += 900
+	SOURCE:30 = 1000
+	SOURCE:31 = 1500
+	SOURCE:32 = 500
+ELSEIF ABL:21 == 3
+	SOURCE:20 = 2000
+	SOURCE:22 += 1500
+	SOURCE:30 = 500
+	SOURCE:31 = 1000
+	SOURCE:32 = 100
+ELSEIF ABL:21 == 4
+	SOURCE:20 = 1000
+	SOURCE:22 += 2000
+	SOURCE:30 = 250
+	SOURCE:31 = 500
+	SOURCE:32 = 0
+ELSE
+	SOURCE:20 = 500
+	SOURCE:22 += 3000
+	SOURCE:30 = 100
+	SOURCE:31 = 100
+	SOURCE:32 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:0 , 0.40
+	SOURCE:20 += 2000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:0 , 0.80
+	SOURCE:20 += 1500
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+	SOURCE:20 += 1000
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:0 , 1.40
+	SOURCE:20 += 500
+ELSE
+	TIMES SOURCE:0 , 1.80
+	SOURCE:20 += 250
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.10
+ELSE
+	TIMES SOURCE:0 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:0 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:0 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:0 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:0 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:0 , 1.20
+ELSE
+	TIMES SOURCE:0 , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+;요도광
+SIF TALENT:175
+	TIMES SOURCE:0 , 1.30
+	TIMES SOURCE:25 , 0.70
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:101
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:100
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+;요도 바이브의 착탈
+IF TEQUIP:32 == 6
+	TEQUIP:32 = 0
+	LOCAL:2 = 2
+	IF TEQUIP:12
+		LOCAL:2 *= 2
+		TEQUIP:12 = 0
+	ENDIF
+ELSE
+	TEQUIP:32 = 6
+	LOCAL:2 = 1
+ENDIF
+
+;방뇨 레벨 증가
+CFLAG:31 += LOCAL:2
+SIF BASE:4
+	BASE:4 = 0
+TCVAR:46 += LOCAL:2
+TCVAR:34 += 2
+SIF (EXP:46 + TCVAR:46) <= 5
+	TCVAR:50 += 1
+	
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;--------------------------------------------------
+;요도바이브 삽입중
+;--------------------------------------------------
+@EQUIP_COM148
+PRINTL <요도 바이브 삽입 중>
+
+LOCAL:3 = 120
+
+;EXP:U확장 경험을 본다
+IF EXP:34 < EXPLV:1
+	TIMES LOCAL:3 , 3.00
+ELSEIF EXP:34 < EXPLV:2
+	TIMES LOCAL:3 , 2.50
+ELSEIF EXP:34 < EXPLV:3
+	TIMES LOCAL:3 , 2.00
+ELSEIF EXP:34 < EXPLV:4
+	TIMES LOCAL:3 , 1.00
+ELSEIF EXP:34 < EXPLV:5
+	TIMES LOCAL:3 , 0.80
+ELSE
+	TIMES LOCAL:3 , 0.60
+ENDIF	
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:3 , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:3 , 0.60
+;요도광
+SIF TALENT:175
+	TIMES LOCAL:3 , 0.90
+
+DOWNBASE:0 += LOCAL:3
+DOWNBASE:1 += LOCAL:3 * 2
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL = 100
+	LOCAL:1 = 400
+ELSEIF ABL:0 == 1
+	LOCAL = 300
+	LOCAL:1 = 800
+ELSEIF ABL:0 == 2
+	LOCAL = 700
+	LOCAL:1 = 1400
+ELSEIF ABL:0 == 3
+	LOCAL = 1000
+	LOCAL:1 = 1800
+ELSEIF ABL:0 == 4
+	LOCAL = 1400
+	LOCAL:1 = 2200
+ELSE
+	LOCAL = 2000
+	LOCAL:1 = 2500
+ENDIF
+
+;EXP:요도 경험을 본다
+IF EXP:46 < EXPLV:1
+	TIMES LOCAL , 0.50
+	LOCAL:2 = 2000
+ELSEIF EXP:46 < EXPLV:2
+	TIMES LOCAL , 1.00
+	LOCAL:2 = 300
+ELSEIF EXP:46 < EXPLV:3
+	TIMES LOCAL , 1.10
+	LOCAL:2 = 50
+ELSEIF EXP:46 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:2 = 10
+ELSEIF EXP:46 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:2 = 0
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:2 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.40
+	LOCAL:2 += 800
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:2 += 500
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:2 += 300
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	LOCAL:2 += 120
+ELSE
+	TIMES LOCAL , 1.80
+	LOCAL:2 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:2 , 2.00
+;요도광
+SIF TALENT:175
+	TIMES LOCAL , 1.20
+	TIMES LOCAL , 0.70
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:101
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ELSEIF TALENT:100
+	TIMES LOCAL , 0.60
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	LOCAL:1 /= 3
+
+SOURCE:0 += LOCAL
+SOURCE:20 += LOCAL:2
+SOURCE:22 += LOCAL:1
+SOURCE:25 += LOCAL:2
+SOURCE:31 += LOCAL:1
+
+;요도바이브 삽입중 때는 강제적으로 뇨의를 개최되는 효과도(=방뇨 레벨 증가)
+IF TEQUIP:12
+	CFLAG:31 += 2
+ELSE
+	CFLAG:31 += 1
+ENDIF
+
+CALL EQUIP_MESSAGE_COM148
+
+TCVAR:46 += 4
+TCVAR:34 += 2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 2
+RETURN 1
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM148
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+	
+PRINTL
+IF TEQUIP:32 == 6
+	PRINTFORM %CALLNAME:TARGET%의 요도에 비집고 들어가 있던 바이브를 뽑자, %CALLNAME:TARGET%의 뜨거운 황금수가 포물선을 그리며 뿜어 나왔다.
+	PRINTL
+
+	IF ABL:14 >= 5 && TALENT:45
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 격렬한 쾌감과 해방감에 몸을 뒤로 젖힌 채 부들부들 떨고 있었다.
+		PRINTFORMW %CALLNAME:TARGET%의 요도는 방광 내부가 보일 정도로 벌려진 채 되는대로 오줌을 흘려 보내고 있었다….
+	ELSEIF ABL:14 >= 4
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 바이브가 남긴 쾌감의 여운을 만끽하며, 아직도 퓩퓩 하고 오줌을 싸고 있는 자신의 요도구를 응시하고 있다.
+	ELSEIF ABL:14 == 3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러움보다 해방감 쪽이 컸는지, 안심한 표정을 짓고 있다.
+	ELSEIF ABL:14 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 몸을 기역자로 꺾은 채로, 아직 남아있는 잔뇨감에 번민하고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 공포에 질린 얼굴로 양손으로 통증이 남아있는 요도를 압박하듯 누르고 있다.
+	ENDIF
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 요도에 격렬히 진동하는 바이브를 찔러넣었다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 요도를 겁탈하는 바이브의 진동에 절규하고 있다….
+ENDIF
+;--------------------------------------------------
+;장착시 메시지
+;--------------------------------------------------
+@EQUIP_MESSAGE_COM148
+CALL KOJO_EQUIP_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 요도에 꽃힌 바이브는 계속 %조사선택(CALLNAME:TARGET, "를")% 괴롭히고 있다….
+PRINTL
+IF ABL:21 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 사색이 되어 요도를 가득 메운 두꺼운 이물감에 괴로워 하고 있다.
+ELSEIF ABL:21 == 1
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈을 질끈 감고 요도의 진동을 견디려 하고 있다.
+ELSEIF ABL:21 == 2
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 바이브의 진동에 몰려오는 요의를 참으려 얼굴을 붉게 불들이고 허벅지를 모으고 있다.
+ELSEIF ABL:21 == 3
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 한계까지 넓혀진 요도가 느끼는 진동에 격통에 시달리면서도, 때때로 황홀한 표정을 짓고 있다.
+ELSEIF ABL:21 >= 5 && TALENT:45
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 요도를 흔들어대는 바이브의 감촉이 기분좋은 모양이다.
+	PRINTFORMW 바이브와 요도 사이에서 오줌을 질질 흘리면서도 %조사선택(CALLNAME:TARGET, "는")% 부족하다는 듯이 요도의 바이브를 더욱 안쪽에 찔러넣고 있다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 요의와 요도통이 쾌감으로 느껴지는지, 넋을 잃고 있다….
+ENDIF

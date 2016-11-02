@@ -1,0 +1,1501 @@
+﻿;=============================================================================
+;자식 패치의 여타 처리
+;=============================================================================
+;-------------------------------------------------
+;자식 성별 쌍둥이 판정＆자식 명명 처리
+;-------------------------------------------------
+;여기서는 태어난 자식을 ADDCHARA하지 않고, 단순히 쌍둥이인가 아닌가? 와
+;그 성별을 판단해 명명하는 처리를 실행한다.
+;또 필연적으로 조교 대상이 되지 않는 자식도 나오지만, 명명은 실행한다
+;ARG:1 = 2면 키워준 부모가 육아를 행한다.
+;ARG:1 = 3이면 알을 키운다.
+@CHILD_CHECK_AND_NAME, ARG, ARG:1
+;쌍둥이인가 아닌가
+;NOTE
+;현실에서는, 쌍둥이는 1/100, 세 쌍둥이는 1/10,000의 통계적 비율로 보고 있다.
+;그러나 era이므로 다소 춘혈할 확률이 높아도 좋지 않겠는가
+LOCAL = RAND:20
+LOCAL:1 = RAND:100
+;알에서는 어디까지나 1명뿐
+IF ARG:1 != 3
+	IF LOCAL:1 == 0
+		CFLAG:ARG:3011 = 3
+		PRINTFORML 놀랍게도 태어난 아이는 세 쌍둥이였다.
+	ELSEIF LOCAL == 0
+		CFLAG:ARG:3011 = 2
+		PRINTFORML 놀랍게도 태어난 아이는 쌍둥이였다.
+	ELSE
+		CFLAG:ARG:3011 = 1
+	ENDIF
+ELSE
+	CFLAG:ARG:3011 = 1
+ENDIF
+
+FOR LOCAL, 0, CFLAG:ARG:3011
+	;개별로 성별 판정
+	LOCAL:1 = (FLAG:12 & 2048) ? RAND:2 # 0
+	
+	CFLAG:ARG:(3012+LOCAL) = LOCAL:1
+	PRINTFORML %조사처리(CALLNAME:ARG,"가")% \@(ARG:1 == 2 || ARG:1 == 3) ? 기르는 # 낳은\@ \@(CFLAG:ARG:3011 > 1) ? {LOCAL+1}명째의 # \@아이는 \@(LOCAL:1 == 0) ? 여자아이 # 사내아이\@입니다.
+
+	;명명 처리. 또 경우에 따라서는 주인이 붙일 수밖에 없는 상황도 있을 수 있음
+	IF CFLAG:ARG:76 == 1 || ARG:1 == 3
+		PRINTFORML %CALLNAME:ARG%더러 이름을 지어달라고 하겠습니까?
+		PRINTL [0] 일본식의 이름으로
+		PRINTL [1] 서양식의 이름으로
+		PRINTL [2] 위임합니다.
+		PRINTL [3] 내가 짓겠어!
+		$INPUT_LOOP_A
+		INPUT
+		;색시에게 맡긴다
+		IF RESULT >=0 && RESULT <= 2
+			LOCAL:2 = RESULT
+			CALL CHILD_NAME, LOCAL:2, LOCAL, ARG
+			PRINTFORM %조사처리(CALLNAME:ARG,"는")% 이 \@(CFLAG:ARG:(3012+LOCAL) == 0) ? 딸 # 아들\@
+			PRINTFORML 에게 %조사처리(RESULTS,"라")%는 이름을 붙였습니다.
+			CSTR:ARG:(21+LOCAL) = \@(CFLAG:ARG:(3012+LOCAL) == 0) ? %RESULTS%(딸) # %RESULTS%(아들)\@
+			CSTR:ARG:(24+LOCAL) = %RESULTS%
+		ELSEIF RESULT == 3
+			PRINTL 이름을 입력해 주세요.
+			$INPUTS_LOOP_C
+			INPUTS
+			SIF RESULTS == ""
+				GOTO INPUTS_LOOP_C
+			PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 이 \@(CFLAG:ARG:(3012+LOCAL) == 0) ? 딸 # 아들\@
+			PRINTFORML 에게 %조사처리(RESULTS,"라")%는 이름을 붙였습니다.
+			CSTR:ARG:(21+LOCAL) = \@(CFLAG:ARG:(3012+LOCAL) == 0) ? %RESULTS%(딸) # %RESULTS%(아들)\@
+			CSTR:ARG:(24+LOCAL) = %RESULTS%
+		ELSE
+			PRINTL 올바른 값을 입력해 주세요.
+			GOTO INPUT_LOOP_A
+		ENDIF
+	ELSE
+		PRINTL 이 아이의 이름을 짓겠습니다. 이름을 입력해 주세요.
+		$INPUTS_LOOP_D
+		INPUTS
+		SIF RESULTS == ""
+			GOTO INPUTS_LOOP_D
+		PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 이 \@(CFLAG:ARG:(3012+LOCAL) == 0) ? 딸 # 아들\@
+		PRINTFORML 에게 %조사처리(RESULTS,"라")%는 이름을 붙였습니다.
+		CSTR:ARG:(21+LOCAL) = \@(CFLAG:ARG:(3012+LOCAL) == 0) ? %RESULTS%(딸) # %RESULTS%(아들)\@
+		CSTR:ARG:(24+LOCAL) = %RESULTS%
+	ENDIF
+
+	IF ARG:1 != 2 && (TALENT:ARG:218 || TALENT:ARG:219) && CFLAG:ARG:(3012+LOCAL) == 0
+		PRINTFORML %CSTR:ARG:(21+LOCAL)%에겐 계승해야 할 이름이 있으므로 닉네임은 붙일 수 없습니다.
+	ELSE
+		PRINTFORML %CSTR:ARG:(21+LOCAL)%에게 닉네임을 붙이겠습니까?
+		PRINTL [0] 예
+		PRINTL [1] 아니오
+		$INPUT_LOOP_B
+		INPUT
+		IF RESULT == 0
+			PRINTL 닉네임을 입력해 주세요. (공백인 경우, 닉네임도 공백이 됩니다)
+			INPUTS
+			CSTR:ARG:(27+LOCAL) = %RESULTS%
+			PRINTW 닉네임을 등록했습니다.
+		ELSEIF RESULT != 1
+			PRINTL 올바른 값을 입력해 주세요.
+			GOTO INPUT_LOOP_B
+		ENDIF
+	ENDIF
+	PRINTL 
+NEXT
+
+RETURN 1
+
+;이하에서
+;TFLAG:651 = 1은 쌍둥이, 세 쌍둥이의 두 번째 자식   2는 세 쌍둥이의 세 번째 자식
+;TFLAG:652 = 낳은 어미의 등록 캐릭터 번호
+;TFLAG:653 = 부친의 등록 캐릭터 번호
+;TFLAG:654 = 0은 딸, 1은 아들
+;-------------------------------------------------
+;자식 탄생 판정 처리
+;-------------------------------------------------
+@CHILD_CHECK, ARG
+;ARG는 키워준 부모의 등록 번호
+FOR LOCAL, 0, CFLAG:ARG:3011
+	TFLAG:651 = LOCAL
+	TFLAG:654 = 0
+	;구입 가능한 노예의 인원수를 본다
+	IF FLAG:1300
+		;디버그
+		;PRINTFORML FLAG:5005={FLAG:5005}, CHARANUM={CHARANUM}, CALC_SLAVE_CAPACITY()={CALC_SLAVE_CAPACITY()}, FLAG:4={FLAG:4}, CFLAG:ARG:3000={CFLAG:ARG:3000}, TALENT:MASTER:56={TALENT:MASTER:56}, 
+		;만약 임신패치(토리코모드)를 켰다면, 금단지식이 없어도 된다.
+		IF FLAG:5005 == 1 && CHARANUM < CALC_SLAVE_CAPACITY() && FLAG:4 < 50 && CFLAG:ARG:3000 != 0
+			IF CFLAG:ARG:(3012+LOCAL)
+				CALL SON_BIRTH, ARG, LOCAL
+			ELSE
+				CALL TRAINABLE_CHILD_BIRTH, ARG, LOCAL
+			ENDIF
+
+		ELSEIF CHARANUM < CALC_SLAVE_CAPACITY() && FLAG:4 < 50 && CFLAG:ARG:3000 != 0 && TALENT:MASTER:56
+			;디버그
+			;PRINTFORML 아이를 획득했다.
+			IF CFLAG:ARG:(3012+LOCAL)
+				CALL SON_BIRTH, ARG, LOCAL
+			ELSE
+				CALL TRAINABLE_CHILD_BIRTH, ARG, LOCAL
+			ENDIF
+		ELSEIF CFLAG:ARG:3000 != 0
+		;조건을 만족시키지 못해도 낳은 자식의 숫자는 늘어난다
+			CALL CHILD_PLUS, ARG, LOCAL
+			PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"는")% 급격히 성장해 어른이 되었습니다.
+			PRINTFORMW 아이를 심한 환경에 놔두고 싶지 않았던 %조사처리(CALLNAME:MASTER,"는")% 아이를 양자로 보냈습니다.
+		ELSE
+			;디버그
+			;PRINTFORML 조건불건전하다
+		ENDIF
+	ELSEIF CFLAG:ARG:3000 != 0
+		CALL CHILD_PLUS, ARG, LOCAL
+		PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"는")% 급격히 성장해 어른이 되었습니다.
+		PRINTFORMW 아이를 심한 환경에 놔두고 싶지 않았던 %조사처리(CALLNAME:MASTER,"는")% 아이를 양자로 보냈습니다.
+	ENDIF
+	PRINTL 
+NEXT
+;키워준 부모의 플래그 리셋
+CFLAG:ARG:3000 = 0
+CFLAG:ARG:3003 = 0
+
+;-------------------------------------------------
+;자식 탄생 범용 처리
+;-------------------------------------------------
+@CHILD_PLUS, ARG, ARG:1
+;낳은 부모 검색
+;낳은 부모
+TFLAG:652 = 0
+;정자제공역
+TFLAG:653 = -1
+
+TFLAG:652 = FINDCHARA(CFLAG:3109, CFLAG:ARG:3003, 0)
+TFLAG:653 = FINDCHARA(CFLAG:3109, CFLAG:ARG:3004, 0)
+
+;낳은 자식의 숫자를 검색한 낳은 부모에 추가
+SIF TFLAG:652 > 0
+	CFLAG:(TFLAG:652):3001 += 1
+SIF TFLAG:653 >= 0
+	CFLAG:(TFLAG:653):3001 += 1
+
+;-------------------------------------------------
+;남자아이 탄생 처리
+;-------------------------------------------------
+@SON_BIRTH, ARG, ARG:1
+;もし息子も調教する場合には調教可能子供誕生処理に飛ばす
+IF FLAG:1300 & 4
+	TFLAG:654 = 1
+	JUMP TRAINABLE_CHILD_BIRTH, ARG, ARG:1
+ENDIF
+;産んだ子供の数+1
+CALL CHILD_PLUS, ARG, ARG:1
+PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"는")% 급격히 성장해 어른이 되었습니다.
+IF TFLAG:652 == 0
+	PRINTFORMW %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"는")% 부모를 쫓아 밖으로 나갔습니다.
+ELSE
+	PRINTFORMW %조사처리(CSTR:ARG:(21+ARG:1),"는")% 자기를 키워주었다는 사실에 감사하며 홀로 생활하기 시작했습니다….
+	;仕送り人数増加
+	CFLAG:(TFLAG:652):3002 += 1
+ENDIF
+
+;-------------------------------------------------
+;조교 가능 자식 탄생 처리
+;-------------------------------------------------
+@TRAINABLE_CHILD_BIRTH, ARG, ARG:1
+CALL CHILD_PLUS, ARG, ARG:1
+;もう産みの親がいない場合、娘を加えることはできない
+IF TFLAG:652 == 0
+	PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"가")% 급격히 성장해 조교할 수 있을 정도가 되었습니다.
+	PRINTFORMW %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"는")% 부모를 쫓아 밖으로 나갔습니다.
+	RETURN 1
+ENDIF
+LOCAL:2 = TARGET
+
+LOCAL = (TFLAG:654 == 1) ? 148 # 149
+ADDCHARA LOCAL
+TARGET = CHARANUM - 1
+CFLAG:3110 = DAY - FLAG:601 + EQUIP:ARG:1
+CFLAG:3109 = FLAG:998
+FLAG:998 += 1
+
+;親が過去に何を取得したかも遺伝
+;MARK:97 = MARK:(TFLAG:652):97
+
+;どちらに似ているか記録変数リセット(詳しくは関数内を参照)
+LOCAL:1 = (TFLAG:651 == 1) ? 0 # 1
+
+CALL CHILD_TALENT_SET2, LOCAL:1
+;CALL CHILD_TALENT_SET
+;상성 결정
+REPEAT 500
+	IF (RELATION:(TFLAG:652):COUNT > 100 || (RELATION:(TFLAG:652):COUNT < 100) && RELATION:(TFLAG:652):COUNT != 0)
+		RELATION:COUNT = (RELATION:(TFLAG:652):COUNT)/2+50
+		RELATION:COUNT = MIN(RELATION:COUNT, 290)
+	ENDIF
+REND
+;부모와의 상성
+RELATION:(CFLAG:ARG:78) = (CFLAG:ARG:78 == MASTER && CFLAG:ARG:3009 == 0) ? 80 # 300
+RELATION:(NO:(TFLAG:652)) = 300
+
+;플래그 켜기
+CFLAG:2 = CFLAG:ARG:3009 * RAND:5
+CFLAG:3100 = NO:(TFLAG:652)
+CFLAG:3101 = NO:ARG
+CFLAG:3102 = CFLAG:(TFLAG:652):3001
+CFLAG:3103 = CFLAG:ARG:78
+CFLAG:3104 = (TFLAG:653 >= 0) ? CFLAG:(TFLAG:653):3001 # 0
+CFLAG:3105 = CFLAG:(TFLAG:652):3109
+CFLAG:3106 = CFLAG:ARG:3109
+CFLAG:3107 = CFLAG:(TFLAG:652):3004
+CFLAG:3108 = CFLAG:(TFLAG:652):3108 + 1
+
+PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"가")% 급격히 성장해 조교할 수 있을 정도가 되었습니다.
+PRINTFORMW %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %조사처리(CSTR:ARG:(21+ARG:1),"가")% 조교 가능해졌습니다.
+
+;하쿠레이의 무녀 및 카제하후리 계승(딸만)
+IF TFLAG:652 != 0 && TFLAG:654 == 0
+	IF TALENT:(TFLAG:652):218 == 1
+		PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %CSTR:ARG:(21+ARG:1)%에게 %TALENTNAME:218%의 이름이 계승되었습니다.
+		NICKNAME:(TFLAG:652) = 선대 하쿠레이의 무녀
+		NICKNAME:TARGET = 하쿠레이의 무녀
+		SIF TFLAG:652 != ARG
+			NICKNAME:ARG = 하쿠레이의 유모
+		TALENT:(TFLAG:652):218 = 0
+		TALENT:218 = 1
+	ENDIF
+	IF TALENT:(TFLAG:652):219 == 1
+		PRINTFORML %조사처리(CALLNAME:ARG,"가")% 기르고 있던 %CSTR:ARG:(21+ARG:1)%에게 %TALENTNAME:219%의 이름이 계승되었습니다.
+		NICKNAME:(TFLAG:652) = 선대 카제하후리
+		NICKNAME:TARGET = 카제하후리
+		SIF TFLAG:652 != ARG
+			NICKNAME:ARG = 카제하후리의 유모
+		TALENT:(TFLAG:652):219 = 0
+		TALENT:219 = 1
+	ENDIF
+ENDIF
+NAME:TARGET = %CSTR:ARG:(21+ARG:1)%
+CALLNAME:TARGET = %CSTR:ARG:(24+ARG:1)%
+SIF STRLENS(NICKNAME:TARGET) == 0
+	NICKNAME:TARGET = %CSTR:ARG:(27+ARG:1)%
+;취기 게이지 설정
+CALL CALC_GAUGE8, TARGET, 0
+PRINTL 
+IF CFLAG:ARG:3009 == 0
+	PRINTFORMW \@(TFLAG:654 == 1) ? 아들 # 딸\@은 %조사처리(CALLNAME:ARG,"과")% 떨어지기를 싫어하며, 처음으로 만나는 %CALLNAME:MASTER%에게 의심과 반감을 품고 있는 모양이다….
+	MARK:9 = 1
+ELSE
+	PRINTFORMW \@(TFLAG:654 == 1) ? 아들 # 딸\@은 자신을 만나러 와 주던 %조사처리(CALLNAME:MASTER,"를")% 따르고 있는 모양이다….
+ENDIF
+
+CSTR:3 = 급격히 성장한 %CALLNAME:MASTER%의 아이
+TFLAG:654 = 0
+TARGET = LOCAL:2
+RETURN 1
+
+;-------------------------------------------------
+;송금
+;-------------------------------------------------
+@REMITTANCE
+;송금하는 인원 총수를 카운트
+LOCAL = 0
+REPEAT CHARANUM
+	SIF COUNT == 0
+		CONTINUE
+	LOCAL += CFLAG:COUNT:3002
+REND
+;0명이라면 돌아가라
+;DAY와 송금하는 총인원수의 7로 나눈 나머지가 같을 때에 송금이 온다
+SIF LOCAL <= 0 || DAY%7 != (LOCAL)%7
+	RETURN 0
+DRAWLINE
+;인원수×5000원
+LOCAL *= 5000
+MONEY += LOCAL
+PRINTFORMW 당신의 \@(LOCAL > 1) ? 아들들 # 아들\@에게서 송금액이 {LOCAL}원 왔습니다.
+
+;-------------------------------------------------
+;딸에게 유전하지 않는 소질 소거 처리
+;-------------------------------------------------
+@CHILD_TALENT_SET
+;親が[巨躯]の場合、[小柄体型][小人体型]は打ち消される.また1/2の確率で[巨躯]が遺伝
+IF TALENT:(TFLAG:652):129
+	TALENT:127 = 0
+	TALENT:128 = 0
+	TALENT:129 = RAND:2
+;小人体型の場合、小柄体型を消す
+ELSEIF TALENT:127
+	TALENT:128 = 0
+ENDIF
+
+;息子の場合
+IF TFLAG:654 == 1
+	TALENT:120 = 1
+	MAXBASE:2 = CALC_GAUGE2_COMMON(TARGET)
+	BASE:2 = MAXBASE:2
+
+	;処女,ふたなり,母乳体質,神霊,半神,死神,濡れやすい、濡れにくい
+	TALENT:0 = 0
+	TALENT:42 = 0
+	TALENT:43 = 0
+	TALENT:121 = 0
+	TALENT:122 = 0
+	TALENT:123 = 0
+	TALENT:124 = 0
+	TALENT:134 = 0
+	TALENT:222 = 0
+	TALENT:223 = 0
+	TALENT:224 = 0
+ELSE
+	;親が再生処女の可能性もあるので念のため
+	TALENT:0 = 1
+
+	;オトコ,ふたなり,早漏,遅漏,母乳体質,神霊,半神,死神
+	TALENT:120 = 0
+	TALENT:121 = 0
+	TALENT:132 = 0
+	TALENT:133 = 0
+	TALENT:134 = 0
+	TALENT:222 = 0
+	TALENT:223 = 0
+	TALENT:224 = 0
+ENDIF
+
+;一部遺伝しない素質
+;最初からついているものと矛盾する(＝打ち消して付かない)
+;濡れやすい,習得早い,音感,料理得意
+IF TALENT:42
+	TALENT:42 = 0
+	TALENT:43 = 0
+ENDIF
+IF TALENT:50
+	TALENT:50 = 0
+	TALENT:51 = 0
+ENDIF
+IF TALENT:191
+	TALENT:190 = 0
+	TALENT:191 = 0
+ENDIF
+IF TALENT:193
+	TALENT:192 = 0
+	TALENT:193 = 0
+ENDIF
+
+;知識がない([針さばき]や[大甲斐性]等は才能とする)
+;貞操観念,貞操無頓着,調合知識,禁断の知識,妖精知識,淫具知識,治療
+;教育者,調理名人,工作名人,報道者,魔術技能,超常目算
+TALENT:30 = 0
+TALENT:31 = 0
+TALENT:55 = 0
+TALENT:56 = 0
+TALENT:57 = 0
+TALENT:58 = 0
+TALENT:59 = 0
+TALENT:126 = 0
+TALENT:194 = 0
+TALENT:195 = 0
+TALENT:196 = 0
+TALENT:197 = 0
+TALENT:198 = 0
+;技術がない
+;大乳導,つるぺた堕し
+TALENT:96 = 0
+TALENT:97 = 0
+
+;後天的なもの([おもらし癖][キス魔]は幼児なので除く)
+;弱味,媚薬中毒,パイパン,精愛味覚,人気
+TALENT:39 = 0
+TALENT:46 = 0
+TALENT:65 = 0
+TALENT:66 = 0
+TALENT:94 = 0
+;爆発物
+TALENT:220 = 0
+
+;妊娠系素質：妊娠,育児中,母性,抱卵中
+;触手系素質：懐卵,寄生,触手使役術
+;愛情系素質：恋慕,妄信,親愛,相愛,嫉妬
+;服従系素質：服従,烙印,隷属,傷物,使い魔
+;崩壊系素質：狂気,幼児退行,精神崩壊,傀儡,壊造人格
+;淫乱系素質：淫乱,淫核,淫壷,淫尻,淫乳,尿道狂,キス魔,ドＳ,ドＭ,即落ち,淫魔
+REPEAT 50
+	TALENT:(COUNT+140) = 0
+REND
+
+;娘のみ親が顕在化持ちの場合、最初から具現持ちのみ具現、それ以外は不思議な根
+IF TALENT:124 && TALENT:120 == 0
+	IF CSVTALENT(NO:(TFLAG:652),123,0)
+		TALENT:123 = 1
+	ELSE
+		TALENT:122 = 1
+	ENDIF
+	TALENT:124 = 0
+ENDIF
+;最初から狂気持ちの子の子のみ狂気が付く
+SIF CSVTALENT(NO:(TFLAG:652),158,0)
+	TALENT:158 = 0
+;キス魔を取得している子の子のみキス魔遺伝
+SIF TALENT:(TFLAG:652):176
+	TALENT:176 = 0
+;調理名人を取得している子の子は料理得意遺伝
+IF TALENT:(TFLAG:652):194
+	TALENT:192 = 0
+	TALENT:193 = 1
+ENDIF
+;神霊の子は半神遺伝
+SIF TALENT:(TFLAG:652):222
+	TALENT:223 = 1
+
+;娘の胸の大きさ(基本的1ランクダウン)
+TALENT:110 = 0
+TALENT:111 = 0
+TALENT:112 = 0
+TALENT:113 = 0
+IF TALENT:120 == 0
+	IF TALENT:(TFLAG:652):110 || TALENT:(TFLAG:652):111
+		TALENT:110 = 1
+	ELSEIF TALENT:(TFLAG:652):113
+		TALENT:112 = 1
+	ELSEIF TALENT:(TFLAG:652):112 == 0
+		TALENT:111 = 1
+	ENDIF
+ENDIF
+
+;츤데레의 처리
+IF (TALENT:11 || TALENT:13) && TALENT:18
+	ABL:10 = 0
+	TALENT:11 = 1
+	TALENT:13 = 0
+ENDIF
+
+;-------------------------------------------------
+;자식의 이름
+;ARG:0……和風/洋風などの分岐
+;ARG:1……何人目の子供か？
+;ARG:2……名づけ親の登録キャラ番号
+;-------------------------------------------------
+@CHILD_NAME, ARG, ARG:1, ARG:2
+;대상 퇴피
+LOCAL:1 = TARGET
+TFLAG:651 += 1
+;命名のために一時的に子供をキャラに加える
+LOCAL = (CFLAG:(ARG:2):(3012+ARG:1) == 1) ? 148 # 149
+ADDCHARA LOCAL
+TARGET = CHARANUM - 1
+CALL CHARA_RANDOM_NAME, ARG
+TFLAG:651 -= 1
+RESULTS = %CALLNAME%
+;一時キャラ削除
+DELCHARA CHARANUM - 1
+;退避していた対象を戻す
+TARGET = LOCAL:1
+
+;-------------------------------------------------
+;자식의 각종 능력 결정 함수(쌍방의 부모로부터 소질 가미)
+;ARG:0……리셋 플래그
+;-------------------------------------------------
+@CHILD_TALENT_SET2, ARG:0
+;精子提供者がいない場合、標準処理(=素質、種族遺伝子は生みの親のみ考慮)
+IF TFLAG:653 < 0
+	;気力体力の処理
+	MAXBASE:0 = MAXBASE:(TFLAG:652):0
+	TIMES MAXBASE:0, 0.80
+	SIF MAXBASE:0 < 1100
+		MAXBASE:0 = 1000
+	MAXBASE:1 = MAXBASE:(TFLAG:652):1
+	TIMES MAXBASE:1, 0.80
+	SIF MAXBASE:1 < 550
+		MAXBASE:1 = 500
+	BASE:0 = MAXBASE:0
+	BASE:1 = MAXBASE:1
+
+	;従順の処理、産みの親の反発刻印が少ないほど最初から従順
+	ABL:10 = MAX(3 - MARK:(TFLAG:652):9, 0)
+
+	;遺伝の処理
+	;↓最初からついているもの
+	;処女(娘のみ),濡れにくい(娘のみ),習得遅い,小柄体型,オトコ(息子のみ),幼児,幼稚
+	REPEAT 230
+		SIF TALENT:(TFLAG:652):COUNT
+			TALENT:COUNT = TALENT:(TFLAG:652):COUNT
+	REND
+
+	CALL CHILD_TALENT_SET
+
+	;種族遺伝子コピー(精子提供者不在の場合は生みの親の遺伝子が全て引き継がれる)
+	FOR COUNT, 3200, 3400
+		CFLAG:COUNT = CFLAG:(TFLAG:652):COUNT
+	NEXT
+
+;精子提供者と生みの親が揃っている場合.ほとんど娘パッチ処理の流用
+ELSE
+	;LOCAL = 精子提供者と生みの親のうちの、似ているほうのキャラ登録番号(算出は@CHILD_PLUSで行っている)
+	;LOCAL:1 = 似ていない方の親のID
+	;キャラ固有IDをそのまま格納.LOCALが-1の時は未決定
+	IF ARG:0
+		LOCAL:2 = RAND:2
+		LOCAL = (LOCAL:2) ? TFLAG:652 # TFLAG:653
+		LOCAL:1 = (LOCAL:2) ? TFLAG:653 # TFLAG:652
+	;双子の片方が生みの親似だった場合、他方は自動的に精子提供者似になる.逆も同じく処理
+	;LOCALが-1でない場合、双子出産イベントによる二回目の処理である
+	ELSE
+		SWAP LOCAL, LOCAL:1
+	ENDIF
+
+	;体力決定.似ている方の親の影響を強く受ける
+	MAXBASE:0 = (MAXBASE:LOCAL:0 * 2 + MAXBASE:(LOCAL:1):0) / 3
+	TIMES MAXBASE:0, 0.80
+	SIF MAXBASE:0 < 1100
+		MAXBASE:0 = 1000
+	;気力決定.似ている方の親の影響を強く受ける
+	MAXBASE:1 = (MAXBASE:LOCAL:1 * 2 + MAXBASE:(LOCAL:1):1) / 3
+	TIMES MAXBASE:1, 0.80
+	SIF MAXBASE:1 < 550
+		MAXBASE:1 = 500
+
+	;種族遺伝処理関数
+	CALL TRANS_RACE, LOCAL, LOCAL:1
+
+	;種族別ボーナス付加関数
+	CALL RACE_BONUS, TARGET
+
+	;端数四捨五入
+	FOR COUNT, 0, 2
+		;切り上げ
+		IF MAXBASE:COUNT % 100 >= 50
+			MAXBASE:COUNT = (MAXBASE:COUNT / 100) * 100 + 100
+		;端数が25이상なら50に切り上げ
+		ELSEIF MAXBASE:COUNT % 100 >= 25
+			MAXBASE:COUNT = (MAXBASE:COUNT / 100) * 100 + 50
+		;そうでないなら切り捨て
+		ELSEIF MAXBASE:COUNT % 100 > 0
+			MAXBASE:COUNT = (MAXBASE:COUNT / 100) * 100
+		ENDIF
+	NEXT
+
+	BASE:0 = MAXBASE:0
+	BASE:1 = MAXBASE:1
+
+	;従順の処理、双方の親の反発刻印が少ないほど最初から従順
+	ABL:10 = MAX(2 - MARK:LOCAL:9, 0)
+	ABL:10 = MAX(ABL:10 + (1 - MARK:(LOCAL:1):9 / 2), 0)
+	;레즈끼の処理、후타나리のにんっしんっ率の低さを考えるとボーナスあってもいいと思うんだ
+	;両方を限界まであげて3。
+	IF TALENT:LOCAL:120 == 0 && TALENT:(LOCAL:1):120 == 0
+		ABL:22 = CFLAG:LOCAL:22 + ( CFLAG:LOCAL:32 * 3 ) + CFLAG:(LOCAL:1):22 + ( CFLAG:LOCAL:32 * 3 )
+		IF ABL:22 < 10
+		ELSEIF ABL:22 >= 10
+			ABL:22 = 1
+		ELSEIF ABL:22 >= 25
+			ABL:22 = 2
+		ELSEIF ABL:22 >= 40
+			ABL:22 = 3
+		ENDIF
+	ENDIF
+
+	;遺伝処理.似ている親のTALENTをまず写し、似ていない方の親のTALENTと比較
+	REPEAT 230
+		SIF TALENT:LOCAL:COUNT
+			TALENT:COUNT = TALENT:LOCAL:COUNT
+	REND
+
+	;種族別の素質を付与・削除する関数
+	CALL RACE_TALENT, TARGET
+
+	;[巨躯]がある場合、体型は元に돌아간다
+	IF TALENT:129
+		TALENT:127 = 0
+		TALENT:128 = 0
+		;似ている親が[巨躯]の場合、[巨躯]が遺伝.似ていない方が持っていた場合、1/2の確率で遺伝
+		TALENT:129 = (TALENT:LOCAL:129) ? 1 # RAND:2
+	;小人体型の場合、小柄体型を消す
+	ELSEIF TALENT:127
+		TALENT:128 = 0
+	ENDIF
+
+	;息子の場合
+	IF TFLAG:654 == 1
+		;オトコ
+		TALENT:120 = 1
+		MAXBASE:2 = CALC_GAUGE2_COMMON(TARGET)
+		BASE:2 = MAXBASE:2
+
+		;処女,ふたなり,母乳体質,神霊,半神,死神,濡れやすい、濡れにくい
+		TALENT:0 = 0
+		TALENT:42 = 0
+		TALENT:43 = 0
+		TALENT:121 = 0
+		TALENT:122 = 0
+		TALENT:123 = 0
+		TALENT:124 = 0
+		TALENT:134 = 0
+		TALENT:222 = 0
+		TALENT:223 = 0
+		TALENT:224 = 0
+	;娘の場合
+	ELSE
+		;処女.再生処女の場合もあるので直接代入
+		TALENT:0 = 1
+
+		;オトコ,ふたなり,早漏,遅漏,母乳体質,神霊,半神,死神
+		TALENT:120 = 0
+		TALENT:121 = 0
+		TALENT:132 = 0
+		TALENT:133 = 0
+		TALENT:134 = 0
+		TALENT:222 = 0
+		TALENT:223 = 0
+		TALENT:224 = 0
+	ENDIF
+
+	;両親が신령なら신령を遺伝。片方のみ신령または両親が반신のときは반신を遺伝
+	IF TALENT:LOCAL:222 && TALENT:(LOCAL:1):222
+		TALENT:222 = 1
+	ELSEIF TALENT:LOCAL:222 || TALENT:(LOCAL:1):222 || (TALENT:LOCAL:223 && TALENT:(LOCAL:1):223)
+		TALENT:223 = 1
+	ENDIF
+	;両親が사신なら사신を遺伝
+	SIF TALENT:LOCAL:224 && TALENT:(LOCAL:1):224
+		TALENT:224 = 1
+	;両親が선인なら선인を遺伝
+	SIF TALENT:LOCAL:225 && TALENT:(LOCAL:1):225
+		TALENT:225 = 1
+	;강시の両親or母親が강시で父親が[금단의 지식]持ちの선인なら강시を遺伝
+	SIF ( TALENT:LOCAL:226 && TALENT:(LOCAL:1):226 ) || ( TALENT:(TFLAG:652):226 && TALENT:(TFLAG:653):225 && TALENT:(TFLAG:653):56 )
+		TALENT:226 = 1
+
+
+	;一部遺伝しない素質.最初からついているものと矛盾する(＝打ち消して付かない)
+	;しかし似ていない方の親も同じ素質を保持していれば遺伝する
+	;濡れやすい
+	IF TALENT:42
+		TALENT:43 = 0
+		SIF TALENT:(LOCAL:1):42 == 0
+			TALENT:42 = 0
+	ENDIF
+	;習得早い
+	IF TALENT:50
+		TALENT:51 = 0
+		SIF TALENT:(LOCAL:1):50 == 0
+			TALENT:50 = 0
+	ENDIF
+	;音感
+	IF TALENT:191
+		TALENT:190 = 0
+		SIF TALENT:(LOCAL:1):191 == 0
+			TALENT:191 = 0
+	ENDIF
+	;料理得意
+	IF TALENT:193
+		TALENT:192 = 0
+		SIF TALENT:(LOCAL:1):193 == 0
+			TALENT:193 = 0
+	ENDIF
+
+	;知識がない([針さばき]や[大甲斐性]等は才能とする)
+	;貞操観念,貞操無頓着,調合知識,禁断の知識,妖精知識,治療,
+	;教育者,調理名人,工作名人,報道者,魔術技能,超常目算
+	TALENT:30 = 0
+	TALENT:31 = 0
+	TALENT:55 = 0
+	TALENT:56 = 0
+	TALENT:57 = 0
+	TALENT:58 = 0
+	TALENT:59 = 0
+	TALENT:126 = 0
+	TALENT:194 = 0
+	TALENT:195 = 0
+	TALENT:196 = 0
+	TALENT:197 = 0
+	TALENT:198 = 0
+	;技術がない
+	;大乳導,つるぺた堕し
+	TALENT:96 = 0
+	TALENT:97 = 0
+
+	;後天的なもの(おもらし癖,キス魔は幼児なので除く)
+	;弱味,媚薬中毒,パイパン,精愛味覚,人気
+	TALENT:39 = 0
+	TALENT:46 = 0
+	TALENT:65 = 0
+	TALENT:66 = 0
+	TALENT:94 = 0
+	;爆発物
+	TALENT:220 = 0
+
+	;妊娠系素質：妊娠,育児中,母性,抱卵中
+	;触手系素質：懐卵,寄生,触手使役術
+	;愛情系素質：恋慕,妄信,親愛,相愛,嫉妬
+	;服従系素質：服従,烙印,隷属,傷物,使い魔
+	;崩壊系素質：狂気,幼児退行,精神崩壊,傀儡,壊造人格
+	;淫乱系素質：淫乱,淫核,淫壷,淫尻,淫乳,尿道狂,キス魔,ドＳ,ドＭ,即落ち,淫魔
+	REPEAT 50
+		TALENT:(COUNT+140) = 0
+	REND
+
+	;サドマゾ処理部
+	;一旦子のサドマゾ素質を初期化
+	TALENT:81 = 0
+	TALENT:82 = 0
+	LOCAL:4 = 0
+	;両親のサドマゾ傾向から娘のサドマゾを決定する
+	;LOCAL:4が正の値＝サド傾倒、負の値＝マゾ傾倒
+	REPEAT 2
+		LOCAL:2 = (COUNT == 0) ? LOCAL # LOCAL:1
+
+		;初期値は親のABL:サド - ABL:マゾ
+		LOCAL:3 = ABL:(LOCAL:2):20 - ABL:(LOCAL:2):21
+
+		;サド
+		SIF TALENT:(LOCAL:2):81
+			LOCAL:3 += 2
+		;マゾ
+		SIF TALENT:(LOCAL:2):82
+			LOCAL:3 -= 2
+		;ドＳ
+		SIF TALENT:(LOCAL:2):177
+			LOCAL:3 += 2
+		;ドＭ
+		SIF TALENT:(LOCAL:2):178
+			LOCAL:3 -= 2
+
+		;似ている方の親の影響を強くする
+		SIF COUNT == 0
+			TIMES LOCAL:3, 1.50
+
+		LOCAL:4 += LOCAL:3
+	REND
+
+	;正の値か負の値かでサドマゾをそれぞれ付加.ただし絶対値3以下の時は何もしない
+	IF LOCAL:4 > 3
+		TALENT:81 = 1
+	ELSEIF LOCAL:4 < -3
+		TALENT:82 = 1
+	ENDIF
+
+	;娘のみ親が顕在化持ちの場合、最初から具現持ちのみ具現、それ以外は不思議な根
+	IF TALENT:124 && TALENT:120 == 0
+		IF CSVTALENT(NO:(TFLAG:652),123,0)
+			TALENT:123 = 1
+		ELSE
+			TALENT:122 = 1
+		ENDIF
+		TALENT:124 = 0
+	ENDIF
+
+	;最初から狂気持ちの子の子のみ狂気が付く
+	IF CSVTALENT(NO:(TFLAG:652),158,0)
+		TALENT:158 = 1
+	;似ていない方の親がネイティブ狂気の場合、半分の確率で狂気
+	ELSEIF CSVTALENT(NO:(TFLAG:653),158,0)
+		TALENT:158 = RAND:2
+	ENDIF
+
+	;キス魔を取得している子の子のみキス魔遺伝
+	IF TALENT:LOCAL:176
+		TALENT:176 = 1
+	;似ていない方の親がキス魔なら半分の確率で遺伝
+	ELSEIF TALENT:(LOCAL:1):176
+		TALENT:176 = RAND:2
+	ENDIF
+	
+	;調理名人を取得している子の子は料理得意遺伝
+	IF TALENT:LOCAL:194
+		TALENT:192 = 0
+		TALENT:193 = 1
+	ELSEIF TALENT:(LOCAL:1):194 && RAND:2
+		TALENT:192 = 0
+		TALENT:193 = 1
+	ENDIF
+
+	;春の人を持っている子の子のみ春の人が半分の確率で遺伝
+	IF TALENT:LOCAL:263 && RAND:2
+		TALENT:263 = 1
+	;似ていない方の親が春の人なら1/4の確率で遺伝
+	ELSEIF TALENT:(LOCAL:1):263 && RAND:4 == 0
+		TALENT:263 = 1
+	ENDIF
+
+	;胸サイズ決定(サドマゾのように胸サイズ参照する)
+	;一旦乳サイズリセット
+	TALENT:110 = 0
+	TALENT:111 = 0
+	TALENT:112 = 0
+	TALENT:113 = 0
+
+	IF TALENT:120 == 0
+		LOCAL:4 = 0
+		REPEAT 2
+			LOCAL:3 = 0
+			LOCAL:2 = (COUNT == 0) ? LOCAL # LOCAL:1
+
+			;親が男なら処理スキップ
+			SIF TALENT:(LOCAL:2):120
+				CONTINUE
+
+			;絶壁
+			SIF TALENT:(LOCAL:2):110
+				LOCAL:3 -= 3
+			;貧乳
+			SIF TALENT:(LOCAL:2):111
+				LOCAL:3 -= 2
+			;巨乳
+			SIF TALENT:(LOCAL:2):112
+				LOCAL:3 += 2
+			;爆乳
+			SIF TALENT:(LOCAL:2):113
+				LOCAL:3 += 3
+
+			;似ている方の親の影響を大きくする
+			SIF COUNT == 0
+				TIMES LOCAL:3, 1.70
+
+			LOCAL:4 += LOCAL:3
+		REND
+
+		;LOCAL:2の値が正なら最初から大きめ、負なら小さめ.基本的に控えめになる
+		;1이상3以下なら普乳
+		;4이상ならロリ巨乳
+		IF LOCAL:4 >= 4
+			TALENT:112 = 1
+		;-4以下なら絶壁
+		ELSEIF LOCAL:4 <= -4
+			TALENT:110 = 1
+		;0以下なら貧乳
+		ELSEIF LOCAL:4 <= 0
+			TALENT:111 = 1
+		ENDIF
+	ENDIF
+
+	;츤데레의 처리
+	IF (TALENT:11 || TALENT:13) && TALENT:18
+		ABL:10 = 0
+		TALENT:11 = 1
+		TALENT:13 = 0
+	ENDIF
+
+ENDIF
+
+;-------------------------------------------------
+;아들의 유전자 결정 함수
+;-------------------------------------------------
+@TRANS_RACE, ARG, ARG:1
+LOCAL:1 = -1
+;もし、種族フラグがない場合は強制補正処理へ飛ばす
+SIF SUMARRAY(CFLAG:ARG:0, 3200, 3400) <= 0
+	CALL FIX_RACE, ARG
+SIF SUMARRAY(CFLAG:(ARG:1):0, 3200, 3400) <= 0
+	CALL FIX_RACE, ARG:1
+
+;双方とも"人間(？)""不明"であるかどうか調べる
+IF (CFLAG:ARG:3200 == 100 || CFLAG:ARG:3399 == 100) && (CFLAG:(ARG:1):3200 == 100 || CFLAG:(ARG:1):3399 == 100)
+	LOCAL:1 = -2
+;どちらかの親が"人間(？)"または"不明"かどうか調べる
+ELSE
+	FOR COUNT, 0, 2
+		IF CFLAG:(ARG:COUNT):3200 == 100 || CFLAG:(ARG:COUNT):3399 == 100
+			;"人間(？)"でない方の親の登録番号をLOCAL:1へ保存
+			LOCAL:1 = (COUNT == 0) ? ARG:1 # ARG
+			BREAK
+		ENDIF
+	NEXT
+ENDIF
+
+;双方とも"人間(？)""不明"であった場合、「人間」「妖怪」「妖精」「悪魔」の中からランダムで一つの種族遺伝子が選ばれる
+;(種族：人間(？)は種族遺伝しない、種族：不明は遺伝における扱いが未定であるため)
+IF LOCAL:1 == -2
+	CFLAG:(3201 + RAND:4) = 100
+;生みの親、または精子提供者が"人間(？)"または"不明"だった場合、他方の親の遺伝子が娘に完全に引き継がれる
+ELSEIF LOCAL:1 != -1
+	FOR COUNT, 3200, 3400
+		CFLAG:COUNT = CFLAG:(LOCAL:1):COUNT
+	NEXT
+;"人間(？)"と"不明"のいずれもが生殖に関わっていない場合
+ELSE
+	;似ている方の親の遺伝強度：似ていない方の親の遺伝強度 = 3：2  の比率で遺伝
+	;ついでに遺伝強度の合計が100%になっているかどうかもチェック
+	LOCAL:2 = 0
+	FOR COUNT, 3200, 3400
+		CFLAG:COUNT = (CFLAG:ARG:COUNT * 3 + CFLAG:(ARG:1):COUNT * 2) / 5
+		LOCAL:2 += CFLAG:COUNT
+	NEXT
+
+	;合計値(LOCAL:2)が100を越えた場合、一番強度の高いものから余剰分減算
+	IF LOCAL:2 > 100
+		;どの遺伝子が一番強度が高いか判定
+		LOCAL:3 = 3200
+		FOR COUNT, 3201, 3400
+			SIF CFLAG:(LOCAL:3) < CFLAG:COUNT
+				LOCAL:3 = COUNT
+		NEXT
+
+		;減算処理
+		CFLAG:(LOCAL:3) -= LOCAL:2 - 100
+	;合計値が100未満の場合、もっとも強度の低い遺伝子に不足分加算
+	ELSEIF LOCAL:2 < 100
+		LOCAL:3 = 3200
+		FOR COUNT, 3201, 3400
+			;遺伝強度0は除外する
+			IF CFLAG:COUNT == 0
+				CONTINUE
+			ELSEIF CFLAG:(LOCAL:3) > CFLAG:COUNT || CFLAG:(LOCAL:3) == 0
+				LOCAL:3 = COUNT
+			ENDIF
+		NEXT
+
+		;加算処理
+		CFLAG:(LOCAL:3) += 100 - LOCAL:2
+	ENDIF
+ENDIF
+
+;1/25の確率で突然変異.遺伝強度35%未満の種族遺伝子が100%になり、それ以外の遺伝子が消去される
+IF RAND:25 == 0
+	;遺伝強度の弱い遺伝子がいくつあったか記録する変数初期化(初期値200)
+	LOCAL:199 = 200
+	FOR COUNT, 200, 401
+		LOCAL:COUNT = 0
+	NEXT
+
+	FOR COUNT, 3200, 3400
+		;遺伝強度が弱い遺伝子を抜き出す
+		IF CFLAG:COUNT > 0 && CFLAG:COUNT < 35
+			LOCAL:(LOCAL:199) = COUNT
+			LOCAL:199 += 1
+		ENDIF
+	NEXT
+
+	;強度の弱い遺伝子が一つ이상有った場合、突然変異処理
+	IF LOCAL:199 > 200
+		;一旦全遺伝子初期化
+		FOR COUNT, 3200, 3400
+			CFLAG:COUNT = 0
+		NEXT
+
+		;強度の弱い遺伝子が一つしかなかった場合、無条件で100%にセット
+		IF LOCAL:199 == 201
+			CFLAG:(LOCAL:200) = 100
+		;強度の弱い遺伝子が二つ이상有った場合、RANDでどれを100%にするか選択
+		ELSEIF LOCAL:199 > 1
+			LOCAL:198 = RAND:(LOCAL:199 - 200) + 200
+			CFLAG:(LOCAL:198) = 100
+		ENDIF
+	ENDIF
+ENDIF
+		
+;影響力の弱すぎる遺伝子削除処理
+;遺伝強度が10%未満の遺伝子を削除し、削除した分の強度を二番目に強度の低い遺伝子に加算する
+
+;WHILE文を終了するか否か決定する変数
+WHILE 1
+	;該当遺伝子検索
+	;一番弱い遺伝子と二番目に弱い遺伝子を検索.一番弱い遺伝子をLOCAL:3に、二番目に弱い遺伝子をLOCAL:4に保存する
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+
+	;검색 처리
+	FOR COUNT, 3200, 3400
+		;강도 0은 제외
+		IF CFLAG:COUNT == 0
+			CONTINUE
+		ELSEIF LOCAL:3 == 0
+			LOCAL:3 = COUNT
+		ELSEIF CFLAG:(LOCAL:3) > CFLAG:COUNT
+			LOCAL:4 = LOCAL:3
+			LOCAL:3 = COUNT
+		ELSEIF CFLAG:(LOCAL:4) > CFLAG:COUNT || LOCAL:4 == 0
+			LOCAL:4 = COUNT
+		ENDIF
+	NEXT
+
+	;強度10%未満の遺伝子が有る場合、二番目に弱い遺伝子に一番弱い遺伝子を加算し、一番弱い遺伝子削除
+	IF CFLAG:(LOCAL:3) < 10
+		CFLAG:(LOCAL:4) += CFLAG:(LOCAL:3)
+		CFLAG:(LOCAL:3) = 0
+	;該当遺伝子がないならWHILE文終了
+	ELSE
+		BREAK
+	ENDIF
+WEND
+RETURN 1
+
+;-------------------------------------------------
+;종족 플래그 강제 보정 처리
+;-------------------------------------------------
+;억지로 원래 종족으로 보정한다
+@FIX_RACE, ARG
+;아나타
+IF NO:ARG == 0
+	CFLAG:ARG:3200 = 100
+;레이무, 마리사, 사쿠야, 유유코(생전), 모코우, 아큐, 렌코, 메리, 코스즈, 레이라, 리카, 메이라, 코토히메, 리카코, 치유리, 유메미, 비라노, 미리아, 마리, 비비트, 이사미, 타츠미, 루미, 텐지, 린, 마을 인간, 레이카
+ELSEIF NO:ARG == 1 || NO:ARG == 2 || NO:ARG == 9 || (NO:ARG == 20 && CFLAG:ARG:0) || NO:ARG == 31 || NO:ARG == 48 || NO:ARG == 49 || NO:ARG == 50 || NO:ARG == 88 ||  NO:ARG == 98 || NO:ARG == 101 || NO:ARG == 102 || NO:ARG == 104 || NO:ARG == 106 || NO:ARG == 107 || NO:ARG == 108 || NO:ARG == 129 || NO:ARG == 130 || NO:ARG == 134 || NO:ARG == 136 || NO:ARG == 139 || NO:ARG == 140 || NO:ARG == 141 || NO:ARG == 142 || NO:ARG == 147 || NO:ARG == 171 || NO:ARG == 218
+	CFLAG:ARG:3201 = 100
+;루미아, 메이링, 레티, 유카리, 유카, 토키코, 이치린, 쇼, 오렌지, 엘리, 유나, 례 메이링
+ELSEIF NO:ARG == 3 || NO:ARG == 6 || NO:ARG == 12 || NO:ARG == 22 || NO:ARG == 34 || NO:ARG == 68 || NO:ARG == 73 || NO:ARG == 76 || NO:ARG == 109 || NO:ARG == 111 || NO:ARG == 202 || NO:ARG == 204
+	CFLAG:ARG:3202 = 100
+;대요정, 치르노, 릴리 W, 서니, 루나, 스타, 릴리 B, 무명 요정, 슈가
+ELSEIF NO:ARG == 4 || NO:ARG == 5 || NO:ARG == 15 || NO:ARG == 45 || NO:ARG == 46 || NO:ARG == 47 || NO:ARG == 56 || (NO:ARG >= 150 && NO:ARG <= 155) || (NO:ARG >= 160 && NO:ARG <= 165) || NO:ARG == 215
+	CFLAG:ARG:3203 = 100
+;소악마, 무게츠, 겐게츠, 엘리스, 코코아
+ELSEIF NO:ARG == 7 || NO:ARG == 112 || NO:ARG == 113 || NO:ARG == 122 || NO:ARG == 176
+	CFLAG:ARG:3204 = 100
+;파츄리, 엘렌, 타트
+ELSEIF NO:ARG == 8 || NO:ARG == 103 || NO:ARG == 213
+	CFLAG:ARG:3205 = 100
+;레밀리아, 플랑, 쿠루미, 흡혈귀
+ELSEIF NO:ARG == 10 || NO:ARG == 11 || NO:ARG == 110 || NO:ARG == 190
+	CFLAG:ARG:3206 = 100
+;첸, 요괴 고양이
+ELSEIF NO:ARG == 13 || NO:ARG == 186
+	CFLAG:ARG:3207 = 100
+;앨리스, 뱌쿠렌
+ELSEIF (NO:ARG == 14 && CFLAG:ARG:0 == 0) || NO:ARG == 77
+	CFLAG:ARG:3208 = 100
+;리리카, 메를랑, 루나사, 카나
+ELSEIF NO:ARG == 16 || NO:ARG == 17 || NO:ARG == 18 || NO:ARG == 105
+	CFLAG:ARG:3209 = 100
+;요우무, 요우키
+ELSEIF NO:ARG == 19 || NO:ARG == 70
+	CFLAG:ARG:3201 = 50
+	CFLAG:ARG:3241 = 50
+;유유코, 토지코, 망령
+ELSEIF (NO:ARG == 20 && CFLAG:ARG:0 == 0) || NO:ARG == 84 || NO:ARG == 179
+	CFLAG:ARG:3211 = 100
+;란, 둔갑여우
+ELSEIF NO:ARG == 21 || NO:ARG == 187
+	CFLAG:ARG:3212 = 100
+;스이카, 유기, 옛도시 오니, 지옥 오니
+ELSEIF NO:ARG == 23 || NO:ARG == 60 || NO:ARG == 181 || NO:ARG == 182
+	CFLAG:ARG:3213 = 100
+;리글
+ELSEIF NO:ARG == 24
+	CFLAG:ARG:3214 = 100
+;미스티아, 밤참새
+ELSEIF NO:ARG == 25 || NO:ARG == 177
+	CFLAG:ARG:3215 = 100
+;케이네
+ELSEIF NO:ARG == 26
+	CFLAG:ARG:3201 = 50
+	CFLAG:ARG:3253 = 50
+;테위, 지상 토끼
+ELSEIF NO:ARG == 27 || NO:ARG == 170
+	CFLAG:ARG:3217 = 100
+;우동게, 레이센, 옥토끼, 키나코
+ELSEIF NO:ARG == 28 || NO:ARG == 55 || NO:ARG == 184 || NO:ARG == 203
+	CFLAG:ARG:3218 = 100
+;에이린, 카구야, 토요히메, 요리히메
+ELSEIF NO:ARG == 29 || NO:ARG == 30 || NO:ARG == 53 || NO:ARG == 54
+	CFLAG:ARG:3219 = 100
+;아야, 하타테, 까마귀 텐구
+ELSEIF NO:ARG == 32 || NO:ARG == 79 || NO:ARG == 174
+	CFLAG:ARG:3220 = 100
+;메디슨, 상하이 인형, 호라이 인형, 오오에도 인형, 골리아테 인형, 앨리스의 인형, 메이벨
+ELSEIF NO:ARG == 33 || NO:ARG == 66 || NO:ARG == 67 || NO:ARG == 96 || NO:ARG == 97 || NO:ARG == 172 || NO:ARG == 200
+	CFLAG:ARG:3221 = 100
+;코마치, 사신
+ELSEIF NO:ARG == 35 || NO:ARG == 183
+	CFLAG:ARG:3222 = 100
+;에이키, 에이카
+ELSEIF NO:ARG == 36 || NO:ARG == 214
+	CFLAG:ARG:3223 = 100
+;시즈하
+ELSEIF NO:ARG == 37
+	CFLAG:ARG:3224 = 100
+;미노리코
+ELSEIF NO:ARG == 38
+	CFLAG:ARG:3225 = 100
+;히나
+ELSEIF NO:ARG == 39
+	CFLAG:ARG:3226 = 100
+;니토리, 캇파
+ELSEIF NO:ARG == 40 || NO:ARG == 180
+	CFLAG:ARG:3227 = 100
+;모미지, 백랑 텐구
+ELSEIF NO:ARG == 41 || NO:ARG == 175
+	CFLAG:ARG:3228 = 100
+;사나에
+ELSEIF NO:ARG == 42
+	CFLAG:ARG:3201 = 75
+	CFLAG:ARG:3254 = 25
+;카나코, 스와코
+ELSEIF NO:ARG == 43 || NO:ARG == 44
+	CFLAG:ARG:3229 = 100
+;이쿠
+ELSEIF NO:ARG == 51
+	CFLAG:ARG:3230 = 100
+;텐시, 천인, 텐소쿠
+ELSEIF NO:ARG == 52 || NO:ARG == 185 || NO:ARG == 209
+	CFLAG:ARG:3231 = 100
+;키스메
+ELSEIF NO:ARG == 57
+	CFLAG:ARG:3232 = 100
+;야먀메
+ELSEIF NO:ARG == 58
+	CFLAG:ARG:3233 = 100
+;파르시
+ELSEIF NO:ARG == 59
+	CFLAG:ARG:3234 = 100
+;사토리, 코이시
+ELSEIF NO:ARG == 61 || NO:ARG == 64
+	CFLAG:ARG:3235 = 100
+;오린
+ELSEIF NO:ARG == 62
+	CFLAG:ARG:3236 = 100
+;단순한 지옥까마귀 우뉴호, 지옥까마귀
+ELSEIF (NO:ARG == 63 && CFLAG:ARG:0 == 1) || NO:ARG == 178
+	CFLAG:ARG:3242 = 100
+;우츠호
+ELSEIF NO:ARG == 63
+	CFLAG:ARG:3237 = 25
+	CFLAG:ARG:3242 = 75
+;반령, 반령(요우키)
+ELSEIF NO:ARG == 65 || NO:ARG == 99
+	CFLAG:ARG:3243 = 100
+;린노스케
+ELSEIF NO:ARG == 69
+	CFLAG:ARG:3201 = 50
+	CFLAG:ARG:3202 = 50
+;나즈린, 요괴 쥐
+ELSEIF NO:ARG == 71 || NO:ARG == 188
+	CFLAG:ARG:3248 = 100
+;코가사
+ELSEIF NO:ARG == 72
+	CFLAG:ARG:3249 = 100
+;운잔
+ELSEIF NO:ARG == 74
+	CFLAG:ARG:3250 = 100
+;무라사
+ELSEIF NO:ARG == 75
+	CFLAG:ARG:3251 = 100
+;누에
+ELSEIF NO:ARG == 78
+	CFLAG:ARG:3252 = 100
+;카센
+ELSEIF NO:ARG == 80
+	CFLAG:ARG:3213 = 50
+	CFLAG:ARG:3259 = 50
+;쿄코
+ELSEIF NO:ARG == 81
+	CFLAG:ARG:3260 = 100
+;요시카
+ELSEIF NO:ARG == 82
+	CFLAG:ARG:3261 = 100
+;청아, 후토, 미코, 선인
+ELSEIF NO:ARG == 83 || NO:ARG == 85 || NO:ARG == 88 || NO:ARG == 189
+	CFLAG:ARG:3259 = 100
+;마미조, 로쿠
+ELSEIF NO:ARG == 87 || NO:ARG == 217
+	CFLAG:ARG:3262 = 100
+;코코로
+ELSEIF NO:ARG == 89
+	CFLAG:ARG:3263 = 100
+;와카사기히메
+ELSEIF NO:ARG == 220
+	CFLAG:ARG:3264 = 100
+;세키반키
+ELSEIF NO:ARG == 221
+	CFLAG:ARG:3265 = 100
+;카케로
+ELSEIF NO:ARG == 222
+	CFLAG:ARG:3266 = 100
+;세이자
+ELSEIF NO:ARG == 225
+	CFLAG:ARG:3267 = 100
+;신묘마루
+ELSEIF NO:ARG == 226
+	CFLAG:ARG:3268 = 100
+;弁々、八橋、雷鼓
+ELSEIF NO:ARG == 223 || NO:ARG == 224 || NO:ARG == 227
+	CFLAG:ARG:3269 = 100
+;미마
+ELSEIF NO:ARG == 100
+	CFLAG:ARG:3238 = 100
+;サラ、ルイズ、ちびアリス、ユキ、マイ、夢子、魔界人
+ELSEIF (NO:ARG == 14 && CFLAG:ARG:0) || NO:ARG == 114 || NO:ARG == 115 || NO:ARG == 116 || NO:ARG == 117 || NO:ARG == 118 || NO:ARG == 173
+	CFLAG:ARG:3240 = 100
+;신키
+ELSEIF NO:ARG == 119
+	CFLAG:ARG:3239 = 100
+;シンギョク、ユウゲンマガン、キクリ、コンガラ、華蓮
+ELSEIF NO:ARG == 120 || NO:ARG == 121 || NO:ARG == 124 || NO:ARG == 125 || NO:ARG == 211
+	CFLAG:ARG:3399 = 100
+;사리엘, 중천사
+ELSEIF NO:ARG == 123 || NO:ARG == 126
+	CFLAG:ARG:3257 = 100
+;ＶＩＶＩＴ
+ELSEIF NO:ARG == 128
+	CFLAG:ARG:3221 = 50
+	CFLAG:ARG:3246 = 50
+;아나타의 아들, 딸
+ELSEIF NO:ARG == 148 || NO:ARG == 149
+	IF TALENT:ARG:212
+		CFLAG:ARG:3201 = 50
+		CFLAG:ARG:3253 = 50
+	ELSE
+		CFLAG:ARG:3200 = 100
+	ENDIF
+;ゾンビフェアリー、黒呪精
+ELSEIF NO:ARG == 156 || NO:ARG == 166
+	CFLAG:ARG:3245 = 100
+;アリオーシュ、閃
+ELSEIF NO:ARG == 201 || NO:ARG == 212
+	CFLAG:ARG:3221 = 50
+	CFLAG:ARG:3246 = 50
+;미루루
+ELSEIF NO:ARG == 205
+	CFLAG:ARG:3247 = 100
+;린보쿠산
+ELSEIF NO:ARG == 206
+	CFLAG:ARG:3202 = 50
+	CFLAG:ARG:3205 = 50
+;미토리
+ELSEIF NO:ARG == 207
+	CFLAG:ARG:3201 = 50
+	CFLAG:ARG:3227 = 50
+;사샤
+ELSEIF NO:ARG == 208
+	CFLAG:ARG:3256 = 100
+;深疫
+ELSEIF NO:ARG == 210
+	CFLAG:ARG:3258 = 100
+;IRC 소재 관련
+ELSEIF NO:ARG == 400 || NO:ARG == 402 || NO:ARG == 423 || NO:ARG == 424 || NO:ARG == 425 || NO:ARG == 426 || NO:ARG == 427 || NO:ARG == 428 || NO:ARG == 429
+	CFLAG:ARG:3399 = 100
+ELSEIF NO:ARG == 401
+	CFLAG:ARG:3255 = 100
+ELSEIF NO:ARG == 403 || NO:ARG == 420 || NO:ARG == 422
+	CFLAG:ARG:3203 = 100
+ELSEIF NO:ARG == 421
+	CFLAG:ARG:3245 = 100
+ELSEIF NO:ARG == 497
+	CFLAG:ARG:3240 = 100
+ELSE
+	CFLAG:ARG:3399 = 100
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;종족 보너스 결정 처리
+;-------------------------------------------------
+;ARGにキャラ登録番号を受け取り、種族別ボーナスを付与する
+@RACE_BONUS, ARG
+;種族判別関数呼び出し
+CALL FIND_RACE, ARG
+
+;結果読み出し
+LOCAL:1 = RESULT:1
+LOCAL:2 = RESULT:2
+
+;種族別ボーナス計算.主に体力気力の引き上げ.結果を画一的にしないためにランダム要素も
+;LOCAL:10に体力を、LOCAL:11に気力の上昇分を計算し、最後に加算する
+FOR COUNT, 1, 3
+	SIF LOCAL:COUNT == 0
+		CONTINUE
+	;短く表記するため、LOCAL:COUNTをLOCALに代入
+	LOCAL = LOCAL:COUNT
+
+	LOCAL:10 = 0
+	LOCAL:11 = 0
+
+	;悪魔
+	IF LOCAL == 3204
+		LOCAL:10 += 80 + RAND:40
+		LOCAL:11 += 50 + RAND:20
+	;魔女、魔法使い、さとり
+	ELSEIF LOCAL == 3205 || LOCAL == 3208 || LOCAL == 3235
+		LOCAL:11 += 80 + RAND:30
+	;吸血鬼、鬼
+	ELSEIF LOCAL == 3206 || LOCAL == 3213
+		LOCAL:10 += 100 + RAND:50
+	;神、魔界の神
+	ELSEIF LOCAL == 3229 || LOCAL == 3239
+		LOCAL:10 += 25 + RAND:40
+		LOCAL:11 += 50 + RAND:40
+	;ヤタ鴉純血.レアかつ他の種族と重複しないためボーナス高め
+	ELSEIF LOCAL == 3237 && LOCAL:2 == 0
+		LOCAL:10 += 150 + RAND:80
+		LOCAL:11 += 100 + RAND:20
+	;奇跡の神純血.ほぼ同上
+	ELSEIF LOCAL == 3254 && LOCAL:2 == 0
+		LOCAL:10 += 80 + RAND:30
+		LOCAL:11 += 150 + RAND:70
+	;触手
+	ELSEIF LOCAL == 3255
+		LOCAL:10 += 20 + RAND:80
+		LOCAL:11 += 30 + RAND:80
+	ENDIF
+	;遺伝強度が弱い方の種族ボーナスは半減される
+	IF COUNT == 2
+		LOCAL:10 /= 2
+		LOCAL:11 /= 2
+	ENDIF
+
+	MAXBASE:ARG:0 += LOCAL:10
+	MAXBASE:ARG:1 += LOCAL:11
+NEXT
+RETURN 1
+
+;-------------------------------------------------------------------------
+;種族別の素質を付与、削除する関数.ARGに計算対象キャラの登録番号を受け取る
+;処理の流れ上TARGETをそのまま用いてもいいはずだが、汎用性のためにARGを使う
+;-------------------------------------------------------------------------
+@RACE_TALENT, ARG
+;TARGET待避
+LOCAL:100 = TARGET
+LOCAL:2 = 0
+TARGET = ARG
+
+;一旦種族別素質をリセット(200～230)
+FOR COUNT, 200, 230
+	;말할 수 있는 인형은 유전(LOCAL:2に退避)
+	SIF COUNT == 208
+		LOCAL:2 = TALENT:COUNT
+	;[구문지][황혼의 괴물][신령][반신][사신]은 초기화하지 않음
+	SIF COUNT == 216 || COUNT == 221 || COUNT == 222 || COUNT == 223 || COUNT == 224
+		CONTINUE
+	TALENT:COUNT = 0
+NEXT
+
+;発現している種族遺伝子を探す関数
+CALL FIND_RACE, TARGET
+
+;結果の取り出し
+LOCAL:3 = RESULT:1
+LOCAL:4 = RESULT:2
+
+;강하게 발현된 유전자를 조사한다. 양쪽 모두 조사하는 것은 EASY만
+LOCAL:1 = (FLAG:3 == 1) ? 2 # 1
+
+FOR LOCAL:5, 0, LOCAL:1
+	;@FIND_RACEで算出した発現している種族遺伝子の結果取り出し
+	LOCAL = LOCAL:(3 + LOCAL:5)
+	;発現していないなら処理スキップ
+	SIF LOCAL == 0
+		CONTINUE
+
+	;[요정]は発現した遺伝子が요정、またはゾンビフェアリー種でなければ維持できない
+	SIF LOCAL == 3203 || LOCAL == 3245
+		TALENT:200 = 1
+
+	;[흡혈귀]は発現した遺伝子が흡혈귀種でなければ維持できない
+	SIF LOCAL == 3206
+		TALENT:205 = 1
+
+	;[기계]は発現した遺伝子が기계種でなければ維持できない
+	SIF LOCAL == 3246
+		TALENT:206 = 1
+
+	;[영체]は発現した遺伝子が亡霊、舟幽霊または騒霊種でなければ維持できない
+	SIF LOCAL == 3209 || LOCAL == 3241 || LOCAL == 3243 || LOCAL == 3251
+		TALENT:207 = 1
+
+	;[인형]は発現した遺伝子が기계、または인형種でなければ維持できない
+	SIF LOCAL == 3221
+		TALENT:208 = LOCAL:2
+
+	;[악마]は発現した遺伝子が악마種でなければ維持できない
+	SIF LOCAL == 3204
+		TALENT:209 = 1
+
+	;[캇파]は発現した遺伝子が캇파種でなければ維持できない
+	SIF LOCAL == 3227
+		TALENT:210 = 1
+
+	;[요호]は発現した遺伝子が化け狐種でなければ維持できない
+	SIF LOCAL == 3212
+		TALENT:211 = 1
+
+	;[반백택]は発現した遺伝子がハクタク、かつ混血(=他の種族遺伝子が発現している)状態でなければ維持できない
+	;想定していなかった条件のため、ちょっとパスタ。発現した遺伝子を該当関数のLOCAL変数から直接参照している
+	SIF LOCAL:3 == 3253 && LOCAL:4 || LOCAL:4 == 3253 && LOCAL:3
+		TALENT:212 = 1
+
+	;[覚]は発現した遺伝子がさとり種でなければ維持できない
+	SIF LOCAL == 3235
+		TALENT:213 = 1
+
+	;[鬼]は発現した遺伝子が鬼種でなければ維持できない
+	SIF LOCAL == 3213
+		TALENT:214 = 1
+
+	;[텐구]は発現した遺伝子が鴉텐구、または白狼텐구種でなければ維持できない
+	SIF LOCAL == 3220 || LOCAL == 3228
+		TALENT:215 = 1
+
+	;[누에]は発現した遺伝子が누에種でなければ維持できない
+	SIF LOCAL == 3252
+		TALENT:217 = 1
+
+	;[둔갑너구리]は発現した遺伝子が둔갑너구리種でなければ維持できない
+	SIF LOCAL == 3262
+		TALENT:227 = 1
+
+	;[츠쿠모가미]は発現した遺伝子が무생물種でなければ維持できない
+	SIF LOCAL == 3249 || LOCAL == 3263 || LOCAL == 3269
+		TALENT:228 = 1
+
+	;[인어]は発現した遺伝子が인어種でなければ維持できない
+	SIF LOCAL == 3264
+		TALENT:229 = 1
+
+	;로쿠로쿠비의 경우 확률적으로 [늘어나는 목]이 되거나 [목 분리]가 된다. 후자가 돌연변이
+	IF LOCAL == 3265
+    IF RAND:8 == 0
+    TALENT:231 = 2
+    ELSE
+    TALENT:231 = 1
+    ENDIF
+  ENDIF
+
+	;[늑대인간]は発現した遺伝子が늑대인간種でなければ維持できない
+	SIF LOCAL == 3266
+		TALENT:231 = 1
+NEXT
+RETURN 1
+
+;-------------------------------------------------
+;자식 성장 범용 처리
+;-------------------------------------------------
+@CHILD_GROWTH, ARG
+DRAWLINE
+PRINTFORML %조사처리(CALLNAME:ARG,"가")% 태어난 뒤로 오랜 시간이 흘렀다……….
+PRINTFORM %조사처리(CALLNAME:ARG,"는")% 성장하여 [유아]
+TALENT:ARG:130 = 0
+LOCAL = 0
+IF RAND:4 == 0
+	LOCAL = 1
+ELSEIF TALENT:ARG:128
+	TALENT:ARG:128 = 0
+	PRINT  및 [소인 체형]
+ENDIF
+IF RAND:5 == 0
+	LOCAL = 1
+ELSEIF TALENT:ARG:131
+	TALENT:ARG:131 = 0
+	PRINT  및 [유치]
+ENDIF
+PRINTW 을(를) 잃었다.
+;胸の成長は1段階アップに変更.[爆乳]のときのみ変化なし
+IF LOCAL == 0 && RAND:10 == 0 && TALENT:ARG:113 == 0 && TALENT:ARG:120 == 0
+	PRINT 가슴도 성장하여 
+	;[絶壁]の場合
+	IF TALENT:ARG:110
+		TALENT:ARG:110 = 0
+		LOCAL = 111
+	;[貧乳]の場合
+	ELSEIF TALENT:ARG:111
+		TALENT:ARG:111 = 0
+	;[巨乳]の場合
+	ELSEIF TALENT:ARG:112
+		TALENT:ARG:112 = 0
+		LOCAL = 113
+	;[普乳]の場合
+	ELSE
+		LOCAL = 112
+	ENDIF
+	PRINTFORMW [\@(LOCAL == 0) ? 평유 # %TALENTNAME:LOCAL%\@]가 되었다.
+	SIF LOCAL > 0
+		TALENT:ARG:LOCAL = 1
+ENDIF
+;成長したことを示す
+MARK:ARG:81 = 1
+;汎用口上用フラグ(成長したので人格が変化するかも？)
+CFLAG:ARG:43 = 0
+;身体測定フラグを寝せる(次回身体測定を行うため)
+CFLAG:ARG:8 = 0

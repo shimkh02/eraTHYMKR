@@ -1,0 +1,926 @@
+﻿;=============================================================================
+;비디오의 타이틀 보너스 부가 처리
+;=============================================================================
+;'이 몸의 저스티스가 없구나!'라는 사람은 수동으로 추가해주세요
+;없으리라곤 생각합니다만 기존 동인지의 타이틀과 중복되었다면 대체안을 마련해 가르쳐주세요
+;솔직히 소재가 썰렁하단 느낌이 안 드는 것도 아니군
+;--------------------------------------------------
+;커맨드 내용에 따른 타이틀 결정(우선도 약간 낮음)
+;--------------------------------------------------
+@VIDEO_TITLE_BONUS(ARG, ARG:1)
+#FUNCTION
+LOCAL = 0
+LOCAL:1 = JUDGE_VIDEOTITLE()
+;보너스는 금후 변화할 가능성 있음(타이틀은 팀 조합 우선)
+IF TFLAG:239 == 0
+	;특정 조건에 따른 우선도가 높은 보너스
+	IF LOCAL:1 == 98
+		TSTR:0 = 산결성
+		LOCAL += 1500
+	ELSEIF LOCAL:1 == 97
+		IF TALENT:140
+			TSTR:0 = 임양천
+			LOCAL += 1100
+		ELSE
+			TSTR:0 = 이혈향
+			LOCAL += 900
+		ENDIF
+		;조교 대상이 음호나 음고라면 추가 보너스
+		SIF TALENT:172 || TALENT:173
+			LOCAL += 800
+	ELSEIF LOCAL:1 == 96
+		TSTR:0 = 약옥정
+		LOCAL += 1150
+		;조교 대상이 초M에다가 약물내성이라면 추가 보너스
+		SIF TALENT:178 && TALENT:44
+			LOCAL += 650
+		;조교 대상이 초M에다가 미약중독이라면 추가 보너스
+		SIF TALENT:178 && TALENT:46
+			LOCAL += 650
+
+	;조교 내용의 경향이 가장 높은 것이 기준이 되는 타이틀 보너스
+	ELSEIF LOCAL:1 == 0
+		TSTR:0 = 두몽상
+		LOCAL += 800
+		;조교 대상이 음핵/음경이라면 추가 보너스
+		SIF TALENT:171
+			LOCAL += 700
+	ELSEIF LOCAL:1 == 1
+		IF TALENT:140
+			TSTR:0 = 임월초
+			LOCAL += 1000
+		ELSE
+			TSTR:0 = 풍질록
+			LOCAL += 800
+		ENDIF
+		;조교 대상이 음호라면 추가 보너스
+		SIF TALENT:172
+			LOCAL += 800
+	ELSEIF LOCAL:1 == 2
+		TSTR:0 = 항마광
+		LOCAL += 700
+		;조교 대상이 애널광이라면 추가 보너스
+		SIF TALENT:173
+			LOCAL += 800
+	ELSEIF LOCAL:1 == 3
+		TSTR:0 = 유유몽
+		LOCAL += 800
+		;조교 대상이 음유라면 추가 보너스
+		SIF TALENT:174
+			LOCAL += 700
+	ELSEIF LOCAL:1 == 4
+		TSTR:0 = 우식사기
+		LOCAL += 800
+		;조교 대상이 헌신적이면 추가 보너스
+		SIF TALENT:63
+			LOCAL += 800
+	ELSEIF LOCAL:1 == 5
+		TSTR:0 = 성련천
+		LOCAL += 500
+		;조교 대상이 오줌싸개 버릇에다 유아 or 유치 or 유아퇴행이라면 추가 보너스
+		IF TALENT:45 && (TALENT:130 || TALENT:131 || TALENT:159)
+			LOCAL += 900
+		;조교 대상이 오줌싸개 버릇이라면 추가 보너스
+		ELSEIF TALENT:45
+			LOCAL += 500
+		ENDIF
+		;조교 대상이 요도광이라면 추가 보너스
+		SIF TALENT:175
+			LOCAL += 500
+	ELSEIF LOCAL:1 == 10
+		TSTR:0 = 치령전
+		LOCAL += 800
+		;조교 대상이 고무라면 추가 보너스
+		SIF TALENT:95
+			LOCAL += 1000
+	ELSEIF LOCAL:1 == 11
+		TSTR:0 = 순정천
+		LOCAL += 700
+		;조교 대상이 키스마라면 추가 보너스
+		SIF TALENT:176
+			LOCAL += 900
+	ELSEIF LOCAL:1 == 12
+		TSTR:0 = 촉수담
+		LOCAL += 600
+		;조교 대상이 기생이라면 추가 보너스
+		SIF TALENT:146
+			LOCAL += 600
+		;조교 대상이 회란이라면 추가 보너스
+		SIF TALENT:145
+			LOCAL += 600
+	ELSEIF LOCAL:1 == 13
+		TSTR:0 = 수륜당
+		LOCAL += 1000
+	ELSEIF LOCAL:1 == 14
+		TSTR:0 = 가영속
+		LOCAL += 750
+		;조교 대상이 초M이라면 추가 보너스
+		SIF TALENT:178
+			LOCAL += 750
+	ELSEIF LOCAL:1 == 15
+		TSTR:0 = 약이공
+		LOCAL += 1000
+		;조교 대상이 약물내성이라면 추가 보너스
+		SIF TALENT:44
+			LOCAL += 600
+		;조교 대상이 미약중독이라면 추가 보너스
+		SIF TALENT:46
+			LOCAL += 600
+	ELSE
+		TSTR:0 = 영야창
+	ENDIF
+	SIF ASSI >= 0 && (TALENT:ASSI:150 || TALENT:ASSI:160 || TALENT:ASSI:169 || TALENT:ASSI:170 || TALENT:ASSI:180) && (TALENT:150 || TALENT:160 || TALENT:169 || TALENT:170 || TALENT:180)
+		LOCAL += VIDEO_EXTRA_TITLE(ARG, ARG:1)
+	TFLAG:239 = 1
+ENDIF
+RETURNF LOCAL
+
+;--------------------------------------------------
+;타이틀 결정 판별용
+;--------------------------------------------------
+@JUDGE_VIDEOTITLE
+#FUNCTION
+LOCAL:1 = 99
+IF TFLAG:120
+	LOCAL:1 = 98
+ELSEIF GET_GENRE(1) >= 8 && GET_GENRE(2) >= 8
+	LOCAL:1 = 97
+ELSEIF GET_GENRE(14) >= 8 && GET_GENRE(15) >= 8
+	LOCAL:1 = 96
+ELSE
+	FOR LOCAL, 0, 16
+		LOCAL:2 = GET_GENRE(LOCAL)
+		SIF LOCAL:2 >= 8 && LOCAL:2 >= GET_GENRE(LOCAL:1)
+				LOCAL:1 = LOCAL
+	NEXT
+ENDIF
+RETURNF LOCAL:1
+
+;--------------------------------------------------
+;특정 캐릭터의 편성에 따른 타이틀 결정(우선도 높음)
+;--------------------------------------------------
+@VIDEO_EXTRA_TITLE(ARG, ARG:1)
+#FUNCTION
+;설(레티or치르노)＆월(레이센or에이린or카구야or루나 차일드or요리히메or토요히메or레이센2호or키쿠리)＆화(유유코or유카or메디슨)
+IF (NO:MASTER == 5 || NO:MASTER == 12) && (ARG == 28 || ARG == 29 || ARG == 30 || ARG == 46 || ARG == 53 || ARG == 54 || ARG == 55 || ARG == 124) && (ARG:1 == 20 || ARG:1 == 33 || ARG:1 == 34)
+	TSTR:0 = 흩날리는 설월화
+	RETURNF 5000
+ELSEIF (ARG == 5 || ARG == 12) && (ARG:1 == 28 || ARG:1 == 29 || ARG:1 == 30 || ARG:1 == 46 || ARG:1 == 53 || ARG:1 == 54 || ARG:1 == 55 || ARG:1 == 124) && (NO:MASTER == 20 || NO:MASTER == 33 || NO:MASTER == 34)
+	TSTR:0 = 음란한 설월화
+	RETURNF 5000
+ELSEIF (ARG:1 == 5 || ARG:1 == 12) && (NO:MASTER == 28 || NO:MASTER == 29 || NO:MASTER == 30 || NO:MASTER == 46 || NO:MASTER == 53 || NO:MASTER == 54 || NO:MASTER == 55 || NO:MASTER == 124) && (ARG == 20 || ARG == 33 || ARG == 34)
+	TSTR:0 = 함락된 설월화
+	RETURNF 5000
+;조건이 알기 쉬운 트리오 보너스
+;동방 주인공조
+ELSEIF (NO:MASTER == 1 || NO:MASTER == 2 || NO:MASTER == 9 || NO:MASTER == 42) && (ARG == 1 || ARG == 2 || ARG == 9 || ARG == 42) && (ARG:1 == 1 || ARG:1 == 2 || ARG:1 == 9 || ARG:1 == 42)
+	TSTR:0 = 낙원의 멋진 에라토호
+	RETURNF 3000
+;프리즘리버 트리오 보너스
+ELSEIF (NO:MASTER == 16 || NO:MASTER == 17 || NO:MASTER == 18) && (ARG == 16 || ARG == 17 || ARG == 18) && (ARG:1 == 16 || ARG:1 == 17 || ARG:1 == 18)
+	TSTR:0 = 자매덮밥 ~ 소령환락단
+	RETURNF 3000
+;야쿠모가 트리오 보너스
+ELSEIF (NO:MASTER == 13 || NO:MASTER == 22 || NO:MASTER == 23) && (ARG == 13 || ARG == 22 || ARG == 23) && (ARG:1 == 13 || ARG:1 == 22 || ARG:1 == 23)
+	TSTR:0 = 깊고♀어두운♀경계 저편의 환상
+	RETURNF 3000
+;모리야 트리오 보너스
+ELSEIF (NO:MASTER == 42 || NO:MASTER == 43 || NO:MASTER == 44) && (ARG == 42 || ARG == 43 || ARG == 44) && (ARG:1 == 42 || ARG:1 == 43 || ARG:1 == 44)
+	TSTR:0 = 진 여신전생 ~ 모리야 아르카나의 삼신합체
+	RETURNF 3000
+;삼월정 트리오 보너스
+ELSEIF (NO:MASTER == 45 || NO:MASTER == 46 || NO:MASTER == 47) && (ARG == 45 || ARG == 46 || ARG == 47) && (ARG:1 == 45 || ARG:1 == 46 || ARG:1 == 47)
+	TSTR:0 = 짜릿☆요정님투성이의 봉사 대회! 삼월정 스페셜
+	RETURNF 3000
+;주인이 치르노인 상태에서 삼월정 출현
+ELSEIF NO:MASTER == 5 && (ARG == 45 || ARG == 46 || ARG == 47) && (ARG:1 == 45 || ARG:1 == 46 || ARG:1 == 47)
+	TSTR:0 = 페도대전쟁 NEXT STAGE ~ 빛의 3원SEX
+	RETURNF 3000
+;호족난무 트리오 보너스
+ELSEIF (NO:MASTER == 84 || NO:MASTER == 85 || NO:MASTER == 86) && (ARG == 84 || ARG == 85 || ARG == 86) && (ARG:1 == 84 || ARG:1 == 85 || ARG:1 == 86)
+	TSTR:0 = 창관 「진 · 호족난무」
+	RETURNF 3000
+;태자님+토지코노이라츠메+카시와데노호키키미노이라츠메
+ELSEIF (NO:MASTER == 82 || NO:MASTER == 84 || NO:MASTER == 86) && (ARG == 82 || ARG == 84 || ARG == 86) && (ARG:1 == 82 || ARG:1 == 84 || ARG:1 == 86)
+	TSTR:0 = 소가노 토지코는 말하지 않는다
+	RETURNF 3000
+;츠쿠모가미 트리오 보너스
+ELSEIF (NO:MASTER == 223 || NO:MASTER == 224 || NO:MASTER == 227) && (ARG == 223 || ARG == 224 || ARG == 227) && (ARG:1 == 223 || ARG:1 == 224 || ARG:1 == 227)
+	TSTR:0 = 음구악단 삼중주
+	RETURNF 3000
+;린노 레이무 마리사
+ELSEIF (NO:MASTER == 1 || NO:MASTER == 2 || NO:MASTER == 69) && (ARG == 1 || ARG == 2 || ARG == 69) && (ARG:1 == 1 || ARG:1 == 2 || ARG:1 == 69)
+	TSTR:0 = 환상향의 왕
+	RETURNF 3000
+;환상향 종교대담의 장 - 구문구수 셋
+ELSEIF (NO:MASTER == 43 || NO:MASTER == 77 || NO:MASTER == 86) && (ARG == 43 || ARG == 77 || ARG == 86) && (ARG:1 == 43 || ARG:1 == 77 || ARG:1 == 86)
+	TSTR:0 = 환상향 종교전쟁 : 3자 육체대담의 장
+	RETURNF 3000
+;케이네 선생님과 모코우와 아큐와 코스즈 중 택3
+ELSEIF (NO:MASTER == 26 || NO:MASTER == 31 || NO:MASTER == 48 || NO:MASTER == 88) && (ARG == 26 || ARG == 31 || ARG == 48 || ARG == 88) && (ARG:1 == 26 || ARG:1 == 31 || ARG:1 == 48 || ARG:1 == 88)
+	TSTR:0 = 사랑과 욕망은 서당에서
+	RETURNF 3000
+;마리사 파츄리 앨리스
+ELSEIF (NO:MASTER == 2 || NO:MASTER == 8 || NO:MASTER == 14) && (ARG == 2 || ARG == 8 || ARG == 14) && (ARG:1 == 2 || ARG:1 == 8 || ARG:1 == 14)
+	TSTR:0 = 마법창녀 마리☆파체☆아리
+	RETURNF 3000
+;텐구 트리오
+ELSEIF (NO:MASTER == 32 || NO:MASTER == 41 || NO:MASTER == 79 ) && (ARG == 32 || ARG == 41 || ARG == 79 ) && (ARG:1 == 32 || ARG:1 == 41 || ARG:1 == 79 )
+	TSTR:0 = TENG○ EGG
+	RETURNF 3000
+;레이무, 사나에(무녀=미코)+미코+에링(너스)
+ELSEIF (NO:MASTER == 1 || NO:MASTER == 42 || NO:MASTER == 29 || NO:MASTER == 86 ) && (ARG == 1 || ARG == 42 || ARG == 29 || ARG == 86 ) && (ARG:1 == 1 || ARG:1 == 42 || ARG:1 == 29 || ARG:1 == 86 )
+	TSTR:0 = 미코미코너스
+	RETURNF 3000
+;토끼 트리오
+ELSEIF (NO:MASTER == 27 || NO:MASTER == 28 || NO:MASTER == 55 ) && (ARG == 27 || ARG == 28 || ARG == 55 ) && (ARG:1 == 27 || ARG:1 == 28 || ARG:1 == 55 )
+	TSTR:0 = 달의 이나바와 지상의 이나바
+	RETURNF 3000
+
+;트리오 비디오용 틀
+;ELSEIF (NO:MASTER ==  || NO:MASTER ==  || NO:MASTER == ) && (ARG ==  || ARG ==  || ARG == ) && (ARG:1 ==  || ARG:1 ==  || ARG:1 == )
+;	TSTR:0 = (제목)
+;	RETURNF 3000
+
+;데이터 기록용
+;레이무 마리사 사쿠야 사나에 중 택3 - 보통낙원의 에라토호 3P버전
+;스이카 유우기 카센 - 오니조합
+;요우무 요리히메 메이라 콘가라 중 택3 - 검사조합
+;메이링 엘리 사라 - 문지기조합
+;레이센 테위 레이센2호 - 토끼조합
+;미스치 아야 우츠호 - 조류조합?
+
+;레이무＆마리사
+ELSEIF (ARG == 1 && ARG:1 == 2) || (ARG == 2 && ARG:1 == 1)
+	TSTR:0 = 평범한 낙원의 에라토호
+	RETURNF 1000
+;레이무＆유카링
+ELSEIF (ARG == 1 && ARG:1 == 22) || (ARG == 22 && ARG:1 == 1)
+	TSTR:0 = 색마결계
+	RETURNF 1000
+;레이무＆스이카
+ELSEIF (ARG == 1 && ARG:1 == 23) || (ARG == 23 && ARG:1 == 1)
+	TSTR:0 = 진 · 두무쌍
+	RETURNF 1000
+;레이무＆사나에 
+ELSEIF (ARG == 1 && ARG:1 == 42) || (ARG == 42 && ARG:1 == 1)
+	TSTR:0 = 무녀 파라다이스
+	RETURNF 1000
+;레이무＆메이라
+ELSEIF (ARG == 1 && ARG:1 == 102) || (ARG == 102 && ARG:1 == 1)
+	TSTR:0 = 하쿠레이의 비밀을 찾아서
+	RETURNF 1000
+;레이무＆코토히메
+ELSEIF (ARG == 1 && ARG:1 == 104) || (ARG == 104 && ARG:1 == 1)
+	TSTR:0 = 공포경찰 · 겨드랑이 무녀 납치 감금편
+	RETURNF 1000
+;마리사＆파체
+ELSEIF (ARG == 2 && ARG:1 == 8) || (ARG == 8 && ARG:1 == 2)
+	TSTR:0 = 밀실창녀
+	RETURNF 1000
+;마리사＆앨리스
+ELSEIF (ARG == 2 && ARG:1 == 14) || (ARG == 14 && ARG:1 == 2)
+	TSTR:0 = TMA
+;파츄리＆앨리스
+ELSEIF (ARG == 8 && ARG:1 == 14) || (ARG == 14 && ARG:1 == 8)
+	TSTR:0 = M모양 피해자 모임
+	RETURNF 1000
+;마리사＆니토리
+ELSEIF (ARG == 2 && ARG:1 == 40) || (ARG == 40 && ARG:1 == 2)
+	TSTR:0 = 캇파를 기르는 방법  한정 특별판
+	RETURNF 1000
+;마리사＆미마
+ELSEIF (ARG == 2 && ARG:1 == 100) || (ARG == 100 && ARG:1 == 2)
+	TSTR:0 = 사연괴재담(邪恋怪綺談)
+	RETURNF 1000
+;다이쨩＆치르노
+ELSEIF (ARG == 4 && ARG:1 == 5) || (ARG == 5 && ARG:1 == 4)
+	TSTR:0 = 두근☆요정님투성이의 봉사 대회!
+	RETURNF 1000
+;치르노＆레티
+ELSEIF (ARG == 5 && ARG:1 == 12) || (ARG == 12 && ARG:1 == 5)
+	TSTR:0 = 오싹☆요정님투성이의 봉사 대회! 플러스 레티
+	RETURNF 1000
+;메이링＆사쿠야
+ELSEIF (ARG == 6 && ARG:1 == 9) || (ARG == 9 && ARG:1 == 6)
+	TSTR:0 = 성투사(性闘士)☆사쿠야 문지기 메이링 편
+	RETURNF 1000
+;코아＆파체
+ELSEIF (ARG == 7 && ARG:1 == 8) || (ARG == 8 && ARG:1 == 7)
+	TSTR:0 = 도서관성쟁
+	RETURNF 1000
+;파체＆레밀리아
+ELSEIF (ARG == 8 && ARG:1 == 10) || (ARG == 10 && ARG:1 == 8)
+	TSTR:0 = 불야성 바이올렛
+	RETURNF 1000
+;사쿠야＆레밀리아
+ELSEIF (ARG == 9 && ARG:1 == 10) || (ARG == 10 && ARG:1 == 9)
+	TSTR:0 = 성투사(性闘士)☆사쿠야 야왕 레밀리아 편
+	RETURNF 1000
+;레밀리아＆플랑
+ELSEIF (ARG == 10 && ARG:1 == 11) || (ARG == 11 && ARG:1 == 10)
+	TSTR:0 = 자매덮밥 ~ 홍(紅)
+	RETURNF 1000
+;첸＆란 님
+ELSEIF (ARG == 13 && ARG:1 == 21) || (ARG == 21 && ARG:1 == 13)
+	TSTR:0 = 란심
+	RETURNF 1000
+;첸＆유카링
+ELSEIF (ARG == 13 && ARG:1 == 22) || (ARG == 22 && ARG:1 == 13)
+	TSTR:0 = 금지된 놀이 ~ 유혹의 틈새
+	RETURNF 1000
+;앨리스＆신키 님
+ELSEIF (ARG == 14 && ARG:1 == 119) || (ARG == 119 && ARG:1 == 14)
+	TSTR:0 = 모자상간
+	RETURNF 1000
+;프리즘리버 3자매
+ELSEIF (ARG == 16 && ARG:1 == 17) || (ARG == 17 && ARG:1 == 16)
+	TSTR:0 = 자매덮밥 ~ 소(騷)
+	RETURNF 1000
+ELSEIF (ARG == 16 && ARG:1 == 18) || (ARG == 18 && ARG:1 == 16)
+	TSTR:0 = 자매덮밥 ~ 영(靈)
+	RETURNF 1000
+ELSEIF (ARG == 17 && ARG:1 == 18) || (ARG == 18 && ARG:1 == 17)
+	TSTR:0 = 자매덮밥 ~ 낙(樂)
+	RETURNF 1000
+;요우무＆유유 님
+ELSEIF (ARG == 19 && ARG:1 == 20) || (ARG == 20 && ARG:1 == 19)
+	TSTR:0 = 주종절정지옥 앵화산화
+	RETURNF 1000
+;유유 님＆유카링
+ELSEIF (ARG == 20 && ARG:1 == 22) || (ARG == 22 && ARG:1 == 20)
+	TSTR:0 = THE 요녀
+	RETURNF 1000
+;유유 님＆미스치
+ELSEIF (ARG == 20 && ARG:1 == 25) || (ARG == 25 && ARG:1 == 20)
+	TSTR:0 = 전자동 잔뼈 제거기
+	RETURNF 1000
+;란 님＆유카링
+ELSEIF (ARG == 21 && ARG:1 == 22) || (ARG == 22 && ARG:1 == 21)
+	TSTR:0 = 경성요녀
+	RETURNF 1000
+;유카링＆스이카
+ELSEIF (ARG == 22 && ARG:1 == 23) || (ARG == 23 && ARG:1 == 22)
+	TSTR:0 = 진 · 두무쌍 몽상 SUKIMA
+	RETURNF 1000
+;케이네＆모코땅
+ELSEIF (ARG == 26 && ARG:1 == 31) || (ARG == 31 && ARG:1 == 26)
+	TSTR:0 = 마잇칭구 케이네 선생님
+	RETURNF 1000
+;테위＆레이센
+ELSEIF (ARG == 27 && ARG:1 == 28) || (ARG == 28 && ARG:1 == 27)
+	TSTR:0 = 너는 펫
+	RETURNF 1000
+;테위＆에-링
+ELSEIF (ARG == 27 && ARG:1 == 29) || (ARG == 29 && ARG:1 == 27)
+	TSTR:0 = 아니될 비밀실험 ~ 영원정 위기일발
+	RETURNF 1000
+;테위＆카구야
+ELSEIF (ARG == 27 && ARG:1 == 30) || (ARG == 30 && ARG:1 == 27)
+	TSTR:0 = 영원절정소토(永遠絶頂素兎)
+	RETURNF 1000
+;레이센＆에-링
+ELSEIF (ARG == 28 && ARG:1 == 29) || (ARG == 29 && ARG:1 == 28)
+	TSTR:0 = 사부와 나  오모이카네
+	RETURNF 1000
+;레이센＆카구야
+ELSEIF (ARG == 28 && ARG:1 == 30) || (ARG == 30 && ARG:1 == 28)
+	TSTR:0 = 애완토끼의 우울
+	RETURNF 1000
+;레이센＆레이센2호
+ELSEIF (ARG == 28 && ARG:1 == 55) || (ARG == 55 && ARG:1 == 28)
+	TSTR:0 = 달토끼 원격최음술
+	RETURNF 1000
+;에-링＆카구야
+ELSEIF (ARG == 29 && ARG:1 == 30) || (ARG == 30 && ARG:1 == 29)
+	TSTR:0 = 호접몽환 나이트메어
+	RETURNF 1000
+;카구야＆모코땅
+ELSEIF (ARG == 30 && ARG:1 == 31) || (ARG == 31 && ARG:1 == 30)
+	TSTR:0 = 호라이 볼케이노
+	RETURNF 1000
+;카구야＆토요히메or요리히메
+ELSEIF (ARG == 30 && (ARG:1 == 53 || ARG:1 == 54)) || ((ARG == 54 || ARG == 53) && ARG:1 == 30)
+	TSTR:0 = Dual Moon Princess
+	RETURNF 1000
+;아야야＆모미지
+ELSEIF (ARG == 32 && ARG:1 == 41) || (ARG == 41 && ARG:1 == 32)
+	TSTR:0 = 아야야와 스캔들
+	RETURNF 1000
+;아야야＆하타테
+ELSEIF (ARG == 32 && ARG:1 == 79) || (ARG == 79 && ARG:1 == 32)
+	TSTR:0 = 더블 스포 음란
+	RETURNF 1000
+;코마치＆에이키
+ELSEIF (ARG == 35 && ARG:1 == 36) || (ARG == 36 && ARG:1 == 35)
+	TSTR:0 = 음업재판
+	RETURNF 1000
+;코마치＆카센
+ELSEIF (ARG == 35 && ARG:1 == 80) || (ARG == 80 && ARG:1 == 35)
+	TSTR:0 = 척락실로(拓落失路)의 두 사람
+	RETURNF 1000
+;아키 자매
+ELSEIF (ARG == 37 && ARG:1 == 38) || (ARG == 38 && ARG:1 == 37)
+	TSTR:0 = 자매덮밥 ~ 추(秋)
+	RETURNF 1000
+;모리야 신사
+ELSEIF (ARG == 42 && ARG:1 == 43) || (ARG == 43 && ARG:1 == 42)
+	TSTR:0 = 스와코 님이 보고 계셔
+	RETURNF 1000
+ELSEIF (ARG == 42 && ARG:1 == 44) || (ARG == 44 && ARG:1 == 42)
+	TSTR:0 = 카나코 님이 보고 계셔
+	RETURNF 1000
+ELSEIF (ARG == 43 && ARG:1 == 44) || (ARG == 44 && ARG:1 == 43)
+	TSTR:0 = 유부녀 능욕 조교 ~ 잃어버린 신앙심
+	RETURNF 1000
+;삼월정
+ELSEIF (ARG == 45 && ARG:1 == 46) || (ARG == 46 && ARG:1 == 45)
+	TSTR:0 = 삼혈정
+	RETURNF 1000
+ELSEIF (ARG == 45 && ARG:1 == 47) || (ARG == 47 && ARG:1 == 45)
+	TSTR:0 = 삼고정
+	RETURNF 1000
+ELSEIF (ARG == 46 && ARG:1 == 47) || (ARG == 47 && ARG:1 == 46)
+	TSTR:0 = 삼결정
+	RETURNF 1000
+;요정대전쟁
+ELSEIF (ARG == 5 && ARG:1 == 45) || (ARG == 45 && ARG:1 == 5)
+	TSTR:0 = 페도대전쟁 ~ 일
+	RETURNF 1000
+ELSEIF (ARG == 5 && ARG:1 == 46) || (ARG == 46 && ARG:1 == 5)
+	TSTR:0 = 페도대전쟁 ~ 월
+	RETURNF 1000
+ELSEIF (ARG == 5 && ARG:1 == 47) || (ARG == 47 && ARG:1 == 5)
+	TSTR:0 = 페도대전쟁 ~ 성
+	RETURNF 1000
+;마리치르
+ELSEIF (ARG == 2 && ARG:1 == 5) || (ARG == 5 && ARG:1 == 2)
+	TSTR:0 = 페도대전쟁 EXTRA ~ 전자발찌 나이트
+	RETURNF 1000
+;비봉
+ELSEIF (ARG == 49 && ARG:1 == 50) || (ARG == 50 && ARG:1 == 49)
+	TSTR:0 = 비봉클럽
+	RETURNF 1000
+;이쿠 씨＆텐시
+ELSEIF (ARG == 51 && ARG:1 == 52) || (ARG == 52 && ARG:1 == 51)
+	TSTR:0 = 요석 FEVERON
+	RETURNF 1000
+;토요히메＆요리히메
+ELSEIF (ARG == 53 && ARG:1 == 54) || (ARG == 54 && ARG:1 == 53)
+	TSTR:0 = 자매덮밥 ~ 월(月)
+	RETURNF 1000
+;사토리＆코이시
+ELSEIF (ARG == 61 && ARG:1 == 64) || (ARG == 64 && ARG:1 == 61)
+	TSTR:0 = 자매덮밥 ~ 각(覺)
+	RETURNF 1000
+;오린＆오쿠
+ELSEIF (ARG == 62 && ARG:1 == 63) || (ARG == 63 && ARG:1 == 62)
+	TSTR:0 = 언럭키 데이즈
+	RETURNF 1000
+;나즈린＆쇼우
+ELSEIF (ARG == 71 && ARG:1 == 76) || (ARG == 76 && ARG:1 == 71)
+	TSTR:0 = 주종의 보물 찾기 ~ 나체편
+	RETURNF 1000
+;이치린＆운잔
+ELSEIF (ARG == 73 && ARG:1 == 74) || (ARG == 74 && ARG:1 == 73)
+	TSTR:0 = 뒤처진 아저씨와 하이 칼라 창녀
+	RETURNF 1000
+;무라사＆뱌쿠렌
+ELSEIF (ARG == 75 && ARG:1 == 77) || (ARG == 77 && ARG:1 == 75)
+	TSTR:0 = 꿀마저 망울지는 히지리 아마기미
+	RETURNF 1000
+;쇼우＆뱌쿠렌
+ELSEIF (ARG == 76 && ARG:1 == 77) || (ARG == 77 && ARG:1 == 76)
+	TSTR:0 = 성(性) 아마기미의 에어 보탑
+	RETURNF 1000
+;뱌쿠렌＆누에
+ELSEIF (ARG == 77 && ARG:1 == 78) || (ARG == 78 && ARG:1 == 77)
+	TSTR:0 = UFO! 멋진 비구니…
+	RETURNF 1000
+;누에＆마미조
+ELSEIF (ARG == 78 && ARG:1 == 87) || (ARG == 87 && ARG:1 == 78)
+	TSTR:0 = 성교변화 열판승부
+	RETURNF 1000
+;요시카＆청아
+ELSEIF (ARG == 82 && ARG:1 == 83) || (ARG == 83 && ARG:1 == 82)
+	TSTR:0 = 통예방향(通隷芳香)
+	RETURNF 1000
+;청아＆미코
+ELSEIF (ARG == 83 && ARG:1 == 86) || (ARG == 86 && ARG:1 == 83)
+	TSTR:0 = 텐 디자이어즈
+	RETURNF 1000
+;토지코＆후토
+ELSEIF (ARG == 84 && ARG:1 == 85) || (ARG == 85 && ARG:1 == 84)
+	TSTR:0 = 창관 「업족난무(業族乱舞)」
+	RETURNF 1000
+;토지코＆미코
+ELSEIF (ARG == 84 && ARG:1 == 86) || (ARG == 86 && ARG:1 == 84)
+	TSTR:0 = 창관 「호속난무(豪俗乱舞)」
+	RETURNF 1000
+;후토＆미코
+ELSEIF (ARG == 85 && ARG:1 == 86) || (ARG == 86 && ARG:1 == 85)
+	TSTR:0 = 창관 「호족난무(豪族乱撫)」
+	RETURNF 1000
+;히지링＆미코
+ELSEIF (ARG == 77 && ARG:1 == 86) || (ARG == 86 && ARG:1 == 77)
+	TSTR:0 = 법의 세계 안에 욕망이 가득해
+	RETURNF 1000
+;아큐&코스즈
+ELSEIF (ARG == 48 && ARG:1 == 88) || (ARG == 88 && ARG:1 == 48)
+	TSTR:0 = 자위광 규중처녀와 관음서적광 책방처녀
+	RETURNF 1000
+;코스즈&마미조
+ELSEIF (ARG == 87 && ARG:1 == 88) || (ARG == 88 && ARG:1 == 87)
+	TSTR:0 = 어맛! 멋진 너구리!
+	RETURNF 1000
+;코코로&코이시
+ELSEIF (ARG == 64 && ARG:1 == 89) || (ARG == 89 && ARG:1 == 64)
+	TSTR:0 = 암흑 전통예능(성인판) ~ 연심
+	RETURNF 1000
+;코코로&미코
+;원네타는 이름을 말할 수 없는 그것
+ELSEIF (ARG == 86 && ARG:1 == 89) || (ARG == 89 && ARG:1 == 86)
+	TSTR:0 = 태자님께서 주신 희망의 가면 잊지 않겠습니다
+	RETURNF 1000
+;코코로&마미조
+ELSEIF (ARG == 87 && ARG:1 == 89) || (ARG == 89 && ARG:1 == 87)
+	TSTR:0 = 66체위 66감각의 변신가면무도회
+	RETURNF 1000
+;치유리＆유메미
+ELSEIF (ARG == 107 && ARG:1 == 108) || (ARG == 108 && ARG:1 == 107)
+	TSTR:0 = 실천 · 성의 비교물리학 강좌
+	RETURNF 1000
+;무게츠＆겐게츠
+ELSEIF (ARG == 112 && ARG:1 == 113) || (ARG == 113 && ARG:1 == 112)
+	TSTR:0 = 자매덮밥 ~ 악(惡)
+	RETURNF 1000
+;VIVIT＆비빗트
+ELSEIF (ARG == 128 && ARG:1 == 136 ) || (ARG == 136 && ARG:1 == 128 )
+	TSTR:0 = Herselves
+	RETURNF 1000
+;츠쿠모 자매
+ELSEIF (ARG == 223 && ARG:1 == 224 ) || (ARG == 224 && ARG:1 == 223 )
+	TSTR:0 = 자매덮밥 ~ 부(付)
+	RETURNF 1000
+;와카사기히메&카게로
+;이렇게만 늘어놓아도 뭔가 메르헨틱
+ELSEIF (ARG == 220 && ARG:1 == 222 ) || (ARG == 222 && ARG:1 == 220 )
+	TSTR:0 = 인어공주와 늑대인간
+	RETURNF 1000
+;세이자&신묘마루
+;평범한 낙원의 에라토호의 반대버전
+ELSEIF (ARG == 225 && ARG:1 == 226 ) || (ARG == 226 && ARG:1 == 225 )
+	TSTR:0 = 뒤집힌 낙원의 eratohoReverse
+	RETURNF 1000
+;츠쿠모 자매+라이코
+;시리즈 단종되고 환상들이(ry
+ELSEIF (ARG == 223 && ARG:1 == 227 ) || (ARG == 227 && ARG:1 == 223 )
+	TSTR:0 = 비파프릭스&엉덩이드럼매니아
+	RETURNF 1000
+ELSEIF (ARG == 224 && ARG:1 == 227 ) || (ARG == 227 && ARG:1 == 224 )
+	TSTR:0 = 음고의 달인
+	RETURNF 1000
+	
+;………………………………………………
+;2차계 페어
+;………………………………………………
+;코코아＆코아
+ELSEIF (ARG == 7 && ARG:1 == 176) || (ARG == 176 && ARG:1 == 7)
+	TSTR:0 = KOADIUS
+	RETURNF 1000
+;코코아＆코코아
+ELSEIF (ARG == 7 && ARG:1 == 176) || (ARG == 176 && ARG:1 == 7)
+	TSTR:0 = KOADIUS Ⅱ　~코코아의 야망~
+	RETURNF 1000
+;코마치＆메이링
+ELSEIF (ARG == 35 && ARG:1 == 6) || (ARG == 6 && ARG:1 == 35)
+	TSTR:0 = 땡땡이 마이스터와 시에스타 · 꿈의 경염(競艶)
+	RETURNF 1000
+;메이링＆사라
+ELSEIF (ARG == 6 && ARG:1 == 114) || (ARG == 114 && ARG:1 == 6)
+	TSTR:0 = 문지기 대결 · 사투편
+	RETURNF 1000
+;사쿠야＆유메코
+ELSEIF (ARG == 9 && ARG:1 == 118) || (ARG == 118 && ARG:1 == 9)
+	TSTR:0 = 메이드 대결 · 밤의 봉사편
+	RETURNF 1000
+;레티＆오쿠
+ELSEIF (ARG == 12 && ARG:1 == 63) || (ARG == 63 && ARG:1 == 12)
+	TSTR:0 = 북풍과 태양
+	RETURNF 1000
+;첸＆린
+ELSEIF (ARG == 13 && ARG:1 == 62) || (ARG == 62 && ARG:1 == 13)
+	TSTR:0 = 상자 속의 고양이
+	RETURNF 1000
+;릴리 화이트＆릴리 블랙
+ELSEIF (ARG == 15 && ARG:1 == 56) || (ARG == 56 && ARG:1 == 15)
+	TSTR:0 = 하루이치방
+	RETURNF 1000
+;요우무＆요리히메
+ELSEIF (ARG == 19 && ARG:1 == 54) || (ARG == 54 && ARG:1 == 19)
+	TSTR:0 = 월하미인(月下美刃)
+	RETURNF 1000
+;사나에＆코가사
+ELSEIF (ARG == 42 && ARG:1 == 72) || (ARG == 72 && ARG:1 == 42)
+	TSTR:0 = 현인신님, 우산을 줍다 (능욕편)
+	RETURNF 1000
+;모머리 모양 재료 모티프로 해 보았다. 반성은(ry
+;히나＆카나코 님
+ELSEIF (ARG == 39 && ARG:1 == 43) || (ARG == 43 && ARG:1 == 39)
+	TSTR:0 = 승천 온바시라 MIX 만발
+	RETURNF 1500
+;히나＆이쿠 씨
+ELSEIF (ARG == 39 && ARG:1 == 51) || (ARG == 51 && ARG:1 == 39)
+	TSTR:0 = 후광 이중 주련승
+	RETURNF 1500
+;카나코 님＆이쿠 씨
+ELSEIF (ARG == 43 && ARG:1 == 51) || (ARG == 51 && ARG:1 == 43)
+	TSTR:0 = 새러데이 나이트 기녀UP
+	RETURNF 1500
+;텐시&토요히메
+ELSEIF (ARG == 52 && ARG:1 == 53) || (ARG == 53 && ARG:1 == 52)
+	TSTR:0 = 탐스러운 복숭아 ~ 엉덩이 노예
+	RETURNF 1000
+;모미지or카게로＆쇼우
+ELSEIF (ARG == 76 && (ARG:1 == 41 || ARG:1 == 222)) || ((ARG == 41 || ARG == 222) && ARG:1 == 76)
+	TSTR:0 = 앞문의 호랑이 · 항문의 늑대
+	RETURNF 1000
+;케이네 선생님과 치르노
+ELSEIF (ARG == 5 && ARG:1 == 26) || (ARG == 26 && ARG:1 == 5)
+	TSTR:0 = 치르노의 퍼펙트 보건체육
+	RETURNF 1000
+;케로치르
+ELSEIF (ARG == 5 && ARG:1 == 44) || (ARG == 44 && ARG:1 == 5)
+	TSTR:0 = 케로⑨데스티니 ~ 먹이사슬의 정점을 노려라!
+	RETURNF 1000
+;우뉴치르
+ELSEIF (ARG == 5 && ARG:1 == 63) || (ARG == 63 && ARG:1 == 5)
+	TSTR:0 = 노심융해
+	RETURNF 1000
+;사나에＆코이시
+ELSEIF (ARG == 42 && ARG:1 == 64) || (ARG == 64 && ARG:1 == 42)
+	TSTR:0 = 코메이지 코이시의 두근두근 대모험 7편 애프터 (R-18)
+	RETURNF 1000
+;유카리＆코이시
+ELSEIF (ARG == 22 && ARG:1 == 64) || (ARG == 64 && ARG:1 == 22)
+	TSTR:0 = 코메이지 코이시의 두근두근 대모험 미공개영상 (R-18G)
+	RETURNF 1000
+;야마메＆코이시
+ELSEIF (ARG == 58 && ARG:1 == 64) || (ARG == 64 && ARG:1 == 58)
+	TSTR:0 = 거미야 미안해
+	RETURNF 1000
+;플랑＆코이시
+ELSEIF (ARG == 11 && ARG:1 == 64) || (ARG == 64 && ARG:1 == 11)
+	TSTR:0 = 이드 브레이커
+	RETURNF 1000
+;미스치＆쿄코
+ELSEIF (ARG == 25 && ARG:1 == 81) || (ARG == 81 && ARG:1 == 25)
+	TSTR:0 = 환상메탈향 ~ 1초에 10번 레○프!
+	RETURNF 1000
+;청아＆음란핑크
+ELSEIF (ARG == 80 && ARG:1 == 83) || (ARG == 83 && ARG:1 == 80)
+	TSTR:0 = 복숭아빛 사선의 길 ~ Forbidden Fruit
+	RETURNF 1000
+;토지코&미마
+ELSEIF (ARG == 84 && ARG:1 == 100) || (ARG == 100 && ARG:1 == 84)
+	TSTR:0 = 내 다리 내놔! ~다리잃은 귀신들이 가운뎃다리에 붙어버렸다?!~
+	RETURNF 1000
+;모코우&후토
+ELSEIF (ARG == 31 && ARG:1 == 85) || (ARG == 85 && ARG:1 == 31)
+	TSTR:0 = Playing With Fire
+	RETURNF 1000
+;모코우&미스치
+ELSEIF (ARG == 31 && ARG:1 == 25) || (ARG == 25 && ARG:1 == 31)
+	TSTR:0 = 고기굽는 아씨들
+	RETURNF 1000
+;레이무나 사나에＆미코 
+ELSEIF ((ARG == 1 || ARG == 42) && ARG:1 == 86) || (ARG == 86 && (ARG:1 == 1 || ARG:1 == 42))
+	TSTR:0 = 미코미코 파라다이스
+	RETURNF 1000
+;모미지&카게로
+ELSEIF (ARG == 41 && ARG:1 == 222) || (ARG == 222 && ARG:1 == 41)
+	TSTR:0 = DOGGY STYLE
+	RETURNF 1000
+;루나사&츠쿠모 자매
+ELSEIF (ARG == 18 && (ARG:1 == 223 || ARG:1 == 224)) || ((ARG:1 == 223 || ARG:1 == 224) && ARG:1 == 18)
+	TSTR:0 = 그녀를 연주하는 밤이면
+	RETURNF 1000
+;소령 퍼커셔니스트&몽환의 퍼커셔니스트
+ELSEIF (ARG == 16 && ARG:1 == 227) || (ARG == 227 && ARG:1 == 16)
+	TSTR:0 = 미래 타악기
+	RETURNF 1000
+
+;A&B 듀오 템플릿
+;ELSEIF (ARG ==  && ARG:1 == ) || (ARG ==  && ARG:1 == )
+;	TSTR:0 = (제목)
+;	RETURNF 1000
+
+;………………………………………………
+;특정의 부모와 자식 스페셜
+;………………………………………………
+;케이네＆누군가의 딸(＆주인이 부친)
+ELSEIF (ARG == 26 && ARG:1 == 149 && CFLAG:ASSI:3100 != 26 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 26 && CFLAG:3100 != 26 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 아니될 삼자면담
+	RETURNF 1000
+;레이무
+ELSEIF (ARG == 1 && ARG:1 == 149 && CFLAG:ASSI:3100 == 1 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 1 && CFLAG:3100 == 1 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 모녀 이중비사 대결계
+	RETURNF 1600
+;마리사(군요-)
+ELSEIF (ARG == 2 && ARG:1 == 149 && CFLAG:ASSI:3100 == 2 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 2 && CFLAG:3100 == 2 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 아이만들기는 파워라구!
+	RETURNF 1600
+;코아―！
+ELSEIF (ARG == 7 && ARG:1 == 149 && CFLAG:ASSI:3100 == 7 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 7 && CFLAG:3100 == 7 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 보스 러쉬
+	RETURNF 1600
+;사쿠포
+ELSEIF (ARG == 9 && ARG:1 == 149 && CFLAG:ASSI:3100 == 9 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 9 && CFLAG:3100 == 9 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 매지컬 사쿠야쨩☆DAUGHTER
+	RETURNF 1600
+;플 랑 쨩
+ELSEIF (ARG == 11 && ARG:1 == 149 && CFLAG:ASSI:3100 == 11 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 11 && CFLAG:3100 == 11 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 모녀덮밥 ~ 금(禁)
+	RETURNF 1600
+;앨리스×앨리스의 딸
+ELSEIF (ARG == 14 && ARG:1 == 149 && CFLAG:ASSI:3100 == 14 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 14 && CFLAG:3100 == 14 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 음탕한 나라의 앨리스
+	RETURNF 1600
+;유유코
+ELSEIF (ARG == 20 && ARG:1 == 149 && CFLAG:ASSI:3100 == 20 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 20 && CFLAG:3100 == 20 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 모녀의 독실한 법요
+	RETURNF 1600
+;모코땅
+ELSEIF (ARG == 31 && ARG:1 == 149 && CFLAG:ASSI:3100 == 31 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 31 && CFLAG:3100 == 31 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 봉래인형 ~ 부정한 아이의 음란한 속죄
+	RETURNF 1600
+;아야야
+ELSEIF (ARG == 32 && ARG:1 == 149 && CFLAG:ASSI:3100 == 32 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 32 && CFLAG:3100 == 32 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 환상향 최속의 애 만들기
+	RETURNF 1600
+;에이키 님
+ELSEIF (ARG == 36 && ARG:1 == 149 && CFLAG:ASSI:3100 == 36 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 36 && CFLAG:3100 == 36 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 두근두근 친딸재판
+	RETURNF 1600
+;사나에
+ELSEIF (ARG == 42 && ARG:1 == 149 && CFLAG:ASSI:3100 == 42 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 42 && CFLAG:3100 == 42 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 미라클 후르츠☆기적의 결실
+	RETURNF 1600
+;스와코님
+ELSEIF (ARG == 44 && ARG:1 == 149 && CFLAG:ASSI:3100 == 44 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 44 && CFLAG:3100 == 44 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 미샤구지님 직계 탄생의 순간
+	RETURNF 1600
+;냥
+ELSEIF (ARG == 62 && ARG:1 == 149 && CFLAG:ASSI:3100 == 62 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 62 && CFLAG:3100 == 62 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 오린린 랜드 · 진(眞)
+	RETURNF 1600
+;미마 님
+ELSEIF (ARG == 100 && ARG:1 == 149 && CFLAG:ASSI:3100 == 100 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 100 && CFLAG:3100 == 100 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 하지만 미마 님의 모유수유라면 보고 싶을지도?
+	RETURNF 1600
+;신키 님
+ELSEIF (ARG == 119 && ARG:1 == 149 && CFLAG:ASSI:3100 == 119 && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 == 119 && CFLAG:3100 == 119 && CFLAG:MASTER:3109 == CFLAG:3107)
+	TSTR:0 = 돌아온 마계창세 · 생명탄생의 장
+	RETURNF 1600
+;특정의 부모와 자식 전용 텐프레(전 4개소에 같은 캐릭터 번호를 입력)
+;ELSEIF (ARG ==  && ARG:1 == 149 && CFLAG:ASSI:3100 ==  && CFLAG:MASTER:3109 == CFLAG:ASSI:3107) || (ARG == 149 && ARG:1 ==  && CFLAG:3100 ==  && CFLAG:MASTER:3109 == CFLAG:3107)
+;	TSTR:0 = 
+;	RETURNF 1600
+;부모와 자식(모친→딸(아가씨))
+ELSEIF ARG == 149 && CFLAG:ASSI:3109 == CFLAG:3105
+	IF CFLAG:MASTER:3109 == CFLAG:3107
+		TSTR:0 = 밤의 육아일기
+		RETURNF 1200
+	ELSE
+		TSTR:0 = 모녀의 교간일기
+		RETURNF 1000
+	ENDIF
+;부모와 자식(딸(아가씨)→모친)
+ELSEIF ARG:1 == 149 && CFLAG:TARGET:3109 == CFLAG:ASSI:3105
+	IF CFLAG:MASTER:3109 == CFLAG:ASSI:3107
+		TSTR:0 = 모녀전쟁 ~ 신부가 될 거야
+		RETURNF 1200
+	ELSE
+		TSTR:0 = 모녀의 교간일기
+		RETURNF 1000
+	ENDIF
+
+;………………………………………………
+;동종족끼리(처리상 소질로 붙은 거로만 한정)의 보너스(다른 것보다 낮음)
+;………………………………………………
+;조교 대상과 조수가 [요정]
+ELSEIF TALENT:ASSI:200 && TALENT:200
+	TSTR:0 = 요정난무
+	RETURNF 500
+;조교 대상과 조수가 [흡혈귀]
+ELSEIF TALENT:ASSI:205 && TALENT:205
+	TSTR:0 = 더블 흡정귀 · 타락의식
+	RETURNF 500
+;조교 대상과 조수가 [기계]
+ELSEIF TALENT:ASSI:206 && TALENT:206
+	TSTR:0 = 안드로이드는 전기안마기의 음몽을 꾸는가
+	RETURNF 500
+;조교 대상과 조수가 [영체]
+ELSEIF TALENT:ASSI:207 && TALENT:207
+	TSTR:0 = 조교신화 ~ 귀접(鬼接)의 의식
+	RETURNF 500
+;조교 대상과 조수가 [인형]
+ELSEIF TALENT:ASSI:208 && TALENT:208
+	TSTR:0 = 에로먼트 돌즈 워
+	RETURNF 500
+;조교 대상과 조수가 [악마]
+ELSEIF TALENT:ASSI:209 && TALENT:209
+	TSTR:0 = 악마의 성연 ~에로 사바트♪~
+	RETURNF 500
+;조교 대상과 조수가 [갓빠]
+ELSEIF TALENT:ASSI:210 && TALENT:210
+	TSTR:0 = 가격이상의 캇파말이
+	RETURNF 500
+;조교 대상과 조수가 [요호]
+ELSEIF TALENT:ASSI:211 && TALENT:211
+	TSTR:0 = 요호발호
+	RETURNF 500
+;조교 대상과 조수가 [반백택]
+ELSEIF TALENT:ASSI:212 && TALENT:212
+	TSTR:0 = 츠게노야의 백택 덮밥
+	RETURNF 500
+;조교 대상과 조수가 [사토리]
+ELSEIF TALENT:ASSI:213 && TALENT:213
+	TSTR:0 = 마음노(魔淫奴) · 스캔
+	RETURNF 500
+;조교 대상과 조수가 [귀신]
+ELSEIF TALENT:ASSI:214 && TALENT:214
+	TSTR:0 = 넘어가는 침상마다 순 오니뿐
+	RETURNF 500
+;조교 대상과 조수가 [텐구]
+ELSEIF TALENT:ASSI:215 && TALENT:215
+	TSTR:0 = 텐구의 못된 장난
+	RETURNF 500
+;조교 대상과 조수가 [누에]
+ELSEIF TALENT:ASSI:217 && TALENT:217
+	TSTR:0 = 창퇴부명(娼退婦鳴)
+	RETURNF 500
+;조교 대상과 조수가 [신령]
+ELSEIF TALENT:ASSI:222 && TALENT:222
+	TSTR:0 = 조교신화 ~ 창성기(創性記)
+	RETURNF 500
+;조교 대상과 조수가 [반신]
+ELSEIF TALENT:ASSI:223 && TALENT:223
+	TSTR:0 = 조교신화 ~ 신과 사람의 교접
+	RETURNF 500
+;조교 대상과 조수가 [선인]
+ELSEIF TALENT:ASSI:225 && TALENT:225
+	TSTR:0 = 도를 아십니까
+	RETURNF 500
+;조교 대상과 조수가 [강시]
+ELSEIF TALENT:ASSI:226 && TALENT:226
+	TSTR:0 = 네크로필릭♥러버즈
+	RETURNF 500
+;조교 대상과 조수가 [둔갑너구리]
+ELSEIF TALENT:ASSI:227 && TALENT:227
+	TSTR:0 = 너구리 한마리 몰고 가세요
+	RETURNF 500
+;조교 대상과 조수가 [츠쿠모가미]
+ELSEIF TALENT:ASSI:228 && TALENT:228
+	TSTR:0 = 어른들의 장난감
+	RETURNF 500
+
+;조교 대상과 조수가 [동물귀]
+ELSEIF TALENT:ASSI:116 && TALENT:116
+	TSTR:0 = 동물농장
+	RETURNF 500
+;조교 대상과 조수가 [남자]
+ELSEIF TALENT:ASSI:120 && TALENT:120
+	TSTR:0 = 육류회전
+	RETURNF 500
+;조교 대상과 조수가 [소인체형]
+ELSEIF TALENT:ASSI:127 && TALENT:127
+	TSTR:0 = 오나홀 요정
+	RETURNF 500
+
+;………………………………………………
+;조금 특수한 보너스
+;………………………………………………
+;조교 대상과 조수가 [소악마]
+ELSEIF TALENT:ASSI:93 && TALENT:93
+	TSTR:0 = KOADIUS 외전
+	RETURNF 300
+;조교 조수가 [빈유]고 조수가 [큰 가슴]
+ELSEIF TALENT:ASSI:111 && TALENT:112
+	TSTR:0 = 발발! 가슴 전기 Ⅰ
+	RETURNF 200
+;조교 조수가 [절벽]이고 조수가 [폭유]
+ELSEIF TALENT:ASSI:110 && TALENT:113
+	TSTR:0 = 발발! 가슴 전기 Ⅱ
+	RETURNF 200
+;조교 조수가 [거유]고 조수가 [빈유]
+ELSEIF TALENT:ASSI:112 && TALENT:111
+	TSTR:0 = 발발! 가슴 전기 Ⅲ
+	RETURNF 200
+;조교 조수가 [폭유]고 조수가 [절벽]
+ELSEIF TALENT:ASSI:113 && TALENT:110
+	TSTR:0 = 발발! 가슴 전기 Ⅳ
+	RETURNF 200
+ELSE
+	RETURNF 0
+ENDIF

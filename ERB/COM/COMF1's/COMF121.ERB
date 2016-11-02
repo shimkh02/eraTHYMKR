@@ -1,0 +1,174 @@
+﻿;=============================================================================
+;사정 막기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE121
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:121 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:19 == 0 && NOITEM == 0
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_PENIS(TARGET) == 0
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM121
+PRINTL 사정 막기
+TSTR:7 = 리본
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 19
+	CALL NAMECHECK_CUSTOMTOOL
+	SIF TSTR:9 == "리본"
+		TSTR:9 = 프릴이 붙은 사랑스러운 %TSTR:7%
+ELSE
+	TSTR:9 = 프릴이 붙은 사랑스러운 %TSTR:7%
+ENDIF
+TSTR:0 = 사정막기
+CALL TRAIN_MESSAGE_COM121
+
+;리본의 착탈
+IF TEQUIP:69
+	;막은 정액이 사정 게이지에 가산된다
+	BASE:2 += EX:40 * MAXBASE:2
+	;남자의 경우 막은 뇨도 방뇨 게이지에 가산된다(후타나리는 여자로부터 방뇨할 수 있다)
+	SIF TALENT:120
+		BASE:4 += EX:43 * MAXBASE:4
+	TEQUIP:69 = 0
+ELSE
+	TCVAR:31 += 1
+	TEQUIP:69 = 1
+ENDIF
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 100
+
+SOURCE:0 = 50
+SOURCE:12 = 100
+SOURCE:20 = 100
+SOURCE:22 = 250
+SOURCE:31 = 500
+
+;PALAM:C감각을 본다
+IF PALAM:0 < PALAMLV:1
+	SOURCE:20 += 100
+ELSEIF PALAM:0 < PALAMLV:2
+	SOURCE:20 += 110
+ELSEIF PALAM:0 < PALAMLV:3
+	SOURCE:20 += 120
+ELSEIF PALAM:0 < PALAMLV:4
+	SOURCE:20 += 130
+ELSE
+	SOURCE:20 += 140
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:18 = 100
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:18 = 110
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:18 = 120
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:18 = 130
+ELSE
+	SOURCE:18 = 140
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:18 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:18 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:18 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:18 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:18 , 2.00
+ELSE
+	TIMES SOURCE:18 , 3.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES SOURCE:18 , 2.00
+;조교자가 사드, 초S, 사드끼 3이상
+SIF TALENT:PLAYER:81 || TALENT:PLAYER:177 || ABL:PLAYER:20 > 2
+	TIMES SOURCE:18 , 1.20
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 19
+	FLAG:1111 = 1
+	FLAG:1112 = SOURCE:0
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:0 = FLAG:1120
+	FLAG:1112 = SOURCE:18
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:18 = FLAG:1120
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;사정막기
+;--------------------------------------------------
+@EQUIP_COM121
+PRINTL <사정 억제 중>
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 15
+
+SOURCE:20 += 20
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM121
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:69
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 괴롭히던 %조사선택(TSTR:7, "를")% 스륵 풀어주었다….
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 페니스의 뿌리에, %조사선택(TSTR:9, "를")% 단단히 묶었다.
+	PRINTFORMW 갈 곳 없이 모여든 피 덕분에 %CALLNAME:TARGET%의 귀두는 검붉게 팽창하고 있다….
+ENDIF

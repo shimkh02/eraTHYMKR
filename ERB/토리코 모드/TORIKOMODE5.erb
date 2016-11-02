@@ -1,0 +1,2134 @@
+﻿;=============================================================================
+;인터럽트 트레이닝 관련 함수들.
+;토리코모드 사양. 
+;간단설명 : 조교중에 노예나 조수가 스스로 무엇인가를 하는 시스템. 캐릭터들을 좀 더 살아있게 만든다.
+;130911~  BY VANDIT KING
+;=============================================================================
+
+;--------------------------------------------------
+; 인터럽트 회수와 타입을 세팅해둔다. (어떤 커맨드를 선택할지는 아직 모른다)
+; 턴 마다 세팅한다. SHOW_STATUS에서 불러진다
+;--------------------------------------------------
+@SET_INTERRUPT_COUNT
+
+;인터럽트 턴 초기화
+CFLAG:TARGET:4007 = 0
+;인터럽트 발동계 초기화
+CFLAG:TARGET:4008 = 0
+;인터럽트 승인 초기화
+CFLAG:TARGET:4009 = 0
+
+;조수가 있다면. 조수의 인터럽트도 초기화 한다.
+IF ASSI > 0
+	;인터럽트 턴 초기화
+	CFLAG:ASSI:4007 = 0
+	;인터럽트 발동계 초기화
+	CFLAG:ASSI:4008 = 0
+	;인터럽트 승인 초기화
+	CFLAG:ASSI:4009 = 0
+ENDIF
+
+;상성 캐스팅. 조수가 있다면, 상성의 기본값이 0일때, 100으로 캐스팅 한다. 뭐, 알게 되었으니 상성이 생겼다... 라고 하면 되겠지?
+IF ASSI > 0
+	IF RELATION:ASSI:(NO:TARGET) == 0
+		RELATION:ASSI:(NO:TARGET) == 100
+		;디버그
+		;PRINTFORML RELATION:ASSI:(NO:TARGET) = {RELATION:ASSI:(NO:TARGET)}
+	ENDIF
+	IF RELATION:TARGET:(NO:ASSI) == 0
+		RELATION:TARGET:(NO:ASSI) == 100
+		;디버그
+		;PRINTFORML RELATION:TARGET:(NO:ASSI) = {RELATION:TARGET:(NO:ASSI)}
+	ENDIF
+ENDIF
+
+;디버그
+;PRINTFORMW 초기화된 CFLAG:TARGET:4007 ={CFLAG:TARGET:4007}  / 발동계 CFLAG:TARGET:4008 ={CFLAG:TARGET:4008}  / 발동승인 CFLAG:TARGET:4009 ={CFLAG:TARGET:4009}
+;PRINTFORMW 초기화된 CFLAG:ASSI:4007 ={CFLAG:ASSI:4007}  / 발동계 CFLAG:ASSI:4008 ={CFLAG:ASSI:4008}  / 발동승인 CFLAG:ASSI:4009 ={CFLAG:ASSI:4009}
+;WAIT
+
+;타겟의 인터럽트 발동여부 체크. 결과값은 사용할 커맨드의 '타입' 이다.
+;PRINTFORML PALAM:TARGET:13 타겟의 욕정은 {PALAM:TARGET:13} 이다.
+;욕정이 5만 이상이고, 기절중이 아니며, 묶여있지 않으면 발동가능. 그리고 체력이 800이상 있어야 한다. 또한 쾌락각인3이 필요하며, 반발각인은 2이상 있으면 안된다.
+IF PALAM:TARGET:13 >= 50000 && TFLAG:899 == 0 && TEQUIP:40 == 0 && BASE:TARGET:0 >=800 && MARK:TARGET:1 == 3 && MARK:TARGET:9 <= 1
+	;발동체크
+	CALL CHECK_INTERRUPT, TARGET
+	;발동할 게 있을 때만 실행.
+	IF RESULT != 99
+		;발동계 설정
+		CFLAG:TARGET:4008 = RESULT
+		;발동할 턴 회수 체크. 2~4회 (단, 마지막 1회는 뺀다. NEXTCOM -1 때문에
+		CFLAG:TARGET:4007 = RAND:4 +3
+		;디버그
+		;PRINTFORML CFLAG:TARGET:4007 ={CFLAG:TARGET:4007}
+		;PRINTFORMW 발동턴 CFLAG:TARGET:4007 ={CFLAG:TARGET:4007}  / 발동계 CFLAG:TARGET:4008 ={CFLAG:TARGET:4008}  / 발동승인 CFLAG:TARGET:4009 ={CFLAG:TARGET:4009}
+		WAIT
+	ENDIF
+ENDIF
+;조수의 인터럽트 발동여부를 체크. 결과값은 사용할 커맨드의 '타입' 이다.
+;조수가 있어야 한다. 타겟이 인터럽트가 발생하지 않았다면 발동가능.
+;연모/음란/복종 중 하나를 가져야 하며, 조수체력이 800 이상, 노예체력이 800이상  있어야 한다. 
+;노예의 윤활이 5000 이상이어야 한다. (안 그러면 험한 꼴이 나니까...) 노예의 욕정이 5000 이상이어야 한다. (노예가 욕정하는 걸 보고 조수가 욕정하는 거니까)
+IF ASSI > 0 && CFLAG:TARGET:4007 ==0 && BASE:ASSI:0 >=800 && BASE:TARGET:0 >=800 && PALAM:TARGET:10 >= 3000 && PALAM:TARGET:13 >= 5000 && (TALENT:ASSI:150 == 1 || TALENT:ASSI:160 == 1|| TALENT:ASSI:170 == 1) 
+	;발동체크
+	CALL CHECK_INTERRUPT, ASSI
+	;발동할 게 있을 때만 실행.
+	IF RESULT != 99
+		;발동계 설정
+		CFLAG:ASSI:4008 = RESULT
+		;발동할 턴 회수 체크. 2~4회 (단, 마지막 1회는 뺀다. NEXTCOM -1 때문에
+		CFLAG:ASSI:4007 = RAND:4 +3
+		;디버그
+		;PRINTFORML CFLAG:ASSI:4007 ={CFLAG:ASSI:4007}
+		;PRINTFORMW 발동턴 CFLAG:ASSI:4007 ={CFLAG:ASSI:4007}  / 발동계 CFLAG:ASSI:4008 ={CFLAG:ASSI:4008}  / 발동승인 CFLAG:ASSI:4009 ={CFLAG:ASSI:4009}
+		;WAIT
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;이벤트컴앤드에서 인터럽트 발동 체크.
+;--------------------------------------------------
+@EVENTCOMEND
+#LATER
+
+;인터럽트 시스템이 켜져있어야만 실행
+IF FLAG:5000 & 512
+	;타겟 인터럽트와 조수 인터럽트가 동시에 발생하면, 타겟만 실행한다.
+	;타겟 인터럽트
+	IF CFLAG:TARGET:4007 > 0
+		;타겟 인터럽트 발생시, 승인해 줄 것인지를 물어본다. 조수일때는 상성에 따라 판정함.
+		IF CFLAG:TARGET:4009 == 0
+			;봉사, 펠라계
+			IF CFLAG:TARGET:4008 == 7 ||  CFLAG:TARGET:4008 == 15
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「후훗. 이번엔 내가 기분 좋게 해 줄까?」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 웃음을 띈 표정으로 %조사처리(CALLNAME:PLAYER,"를")% 덮쳐왔다
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 가끔은 이런 것도 좋겠지
+					PRINTFORML [1] 말린다.
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 손에 몸을 맏겼다.
+						RESULT = 0
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 손을 뿌리쳤다.
+						RESULT = 1
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「좋아. 그럼 맏겨줘%UNICODE(0x2665)%」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"가")% 적극적으로 봉사를 시작했다...
+					CFLAG:TARGET:4009 == 1
+				ELSEIF RESULT == 1
+					PRINTFORMW 「그래...? 기껏 해 줄 마음이 들었는데...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 조금 실망한 것 같다.
+					CFLAG:TARGET:4007 = 0
+				ELSE
+					PRINTFORMW 「에잇%UNICODE(0x2665)%」
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"가")% 어리둥절 하고 있는 찰나, %조사처리(CALLNAME:TARGET,"가")% 적극적으로 봉사를 시작했다...
+					CFLAG:TARGET:4009 == 1
+				ENDIF
+			;자위계
+			ELSEIF CFLAG:TARGET:4008 == 14
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「으윽... 더, 더이상 참을 수가...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 욕정에 사로잡혀 몸을 배배 꼬며 자위를 하려 한다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 스트레스를 풀게 한다
+					PRINTFORML [1] 말린다
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %조사처리(CALLNAME:TARGET,"가")% 의 달아오른 모습을 보고 흥분하기 시작했다...
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET% 손을 붙잡으며 제제했다.
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「그래. 그럼 잠시만...%UNICODE(0x2665)%」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"가")% 스스로를 달래기 시작했다...
+					CFLAG:TARGET:4009 == 1
+				ELSEIF RESULT == 1
+					PRINTFORMW 「하아... 역시 무리겠지...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 조금 실망한 것 같다.
+					CFLAG:TARGET:4007 = 0
+				ELSE
+					PRINTFORMW 「으읏.... 참을 수 없어!!」
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"가")% 어리둥절 하고 있는 찰나, %조사처리(CALLNAME:TARGET,"가")% 멋대로 자위를 시작했다...
+					CFLAG:TARGET:4009 == 1
+				ENDIF
+			;A계열
+			ELSEIF CFLAG:TARGET:4008 == 0 || CFLAG:TARGET:4008 == 11
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「하앗... 하앗... 엉덩이가... 어떻게 좀...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 욕정에 사로잡혀 엉덩이를 만지며 애원하고 있다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 엉덩이를 달래준다
+					PRINTFORML [1] 말린다
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 엉덩이를 붙잡으며 음란한 미소를 지었다.
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 엉덩이를 밀어냈다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「으, 으응...그럼, 잘 부탁해...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 엉덩이를 이쪽으로 향하고 있다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「.........」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 애원을 들어주지 않아 실망한 눈치다.
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;C계열
+			ELSEIF CFLAG:TARGET:4008 == 2 || CFLAG:TARGET:4008 == 10
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「아앙... 클리가... 근질 근질 거려서 참을 수가 없어...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 욕정에 사로잡혀 클리를 비벼대며 애원하고 있다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 클리를 살짝 달래준다
+					PRINTFORML [1] 신경쓰지 않는다.
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 클리를 내려다보며 얼굴을 붉히고 있다.
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 모습이 맘에 들지 않는 것 같다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「응... 그럼 조금만...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 다리를 살짝 벌리며 뜨거운 숨을 내쉬고 있다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「.........뭐야...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 부끄러운 걸 부탁했다는 걸 깨닫고 자괴감에 빠져있다...
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;B계열
+			ELSEIF CFLAG:TARGET:4008 == 1 || CFLAG:TARGET:4008 == 12
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「가슴이.. 유두가 뜨거워서... 하아앙....」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 가슴과 유두를 만져대며 애원하고 있다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 가슴을 달래준다
+					PRINTFORML [1] 그냥 둔다
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 모습을 보며 살짝 미소지었다.
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 모습에 고개를 돌려버렸다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「그럼...살살 부탁할게...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 쭈뼛쭈뼛 가슴을 내밀며 고개를 돌리고 있다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「기껏 부탁했는데...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 요구를 들어주지 않아 얼굴을 찡그리고 있다...
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;P계열
+			ELSEIF CFLAG:TARGET:4008 == 4
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「으웃...! 이게...자지가 딱딱하게 되서... 아파...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 분기탱천한 남성을 양 손으로 부여잡고 애원의 눈빛을 보내고 있다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 괴로워 보이니 조금만 하게 해준다
+					PRINTFORML [1] 어딜 감히
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 페니스를 보며 얼굴이 붉어졌다.
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 요구를 거부했다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「저, 정말이지?!」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 못참겠다는 듯이 %CALLNAME:PLAYER%의 다리를 벌린다...
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「그래... 무리한 부탁이었네...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 아쉬움과 고통이 뒤섞인 애매한 표정으로 바라보고 있다.
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;M, 수치계열
+			ELSEIF CFLAG:TARGET:4008 == 3 || CFLAG:TARGET:4008 == 8
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「하아....하아...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 수치심과 피학심을 갈망하며 욕정하고 있다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 수치스러운 모습을 즐긴다
+					PRINTFORML [1] 이성을 찾아
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 욕정을 달래 주기로 한 모양이다...
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%에게 이성을 찾으라고 살짝 꾸짖었다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「으응. 그럼 살짝.... 살짝만이야.」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 얼굴을 홍당무처럼 붉히고서 몸을 배배꼬며 기대하고 있다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「그... 그렇지.. 참...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 부끄러운 걸 요구했다는 걸 깨닫고 자괴감을 느낀 것 같다.
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;S 계열
+			ELSEIF CFLAG:TARGET:4008 == 5
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「후훗... 정말 건방진 녀석이네. 버릇을 고쳐줘야겠어...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 욕정에 사로잡혀 %조사처리(CALLNAME:PLAYER,"를")% 덮쳐왔다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 더 때려주세요!
+					PRINTFORML [1] 아픈 건 싫어!
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 모습에 살짝 두려워 하면서도 벌 받는 걸 기대하고 있다...
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%에게 이성을 찾으라고 살짝 꾸짖었다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「따끔한 맛을 보여주겠어%UNICODE(0x2665)%」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 도도함과 욕망이 뒤섞여 아랫입술을 질끈 깨물며 음미한 눈으로 쳐다보고 있다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「내, 내가 무슨 짓을...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 잠시나마 이성을 잃었던 것을 부끄러워 하고 있다.
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;V 계열
+			ELSEIF CFLAG:TARGET:4008 == 6
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「하아....하아앙....더는 안돼.. 어서, 어서 넣어줘...」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 애액이 흐르는 보지를 두 손으로 벌리며 %조사처리(CALLNAME:PLAYER,"를")% 유혹하고 있다.
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 지금이다!
+					PRINTFORML [1] 아직은 때가 아니야
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 모습에 흥분하여, 페니스를 꽂꽂히 세우고 있다.
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 모습을 보고, 살짝 죄악감을 느낀 것 같다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「꺄앗%UNICODE(0x2665)%」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%  %CALLNAME:PLAYER%에게 덮쳐지며 교성을 질렀다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「후우...너무해...으응...」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 몹시 아쉬워 하고 있다...
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			;애정계열
+			ELSEIF CFLAG:TARGET:4008 == 9
+				PRINTL
+				CALL SETCOLOR_TORIKOMODE, "PINK", 2
+				PRINTFORMW 「저기... 이대로 조금만 있으면 안될까?」
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 얼굴을 붉히며 %CALLNAME:PLAYER%에게 기대왔다
+				PRINTL
+				RESETCOLOR
+				IF PLAYER == MASTER
+					PRINTFORML 어떻게 할까?
+					PRINTFORML [0] 상냥하게 대한다
+					PRINTFORML [1] 거추장스러우니 밀어낸다
+					TINPUT 3000, 100, 1
+				ELSEIF PLAYER == ASSI
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+					IF RESULT:0 == 0
+						PRINTFORMW %CALLNAME:TARGET%의 사랑스러운 모습에 반해버린 것 같다...
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%의 모습에 어색함을 느낀건지, 살짝 밀어냈다...
+					ENDIF
+					PRINTL
+				ENDIF
+				IF RESULT == 0
+					PRINTFORMW 「으응%UNICODE(0x2665)%」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:PLAYER%에게 안기며 행복한 미소를 지었다.
+					CFLAG:TARGET:4009 == 1
+				ELSE 
+					PRINTFORMW 「...내가 싫어진거야...?」
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 실망한 눈치다...
+					CFLAG:TARGET:4007 = 0
+				ENDIF
+			ELSE
+			ENDIF
+			PRINTL
+			
+			;결과에 따른 타겟의 호감도/스트레스 변동. 조교일때도 호감도가 변해도 괜찮은걸까...대신 스트레스를 줄여주자...
+			IF RESULT == 0
+				IF PLAYER == MASTER
+					CFLAG:TARGET:2 += CFLAG:TARGET:4007 * 10
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+					PRINTFORML %CALLNAME:TARGET%의 호감도 + {CFLAG:TARGET:4007 * 10}
+					RESETCOLOR
+				ELSEIF PLAYER == ASSI
+					CFLAG:TARGET:65 -= 100
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+					PRINTFORML %CALLNAME:TARGET%의 스트레스 - 100
+					;50% 확률로 상성 업
+					IF RAND:2 > 0
+						RELATION:ASSI:(NO:TARGET) += 1
+						RELATION:TARGET:(NO:ASSI) += 1
+						PRINTFORMW <서로에 대한 상성 +1>
+					ENDIF
+					RESETCOLOR
+				ENDIF
+			ELSE
+				CFLAG:TARGET:65+= 50
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				PRINTFORMW %CALLNAME:TARGET%의 스트레스 + 50
+				RESETCOLOR
+			ENDIF
+			PRINTL
+		;승인상태고, 턴이 1턴이상 존재한다면, 인터럽트를 발생시킨다.
+		ENDIF
+		IF CFLAG:TARGET:4007 > 1 && CFLAG:TARGET:4009 == 1
+			;지난 턴의 누적 체력기력 소모량 초기화
+			CALL RESET_DOWNARG_TORIKOMODE
+			;커맨드를 뽑는다. (-1이 돌아오기도 한다)
+			CALL INTERRUPT_SELECT_TRAIN, TARGET, CFLAG:TARGET:4008
+			;그리고 자율행동 턴을 1 줄인다.
+			CFLAG:TARGET:4007 -= 1
+			;남은 턴을 표시한다.
+			;디버그
+			;PRINTFORML NEXTCOM ={NEXTCOM} SELECTCOM={SELECTCOM} PREVCOM ={PREVCOM}
+			IF NEXTCOM == -1
+				PRINTL
+				PRINTFORML <실행할 수 있는 조교가 없습니다. 인터럽트를 종료합니다.>
+				PRINTL
+				;다음 커맨드를 없앰.
+				NEXTCOM = -1
+				;승인을 비승인으로 바꾼다.
+				CFLAG:TARGET:4009 == 0
+			ELSE
+				PRINTL
+				DRAWLINE
+				PRINTFORMW <%CALLNAME:TARGET%의 인터럽트 ({CFLAG:TARGET:4007}턴)>
+				PRINTL
+			ENDIF
+		;1턴 남았다면. 끝내버리자.
+		ELSEIF CFLAG:TARGET:4007 == 1 && CFLAG:TARGET:4009 == 1
+			;지난 턴의 누적 체력기력 소모량 초기화
+			CALL RESET_DOWNARG_TORIKOMODE
+			CFLAG:TARGET:4007 -= 1
+			;종료표시
+			PRINTL
+			PRINTFORMW 「하아...하아...」
+			FONTBOLD
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 만족한 것 같다...
+			FONTREGULAR
+			PRINTL
+			;다음 커맨드를 없앰.
+			NEXTCOM = -1
+			;승인을 비승인으로 바꾼다.
+			CFLAG:TARGET:4009 == 0
+		ELSE
+		ENDIF
+
+	;조수 인터럽트. 조수가 있어야 함.
+	ELSEIF ASSI > 0 && CFLAG:ASSI:4007 > 0
+		;승인해 줄 건지 물어본다.
+		IF CFLAG:ASSI:4009 == 0
+			PRINTL
+			CALL SETCOLOR_TORIKOMODE, "PINK", 2
+			;음란한 조수다
+			IF TALENT:ASSI:170
+				PRINTFORMW 「하아...%CALLNAME:TARGET%... 더는 참을 수가...」
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% %CALLNAME:TARGET%의 모습에 욕정하여, 더 이상 참을 수 없는 것 같다...
+			;그 외
+			ELSE
+				PRINTFORMW 「...이번엔 내가...」
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% %조사처리(CALLNAME:TARGET,"을")% 조교하고 싶어하는 것 같다...
+			ENDIF
+			PRINTL
+			RESETCOLOR
+			;주인의 승인
+			PRINTFORML 어떻게 할까?
+			PRINTFORML [0] 좋을 대로 해.
+			PRINTFORML [1] 제지한다.
+			TINPUT 3000, 100, 1
+			IF RESULT == 0
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 기다렸다는 듯이 조교를 시작했다...
+				;조교자가 주인이라면 교대
+				IF PLAYER == MASTER
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+					PRINTFORMW (조수와 교대합니다)
+					RESETCOLOR
+					PLAYER = ASSI
+					ASSIPLAY = 1
+				ENDIF
+				;호감도 처리
+				CFLAG:ASSI:2 += CFLAG:ASSI:4007 * 10
+				CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+				PRINTFORML %CALLNAME:ASSI%의 호감도 + {CFLAG:ASSI:4007 * 10}
+				RESETCOLOR
+				PRINTL
+				CFLAG:ASSI:4009 == 1
+			ELSEIF RESULT == 1
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 실망한 눈빛으로 뒤로 물러났다...
+				;스트레스 처리
+				CFLAG:ASSI:65+= 50
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				PRINTFORMW %CALLNAME:ASSI%의 스트레스 + 50
+				RESETCOLOR
+				;턴이 없어진다.
+				CFLAG:ASSI:4007 = 0
+				;승인이 없어진다
+				CFLAG:ASSI:4009 = 0
+				PRINTL
+				WAIT
+			ELSE
+				PRINTFORMW %조사처리(CALLNAME:PLAYER,"가")% 고민하던 찰나, %조사처리(CALLNAME:ASSI,"가")% 멋대로 조교를 시작했다...
+				;조교자가 주인이라면 교대
+				IF PLAYER == MASTER
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+					PRINTFORMW (조수와 교대합니다)
+					RESETCOLOR
+					PLAYER = ASSI
+					ASSIPLAY = 1
+				ENDIF
+				PRINTL
+				;호감도 상승은 없다. (멋대로니까)
+				CFLAG:ASSI:4009 == 1
+			ENDIF
+			;주인이 승낙했다면, 타겟의 승인을 체크한다.
+			IF CFLAG:ASSI:4009 == 1
+				;타겟의 승인 계산
+				CALL CHECK_INTERRUPT_ASSITOSLAVE_TORIKOMODE
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%...
+				IF RESULT:0 == 0
+					;음란한 타겟이다
+					SIF TALENT:TARGET:170
+						PRINTFORM 기대로 가득 찬 표정으로 
+					PRINTFORMW %CALLNAME:ASSI%의 손에 몸을 맏겼다.
+					;50%확률로 상성 업
+					IF RAND:2 > 0
+						RELATION:ASSI:(NO:TARGET) += 1
+						RELATION:TARGET:(NO:ASSI) += 1
+						CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+						PRINTFORMW <서로에 대한 상성 +1>
+						RESETCOLOR
+					ENDIF
+					PRINTL
+				ELSE
+					PRINTFORMW %CALLNAME:ASSI%의 손을 뿌리쳤다.
+					;조수가 강제로 한다. 이 경우, 판정값을 거꾸로 사용한다. (타겟을 그만큼 아끼기 때문에, 판정에 실패해야 강제로 한다)
+					PRINTL
+					CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+					PRINTFORMW 그런 %CALLNAME:TARGET%의 행동에, %조사처리(CALLNAME:ASSI,"는")%...
+					IF RESULT:0 == 1
+						PRINTFORMW  \@ (TALENT:ASSI:170) ? 욕정에 이기지 못해, # 강하게 \@ %CALLNAME:TARGET%의 손목을 양 손으로 붙잡고 강제로 조교를 시작했다.
+						;50%확률로 상성 다운
+						IF RAND:2 > 1
+							RELATION:ASSI:(NO:TARGET) -= 1
+							RELATION:TARGET:(NO:ASSI) -= 1
+							;상성 최소치는 1
+							RELATION:ASSI:(NO:TARGET) = MAX (RELATION:ASSI:(NO:TARGET), 1)
+							RELATION:TARGET:(NO:ASSI)  = MAX (RELATION:TARGET:(NO:ASSI) , 1)
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW <서로에 대한 상성 -1>
+							RESETCOLOR
+						ENDIF
+						PRINTL
+					ELSE
+						PRINTFORMW 아쉬운 표정으로, 뒤로 물러났다...
+						;스트레스 처리
+						CFLAG:ASSI:65+= 50
+						CALL SETCOLOR_TORIKOMODE, "RED", 2
+						PRINTFORMW %CALLNAME:ASSI%의 스트레스 + 50
+						RESETCOLOR
+						;20%확률로 상성 다운
+						IF RAND:5 > 3
+							RELATION:ASSI:(NO:TARGET) -= 1
+							RELATION:TARGET:(NO:ASSI) -= 1
+							;상성 최소치는 1
+							RELATION:ASSI:(NO:TARGET) = MAX (RELATION:ASSI:(NO:TARGET), 1)
+							RELATION:TARGET:(NO:ASSI)  = MAX (RELATION:TARGET:(NO:ASSI) , 1)
+							CALL SETCOLOR_TORIKOMODE, "RED", 2
+							PRINTFORMW <서로에 대한 상성 -1>
+							RESETCOLOR
+						ENDIF
+						;턴이 없어진다.
+						CFLAG:ASSI:4007 = 0
+						;승인이 없어진다
+						CFLAG:ASSI:4009 = 0
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+		;승인상태고, 턴이 1턴이상 존재한다면, 인터럽트를 발생시킨다.
+		IF CFLAG:ASSI:4007 > 1 && CFLAG:ASSI:4009 == 1
+			;지난 턴의 누적 체력기력 소모량 초기화
+			CALL RESET_DOWNARG_TORIKOMODE
+			;커맨드를 뽑는다. (-1이 돌아오기도 한다)
+			CALL INTERRUPT_SELECT_TRAIN, ASSI, CFLAG:ASSI:4008
+			;그리고 자율행동 턴을 1 줄인다.
+			CFLAG:ASSI:4007 -= 1
+			;디버그
+			;PRINTFORML NEXTCOM ={NEXTCOM} SELECTCOM={SELECTCOM} PREVCOM ={PREVCOM}
+			IF NEXTCOM == -1
+				PRINTL
+				PRINTFORML <실행할 수 있는 조교가 없습니다. 인터럽트를 종료합니다.>
+				PRINTL
+				;승인을 비승인으로 바꾼다.
+				CFLAG:TARGET:4009 == 0
+				;턴을 없앤다
+				CFLAG:TARGET:4007 == 0
+			ELSE
+				PRINTL
+				DRAWLINE
+				PRINTFORMW <%CALLNAME:ASSI%의 인터럽트 ({CFLAG:ASSI:4007}턴)>
+				PRINTL
+			ENDIF
+		;1턴 남았다면. 끝내버리자.
+		ELSEIF CFLAG:ASSI:4007 == 1 && CFLAG:ASSI:4009 == 1	
+			;지난 턴의 누적 체력기력 소모량 초기화
+			CALL RESET_DOWNARG_TORIKOMODE
+			CFLAG:TARGET:4007 -= 1
+			;종료표시
+			PRINTL
+			PRINTFORMW 「후우...」
+			;음란한 조수다
+			SIF TALENT:ASSI:170
+				PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 욕정을 채웠다는 듯이, 입술을 혀로 살짝 핥으면서 음란한 미소를 지었다.
+			;상성이 매우 좋다면
+			SIF RELATION:ASSI:(NO:TARGET) >= 150
+				PRINTFORMW 좋아하는 %CALLNAME:TARGET%와의 관계에 더 없이 기쁨을 느끼고 있는 것 같다.
+				CFLAG:ASSI:65 -= 50
+				PRINTFORMW %CALLNAME:ASSI%의 스트레스가 추가로 50 하락했다.
+			FONTBOLD
+			PRINTFORMW %조사처리(CALLNAME:ASSI,"는")% 만족한 것 같다...
+			FONTREGULAR
+			PRINTL
+			;다음 커맨드를 없앰.
+			NEXTCOM = -1
+			;승인을 비승인으로 바꾼다.
+			CFLAG:TARGET:4009 == 0
+			;턴을 없앤다
+			CFLAG:TARGET:4007 == 0
+		ENDIF			
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;인터럽트시 조교 커맨드 선택처리
+; 
+;--------------------------------------------------
+@INTERRUPT_SELECT_TRAIN, ARG, ARG:1
+;반복 카운터
+LOCAL:0 =30
+
+$SELECT_TRAIN
+IF ARG:1 == 0
+	;A계
+	SELECTCASE RAND: 18
+		;2,애널애무
+		CASE 0
+			NEXTCOM = 2
+		;13,애널바이브
+		CASE 1
+			NEXTCOM = 13
+		;30,정상위애널
+		CASE 2
+			NEXTCOM = 30
+		;31,후배위애널
+		CASE 3
+			NEXTCOM = 31
+		;32,대면좌위애널
+		CASE 4
+			NEXTCOM = 32
+		;33,배면좌위애널
+		CASE 5
+			NEXTCOM = 33
+		;34,기승위애널
+		CASE 6
+			NEXTCOM = 34
+		;37,대면입위애널
+		CASE 7
+			NEXTCOM = 37
+		;38,배면입위애널
+		CASE 8
+			NEXTCOM = 38
+		;170,로터Ａ삽입
+		CASE 9
+			NEXTCOM = 170
+		;172,애널비즈
+		CASE 10
+			NEXTCOM = 172
+		;180,애널핥기
+		CASE 11
+			NEXTCOM = 180
+		;181,애널면봉
+		CASE 12
+			NEXTCOM = 181
+		;186,엉덩이애무
+		CASE 13
+			NEXTCOM = 186
+		;187,안면애널기승위
+		CASE 14
+			NEXTCOM = 187
+		;618,후배위애널가슴애무
+		CASE 15
+			NEXTCOM = 618
+		;619,대면애널가슴애무
+		CASE 16
+			NEXTCOM = 619
+		;662,꼬리애널삽입
+		CASE 17
+			NEXTCOM = 662
+	ENDSELECT
+	ELSEIF ARG:1 == 1
+	;B계
+	SELECTCASE RAND: 13
+		;3,가슴애무
+		CASE 0
+			NEXTCOM = 3
+		;15,유두캡
+		CASE 1
+			NEXTCOM = 15
+		;190,유두로터
+		CASE 2
+			NEXTCOM = 190
+		;200,가슴주무르기
+		CASE 3
+			NEXTCOM = 200
+		;201,유두집중자극
+		CASE 4
+			NEXTCOM = 201
+		;202,유두핥기
+		CASE 5
+			NEXTCOM = 202
+		;203,유두빨기
+		CASE 6
+			NEXTCOM = 203
+		;210,젖맞닿기
+		CASE 7
+			NEXTCOM = 210
+		;613,기승유방자위
+		CASE 13
+			NEXTCOM = 613
+		;616,후배위가슴애무
+		CASE 8
+			NEXTCOM = 616
+		;617,대면가슴애무
+		CASE 9
+			NEXTCOM = 617
+		;618,후배위애널가슴애무
+		CASE 10
+			NEXTCOM = 618
+		;619,대면애널가슴애무
+		CASE 11
+			NEXTCOM = 619
+		;627,유두아마가미
+		CASE 12
+			NEXTCOM = 627
+	ENDSELECT
+	ELSEIF ARG:1 == 2
+	;C계
+	SELECTCASE RAND: 13
+		;1,커닐링구스
+		CASE 0
+			NEXTCOM = 1
+		;10,로터
+		CASE 1
+			NEXTCOM = 10
+		;11,전기안마기
+		CASE 2
+			NEXTCOM = 11
+		;14,클리캡
+		CASE 3
+			NEXTCOM = 14
+		;122,클리집중자극
+		CASE 4
+			NEXTCOM = 122
+		;123,클리쥐어짜기
+		CASE 5
+			NEXTCOM = 123
+		;126,안면기승위
+		CASE 6
+			NEXTCOM = 126
+		;130,음핵빨래집게
+		CASE 7
+			NEXTCOM = 130
+		;131,음핵전극
+		CASE 8
+			NEXTCOM = 131
+		;135,음핵측정
+		CASE 9
+			NEXTCOM = 135
+		;152,소음순손가락애무
+		CASE 10
+			NEXTCOM = 152
+		;604,카리가쿠비
+		CASE 13
+			NEXTCOM = 604
+		;605,보지 만지기
+		CASE 11
+			NEXTCOM = 605
+		;611,이와시미즈
+		CASE 12
+			NEXTCOM = 611
+	ENDSELECT
+	ELSEIF ARG:1 == 3
+	;M계
+	SELECTCASE RAND: 32
+		;44,애널강제핥기
+		CASE 0
+			NEXTCOM = 44
+		;45,애널애원하기
+		CASE 1
+			NEXTCOM = 45
+		;46,강제발핥기
+		CASE 2
+			NEXTCOM = 46
+		;54,강제불알핥기
+		CASE 3
+			NEXTCOM = 54
+		;55,강제애널애무
+		CASE 4
+			NEXTCOM = 55
+		;123,클리쥐어짜기
+		CASE 5
+			NEXTCOM = 123
+		;130,음핵빨래집게
+		CASE 6
+			NEXTCOM = 130
+		;131,음핵전극
+		CASE 7
+			NEXTCOM = 131
+		;188,애널주름세기
+		CASE 8
+			NEXTCOM = 188
+		;206,젖스팽킹
+		CASE 9
+			NEXTCOM = 206
+		;220,스팽킹
+		CASE 10
+			NEXTCOM = 220
+		;221,채찍
+		CASE 11
+			NEXTCOM = 221
+		;222,바늘
+		CASE 12
+			NEXTCOM = 222
+		;223,촛불
+		CASE 13
+			NEXTCOM = 223
+		;224,밧줄
+		CASE 14
+			NEXTCOM = 224
+		;225,아이마스크
+		CASE 15
+			NEXTCOM = 225
+		;226,볼재갈
+		CASE 16
+			NEXTCOM = 226
+		;227,매도
+		CASE 17
+			NEXTCOM = 227
+		;228,코집게
+		CASE 18
+			NEXTCOM = 228
+		;229,강제개구기
+		CASE 19
+			NEXTCOM = 229
+		;230,이라마치오
+		CASE 20
+			NEXTCOM = 230
+		;231,피스트퍽. 처녀일때는 스팽킹으로. 또한 체력이 1000이상 있어야 발동함
+		CASE 21
+			IF TALENT:TARGET:0 == 0 || BASE:TARGET:0 >= 1000
+				NEXTCOM = 231
+			ELSE
+				NEXTCOM = 220
+			ENDIF
+		;232,애널피스트. 체력이 1000 필요하다
+		CASE 22
+			IF BASE:TARGET:0 >= 1000
+				NEXTCOM = 232
+			ELSE
+				NEXTCOM = 220
+			ENDIF
+		;233,양구멍피스트. 처녀일때는 스팽킹으로. 또한 체력이 1200이상 있어야 함
+		CASE 23
+			IF TALENT:TARGET:0 == 0|| BASE:TARGET:0 >= 1200
+				NEXTCOM = 223
+			ELSE
+				NEXTCOM = 220
+			ENDIF
+		;234,바기나다이빙. 처녀일때는 스팽킹으로 또한 체력이 1200이상 있어야 함
+		CASE 24
+			IF TALENT:TARGET:0 == 0|| BASE:TARGET:0 >= 1200
+				NEXTCOM = 224
+			ELSE
+				NEXTCOM = 220
+			ENDIF
+		;235,애널다이빙. 체력 1000 필요
+		CASE 25
+			IF BASE:TARGET:0 >= 1000
+				NEXTCOM = 235
+			ELSE
+				NEXTCOM = 220
+			ENDIF
+		;236,자궁구찌르기
+		CASE 26
+			NEXTCOM = 236
+		;237,코 빨래집개
+		CASE 27
+			NEXTCOM = 237
+		;238,스턴건
+		CASE 28
+			NEXTCOM = 238
+		;251,따귀때리기
+		CASE 29
+			NEXTCOM = 251
+		;669,꼬리당기기
+		CASE 30
+			NEXTCOM = 669
+		;300,강제커닐링구스
+		CASE 31
+			NEXTCOM = 300
+	ENDSELECT
+	ELSEIF ARG:1 == 4
+	;P계
+	SELECTCASE RAND: 18
+		;5,펠라한다
+		CASE 0
+			NEXTCOM = 5
+		;16,오나홀
+		CASE 1
+			NEXTCOM = 16
+		;17,전극오나홀
+		CASE 2
+			NEXTCOM = 17
+		;25,역강간
+		CASE 3
+			NEXTCOM = 25
+		;35,역애널강간
+		CASE 4
+			NEXTCOM = 35
+		;52,육봉마찰
+		CASE 5
+			NEXTCOM = 52
+		;132,ペニスローター
+		CASE 6
+			NEXTCOM = 132
+		;133,電マペニス責め
+		CASE 7
+			NEXTCOM = 133
+		;323,정상위시킨다
+		CASE 8
+			NEXTCOM = 323
+		;324,후배위시킨다
+		CASE 9
+			NEXTCOM = 324
+		;329,불알애무
+		CASE 10
+			NEXTCOM = 329
+		;330,불알핥기
+		CASE 11
+			NEXTCOM = 330
+		;332,Ａ정상위시킨다
+		CASE 12
+			NEXTCOM = 332
+		;333,Ａ후배위시킨다
+		CASE 13
+			NEXTCOM = 333
+		;334,Ａ기승위시킨다
+		CASE 14
+			NEXTCOM = 334
+		;630,후배위수음
+		CASE 15
+			NEXTCOM = 630
+		;26,조수를 범한다
+		CASE 16
+			NEXTCOM = 26
+		;36,조수의Ａ를 범함
+		CASE 17
+			NEXTCOM = 36
+	ENDSELECT
+	ELSEIF ARG:1 == 5
+	;S계
+	SELECTCASE RAND: 3
+		;270,매도당하기
+		CASE 0
+			NEXTCOM = 270
+		;272,얻어맞기
+		CASE 1
+			NEXTCOM = 272
+		;273,채찍질맞기
+		CASE 2
+			NEXTCOM = 273
+	ENDSELECT
+	ELSEIF ARG:1 == 6
+	;V계
+	SELECTCASE RAND: 8
+		;4,손가락삽입
+		CASE 0
+			NEXTCOM = 4
+		;12,바이브
+		CASE 1
+			NEXTCOM = 12
+		;20,정상위
+		CASE 2
+			NEXTCOM = 20
+		;21,후배위
+		CASE 3
+			NEXTCOM = 21
+		;22,대면좌위
+		CASE 4
+			NEXTCOM = 22
+		;23,배면좌위
+		CASE 5
+			NEXTCOM = 23
+		;24,기승위
+		CASE 6
+			NEXTCOM = 24
+		;27,대면입위
+		CASE 7
+			NEXTCOM = 27
+	ENDSELECT
+	ELSEIF ARG:1 == 7
+	;봉사계
+	SELECTCASE RAND: 21
+		;24,기승위. 처녀일시는 수음으로 
+		CASE 0
+			IF TALENT:TARGET:0  == 0
+				NEXTCOM = 24
+			ELSE
+				NEXTCOM = 40
+			ENDIF
+		;34,기승위애널
+		CASE 1
+			NEXTCOM = 34
+		;40,수음
+		CASE 2
+			NEXTCOM = 40
+		;41,펠라치오
+		CASE 3
+			NEXTCOM = 41
+		;42,파이즈리
+		CASE 4
+			NEXTCOM = 42
+		;43,스마타
+		CASE 5
+			NEXTCOM = 43
+		;45,애널애원하기
+		CASE 6
+			NEXTCOM = 45
+		;47,풋잡
+		CASE 7
+			NEXTCOM = 47
+		;48,헤어잡
+		CASE 8
+			NEXTCOM = 48
+		;49,겨드랑이잡
+		CASE 9
+			NEXTCOM = 49
+		;50,전신잡
+		CASE 10
+			NEXTCOM = 50
+		;51,엉덩이잡
+		CASE 11
+			NEXTCOM = 51
+		;53,불알애무
+		CASE 12
+			NEXTCOM = 53
+		;183,엉덩이스마타
+		CASE 13
+			NEXTCOM = 183
+		;208,세로파이즈리
+		CASE 14
+			NEXTCOM = 208
+		;209,파이즈리펠라
+		CASE 15
+			NEXTCOM = 209
+		;602,식스나인
+		CASE 16
+			NEXTCOM = 602
+		;603,６９파이즈리
+		CASE 17
+			NEXTCOM = 603
+		;604,카리가쿠비
+		CASE 18
+			NEXTCOM = 604
+		;613,기승유방자위
+		CASE 19
+			NEXTCOM = 613
+		;628,상호자위
+		CASE 20
+			NEXTCOM = 628
+	ENDSELECT
+	ELSEIF ARG:1 == 8
+	;수치계
+	SELECTCASE RAND: 23
+		;44,애널강제핥기
+		CASE 0
+			NEXTCOM = 44
+		;45,애널애원하기
+		CASE 1
+			NEXTCOM = 45
+		;46,강제발핥기
+		CASE 2
+			NEXTCOM = 46
+		;54,강제불알핥기
+		CASE 3
+			NEXTCOM = 54
+		;55,강제애널애무
+		CASE 4
+			NEXTCOM = 55
+		;90,나체에이프런
+		CASE 5
+			NEXTCOM = 90
+		;91,학교수영복플레이
+		CASE 6
+			NEXTCOM = 91
+		;92,의사플레이
+		CASE 7
+			NEXTCOM = 92
+		;93,코스프레
+		CASE 8
+			NEXTCOM = 93
+		;94,조수코스프레
+		CASE 9
+			NEXTCOM = 94
+		;103,수치플레이
+		CASE 10
+			NEXTCOM = 103
+		;104,야외플레이
+		CASE 11
+			NEXTCOM = 104
+		;108,베이비플레이
+		CASE 12
+			NEXTCOM = 108
+		;110,보지벌리기
+		CASE 13
+			NEXTCOM = 110
+		;111,방뇨
+		CASE 14
+			NEXTCOM = 111
+		;115,자위보여주기
+		CASE 15
+			NEXTCOM = 115
+		;116,조수주인자위공연
+		CASE 16
+			NEXTCOM = 116
+		;117,음부과시
+		CASE 17
+			NEXTCOM = 117
+		;118,더블음부과시
+		CASE 18
+			NEXTCOM = 118
+		;611,이와시미즈
+		CASE 19
+			NEXTCOM = 611
+		;612,거울좌위
+		CASE 20
+			NEXTCOM = 612
+		;631,서로보지벌리기
+		CASE 21
+			NEXTCOM = 631
+		;671,꼬리딸
+		CASE 22
+			NEXTCOM = 671
+	ENDSELECT
+	ELSEIF ARG:1 == 9
+	;애정계
+	SELECTCASE RAND: 48
+		;1,커닐링구스
+		CASE 0
+			NEXTCOM = 1
+		;6,키스한다
+		CASE 1
+			NEXTCOM = 6
+		;101,비디오감상
+		CASE 2
+			NEXTCOM = 101
+		;152,소음순손가락애무
+		CASE 3
+			NEXTCOM = 152
+		;180,애널핥기
+		CASE 4
+			NEXTCOM = 180
+		;181,애널면봉
+		CASE 5
+			NEXTCOM = 181
+		;186,엉덩이애무
+		CASE 6
+			NEXTCOM = 186
+		;187,안면애널기승위
+		CASE 7
+			NEXTCOM = 187
+		;210,젖맞닿기
+		CASE 8
+			NEXTCOM = 210
+		;271, 다리빨기
+		CASE 9
+			NEXTCOM = 271
+		;301,보지비비기
+		CASE 10
+			NEXTCOM = 301
+		;302,풋잡한다
+		CASE 11
+			NEXTCOM = 302
+		;320,상냥하게 한다
+		CASE 12
+			NEXTCOM = 320
+		;321,수음한다
+		CASE 13
+			NEXTCOM = 321
+		;322,파이즈리한다
+		CASE 14
+			NEXTCOM = 322
+		;323,정상위시킨다
+		CASE 15
+			NEXTCOM = 323
+		;324,후배위시킨다
+		CASE 16
+			NEXTCOM = 324
+		;325,기승위한다
+		CASE 17
+			NEXTCOM = 325
+		;327,손가락츄파
+		CASE 18
+			NEXTCOM = 327
+		;328,목덜미자극
+		CASE 19
+			NEXTCOM = 328
+		;329,불알애무
+		CASE 20
+			NEXTCOM = 329
+		;330,불알핥기
+		CASE 21
+			NEXTCOM = 330
+		;332,Ａ정상위시킨다
+		CASE 22
+			NEXTCOM = 332
+		;333,Ａ후배위시킨다
+		CASE 23
+			NEXTCOM = 333
+		;334,Ａ기승위시킨다
+		CASE 24
+			NEXTCOM = 334
+		;335,파이즈리펠라한다
+		CASE 25
+			NEXTCOM = 335
+		;336,보지닦기
+		CASE 26
+			NEXTCOM = 336
+		;339,포옹한다
+		CASE 27
+			NEXTCOM = 339
+		;340,파후파후
+		CASE 28
+			NEXTCOM = 340
+		;341,가슴베개
+		CASE 29
+			NEXTCOM = 341
+		;342,가슴맞대기
+		CASE 30
+			NEXTCOM = 342
+		;343,젖싸다귀
+		CASE 31
+			NEXTCOM = 343
+		;344,서로 젖주무르기
+		CASE 32
+			NEXTCOM = 344
+		;345,목욕하며 보낸다
+		CASE 33
+			NEXTCOM = 345
+		;346,밖에서 보낸다
+		CASE 34
+			NEXTCOM = 346
+		;347,신혼부부처럼 보낸다
+		CASE 35
+			NEXTCOM = 347
+		;603,６９파이즈리
+		CASE 36
+			NEXTCOM = 603
+		;604,카리가쿠비
+		CASE 37
+			NEXTCOM = 604
+		;605,보지 만지기
+		CASE 38
+			NEXTCOM = 605
+		;625,로션플레이
+		CASE 39
+			NEXTCOM = 625
+		;627,유두아마가미
+		CASE 40
+			NEXTCOM = 627
+		;630,후배위수음
+		CASE 41
+			NEXTCOM = 630
+		;631,서로보지벌리기
+		CASE 42
+			NEXTCOM = 631
+		;660,꼬리애무
+		CASE 43
+			NEXTCOM = 660
+		;664,꼬리파묻히기
+		CASE 44
+			NEXTCOM = 664
+		;670,꼬리베개
+		CASE 45
+			NEXTCOM = 670
+		;671,꼬리딸
+		CASE 46
+			NEXTCOM = 671
+		;672,꼬리枕もふもふ
+		CASE 47
+			NEXTCOM = 672
+
+	ENDSELECT
+	ELSEIF ARG:1 == 10
+	;요도광계
+	SELECTCASE RAND: 8
+		;111,방뇨
+		CASE 0
+			NEXTCOM = 111
+		;140,요도면봉
+		CASE 1
+			NEXTCOM = 140
+		;141,카테터삽입
+		CASE 2
+			NEXTCOM = 141
+		;142,채뇨기
+		CASE 3
+			NEXTCOM = 142
+		;143,벌룬카테터
+		CASE 4
+			NEXTCOM = 143
+		;144,전극카테터
+		CASE 5
+			NEXTCOM = 144
+		;145,오줌마시기
+		CASE 6
+			NEXTCOM = 145
+		;146,요도삽입
+		CASE 7
+			NEXTCOM = 146
+	ENDSELECT
+	ELSEIF ARG:1 == 11
+	;음고계
+	SELECTCASE RAND: 11
+		;170,로터Ａ삽입
+		CASE 0
+			NEXTCOM = 170
+		;171,애널전극
+		CASE 1
+			NEXTCOM = 171
+		;172,애널비즈
+		CASE 2
+			NEXTCOM = 172
+		;173,확장벌룬
+		CASE 3
+			NEXTCOM = 173
+		;174,관장플레이
+		CASE 4
+			NEXTCOM = 174
+		;175,공기관장
+		CASE 5
+			NEXTCOM = 175
+		;179,애널바벨
+		CASE 6
+			NEXTCOM = 179
+		;188,애널주름세기
+		CASE 7
+			NEXTCOM = 188
+		;232,애널피스트. 체력 1000 필요
+		CASE 8
+			IF BASE:TARGET:0 >= 1000
+				NEXTCOM = 232
+			ELSE
+				NEXTCOM = 170
+			ENDIF
+		;233,양구멍피스트
+		CASE 9
+			IF BASE:TARGET:0 >= 1000
+				NEXTCOM = 233
+			ELSE
+				NEXTCOM = 172
+			ENDIF
+		;235,애널다이빙
+		CASE 10
+			IF BASE:TARGET:0 >= 1000
+				NEXTCOM = 235
+			ELSE
+				NEXTCOM = 188
+			ENDIF
+		;193,유방전극
+	ENDSELECT
+	ELSEIF ARG:1 == 12
+	;음유계
+	SELECTCASE RAND: 7
+		CASE 0
+			NEXTCOM = 193
+		;194,사라시
+		CASE 1
+			NEXTCOM = 194
+		;195,유두빨래집개
+		CASE 2
+			NEXTCOM = 195
+		;204,모유마시기
+		CASE 3
+			NEXTCOM = 204
+		;207,젖퍽
+		CASE 4
+			NEXTCOM = 207
+		;208,세로파이즈리
+		CASE 5
+			NEXTCOM = 208
+		;626,착유
+		CASE 6
+			NEXTCOM = 626
+	ENDSELECT
+	ELSEIF ARG:1 == 13
+	;음호계
+	SELECTCASE RAND: 9
+		;150,쿠스코
+		CASE 0
+			NEXTCOM = 150
+		;151,로터삽입
+		CASE 1
+			NEXTCOM = 151
+		;153,애액채집기
+		CASE 2
+			NEXTCOM = 153
+		;155,바기나전극
+		CASE 3
+			NEXTCOM = 155
+		;156,바기나바벨
+		CASE 4
+			NEXTCOM = 156
+		;157,바기나벌룬
+		CASE 5
+			NEXTCOM = 157
+		;231,피스트퍽. 체력 1000 필요
+		CASE 6
+			IF BASE:TARGET:0 >= 1000
+				NEXTCOM = 231
+			ELSE
+				NEXTCOM = 151
+			ENDIF
+		;233,양구멍피스트. 체력 1200 필요
+		CASE 7
+			IF BASE:TARGET:0 >= 1200
+				NEXTCOM = 233
+			ELSE
+				NEXTCOM = 150
+			ENDIF
+		;234,바기나다이빙. 체력 1200 필요
+		CASE 8
+			IF BASE:TARGET:0 >= 1200
+				NEXTCOM = 234
+			ELSE
+				NEXTCOM = 153
+			ENDIF
+	ENDSELECT
+	ELSEIF ARG:1 == 14
+	;자위계
+	SELECTCASE RAND: 8
+		;7,자위
+		CASE 0
+			NEXTCOM = 7
+		;124,로터자위. 처녀시 그냥 자위로 변동.
+		CASE 1
+			IF TALENT:TARGET:0 ==0
+				NEXTCOM = 124
+			ELSE
+				NEXTCOM = 7
+			ENDIF
+		;125,전기안마자위
+		CASE 2
+			NEXTCOM = 125
+		;182,애널자위
+		CASE 3
+			NEXTCOM = 182
+		;205,가슴자위
+		CASE 4
+			NEXTCOM = 205
+		;613,기승유방자위
+		CASE 5
+			NEXTCOM = 613
+		;628,상호자위
+		CASE 6
+			NEXTCOM = 631
+		;663,꼬리자위
+		CASE 7
+			NEXTCOM = 663
+	ENDSELECT
+	ELSEIF ARG:1 == 15
+	;펠라계
+	SELECTCASE RAND: 8
+		;41,펠라치오
+		CASE 0
+			NEXTCOM = 41
+		;42,파이즈리
+		CASE 1
+			NEXTCOM = 42
+		;209,파이즈리펠라
+		CASE 2
+			NEXTCOM = 209
+		;230,이라마치오
+		CASE 3
+			NEXTCOM = 230
+		;601,잠망경
+		CASE 4
+			NEXTCOM = 601
+		;602,식스나인
+		CASE 5
+			NEXTCOM = 602
+		;603,６９파이즈리
+		CASE 6
+			NEXTCOM = 603
+		;604,카리가쿠비
+		CASE 7
+			NEXTCOM = 604
+	ENDSELECT
+	ELSEIF ARG:1 == 16
+	;조수계
+	SELECTCASE RAND: 20
+		;26,조수를 범한다. 만약 조수가 처녀라면 A를 범한다로 됨
+		CASE 0
+			IF TALENT:TARGET:0 ==0
+				NEXTCOM = 26
+			ELSE
+				NEXTCOM = 36
+			ENDIF
+		;36,조수의Ａ를 범함
+		CASE 1
+			NEXTCOM = 36
+		;94,조수코스프레
+		CASE 2
+			NEXTCOM = 94
+		;116,조수주인자위공연
+		CASE 3
+			NEXTCOM = 116
+		;211,젖맞대고 과시
+		CASE 4
+			NEXTCOM = 211
+		;303,더블펠라
+		CASE 5
+			NEXTCOM = 303
+		;304,Ｗ펠라
+		CASE 6
+			NEXTCOM = 304
+		;305,더블스마타
+		CASE 7
+			NEXTCOM = 305
+		;306,더블파이즈리
+		CASE 8
+			NEXTCOM = 306
+		;307,조수를 범하게함. 만약 조수가 처녀라면 A를 범한다로.
+		CASE 9
+			IF TALENT:TARGET:0 ==0
+				NEXTCOM = 307
+			ELSE
+				NEXTCOM = 308
+			ENDIF
+		;308,조수의 Ａ를 범하게함
+		CASE 10
+			NEXTCOM = 308
+		;309,조수와 키스한다
+		CASE 11
+			NEXTCOM = 309
+		;310,더블스팽킹
+		CASE 12
+			NEXTCOM = 310
+		;311,Ｗ스팽킹
+		CASE 13
+			NEXTCOM = 311
+		;312,두사람의 V를 피스트. 둘의 체력이 1000을 넘어야 함. 처녀면 안됨.
+		CASE 14
+			IF TALENT:TARGET:0 ==0  || (BASE:TARGET:0 >= 1000 && BASE:ASSI:0 >= 1000)
+				NEXTCOM = 312
+			ELSE
+				NEXTCOM = 303
+			ENDIF
+		;313,두사람의 A를 피스트
+		CASE 15
+			IF TALENT:TARGET:0 ==0  || (BASE:TARGET:0 >= 1000 && BASE:ASSI:0 >= 1000)
+				NEXTCOM = 313
+			ELSE
+				NEXTCOM = 306
+			ENDIF
+		;331,둘이서 펠라한다
+		CASE 16
+			NEXTCOM = 331
+		;337,W목덜미자극
+		CASE 17
+			NEXTCOM = 337
+		;338,두명이범하게한다. 주인이 당하는 것. 주인이 여성이어야 함. 만약 실행할 수 없다면 W목덜미자극으로
+		CASE 18
+			IF TALENT:MASTER:120 ==0
+				NEXTCOM = 338
+			ELSE
+				NEXTCOM = 337
+			ENDIF
+		;673,꼬리맞대기
+		CASE 19
+			NEXTCOM = 673
+	ENDSELECT
+ENDIF
+
+;선택된 커맨드의 실행가능 여부를 체크
+IF LOCAL:0 >0
+	;PRINTFORML  선택된 커맨드는 {NEXTCOM}이다.
+	CALL COM_TRY, 1
+	;디버그
+	;PRINTFORML  실행가능여부의 결과는 {RESULT}이다.
+	;PRINTL
+	;실행할 수 없다면
+	IF RESULT >= 1
+		;카운터를 1 줄이고, 한번 더 체크해본다.
+		LOCAL:0 -= 1
+		GOTO SELECT_TRAIN
+	;실행할 수 있다면
+	ELSE
+		;그대로 나간다.
+	ENDIF
+;카운터가 다 되었다면,
+ELSE
+	;디버그
+	;PRINTFORML 카운터가 다 되었다. 다음 커맨드는 없음이다.
+	NEXTCOM = -1
+ENDIF
+
+;디버그
+;PRINTFORML  다음 커맨드는 {NEXTCOM}이다.
+;SIF NEXTCOM>=0
+;	PRINTFORML  그리고 그 이름은 %TRAINNAME:NEXTCOM% 이다.
+;PRINTL
+
+
+
+;--------------------------------------------------
+;인터럽트 발동여부 체크.
+;--------------------------------------------------
+@CHECK_INTERRUPT, ARG
+;A :0
+;B :1
+;C :2
+;M :3
+;P :4
+;S :5
+;V :6
+;봉사 :7
+;수치계 :8
+;애정 :9
+;요도광 :10
+;음고계 :11
+;음유계 :12
+;음호계 :13
+;자위 :14
+;펠라 :15
+;조수 : 16
+
+;필요수치
+LOCAL:0 = 0
+;계열의 종류
+LOCAL:1 = 0
+;랜덤치
+LOCAL:2 = 0
+;선택된 계열
+LOCAL:4 = -1
+;판정 랜덤수치2 (계의 발동확률)
+LOCAL:5 = 0
+
+;랜덤으로 계를 설정한다.
+IF ARG == TARGET
+	LOCAL:1 = RAND:16
+ELSEIF ARG == ASSI
+	LOCAL:1 = RAND:17
+ENDIF
+;디버그
+;PRINTL
+;PRINTFORMW 랜덤으로 뽑힌 계는 LOCAL:1 ={LOCAL:1} 이다
+;PRINTL
+
+;인터럽트 발생자가 노예라면
+IF ARG == TARGET
+	;A계 : A감각3필수;/ 감각1000 쾌1 음고5000 민감3000 둔감-3000
+	IF LOCAL:1 == 0 && ABL:ARG:2 >=3
+		LOCAL:0 = ABL:ARG:2*1000 + PALAM:ARG:2  + TALENT:ARG:173 *5000 + TALENT:ARG:174 *3000 - TALENT:ARG:175 *3000
+		LOCAL:4 = 0
+	;B계 : 남자가 아닐 것. 감각3필수/ ;감각1000 쾌1 음유5000 민감3000 둔감-3000
+	ELSEIF LOCAL:1 == 1 && TALENT:ARG:120 != 1 && ABL:ARG:3 >=3
+		LOCAL:0 = ABL:ARG:3*1000 + PALAM:ARG:3  + TALENT:ARG:174 *5000 + TALENT:ARG:106 *3000 - TALENT:ARG:107 *3000
+		LOCAL:4 = 1
+	;C계 : 남자가 아닐 것. 감각3필수 /C감각1000 쾌C1 음핵/음경5000 민감3000 둔감-3000
+	ELSEIF LOCAL:1 == 2 && TALENT:ARG:120 != 1 && ABL:ARG:0 >=3
+		LOCAL:0 = ABL:ARG:0*1000 + PALAM:ARG:0  + TALENT:ARG:171 *5000 + TALENT:ARG:100 *3000 - TALENT:ARG:101 *3000
+		LOCAL:4 = 2
+	;M계 : 마조끼 2이상 필수 /마조끼1000 욕망레벨1000 마조2000 초M5000 
+	ELSEIF LOCAL:1 == 3 && ABL:ARG:21 >=2
+		LOCAL:0 = ABL:ARG:21*1000 + ABL:ARG:11 *1000  + TALENT:ARG:82 *2000 + TALENT:ARG:178 *5000
+		LOCAL:4 = 3
+	;P계 : 남자 또는 후타나리 감각3. 조교자가 여자여야 하며 비처녀여야 함  / 감각500 쾌0.5 사정중독lv2000  
+	ELSEIF LOCAL:1 == 4 && (TALENT:ARG:120 == 1 ||  TALENT:ARG:121 == 1)  && ABL:ARG:0 >=3 && TALENT:PLAYER:120 == 0 && TALENT:PLAYER:0 == 0
+		LOCAL:0 = ABL:ARG:3*500 + PALAM:ARG:0 /2 + ABL:ARG:37*2000
+		LOCAL:4 = 4
+	;S계 : 새드끼 2이상 필수/새드끼1000 욕망레벨1000 새드2000 초S5000 
+	ELSEIF LOCAL:1 == 5 && ABL:ARG:20 >=2
+		LOCAL:0 = ABL:ARG:20*1000 + ABL:ARG:11 *1000  + TALENT:ARG:81 *2000 + TALENT:ARG:177 *5000
+		LOCAL:4 = 5
+	;V계 :남자가 아닐 것. 감각3. 연모 또는 음란. 비처녀여야 함. / 감각1000 쾌1 음호5000 민감3000 둔감-3000
+	ELSEIF LOCAL:1 == 6 && TALENT:ARG:120 != 1 && ABL:ARG:1 >=3 && TALENT:ARG:0 == 0 && (TALENT:ARG:150 ==1 || TALENT:ARG:170 ==1)
+		LOCAL:0 = ABL:ARG:1*1000 + PALAM:ARG:1  + TALENT:ARG:172 *5000 + TALENT:ARG:102 *3000 - TALENT:ARG:103 *3000
+		LOCAL:4 = 6
+	;봉사계 :연모 또는 음란  / 봉사정신2000 욕망레벨1000   헌신적5000
+	ELSEIF LOCAL:1 == 7 && (TALENT:ARG:150 ==1 || TALENT:ARG:170 ==1)
+		LOCAL:0 = ABL:ARG:13*2000 + ABL:ARG:11*1000  + TALENT:ARG:63 *5000
+		LOCAL:4 = 7	
+	;수치계 :노출증3  / 노출증2000 욕망레벨1000   부끄럼없음5000
+	ELSEIF LOCAL:1 == 8 && ABL:ARG:14 >=3
+		LOCAL:0 = ABL:ARG:14*2000 + ABL:ARG:11 *1000  + TALENT:ARG:36 *5000
+		LOCAL:4 = 8
+	;애정계 :연모 또는 음란 / 욕망레벨3000 키스마5000  
+	ELSEIF LOCAL:1 == 9 && (TALENT:ARG:150 ==1 || TALENT:ARG:170 ==1)
+		LOCAL:0 =  (ABL:ARG:11) *3000  + (TALENT:ARG:176) *5000
+		LOCAL:4 = 9
+	;요도광계 :요도광 필수  / 감각500 쾌2 배설중독2000  
+	ELSEIF LOCAL:1 == 10 && TALENT:ARG:175 == 1
+		LOCAL:0 =  ABL:ARG:0*500 + PALAM:ARG:0 *2  + ABL:ARG:36*2000
+		LOCAL:4 = 10
+	;음고계 : 음고 필수 감각500 쾌2 배설중독2000  
+	ELSEIF LOCAL:1 == 11 && TALENT:ARG:173 == 1
+		LOCAL:0 =  ABL:ARG:2*500 + PALAM:ARG:2 *2  + ABL:ARG:36*2000
+		LOCAL:4 = 11
+	;음유계 : 남자가 아닐 것. 음유필수, 감각500 쾌2 착유중독2000 
+	ELSEIF LOCAL:1 == 12 && TALENT:ARG:120 != 1 && TALENT:ARG:174
+		LOCAL:0 =  ABL:ARG:3*500 + PALAM:ARG:3 *2  + ABL:ARG:34*2000
+		LOCAL:4 = 12
+	;음호계 : 비처녀. 남자가 아닐 것. 음호필수 감각1000 쾌2 욕망2000  
+	ELSEIF LOCAL:1 == 13 &&  TALENT:ARG:120 != 1 && TALENT:ARG:0 == 0 && TALENT:ARG:172
+		LOCAL:0 =  ABL:ARG:0*1000 + PALAM:ARG:3*2  + ABL:ARG:11*2000 
+		LOCAL:4 = 13
+	;자위계 : 자위중독1 / 자위중독1000 욕망레벨2000 자위하기쉬움5000  
+	ELSEIF LOCAL:1 == 14 &&  ABL:ARG:30 >= 1
+		LOCAL:0 =  ABL:ARG:30*1000 + ABL:ARG:11*2000  + TALENT:ARG:60*5000 
+		LOCAL:4 = 14
+	;펠라계 : 연모 또는 음란  / 봉사정신1000 욕망레벨1000 정액중독2000 정애미각5000
+	ELSEIF LOCAL:1 == 15 &&  (TALENT:ARG:150 ==1 || TALENT:ARG:170 ==1)
+		LOCAL:0 =  ABL:ARG:13*1000 + ABL:ARG:11 *2000  +ABL:ARG:31*2000 + TALENT:ARG:66*5000 
+		LOCAL:4 = 15
+	;조수계 : 조교자가 조수가 아니다./ 레즈중독2000 욕망2000 bl중독2000
+	ELSEIF LOCAL:1 == 16 &&PLAYER == MASTER
+		LOCAL:0 =  ABL:ARG:11*2000 +  ABL:ARG:32*2000 + ABL:ARG:33*2000
+		LOCAL:4 = 16
+	ENDIF
+;인터럽트 발생자가 조수이고 조수가 있다면
+ELSEIF ARG == ASSI && ASSI > 0
+	;A계 : 없다 / 욕망레벨*2000 , 사정중독LV*2000, 레즈끼LV*1000, 레즈중독LV*2000, BL끼*1000, BL중독*2000
+	IF LOCAL:1 == 0
+		LOCAL:0 = ABL:ASSI:11 *2000 + ABL:ASSI:37*2000 + ABL:ASSI:23*1000 + ABL:ASSI:24*1000 + ABL:ASSI:32*2000 + ABL:ASSI:33*2000
+		LOCAL:4 = 0
+	;B계 : 타겟이 남자가 아닐 것 / 욕망레벨*2000 , 사정중독LV*2000, 레즈끼LV*1000, 레즈중독LV*2000, BL끼*1000, BL중독*2000
+	ELSEIF LOCAL:1 == 1 && TALENT:ASSI:120 != 1 && ABL:ASSI:3 >=3
+		LOCAL:0 = ABL:ASSI:11 *2000 + ABL:ASSI:37*2000 + ABL:ASSI:23*1000 + ABL:ASSI:24*1000 + ABL:ASSI:32*2000 + ABL:ASSI:33*2000
+		LOCAL:4 = 1
+	;C계 : 조건 없다 / 욕망레벨*2000 , 사정중독LV*2000, 레즈끼LV*1000, 레즈중독LV*2000, BL끼*1000, BL중독*2000
+	ELSEIF LOCAL:1 == 2 
+		LOCAL:0 = ABL:ASSI:11 *2000 + ABL:ASSI:37*2000 + ABL:ASSI:23*1000 + ABL:ASSI:24*1000 + ABL:ASSI:32*2000 + ABL:ASSI:33*2000
+		LOCAL:4 = 2
+	;M계 : 새드끼 2이상 필수 / 새드끼2000 욕망레벨1000 새드2000 초S5000 
+	ELSEIF LOCAL:1 == 3 && ABL:ASSI:20 >=2
+		LOCAL:0 = ABL:ASSI:20*2000 + ABL:ASSI:11 *1000  + TALENT:ASSI:81 *2000 + TALENT:ASSI:177 *5000
+		LOCAL:4 = 3
+	;P계 : 타겟이 남자 또는 후타나리 / 조교자가 여자여야 하며 비처녀여야 함 / V감각 1000 A감각 1000 욕망 2000 정액중독 2000
+	ELSEIF LOCAL:1 == 4 && (TALENT:ASSI:120 == 1 ||  TALENT:TARGET:121 == 1)  && TALENT:ASSI:120 == 0 && TALENT:ASSI:0 == 0
+		LOCAL:0 = ABL:ASSI:1*1000  + ABL:ASSI:2*1000 + ABL:ASSI:11*2000 + ABL:ASSI:31 *2000
+		LOCAL:4 = 4
+	;S계 : 마조끼 2이상 필수/마조끼2000 욕망레벨1000 마조2000 초M5000 
+	ELSEIF LOCAL:1 == 5 && ABL:ASSI:21 >=2
+		LOCAL:0 = ABL:ASSI:21*2000 + ABL:ASSI:11*1000  + TALENT:ASSI:82 *2000 + TALENT:ASSI:178 *5000
+		LOCAL:4 = 5
+	;V계 :타겟이 남자가 아니며 처녀가 아니다. 조수가 페니스가 있을 것 / 욕망레벨*2000 C감각*1000 사정중독LV2000
+	ELSEIF LOCAL:1 == 6 && TALENT:TARGET:120 != 1 && TALENT:TARGET:0 == 0 && (TALENT:ASSI:120 == 1 ||  TALENT:ASSI:121 == 1)
+		LOCAL:0 = ABL:ASSI:11 *2000 + ABL:ASSI:0*1000 + ABL:ASSI:37*2000
+		LOCAL:4 = 6
+	;봉사계 조건 없다 / 욕망레벨*3000
+	ELSEIF LOCAL:1 == 7
+		LOCAL:0 = ABL:ASSI:11*3000
+		LOCAL:4 = 7	
+	;수치계 :새드끼 2이상 필수 / 새드끼1000 욕망레벨2000 새드2000 초S5000 
+	ELSEIF LOCAL:1 == 8 && ABL:ASSI:20 >=2
+		LOCAL:0 = ABL:ASSI:20*1000 + ABL:ASSI:11 *2000  + TALENT:ASSI:81 *2000 + TALENT:ASSI:177 *5000
+		LOCAL:4 = 8
+	;애정계 :조건 없다 / 욕망레벨3000 키스마5000  
+	ELSEIF LOCAL:1 == 9
+		LOCAL:0 =  (ABL:ASSI:11) *3000  + (TALENT:ASSI:176) *5000
+		LOCAL:4 = 9
+	;요도광계 : 타겟의 윤활이 10000 이상. 타겟의 U확장경험이 1회 이상 / 욕망레벨*3000
+	ELSEIF LOCAL:1 == 10 && PALAM:TARGET:10 >=10000 && EXP:TARGET:34 >=1
+		LOCAL:0 =  ABL:ASSI:11*3000
+		LOCAL:4 = 10
+	;음고계 : 타겟의 윤활이 10000 이상. 타겟의 A확장경험이 1회 이상 / 욕망레벨*3000
+	ELSEIF LOCAL:1 == 11 && PALAM:TARGET:10 >=10000 && EXP:TARGET:33 >=1
+		LOCAL:0 =  ABL:ASSI:11*3000
+		LOCAL:4 = 11
+	;음유계 : 타겟이 남자가 아니다. 타겟의 윤활이 10000 이상. 타겟의 유선개발경험이 1회 이상 / 욕망레벨*3000
+	ELSEIF LOCAL:1 == 12 && TALENT:TARGET:120 != 1 && PALAM:TARGET:10 >=10000 && EXP:TARGET:45 >=1
+		LOCAL:0 =  ABL:ASSI:11*3000
+		LOCAL:4 = 12
+	;음호계 :타겟이 남자가 아니다. 타겟이 처녀가 아니다. 타겟의 윤활이 10000 이상. 타겟의 V확장경험이 1회 이상./ 조수가 페니스가 있다./ 욕망레벨*2000 사정중독LV2000
+	ELSEIF LOCAL:1 == 13 &&  TALENT:ASSI:120 != 1 && TALENT:ASSI:0 == 0  && PALAM:TARGET:10 >=10000 && EXP:TARGET:32 >=1 && (TALENT:ASSI:120 == 1 ||  TALENT:ASSI:121 == 1)
+		LOCAL:0 = ABL:ASSI:11*2000 + ABL:ASSI:37*2000
+		LOCAL:4 = 13
+	;자위계 : 새드끼 2이상 필수 / 새드끼1000 욕망레벨2000 새드2000 초S5000 
+	ELSEIF LOCAL:1 == 14 && ABL:ASSI:20 >=2
+		LOCAL:0 =  ABL:ASSI:20*1000 + ABL:ASSI:11 *2000  + TALENT:ASSI:81 *2000 + TALENT:ASSI:177 *5000
+		LOCAL:4 = 14
+	;펠라계 : 조수가 페니스가 있어야 함.  / 욕망레벨2000, 사정중독LV2000
+	ELSEIF LOCAL:1 == 15 &&  (TALENT:ASSI:150 ==1 || TALENT:ASSI:170 ==1)
+		LOCAL:0 =  ABL:ASSI:11*3000 +ABL:ASSI:37*2000
+		LOCAL:4 = 15
+	;조수계 : 조교자가 조수가 아니다./ 레즈중독2000 욕망2000 bl중독2000
+	ELSEIF LOCAL:1 == 16 && PLAYER == MASTER
+		LOCAL:0 =  ABL:ASSI:11*2000 +  ABL:ASSI:32*2000 + ABL:ASSI:33*2000
+		LOCAL:4 = 16
+	ENDIF
+ENDIF
+
+
+;상성에 따른 가산치를 준다. (상성이 높을수록 발동이 쉬워짐). 0점은 패스.
+;노예의 인터럽트라면
+IF ARG == TARGET
+	IF RELATION:TARGET:(NO:PLAYER) == 0
+		;
+	ELSE
+		LOCAL:0 +=  (RELATION:TARGET:(NO:PLAYER)*50) - 5000
+	ENDIF
+ELSEIF ARG == ASSI && ASSI > 0
+;조수의 인터럽트라면, 상성에 대한 보정이 크다. 상성이 낮으면 거의 발동하지 않는다고 봐야 할 정도로.
+	IF RELATION:ASSI:(NO:TARGET) == 0
+		;
+	ELSE
+		LOCAL:0 +=  (RELATION:ASSI:(NO:TARGET)*100) - 10000
+	ENDIF
+ENDIF
+
+;디버그. 판정하고 반환한다.
+;PRINTFORML {LOCAL:4}계가 선택되었음. 필요수치 LOCAL:0 ={LOCAL:0} 이다.
+;조수는 발동확률 낮다.
+IF ARG == TARGET
+	LOCAL:5 = RAND:30000
+ELSEIF ARG == ASSI && ASSI > 0
+	LOCAL:5 = RAND:100000
+ENDIF
+;디버그
+;PRINTFORML 주사위를 굴렸더니{LOCAL:5}이 나왔다.
+IF (LOCAL:0 > LOCAL:5) && (LOCAL:4 > 0)
+	;디버그
+	;PRINTFORMW [{LOCAL:4}]계를 실행하기로 결정됨!
+	RESULT:0 = LOCAL:4
+	RETURN RESULT:0
+ELSE
+	;디버그
+	;PRINTFORMW 필요치 부족. 실행취소.
+	RESULT:0 = 99
+	RETURN RESULT:0
+ENDIF
+
+
+
+
+;--------------------------------------------------
+;조교중 연속커맨드 실행시, 이걸 한번씩 돌려서 누적소모를 하지 않도록 한다.
+;-------------------------------------------------
+@RESET_DOWNARG_TORIKOMODE
+;디버그
+;PRINTFORML @RESET_DOWNARG_TORIKOMODE 안으로 들어왔다
+
+;조수가 있으면 조수걸 먼저 초기화.
+IF ASSI > 0
+	DOWNBASE:ASSI:0 =0
+	DOWNBASE:ASSI:1 =0
+	;PRINTFORML 조수 체력기력 소모량 초기화 종료
+ENDIF
+;노예소모체력 초기화
+DOWNBASE:TARGET:0 =0
+DOWNBASE:TARGET:1 =0
+;주인 소모체력기력 초기화
+DOWNBASE:MASTER:0 =0
+DOWNBASE:MASTER:1 =0
+;PRINTFORML 노예 주인 체력기력 소모량 초기화 종료
+
+;--------------------------------------------------
+;노예 인터럽트시, 조수의 판정생성함수
+;조수가 노예에 대한 상성이 좋을 수록, 판정이 좋게 나옴.
+;--------------------------------------------------
+;일단 상성이 없는 경우, 100으로 캐스팅 해 준다.
+@CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+IF RELATION:ASSI:(NO:TARGET)  == 0
+	LOCAL:0 = 100
+ELSE
+	LOCAL:0 = RELATION:ASSI:(NO:TARGET)
+ENDIF
+
+PRINTFORML (%CALLNAME:ASSI%의 %CALLNAME:TARGET%에 대한 상성 : {LOCAL:0}퍼센트)
+IF LOCAL:0 + RAND:100 >= 150
+	;승인
+	RESULT:0 = 0
+ELSE
+	;거부
+	RESULT:0 = 1
+ENDIF
+RETURN RESULT:0
+
+
+;--------------------------------------------------
+;조수 인터럽트시, 노예의 판정생성함수
+;조수가 노예에 대한 상성이 좋을 수록, 판정이 좋게 나옴.
+;--------------------------------------------------
+;일단 상성이 없는 경우, 100으로 캐스팅 해 준다.
+@CHECK_INTERRUPT_ASSITOSLAVE_TORIKOMODE
+IF RELATION:TARGET:(NO:ASSI)  == 0
+	LOCAL:0 = 100
+ELSE
+	LOCAL:0 = RELATION:TARGET:(NO:ASSI)
+ENDIF
+
+PRINTFORML (%CALLNAME:TARGET%의 %CALLNAME:ASSI%에 대한 상성 : {LOCAL:0}퍼센트)
+IF LOCAL:0 + RAND:100 >= 150
+	;승인
+	RESULT:0 = 0
+ELSE
+	;거부
+	RESULT:0 = 1
+ENDIF
+RETURN RESULT:0
+
+
+
+;--------------------------------------------------
+;조교중 커맨드 거부시, 강제로 하기 체크
+;ARG:0 = 결과치 ARG:1 = 실행치
+;밸런스 : 발동률은 어느정도 (30~60) 나오게 하고, 굴복확률도 최소 10%는 보장한다.
+;단, 거부시 체력을 깎음으로서, 유저가 기승위 짤짤이를 하지 못하게 한다.
+;인터럽트 중에는 체크하지 않는다. (원래는 인터럽트 중에도 체크를 해야 한다. 그러나 NEXTCOM을 쓰니 복잡해져서 일단 빼둔다)
+;--------------------------------------------------
+@CHECK_DENIAL_TOFORCE_TORIKOMODE, ARG:0, ARG:1
+;실행치가 없는 경우를 위해 체크.
+SIF ARG:0 == 0
+	ARG:0 = 1
+SIF ARG:1 == 0
+	ARG:1 = 1
+
+;반항확률
+LOCAL:3 = 0
+;최종결과
+LOCAL:99 = 0
+;인터럽트 관련 실행판정 변수
+LOCAL:98 = 0
+
+;인터럽트 여부 체크
+IF ASSIPLAY > 0
+	LOCAL:98 = CFLAG:ASSI:4007
+ELSE
+	LOCAL:98 = CFLAG:TARGET:4007
+ENDIF
+
+
+;인터럽트 턴 중에는 발동하지 않는다.
+IF ARG:0 <= ARG:1 && LOCAL:98 == 0
+	;인터럽트 중 판정이라면, 커맨드명을 표시
+	SIF NEXTCOM > 0
+		PRINTFORMW <%TRAINNAME:NEXTCOM% 거부 당함>
+
+	;필요 실행치를 가지고 난이도를 결정. 실행한다. (실행치가 높을수록 어려운 조교란 뜻)	;당초 결과치/실행치로 계산할 생각이었으나. 그랬다가는 너무 발동확률이 낮아져 부득이 이렇게 함.
+	;실행치 0~5 = 1 , 6~10 = 2, ...
+	LOCAL:0 = (ARG:1/5)+1
+
+	;TRY 1. 발동률의 계산
+	;발동률. 100 - 실행치*3 + 반발각인 1개당 5 + 반항적이면 5 . (반갈각인과 반항적이 클 수록 더욱 더 바둥대는 모습을 볼 수 있다)
+	;LOCAL:1 = 100 - (ARG:1*3) + (MARK:TARGET:9 *5) + (TALENT:TARGET:11*5)
+	;디버그
+	;PRINTFORML 강제로 하기 발동확률은 {LOCAL:1} 이다.
+
+	;TRY 2. 일단 발동률을 100으로 둔다. (어떨때는 뜨고 어떨때는 안 뜨고 하는게 이상하기 때문)
+	LOCAL:1 = 100
+
+	;발동계산
+	IF LOCAL:1 > RAND:100 
+		PRINTL
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 싫다며 바둥대고 있다...
+		;조수의 행동. 이 경우, 판정값을 거꾸로 사용한다. (타겟을 그만큼 아끼기 때문에, 판정에 실패해야 강제로 한다)
+		IF ASSIPLAY == 1
+			PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")%...
+			CALL CHECK_INTERRUPT_SLAVETOASSI_TORIKOMODE
+		;주인조교중
+		ELSE
+			PRINTFORMW 어떻게 할까?
+			PRINTL
+			PRINTFORML [0]그만둔다.
+			PRINTFORML [1]강제한다.
+			TINPUT 3000, 100, 1
+		ENDIF
+		;강제한다.
+		IF RESULT == 1
+			;출력
+			SELECTCASE RAND:10
+				CASE 0
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %조사처리(CALLNAME:TARGET,"를")% 겁주었다.
+				CASE 1
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 버둥대는 몸을 강하게 끌어안았다.
+				CASE 2
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %조사처리(CALLNAME:TARGET,"를")% 달콤한 말로 꼬드겼다.
+				CASE 3
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %조사처리(CALLNAME:TARGET,"를")% 노려보며 위협했다.
+				CASE 4
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 뺨을 살짝 때렸다.
+				CASE 5 TO 9
+					PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% 강제로 하려 했다.
+			ENDSELECT
+			; 노예의 행동. 굴복할지 안할지?
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%...
+			;굴복확률 계산
+			LOCAL:3 = 10 + (ARG:0*100/ARG:1)
+			;범위를 정한다. 최소 10. 최대 결과치/실행치.
+			LOCAL:3 = LIMIT(LOCAL:3, 10, (ARG:0*100/ARG:1))
+			;디버그
+			;PRINTFORMW 굴복확률은 {LOCAL:3}퍼센트 이다.
+			IF RAND:100 < LOCAL:3
+				;굴복 표현
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+				SELECTCASE RAND:4
+					CASE 0
+						PRINTFORMW 억울함에 눈시울을 붉히며 겨우 겨우 %CALLNAME:PLAYER%의 명령을 따랐다.
+					CASE 1
+						PRINTFORMW 체념한 듯이 한숨을 내쉬고는, %CALLNAME:PLAYER%의 명령을 따랐다.
+					CASE 2
+						PRINTFORMW 이를 악 물고 %조사처리(CALLNAME:PLAYER,"가")% 다가오는 것을 노려보고 있다.
+					CASE 3
+						PRINTFORMW 금방이라도 울 것 같은 표정이 되어버렸다.
+				ENDSELECT
+				RESETCOLOR
+				;실행가능이 된다.
+				LOCAL:99 = 1
+			ELSE
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				SELECTCASE RAND:2
+					CASE 0
+						PRINTFORMW 더욱 바둥대며 명령을 거부했다.
+					CASE 1
+						PRINTFORMW 어디서 그런 힘이 났는지, %CALLNAME:PLAYER%의 몸을 강하게 밀쳐냈다.
+				ENDSELECT
+				RESETCOLOR
+				;이 경우, 짤짤이를 막기 위해 체력을 하락시킨다.
+				BASE:TARGET:0 -= 100
+				PRINTFORML (%CALLNAME:TARGET%의 체력 - 100)
+				;실행불가 상태로 고정.
+				LOCAL:99 = 0
+			ENDIF
+			CALL DENIAL_PALAM_MOVE
+			CFLAG:TARGET:2 -= LOCAL:0 *5
+			CFLAG:TARGET:65 += LOCAL:0 *5
+			;수치 감소 출력
+			IF PLAYER == MASTER
+				PRINTFORML (호감도 - {LOCAL:0 *5})
+			ELSEIF PLAYER == ASSI
+				IF 50 > RAND:100
+					RELATION:ASSI:(NO:TARGET) -= 1
+					RELATION:TARGET:(NO:ASSI) -= 1
+					;상성 최소치는 1
+					RELATION:ASSI:(NO:TARGET) = MAX (RELATION:ASSI:(NO:TARGET), 1)
+					RELATION:TARGET:(NO:ASSI)  = MAX (RELATION:TARGET:(NO:ASSI) , 1)
+					CALL SETCOLOR_TORIKOMODE, "RED", 2
+					PRINTFORML <서로에 대한 상성 -1>
+					RESETCOLOR
+				ENDIF
+			ENDIF
+			PRINTFORMW (스트레스 + {LOCAL:0 *5})
+		;그만둔다 혹은 타임오버. 이 경우 기존과 달라지는 것은 없다.
+		ELSE
+			;조수 플레이 일 때만.
+			SIF ASSIPLAY == 1
+				PRINTFORMW 강제로 하긴 싫은 모양이다...
+			LOCAL:99 = 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;결과 반환
+RESULT:0 = LOCAL:99
+RETURN RESULT:0

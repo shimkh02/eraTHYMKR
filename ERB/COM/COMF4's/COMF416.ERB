@@ -1,0 +1,103 @@
+﻿;=============================================================================
+;사간
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE416
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:416 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 心の目を閉ざしている[覚]だとダメ
+SIF TALENT:PLAYER:213 == 2
+	RETURN 0
+;조교 대상이 心の目を閉ざしていない[覚]でないとダメ
+SIF TALENT:213 != 1
+	RETURN 0
+;기력이 0일 때는 불가
+SIF BASE:1 <= 0
+	RETURN 0
+;조교 대상이 [精神崩壊]または[傀儡]だとダメ
+SIF TALENT:167 || TALENT:168
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;사간은 깨닫아 상대에게만 사용 가능합니다
+;특히 재료도 없기 때문에 간소한 만들기
+;순서에 효과도 거기까지 생각하지 않았습니다 , 득도함이 온순하면 효과가 높아지는 정도이고 쓰는 법도 엉성합니다
+
+;마음의 눈을 닫지 않은[깨닫고]소유의 캐릭터 전원에게 사용 가능하게 효과 변경
+@COM416
+PRINTL 사간 (마음을 범하기)
+TSTR:0 = 사간
+CALL TRAIN_MESSAGE_COM416
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 50
+
+SOURCE:15 = 50
+SOURCE:19 = 5000
+SOURCE:18 = 3000
+SOURCE:12 = 500
+SOURCE:31 = 200
+SOURCE:32 = 200
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:12 , 6.00
+	TIMES SOURCE:31 , 6.00
+	TIMES SOURCE:32 , 6.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:12 , 5.00
+	TIMES SOURCE:31 , 5.00
+	TIMES SOURCE:32 , 5.00
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:12 , 4.00
+	TIMES SOURCE:31 , 4.00
+	TIMES SOURCE:32 , 4.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:12 , 1.00
+	TIMES SOURCE:31 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:12 , 1.00
+	TIMES SOURCE:31 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSE
+	TIMES SOURCE:12 , 1.00
+	TIMES SOURCE:31 , 1.00
+	TIMES SOURCE:32 , 1.00
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM416
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 마음 속에서 %조사선택(CALLNAME:TARGET, "를")% 범하고 있다.
+PRINTFORML %CALLNAME:PLAYER%의 마음을 읽은 %조사선택(CALLNAME:TARGET, "는")%
+IF TALENT:169
+	PRINTFORMW 상상한 것을 실제로 했으면 좋겠다는 표정으로 %조사선택(CALLNAME:PLAYER, "를")% 보고 있다….
+ELSEIF TALENT:170
+	PRINTW 무엇인가를 기대하는 것 같은 눈으로 여기를 보고 있다….
+ELSEIF TALENT:152 || TALENT:153
+	PRINTFORMW 얼굴을 새빨갛게 하면서도, 어딘지 모르게 기대를 담아 %조사선택(CALLNAME:PLAYER, "를")% 보고 있다….
+ELSEIF TALENT:150 || TALENT:160
+	PRINTW 얼굴을 새빨갛게 하고 고개를 돌려버렸다….
+ELSEIF MARK:9 > 1
+	PRINTFORMW 지금까지 업신여겨왔던 %조사선택(CALLNAME:PLAYER, "를")%, 이젠 조금 무서워 하는 눈으로 보고 있다….
+ELSE
+	PRINTFORMW 공포심에 흔들리는 눈으로 %조사선택(CALLNAME:PLAYER, "를")% 보고 있다….
+ENDIF

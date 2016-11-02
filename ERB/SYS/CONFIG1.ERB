@@ -1,0 +1,342 @@
+﻿;=============================================================================
+;텍스트 표시
+;=============================================================================
+@CONFIGURATION_TEXT
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL 현재, 텍스트 표시 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+IF FLAG:11 == -1
+	PRINT ×
+ELSEIF FLAG:11 == 1
+	PRINT ○
+ELSE
+	PRINT ◎
+ENDIF
+PRINTL [ 0] 캐릭터 대사의 표시빈도
+;-------------------------------------------------
+PRINTFORML %LOCALS:(FLAG:10)%[ 1] 텍스트 표시
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:21 & 1) > 0)%[ 2] 소지 아이템 표시
+;-------------------------------------------------
+SIF FLAG:11 > 0
+	PRINTFORML %LOCALS:(FLAG:22  == 0 )%[ 3] 범용 대사의 사용 (무명 캐릭터, 딸용)
+;-------------------------------------------------
+PRINTL  [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	CALL CONFIGURATION_TEXT_KOJO
+ELSEIF RESULT == 1
+	PRINTFORMW 캐릭터 대사의 표시빈도를 \@(FLAG:10 == 1) ? OFF # ON\@ 합니다.
+	FLAG:10 = 1 - FLAG:10
+ELSEIF RESULT == 2
+	PRINTFORMW 소지 아이템 표시를 \@(FLAG:21 & 1) ? OFF # ON\@합니다.
+	FLAG:21 ^= 1
+ELSEIF RESULT == 3 && FLAG:11 > 0
+	PRINTFORMW 범용 대사를 \@(FLAG:22 == 0 ) ? 사용하지 않습니다. # 사용합니다.\@
+	IF FLAG:22 == 1
+		FLAG:22 = 0
+	ELSE
+		FLAG:22 = 1
+	ENDIF
+	;디버그
+	;PRINTFORML FLAG:22={FLAG:22}
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_0
+ENDIF
+PRINT 그밖에 
+GOTO INPUT_LOOP_0
+
+;-------------------------------------------------
+;캐릭터 대사의 표시 빈도 설정
+;-------------------------------------------------
+@CONFIGURATION_TEXT_KOJO
+PRINTL 캐릭터 대사의 표시 빈도를 설정합니다.
+PRINTL [0] - 표시 OFF
+PRINTL [1] - 표시 ON
+PRINTL [2] - 표시 빈도 MAX
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTW 캐릭터 대사를 OFF로 합니다.
+	FLAG:11 = -1
+ELSEIF RESULT == 1
+	PRINTW 캐릭터 대사를 ON로 합니다.
+	FLAG:11 = 1
+ELSEIF RESULT == 2
+	PRINTW 캐릭터 대사를 최대로 합니다.
+	FLAG:11 = 2
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP
+ENDIF
+
+;=============================================================================
+;SHOP · 이벤트 확장
+;=============================================================================
+@CONFIGURATION_0
+LOCALS:0 = ×
+LOCALS:1 = ○
+;항목 전부 ON
+LOCAL = 262143
+PRINTL 현재, SHOP · 이벤트 확장 기능의 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+SIF FLAG:4 < 50 && FLAG:4 != 2
+	PRINTFORML %LOCALS:((FLAG:12 & 1) > 0)%[ 0] 강하게 뉴 게임
+;-------------------------------------------------
+IF FLAG:12 & 2
+	PRINTFORML \@FLAG:1122 > 0 ? ③ # ②\@[ 1] 표시형식 변경
+ELSE
+	;①형 표시
+	PRINTFORML ①[ 1] 표시형식 변경
+ENDIF
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 4) > 0)%[ 2] 호감도 표시
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 8) > 0)%[ 3] 전시실
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 16) > 0)%[ 4] 도시락 · 라이브
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 32) > 0)%[ 5] 순애 모드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 64) > 0)%[ 6] 일상생활
+;-------------------------------------------------
+SIF FLAG:12 & 64
+	PRINTFORML %LOCALS:((FLAG:12 & 128) > 0)%[ 7] 일상생활 확장
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 256) > 0)%[ 8] 밤 이벤트 확장
+;-------------------------------------------------
+IF FLAG:12 & 256
+	PRINTFORML %LOCALS:((FLAG:12 & 512) > 0)%[ 9] 밤 상대 랜덤 검출
+;-------------------------------------------------
+	SIF FLAG:3 < 4
+		PRINTFORML %LOCALS:((FLAG:12 & 1024) > 0)%[10] 반발각인 보유자는 밤 이벤트 없음
+ENDIF
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 2048) > 0)%[11] 무명 캐릭터의 성별 랜덤 (남자 포함)
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 4096) > 0)%[12] 조교 후 행위를 억제한다
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 8192) > 0)%[13] 식후의 멋진 운동을 억제한다
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 16384) > 0)%[14] 매각시 대사를 OFF합니다
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 32768) > 0)%[15] 아침의 이벤트를 억제한다
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 65536) > 0)%[16] 기능훈련사를 이용할 수 없게 한다
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:12 & 131072) > 0)%[17] 시간 흐름에 따른 호감도 저하를 억제한다
+;-------------------------------------------------
+SIF FLAG:12 < LOCAL
+	PRINTL 　[98] 전부 유효
+SIF FLAG:12
+	PRINTL 　[99] 전부 무효
+PRINTL  [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 98 && FLAG:12 < LOCAL
+	PRINTW SHOP · 이벤트 확장 기능을 전부 사용할 수 있게 설정했습니다.
+	FLAG:12 = LOCAL
+ELSEIF RESULT == 99 && FLAG:12
+	PRINTW SHOP · 이벤트 확장 기능을 전부 사용할 수 없게 설정했습니다.
+	FLAG:12 = 0
+ELSEIF RESULT == 0 && FLAG:4 < 50 && FLAG:4 != 2
+	PRINTFORMW 엔딩 후, 강하게 뉴 게임을 선택할 수 \@(FLAG:12 & 1) ? 없게 # 있게\@ 했습니다.
+	FLAG:12 ^= 1
+ELSEIF RESULT == 1
+	;PRINTFORMW 능력치를 \@(FLAG:12 & 2) ? 1(기존 형태) # 2(신규 형태)\@식으로 표시하도록 설정했습니다.
+	;FLAG:12 ^= 2
+	
+	IF (FLAG:12 & 2) && FLAG:1122
+		FLAG:1122 = 0
+		FLAG:12 ^= 2
+	ELSEIF !(FLAG:12 & 2)
+		FLAG:1122 = 0
+		FLAG:12 ^= 2
+	ELSE
+		FLAG:1122 = 1
+	ENDIF
+	
+	;③형 표시. 컬러바 패치
+	IF (FLAG:12 & 2) && FLAG:1122 > 0		
+		PRINTFORMW 3(컬러바 형태)식으로 표시하도록 설정했습니다.
+	;①형 표시
+	ELSEIF !(FLAG:12 & 2)
+		PRINTFORMW 1(기존 형태) 식으로 표시하도록 설정했습니다.
+	;②형 표시
+	ELSE
+		PRINTFORMW 2(신규 형태)식으로 표시하도록 설정했습니다.
+	ENDIF
+
+ELSEIF RESULT == 2
+	PRINTFORMW 호감도가 \@(FLAG:12 & 4) ? 숨겨지게 # 표시되게 \@ 합니다.
+	FLAG:12 ^= 4
+ELSEIF RESULT == 3
+	PRINTFORMW 전시실 및 관련 이벤트가 발생하\@(FLAG:12 & 8) ? 지 않도록 # 게\@ 설정됩니다.
+	FLAG:12 ^= 8
+ELSEIF RESULT == 4
+	PRINTFORMW 상점 메뉴에서 「요리를 시킨다」, 「야외 라이브 공연」를 \@(FLAG:12 & 16) ? 할 수 없게 # 할 수 있게 \@설정합니다.
+	FLAG:12 ^= 16
+ELSEIF RESULT == 5
+	PRINTFORMW 순애 모드 소질변경 이벤트를 \@(FLAG:12 & 32) ? 무효 # 유효 \@ 처리합니다.
+	FLAG:12 ^= 32
+ELSEIF RESULT == 6
+	PRINTFORMW 휴식 선택시, 노예들의 일상생활을 \@(FLAG:12 & 64) ? 보이지 않게 # 보이게 \@ 합니다.
+	FLAG:12 ^= 64
+ELSEIF RESULT == 7 && FLAG:12 & 64
+	PRINTFORMW 일상생활의 기능을 \@(FLAG:12 & 128) ? 표준으로 # 확장해서 \@ 보여줍니다.
+	FLAG:12 ^= 128
+ELSEIF RESULT == 8
+	PRINTFORMW 밤 이벤트를 \@(FLAG:12 & 256) ? 기본으로 # 확장해서 \@ 보여줍니다.
+	SIF FLAG:12 & 256
+		FLAG:12 &= ~1536
+	FLAG:12 ^= 256
+ELSEIF RESULT == 9 && FLAG:12 & 256
+	IF FLAG:12 & 512
+		PRINTW 밤 상대에 조교 대상이 반드시 포함됩니다.
+	ELSE
+		PRINTFORML 밤 상대가 데리고 있는 노예들 중 랜덤하게 검출됩니다.
+		PRINTFORMW ※또한, 이 기능은 정렬 순서상 위에서부터 100명까지밖에 대응하지 않습니다.
+	ENDIF
+	FLAG:12 ^= 512
+ELSEIF RESULT == 10 && FLAG:12 & 256 && FLAG:3 < 4
+	PRINTFORMW 밤 상대로 반발각인을 가진 캐릭터\@(FLAG:12 & 1024) ? 도 포함됩니다. # 는 제외됩니다.\@
+	FLAG:12 ^= 1024
+ELSEIF RESULT == 11
+	PRINTFORMW 구입 · 추가되는 무명 캐릭터의 성별을 \@(FLAG:12 & 2048) ? 모두 여자로 # 랜덤으로\@ 설정합니다.
+	FLAG:12 ^= 2048
+ELSEIF RESULT == 12
+	PRINTFORMW 조교후 행위를 \@(FLAG:12 & 4096) ? 허용합니다. # 억제합니다. \@
+	FLAG:12 ^= 4096
+ELSEIF RESULT == 13
+	PRINTFORMW 식후의 멋진 운동을 \@(FLAG:12 & 8192) ? 허용합니다. # 억제합니다. \@
+	FLAG:12 ^= 8192
+ELSEIF RESULT == 14
+	PRINTFORMW 매각 대사를 \@(FLAG:12 & 16384) ? 보여줍 # 보여주지 않습 \@니다.
+	FLAG:12 ^= 16384
+ELSEIF RESULT == 15
+	PRINTFORMW 아침의 운동을 \@(FLAG:12 & 32768) ? 허용합니다. # 억제합니다. \@
+	FLAG:12 ^= 32768
+ELSEIF RESULT == 16
+	PRINTFORMW 기능훈련사를 \@(FLAG:12 & 65536) ? 봉인 # 허용 \@ 합니다.
+	FLAG:12 ^= 65536
+ELSEIF RESULT == 17
+	PRINTFORMW 시간 경과로 인한 호감도 하락을 \@(FLAG:12 & 131072) ? 막지 않 # 막 \@습니다.
+	FLAG:12 ^= 131072
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 다른거
+GOTO INPUT_LOOP_0
+
+;=============================================================================
+;아이템 확장
+;=============================================================================
+@CONFIGURATION_1
+LOCALS:0 = ×
+LOCALS:1 = ○
+;항목 전부 ON
+LOCAL = 127
+PRINTL 현재, 아이템의 확장 기능 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+PRINTFORML %LOCALS:((FLAG:13 & 1) > 0)%[ 0] 특수한 약([금단의 지식] or [조합지식] 필수)
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 2) > 0)%[ 1] 강력 아이템 · 커맨드
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 4) > 0)%[ 2] 일반적인 약품 아이템의 자동 보충
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 8) > 0)%[ 3] 특수한 약품 아이템의 자동 보충
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 16) > 0)%[ 4] 소모품 아이템의 자동 보충
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 32) > 0)%[ 5] 진정차의 자동 사용
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 64) > 0)%[ 6] 영양제의 자동 사용
+;-------------------------------------------------
+PRINTFORML %LOCALS:((FLAG:13 & 1024) > 0)%[11] 창관 · 커맨드 해금
+;-------------------------------------------------
+SIF FLAG:13 < LOCAL
+	PRINTL 　[98] 전부 유효
+SIF FLAG:13
+	PRINTL 　[99] 전부 무효
+PRINTL  [100] 돌아간다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 98 && FLAG:13 < LOCAL
+	PRINTW 아이템 확장 기능을 모두 사용할 수 있도록 설정했습니다.
+	FLAG:13 = LOCAL
+ELSEIF RESULT == 99 && FLAG:13
+	PRINTW 아이템 확장 기능을 모두 사용할 수 없도록 설정했습니다.
+	FLAG:13 = 0
+	;Ｓ패치 추가
+	IF FLAG:4 == 4
+		PRINTFORMW “PROSTITUTE” 모드에선 창관 관련 커맨드를 봉인할 수 없습니다.
+		FLAG:13 = 1024
+	ELSEIF FLAG:13 & 1024
+		CALL SPRING_OUT
+		FLAG:13 = 0
+	ELSE
+		FLAG:13 = 0
+	ENDIF
+ELSEIF RESULT == 0
+	PRINTFORMW 특수한 약 계열 아이템을 \@(FLAG:13 & 1) ? 무효 # 유효 \@로 합니다.
+	FLAG:13 ^= 1
+ELSEIF RESULT == 1
+	PRINTFORMW 강력 아이템 · 커맨드를 \@(FLAG:13 & 2) ? 무효 # 유효 \@로 합니다.
+	FLAG:13 ^= 2
+ELSEIF RESULT == 2
+	PRINTFORMW 일반적인 약품 아이템의 자동보충을 \@(FLAG:13 & 4) ? 하지 않습니다. # 합니다. \@
+	FLAG:13 ^= 4
+ELSEIF RESULT == 3
+	PRINTFORMW 특수한 약품 아이템의 자동보충을 \@(FLAG:13 & 8) ? 하지 않습니다. # 합니다. \@
+	FLAG:13 ^= 8
+ELSEIF RESULT == 4
+	PRINTFORMW 소모품 아이템의 자동보충을 \@(FLAG:13 & 16) ? 하지 않습니다. # 합니다. \@
+	FLAG:13 ^= 16
+ELSEIF RESULT == 5
+	PRINTFORMW 진정차의 자동 사용을 \@(FLAG:13 & 32) ? 하지 않습니다. # 합니다. \@
+	FLAG:13 ^= 32
+ELSEIF RESULT == 6
+	PRINTFORMW 영양제의 자동 사용을 \@(FLAG:13 & 64) ? 하지 않습니다. # 합니다. \@
+	FLAG:13 ^= 64
+ELSEIF RESULT == 11
+	IF FLAG:13 & 1024 && FLAG:4 == 4
+		PRINTFORMW “PROSTITUTE” 모드에선 창관 관련 커맨드를 봉인할 수 없습니다.
+	ELSEIF FLAG:13 & 1024
+		PRINTFORMW 창관을 봉인하고 모든 매춘 상태를 클리어했습니다.
+		FLAG:13 -= 1024
+		CALL SPRING_OUT
+	ELSE
+		PRINTFORMW 창관을 유효로 했습니다.
+		FLAG:13 |= 1024
+	ENDIF
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 올바른 값을 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에
+GOTO INPUT_LOOP_0

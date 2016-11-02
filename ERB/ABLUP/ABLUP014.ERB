@@ -1,0 +1,170 @@
+﻿;=============================================================================
+;노출벽
+;=============================================================================
+@ABLUP14
+DRAWLINE
+SIF ABL:14 >= 5
+	JUMP ABLUP_MAX
+
+;露出癖を3이상に上げるなら恥辱刻印が必要
+SIF COST14(2)
+	PRINTFORM %MARKNAME:4% {COST14(2)}LV 이상, 그리고 
+;ＬＶ3から4、4から5に上げるときは異常経験必要（素質：[目立ちたがり]なら無視できる）
+SIF COST14(3)
+	PRINTFORM %EXPNAME:50% {COST14(3)} 이상, 그리고 
+;절정経験、または調教自慰経験が必要
+PRINTFORML \@(ABL:14 < 2) ? %EXPNAME:2% # %EXPNAME:11%\@ 1 이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:15%의 구슬×{COST14(0)}
+SIF COST14(1) > 0
+	PRINTFORM , %EXPNAME:14% {COST14(1)} 이상
+PRINT ……
+CALL SHOW_ISABLUP_COMMON, CAN14(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN14(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:15 -= COST14(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:14 += 1
+PRINTFORMW %ABLNAME:14%의 레벨이 %조사처리(ABL:14,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP14
+SIF ABL:14 >= 5
+	RETURN 0
+
+CALLF CALC_COST14, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP14("CHECK")
+
+@COST14(ARG)
+#FUNCTION
+RETURNF CALC_COST14("GET", ARG)
+
+@CALC_COST14(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:14 == 0
+	LOCAL:0 = 100
+	LOCAL:1 = 0
+ELSEIF ABL:14 == 1
+	LOCAL:0 = 1000
+	LOCAL:1 = 1
+ELSEIF ABL:14 == 2
+	LOCAL:0 = 5000
+	LOCAL:1 = 5
+ELSEIF ABL:14 == 3
+	LOCAL:0 = 15000
+	LOCAL:1 = 20
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 1.50
+	ENDIF
+ELSEIF ABL:14 == 4
+	LOCAL:0 = 35000
+	LOCAL:1 = 100
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 2.50
+	ENDIF
+ENDIF
+
+;目立ちたがり
+IF TALENT:28
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;倒錯的
+IF TALENT:80
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;マゾ
+IF TALENT:82
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+ENDIF
+
+;欲望が高いと軽減
+IF ABL:11 >= 5
+	TIMES LOCAL:0 , 0.70
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:11 == 4
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:11 == 3
+	TIMES LOCAL:0 , 0.85
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:11 == 2
+	TIMES LOCAL:0 , 0.90
+ELSEIF ABL:11 == 1
+	TIMES LOCAL:0 , 0.95
+ENDIF
+
+;露出癖を3이상に上げるなら恥辱刻印が必要
+SIF ABL:14 > 1
+	LOCAL:2 = ABL:14 - 1
+
+;ＬＶ3から4、4から5に上げるときは異常経験必要（素質：[目立ちたがり]なら無視できる）
+SIF ABL:14 >= 3 && TALENT:28 == 0
+	LOCAL:3 = ABL:14 - 2
+
+RETURNF 0
+
+@CAN14(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP14("GET", ARG)
+
+@CAN_ABLUP14(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;露出癖を3이상に上げるなら恥辱刻印が必要
+IF ABL:14 > 1
+	;恥辱刻印が不足
+	SIF MARK:4 < COST14(2)
+		LOCAL:0 |= 8
+ENDIF
+
+;異常経験が必要な場合
+SIF EXP:50 < COST14(3)
+	LOCAL:0 |= 2
+
+;恥情의 구슬で上げる
+SIF JUEL:15 < COST14(0)
+	LOCAL:0 |= 1
+
+;露出快楽経験が必要な場合
+SIF EXP:14 < COST14(1)
+	LOCAL:0 |= 2
+IF ABL:14 < 2
+	;절정経験が必要
+	SIF EXP:2 == 0
+		LOCAL:0 |= 2
+ELSE
+	;調教自慰経験が必要
+	SIF EXP:11 == 0
+		LOCAL:0 |= 2
+ENDIF
+
+RETURNF (LOCAL:0 == 0)

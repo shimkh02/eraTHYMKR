@@ -1,0 +1,784 @@
+﻿;-------------------------------------------------
+;카소다니 쿄코 대사
+;한국에서 누가 복붙해서 땜빵한 거라 보존 가치는 없음
+;-------------------------------------------------
+
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+;대사의 존재 판정(YM판)
+@TRY_81
+RETURN 1
+
+@EVENTTRAIN
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+@EVENTEND
+#LATER
+
+;--------------------------------------------------
+;EVENTTRAIN?係（X1をキャラ番?に置換）
+;調?開始時のセリフ CFLAG 201～219を使用
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 81
+	RETURN 0
+;--------------------------------------------------
+;エキストラモ?ド構文　CFLAG:5220を使用
+;はいを選?した時に初調?時に口上設定用の素質に?更できます
+;-------------------------------------------------
+IF CFLAG:5000 == 0
+	PRINTL 쿄코는 귀여워요.
+	CFLAG:5000 = 1
+ENDIF
+
+;--------------------------------------------------
+;特定助手、主人時に特殊助手口上を呼び出す(Y1を特定助手、X1を主人のキャラ番?に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTTRAIN_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_EVENTTRAIN_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;첫 조교시 CFLAG201
+;-------------------------------------------------
+
+IF CFLAG:5001 == 0
+	DRAWLINE
+	PRINTFORMW 「……. 여기는 어디?」
+	PRINTFORMW 「%tstr:301%은……. 꺄앗, 무엇을 할 생각이야?!」
+	CFLAG:5001 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;조교 개시시（一回のみ） CFLAG201
+;-------------------------------------------------
+
+;굴복각인Lv1
+ELSEIF CFLAG:5001 < 2 && MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 쿄코는 이쪽을 노려보고 있다.
+	CFLAG:5001 = 2
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF CFLAG:5001 < 3 && MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「……이제 저번처럼 그런 짓 하지 않는다고 말하면, 나오겠어요!」
+	PRINTFORMW 쿄코는 침대 밑에서 이쪽을 올려보고 있다
+	CFLAG:5001 = 3
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF CFLAG:5001 < 4 && MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 방에 들어가자 쿄코는 모든 것을 단념한 눈동자로 이쪽으로 시선을 돌리고는, 접근해 왔다…
+	PRINTFORMW 이미 조교에 반항할 의사를 잃은 것 같다…
+	CFLAG:5001 = 4
+	RETURN 1
+
+;굴복각인Lv3+ 연모
+ELSEIF CFLAG:5001 < 5 && MARK:2 == 3 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 쿄코는 %조사처리(CALLNAME:MASTER,"를")% 발견하자 기쁜 듯한 웃음을 띄우며 총총 다가와 안겨들었다.
+	PRINTFORMW 「겨우 와줬군요!」
+	PRINTFORMW 「쿄코는 주인님의 완구예요」
+	PRINTFORMW 「연인처럼 돌봐주지 않더라도, 애완동물처럼 귀여워해주지 않아도 돼요」
+	PRINTFORMW 「쭉쭉 계속, 쿄코로 놀아주세요……」
+	PRINTFORMW 「물건으로서든 뭐든 상관없으니 저를 기억해 주세요……」
+	CFLAG:5001 = 5
+	RETURN 1
+
+;助手の有無をチェック（いない場合は二回目以降へ飛ぶ）
+ELSEIF ASSI < 0 
+	CALL K81_KOJO2
+
+;-------------------------------------------------
+;助手との掛け合い(Y1を助手のキャラ番?に置換、X1をキャラ番?に?更する) CFLAG202
+;掛け合いをするキャラを?やす場合は、コピ?＆ペ?ストをして、CFLAGの?を203、204と?やす
+;-------------------------------------------------
+;조수
+
+;ELSEIF ASSINO() == Y1
+;	DRAWLINE
+	;初めて
+;	IF CFLAG:5203 == 0
+		;?慕+?慕時初口上（?落イベント）が?生?み
+;		IF TALENT:150 == 1 && CFLAG:5201 >= 5
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5203 = 1
+;			RETURN 1
+	;二回目以降
+;	ELSE CFLAG:5203 == 1 && FLAG:11 ==2
+		;?慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+;口上のある助手が居ない場合は、通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K81_KOJO2
+ENDIF
+
+
+;-------------------------------------------------
+;조교 개시시（2回目以降、X1をキャラ番?に?更する） CFLAGなし 
+;-------------------------------------------------
+@K81_KOJO2
+;반발각인Lv3
+IF MARK:9 == 3 && FLAG:11 == 2
+	DRAWLINE
+	RETURN 1
+
+;굴복각인Lv0
+ELSEIF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 쿄코는 이쪽에 흥미를 보이지 않는다…
+	PRINTFORMW 소리를 내자 이쪽을 돌아보았지만、바로 눈을 다른 곳으로 돌려버렸다…
+	RETURN 1
+
+;굴복각인Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORML 「……『여기서 나가 절로 돌아가고 싶냐』고요?」
+	PRINTFORMW 「어짜피 그렇게 말하고 함정을 파둘께 뻔핞아요!」
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「
+	RETURN 1
+
+;굴복각인Lv3+?연모없음
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORML %조사처리(CALLNAME:MASTER,"가")% 방에 들어오자 쿄코는 몸을 떨었다.
+	PRINTFORMW 「오늘은 뭘 할 생각인거요…？」
+	RETURN 1
+
+;굴복각인Lv3+?연모
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORML 「기다렸었어요!」
+	PRINTFORMW 「오늘도 나랑 많이 놀아줘요」
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND?係（X1をキャラ番?に置換）
+;調?終了時のセリフ
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 81
+	RETURN 0
+;--------------------------------------------------
+;特定助手、主人時に特殊助手口上を呼び出す(Y1を特定助手、X1を主人のキャラ番?に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTEND_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	SIF ASSINO() == Y1
+;	CALL LES_EVENTEND_KX1_MY1
+;	RETURN 0
+;ENDIF
+;--------------------------------------------------
+;調?終了時のセリフ CFLAG 211～220を使用
+;--------------------------------------------------
+IF ASSI > 0
+	PRINTFORMW 「
+;반발각인Lv3
+ELSEIF MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「저리 꺼져! 꼴도보기 실허요!
+	PRINTFORMW 쿄코는 걷어차듯이 %조사처리(CALLNAME:MASTER,"를")% 쫒아냈다…
+	PRINTFORMW ……억누른 흐느낌 소리가 방 안에서 들려온다…
+	RETURN 1
+
+;굴복각인Lv1이하
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「이정도로 끝날거라 생각해요?
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORML 「벌써 가는건가요？」
+	PRINTFORMW 조그마한 목소리로 쿄코는 떠나가는 %조사처리(CALLNAME:MASTER,"를")% 보고 있다.
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORML 「오늘은 벌써 끝인거요？」
+	PRINTFORML 「점점 즐거워지기 시작했는데요…」
+	PRINTFORMW 눈을 치켜뜨며 쿄코는 입술에 손가락을 갖다댔다
+	RETURN 1
+
+ELSEIF TEQUIP:90 && ABL:MASTER:98 >= 1
+	DRAWLINE
+	;35Lv3以上
+	IF ABL:35 >= 3
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 조교 도구를 정리하고 촉수 생물을 남겨둔채 나갈 준비를 했다
+		PRINTFORMW 「……아…끝인가요…？……하아…하아……아직 이 아이들이…있…거기에…나도요…」
+		PRINTFORMW 쿄코는 촉수 한 개를 손에 들어, 혀를 써서 핥는다
+		PRINTFORMW 「…응……할짝…츄르릅……우웅……츄릅…할짝……」
+		PRINTFORMW 여러가지 체액 투성이가 된 소녀의 모습에 촉수들은 흥분해, 쿄코의 몸으로 일제히 덤벼 들었다
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 복도로 나와서 방문을 닫자, 쿄코의 교성이 들려온다.
+		IF TALENT:0 == 1
+		DRAWLINE
+			PRINTFORMW ・・・
+			PRINTFORMW ・・
+			PRINTFORMW ・
+			PRINTFORMW 자기 방에서 잡무 처리를 하고 있던%조사처리(CALLNAME:MASTER,"는")% 시계를 보고 쿄코가 있는 방으로 갔다.
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 문을 열자, 악취가 앞을 다투어 새어나온다
+			PRINTFORMW 어슴푸레한 방의 중앙에는 쿄코와 그 전신에 붙어있는 촉수의 덩어리가 보인다
+			PRINTFORMW 「……………우………아우……아…아앙,앗……」
+			PRINTFORMW 쿄코는 질과 아날, 입안이 유린되어 손발을 움찔움찔하며 경련시키고 있다
+			PRINTFORMW 느긋한 촉수 덩어리는, 격렬한 능욕을 끝내고 소녀의 신체의 여운을 맛보고 있는 것처럼도 보인다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 촉수 덩어리로 다가가며, 촉수로부터 쿄코를 갈라 놓는다
+			PRINTFORMW 「…………아……야아앗…좀 더……더 하고 싶어요…」
+			PRINTFORMW 질내에 들어간 촉수가 나오자 거기선, 처녀혈이 섞인 대량의 정액이 넘쳐 나왔다
+			PRINTFORMW 「……………아후……아우우………」
+			PRINTFORMW 쿄코는 쾌락에 녹은 표정으로, 흘러넘쳐 나오는 정액의 덩어리를 응시하고 있었다
+		ENDIF
+	;恋慕
+	ELSEIF TALENT:150 == 1
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 조교 도구를 정리하고 촉수 생물을 남겨둔채 나갈 준비를 했다
+		PRINTFORML 「……응……하아…하아……에…？……%CALLNAME:MASTER%…？」
+		PRINTFORMW 「기、기다려……이거…아직……서、설마…이대로…두고 갈 생각인가…요…？」
+		PRINTFORML 「……아、알았다고………%조사처리(CALLNAME:MASTER,"가")% 말하는 일…이라…면――！？」
+		PRINTFORMW 무서움을 숨길 수 없는 소녀의 모습에 촉수들은 흥분해, 그 가녀린 신체로 일제히 덤벼 들었다
+		PRINTFORMW 파츄리의 절규를 듣고 만족한%CALLNAME:MASTER%는, 복도에서 나오면서 문을 닫았다
+		IF TALENT:0 == 1
+		DRAWLINE
+			PRINTFORMW ・・・
+			PRINTFORMW ・・
+			PRINTFORMW ・
+			PRINTFORMW 자기방에서 서류작업을 하던 %조사처리(CALLNAME:MASTER,"는")% 시계를 본뒤 쿄코가 있는 방으로 갔다.
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 문을 열자, 악취가 코를 찌른다
+			PRINTFORMW 어슴푸레한 방의 중앙에는 쿄코와 그 전신에 붙어있는 촉수의 덩어리가 보인다
+			PRINTFORMW 「……………우…………우………우……」
+			PRINTFORMW 쿄코는 질과 아날, 입안이 유린되어 손발을 움찔움찔하며 경련시키고 있다
+			PRINTFORMW 촉수 덩어리는, 격렬한 능욕을 끝내고 소녀의 여운을 맛보고 있는 것처럼도 보인다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 촉수 덩어리에게 가서, 촉수로부터 쿄코를 갈라 놓는다
+			PRINTFORMW 「…………아……우…」
+			PRINTFORMW 질내에 있던 촉수가 빠져나오자, 파과혈이 섞인 대량의 정액이 넘쳐 나왔다
+			PRINTFORMW 「…………………………」
+			PRINTFORMW 쿄코는 넋이 나간것같았지만 %조사처리(CALLNAME:MASTER,"가")% 소리치니 의식을 되찾았다
+			PRINTFORMW 「………우……힛…그만둬…이제 싫어…이제 싫어요요요요요……」
+		ENDIF
+	;それ以外
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 조교 도구를 정리하고 촉수 생물을 남겨둔채 나갈 준비를 했다
+		PRINTFORML 「……읏……하아…하아……에…？……」
+		PRINTFORMW 「기、기다려……이거……아직……서、설마…이대로…두고 갈 생각인가…요…？」
+		PRINTFORMW 「……거、거짓말이지요……？…시…싫어…싫어어어어어어────！」
+		PRINTFORMW 무서워 하는 소녀의 모습을 보고 촉수들은 더욱더 흥분하여 일제히 덤벼들었다.
+		PRINTFORMW 쿄코의 절규를 듣고 만족한%CALLNAME:MASTER%는, 복도에서 나오면서 문을 닫았다
+		IF TALENT:0 == 1 && CFLAG:5159 == 0
+		DRAWLINE
+			PRINTFORMW ・・・
+			PRINTFORMW ・・
+			PRINTFORMW ・
+			PRINTFORMW 자기방에서 서류작업을 하던 %조사처리(CALLNAME:MASTER,"는")% 시계를 본뒤 쿄코가 있는 방으로 갔다.
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 문을 열면, 악취가 코를 찌른다
+			PRINTFORMW 어슴푸레한 방의 중앙에는 쿄코와 그 전신에 붙어있는 촉수의 덩어리가 보인다
+			PRINTFORMW 「……………우…………우………우……」
+			PRINTFORMW 쿄코는 질과 아날, 입안이 유린되어 손발을 움찔움찔하며 경련시키고 있다
+			PRINTFORMW 촉수 덩어리는, 격렬한 능욕을 끝내고 소녀의 여운을 맛보고 있는 것처럼도 보인다
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 촉수 덩어리에게 가서, 촉수로부터 쿄코를 갈라 놓는다
+			PRINTFORMW 「…………아……우…」
+			PRINTFORMW 질내에 있던 촉수가 빠져나오자, 파과혈이 섞인 대량의 정액이 넘쳐 나왔다
+			PRINTFORMW 「…………………………」
+			PRINTFORMW 쿄코는 넋이 나간것같았지만 %조사처리(CALLNAME:MASTER,"가")% 소리치니 의식을 되찾았다
+			PRINTFORMW 「………우……힛…그만둬…이제 싫어…이제 싫어요요요요요……」
+		ENDIF
+	ENDIF
+	RETURN 1
+	
+;굴복각인Lv3+?연모+체력500이하?
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「
+	RETURN 1
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM?係（X1をキャラ番?に置換）
+;コマンド?行時に出力されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_81
+;助手が調?した時に口上をスキップする（好みに?じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ?ルギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに?りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;--------------------------------------------------
+;特定助手、主人時に特殊助手口上を呼び出す(Y1を特定助手、X1を主人のキャラ番?に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_COM_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_COM_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;コマンド?行時のセリフ CFLAG 301～400を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;愛撫 CFLAG301
+;-------------------------------------------------
+IF SELECTCOM == 0
+
+ENDIF
+
+;-------------------------------------------------
+;触手召喚 cflag:5300
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 500 && TEQUIP:90
+	;初めて
+	IF CFLAG:5300 == 0
+		PRINTFORMW 「%TSTR:305% 이건 뭔가요?」
+		;150
+		IF TALENT:150 == 1
+			PRINTFORMW 「……이런건 싫지만, 그것이%CALLNAME:MASTER%의 소망이라면요………」
+			PRINTFORML 각오를 결정한 표정으로 한 걸음 앞으로 나오는 쿄코에게
+			PRINTFORMW 촉수들이 하나씩 붙어 간다…
+		;それ以外
+		ELSE
+			PRINTFORMW 「…싫어요!무서웟!살해당해요!도와ㅈ…싫어어어어어어요!!」
+			PRINTFORML 새파래져 저항하는 쿄코지만, 다수의 촉수에 삼켜져 간다…
+		ENDIF
+			CFLAG:5300 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;150＋35Lv3以上
+		IF TALENT:150 == 1 && ABL:35 >= 3 && (CFLAG:5300 <= 4 || FLAG:11 == 2)
+			IF RAND:2 == 0
+				PRINTFORMW 쿄코는 소환된 촉수의 한 부분을 손에 쥐고、어루만지기 시작했다
+				PRINTFORMW 「어서오세요ー、저의 몸을 즐겨주세요」
+				PRINTFORMW 「그래도 너무 즐기면 안돼요。제 몸은 %TSTR:305%의 것이니까요」
+			ELSE
+				PRINTFORMW 「아…또 부숴 주는구나…♪」
+				PRINTFORML 쿄코는 사뿐사뿐 걸어가서 촉수에 팔을 걸고
+				PRINTFORML 그것을 사랑스럽지만 아까운 듯이 내려보기 시작했다
+				PRINTFORMW 「하아…하아…빨리…빨리 …밑에 줘요♪」
+			ENDIF
+
+			CFLAG:5300 = 5
+		;150
+		ELSEIF TALENT:150 == 1 && (CFLAG:5300 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「거기서 보고 있어…%CALLNAME:MASTER% 나,%조사처리(CALLNAME:MASTER,"가")% 원한다면요…」
+			PRINTFORML 쿄코는 공포를 지우듯이, 생긋%CALLNAME:MASTER%에 미소짓고 촉수에게 걸어 가면서
+			PRINTFORMW 소녀의 향기에 흥분한듯, 기다리지 못할 듯이 꾸불꾸불하는 촉수에게 몸을 맡겨 갔다
+			CFLAG:5300 = 4
+		;150無し＋触手に0を奪われた＋35LV3以下
+		ELSEIF ABL:35 <= 2 && (CFLAG:5300 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「히잇…!싫엇…그만둬……이제 그만둬어어어어요…」
+			CFLAG:5300 = 3
+		;それ以外
+		ELSEIF CFLAG:5300 <= 1 || FLAG:11 == 2
+			PRINTFORMW 쿄코는 스스로의 몸을 꼭 껴안아 눈을 감았다
+			CFLAG:5300 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+		PRINTFORMW 콰당 하는 소리와 함께 마루에 넘어진 쿄코카
+	;150+35Lv3以上
+	IF TALENT:150 == 1 && ABL:35 >= 3 && (CFLAG:5301 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「하아……하우우우♪응…♪좀더어어어 먹을래요…♪」
+		PRINTFORML 촉수의 분비액으로 전신이 미끈미끈이 되어서
+		PRINTFORMW 쿄코는 마루에 흘러넘친 액을 손가락으로 건져, 이상한 눈을 하고선 그것을 핥았다
+		CFLAG:5301 = 3
+	;150無し＋触手に0を奪われた＋35LV3以下
+	ELSEIF ABL:35 <= 2 && (CFLAG:5301 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「…이제 싫어…이제 싫어요 …」
+		PRINTFORMW 쿄코는 부들부들 떨었다.
+		CFLAG:5301 = 2
+	;それ以外
+	ELSEIF CFLAG:5301 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…콜록……변태와 촉수의……하베라니…」
+		PRINTFORMW 쿄코는 당장 으스러질 것 같은, 가냘픈 소리로 중얼거렸다
+		CFLAG:5301 = 1
+	ENDIF
+	RETURN 0
+ENDIF
+;촉수애무 CFLAG:5302
+IF SELECTCOM == 0 && TEQUIP:90 == 1
+	IF CFLAG:5302 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「…이것보단……%TSTR:305%랑 하고 싶은데……요…」
+			PRINTFORMW 쿄코는 아쉬운듯 %조사처리(CALLNAME:MASTER,"를")% 보고 있다.
+		ELSE
+			PRINTFORMW 「…이것랑……부비적 거리라고요? 미친거 아닌가요?…」
+		ENDIF
+			CFLAG:5302 = 1
+			RETURN 0
+	ELSE
+		IF TALENT:150 == 1 && ABL:35 >= 5 && (CFLAG:5302 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「응…하앙…하우우우♪응…♪좀더어어어 먹을래요…♪」
+			PRINTFORML 촉수는 익숙한듯 쿄코의 온몸을 애무하고 있다.			
+			CFLAG:5302 = 3
+		;150無し＋触手に0を奪われた＋35LV3以下
+		ELSEIF ABL:35 <= 2 && (CFLAG:5302 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「…이제 싫어…이제 싫어요 …」
+			PRINTFORMW 쿄코는 부들부들 떨었다.
+			CFLAG:5302 = 2
+		;それ以外
+		ELSEIF CFLAG:5302 < 1 || FLAG:11 == 2
+			PRINTFORMW 「…콜록……변태와 촉수의……하베라니…」
+			PRINTFORMW 쿄코는 당장 으스러질 것 같은, 가냘픈 소리로 중얼거렸다
+			CFLAG:5302 = 1
+		ENDIF
+	RETURN 0
+	ENDIF
+ENDIF
+;촉수+ 항문 애무
+IF SELECTCOM == 2 && TEQUIP:90 == 1
+	;처음
+	IF CFLAG:5303 == 0
+		IF ABL:2 <= 2
+		PRINTFORMW 「힛！？거, 거긴！싫어! 엉덩이는 안돼요！」
+		PRINTFORMW 쿄코는 필사적으로 저항하였으나 촉수의 힘에는 중과부적이였다.
+		ELSEIF ABL:2 == 5
+			PRINTFORMW 「아아……엉덩이를 만져주는건 기분 좋지만, %TSTR:305%가 하는게 더 좋아요……」
+			PRINTFORMW 쿄코는 엉덩이의 감각이를 느끼고 있는것 같다.
+		ENDIF
+		CFLAG:5303 = 1
+		RETURN 0
+	ELSE
+		IF ABL:2 >= 4 && ABL:35 >= 3 && (CFLAG:5303 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 엎드린 자세로 있는 쿄코의 항문에 가느다란 촉수가 들어가기 시작했다.
+			PRINTFORMW 「응, 후-웃.」
+			PRINTFORMW 「아하아앙!　히잇……하,  아-앗,  아-아앙!」
+			PRINTFORMW 쿄코는 촉수가 주는 쾌감에 사로잡힌것 같다.
+			CFLAG:5303 = 3
+		ELSE
+			PRINTFORMW 「흐,으응.  싫어요오……」
+			PRINTFORMW 촉수가 항문을 문지르자 쿄코의 몸이 튕겨지듯 튀어오른다.
+			PRINTFORMW 아직 좀더 개발이 필요한것 같다.
+			CFLAG:5302 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;촉수가슴애무 CFLAG5304
+IF SELECTCOM == 3 && TEQUIP:90 == 1
+	IF CFLAG:5304 == 0
+		PRINTFORMW 「뭘 하려는 거예요!」
+		PRINTFORMW 쿄코는 촉수가 가슴을 문지르자,  양팔을 휘둘러 대면서 저항하고 있다.
+	ELSE
+		IF ABL:3 >= 3 && ABL:35 >= 3 && (CFLAG:5304 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하앙, 가슴으로 가버러요!」
+			PRINTFORMW 촉수는 쿄코의 유두를 집중적으로 건드리고 있다.
+			CFLAG:5304 = 4
+		ELSEIF ABL:3 >= 3 && ABL:35 >= 1 && (CFLAG:5304 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「가슴을 만지는것 좋지만 %TSTR:305%가 만지는게 좋아요」
+			PRINTFORMW 쿄코는 아쉬운듯이 말하고 있다.
+			CFLAG:5304 = 3
+		ELSE
+			PRINTFORMW 「이제 싫어요오오」
+			CFLAG:5304 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;촉수 삽입CFLAG:5305
+IF SELECTCOM == 501 && TEQUIP:20 == 1
+	IF CFLAG:5305 == 0
+		PRINTFORMW 「으……아앗！」
+		PRINTFORMW 쿄코는 하복부에 가해지는 충격을 꾹 참고 있다……
+		CFLAG:5305 = 1
+		RETURN 0
+	ELSE
+		IF TALENT:150 == 1 && ABL:1 == 5 && ABL:35 > 4 && (CFLAG:5305 >= 3 || FLAG:11 == 2)
+			PRINTFORMW 「격렬하지만、괜찮아요……」
+			PRINTFORMW 쿄코는 바닥에 넙죽 엎드린 상태로 촉수에게 몸을 맡기고 있다.
+			PRINTFORMW 쿄코의 질내에 들어간 촉수는,음핵 가까이의 질벽을 집요하게 자극하고 있는 것 같다.
+			PRINTFORMW 촉수가 정액을 흩뿌리며 질내를 희롱할 때마다, 쿄코는 입에서 뜨거운 숨결을 토해낸다.
+			PRINTFORMW 「거기,더,해줘……요」
+			PRINTFORMW 쿄코는 질내를 휘젓는 촉수의 감촉에 황홀한 표정을 띄우고 있다……
+			CFLAG:5305 = 4
+		ELSEIF TALENT:150 == 0 && ABL:1 >= 3 && ABL:35 >= 1 && (CFLAG:5305 >= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응…으、이、이런 짓 당해도 괜찮…」
+			PRINTFORMW 얼굴이 새빨게졌지고 촉수가 질내에서 꿈틀거릴때마다 허리를 흔들면서도
+			PRINTFORMW 쿄코는 허세를 거두지 않는다.
+			CFLAG:5305 = 3
+		ELSE
+			PRINTFORMW 「역시 이건 싫어요…」
+			PRINTFORMW 쿄코는 촉수에 대한 공포심이 깊이 박혔는지、별로 저항도 하지 못하고、촉수가 움직이는 대로 끌려가고 있다。
+			PRINTFORMW 촉수가 쿄코의 질내를 오갈 떄마다、조금씩 몸을 떨며、
+			PRINTFORMW 「크읏……」
+			PRINTFORMW 필사적으로 눈을 감고、자신의 몸이 괴물에게 희롱당하고 있다는 사실을 외면하려는 듯 하다……
+			CFLAG:5305 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;촉수삽입 해제 CFLAG:5306
+IF SELECTCOM == 501 && TEQUIP:20 == 0
+	IF CFLAG:5306 == 0
+		PRINTFORMW 「역시 이건 싫어요…」
+		RETURN 0
+	ELSE
+		IF TALENT:150 == 1 && ABL:35 >= 4 && (CFLAG:5306 >= 2 || FLAG:11 == 2)
+			PRINTFORMW
+			CFLAG:5306 = 3
+		ELSE
+			PRINTFORMW
+			CFLAG:5306 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;촉수 애널삽입 CFLAG:5307
+IF SELECTCOM == 502 && TEQUIP:25 == 1
+	IF CFLAG:5307 == 0
+		PRINTFORMW 「역시 이건 싫어요…」
+		RETURN 0
+	ELSE
+		IF TALENT:150 == 1 && ABL:35 >= 4 && (CFLAG:5307 >= 2 || FLAG:11 == 2)
+			PRINTFORMW
+			CFLAG:5307 = 3
+		ELSE
+			PRINTFORMW
+			CFLAG:5307 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;촉수 애널삽입 해제 CFLAG:5308
+IF SELECTCOM == 502 && TEQUIP:25 == 0
+	IF CFLAG:5308 == 0
+		PRINTFORMW 「역시 이건 싫어요…」
+		RETURN 0
+	ELSE
+		IF TALENT:150 == 1 && ABL:35 >= 4 && (CFLAG:5308 >= 2 || FLAG:11 == 2)
+			PRINTFORMW
+			CFLAG:5308 = 3
+		ELSE
+			PRINTFORMW
+			CFLAG:5308 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG?係（X1をキャラ番?に置換）
+;パラメ?タ?動をトリガ?にした口上
+;パラメ?タ?動後に口上を?動します
+;------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_81
+;助手が調?した時に口上をスキップする（好みに?じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ?ルギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに?りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;--------------------------------------------------
+;特定助手、主人時に特殊助手口上を呼び出す(Y1を特定助手、X1を主人のキャラ番?に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_PALAMCNG_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_PALAMCNG_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;パラメ?タ?動時のセリフ CFLAG 221～260を使用
+;-------------------------------------------------
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG?係（X1をキャラ番?に置換）
+;刻印?動をトリガ?にした口上
+;刻印?動後に口上を?動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_81
+;助手が調?した時に口上をスキップする（好みに?じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ?ルギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに?りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;--------------------------------------------------
+;特定助手、主人時に特殊助手口上を呼び出す(Y1を特定助手、X1を主人のキャラ番?に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;고통3렙 획득, cflag:6000
+;-------------------------------------------------
+IF TFLAG:40 == 3
+	IF CFLAG:6002 == 0
+		PRINTFORMW 「히그、아、아아아아아아아요…」
+		PRINTFORMW 「잘…잘못했어요!……잘…어요…」
+		PRINTFORMW 「용…해줘……용…서…해줘어요……」
+		PRINTFORMW 「아아아아아아아아아아……！！」
+		CFLAG:6002 = 1
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;快楽刻印Lv3取得 CFLAG298
+;-------------------------------------------------
+IF TFLAG:41 == 3
+	IF CFLAG:6001 == 0
+		PRINTFORMW 「앗, 앗, 아아앗, 안돼, 이런 거요………」
+		PRINTFORMW 「미, 미쳐버렷, 미쳐버려엇! 아앗! 아아아아아아ーーーー앗!!」
+		PRINTFORML 「뭐, 뭐야 이거…언……너, 너무 무서워……요」
+		PRINTFORMW 쿄코는 마음을 놔버린 듯한 표정으로 쾌락에 몸을 맡기고 있다.
+		PRINTFORMW 이제 그녀의 몸과 마음이 두번 다시 이 쾌락을 잊는 일은 불가능하겠지.
+		CFLAG:6001 = 1
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;屈服刻印Lv3取得 
+;-------------------------------------------------
+IF TFLAG:42 == 3
+	IF CFLAG:6003 == 0
+		IF MARK:9 < 3
+			PRINTFORML （……이느낌 이상해요………）
+			PRINTFORMW （…뭔가 가슴이 답답해서, 풀리질 않아요……）
+			PRINTFORMW （……거기다……어레이요?)
+			PRINTFORMW （어째서일까아……전에는 그렇게 싫었었는데요……）
+			PRINTFORMW 「저 사람과 있는게, 싫지……않아졌어요……」
+			CFLAG:6003 = 1
+		ELSEIF MARK:9 == 3
+			
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;反発刻印Lv3取得 CFLAG300
+;-------------------------------------------------
+IF TFLAG:44 == 3
+	IF CFLAG:6004 == 0
+		PRINTFORML 「…… 밤길 조심하세요」
+		PRINTFORMW 쿄코는 뼛속까지 싸늘해지는 듯한 웃음을 얼굴에 띄우고 있다.
+		CFLAG:6004 = 1
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;쿄코가 죽었슴다.
+;-------------------------------------------------
+IF BASE:0 <= 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW ……
+		WAIT
+		PRINTFORMW 쿄코의 몸이 경련을 일으키기 시작했다
+		PRINTFORMW 안구가 떨어질 것처럼 눈꺼풀이 벌어지고 입에선 쇳냄새가 심하게 풍기고 있었다.
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 부들부들 망가진 장난감처럼 사지를 뒤흔드는 쿄코의 이름을 불렀지만
+		PRINTFORMW 쿄코의 혀는 굳어지기 시작했고 입술의 사이를 뚫고 뜨겁고 끈적이는 쇠비릿한 액체가 넘쳐 턱을 타고 흐른다
+		WAIT
+		PRINTFORMW ……족히 1분 가량 그러던 뒤, 쿄코는 천천히 경련을 끝마쳤다
+		PRINTFORMW 축 늘어진 쿄코는 %CALLNAME:MASTER%의 옆에 기대고 있었다.
+		PRINTFORMW 쿄코의 어린 손이, %CALLNAME:MASTER%의 손을 아직도 세게 꼬옥 쥐고 있었다
+		RETURN 0
+	;연모없음
+	ELSE
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW ……
+		WAIT
+		PRINTFORMW 「어……라……?」
+		PRINTFORMW 「…………아」
+		PRINTFORMW 「하핫………… 뭔가 했네…………」
+		PRINTFORMW 「잘 자요……」
+		RETURN 0
+	ENDIF
+ENDIF
+
+@SELF_KOJO_K81
+;-------------------------------------------------
+;調?後夜這い　 CFLAG265
+;-------------------------------------------------
+IF TFLAG:200 == 158
+
+ENDIF
+;----------------------------------------------------------------
+;조수가능
+;----------------------------------------------------------------
+IF TFLAG:200 == 123
+	PRINTFORML 「예? 제가 %CALLNAME:MASTER%의 조수를 하라고요?」
+	PRINTFORMW 「그럼 %CALLNAME:MASTER% 랑 같이 다름 사람에게 야한짓 하는거인가요?」
+	PRINTFORMW 「그거 재밌을거 같아요」
+	PRINTFORMW 「후후후♪ 어떤 얼굴로 다른 사람들이 갈지, 벌써부터 즐거워지는데요♪」
+	PRINTFORMW 그러나 그것만으로는 설명되지 않는 흥분이, 쿄코에게 있다.
+ENDIF
+
+;-------------------------------------------------
+;?却
+;-------------------------------------------------
+IF TFLAG:200 == 130
+ENDIF
+
+;-------------------------------------------------
+;エンゲ?ジリング使用時
+;-------------------------------------------------
+IF TFLAG:200 == 200
+	PRINTFORMW 
+ENDIF
+
+;-------------------------------------------------
+;@??エンディング?係(X1、X2をキャラ番?に置換する)
+;-------------------------------------------------
+@SINGLE_ENDING_K81
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+		SETCOLOR 255,0,0
+PRINTFORMW <SYSTEM> 전자발찌를 획득하셨습니다. 착용시 귀속
+QUIT
+
+RETURN 0
+
+

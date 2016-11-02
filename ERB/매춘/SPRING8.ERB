@@ -1,0 +1,1525 @@
+﻿@SPRING_8TH
+DRAWLINE
+
+
+CALL SPRING_PERSON_C
+REPEAT 100
+	LOCAL@SPRING_TIME:COUNT = 0
+	LOCAL:(COUNT + 100) = CHARANUM
+REND
+LOCAL = 0
+Z = TARGET
+Z:1 = 0
+FLAG:3000 |= 512
+IF FLAG:3004 == 0
+	RETURN 0
+ELSEIF FLAG:3004 == 1
+	;처녀 옥션은, 처녀의 인기와 원가로 계산됩니다
+	PRINTFORML %CALLNAME:MASTER%의 요청으로 처녀 경매가 개최되었습니다.
+	REPEAT CHARANUM
+		IF CFLAG:COUNT:1501 == 8
+			;우선, 넘버의 대입.
+			LOCAL:(LOCAL + 100) = COUNT
+			
+			;다음에, 단골 손님수로부터, 손님의 증가를 계산
+			CALL SPRING_PERSON_D
+			;다음에 처녀의 가격의 기본치를 결정한다. 기본의 가격에, 한층 더 인기 보정을 추가.
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:1 *= 10
+			LOCAL@SPRING_DUMMY:1 *= EXP:COUNT:77 + 50
+			LOCAL@SPRING_DUMMY:1 /= 100
+			
+			;순수한 처녀가 아니었으면 반액
+			SIF TALENT:COUNT:0 == 2
+				LOCAL@SPRING_DUMMY:1 /= 2
+			LOCAL@SPRING_TIME:LOCAL = LOCAL@SPRING_DUMMY:1
+			
+			LOCAL += 1
+		ENDIF
+	REND
+	PRINTFORML 회장에는 {LOCAL@SPRING_DUMMY:6}명의 고객이 찾아왔다.
+	;손님의 인원수에 의한 보정을 E에 보존. 손님의 인원수가 많을 정도(수록), 히트 올라가 비싸게 팔린다
+	IF LOCAL@SPRING_DUMMY:6 > 100
+		LOCAL@SPRING_DUMMY:4 = 25
+	ELSEIF LOCAL@SPRING_DUMMY:6 > 80
+		LOCAL@SPRING_DUMMY:4 = 22
+	ELSEIF LOCAL@SPRING_DUMMY:6 > 60
+		LOCAL@SPRING_DUMMY:4 = 19
+	ELSEIF LOCAL@SPRING_DUMMY:6 > 40
+		LOCAL@SPRING_DUMMY:4 = 17
+	ELSEIF LOCAL@SPRING_DUMMY:6 > 20
+		LOCAL@SPRING_DUMMY:4 = 16
+	ELSE
+		LOCAL@SPRING_DUMMY:4 = 15
+	ENDIF
+	
+	IF LOCAL < LOCAL@SPRING_DUMMY:6 && LOCAL
+		PRINTFORML %CALLNAME:MASTER% 앞에서 노예들은 속옷 차림으로 일렬로 서서, 한 사람 한 사람 옥션에 상품으로 나왔다.
+		;처리 개시
+		LOCAL@SPRING_DUMMY:6 = 30
+		LOCAL@SPRING_DUMMY:5 = 10
+		REPEAT LOCAL
+			LOCAL@SPRING_TIME:COUNT *= LOCAL@SPRING_DUMMY:4
+			TARGET = LOCAL:(COUNT + 100)
+			CALL JINKAKU
+			IF CFLAG:3005 == 3
+				PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 고객들 앞에서 우아하게 인사한 뒤, 요염한 미소를 지으며 속옷을 벗었다.
+				IF ABL:11 >= 5 || TALENT:TARGET:0 == 2
+					PRINTFORMW 앞으로 일어날 일에 대한 기대 때문인지, 얼굴은 상기되고 속옷 위로도 알 수 있을 만큼 보지는 젖어 있다.
+				ELSE
+					PRINTFORMW 꿋꿋한 척 하고 있지만, 앞으로 일어날 일을 생각하고 있는지 몸은 떨고 있다.
+				ENDIF
+			ELSEIF CFLAG:3005 == 1 || CFLAG:3005 == 2
+				PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 고객들 앞에서 전라가 된 뒤 인사했다.
+				IF ABL:11 >= 5 || TALENT:0 == 2
+					PRINTFORMW 이미 애액은 허벅지까지 흘러내렸고, 숨은 거칠어져 있다.
+				ELSE
+					PRINTFORMW 심호흡을 몇 번이고 반복하고 있지만, 떨림은 멈추지 않는 것 같다.
+				ENDIF
+			ELSEIF CFLAG:3005 == 5
+				PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 속옷을 벗고 나서도, 손으로 가슴과 가랑이를 숨기고 있다.
+				IF (ABL:11 >= 5 || TALENT:0 == 2) && ABL:14 >= 3
+					PRINTFORMW 그러나 잘 보면 그 손은 야스럽게 구불대고 있었고…… 마지막엔 소리를 높여 자위를 보여주기 시작했다.
+				ELSE
+					PRINTFORMW 그 몸은 작게 흔들리며, 피학심을 부추키는 눈동자는 초점이 맞지 않는 눈으로 주변을 보고 있다.
+				ENDIF
+			ELSE
+				PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 속옷을 벗더니, 곤란한 듯이 %조사처리(CALLNAME:MASTER,"를")% 봤다.
+				IF ABL:11 >= 5 || TALENT:0 == 2
+					PRINTFORMW 아무래도 이미 야한 걸 참을 수가 없게 되어버린 것 같다.
+				ELSE
+					PRINTFORMW 애원하는 듯한 %CALLNAME:TARGET%의 눈동자를 무시하고 %조사처리(CALLNAME:MASTER,"는")% 경매를 개시했다.
+				ENDIF
+			ENDIF
+			PRINTFORMW %NAME:TARGET%의 처녀는 {LOCAL@SPRING_TIME:COUNT}원에 낙찰되었습니다.
+			LOCAL@SPRING_DUMMY:30 += LOCAL@SPRING_TIME:COUNT
+			PRINTFORM 그녀를 구입한 
+			CALL SPRING_8_RANDOMCHARA
+			PRINT 는,
+			IF ABL:11 >= 5 || TALENT:0 == 2
+				PRINTFORM 이미 기다릴 대로 기다리다 지친 %조사처리(CALLNAME:TARGET,"를")% 
+				IF RAND:4 == 0
+					PRINTFORML 끌어안더니만, 고객들에게 잘 보이도록 그 자리에서 처녀를 빼앗았다.
+				ELSEIF RAND:3 == 0
+					PRINTFORML 더욱 애태우며, 몇 번이고 자기 손 안에서 절정시키더니
+					PRINTFORML 스스로 처녀를 빼앗아달라고 사람들 앞에서 애원하게 만들고 나서야, 겨우 보지를 유린하기 시작했다.
+				ELSEIF RAND:2 == 0
+					PRINTFORML 개인실로 데리고 가서 더욱 더 절정시키고 나서 그제서야 처녀를 빼앗았다.
+				ELSE
+					PRINTFORML 개인실로 끌고 가 그자리에서 처녀를 빼앗고 질의 감촉을 즐겼다.
+				ENDIF
+			ELSE
+				PRINT 떨고 있는 %조사처리(CALLNAME:TARGET,"를")% 
+				IF RAND:2 == 0
+					PRINTFORML 그 자리에서 쓰러트리더니 고객들에게 울부짖는 모습을 보이면서 처녀를 빼앗아 버렸다.
+				ELSE
+					PRINTFORML 개인실로 끌고 가 그자리에서 처녀를 빼앗고 질의 감촉을 즐겼다.
+				ENDIF
+			ENDIF
+			PRINTL 【처녀 상실】
+			TALENT:0 = 0
+			PRINTFORML V경험　{EXP:0} + 1
+			EXP:0 += 1
+			PRINTFORML 이상 경험　{EXP:50} + 1
+			EXP:50 += 1
+			PRINTFORML 매춘 경험　{EXP:76} + 1
+			EXP:76 += 1
+			;여기로부터, 주의 처리
+			LOCAL@SPRING_DUMMY:31 = COUNT
+			COUNT = TARGET
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+			COUNT = LOCAL@SPRING_DUMMY:31
+			TALENT:0 = 0
+			DRAWLINE
+		REND
+		;경비
+		LOCAL@SPRING_DUMMY:30 -= 10000
+		;처리 종료
+		IF LOCAL@SPRING_DUMMY:30 > 0
+			PRINTFORMW 처녀 옥션은 무사히 종료되고, 경비를 제외한 합계 {LOCAL@SPRING_DUMMY:30}원의 수입을 얻었다.
+			FLAG:3005 += RAND:10
+			SIF FLAG:3005 > 100
+				FLAG:3005 = 100
+			LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:30
+			CALL SPRING_MONEY_CH2
+		ELSE
+			PRINTFORMW 처녀 옥션은 무사히 종료되었지만, 경비 등을 제하니 결국 수입은 얻을 수 없었다.
+			FLAG:3005 += RAND:10
+			SIF FLAG:3005 > 100
+				FLAG:3005 = 100
+		ENDIF
+	ELSEIF LOCAL
+		PRINTFORMW 하지만 경매가 진행될 수록 사람은 모이지 않고, 나중엔 아예 노예 쪽이 고객보다도 많이 모여버렸다.
+		PRINTFORMW 유감이지만 경매는 중지되고 말았다…….
+		FLAG:3005 -= RAND:5
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ELSE
+		PRINTFORMW 하지만 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 않았다.
+		PRINTFORM 화가 머리끝까지 난 고객들에게 %조사처리(CALLNAME:MASTER,"는")% 
+		IF TALENT:MASTER:0
+			PRINTFORMW 처녀를 빼앗기고 말았다….
+			TALENT:MASTER:0 = 0
+			EXP:MASTER:0 = LOCAL@SPRING_DUMMY:6
+		ELSEIF EXP:MASTER:1 == 0
+			PRINTFORMW 뒷구멍 처녀를 빼앗기고 말았다….
+			EXP:MASTER:1 = LOCAL@SPRING_DUMMY:6
+		ELSEIF EXP:MASTER:22 == 0
+			PRINTFORMW 입 처녀를 빼앗기고 말았다….
+			EXP:MASTER:22 = LOCAL@SPRING_DUMMY:6
+		ELSEIF EXP:MASTER:46 == 0
+			PRINTFORMW 요도 처녀를 빼앗기고 말았다….
+			EXP:MASTER:46 = LOCAL@SPRING_DUMMY:6
+		ELSE
+			PRINTFORMW 필사적으로 변명하며 사죄했다…….
+		ENDIF
+		FLAG:3005 -= RAND:11
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+	
+	
+
+ELSEIF FLAG:3004 == 2
+	PRINTFORML %CALLNAME:MASTER%의 요청으로 입식 파티가 개최되었다.
+	LOCAL@SPRING_DUMMY:33 = 300
+	REPEAT CHARANUM
+		;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+		SIF CFLAG:COUNT:1501 != 9
+			CONTINUE
+		;다음에, 단골 손님수로부터, 손님의 증가를 계산
+		CALL SPRING_PERSON_D
+		;다음에 식사의 맛을 결정한다
+		LOCAL@SPRING_DUMMY:31 += ABL:COUNT:70
+		;접대도를 결정한다
+		LOCAL@SPRING_DUMMY:32 += ABL:COUNT:10 + ABL:COUNT:13 + RAND:3
+		;접대치의 값이 가장 낮은 아이를 결정한다. 동치의 경우는 랜덤. 번호가 늦은 아이만큼 불리합니다만 신경쓰지 않는다.
+		IF LOCAL@SPRING_DUMMY:33 > ABL:COUNT:10 + ABL:COUNT:13 + RAND:3
+			LOCAL@SPRING_DUMMY:30 = COUNT
+			LOCAL@SPRING_DUMMY:33 = ABL:COUNT:10 + ABL:COUNT:13 + RAND:3
+		ELSEIF LOCAL@SPRING_DUMMY:33 == ABL:COUNT:10 + ABL:COUNT:13 + RAND:3
+			IF RAND:2 == 0
+				LOCAL@SPRING_DUMMY:30 = COUNT
+			ENDIF
+		ENDIF
+		LOCAL += 1
+	REND
+	SIF LOCAL * 10 < LOCAL@SPRING_DUMMY:6 && LOCAL > 4
+		LOCAL@SPRING_DUMMY:6 = LOCAL * 10
+	PRINTFORML 회장에는 {LOCAL@SPRING_DUMMY:6}명의 고객이 방문했다.
+	IF LOCAL > 4
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 9
+				CONTINUE
+			;최하정도의 사람은, 연출에 포함되지 않습니다.
+			SIF LOCAL@SPRING_DUMMY:30 == COUNT
+				CONTINUE
+			$SPRING_2
+			IF RAND:10 == 0 && ((LOCAL@SPRING_TIME:20 == 0 || FLAG:3000 & 524288) || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 한가해 하는 고객에게 접근해서, 
+				PRINTFORMW 입에서 입으로 요리를 먹여주고 있다.
+				LOCAL@SPRING_TIME:20 = 1
+			ELSEIF RAND:9 == 0 && (LOCAL@SPRING_TIME:19 == 0 || FLAG:3000 & 524288) && EXP:COUNT:76
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 여러 번 본 고객에게
+				PRINTFORMW 창관에서 일하고 있을 때 있었던 일을 재미있게 이야기해 주고 있다.
+				LOCAL@SPRING_TIME:19 = 1
+			ELSEIF RAND:8 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:55
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 자신이 조합한 특별한 약을 고객들에게 건네주었다.
+				PRINTFORMW ……별 일 없으면 좋겠는데.
+				LOCAL@SPRING_TIME:18 = 1
+			ELSEIF RAND:7 == 0 && (LOCAL@SPRING_TIME:17 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객 중 한 사람의 마음에 든 모양이라, 보람있는 듯 그 사람을 모시고 있다.
+				PRINTFORMW 엉덩이랑 가슴을 몇 번이고 주물러져, 눈동자는 짐승 같은 욕구에 젖어 있다.
+				LOCAL@SPRING_TIME:17 = 1
+			ELSEIF RAND:6 == 0 && (LOCAL@SPRING_TIME:16 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:26 == 0
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 밝게 고객들과 이야기를 나누고 있다.
+				PRINTFORMW 성희롱도 가볍게 넘기며 이야기를 더욱 띄우고 있는 듯하다.
+				LOCAL@SPRING_TIME:16 = 1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:15 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:28 == 0
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 들어주는 역할에 충실하게 고객들의 얘기를 열심히 듣고 있다.
+				PRINTFORMW 보통은 하지 못하는 얘기를 하며 고객들은 굉장히 상쾌해진 모양이다.
+				LOCAL@SPRING_TIME:15 = 1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:35
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 부끄러워 하고 있다가 고객 한 명에게 억지로 끌려나온 모양이다.
+				PRINTFORMW 뺨을 붉게 물들이면서, 고객들의 시선을 한 몸에 뒤집어쓰며 필사적으로 화제를 찾고 있다.
+				LOCAL@SPRING_TIME:14 = 1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객 중 한 사람에게 노예가 되기 전 자신의 생활을 이야기해줬다.
+				PRINTFORMW 흥미 깊은 내용이었는지, 고객은 진지하게 듣고 있다.
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 한 번 뒤를 돌더니, 새로 나온 요리를 고객들 앞으로 가지고 왔다.
+				PRINTFORMW 새로운 요리를 보며 주변에서 환성이 터져나왔다.
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_2
+				CONTINUE
+			ENDIF
+		REND
+		;렛트오시오키타임
+		IF LOCAL@SPRING_DUMMY:33 <= 10
+			SIF LOCAL@SPRING_TIME:12 || LOCAL@SPRING_TIME:13 || LOCAL@SPRING_TIME:14 || LOCAL@SPRING_TIME:15 || LOCAL@SPRING_TIME:16 || LOCAL@SPRING_TIME:17 || LOCAL@SPRING_TIME:18 || LOCAL@SPRING_TIME:19 || LOCAL@SPRING_TIME:20
+				PRINT 그러다가, 
+			PRINTFORM 접대중에 실수를 해 버린 %CALLNAME:(LOCAL@SPRING_DUMMY:30)%
+			IF RAND:3 == 0
+				PRINTFORML 를(을) 매달아 올리고 고객들은 자기들 마음껏 희롱했다.
+				PRINTFORMW 온몸을 주물러지고 채찍으로 얻어맞고, %CALLNAME:(LOCAL@SPRING_DUMMY:30)%는(은) 가학심을 채우는 듯한 울음소리를 냈다.
+				EXP:(LOCAL@SPRING_DUMMY:30):31 += 1
+			ELSEIF RAND:2 == 0
+				PRINTFORML 의 몸을 묶고 이뇨제를 마시게 했다.
+				PRINTFORML 견디지 못하고 울면서 방뇨하는 모습이 고객들을 크게 즐겁게 했고, 
+				PRINTFORMW 오줌을 고객들에게 뿌리자 환성이 터져나왔다.
+				;환성 오른다 라고, 응만 신사겠지……
+				EXP:(LOCAL@SPRING_DUMMY:30):6 += 1
+			ELSE
+				PRINTFORMW 의 팔을 움켜쥐고 방 한가운데로 끌고 나와 펠라치오를 강요했다.
+				PRINTFORMW 갑자기 시작된 쇼에 주변의 분위기는 달아올랐고…… %CALLNAME:(LOCAL@SPRING_DUMMY:30)%는(은) 수치심에 얼굴을 일그러뜨렸다.
+				EXP:(LOCAL@SPRING_DUMMY:30):22 += 1
+			ENDIF
+		ELSE
+			PRINTFORMW ……이번에는 아무도 실수하지 않고 잘 끝낼 수 있었던 것 같다.
+		ENDIF
+		IF LOCAL@SPRING_DUMMY:31 * 3 > LOCAL@SPRING_DUMMY:6
+			PRINTFORMW 고객들은 요리에도 굉장히 만족한 것 같다.
+			LOCAL@SPRING_DUMMY:32 *= 2
+		ELSEIF LOCAL@SPRING_DUMMY:31 * 5 > LOCAL@SPRING_DUMMY:6
+			PRINTFORMW 고객들은 요리에도 나름대로 만족한 것 같다.
+		ELSE
+			PRINTFORMW 유감스럽게도 고객들은 요리의 양과 질에 만족하지 못한 것 같다.
+			LOCAL@SPRING_DUMMY:32 /= 2
+		ENDIF
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:32 *= 12
+		LOCAL@SPRING_DUMMY:32 *= LOCAL@SPRING_DUMMY:6
+		;경비
+		LOCAL@SPRING_DUMMY:32 -= 1000
+		;처리 종료
+		IF LOCAL@SPRING_DUMMY:32 > 0
+			PRINTFORMW 입식 파티는 무사히 종료되고, 경비를 제외한 합계 {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+			LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+			CALL SPRING_MONEY_CH2
+		ELSE
+			PRINTFORMW 입식 파티는 무사히 종료되었지만, 경비 등을 제외하니 결국 수입은 얻을 수 없었다.
+		ENDIF
+		DRAWLINE
+		REPEAT CHARANUM
+		;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 9
+				CONTINUE
+			EXP:76 += 1
+			EXP:70 += 5
+			LOCAL@SPRING_DUMMY:5 = 4
+			;여기로부터, 부정의 주의 처리
+			SIF LOCAL@SPRING_DUMMY:30 == COUNT && LOCAL@SPRING_DUMMY:33 <= 10
+				LOCAL@SPRING_DUMMY:4 |= 32
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSE
+		PRINTFORMW 하지만 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 못했다.
+		PRINTFORM 분노한 고객들에게 %조사처리(CALLNAME:MASTER,"는")% 
+		IF TALENT:MASTER:0 == 0 && TALENT:MASTER:120 == 0
+			PRINTFORMW 맛있게 먹혀버렸다….
+			PRINTFORMW V경험 + {LOCAL@SPRING_DUMMY:6}
+			EXP:MASTER:0 = LOCAL@SPRING_DUMMY:6
+		ELSEIF EXP:MASTER:1
+			PRINTFORMW 뒷구멍을 맛있게 먹혀버렸다….
+			EXP:MASTER:1 = LOCAL@SPRING_DUMMY:6
+		ELSE
+			PRINTFORMW 필사적으로 변명하며 사죄했다…….
+		ENDIF
+		FLAG:3005 -= RAND:11
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+;10받침대는 시추에이션계. 여러가지 되어 송곳 플레이를 즐긴다
+ELSEIF FLAG:3004 == 10
+	PRINTFORML %CALLNAME:MASTER%의 주최로 서당에서……라는 시추에이션에서의 난교가 개시되었다.
+	REPEAT CHARANUM
+		;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+		SIF CFLAG:COUNT:1501 != 10
+			CONTINUE
+		;단골 손님수로부터, 손님의 증가를 계산
+		CALL SPRING_PERSON_D
+		LOCAL += 1
+	REND
+	SIF LOCAL * 8 < LOCAL@SPRING_DUMMY:6 && LOCAL > 4
+		LOCAL@SPRING_DUMMY:6 = LOCAL * 8
+	PRINTFORML 회장에는 {LOCAL@SPRING_DUMMY:6}명의 손님이 찾아왔다.
+	WAIT
+	IF LOCAL > 4
+		LOCAL@SPRING_DUMMY:16 = LOCAL@SPRING_DUMMY:6
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 10
+				CONTINUE
+			$SPRING_10
+			IF RAND:10 == 0 && (LOCAL@SPRING_TIME:20 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 교복을 입은 %조사처리(CALLNAME:COUNT,"는")% 딱 봐도 짧은 스커트를 입고 고객들을 도발했다.
+				PRINTFORML 가만히 치마를 말아 올리자, 거기엔 보지를 가리는 게 아무것도 없다.
+				PRINTFORMW 흥분한 고객들은 %조사처리(CALLNAME:COUNT,"를")% 쓰러트리고 허리를 흔들기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_TIME:20 = 1
+			ELSEIF RAND:9 == 0 && (LOCAL@SPRING_TIME:19 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 선생 같은 의상을 몸에 두른 %조사처리(CALLNAME:COUNT,"는")% 교단 위에 자리잡고 앉더니, 
+				PRINTFORML 천천히 다리를 벌리고 국부를 드러내면서 보건체육 수업을 시작했다.
+				PRINTFORMW 학생으로 분장한 고객들은 그 치태에 흥분하고 있다.
+				LOCAL@SPRING_TIME:19 = 1
+			ELSEIF RAND:8 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:55
+				PRINTFORML 선생같은 의상을 몸에 두른 %조사처리(CALLNAME:COUNT,"는")% 교단 위에 자리잡고 앉더니, 
+				PRINTFORML 천천히 다리를 벌리고 국부를 드러내면서 보건체육 수업을 시작했다.
+				PRINTFORMW 학생으로 분한 고객들은 그 치태에 흥분하고 있다.
+				LOCAL@SPRING_EXP:22 = RAND:3 + 1
+				LOCAL@SPRING_TIME:18 = 1
+			ELSEIF RAND:7 == 0 && (LOCAL@SPRING_TIME:17 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 부르마 차림의 %CALLNAME:COUNT%의 몸은 이미 성의 운동에 의해 땀투성이가 되어 있다.
+				PRINTFORMW 고객들은 그 모습과 물씬 풍겨나오는 암컷의 향기에 흥분해, 더더욱 그 몸을 탐하며 정액을 내뿜었다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:17 = 1
+			ELSEIF RAND:6 == 0 && (LOCAL@SPRING_TIME:16 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 옷을 벗고는 창가에 몸을 지지한 채 고객과 몸을 나누고 있다.
+				PRINTFORML 운동장에서 보이는 거 아냐? 하고 고객이 귓전에 대고 속삭이자, 
+				PRINTFORMW %CALLNAME:COUNT%의 몸은 수치와 기대와 절정으로 단속적으로 몇 번이고 경련했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_TIME:16 = 1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:15 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 교장으로 분한 고객에게 펠라치오를 강요당하고 있다.
+				PRINTFORML 매도당하며 눈물을 흘리면서도 봉사하는 모습이 주변의 고객들의 가학심을 자극했는지
+				PRINTFORMW 결국에는 몇 명의 고객들에게 윤간당하고 말았다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:22 = 1
+				LOCAL@SPRING_EXP:30 = 2
+				LOCAL@SPRING_TIME:15 = 1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:128
+				PRINTFORML 느슨한 옷을 몸에 걸친 %조사처리(CALLNAME:COUNT,"는")% 그것을 자신의 양손으로 들어올려, 
+				PRINTFORML 고객의 남성기에 찔려서 거품이 인 자신의 비부를 주변에 드러냈다.
+				PRINTFORMW 연결되어 있던 고객은 물론이고 주변의 고객들도 흥분해서, 겉옷은 하얀 액체로 끈적끈적해지고 말았다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:14 = 1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 학동의 옷을 몸에 두른 %조사처리(CALLNAME:COUNT,"는")% 고객들과 격렬하게 섹스를 나누었다.
+				PRINTFORMW 책상 위에 몸을 축 늘어뜨리고는 흐트러진 그 모습이 주변의 흥분을 가속시키는 듯하다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 선생님 옷을 몸에 걸친 %조사처리(CALLNAME:COUNT,"는")% 고객들에게 상냥하게 성의 과외수업을 해주고 있다.
+				PRINTFORMW 요염한 그 모습과 기술에 고객들은 압도되고 있는 듯하다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_10
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+			LOCAL@SPRING_DUMMY:5 = 6
+			LOCAL@SPRING_DUMMY:6 = 10
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+			LOCAL@SPRING_DUMMY:0 = 100
+			CALL SPRING_EXP
+		REND
+
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:6 = LOCAL@SPRING_DUMMY:16
+		CALL SPRING_G_CHECK
+		LOCAL@SPRING_DUMMY:32 *= LOCAL@SPRING_DUMMY:6
+		LOCAL@SPRING_DUMMY:32 *= 7
+		;경비
+		LOCAL@SPRING_DUMMY:32 -= 5000
+		;처리 종료
+		IF LOCAL@SPRING_DUMMY:32 > 0
+			PRINTFORMW 서당 플레이는 무사히 종료되고, 경비를 제외한 합계 {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+			LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+			CALL SPRING_MONEY_CH2
+		ELSE
+			PRINTFORMW 서당 플레이는 무사히 종료되었지만, 경비 등에 의해 결국 수입은 얻을 수 없었다.
+		ENDIF
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 10
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 6
+			LOCAL@SPRING_DUMMY:6 = 30
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSE
+		PRINTFORMW 하지만 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 못했다.
+		PRINTFORM 화가 머리끝까지 난 고객들에게 %조사처리(CALLNAME:MASTER,"는")% 
+		PRINTFORMW 필사적으로 변명하며, 사죄했다…….
+		FLAG:3005 -= RAND:11
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+ELSEIF FLAG:3004 == 11
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 마을의 진료소를 빌린뒤 난교파티를 시작했다.
+	REPEAT CHARANUM
+		;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+		SIF CFLAG:COUNT:1501 != 11
+			CONTINUE
+		;단골 손님수로부터, 손님의 증가를 계산
+		CALL SPRING_PERSON_D
+		LOCAL += 1
+	REND
+	SIF LOCAL * 10 < LOCAL@SPRING_DUMMY:6 && LOCAL > 4
+		LOCAL@SPRING_DUMMY:6 = LOCAL * 10
+	PRINTFORML 진료소에는{LOCAL@SPRING_DUMMY:6}명의 손님이 방문했다.
+	WAIT
+	IF LOCAL > 4
+		LOCAL@SPRING_DUMMY:16 = LOCAL@SPRING_DUMMY:6
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 11
+				CONTINUE
+			$SPRING_11
+			IF RAND:10 == 0 && (LOCAL@SPRING_TIME:20 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 간호사복을 껴입은 %조사처리(CALLNAME:COUNT,"는")% 딱 봐도 짧은 스커트를 입고 고객들을 도발했다.
+				PRINTFORML 살가만히 치마를 말아 올리자, 거기엔 보지를 가리는 게 아무것도 없다.
+				PRINTFORMW 흥분한 고객들은 대합실에 있는 의자쪽으로 %조사처리(CALLNAME:COUNT,"를")% 쓰러트리고 허리를 흔들기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_TIME:20 = 1
+			ELSEIF RAND:9 == 0 && (LOCAL@SPRING_TIME:19 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 의사양반 가운을 걸친 %조사처리(CALLNAME:COUNT,"는")%, 청진기로 고객의 심장소리를 듣고있다.
+				PRINTFORML 조금씩 청진기를 아래쪽으로 내리다가 마지막에는 자지의 소리를 듣고있다.
+				PRINTFORMW 애처로워 보이는 고객의 모습을 보고 미소지으면서,%조사처리(CALLNAME:COUNT,"는")% 그 자지를 천천히 삼켰다.
+				LOCAL@SPRING_EXP:22 = RAND:5 + 2
+				LOCAL@SPRING_TIME:19 = 1
+			ELSEIF RAND:8 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 백의로 몸을 감싼 %조사처리(CALLNAME:COUNT,"는")%, 고객의 사정을 촉진하고 있다.
+				PRINTFORML 윤활류로 젖은 손가락을 애널에 넣고 휘저으니
+				PRINTFORMW 고객이 흘린 정액으로 %CALLNAME:COUNT%의 얼굴이 하얗게 물들어간다.
+				LOCAL@SPRING_EXP:4 = 2
+				LOCAL@SPRING_TIME:18 = 1
+			ELSEIF RAND:7 == 0 && (LOCAL@SPRING_TIME:17 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 미라처럼 온몸을 붕대로 빙빙 감아둔 %조사처리(CALLNAME:COUNT,"는")%, 침대 위에서 고객들에게 범해지고 있다.
+				PRINTFORML 저항하면서 몸을 비비꼬는 연기가 고객들의 가학심을 부추겼는지
+				PRINTFORMW 모두가 끝난 뒤 %CALLNAME:COUNT%의 몸은 보는 것도 끔찍하게 흰색으로 범벅이 됬다.
+				LOCAL@SPRING_EXP:0 = RAND:4 + 2
+				LOCAL@SPRING_EXP:4 = RAND:4 + 1
+				LOCAL@SPRING_EXP:31 = RAND:3 + 2
+				LOCAL@SPRING_TIME:17 = 1
+			ELSEIF RAND:6 == 0 && (LOCAL@SPRING_TIME:16 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 의사 분장을 한 고객에게 온몸을 희롱당하고 있다.
+				PRINTFORML 약속 한듯이 주사라고 부르면서 페니스를 찔러 넣자
+				PRINTFORMW 이미 촉촉하게 젖어있던 %CALLNAME:COUNT%의 몸은 고객을 껴안고 몇 번이나 왕복했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_TIME:16 = 1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:15 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 고객들의 눈 앞에서 주저앉더니 종이 컵을 향해 오줌을 내뿜게 했다.
+				PRINTFORML 손가락 끝으로 질을 조물락거리며, 쾌락과 수치에 떨면서 마지막 한 방울까지 짜내고, 
+				PRINTFORMW 결국, 손가락을 타고 대부분의 오줌은 넘쳐 흐름이라고 끝낸 것 같다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:6 = 1
+				LOCAL@SPRING_TIME:15 = 1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288) && ITEM:53
+				PRINTFORML 기본의 주사바늘을 꽂을 수 있어 미약에 침범된 %조사처리(CALLNAME:COUNT,"는")% 완전하게 발정해 버리고 있다.
+				PRINTFORML 비부를 드러내며 %조사처리(CALLNAME:COUNT,"가")% 간청하자,
+				PRINTFORMW 고객들은 거기에 모여, 만족할 때까지 다 범했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:8 + 2
+				LOCAL@SPRING_EXP:40 = RAND:2 + 3
+				LOCAL@SPRING_TIME:14 = 1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 간호사복을 껴입은 %조사처리(CALLNAME:COUNT,"는")% 환자들의 정액을 모아 이상이 없는가 검사하고 있다.
+				PRINTFORMW 혀 위에서 전매해, 군침이 돌아 다 마셔 가는 것처럼 고객들은 흥분한 것 같다.
+				LOCAL@SPRING_EXP:4 = RAND:3 + 2
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 간호사복을 껴입은 %조사처리(CALLNAME:COUNT,"는")% 환자를 침대에 붙들어매자, 
+				PRINTFORMW 그 위에 걸쳐, 크게 부풀어 오른 환부를 자신 안으로 이끌어 '치료'하기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_11
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+			LOCAL@SPRING_DUMMY:5 = 8
+			LOCAL@SPRING_DUMMY:6 = 10
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+			LOCAL@SPRING_DUMMY:0 = 100
+			CALL SPRING_EXP
+		REND
+		
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:6 = LOCAL@SPRING_DUMMY:16
+		CALL SPRING_G_CHECK
+		LOCAL@SPRING_DUMMY:32 *= LOCAL@SPRING_DUMMY:6
+		LOCAL@SPRING_DUMMY:32 *= 8
+		;경비
+		LOCAL@SPRING_DUMMY:32 -= 10000
+		;처리 종료
+		IF LOCAL@SPRING_DUMMY:32 > 0
+			PRINTFORMW 진료소 플레이는 무사히 종료해, 경비를 공제해 합계 {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+			LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+			CALL SPRING_MONEY_CH2
+		ELSE
+			PRINTFORMW 진료소 플레이는 무사히 종료했지만, 경비등에 의해 결국 수입은 얻을 수 없었다.
+		ENDIF
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 11
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 8
+			LOCAL@SPRING_DUMMY:6 = 40
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSEIF LOCAL
+		PRINTFORMW 그러나, 창녀의 수가 충분하지 않고, 만족스러운 대접을 할 수가 없었다…
+		PRINTFORMW 유감스럽지만, 도중에 중지키 자리선이었습니다……
+		FLAG:3005 -= RAND:5
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ELSE
+		PRINTFORMW 그러나,%조사처리(CALLNAME:MASTER,"는")% 충분한 노예를 준비하고 있지 않았다.
+		PRINTFORM 광분한 고객들에게 %조사처리(CALLNAME:MASTER,"는")%
+		PRINTFORMW 필사적으로 변명해, 사죄했다…….
+		FLAG:3005 -= RAND:11
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+ELSEIF FLAG:3004 == 12
+	PRINTFORML %CALLNAME:MASTER%의 주최로, 인적이 드문 호수에서……라는 시추에이션에서의 난교가 개시되었다.
+	REPEAT CHARANUM
+		;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+		SIF CFLAG:COUNT:1501 != 12
+			CONTINUE
+		;단골 손님수로부터, 손님의 증가를 계산
+		CALL SPRING_PERSON_D
+		LOCAL += 1
+	REND
+	SIF LOCAL * 12 < LOCAL@SPRING_DUMMY:6 && LOCAL > 4
+		LOCAL@SPRING_DUMMY:6 = LOCAL * 12
+	PRINTFORML 회장에는 {LOCAL@SPRING_DUMMY:6}명의 손님이 찾아왔다.
+	WAIT
+	;IF LOCAL * 10 > LOCAL@SPRING_DUMMY:6 && LOCAL
+	IF LOCAL > 4
+		LOCAL@SPRING_DUMMY:16 = LOCAL@SPRING_DUMMY:6
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 12
+				CONTINUE
+			$SPRING_12
+			IF RAND:10 == 0 && (LOCAL@SPRING_TIME:20 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 실 한오라기 걸치지 않은 모습이 되더니, 한쪽 발을 호수에 담근 채 천천히 자위를 시작했다.
+				PRINTFORMW 발목과 다리사이에서 울려퍼지는 물소리에 흥분한 고객들은 %조사처리(CALLNAME:COUNT,"를")% 쓰러트리고, 허리를 흔들기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:10 = RAND:3 + 1
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_TIME:20 = 1
+			ELSEIF RAND:9 == 0 && (LOCAL@SPRING_TIME:19 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 사람들 앞에서 천천히 옷을 벗고, 수영복으로 갈아입기 시작했다……
+				PRINTFORML 그러나 갈아입는 와중이라 움직일 수 없는 틈에 고객들에게 습격당해, 
+				PRINTFORMW 반라인 채로 몇 명에게 지지된 채 입위로 범해지는 처지가 되었다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_TIME:19 = 1
+			ELSEIF RAND:8 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:110
+				PRINTFORML 학교 수영복 차림의 %조사처리(CALLNAME:COUNT,"는")% 주변에서 고객들을 모시며 요염한 미소를 띄우고 있다.
+				PRINTFORML 찔러들어오는 무수한 남성기를 물고, 부비며 온몸에 정액을 뒤집어쓰는 모습은
+				PRINTFORMW 마치 물놀이 전에 물에 익숙해지기 위해 하얀 샤워를 한 게 아닌가 싶을 정도였다.
+				LOCAL@SPRING_EXP:22 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:3 + 2
+				LOCAL@SPRING_TIME:18 = 1
+			ELSEIF RAND:7 == 0 && (LOCAL@SPRING_TIME:17 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 물속에서 뒤엉켜 있는 %조사처리(CALLNAME:COUNT,"는")% 난폭하게 몸을 흔들리며 몇 번이고 몸을 경련하고 있다.
+				PRINTFORMW 남성기가 빠져나오자, 헤 벌어진 음부에서 차가운 물로 반쯤 굳은 정액이 호수 안으로 몇 덩이고 흘러떨어졌다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:17 = 1
+			ELSEIF RAND:6 == 0 && (LOCAL@SPRING_TIME:16 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 바위 위에서 바위에 등을 기댄 채 몸을 섞고 있다.
+				PRINTFORMW 주변에 울려퍼지는 소리를 지적받자 %CALLNAME:COUNT%의 몸은 수치와 기대와 절정으로 단속적으로 몇 번이고 떨렸다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_TIME:16 = 1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:15 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 수면에 가라앉혀진 채 펠라치오를 강요당하고 있다.
+				PRINTFORML 괴로운 듯이, 하지만 사랑스러운 듯이 물속에서 봉사를 계속하는 모습에 고객들은 굉장히 업했다.
+				PRINTFORMW 결국에는 몇 명의 고객들에게 윤간당하고 만 모양이다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:22 = 1
+				LOCAL@SPRING_EXP:30 = 2
+				LOCAL@SPRING_TIME:15 = 1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:128
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 입고 있던 귀여운 수영복을 무참히 찢기고 윤간당하고 있다.
+				PRINTFORML 주변에 울려 퍼지는 듯한, 색기를 띈 비명을 들으면서
+				PRINTFORMW 정말로 어린 소녀를 강간하고 있는 듯한 착각에 빠진 고객들은 격렬하게 허리를 흔들며 절정을 맞이했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:14 = 1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 옷이 축축하게 젖어버린 %조사처리(CALLNAME:COUNT,"는")% 비쳐보이는 유두와, 
+				PRINTFORMW 팬티 너머로 투명하게 보이는 여성기를 희롱당하며, 몇 번이고 고객들의 품 속에서 절정했다.
+				LOCAL@SPRING_EXP:2 = RAND:3 + 2
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 비키니를 몸에 두른 %조사처리(CALLNAME:COUNT,"는")% 고객들과 같이 물놀이를 신나게 하고 있다.
+				PRINTFORML 가슴만을 노리고 물을 끼얹는 고객의 존재를 눈치채고, 그 손을 잡아 가슴에 꾸욱 누르니
+				PRINTFORMW 이번엔 물속에서 다른 놀이로 흥이 돋궈지기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_12
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+			LOCAL@SPRING_DUMMY:5 = 10
+			LOCAL@SPRING_DUMMY:6 = 10
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+			LOCAL@SPRING_DUMMY:0 = 100
+			CALL SPRING_EXP
+		REND
+		
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:6 = LOCAL@SPRING_DUMMY:16
+		CALL SPRING_G_CHECK
+		LOCAL@SPRING_DUMMY:32 *= LOCAL@SPRING_DUMMY:6
+		LOCAL@SPRING_DUMMY:32 *= 9
+		;경비
+		LOCAL@SPRING_DUMMY:32 -= 10000
+		;처리 종료
+		IF LOCAL@SPRING_DUMMY:32 > 0
+			PRINTFORMW  호반에서의 플레이는 무사히 종료되고, 경비를 제외한 합계 {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+			LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+			CALL SPRING_MONEY_CH2
+		ELSE
+			PRINTFORMW 호반에서의 플레이는 무사히 종료되었지만, 경비 등에 의해 결국 수입은 얻을 수 없었다.
+		ENDIF
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 12
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 7
+			LOCAL@SPRING_DUMMY:6 = 50
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSE
+		PRINTFORMW 하지만 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 못했다.
+		PRINTFORM 화가 머리끝까지 난 고객들에게 %조사처리(CALLNAME:MASTER,"는")% 
+		PRINTFORMW 필사적으로 변명하며, 사죄했다…….
+		FLAG:3005 -= RAND:11
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+;20받침대는 난교계
+ELSEIF FLAG:3004 == 20
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 난교 파티를 개최했다.
+	PRINTFORMW 회장에는 {LOCAL@SPRING_DUMMY:6}인의 손님이 방문했다.
+	REPEAT CHARANUM
+		SIF CFLAG:COUNT:1501 != 13
+			CONTINUE
+		LOCAL:(100 + LOCAL) = COUNT
+		CALL SPRING_PERSON_D
+		LOCAL += 1
+	REND
+	SIF LOCAL * 10 < LOCAL@SPRING_DUMMY:6 && LOCAL > 4
+		LOCAL@SPRING_DUMMY:6 = LOCAL * 10
+	IF LOCAL >= 5
+		;LOCAL에 참가한 인원수, LOCAL100~LOCAL1XX까지 참가 멤버 상세가 차 있습니다.
+		ADDCHARA 146
+		CALLNAME:(CHARANUM - 1) = 고객
+		$SPRING_20
+		REPEAT (LOCAL * 2)
+			LOCAL:99 = RAND:LOCAL
+			LOCAL:98 = LOCAL:(100 + LOCAL:99)
+			LOCAL:(100 + LOCAL:99) = CHARANUM - 1
+			LOCAL:99 = RAND:LOCAL
+			LOCAL:97 = LOCAL:(100 + LOCAL:99)
+			LOCAL:(100 + LOCAL:99) = (CHARANUM - 1)
+			SIF LOCAL:98 == (CHARANUM - 1) && LOCAL:97 == (CHARANUM - 1)
+				CONTINUE
+			;LOCAL:98을 우선적으로 묻습니다
+			IF LOCAL:98 == (CHARANUM - 1)
+				LOCAL:98 = LOCAL:97
+				LOCAL:97 = (CHARANUM - 1)
+			ENDIF
+			;LOCAL:97에 남자역의 여배우를 우선적으로 가지고 갑니다
+			IF TALENT:(LOCAL:97):121 != 0 && TALENT:(LOCAL:98):121 == 1 && LOCAL:97 != (CHARANUM - 1)
+				LOCAL:99 = LOCAL:98
+				LOCAL:98 = LOCAL:97
+				LOCAL:97 = LOCAL:99
+			ENDIF
+			LOCAL:96 = 1
+			$SPRING_20G
+			;우선 순위：남×여자는 한가운데정도. 창녀×창녀가 맨 위. 어디라도 좋은 조합을 마지막으로.
+			IF RAND:6 == 0 && (LOCAL@SPRING_TIME:20 == 0 || FLAG:3000 & 524288) && LOCAL:98 != (CHARANUM - 1) && LOCAL:97 != (CHARANUM - 1) && TALENT:(LOCAL:97):121 && TALENT:(LOCAL:98):0 == 0 && TALENT:(LOCAL:97):0 == 0
+				PRINTFORML %조사처리(CALLNAME:(LOCAL:97),"는")% %조사처리(CALLNAME:(LOCAL:98),"를")% 관철하면서, 자기 자신도 고객에게 관철해지고 있다.
+				PRINTFORMW 주위에서는 그것을 응시하면서 고객들이 자위를 하고 있어, 뇌를 녹이는 것 같은 성의 냄새가 자욱한다.
+				PRINTFORML 숨도 끊어지고 끊어지가 되면서도, 음외인 말로 정액을 조르는 %조사처리(CALLNAME:(LOCAL:98),"는")% 
+				PRINTFORMW 중으로부터, 밖으로부터 대량의 정액을 마구 퍼부을 수 있어 미소지었다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:8 + 5
+				LOCAL@SPRING_EXP:2 = RAND:3 + 1
+				LOCAL@SPRING_EXP:12 = RAND:3 + 1
+				LOCAL@SPRING_TIME:20 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:12 = RAND:3 + 2
+					LOCAL@SPRING_EXP:4 = RAND:8 + 5
+					LOCAL@SPRING_EXP:3 = RAND:3 + 2
+					LOCAL@SPRING_EXP:2 = RAND:3 + 2
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:19 == 0 || FLAG:3000 & 524288) && LOCAL:98 != (CHARANUM - 1) && LOCAL:97 != (CHARANUM - 1) && TALENT:(LOCAL:97):121 && TALENT:(LOCAL:98):0 == 0
+				PRINTFORM %조사처리(CALLNAME:(LOCAL:97),"는")% %CALLNAME:(LOCAL:98)%의
+				IF ABL:(LOCAL:98):2 >= 3
+					PRINTL 애널을, 
+					LOCAL@SPRING_EXP:1 = G
+				ELSE
+					PRINTL 입을, 
+					LOCAL@SPRING_EXP:22 = G
+				ENDIF
+				PRINTFORML 고객은 질을 각각 남근으로 관철해, 몸을 들어 올려 격렬하게 찔러, 동요시켰다.
+				PRINTFORMW 동시에 격렬하게 공격받아, %조사처리(CALLNAME:(LOCAL:98),"는")% 격렬하고 몇 번이나 절정에 이르러, 기분을 해 버린 것 같다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:4 + 1
+				LOCAL@SPRING_EXP:12 = RAND:3 + 2
+				LOCAL@SPRING_TIME:19 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:12 = RAND:3 + 2
+					LOCAL@SPRING_EXP:3 = RAND:3 + 2
+					LOCAL@SPRING_EXP:2 = RAND:3 + 2
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288) && LOCAL:98 != (CHARANUM - 1) && LOCAL:97 != (CHARANUM - 1) && TALENT:(LOCAL:98):0 == 0 && TALENT:(LOCAL:97):0 == 0
+				PRINTFORML %CALLNAME:(LOCAL:97)%과 %조사처리(CALLNAME:(LOCAL:98),"는")% 충분히 촉촉한 비소끼리를  아울러 누워, 고객을 맞아들였다.
+				PRINTL 남근을 교대로 찔러 넣을 수 있는이면서, 격렬하게 소리를 높이고 몸을 흔드는 두 명.
+				PRINTW 부드럽게 촉촉한 2개의 가랑이의 사이에 고객은 시원스럽게 절정을 맞이해 두 명의 지체를 희게 더럽혀 갔다.
+				LOCAL@SPRING_EXP:12 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:3 + 2
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_TIME:18 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:12 = RAND:3 + 2
+					LOCAL@SPRING_EXP:4 = RAND:3 + 2
+					LOCAL@SPRING_EXP:0 = RAND:3 + 2
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:17 == 0 || FLAG:3000 & 524288) && LOCAL:98 != (CHARANUM - 1) && LOCAL:97 != (CHARANUM - 1)
+				PRINTFORML %CALLNAME:(LOCAL:97)%과 %조사처리(CALLNAME:(LOCAL:98),"는")%, 고객들의 전으로 서로 천천히 입맞추면서,
+				PRINTFORMW 서로의 몸을 희롱하는 모양을 주위에 충분히과시했다.
+				PRINTFORML 흥분한 고객의 한사람이 흥분해 남성기를 내미면(자), 두 명은 요염하게 미소지어 함께 페니스를 핥고 돌린다.
+				PRINTFORMW 그 모습에 고객들은 한층 더 흥분되어, 그녀들에게 쇄도해 갔다.
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_EXP:22 = RAND:3 + 1
+				LOCAL@SPRING_EXP:23 = RAND:3 + 1
+				LOCAL@SPRING_EXP:12 = RAND:3 + 1
+				LOCAL@SPRING_TIME:17 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:12 = 2
+					LOCAL@SPRING_EXP:4 = 2
+					LOCAL@SPRING_EXP:22 = RAND:3 + 1
+					LOCAL@SPRING_EXP:23 = RAND:3 + 1
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:6 == 0 && (LOCAL@SPRING_TIME:16 == 0 || FLAG:3000 & 524288) && (TALENT:(LOCAL:97):121 || LOCAL:97 == (CHARANUM - 1)) && TALENT:(LOCAL:98):0 == 0
+				PRINTFORML %조사처리(CALLNAME:(LOCAL:98),"는")% %CALLNAME:(LOCAL:97)%에 삽입시키면(자),
+				PRINTFORMW 한층 더 복수의 고객에게 남성기를 졸라, 주위를 둘러싸 주었다.
+				PRINTFORML 시야를 다 메우는 것 같은 수의 남성기에 넋을 잃고된 %조사처리(CALLNAME:(LOCAL:98),"는")%,
+				PRINTFORMW 구와 손으로 그것들을 희롱하면서 오로지에 허리를 거절해, 최후는 정액의 빗속에서 황홀의 미소를 띄웠다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3 + 1
+				LOCAL@SPRING_EXP:4 = RAND:4 + 3
+				LOCAL@SPRING_EXP:22 = RAND:4 + 3
+				LOCAL@SPRING_TIME:16 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:3 = 2
+					LOCAL@SPRING_EXP:2 = 2
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:15 == 0 || FLAG:3000 & 524288) && (TALENT:(LOCAL:97):121 || LOCAL:97 == (CHARANUM - 1))
+				PRINTFORM %조사처리(CALLNAME:(LOCAL:97),"는")% %CALLNAME:(LOCAL:98)%
+				IF TALENT:(LOCAL:98):128 == 1
+					PRINTL 가 작은 몸을 희롱하면서 애널에 삽입해,
+					LOCAL@SPRING_EXP:1 = 2
+				ELSEIF ABL:(LOCAL:98):2 != 0
+					PRINTL 자포자기한 애널에 남성기를 삽입해
+					LOCAL@SPRING_EXP:1 = 3
+				ELSE
+					PRINTL 의 양손에 남성기를 무리하게 잡게 해
+				ENDIF
+				PRINTFORMW 오로지에 허리를 털어 쾌락을 탐냈다.
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:15 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:3 = 2
+					LOCAL@SPRING_EXP:2 = 2
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288) && (TALENT:(LOCAL:97):121 || LOCAL:97 == (CHARANUM - 1))
+				PRINTFORM %조사처리(CALLNAME:(LOCAL:97),"는")% %CALLNAME:(LOCAL:98)%
+				IF TALENT:(LOCAL:98):128 == 1 && TALENT:(LOCAL:98):0 == 0
+					PRINTL 가 작은 몸을 움켜 쥐어 관철해,
+					LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				ELSEIF TALENT:(LOCAL:98):0 == 0
+					PRINTL 를 무리하게 밀어 넘어뜨려,
+					LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				ELSE
+					PRINTL 의 입에 남성기를 더하게 해
+					LOCAL@SPRING_EXP:22 = RAND:3 + 2
+				ENDIF
+				PRINTFORMW 오로지에 허리를 털어 쾌락을 탐냈다.
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:14 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:3 = 2
+					LOCAL@SPRING_EXP:2 = 2
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORM %조사처리(CALLNAME:(LOCAL:97),"는")% %CALLNAME:(LOCAL:98)%의 몸을
+				IF TALENT:(LOCAL:98):0 == 0
+					PRINT 바이브래이터로
+					LOCAL@SPRING_EXP:0 = 3
+				ELSEIF ABL:(LOCAL:98):2 == 0
+					PRINT 애널 바이브래이터로
+					LOCAL@SPRING_EXP:1 = 3
+				ELSE
+					PRINT 로터로
+					LOCAL@SPRING_EXP:2 = 2
+				ENDIF
+				PRINTL 오로지에 괴롭혀
+				PRINTFORMW 그 몸의 반응을 즐기고 있다…….
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					LOCAL@SPRING_EXP:20 = 1
+					LOCAL@SPRING_EXP:12 = 1
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:(LOCAL:97),"는")% 주위의 열기에 매달려졌는지와 같이
+				PRINTFORMW %CALLNAME:(LOCAL:98)%의 몸을 오로지 빨아 계속 애무하고 있다.
+				LOCAL@SPRING_TIME:12 = 1
+				LOCAL:1 = COUNT
+				COUNT = LOCAL:98
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+				IF LOCAL:97 != (CHARANUM - 1)
+					COUNT = LOCAL:97
+					CALL SPRING_MONEYD
+					LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+					LOCAL@SPRING_DUMMY:0 = 100
+					CALL SPRING_EXP
+				ENDIF
+				COUNT = LOCAL:1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_20G
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+		REND
+		
+		A = CHARANUM -1
+		T = TARGET
+		B = ASSI
+		CALL SPRING_CHARA_GONE
+		LOCAL:1 = 0
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 13
+				CONTINUE
+			IF LOCAL:(100 + LOCAL:1) != (CHARANUM - 1)
+				;묘사없이도 노력하고 있었습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_DUMMY:5 = 7
+				LOCAL@SPRING_DUMMY:6 = 10
+				CALL SPRING_MONEYD
+				LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+				LOCAL@SPRING_DUMMY:0 = 100
+				CALL SPRING_EXP
+			ENDIF
+		REND
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:6 = LOCAL@SPRING_DUMMY:16
+		CALL SPRING_G_CHECK
+		LOCAL@SPRING_DUMMY:32 *= LOCAL@SPRING_DUMMY:6
+		LOCAL@SPRING_DUMMY:32 *= 14
+		;처리 종료
+		PRINTFORMW 난교 파티는 무사하게 종료해, {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+		LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+		CALL SPRING_MONEY_CH2
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 13
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 10
+			LOCAL@SPRING_DUMMY:6 = 50
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSE
+		PRINTFORMW 그러나 %조사처리(CALLNAME:MASTER,"는")% 충분한 노예를 준비하지 못했었다.
+		PRINTFORMW 광분한 고객에게 %조사처리(CALLNAME:MASTER,"는")% 필사적으로 변명하며 사죄했지만…… 나쁜 소문이 나 버린 것 같다.
+		PRINTFORMW 창관의 인기가 큰 폭으로 떨어졌습니다.
+		FLAG:3005 /= 2
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+
+;30받침대는 손님 한사람에게로의 초봉사계
+ELSEIF FLAG:3004 == 30
+	CALL SPRING_8_RANDOMCHARA
+	PRINTFORMW 의 단골손님의 요망에 응해 %조사처리(CALLNAME:MASTER,"는")% 노예를 다수 준비해도라고 이루기로 했습니다.
+	;참가인수카운트
+	REPEAT CHARANUM
+		SIF CFLAG:COUNT:1501 != 14
+			CONTINUE
+		LOCAL += 1
+	REND
+	WAIT
+	;최저 인원수 4명
+	IF LOCAL > 3
+		LOCAL@SPRING_DUMMY:16 = LOCAL@SPRING_DUMMY:6
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 14
+				CONTINUE
+			$SPRING_30
+			;남성기는 1개
+			IF RAND:10 == 0 && LOCAL@SPRING_TIME:20 == 0 && LOCAL@SPRING_8_RANDOMCHARA != 7
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 일사 휘감지 않는 모습이 되면(자), 말타기가 되어 고객의 남성기를 입에 물고 붐비어,
+				PRINTFORMW 격렬하게 허리를 흔들기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_EXP:4 = RAND:3
+				LOCAL@SPRING_TIME:20 = 1
+			;손가락은 2개
+			ELSEIF RAND:9 == 0 && LOCAL@SPRING_TIME:19 < 2
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 동물과 같이 엉덩이를 높게 올려 고객의 손가락을 받아들였다.
+				PRINTFORMW 고객의 손가락끝이 우글거릴 때에 그 교성이 빠져 주위에 영향을 주어 건넌다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_TIME:19 += 1
+			;다리는 2개
+			ELSEIF RAND:8 == 0 && LOCAL@SPRING_TIME:18 < 2
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 드러누워, 고객의 발부리에 혀를 기게 하고 있다.
+				PRINTFORMW 복사뼈로부터 손가락의 사이까지취해 빨고 취해, 그 입기술로 고객을 즐겁게 하고 있는 것 같다.
+				LOCAL@SPRING_EXP:22 = RAND:3 + 2
+				LOCAL@SPRING_TIME:18 += 1
+			;머리는 1개
+			ELSEIF RAND:7 == 0 && LOCAL@SPRING_TIME:17 == 0
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 옷을 완전하게 벗어 떠나, 고객 위에 말타기가 되어 있다.
+				PRINTFORMW 고객이 혀를 움직일 때, 숨을 내쉴 때마다 그 몸은 흔들려 강렬한 암컷의 냄새가 직접 고객의 코를 자극해 나간다…….
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_EXP:20 = RAND:2 + 1
+				LOCAL@SPRING_TIME:17 = 1
+			;애널은 1개
+			ELSEIF RAND:6 == 0 && LOCAL@SPRING_TIME:16 == 0
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 불어 버리는 위, 몇 번이나 고객의 항문을 계속 빨고 있다.
+				PRINTFORML 충분히 자포자기한 것을 확인하고 나서,
+				PRINTFORMW %조사처리(CALLNAME:COUNT,"는")% 조용히 애널 바이브래이터를 꺼내 고객의 애널을 유린하기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_TIME:16 = 1
+			;젖은 2개
+			ELSEIF RAND:5 == 0 && LOCAL@SPRING_TIME:15 < 2
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 가슴을 상냥하게 자극해, 어루만지고 돌리고 있다.
+				PRINTFORML 조금씩 단단하게 되어 가는 유두에 혀를 기게 해 옆구리를 상냥하게 더듬어,
+				PRINTFORMW 완전하게 단단해진 것을 확인하고 나서……%조사처리(CALLNAME:COUNT,"는")% 천천히 그 유두에 가볍게 이빨을 세웠다.
+				LOCAL@SPRING_TIME:15 += 1
+			;그 외
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:128
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 고객의 체내를 열심히 혀로 빨고 취하고 있다.
+				PRINTFORMW 옆구리나 견갑골의 근처, 귀등 , 성감대를 자극할 때마다, 고객은 숨을 황라고 반응을 돌려주고 있다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:2 + 1
+				LOCAL@SPRING_TIME:14 = 1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 눈앞에서 소리를 높이면서 자위에 빠지고 있다.
+				PRINTFORMW 보게 되어 흥분하고 있을 몸을, 애액이 붙은 손가락끝으로 쓰다듬어 올리면(자), 고객의 몸이 비크리와 뛰었다.
+				LOCAL@SPRING_EXP:10 = RAND:3 + 2
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 고객의 남성기에 혀를 기게 하고 있다.
+				SIF LOCAL@SPRING_TIME:20
+					PRINTFORM 섹스의 허리의 움직여에 맞추어 그 근원으로부터
+				PRINTFORML 몇 번이나 빨아서는 , 흘러넘친 정액으로 더러워진 얼굴에 미소를 띄워
+				PRINTFORMW 한층 더 고객의 쾌감을 끌어내려고 행위를 계속했다……
+				LOCAL@SPRING_EXP:22 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:3 + 2
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_30
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+			LOCAL@SPRING_DUMMY:5 = 4
+			LOCAL@SPRING_DUMMY:6 = 30
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+			LOCAL@SPRING_DUMMY:0 = 100
+			CALL SPRING_EXP
+		REND
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:32 *= 200
+		;처리 종료
+		PRINTFORMW 접대는 무사하게 종료해 {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+		LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+		CALL SPRING_MONEY_CH2
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 14
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 4
+			LOCAL@SPRING_DUMMY:6 = 30
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSEIF LOCAL > 0
+		PRINTFORMW 그러나, 창녀의 수가 충분하지 않고, 만족스러운 대접을 할 수가 없었다…
+		PRINTFORMW 유감스럽지만, 도중에 중지키 자리선이었습니다……
+		FLAG:3005 -= RAND:5
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ELSE
+		PRINTFORMW 그러나 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 못했었다.
+		PRINTFORMW 광분한 고객에게 %조사처리(CALLNAME:MASTER,"는")% 필사적으로 변명하며 사죄했지만…… 나쁜 소문이 나 버린 것 같다.
+		PRINTFORMW 창관의 인기가 큰 폭으로 떨어졌습니다.
+		FLAG:3005 /= 2
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+ELSEIF FLAG:3004 == 31
+	CALL SPRING_8_RANDOMCHARA
+	PRINTFORMW 의 단골손님의 요망에 응해서 %조사처리(CALLNAME:MASTER,"는")% 노예를 다수 준비해 다 괴롭히기로 했습니다.
+	;참가인수카운트
+	REPEAT CHARANUM
+		SIF CFLAG:COUNT:1501 != 15
+			CONTINUE
+		LOCAL += 1
+	REND
+	WAIT
+	;최저 인원수 4명
+	IF LOCAL > 3
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 15
+				CONTINUE
+			$SPRING_31
+			;남성기는 1개
+			IF RAND:10 == 0 && LOCAL@SPRING_TIME:20 == 0 && LOCAL@SPRING_8_RANDOMCHARA != 7
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 남성기를 리본으로 묶어, 낼 수 없게 한 다음
+				PRINTFORMW 그 상태로 말타기가 되어 격렬하게 허리를 흔들기 시작했다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+				LOCAL@SPRING_TIME:20 = 1
+			;여성기도 1개
+			ELSEIF RAND:9 == 0 && LOCAL@SPRING_TIME:19 == 0 && LOCAL@SPRING_8_RANDOMCHARA == 7
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 클리토리스를 테그스로 붙들어매면(자),
+				PRINTFORMW 새빨갛게 충혈한 그것을 만지작거리면서, 골반을 삐걱거리게 할 정도로 극태의 바이브래이터로 고객을 관철했다.
+				LOCAL@SPRING_TIME:19 += 1
+			;귀는 2개이지만, 1개로 좋아
+			ELSEIF RAND:8 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 눈을 아이마스크로 막으면(자),
+				PRINTFORMW 그 귓전으로 불안을 부추기는 것 같은 일을 끝없이 속삭임 시작했다.
+				LOCAL@SPRING_TIME:18 += 1
+			;머리는 1개
+			ELSEIF RAND:7 == 0 && LOCAL@SPRING_TIME:17 == 0
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 옷을 완전하게 벗어 떠나, 고객 위에 말타기가 되어 있다.
+				PRINTFORMW 숨을 쉬지 못하고 고객이 괴로워하고 있는 모양을 봐,%조사처리(CALLNAME:COUNT,"는")% 한층 더 고간을 적실 수 있었다.
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_EXP:20 = RAND:2 + 1
+				LOCAL@SPRING_TIME:17 = 1
+			;애널은 1개
+			ELSEIF RAND:6 == 0 && LOCAL@SPRING_TIME:16 == 0
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 가볍게 적신 정도의 고객의 애널에 바이브래이터를 찔러 넣으면(자),
+				PRINTFORMW 격렬하게 움직여, 그 전립선을 찾아 찔러 세웠다.
+				LOCAL@SPRING_TIME:16 = 1
+			;젖은 2개
+			ELSEIF RAND:5 == 0 && LOCAL@SPRING_TIME:15 < 2
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 가슴을 비틀어, 농 먹고 있다.
+				PRINTFORMW 완전하게 단단해진 것을 확인하고 나서……%조사처리(CALLNAME:COUNT,"는")% 천천히 그 유두에 바늘을 꽂았다.
+				LOCAL@SPRING_TIME:15 += 1
+			;손가락은 2개
+			ELSEIF RAND:4 == 0 && LOCAL@SPRING_TIME:14 < 2
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 동물과 같이 엉덩이를 높게 올려 고객의 손가락을 받아들여
+				PRINTFORMW 고객의 의사를 무시해 그 팔을 잡아, 상하에 움직여 자위를 감행 했다……
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_TIME:14 += 1
+			;그 외
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")%, 고객의 체내에 열심히 초의 납을 늘어뜨리고 있다.
+				PRINTFORMW 옆구리나 견갑골의 근처, 귀등에 늘어뜨릴 때마다, 그 몸이 비크리와 떨렸다.
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 자위를 하면서 채찍을 치켜들어 고객의 몸에 몇 번이나 거절해 내리고 있다.
+				PRINTFORMW 붉게 부어 오른 부분에 자신의 애액을 발라 넣으면(자), 고객은 아픔으로 몸을 비비 꼬고 애태울 수 있었다.
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_31
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+			LOCAL@SPRING_DUMMY:5 = 7
+			LOCAL@SPRING_DUMMY:6 = 10
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+			LOCAL@SPRING_DUMMY:0 = 100
+			CALL SPRING_EXP
+		REND
+		
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:32 *= 300
+		;처리 종료
+		PRINTFORMW 접대는 무사하게 종료해, {LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+		LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+		CALL SPRING_MONEY_CH2
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 15
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 7
+			LOCAL@SPRING_DUMMY:6 = 40
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSEIF LOCAL > 0
+		PRINTFORMW 그러나, 창녀의 수가 충분하지 않고, 만족스러운 대접을 할 수가 없었다…
+		PRINTFORMW 유감스럽지만, 도중에 중지키 자리선이었습니다……
+		FLAG:3005 -= RAND:5
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ELSE
+		PRINTFORMW 그러나 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 못했었다.
+		PRINTFORMW 광분한 고객에게 %조사처리(CALLNAME:MASTER,"는")% 필사적으로 변명하며 사죄했지만…… 나쁜 소문이 나 버린 것 같다.
+		PRINTFORMW 창관의 인기가 큰 폭으로 떨어졌습니다.
+		FLAG:3005 /= 2
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+ELSEIF FLAG:3004 == 32
+	CALL SPRING_8_RANDOMCHARA
+	PRINTFORML 의 단골손님의 요망에 응해서 %조사처리(CALLNAME:MASTER,"는")% 노예를 다수 준비해, 정액 목욕탕에서 대접하기로 했습니다.
+	;참가인수카운트
+	REPEAT CHARANUM
+		SIF CFLAG:COUNT:1501 != 16
+			CONTINUE
+		LOCAL += 3
+		SIF TALENT:COUNT:132
+			LOCAL += 2
+		SIF TALENT:COUNT:133
+			LOCAL -= 1
+	REND
+	WAIT
+	;최저 인원수 4명
+	IF LOCAL > 12
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 16
+				CONTINUE
+			$SPRING_32
+			IF RAND:10 == 0 && (LOCAL@SPRING_TIME:20 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 고객은 목욕탕통에 쌓인 정액을 %CALLNAME:COUNT%의 여성기에 몇 번이나 발라 감색으로 있다.
+				PRINTFORMW 격렬하고 여성기를 다루어져 절정을 맞이한%조사처리(CALLNAME:COUNT,"는")%, 자신이 발라 난처할 수 있던 것과 같은 정도 대량의 정액을 사정해 버린 것 같다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:20 = 1
+			ELSEIF RAND:9 == 0 && (LOCAL@SPRING_TIME:19 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 몸을 자신의 남성기로 어루만지고 문질러 씻고 있다.
+				PRINTFORMW 자제국물로 거품이었던 남성기는 고객의 등이나 배, 팔을 더럽혀, 최후는 성대하게 얼굴을 희게 염색해 냈다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:19 += 1
+			ELSEIF RAND:8 == 0 && (LOCAL@SPRING_TIME:18 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 고객은 %CALLNAME:COUNT%의 남성기를 손을 사용해 몇 번이나 비비고 있다.
+				PRINTFORMW 크게 부풀어 오른 불알을 몇 번이나 비비어 풀어져 %조사처리(CALLNAME:COUNT,"는")% 쾌감에 견디지 못하고 격렬하게 사정했다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:18 += 1
+			ELSEIF RAND:7 == 0 && (LOCAL@SPRING_TIME:17 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 스스로도 정액 목욕탕가운데에 들어와, 고객과 사귀고 있다.
+				PRINTFORMW 격렬하게 밀어 올려 고객이 태내에 사정하자, 그 자극으로 절정을 맞이한 %조사처리(CALLNAME:COUNT,"는")%, 목욕탕가운데에 격렬하게 정자를 마구 따돌렸다.
+				LOCAL@SPRING_EXP:0 = RAND:2 + 1
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_EXP:4 = RAND:10 + 10
+				LOCAL@SPRING_TIME:17 = 1
+			ELSEIF RAND:6 == 0 && (LOCAL@SPRING_TIME:16 == 0 || FLAG:3000 & 524288) && ABL:COUNT:2 > 5
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 불어 버리는 위, 몇 번이나 애널을 빨아 계속되고 있다.
+				PRINTFORML 성기를 만지작거리는 것을 금지되어 오로지 애태워지고 계속한%조사처리(CALLNAME:COUNT,"는")%, 울면서 사정을 간절히 원함 한다.
+				PRINTFORMW 고객이 허가를 내, 남성기를 문지르면(자), 거기로부터 굉장할 기세로 정액이 내뿜었다.
+				LOCAL@SPRING_EXP:1 = RAND:3 + 2
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:2 + 1
+				LOCAL@SPRING_TIME:16 = 1
+			ELSEIF RAND:5 == 0 && (LOCAL@SPRING_TIME:15 == 0 || FLAG:3000 & 524288) && TALENT:COUNT:134
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객에게 가슴을 비비어지고면서, 필사적으로 남성기를 잡아당기고 있다.
+				PRINTFORMW 조금씩 단단하게 되어 가는 유두를 혀로 돌 붙어지면(자), 다 참아 수 있지 않고 2개(살) 첨단으로부터 백탁액을 흘려 버렸다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:15 += 1
+			ELSEIF RAND:4 == 0 && (LOCAL@SPRING_TIME:14 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 고객은 %CALLNAME:COUNT%의 여성기에 손가락을 쑤시면서, 스스로 남성기를 잡아당기게 하고 있다.
+				PRINTFORMW 양쪽 모두로부터의 자극에 다 참아 수 있지 않고 정령을 발하면(자), 고객은 한층 더 손가락을 격렬하게 움직여, 다시 %조사처리(CALLNAME:COUNT,"를")% 흥분되게 해 갔다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:14 = 1
+			ELSEIF RAND:3 == 0 && (LOCAL@SPRING_TIME:13 == 0 || FLAG:3000 & 524288)
+				PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 고객의 눈앞에서 소리를 높이면서 자위에 빠지고 있다.
+				PRINTFORMW 보게 되어 흥분한 고객이 그 손가락으로 리근을 쓰다듬어 올리면(자), 다 참아 수 있지 않고 정액이 분출했다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:13 = 1
+			ELSEIF RAND:2 == 0 && (LOCAL@SPRING_TIME:12 == 0 || FLAG:3000 & 524288)
+				PRINTFORML 고객은 %CALLNAME:COUNT%의 남성기를 입에 입에 물면(자), 몇 번이나 빤다.
+				PRINTFORMW 한 번 사정시킨 것 만으로는 어딘지 부족했던 것일까, 사정 후도 한층 더 입 중(안)에서 계속 공격했다.
+				LOCAL@SPRING_EXP:3 = RAND:3 + 2
+				LOCAL@SPRING_TIME:12 = 1
+			ELSE
+				SIF FLAG:3000 & 524288
+					GOTO SPRING_32
+				;묘사없이도 노력하고 있습니다.
+				LOCAL@SPRING_EXP:0 = RAND:3 + 2
+				LOCAL@SPRING_EXP:2 = RAND:3
+			ENDIF
+			LOCAL@SPRING_DUMMY:5 = 6
+			LOCAL@SPRING_DUMMY:6 = 10
+			CALL SPRING_MONEYD
+			LOCAL@SPRING_DUMMY:32 += LOCAL@SPRING_DUMMY:1
+			LOCAL@SPRING_DUMMY:0 = 100
+			CALL SPRING_EXP
+		REND
+		FLAG:3005 += RAND:10
+		SIF FLAG:3005 > 100
+			FLAG:3005 = 100
+		LOCAL@SPRING_DUMMY:32 *= 500
+		;처리 종료
+		PRINTFORM 소녀들의 정액은
+		IF LOCAL > 100
+			PRINTFORML 큰 목욕탕통을 완전하게 채울수록 모여, 고객을 다이마 더하게 했습니다.
+			LOCAL@SPRING_DUMMY:32 += 10000
+		ELSEIF LOCAL > 50
+			PRINTFORML 실로{LOCAL}cm 정도의 높이까지 모여, 고객은 그 중에 냄새를 마음껏 만끽했습니다.
+			LOCAL@SPRING_DUMMY:32 += 5000
+		ELSEIF LOCAL > 30
+			PRINTFORML 실로{LOCAL}cm 정도의 높이까지 모여, 고객은 몸을 펴 그 감촉을 즐겼습니다.
+			LOCAL@SPRING_DUMMY:32 += 5000
+		ELSE
+			PRINTFORML 고객의 몸을 희게 물들여 고객은 거기에 만족했습니다.
+			LOCAL@SPRING_DUMMY:32 += 5000
+		ENDIF
+		PRINTFORMW 접대는 무사하게 종료해,{LOCAL@SPRING_DUMMY:32}원의 수입을 얻었다.
+		LOCAL@SPRING_DUMMY:1 = LOCAL@SPRING_DUMMY:32
+		CALL SPRING_MONEY_CH2
+		DRAWLINE
+		REPEAT CHARANUM
+			;물론, 참가하고 있지 않는 사람은 포함되지 않습니다
+			SIF CFLAG:COUNT:1501 != 16
+				CONTINUE
+			LOCAL@SPRING_DUMMY:5 = 6
+			LOCAL@SPRING_DUMMY:6 = 30
+			CALL SPRING_DOWN
+			CALL SPRING_BASE
+		REND
+	ELSEIF LOCAL > 0
+		PRINTFORMW 그러나 정액의 양이 충분하지 않아 만족스러운 대접을 할 수가 없었습니다.
+		PRINTFORMW 유감스럽지만, 욕실은 도중에 중지가 되었습니다.
+		FLAG:3005 -= RAND:5
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ELSE
+		PRINTFORMW 그러나 %조사처리(CALLNAME:MASTER,"는")% 노예를 준비하지 못했었다.
+		PRINTFORMW 광분한 고객에게 %조사처리(CALLNAME:MASTER,"는")% 필사적으로 변명하며 사죄했지만…… 나쁜 소문이 나 버린 것 같다.
+		PRINTFORMW 창관의 인기가 큰 폭으로 떨어졌습니다.
+		FLAG:3005 /= 2
+		SIF FLAG:3005 < 0
+			FLAG:3005 = 0
+	ENDIF
+ENDIF
+CALL SPRING_MONEY_CH5
+
+;마지막으로, 이벤트 종료이므로 해제됩니다
+REPEAT CHARANUM
+	IF CFLAG:COUNT:1501 == 8
+		CFLAG:COUNT:1501 = 0
+		CFLAG:COUNT:4 -= 1024
+		FLAG:3001 -= 1
+	ENDIF
+REND
+FLAG:3004 = 0
+FLAG:3000 -= 512
+TARGET = Z
+
+@SPRING_8_RANDOMCHARA
+LOCAL = 0
+IF RAND:10 == 0
+	PRINT 천마
+	LOCAL = 1
+ELSEIF RAND:9 == 0
+	PRINT 텐구의 남자
+	LOCAL = 2
+ELSEIF RAND:8 == 0
+	PRINT 갓빠의 남자
+	LOCAL = 3
+ELSEIF RAND:7 == 0
+	;어쩐지, 지저에 많이 있을 것 같아서 해금. 사실은 그다지 좋지 않은 것인지?
+	PRINT 귀신의 큰 남자
+	LOCAL = 4
+ELSEIF RAND:6 == 0
+	PRINT 남 토끼
+	LOCAL = 5
+ELSEIF RAND:5 == 0
+	PRINT 건달
+	LOCAL = 6
+ELSEIF RAND:4 == 0
+	PRINT 동성사랑자의 여자
+	LOCAL = 7
+ELSEIF RAND:3 == 0
+	PRINT 몸치장한 부자의 남자
+	LOCAL = 8
+ELSEIF RAND:2 == 0
+	PRINT 신사복의 신사
+	LOCAL = 9
+ELSE
+	PRINT 마을의 남자
+	LOCAL = 10
+ENDIF
+

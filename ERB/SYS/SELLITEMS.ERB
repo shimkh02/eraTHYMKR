@@ -1,0 +1,892 @@
+﻿;=============================================================================
+;○○ 매각 관련
+;=============================================================================
+;--------------------------------------------------
+;사진의 가격을 결정하는 처리
+;--------------------------------------------------
+;사진의 가격은 커맨드 중에서도 처리를 실행한 TFLAG:124에서를 사용.
+;HARD와 그 외에서는 금액 제한 처리의 방법이 약간 다르다(HARD 쪽이 빡빡함)
+@GET_PICTURE
+;HARD 모드 이상
+IF FLAG:3 >= 3
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 2500, 2)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 5000, 5)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 10000, 10)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 50000, 25)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 100000, 50)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 250000, 100)
+	TFLAG:124 = MIN(TFLAG:124, 500000)
+ELSE
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 5000, 2)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 10000, 3)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 50000, 5)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 100000, 10)
+	TFLAG:124 = TABLE_CALC(TFLAG:124, 500000, 25)
+ENDIF
+TFLAG:124 = MAX(TFLAG:124, 5)
+PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 사진을 현상했다.
+;전시실 유효 시에는 사진의 보존이 가능
+IF FLAG:12 & 8
+	CALL SELECT_PICTURE
+ELSE
+	CALL SELL_PICTURE
+ENDIF
+;플래그 리셋. 이걸로 조교 메뉴 외에서도 재사용할 수 있게
+TFLAG:124 = 0
+
+;--------------------------------------------------
+;사진 매각 처리
+;--------------------------------------------------
+@SELL_PICTURE
+;사진 매각의 이벤트 대사 호출
+CALL SELF_KOJO, TARGET, 132
+;TFLAG:200 = 0
+PRINTFORML %CALLNAME:TARGET%의 사진에는 {TFLAG:124}의 가격이 붙었다.
+MONEY:1 = TFLAG:124
+CALL SHOW_MONEY_INCREACE
+;--------------------------------------------------
+;사진으로 번 최고 금액 판정 처리
+SIF MONEY:1 > MONEY:971
+	CALL NEW_HIGH_INCOME_ALL, 971
+SIF MONEY:1 > CFLAG:83
+	CALL NEW_HIGH_INCOME_SLAVE, 83
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+
+;--------------------------------------------------
+;사진의 매각 or 보존 처리
+;--------------------------------------------------
+@SELECT_PICTURE
+PRINTFORML 이 사진이라면 {TFLAG:124}원의 가치가 있을 것 같다…….
+PRINTW 어쩔까? 팔까? 가지고 있을까? 아니면 파기할까?
+DRAWLINE
+PRINTL [0] - 판다
+PRINTFORML [1] - 수중에 남긴다\@(CFLAG:10 & 64) ?  (전시실에는 %CALLNAME:TARGET%의 사진이 있습니다) # (아직 전시실에는 %CALLNAME:TARGET%의 사진이 없습니다)\@
+PRINTL [2] - 파기한다
+DRAWLINE
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	;사진 매각의 이벤트 대사 호출
+	CALL SELF_KOJO, TARGET, 132
+	TFLAG:202 = 0
+	PRINTFORML %CALLNAME:TARGET%의 사진을 팔았다.
+	MONEY:1 = TFLAG:124
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;사진으로 번 최고 금액 판정 처리
+	SIF MONEY:1 > MONEY:971
+		CALL NEW_HIGH_INCOME_ALL, 971
+	SIF MONEY:1 > CFLAG:83
+		CALL NEW_HIGH_INCOME_SLAVE, 83
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+	WAIT
+ELSEIF RESULT == 1
+	CALL KEEP_PICTURE
+ELSEIF RESULT == 2
+	PRINTFORMW %CALLNAME:TARGET%의 사진을 파기했다.
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;모유 매각의 처리
+;--------------------------------------------------
+;搾乳機を使っていない場合はAFTERTRA.ERBの時点でこっちに来ないように
+@SELL_MILK
+;난이도가 PHANTASM이상
+IF FLAG:3 >= 5
+	LOCAL:1 = TFLAG:126 * 5
+;난이도가 LUNATIC
+ELSEIF FLAG:3 == 4
+	LOCAL:1 = TFLAG:126 * 20
+ELSE
+	LOCAL:1 = TFLAG:126 * 25
+ENDIF
+;븐유경험을 본다
+GETEXPLV EXP:5, 6
+LOCAL = (RESULT + 1) * LOCAL:1
+
+;脱水症状ならぬ脱水少女もいいところなので○○ccの表示のみ修正
+;値段が高いのはおいしいと評判だったって解釈で
+LOCAL:1 = TABLE_CALC(LOCAL, 50, 2)
+LOCAL:1 = TABLE_CALC(LOCAL, 100, 5)
+LOCAL:1 = TABLE_CALC(LOCAL, 200, 10)
+LOCAL:1 = MIN(LOCAL:1, 300)
+
+
+;숫처녀에 난이도HARD이상
+IF TALENT:0 == 1 && EXP:0 == 0 && FLAG:3 >= 3
+	TIMES LOCAL , 2.50
+;숫처녀 혹은 Ｖ경험 없음
+ELSEIF TALENT:0 == 1 || EXP:0 == 0
+	TIMES LOCAL , 1.50
+;재상처녀
+ELSEIF TALENT:0
+	TIMES LOCAL , 1.20
+ENDIF
+;음유
+SIF TALENT:174
+	TIMES LOCAL , 1.50
+LOCAL:2 = NO:TARGET
+;히낫치의 모유는 야쿠(厄)르트
+IF LOCAL:2 == 39
+	TIMES LOCAL , 1.50
+;その他모유に固有の名前付き
+ELSEIF LOCAL:2 == 5 || LOCAL:2 == 45 || LOCAL:2 == 108
+	TIMES LOCAL , 1.30
+ENDIF
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 250000, 25)
+	LOCAL = MIN(LOCAL, 500000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 5)
+ENDIF
+
+
+;토리코모드. 의뢰소가 켜져있을 때.
+IF FLAG:5010  == 4
+	PRINTFORML 착유기를 사용해 %CALLNAME:TARGET%에게서 {LOCAL:1}cc의 %TSTR:2%를 짜냈다.
+	PRINTFORML %CALLNAME:TARGET%의 %TSTR:2%에는 {LOCAL}원의 가격이 붙었다.
+	PRINTW 어쩔까? 팔까? 병에 넣어서 가지고 있을까? 아니면 파기할까?
+	DRAWLINE
+	PRINTL [0] - 판다
+	PRINTFORML [1] - 수중에 남긴다\@(CFLAG:10 & 256) ?  (전시실에는 %CALLNAME:TARGET%의 모유가 있습니다) # (아직 전시실에는 %CALLNAME:TARGET%의 모유가 없습니다)\@
+	PRINTL [2] - 파기한다
+	DRAWLINE
+
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		;모유판매 구상 출력
+		CALL SELF_KOJO, TARGET, 133, LOCAL
+		;TFLAG:202 = 0
+		PRINTFORML %CALLNAME:TARGET%의 모유를 팔았다.
+		MONEY:1 = LOCAL
+		CALL SHOW_MONEY_INCREACE
+		;--------------------------------------------------
+		;모유で稼いだ最高金額判定처리
+		SIF MONEY:1 > MONEY:980
+			CALL NEW_HIGH_INCOME_ALL, 980
+		SIF MONEY:1 > CFLAG:87
+			CALL NEW_HIGH_INCOME_SLAVE, 87
+		CALL TOTAL_INCOME_SLAVE, MONEY:1
+		;--------------------------------------------------
+		WAIT
+	ELSEIF RESULT == 1
+		IF (ITEM:81 > 0 || NOITEM)
+			CALL GET_MILK
+			ITEM:81 -= 1
+		ELSE
+			PRINTFORMW 뚜껑달린 병이 없어 수집을 할 수 없다.
+			PRINTFORMW %CALLNAME:TARGET%의 모유를 파기했다.
+		ENDIF
+	ELSEIF RESULT == 2
+		PRINTFORMW %CALLNAME:TARGET%의 모유를 파기했다.
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ELSE
+	;기존모드
+	;모유매각의 이벤트 대사 호출(金額はTFLAG:99で)
+	CALL SELF_KOJO, TARGET, 133, LOCAL
+	CALL NAME_SELL_MILK, NO:TARGET
+	PRINTFORML 착유기를 사용해 %CALLNAME:TARGET%에게서 {LOCAL:1}cc의 %TSTR:2%를 짜냈다.
+	PRINTFORML %CALLNAME:TARGET%의 %TSTR:2%에는 {LOCAL}원의 가격이 붙었다.
+	MONEY:1 = LOCAL
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;모유で稼いだ最高金額判定처리
+	SIF MONEY:1 > MONEY:980
+		CALL NEW_HIGH_INCOME_ALL, 980
+	SIF MONEY:1 > CFLAG:87
+		CALL NEW_HIGH_INCOME_SLAVE, 87
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+	WAIT
+ENDIF
+
+;--------------------------------------------------
+;聖水매각의 처리
+;--------------------------------------------------
+;採尿器を使っていない場合はAFTERTRA.ERBの時点でこっちに来ないように
+@SELL_PEE
+;난이도PHANTASM이상
+IF FLAG:3 >= 5
+	LOCAL:1 = TFLAG:127 * 2
+;난이도LUNATIC
+ELSEIF FLAG:3 == 4
+	LOCAL:1 = TFLAG:127 * 4
+ELSE
+	LOCAL:1 = TFLAG:127 * 8
+ENDIF
+;放尿경험をみる
+IF EXP:6 < EXPLV:1
+	LOCAL = 1
+ELSEIF EXP:6 < EXPLV:2
+	LOCAL = 2
+ELSEIF EXP:6 < EXPLV:3
+	LOCAL = 5
+ELSEIF EXP:6 < EXPLV:4
+	LOCAL = 10
+ELSEIF EXP:6 < EXPLV:5
+	LOCAL = 15
+ELSE
+	LOCAL = 30
+ENDIF
+LOCAL *= LOCAL:1
+
+;脱水症状ならぬ脱水少女もいいところなので○○ccの表示のみ修正
+;値段が高いのはおいしい(!?)と評判だったって解釈で
+LOCAL:1 = TABLE_CALC(LOCAL, 50, 2)
+LOCAL:1 = TABLE_CALC(LOCAL, 100, 5)
+LOCAL:1 = TABLE_CALC(LOCAL, 200, 10)
+LOCAL:1 = MIN(LOCAL:1, 300)
+
+;おもらし癖＋幼児or幼稚or幼児退行
+IF TALENT:45 && (TALENT:130 || TALENT:131 || TALENT:159)
+	TIMES LOCAL , 2.50
+;幼児or幼稚or幼児退行
+ELSEIF TALENT:130 || TALENT:131 || TALENT:1
+	TIMES LOCAL , 1.80
+;おもらし癖
+ELSEIF TALENT:45
+	TIMES LOCAL , 1.20
+ENDIF
+;尿道狂
+SIF TALENT:175
+	TIMES LOCAL , 1.50
+
+;フ　ラ　ン　ち　ゃ　ん　ウ　フ　フ
+SIF NO:TARGET == 11
+	TIMES LOCAL , 1.50
+;もみもみもみもみもみぴったん
+SIF NO:TARGET == 41
+	TIMES LOCAL , 1.50
+;ルナ茶！　ルナ茶！
+SIF NO:TARGET == 46
+	TIMES LOCAL , 1.50
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 250000, 25)
+	LOCAL = MIN(LOCAL, 500000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 5)
+ENDIF
+
+;토리코모드. 의뢰소가 켜져있을 때.
+IF FLAG:5010  == 4
+	PRINTFORML 채뇨기를 사용해서 %CALLNAME:TARGET%에게서 %STR:2%를 채집했다.
+	PRINTFORML %CALLNAME:TARGET%의 황금수에는 {LOCAL}원의 가격이 붙었다.
+	PRINTW 어쩔까? 팔까? 병에 넣어서 가지고 있을까? 아니면 파기할까?
+	DRAWLINE
+	PRINTL [0] - 판다
+	PRINTFORML [1] - 수중에 남긴다\@(CFLAG:10 & 2) ?  (전시실에는 %CALLNAME:TARGET%의 황금수가 있습니다) # (아직 전시실에는 %CALLNAME:TARGET%의 황금수가 없습니다)\@
+	PRINTL [2] - 파기한다
+	DRAWLINE
+
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		;황금수판매 구상 출력
+		CALL SELF_KOJO, TARGET, 134, LOCAL
+		;TFLAG:202 = 0
+		PRINTFORML %CALLNAME:TARGET%의 황금수를 팔았다.
+		MONEY:1 = LOCAL
+		CALL SHOW_MONEY_INCREACE
+		;--------------------------------------------------
+		;聖水で稼いだ最高金額判定처리
+		SIF MONEY:1 > MONEY:981
+			CALL NEW_HIGH_INCOME_ALL, 981
+		SIF MONEY:1 > CFLAG:88
+			CALL NEW_HIGH_INCOME_SLAVE, 88
+		CALL TOTAL_INCOME_SLAVE, MONEY:1
+		;--------------------------------------------------
+		WAIT
+	ELSEIF RESULT == 1
+		IF (ITEM:81 > 0 || NOITEM)
+			CALL GET_GOLD_WATER
+			ITEM:81 -= 1
+		ELSE
+			PRINTFORMW 뚜껑달린 병이 없어 수집을 할 수 없다.
+			PRINTFORMW %CALLNAME:TARGET%의 황금수를 파기했다.
+		ENDIF
+	ELSEIF RESULT == 2
+		PRINTFORMW %CALLNAME:TARGET%의 황금수를 파기했다.
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ELSE
+	;일반모드
+	;聖水매각의 이벤트 대사 호출(金額はTFLAG:99で)
+	CALL SELF_KOJO, TARGET, 134, LOCAL
+	CALL NAME_SELL_GOLDWATER, NO:TARGET
+	PRINTFORML 채뇨기를 사용해서 %CALLNAME:TARGET%에게서 %STR:2%를 채집했다.
+	PRINTFORML %CALLNAME:TARGET%의 성수에는 {LOCAL}원의 가격이 붙었다.
+	MONEY:1 = LOCAL
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;聖水で稼いだ最高金額判定처리
+	SIF MONEY:1 > MONEY:981
+		CALL NEW_HIGH_INCOME_ALL, 981
+	SIF MONEY:1 > CFLAG:88
+		CALL NEW_HIGH_INCOME_SLAVE, 88
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+	WAIT
+ENDIF
+
+;--------------------------------------------------
+;愛液매각의 처리
+;--------------------------------------------------
+;愛液採集器を使っていない場合はAFTERTRA.ERBの時点でこっちに来ないように
+@SELL_LOVERWATER
+;난이도PHANTASM이상
+IF FLAG:3 >= 5
+	LOCAL:1 = TFLAG:129 * 2
+;난이도LUNATIC
+ELSEIF FLAG:3 == 4
+	LOCAL:1 = TFLAG:129 * 4
+ELSE
+	LOCAL:1 = TFLAG:129 * 8
+ENDIF
+;Ｖ調律경험をみる
+IF EXP:42 < EXPLV:1
+	LOCAL = 1
+ELSEIF EXP:42 < EXPLV:2
+	LOCAL = 2
+ELSEIF EXP:42 < EXPLV:3
+	LOCAL = 5
+ELSEIF EXP:42 < EXPLV:4
+	LOCAL = 10
+ELSEIF EXP:42 < EXPLV:5
+	LOCAL = 15
+ELSE
+	LOCAL = 30
+ENDIF
+LOCAL *= LOCAL:1
+
+;脱水症状ならぬ脱水少女もいいところなので○○ccの表示のみ修正
+;値段が高いのはおいしい(!?)と評判だったって解釈で
+LOCAL:1 = TABLE_CALC(LOCAL, 50, 2)
+LOCAL:1 = TABLE_CALC(LOCAL, 100, 5)
+LOCAL:1 = TABLE_CALC(LOCAL, 200, 10)
+LOCAL:1 = MIN(LOCAL:1, 300)
+
+;ただし愛液はさほど出ないので
+TIMES LOCAL:1 , 0.50
+TIMES LOCAL , 0.70
+
+;幼児or幼稚or幼児退行
+SIF TALENT:130 || TALENT:131 || TALENT:1
+	TIMES LOCAL , 2.00
+;淫壷
+SIF TALENT:172
+	TIMES LOCAL , 1.50
+
+LOCAL:2 = NO:TARGET
+;フ　ラ　ン　ち　ゃ　ん　ウ　フ　フ
+IF LOCAL:2 == 11
+	TIMES LOCAL , 1.50
+;その他愛液に固有の名前付き
+ELSEIF LOVERWATER_SPECAIL_PRICE(LOCAL:2) > 0
+	TIMES LOCAL , 1.30
+ENDIF
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 250000, 25)
+	LOCAL = MIN(LOCAL, 500000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 5)
+ENDIF
+
+;토리코모드. 의뢰소가 켜져있을 때.
+	IF FLAG:5010  == 4
+	PRINTFORML 애액 채집기를 사용해 %CALLNAME:TARGET%로부터 {LOCAL:1}cc의 애액을 채취했다.
+	PRINTFORML %CALLNAME:TARGET%의 애액에는 {LOCAL}원의 매입가가 붙었다.
+	PRINTW 어쩔까? 팔까? 병에 넣어서 가지고 있을까? 아니면 파기할까?
+	DRAWLINE
+	PRINTL [0] - 판다
+	PRINTFORML [1] - 수중에 남긴다\@(CFLAG:10 & 4) ?  (전시실에는 %CALLNAME:TARGET%의 애액이 있습니다) # (아직 전시실에는 %CALLNAME:TARGET%의 애액이 없습니다)\@
+	PRINTL [2] - 파기한다
+	DRAWLINE
+
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		;애액판매 구상 출력
+		CALL SELF_KOJO, TARGET, 138, LOCAL
+		;TFLAG:202 = 0
+		PRINTFORML %CALLNAME:TARGET%의 애액에는 {LOCAL}의 가격이 붙었다.
+		MONEY:1 = LOCAL
+		CALL SHOW_MONEY_INCREACE
+		;--------------------------------------------------
+		;愛液で稼いだ最高金額判定처리
+		SIF MONEY:1 > MONEY:984
+			CALL NEW_HIGH_INCOME_ALL, 984
+		SIF MONEY:1 > CFLAG:95
+			CALL NEW_HIGH_INCOME_SLAVE, 95
+		CALL TOTAL_INCOME_SLAVE, MONEY:1
+		;--------------------------------------------------
+		WAIT
+	ELSEIF RESULT == 1
+		IF (ITEM:81 > 0 || NOITEM)
+			CALL GET_LOVE_WATER
+			ITEM:81 -= 1
+		ELSE
+			PRINTFORMW 뚜껑달린 병이 없어 수집을 할 수 없다.
+			PRINTFORMW %CALLNAME:TARGET%의 애액을 파기했다.
+		ENDIF
+	ELSEIF RESULT == 2
+		PRINTFORMW %CALLNAME:TARGET%의 애액을 파기했다.
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+
+ELSE
+	;일반모드
+	;;愛液매각의 이벤트 대사 호출(金額はTFLAG:99で)
+	CALL SELF_KOJO, TARGET, 138, LOCAL
+	
+	PRINTFORML 애액 채집기를 사용해 %CALLNAME:TARGET%로부터 {LOCAL:1}cc의 애액을 채취했다.
+	PRINTFORML %CALLNAME:TARGET%의 애액에는 {LOCAL}원의 매입가가 붙었다.
+	MONEY:1 = LOCAL
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;愛液で稼いだ最高金額判定처리
+	SIF MONEY:1 > MONEY:984
+		CALL NEW_HIGH_INCOME_ALL, 984
+	SIF MONEY:1 > CFLAG:95
+		CALL NEW_HIGH_INCOME_SLAVE, 95
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+	WAIT
+ENDIF
+
+;--------------------------------------------------
+;固有愛液による金額修正用式中関数
+;--------------------------------------------------
+@LOVERWATER_SPECAIL_PRICE(ARG)
+#FUNCTION
+;その他愛液に固有の名前付き
+SIF ARG == 8 || ARG == 10 || ARG == 14 || ARG == 15 || ARG == 37 || ARG == 38 || ARG == 39 || ARG == 40 || ARG == 44 || ARG == 52 || ARG == 56 || ARG == 59 || ARG == 109 || ARG == 110
+	RETURNF 1
+RETURNF 0
+
+;--------------------------------------------------
+;陰毛매각or보존の처리
+;--------------------------------------------------
+;オトコなら底値.でも処女のお守りはいいよね.
+@GET_PUBLIC_HAIR
+;基本価格100圓にランダムで0～50圓を加算
+LOCAL = RAND(100,151)
+
+;난이도PHANTASM이상
+IF FLAG:3 >= 5
+	TIMES LOCAL , 0.80
+;난이도LUNATIC
+ELSEIF FLAG:3 == 4
+	TIMES LOCAL , 1.00
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;露出癖をみる
+IF ABL:14 == 0
+	TIMES LOCAL , 2.00
+ELSEIF ABL:14 == 1
+	TIMES LOCAL , 1.50
+ELSEIF ABL:14 == 2
+	TIMES LOCAL , 1.20
+ELSEIF ABL:14 == 3
+	TIMES LOCAL , 1.00
+ELSEIF ABL:14 == 4
+	TIMES LOCAL , 0.80
+ELSE
+	TIMES LOCAL , 0.60
+ENDIF
+
+;本物の処女
+IF TALENT:0 == 1
+	TIMES LOCAL , 3.00
+;再生処女
+ELSEIF TALENT:0 == 2
+	TIMES LOCAL , 2.00
+ENDIF
+;臆病
+SIF TALENT:10
+	TIMES LOCAL , 1.10
+;反抗的
+SIF TALENT:11
+	TIMES LOCAL , 1.10
+;生意気
+SIF TALENT:15
+	TIMES LOCAL , 1.10
+;プライド高い
+IF TALENT:16
+	TIMES LOCAL , 1.10
+;プライド低い
+ELSEIF TALENT:17
+	TIMES LOCAL , 0.90
+ENDIF
+;自制心
+SIF TALENT:20
+	TIMES LOCAL , 1.10
+;保守的
+SIF TALENT:24
+	TIMES LOCAL , 1.10
+;一線越えない
+SIF TALENT:27
+	TIMES LOCAL , 1.10
+;抵抗
+SIF TALENT:34
+	TIMES LOCAL , 1.10
+;恥じらい
+IF TALENT:35
+	TIMES LOCAL , 1.30
+;恥薄い
+ELSEIF TALENT:36
+	TIMES LOCAL , 0.80
+ENDIF
+;蓬莱人
+SIF TALENT:49
+	TIMES LOCAL , 1.80
+;魅力
+SIF TALENT:90
+	TIMES LOCAL , 1.50
+;謎の魅力
+SIF TALENT:92
+	TIMES LOCAL , 1.50
+;人気
+SIF TALENT:94
+	TIMES LOCAL , 1.50
+;オトコ
+SIF TALENT:120
+	TIMES LOCAL , 0.30
+;フタナリ
+SIF TALENT:121
+	TIMES LOCAL , 1.20
+;幼児
+SIF TALENT:130
+	TIMES LOCAL , 2.50
+;妖精
+SIF TALENT:200
+	TIMES LOCAL , 1.70
+;吸血鬼
+SIF TALENT:205
+	TIMES LOCAL , 1.50
+;鬼
+SIF TALENT:214
+	TIMES LOCAL , 1.50
+;巫女さん修正
+SIF NO:TARGET == 1 || NO:TARGET == 42 || TALENT:218 || TALENT:219
+	TIMES LOCAL , 1.20
+
+;脱毛状態（もう生えてこない）
+SIF CFLAG:36 == 1
+	TIMES LOCAL , 2.00
+
+;主人の技巧による修正
+IF ABL:MASTER:12 == 0
+	TIMES LOCAL , 0.50
+ELSEIF ABL:MASTER:12 == 1
+	TIMES LOCAL , 0.80
+ELSEIF ABL:MASTER:12 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:MASTER:12 == 3
+	TIMES LOCAL , 1.20
+ELSEIF ABL:MASTER:12 == 4
+	TIMES LOCAL , 1.50
+ELSE
+	TIMES LOCAL , 2.00
+ENDIF
+
+;主人の工作名人
+SIF TALENT:MASTER:195
+	TIMES LOCAL , 1.50
+;主人の謎の魅力
+SIF TALENT:MASTER:92
+	TIMES LOCAL , 1.20
+;主人の人気
+SIF TALENT:MASTER:94
+	TIMES LOCAL , 1.20
+
+;陰毛お守り作成의 이벤트 대사 호출(金額はTFLAG:99で)
+CALL SELF_KOJO, TARGET, 136, LOCAL
+
+PRINTFORML %CALLNAME:TARGET%에게서 음모를 채집했다.
+PRINTFORML 이 음모를 부적으로 가공해서 팔면 {LOCAL}원의 값어치가 나갈 것 같다…….
+PRINTW 어쩔까? 팔까? 병에 넣어서 가지고 있을까? 아니면 파기할까?
+DRAWLINE
+PRINTL [0] - 판다
+;そのキャラの陰毛が蒐集されていない場合
+IF (CFLAG:10 & 1024) == 0
+	PRINTL [1] - 가지고 있는다
+ELSE
+	PRINTFORML [1] - 가지고 있는다 (이미 수집장에 %CALLNAME:TARGET%의 음모는 있습니다)
+ENDIF
+PRINTL [2] - 파기한다
+DRAWLINE
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	;陰毛お守り매각의 이벤트 대사 호출(金額はTFLAG:99で)
+	CALL SELF_KOJO, TARGET, 137, LOCAL
+	TFLAG:202 = 0
+	PRINTFORML %CALLNAME:TARGET%의 음모로 만든 부적엔 {LOCAL}의 가격이 붙었다.
+	MONEY:1 = LOCAL
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;陰毛守りで稼いだ最高金額判定처리
+	SIF MONEY:1 > MONEY:983
+		CALL NEW_HIGH_INCOME_ALL, 983
+	SIF MONEY:1 > CFLAG:94
+		CALL NEW_HIGH_INCOME_SLAVE, 94
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+	WAIT
+ELSEIF RESULT == 1
+	CALL KEEP_PUBLIC_HAIR
+ELSEIF RESULT == 2
+	PRINTFORMW %CALLNAME:TARGET%의 음모를 파기했습니다.
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;卵매각의 처리
+;--------------------------------------------------
+;卵を전시실に飾った場合はAFTERTRA.ERBの時点でこっちに来ないように
+;모유よりも出にくいかつ産卵促進剤そのものが高価なので補正は高め
+;産卵促進剤なしでの매각に対応、ただし1個だけなので大したお金にはならない
+@SELL_EGG
+;産卵個数をLOCAL:2で再定義しておく（産卵促進剤なしに対応するため）
+LOCAL:2 = (TFLAG:128 > 0) ? TFLAG:128 # 1
+;난이도PHANTASM이상
+IF FLAG:3 >= 5
+	LOCAL:1 = LOCAL:2 * 50
+;난이도LUNATIC
+ELSEIF FLAG:3 == 4
+	LOCAL:1 = LOCAL:2 * 100
+ELSE
+	LOCAL:1 = LOCAL:2 * 250
+ENDIF
+;産卵경험をみる
+IF EXP:51 < EXPLV:1
+	LOCAL = 1
+ELSEIF EXP:51 < EXPLV:2
+	LOCAL = 2
+ELSEIF EXP:51 < EXPLV:3
+	LOCAL = 4
+ELSEIF EXP:51 < EXPLV:4
+	LOCAL = 6
+ELSEIF EXP:51 < EXPLV:5
+	LOCAL = 8
+ELSE
+	LOCAL = 10
+ENDIF
+LOCAL *= LOCAL:1
+
+;淫壷
+SIF TALENT:172
+	TIMES LOCAL , 1.50
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 50000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 500000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 1000000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 2500000, 25)
+	LOCAL = MIN(LOCAL, 5000000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 50000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 500000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 1000000, 5)
+ENDIF
+
+;卵매각의 이벤트 대사 호출(金額はTFLAG:99で)
+CALL SELF_KOJO, TARGET, 135, LOCAL
+
+SIF TFLAG:128 > 0
+	PRINT 산란촉진제에 의해 
+PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 이번에 {LOCAL:2}개의 알을 낳았다.
+PRINTFORML %CALLNAME:TARGET%의 알에는 {LOCAL}원의 가격이 붙었다.
+MONEY:1 = LOCAL
+CALL SHOW_MONEY_INCREACE
+
+;--------------------------------------------------
+;卵で稼いだ最高金額判定처리
+SIF MONEY:1 > MONEY:982
+	CALL NEW_HIGH_INCOME_ALL, 982
+SIF MONEY:1 > CFLAG:89
+	CALL NEW_HIGH_INCOME_SLAVE, 89
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+WAIT
+
+;ディナーパッチ関連
+;野菜性活調教(焼き芋挿入、巨峰挿入、石勺柏挿入)で出来あがった料理(?)を매각
+;HARDモードの補正の強さは모유よりも少しぬるい代わり、より低価格帯でも多く調整が入る様に
+;--------------------------------------------------
+;焼芋編
+;--------------------------------------------------
+@SELL_DINNER_POTATO
+LOCAL:1 = TFLAG:163 * 15
+;Ｖ경험をみる
+GETEXPLV EXP:0, 6
+LOCAL = (RESULT + 1) * LOCAL:1
+
+;淫壷
+SIF TALENT:172
+	LOCAL *= 3
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 25000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 8)
+	LOCAL = TABLE_CALC(LOCAL, 75000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 15)
+	LOCAL = MIN(LOCAL, 50000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 5)
+ENDIF
+
+PRINTFORML 군고구마와 %CALLNAME:TARGET%의 성기를 사용해 스위트 포테이토를 만들었다.
+PRINTFORML %CALLNAME:TARGET%의 스위트 포테이토에는 {LOCAL}원의 가격이 붙었다.
+MONEY:1 = LOCAL
+CALL SHOW_MONEY_INCREACE
+;--------------------------------------------------
+;スイートポテトで稼いだ最高金額判定처리
+SIF MONEY:1 > MONEY:985
+	CALL NEW_HIGH_INCOME_ALL, 985
+SIF MONEY:1 > CFLAG:92
+	CALL NEW_HIGH_INCOME_SLAVE, 92
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+WAIT
+SIF TFLAG:164 > 0 || TFLAG:165 > 0
+	PRINTL 
+
+;--------------------------------------------------
+;巨峰編
+;--------------------------------------------------
+@SELL_DINNER_WINE
+LOCAL:1 = TFLAG:164 * 15
+;Ａ경험をみる
+GETEXPLV EXP:1, 6
+LOCAL = (RESULT + 1) * LOCAL:1
+
+;淫尻
+SIF TALENT:173
+	LOCAL *= 3
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 25000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 8)
+	LOCAL = TABLE_CALC(LOCAL, 75000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 15)
+	LOCAL = MIN(LOCAL, 50000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 5)
+ENDIF
+
+PRINTFORML 거봉과 %CALLNAME:TARGET%의 국문을 사용해 와인을 만들었다.
+PRINTFORML %CALLNAME:TARGET%의 와인에 {LOCAL}원의 가격이 붙었다.
+MONEY:1 = LOCAL
+CALL SHOW_MONEY_INCREACE
+;--------------------------------------------------
+;ワインで稼いだ最高金額判定처리
+SIF MONEY:1 > MONEY:986
+	CALL NEW_HIGH_INCOME_ALL, 986
+SIF MONEY:1 > CFLAG:91
+	CALL NEW_HIGH_INCOME_SLAVE, 91
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+WAIT
+SIF TFLAG:165 > 0
+	PRINTL 
+
+;--------------------------------------------------
+;石勺柏編
+;--------------------------------------------------
+@SELL_DINNER_ASPARAGUS
+LOCAL:1 = TFLAG:165 * 15
+;尿道開発경험をみる
+GETEXPLV EXP:46, 6
+LOCAL = (RESULT + 1) * LOCAL:1
+
+;尿道狂
+SIF TALENT:175
+	LOCAL *= 3
+
+;난이도HARD이상
+IF FLAG:3 >= 3
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 25000, 5)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 8)
+	LOCAL = TABLE_CALC(LOCAL, 75000, 10)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 15)
+	LOCAL = MIN(LOCAL, 50000)
+ELSE
+	LOCAL = TABLE_CALC(LOCAL, 5000, 2)
+	LOCAL = TABLE_CALC(LOCAL, 10000, 3)
+	LOCAL = TABLE_CALC(LOCAL, 50000, 4)
+	LOCAL = TABLE_CALC(LOCAL, 100000, 5)
+ENDIF
+
+PRINTFORML 아스파라거스와 %CALLNAME:TARGET%의 요도를 사용한 아스파라거스 오줌절임을 만들었다.
+PRINTFORML %CALLNAME:TARGET%의 아스파라거스 오줌절임에 {LOCAL}원의 가격이 붙었다.
+MONEY:1 = LOCAL
+CALL SHOW_MONEY_INCREACE
+;--------------------------------------------------
+;アスパラの尿浸しで稼いだ最高金額判定처리
+SIF MONEY:1 > MONEY:987
+	CALL NEW_HIGH_INCOME_ALL, 987
+SIF MONEY:1 > CFLAG:90
+	CALL NEW_HIGH_INCOME_SLAVE, 90
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+WAIT
+PRINTL 

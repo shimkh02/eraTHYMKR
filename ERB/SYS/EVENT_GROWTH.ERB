@@ -1,0 +1,250 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;캐릭터의 특정 스테이터스 성장 처리 관련
+;
+;캐릭터의 BASE, MAXBASE가 증감하는 처리를 여기서 실행한다
+;대부분은 시간 경과 처리(EVENT.ERB)로부터 호출된다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;체력 · 기력의 최대치 상승 처리
+;=============================================================================
+;조교 종료 후 각각 2/5의 확률로 체력 · 기력의 최대치가 상승. 이상경험 값으로 상승하는 수치가 증가합니다
+;ただし増加する値はそれぞれ＋40(難易度によっては＋80)が限度かつ、性別(及び処女性)によって
+;体力、気力それぞれにある値を超えるとそれ以上は成長しない限界値というものが設定されています.
+;また、体力・気力を減らしすぎた場合は上昇しないよう条件を変えました.
+;LOCAL:0 最大体力と現在体力の差
+;LOCAL:1 最大気力と現在気力の差
+;LOCAL:2 体力と気力のいずれを上げるのか？
+;LOCAL:3 上昇幅を求めるための基礎値
+;LOCAL:4 実際の体力上昇値
+;LOCAL:5 実際の気力上昇値
+;LOCAL:6 1回の成長値
+;LOCAL:7 体力成長限界
+;LOCAL:8 気力成長限界
+
+@EVENT_GROWTH
+VARSET LOCAL,0
+LOCAL = MAXBASE:0 - BASE:0
+LOCAL:1 = MAXBASE:1 - BASE:1
+LOCAL:2 = RAND:5
+LOCAL:3 = 1
+LOCAL:6 = EXP:50 * 2
+;PHANTASMは1回の成長の最大値が大きい
+IF FLAG:3 >= 5
+	LOCAL:6 = MIN(LOCAL:6, 100)
+;EASYとHARDは1回の成長の最大値が少し大きい
+ELSEIF FLAG:3 == 1 || FLAG:3 == 3
+	LOCAL:6 = MIN(LOCAL:6, 60)
+ELSE
+	LOCAL:6 = MIN(LOCAL:6, 20)
+ENDIF
+
+;調教対象の性別、処女性によって成長限界が変化(オトコは限界値がかなり高く設定されている)
+IF TALENT:120
+	LOCAL:7 = 5000
+	LOCAL:8 = 3000
+ELSE
+	LOCAL:7 = 3000
+	IF TALENT:0 == 1 && EXP:0 == 0 && ABL:1 == 0 && JUEL:1 == 0
+		LOCAL:8 = 2000
+	ELSEIF TALENT:0 == 1 && EXP:0 == 0 && ABL:1 == 0
+		LOCAL:8 = 1500
+	ELSE
+		LOCAL:8 = 1000
+	ENDIF
+ENDIF
+;ベリージュエルを装着していると成長限界と速度がダウン
+IF CFLAG:42 & 4
+	TIMES LOCAL:6 , 0.75
+	TIMES LOCAL:7 , 0.75
+	TIMES LOCAL:8 , 0.75
+ENDIF
+;性転換をしていると成長限界と速度がダウン
+IF CFLAG:4995
+	TIMES LOCAL:6 , 0.50
+	TIMES LOCAL:7 , 0.50
+	TIMES LOCAL:8 , 0.50
+ENDIF
+
+;体力が大きい場合は気力が、気力が大きい場合は体力が成長する確率が上昇
+IF LOCAL:2 == 1 && MAXBASE:0 > MAXBASE:1 && RAND:3 == 0
+	LOCAL:2 = 2
+ELSEIF LOCAL:2 == 2 && MAXBASE:1 > MAXBASE:0 && RAND:3 == 0
+	LOCAL:2 = 1
+ENDIF
+
+IF LOCAL:2 <= 1 && LOCAL != 0 && BASE:0 >= 300 && CFLAG:6 < LOCAL:7
+	SIF LOCAL > 0 && LOCAL <= 500
+		LOCAL:3 = 250
+	SIF LOCAL > 500 && LOCAL <= 1000
+		LOCAL:3 = 300
+	SIF LOCAL > 1000 && LOCAL <= 1500
+		LOCAL:3 = 350
+	SIF LOCAL > 1500 && LOCAL <= 2000
+		LOCAL:3 = 400
+	SIF LOCAL > 2000 && LOCAL <= 2500
+		LOCAL:3 = 450
+	SIF LOCAL > 2500
+		LOCAL:3 = 500
+	SIF BASE:0 < 500
+		LOCAL:3 = 750
+	LOCAL:4 = MIN(LOCAL / LOCAL:3, 20)
+	SIF TALENT:150 == 0 && TALENT:160 == 0
+		LOCAL:4 /= 2
+	LOCAL:4 += LOCAL:6
+	IF LOCAL:4 > 0
+		CALL SELF_KOJO, TARGET, 120, LOCAL:4
+		MAXBASE:0 += LOCAL:4
+		CFLAG:6 += LOCAL:4
+		;지문 컷
+		IF CFLAG:99 == 0
+			PRINTFORML 격렬한 조교로 인해 %조사처리(CALLNAME:TARGET,"는")% 참는 것의 쾌감을 깨달았다.
+			PRINTFORML %CALLNAME:TARGET%의 체력 최대치가 {LOCAL:4} 올랐습니다.
+			WAIT
+		ENDIF
+	ENDIF
+ELSEIF LOCAL:2 <= 1 && LOCAL != 0 && BASE:0 >= 300 && CFLAG:6 >= LOCAL:7
+	LOCAL:2 = 0
+ENDIF
+
+IF (LOCAL:2 == 0 || LOCAL:2 == 2) && LOCAL:1 != 0 && BASE:1 >= 100 && CFLAG:7 < LOCAL:8
+	SIF LOCAL:1 > 0 && LOCAL:1 <= 300
+		LOCAL:3 = 200
+	SIF LOCAL:1 > 300 && LOCAL:1 <= 500
+		LOCAL:3 = 250
+	SIF LOCAL:1 > 500 && LOCAL:1 <= 1000
+		LOCAL:3 = 300
+	SIF LOCAL:1 > 1000 && LOCAL:1 <= 1500
+		LOCAL:3 = 350
+	SIF LOCAL:1 > 1500 && LOCAL:1 <= 2000
+		LOCAL:3 = 400
+	SIF LOCAL:1 > 2000 && LOCAL:1 <= 2500
+		LOCAL:3 = 450
+	SIF LOCAL:1 > 2500
+		LOCAL:3 = 500
+	SIF BASE:1 < 300
+		LOCAL:3 = 750
+	LOCAL:5 = MIN(LOCAL:1 / LOCAL:3, 20)
+	SIF TALENT:150 == 0 && TALENT:160 == 0
+		LOCAL:5 /= 2
+	LOCAL:5 += LOCAL:6
+	IF LOCAL:5 > 0
+		CALL SELF_KOJO, TARGET, 121, LOCAL:5
+		MAXBASE:1 += LOCAL:5
+		CFLAG:7 += LOCAL:5
+		;지문 컷
+		IF CFLAG:99 == 0
+			PRINTFORML 격렬한 조교로 인해 %CALLNAME:TARGET%의 의지는 강해졌다.
+			PRINTFORML %CALLNAME:TARGET%의 기력 최대치가 {LOCAL:5} 올랐습니다.
+			WAIT
+		ENDIF
+	ENDIF
+ENDIF
+
+;=============================================================================
+;음모 성장 관련
+;=============================================================================
+;陰毛の成長具合(BASE:5)の増減処理や、状態判定をここで行う.細かくやると面倒なため、処理は大雑把に
+;剃毛プレイ等を実行(つまり初期状態のときではない場合)または脱毛状態でないときは毛が生えてくるように
+;大まかな目安として、0～50：ツルツル、51～250：生えかけ、251～1000：生えそろった(剃毛可能)……となっている
+;--------------------------------------------------
+;時間経過における陰毛成長処理
+;--------------------------------------------------
+@CHECK_DAY_PUBIC_HAIR
+LOCAL = TARGET
+LOCAL:1 = TFLAG:900
+TARGET = TFLAG:900
+
+;日光浴、月光浴、吸血鬼
+IF TIME == 0
+	LOCAL:5 = 5
+	SIF TALENT:114
+		TIMES LOCAL:5 , 1.20
+ELSE
+	LOCAL:5 = 10
+	SIF TALENT:115 || TALENT:205
+		TIMES LOCAL:5 , 1.20
+ENDIF
+
+;回復早い、回復遅い、吸血鬼、蓬莱人
+IF TALENT:137 || TALENT:205
+	TIMES LOCAL:5 , 1.30
+ELSEIF TALENT:138
+	TIMES LOCAL:5 , 0.70
+ELSEIF TALENT:49
+	TIMES LOCAL:5 , 1.50
+ENDIF
+
+;작은체형
+SIF TALENT:128
+	LOCAL:5 /= 2
+
+BASE:5 = MIN(BASE:5 + MAX(LOCAL:5, 1), 1000)
+IF TALENT:65 && BASE:5 > 250
+	PRINTFORML %CALLNAME:TARGET%의 밑쪽 털이 다시 자라났습니다.
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:65%]에서 탈출했다.
+	TALENT:65 = 0
+ENDIF
+
+TARGET = LOCAL
+TFLAG:900 = LOCAL:1
+
+;=============================================================================
+;음핵 성장 관련
+;=============================================================================
+;陰核の成長具合(BASE:7)の増減処理や、状態判定をここで行う
+;大まかな目安として、0：成長しない、1～50：ノーマル、51～100：小指サイズ、
+;101～200：男性器サイズ(150以上になると挿入可能な[肥大陰核]が付く)、201～250(最大値)：異様なサイズ(初めての時は이상경험が付く)
+;……となっている
+;--------------------------------------------------
+;時間経過における陰核成長処理
+;--------------------------------------------------
+@CHECK_DAY_CLITORIS
+LOCAL = TARGET
+LOCAL:1 = TFLAG:900
+TARGET = TFLAG:900
+
+BASE:7 += (TIME == 1) ? RAND:10 # RAND:5
+
+CALL CHECK_CLITORIS_GROWTH
+
+TARGET = LOCAL
+TFLAG:900 = LOCAL:1
+
+;--------------------------------------------------
+;陰核成長判定処理
+;--------------------------------------------------
+@CHECK_CLITORIS_GROWTH
+SIF BASE:7 >= 150 && TALENT:1 == 0
+	CALL HUGE_CLITORIS, TARGET
+SIF BASE:7 > 200 && (CFLAG:37 & 4) == 0
+	CALL GIGATORIS, TARGET
+BASE:7 = MIN(BASE:7, 250)
+
+;--------------------------------------------------
+;陰核の成長具合150以上による[肥大陰核]付加処理
+;--------------------------------------------------
+@HUGE_CLITORIS, ARG
+PRINTFORMW %CALLNAME:ARG%의 음핵은 충분한 수준의 크기까지 성장했다.
+
+;비대음핵 취득에 따른 대사 호출
+CALL SELF_KOJO, ARG, 125
+
+TALENT:ARG:1 = 1
+IF (CFLAG:ARG:37 & 2) == 0
+	CFLAG:ARG:37 |= 2
+	;이상경험
+	CALL COMMON_UP_EXP, ARG, 50, 1, 0
+ENDIF
+
+;--------------------------------------------------
+;陰核の成長具合200以上による이상경험付加処理
+;--------------------------------------------------
+@GIGATORIS, ARG
+PRINTFORMW %CALLNAME:ARG%의 음핵은 비정상적인 수준의 크기까지 성장했다.
+
+;음핵 비대화 완료에 따른 대사 호출
+CALL SELF_KOJO, ARG, 126
+
+CFLAG:ARG:37 |= 4
+;이상경험
+CALL COMMON_UP_EXP, ARG, 50, 1, 0

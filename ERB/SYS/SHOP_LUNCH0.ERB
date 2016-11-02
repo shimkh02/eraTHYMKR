@@ -1,0 +1,3118 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;도시락 관련용 처리
+;이하 군고구마 도시락 패치의 도시락 기능중, 통상의 도시락(먹는, 매각의 선택이 가능)의 처리 및,
+;일정 조건을 채웠을 때에 발생하는 식후의 운동(성교) 처리를 여기서 일괄로 관리
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;도시락 처리(노예)
+;=============================================================================
+;노예에 도시락을 만들게 해 파는 옵션.
+;-------------------------------------------------
+;LOCAL = 요리의 종류
+;LOCAL:1 = 에이키 님 특별처리용
+;LOCAL:2 = 요리 가격의 보정을 결정
+;LOCAL:3 = 요리 가격
+;LOCAL:4 = 요리 가격의 기초
+;LOCAL:5 = 습득의 구슬 증가량
+;LOCAL:6 = 고유 요리의 종류, 난수 처리용
+;-------------------------------------------------
+@LUNCH_SALE
+VARSET LOCAL, 0
+LOCAL = RAND:16
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL:2 = 10
+ELSEIF ABL:12 == 1
+	LOCAL:2 = 15
+ELSEIF ABL:12 == 2
+	LOCAL:2 = 20
+ELSEIF ABL:12 == 3
+	LOCAL:2 = 30
+ELSEIF ABL:12 == 4
+	LOCAL:2 = 40
+ELSE
+	LOCAL:2 = 50
+ENDIF
+
+;ABL:봉사 정신을 본다
+LOCAL:2 += 5 * ABL:13
+
+;ABL:요리 기능을 본다
+IF ABL:70 == 0
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:70 == 1
+	TIMES LOCAL:2 , 1.20
+ELSEIF ABL:70 == 2
+	TIMES LOCAL:2 , 1.40
+ELSEIF ABL:70 == 3
+	TIMES LOCAL:2 , 1.60
+ELSEIF ABL:70 == 4
+	TIMES LOCAL:2 , 1.80
+ELSE
+	TIMES LOCAL:2 , 2.00
+ENDIF
+
+;EXP:70을 본다
+IF EXP:70 < EXPLV:1
+	TIMES LOCAL:2 , 0.80
+ELSEIF EXP:70 < EXPLV:2
+	TIMES LOCAL:2 , 1.00
+ELSEIF EXP:70 < EXPLV:3
+	TIMES LOCAL:2 , 1.20
+ELSEIF EXP:70 < EXPLV:4
+	TIMES LOCAL:2 , 1.40
+ELSEIF EXP:70 < EXPLV:5
+	TIMES LOCAL:2 , 1.70
+ELSE
+	TIMES LOCAL:2 , 2.00
+ENDIF
+
+;헌신적
+SIF TALENT:63
+	TIMES LOCAL:2 , 1.20
+
+;서로 사랑함
+;IF TALENT:153
+;	TIMES LOCAL:2 , 3.00
+;친애
+;ELSEIF TALENT:152
+;	TIMES LOCAL:2 , 2.50
+;연모
+;ELSEIF TALENT:150
+;	TIMES LOCAL:2 , 2.00
+;ENDIF
+
+;상애
+SIF TALENT:153
+	TIMES LOCAL:2 , 3.00
+;친애
+SIF TALENT:152
+	TIMES LOCAL:2 , 2.50
+;망신
+SIF TALENT:151
+	TIMES LOCAL:2 , 1.75
+;연모
+SIF TALENT:150
+	TIMES LOCAL:2 , 2.00
+
+;사역마
+SIF TALENT:164
+	TIMES LOCAL:2 , 2.50
+
+
+;EASY가 아니면 제작자의 체력 소모, 기력 소모, 취해, 스트레스에 의한 마이나스 보정이 있다
+IF FLAG:3 != 1
+	;체력 소모 상태
+	SIF MAXBASE:0 > 0 && (100 * BASE:0) / MAXBASE:0 <= 25
+		TIMES LOCAL:2 , 0.90
+	;기력 소모 상태
+	SIF MAXBASE:1 > 0 && (100 * BASE:1) / MAXBASE:1 <= 25
+		TIMES LOCAL:2 , 0.90
+	;취하고 있다
+	SIF MAXBASE:8 > 0 && (100 * BASE:8) / MAXBASE:8 >= 80
+		TIMES LOCAL:2 , 0.50
+
+	;스트레스가 10000이상
+	IF CFLAG:65 >= 10000
+		TIMES LOCAL:2 , 0.80
+	;스트레스가 1000이상
+	ELSEIF CFLAG:65 >= 1000
+		TIMES LOCAL:2 , 0.90
+	ENDIF
+ENDIF
+
+;반발 각인 소유
+SIF MARK:9
+	TIMES LOCAL:2 , 0.90
+
+;LOCAL = 요리의 종류
+IF LOCAL == 0 && ABL:70 >= 4
+	;캐릭터 고유 요리
+	LOCAL:4 = 500
+ELSEIF LOCAL == 1 || LOCAL == 15
+	;소바
+	LOCAL:4 = 320
+ELSEIF LOCAL == 2 || LOCAL == 14
+	;고기감자조림
+	LOCAL:4 = 480
+ELSEIF LOCAL == 3 || LOCAL == 13
+	;케이크
+	LOCAL:4 = 390
+ELSEIF LOCAL == 4 || LOCAL == 12
+	;소면
+	LOCAL:4 = 300
+ELSEIF LOCAL == 5 || LOCAL == 11
+	;샐러드
+	LOCAL:4 = 230
+ELSEIF LOCAL == 6 || LOCAL == 10
+	;햄버거
+	LOCAL:4 = 270
+ELSEIF LOCAL == 7 && TALENT:134
+	;모유 요리
+	LOCAL:4 = 350
+ELSEIF LOCAL == 9 && (TALENT:135 || TALENT:136)
+	;무레트
+	LOCAL:4 = 350
+ELSE
+	;주먹밥
+	LOCAL:4 = 210
+ENDIF
+
+;조리 명인
+IF TALENT:194
+	TIMES LOCAL:4 , 2.50
+;요리 잘함
+ELSEIF TALENT:193
+	TIMES LOCAL:4 , 1.75
+;요리 못함
+ELSEIF TALENT:192
+	TIMES LOCAL:4 , 0.75
+ENDIF
+
+;⑨보정(샐러드)
+SIF NO:TARGET == 5 && (LOCAL == 5 || LOCAL == 11)
+	TIMES LOCAL:2 , 1.20
+
+;매력
+SIF TALENT:90
+	TIMES LOCAL:4 , 1.10
+;수수께끼의 매력
+SIF TALENT:92
+	TIMES LOCAL:4 , 1.10
+;인기
+SIF TALENT:94
+	TIMES LOCAL:4 , 1.30
+
+PRINTL 
+PRINTFORMW %CALLNAME:TARGET%더러 요리를 만들게 했다.
+PRINTL 
+;에이키 님만  60일마다 실행하면 보너스가 들어온다.
+IF NO:TARGET == 36 && (DAY % 60) == 0
+	PRINTL …………?
+	PRINTFORMW 왜인지 %조사처리(CALLNAME:TARGET,"는")% 평소보다 더 의욕이 넘치는 모양이다…….
+	PRINTL 
+	LOCAL = 0
+	LOCAL:4 = 600
+	LOCAL:1 = 1
+ENDIF
+;도시락 작성
+CALL SELF_KOJO, TARGET, 111, LOCAL
+IF TALENT:150
+	PRINTW   「♪∼」
+	PRINTW  「♪♪∼」
+	PRINTW 「♪∼♪∼」
+	PRINTW      ！
+ELSE
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ！
+ENDIF
+PRINTL 
+PRINTFORM %조사처리(CALLNAME:TARGET,"는")% 
+SIF TALENT:152 || TALENT:153
+	PRINTFORM 애정이 듬뿍 담긴 
+IF LOCAL == 0 && (ABL:70 >= 4 || LOCAL:1 == 1)
+	;경력 플래그를 ON
+	CFLAG:150 |= 1
+	;(전용) 말측에서 정의되고 있는 고유 요리가25%의 확률로 나온다
+	IF CSTR:88 != "" && RAND:4 == 0
+		PRINTS CSTR:88
+		LOCAL:4 += 88
+	;캐릭터 고유 요리
+	ELSEIF NO:TARGET == 1 && CFLAG:0 == 0
+		;레이무
+		LOCAL:6 = RAND:9
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 밥과 된장국
+			LOCAL:4 += 88
+		ELSEIF LOCAL:6 == 1
+			PRINT 팥경단
+			LOCAL:4 += 77
+		ELSEIF LOCAL:6 == 2
+			PRINT 전갱이 구이
+			LOCAL:4 += 66
+		ELSEIF LOCAL:6 == 3
+			PRINT 찹쌀경단
+			LOCAL:4 += 60
+		ELSEIF LOCAL:6 == 4
+			PRINT 시금치 팍팍 무침
+			LOCAL:4 += 55
+		ELSEIF LOCAL:6 == 5
+			PRINT 레이무 특제 블렌드차
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 6
+			PRINT 모듬 냄비 전골
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 7
+			PRINT 잡초
+			LOCAL:4 += 45
+		ELSE
+			PRINT 전병
+			LOCAL:4 += 50
+		ENDIF
+	ELSEIF NO:TARGET == 1 && CFLAG:0
+		;레이무 님
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 라면
+			LOCAL:4 = 777
+		ELSEIF LOCAL:6 == 1
+			PRINT 팥경단
+			LOCAL:4 = 666
+		ELSE
+			PRINT 컵라면
+			LOCAL:4 = 555
+		ENDIF
+	ELSEIF NO:TARGET == 2
+		;마리사
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 버섯 카레
+			LOCAL:4 += 85
+		ELSEIF LOCAL:6 == 1
+			PRINT 마리사 특제 허브티
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 2
+			PRINT 쿠키☆
+			LOCAL:4 += 114
+		ELSE
+			PRINT 잡탕냄비요리
+			LOCAL:4 += 45
+		ENDIF
+	ELSEIF NO:TARGET == 3
+		;루미아
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 뇌의 뵈르 누아제트
+			;「하」ㄴ「니」발
+			;일정 확률로 뭘 사용하고 있는지 발각
+			LOCAL:4 += 82
+			SIF RAND:50 == 0
+				LOCAL:4 -= 100
+		ELSEIF LOCAL:6 == 1
+			PRINT 피가 뚝뚝 떨어질 듯한 양고기완자
+			LOCAL:4 += 60
+		ELSE
+			PRINT 어둠전골
+			LOCAL:4 -= 25
+			LOCAL:4 += RAND:51
+		ENDIF
+	ELSEIF NO:TARGET == 4
+		;대요정
+		;아이의 도시락용입니까?
+		;눈인데 의미는 없다
+		LOCAL:6 = RAND:7
+		IF LOCAL:6 == 0
+			PRINT 문어모양 비엔나소시지
+			LOCAL:4 += 33
+		ELSEIF LOCAL:6 == 1
+			PRINT 소보로밥
+			LOCAL:4 += 33
+		ELSEIF LOCAL:6 == 2
+			PRINT 미니 튀김
+			LOCAL:4 += 44
+		ELSEIF LOCAL:6 == 3
+			PRINT 계란부침
+			LOCAL:4 += 44
+		ELSEIF LOCAL:6 == 4
+			PRINT 포테이토 샐러드
+			LOCAL:4 += 55
+		ELSEIF LOCAL:6 == 5
+			PRINT 토끼사과
+			LOCAL:4 += 66
+		ELSEIF LOCAL:6 == 6 && TALENT:150
+			PRINT 고기감자조림
+			LOCAL:4 += 555
+			TFLAG:202 = 1
+		ELSE
+			PRINT 컬러풀 주먹밥
+			LOCAL:4 += 44
+		ENDIF
+	ELSEIF NO:TARGET == 5
+		;치르노
+		LOCAL:6 = RAND:8
+		IF LOCAL:6 == 0
+			PRINT 개구리 얼린 거
+			LOCAL:4 += 9
+		ELSEIF LOCAL:6 == 1 || LOCAL:6 == 2
+			PRINTDATA
+				DATA 딸기맛 
+				DATA 레몬맛 
+				DATA 멜론맛 
+				DATA 블루 하와이 
+				DATA 꿀 
+			ENDDATA
+			PRINT 빙수
+			LOCAL:4 += 12
+		ELSEIF LOCAL:6 == 3
+			PRINT 계란 빙수
+			LOCAL:4 += 18
+		ELSEIF LOCAL:6 == 4
+			PRINT 아이스크림 캔디
+			LOCAL:4 += 30
+		ELSEIF LOCAL:6 == 5 && TALENT:134
+			PRINT 얼음요정 젖 빙수
+			LOCAL:4 += 309
+		ELSEIF LOCAL:6 == 6
+    	PRINT 우유빙수
+			LOCAL:4 += 60
+		ELSE
+			PRINT 팥빙수
+			LOCAL:4 += 70
+		ENDIF
+	ELSEIF NO:TARGET == 6 || NO:TARGET == 204
+		;메이링
+		LOCAL:6 = RAND:7
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 북경오리
+			LOCAL:4 += 210
+		ELSEIF LOCAL:6 == 1
+			PRINT 복숭아만두
+			LOCAL:4 += 170
+		ELSEIF LOCAL:6 == 2
+			PRINT 물만두
+			LOCAL:4 += 160
+		ELSEIF LOCAL:6 == 3
+			PRINT 행인두부
+			LOCAL:4 += 150
+		ELSEIF LOCAL:6 == 4
+			PRINT 아이위
+			LOCAL:4 += 140
+		ELSEIF LOCAL:6 == 5
+			PRINT 우롱차
+			LOCAL:4 += 80
+		ELSE
+			PRINT 중화볶음밥
+			LOCAL:4 += 130
+		ENDIF
+	ELSEIF NO:TARGET == 7
+		;코아
+		;요리에서 강한 573냄새가 느껴지는 건 기분탓
+		LOCAL:6 = RAND:9
+		IF LOCAL:6 == 0
+			;빅코아 Mk-Ⅳ의 요리. 늘어놓고 바꾸는 곳의 요리 빅 마크Ⅳ. -를0에 바꾸어……
+			PRINT 빅마○크Ⅳ
+			LOCAL:4 += 90
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			;빅코아 Mk-Ⅲ의 요리. 늘어놓고 바꾸면(자)(ry
+			;우우 매, 말매, 능숙한, 말매
+			IF (ITEM:61 > 0 || NOITEM) && TALENT:170
+				IF NOITEM == 0
+					ITEM:61 -= 1
+					SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+						CALL FILL_PLURAL_ITEM, 61
+				ENDIF
+				TFLAG:202 = 1
+				LOCAL:4 += 5
+				PRINT 발광할 정도로 맛있을 듯한 
+			ENDIF
+			PRINT 빅마○크Ⅲ
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 2
+			;빅코아 Mk-Ⅱ의 요리. 늘어놓고 바꾸면(자)(ry
+			PRINT 빅마○크Ⅱ
+			LOCAL:4 += 75
+		ELSEIF LOCAL:6 == 3
+			;시력 검사(ry
+			PRINT 빅마○크ⅠRev. 2
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 4
+			;VIVA(ry
+			PRINT 비빔밥
+			LOCAL:4 += 65
+		ELSEIF LOCAL:6 == 5
+			;블래스터 캐논(ry
+			PRINT 군고구마
+			LOCAL:4 += 60
+		ELSEIF LOCAL:6 == 6
+			;ODN(ry
+			PRINT 오뎅
+			LOCAL:4 += 55
+		ELSEIF LOCAL:6 == 7
+			;크리스탈(ry
+			PRINT 얼음사탕
+			LOCAL:4 += 50
+		ELSE
+			;디저트(ry
+			PRINT 디저트
+			LOCAL:4 += 45
+		ENDIF
+	ELSEIF NO:TARGET == 8
+		;파츄리
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			LOCAL:6 = RAND:2
+			IF LOCAL:6 > 0 && TALENT:150
+				PRINT 오색찬란초밥
+				LOCAL:4 += 250
+				SIF TALENT:0 == 0
+					TFLAG:202 = 1
+			ELSE
+				;라크트가르인인 만큼
+				PRINT 요구르트
+				LOCAL:4 += 20
+			ENDIF
+		ELSE
+			LOCAL:6 = RAND:7
+			;월화수목금토일인 요리
+			IF LOCAL:6 == 0
+				PRINT 월병
+				LOCAL:4 += 32
+			ELSEIF LOCAL:6 == 1
+				PRINT 모듬생선덮밥
+				LOCAL:4 += 55
+			ELSEIF LOCAL:6 == 2
+				PRINT 레몬 소다
+				LOCAL:4 += 28
+			ELSEIF LOCAL:6 == 3
+				PRINT 부쉬 드 노엘
+				LOCAL:4 += 80
+			ELSEIF LOCAL:6 == 4
+				PRINT 금박주먹밥
+				LOCAL:4 += 120
+			ELSEIF LOCAL:6 == 5
+				PRINT 보랏빛 콩나물무침
+				LOCAL:4 += 40
+			ELSE
+				PRINT 서니 사이드 업
+				LOCAL:4 += 36
+			ENDIF
+		ENDIF
+	ELSEIF NO:TARGET == 9
+		;사쿠야씨
+		LOCAL:6 = RAND:9
+		IF LOCAL:6 == 0
+			PRINT 카스테라
+			LOCAL:4 += 220
+		ELSEIF LOCAL:6 == 1
+			PRINT 자허토르테
+			LOCAL:4 += 200
+		ELSEIF LOCAL:6 == 2
+			PRINT 티라미수
+			LOCAL:4 += 180
+		ELSEIF LOCAL:6 == 3
+			PRINT 빈티지 와인
+			LOCAL:4 += 160
+		ELSEIF LOCAL:6 == 4
+			PRINT 미트 파이
+			LOCAL:4 += 150
+		ELSEIF LOCAL:6 == 5
+			PRINT 비프 스튜
+			LOCAL:4 += 180
+		ELSEIF LOCAL:6 == 6
+			PRINT 치즈 퐁듀
+			LOCAL:4 += 170
+    ELSEIF LOCAL:6 == 7
+			PRINT 치즈 생크림 케익
+			LOCAL:4 += 180
+		ELSE
+			PRINT 홍차 세트
+			LOCAL:4 += 140
+			;주인이[약물내성]을 가지고 있으면 이따금 독첨가
+			;함께 마시는 경우는, 사쿠야씨의 홍차에는 독없음
+			IF TALENT:MASTER:44 && RAND:5 == 0
+				PRINT (독성)
+				LOCAL:4 -= 100
+			ENDIF
+		ENDIF
+	ELSEIF NO:TARGET == 10
+		;레밀리아 아가씨
+		PRINT 블러디 메리
+		LOCAL:4 = 666 - RAND:334
+		SIF TALENT:150
+			TFLAG:202 = 1
+	ELSEIF NO:TARGET == 11
+		;플랑쨩 우후후
+		LOCAL:6 = RAND:8
+		IF LOCAL:6 == 0 && TALENT:170
+			;유기용매 테트라 히드로 프랑→포오브아카인드로 H인 프랑→
+			;4사람에게 분열한 프란 가 진심을 담아 애액으로 맛내기한 유기 요괴딸기→Marvelous(불가사의한)!
+			PRINT 유기요매(有機妖莓) 「4-H-플랑」
+			LOCAL:4 += 256
+			TFLAG:202 = 1
+		ELSE
+			;사랑의 미로→연→미약이라고 하는 이상한 발상보다
+			PRINT 검게 찐 도마뱀구이
+			LOCAL:4 += 78
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ENDIF
+	ELSEIF NO:TARGET == 12
+		;레티
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 1
+			PRINT 유키이치고
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 2
+			PRINT 얼음사탕 눈개구리
+			LOCAL:4 += 110
+		ELSE
+			PRINT 시로쿠마 빙수
+			LOCAL:4 += 70
+		ENDIF
+	ELSEIF NO:TARGET == 13
+		;첸
+		LOCAL:6 = RAND:4
+		;고양이의 좋아하는 것이라고 말하면
+		IF LOCAL:6 == 0
+			PRINT 가츠오부시
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 1
+			PRINT 어묵
+			LOCAL:4 += 60
+		ELSEIF LOCAL:6 == 2
+			PRINT 시샤모구이
+			LOCAL:4 += 90
+		ELSE
+			PRINT 고양이밥
+			LOCAL:4 += 33
+		ENDIF
+	ELSEIF NO:TARGET == 14 && CFLAG:0 == 0
+		;앨리스
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0
+			PRINT 샌드위치
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 1
+			PRINT 핫커피
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 2
+			PRINT 인형 모양의 카스테라풍 과자
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 3
+			PRINT 특제 쿠키
+			LOCAL:4 += 85
+		ELSEIF LOCAL:6 == 4
+			PRINT 반 호텐 코코아를 쓴 브라우니
+			LOCAL:4 += 114
+		ELSE
+			PRINT 스튜
+			LOCAL:4 += 87
+		ENDIF
+	ELSEIF NO:TARGET == 14 && CFLAG:0
+		;꼬마 앨리스
+		PRINT 오야코동
+		LOCAL:4 += 210
+	ELSEIF NO:TARGET == 15
+		;릴리 화이트
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 <= 1
+			PRINT 벚꽃밥
+			LOCAL:4 += 77
+		ELSE
+			PRINT 사쿠라모치
+			LOCAL:4 += 81
+		ENDIF
+	;소령3 자매
+	ELSEIF NO:TARGET == 16
+		;리리카
+		;키보드는 흑백→
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 참깨 경단
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 1
+			PRINT 참기름 닭구이
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 2
+			PRINT 시금치참깨무침
+			LOCAL:4 += 65
+		ELSE
+			PRINT 깨소금 주먹밥
+			LOCAL:4 += 70
+		ENDIF
+	ELSEIF NO:TARGET == 17
+		;메를란
+		;빙빙은 감정의 증폭기, 라고 해서
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 바움쿠헨
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 1 && TALENT:150
+			PRINT 롤 케이크
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 2
+			PRINT 김초밥
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 3
+			PRINT 아스파라거스 소고기말이
+			LOCAL:4 += 110
+		ELSE
+			PRINT 소프트 아이스크림
+			LOCAL:4 += 83
+		ENDIF
+	ELSEIF NO:TARGET == 18
+		;루나사
+		;성실하지만 어두운, 이라고 하는 일이므로
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 프랑스 요리 풀코스
+			LOCAL:4 += 150
+		ELSEIF LOCAL:6 == 1
+			PRINT 스콘
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 2
+			PRINT 비시스와즈
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 3
+			PRINT 농어 포와레
+			LOCAL:4 += 100
+		ELSE
+			PRINT 정진요리
+			LOCAL:4 += 85
+		ENDIF
+	ELSEIF NO:TARGET == 19
+		;요우무
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0 && TALENT:150
+			;외형 호쾌한 요리로 칼→처리한다고 하는 안이한 발상보다
+			PRINT 도미 머릿살
+			LOCAL:4 += 97
+		ELSEIF LOCAL:6 == 1
+			PRINT 달맞이 경단
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 2
+			PRINT 도미 소금구이
+			LOCAL:4 += 120
+		ELSEIF LOCAL:6 == 3
+			PRINT 참돔밥
+			LOCAL:4 += 110
+		ELSE
+			PRINT 생선회
+			LOCAL:4 += 90
+		ENDIF
+	ELSEIF NO:TARGET == 20
+		;유유 님
+		LOCAL:6 = RAND:7
+		IF LOCAL:6 == 0
+			PRINT 시루떡
+			LOCAL:4 += 99
+		ELSEIF LOCAL:6 == 1
+			PRINT 아와유키칸
+			LOCAL:4 += 95
+		ELSEIF LOCAL:6 == 2
+			PRINT 대복차
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 3
+			PRINT 물양갱
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 4
+			PRINT 단팥죽
+			LOCAL:4 += 102
+		ELSEIF LOCAL:6 == 5
+			PRINT 찹쌀떡
+			LOCAL:4 += 80
+		ELSE
+			PRINT 사쿠라모치
+			LOCAL:4 += 88
+		ENDIF
+	ELSEIF NO:TARGET == 21
+		;란 님
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 왕새우 칵테일
+			LOCAL:4 += 175
+		ELSEIF LOCAL:6 == 1
+			PRINT 텐동
+			LOCAL:4 += 150
+		ELSEIF LOCAL:6 == 2
+			PRINT 유부초밥
+			LOCAL:4 += 125
+		ELSEIF LOCAL:6 == 3
+			PRINT 일본식 스테이크
+			LOCAL:4 += 160
+		ELSEIF LOCAL:6 == 4
+			PRINT 참치 통구이
+			LOCAL:4 += 140
+		ELSE
+			PRINT 여우 우동
+			LOCAL:4 += 100
+		ENDIF
+	ELSEIF NO:TARGET == 22
+		;유카리
+		LOCAL:6 = RAND:20
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 푸아그라의 소테 포르치니 버섯 소스 캐비어 모듬
+			LOCAL:4 += 300
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 >= 1 &&  LOCAL:6 < 4
+			PRINT 고르곤졸라 리조또
+			LOCAL:4 += 170
+		ELSEIF LOCAL:6 >= 4 &&  LOCAL:6 < 8
+			PRINT 상어지느러미 스프
+			LOCAL:4 += 150
+		ELSEIF LOCAL:6 >= 8 &&  LOCAL:6 < 12
+			PRINT 케밥
+			LOCAL:4 += 115
+		ELSEIF LOCAL:6 >= 12 &&  LOCAL:6 < 16
+			PRINT 터키쉬 딜라이트
+			LOCAL:4 += 120
+		ELSE
+			PRINT 계란찜
+			LOCAL:4 += 90
+		ENDIF
+	ELSEIF NO:TARGET == 23
+		;스이카
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			;이름은  모대형 전술 격투 공격기보다
+			PRINT 대음양 「담룡(曇竜)」
+			LOCAL:4 += 98
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			;이름은  모수령인 아레
+			PRINT 스이카 특제 양조주 「탄봉(呑蜂)」
+			LOCAL:4 += 180
+		ELSEIF LOCAL:6 == 2
+			;슈와슈퍼대작전
+			PRINT 스이카 특제 사랑의 비약 「큥큥 칵테일」
+			LOCAL:4 += 114
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSE
+			PRINT 에호우마키
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 24
+		;리글
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 오무(王蟲)라이스
+			LOCAL:4 += 128
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 호두 벌꿀 케이크
+			LOCAL:4 += 96
+		ELSEIF LOCAL:6 == 2
+			PRINT 벌꿀 시럽
+			LOCAL:4 += 64
+		ELSE
+			PRINT 구운 번데기
+			LOCAL:4 += 60
+		ENDIF
+	ELSEIF NO:TARGET == 25
+		;미슷치
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0
+			PRINT 칠성장어 양념구이
+			LOCAL:4 += 135
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 장어초밥
+			LOCAL:4 += 130
+		ELSEIF LOCAL:6 == 2
+			PRINT 밤참새 라면
+			LOCAL:4 += 123
+		ELSE
+			PRINT 장어덮밥
+			LOCAL:4 += 125
+		ELSE
+			PRINT 장어튀김
+			LOCAL:4 += 120
+		ENDIF
+	ELSEIF NO:TARGET == 26
+		;케이네
+		LOCAL:6 = RAND:9
+		IF LOCAL:6 == 0
+			PRINT 백택 덮밥
+			LOCAL:4 += 89
+		;-군요=선생님이므로 학교급식으로 친숙한 메뉴
+		ELSEIF LOCAL:6 == 1
+			PRINT 파프리카 거봉 순대
+			LOCAL:4 += 115
+		ELSEIF LOCAL:6 == 2
+			PRINT 딸기밥
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 3
+			PRINT 케챱국밥
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 4
+			PRINT 튀김빵
+			LOCAL:4 += 120
+		ELSEIF LOCAL:6 == 5
+			PRINT 카레라이스
+			LOCAL:4 += 130
+		ELSEIF LOCAL:6 == 6
+			PRINT 흰살생선튀김
+			LOCAL:4 += 95
+		ELSEIF LOCAL:6 == 7
+			PRINT 탕수육
+			LOCAL:4 += 100
+		ELSE
+			PRINT 오징어 제트기
+			LOCAL:4 += 95
+		ENDIF
+	ELSEIF NO:TARGET == 27
+		;테위
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0
+			PRINT 악어튀김
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 1
+			PRINT 상어 된장 조림
+			LOCAL:4 += 108
+		ELSEIF LOCAL:6 == 2
+			PRINT 홍게 튀김
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 3
+			PRINT 고등어 간구이
+			LOCAL:4 += 108
+		;이하2개(살)은 이나바의 향토요리
+		ELSEIF LOCAL:6 == 4
+			PRINT 두부정식
+			LOCAL:4 += 80
+		ELSE
+			PRINT 모듬볶음
+			LOCAL:4 += 70
+		ENDIF
+	ELSEIF NO:TARGET == 28
+		;우동게
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0
+			PRINT 달맞이 경단
+			LOCAL:4 += 100
+		;영원정부근이라고 하면 죽순
+		ELSEIF LOCAL:6 == 1
+			PRINT 죽순 찰밥
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 2
+			PRINT 일본식 죽순 고로케
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 3
+			PRINT 달표 치즈
+			LOCAL:4 += 85
+		ELSEIF LOCAL:6 == 4
+			PRINT 달표 자판기 치즈
+			LOCAL:4 += 80
+		ELSE
+			PRINT 이나바 우동
+			LOCAL:4 += 70
+		ENDIF
+	ELSEIF NO:TARGET == 29
+		;에링
+		LOCAL:6 = RAND:7
+		IF LOCAL:6 == 0
+			PRINT 《청색 일호》
+			LOCAL:4 = 666
+		ELSEIF LOCAL:6 == 1
+			PRINT “Potion”
+			LOCAL:4 = 600
+		ELSEIF LOCAL:6 == 2
+			;마○라이트 그린
+			PRINT 녹색마사광
+			LOCAL:4 /= 5
+			LOCAL:4 += RAND:255
+		;네-링은 약선 요리라든지 자신있는 예감
+		ELSEIF LOCAL:6 == 3
+			PRINT 소계약선 소스
+			LOCAL:4 += 140
+		ELSEIF LOCAL:6 == 4
+			PRINT 별미 전어구이
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 5
+			PRINT 해물듬뿍국수
+			LOCAL:4 += 120
+		ELSE
+			PRINT 「녹즙」
+			LOCAL:4 += RAND:152
+		ENDIF
+	ELSEIF NO:TARGET == 30
+		;카구야
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0
+			PRINT 돌솥비빔밥
+			LOCAL:4 += 111
+		ELSEIF LOCAL:6 == 1
+			PRINT 생간 육회
+			LOCAL:4 += 99
+		;어떻게든(어쩐지) 경요리가 자신있을 것 같은 것으로
+		ELSEIF LOCAL:6 == 2
+			PRINT 닭고기와 표고버섯 구이
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 3
+			PRINT 죽순싹무침
+			LOCAL:4 += 95
+		ELSEIF LOCAL:6 == 4
+			PRINT 삼치구이
+			LOCAL:4 += 120
+		ELSE
+			;왠지 두부 요리가 이익 그렇다는 것은 신탁이 왔다
+			PRINT 미네오카 두부
+			LOCAL:4 += 102
+		ENDIF
+	ELSEIF NO:TARGET == 31 && CFLAG:0 == 0
+		;모코우
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 곱창전골
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 1
+			PRINT 소간부추볶음
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 2 && ASSI < 0
+			PRINT 사○마의 새구이꼬치(?)
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 2 && ASSI >= 0
+			IF NO:ASSI == 25
+				PRINT 밤○새의 새구이꼬치(?)
+				LOCAL:4 += 200
+			ELSEIF NO:ASSI == 32
+				PRINT 까마귀 ○구의 새구이꼬치(?)
+				LOCAL:4 += 220
+			ELSEIF NO:ASSI == 83
+				PRINT 지○ 까마귀의 새구이꼬치(?)
+				LOCAL:4 += 210
+			ELSE
+				PRINT 사○마의 새구이꼬치(?)
+				LOCAL:4 += 110
+			ENDIF
+		ELSE
+			PRINT 구운 주먹밥
+			LOCAL:4 += 80
+		ENDIF
+	ELSEIF NO:TARGET == 31 && CFLAG:0
+		;귀족의 딸(아가씨)의 매홍
+		LOCAL:6 = RAND:5
+		;섭관가 클래스의 확실히 호화로운 향응요리
+		IF LOCAL:6 == 0
+			PRINT 대신대찬
+			LOCAL:4 += 800
+		ELSE
+			PRINT 새고기튀김
+			LOCAL:4 += 55
+		ENDIF
+	ELSEIF NO:TARGET == 32
+		;아야야
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0
+			PRINT 소고기 덮밥
+			LOCAL:4 += 86
+		;요괴의 산은 산채가 풍부
+		ELSEIF LOCAL:6 == 1
+			PRINT 죽순 도사조림
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 2
+			PRINT 연근과 머위 조림
+			LOCAL:4 += 85
+		ELSEIF LOCAL:6 == 3
+			PRINT 산채 덴뿌라
+			LOCAL:4 += 120
+		;환상향 최고 속도의 패스트푸드
+		ELSE
+			PRINT 환상향 최속의 햄버거
+			LOCAL:4 += 75
+		ENDIF
+	ELSEIF NO:TARGET == 33
+		;메디슨
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 겔세미움엘레강스차
+			LOCAL:4 += RAND:234 - 100
+			BASE:MASTER:0 /= 4
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 비소가 듬뿍 첨가된 녹차
+			LOCAL:4 += RAND:200 - 90
+			BASE:MASTER:0 /= 2
+		ELSEIF LOCAL:6 == 2
+			PRINT I313 포함 브랜디
+			LOCAL:4 += RAND:215 - 60
+			BASE:MASTER:0 /= 2
+		ELSE
+			PRINT 방울꽃차
+			LOCAL:4 += RAND:161 - 80
+			BASE:MASTER:0 /= 2
+		ENDIF
+	ELSEIF NO:TARGET == 34
+		;유우카링
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 자스민티
+			LOCAL:4 += 100
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 국화 덴뿌라
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 2
+			PRINT 장미 잼
+			LOCAL:4 += 60
+		ELSE
+			PRINT 해바라기씨 쿠키
+			LOCAL:4 += 70
+		ENDIF
+	ELSEIF NO:TARGET == 35
+		;코맛쨩
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0
+			PRINT 솜사탕
+			LOCAL:4 += 93
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 캔디
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 2
+			PRINT 도너츠
+			LOCAL:4 += 60
+		ELSEIF LOCAL:6 == 3
+			PRINT 포테이토칩
+			LOCAL:4 += 54
+		ELSE
+			PRINT 팝콘
+			LOCAL:4 += 52
+		ENDIF
+	ELSEIF NO:TARGET == 36
+		;시키 님
+		;추가인 J의 대말의 사람 YM Mk-2 rev6용영공주님 말
+		LOCAL:6 = RAND:9
+		IF DAY == 60 || (LOCAL:6 == 0 && TALENT:153)
+			PRINT 쇠고기 정식
+			LOCAL:4 += 80
+			SIF RAND:3 == 0
+				TFLAG:202 = 1
+		ELSE
+			LOCAL:6 = RAND:9
+			IF LOCAL:6 == 0
+				PRINT 팔보채
+				LOCAL:4 += 83
+			ELSEIF LOCAL:6 == 1
+				PRINT 고마 두부
+				LOCAL:4 += 67
+			ELSEIF LOCAL:6 == 2
+				PRINT 낫토 정식
+				LOCAL:4 += 55
+			ELSEIF LOCAL:6 == 3
+				PRINT 냉두부
+				LOCAL:4 += 45
+			ELSEIF LOCAL:6 == 4
+				PRINT 야채절임
+				LOCAL:4 += 43
+			ELSEIF LOCAL:6 == 5
+				PRINT 된장국과 밥
+				LOCAL:4 += 40
+			ELSEIF LOCAL:6 == 6
+				PRINT 계란찜
+				LOCAL:4 += 50
+			ELSEIF LOCAL:6 == 7
+				PRINT 삶은 토란
+				LOCAL:4 += 43
+			ELSE
+				PRINT 단무지
+				LOCAL:4 += 31
+			ENDIF
+		ENDIF
+	ELSEIF NO:TARGET == 37
+		;시즈하
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 카시와모치
+			LOCAL:4 += 99
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 메이플 시럽
+			LOCAL:4 += 75
+		ELSEIF LOCAL:6 == 2
+			PRINT 홍엽만두
+			LOCAL:4 += 70
+		ELSE
+			;자면보다
+			PRINT 단풍갈이
+			LOCAL:4 += 66
+		ENDIF
+	ELSEIF NO:TARGET == 38
+		;미노리코
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 밤밥
+			LOCAL:4 += 92
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 호박 케이크
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 == 2
+			PRINT 고구마양갱
+			LOCAL:4 += 70
+		ELSE
+			PRINT 군고구마
+			LOCAL:4 += 65
+		ENDIF
+	ELSEIF NO:TARGET == 39
+		;히나
+		LOCAL:6 = RAND:8
+		IF LOCAL:6 == 0 && TALENT:150
+			;뻥튀기가 없는 모습인 병아리씨라고 하는 의미로
+			PRINT 병아리 뻥튀기
+			LOCAL:4 += 200
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 < 3
+			PRINT 병아리 뻥튀기
+			LOCAL:4 += 75
+		ELSE
+			PRINT 회전 초밥
+			LOCAL:4 += 40
+			LOCAL:4 += RAND:41
+		ENDIF
+	ELSEIF NO:TARGET == 40
+		;니토리
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 오이 냉채 스프
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 1
+			PRINT 오이 스틱
+			LOCAL:4 += 60
+		ELSE
+			PRINT 캇파말이
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 41
+		;모미지
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 단팥빵과 병 우유 세트
+			LOCAL:4 += 56
+		ELSEIF LOCAL:6 == 1
+			PRINT 단풍 만두
+			LOCAL:4 += 55
+		ELSEIF LOCAL:6 == 2
+			PRINT 단풍잎 만두
+			LOCAL:4 += 50
+		ELSEIF LOCAL:6 == 3
+			PRINT 육포
+			LOCAL:4 += 47
+		ELSE
+			PRINT 개밥
+			LOCAL:4 += 33
+		ENDIF
+	ELSEIF NO:TARGET == 42 && CFLAG:0 == 0
+		;사나에
+		LOCAL:6 = RAND:11
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 입에 머금었던 술
+			LOCAL:4 += 256
+			TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 오리 국수
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 2
+			PRINT 유채국수
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 3
+			PRINT 냉두부
+			LOCAL:4 += 50
+		ELSEIF LOCAL:6 == 4
+			PRINT 검은흑임자죽
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 5
+			PRINT 햄치즈튀김
+			LOCAL:4 += 65
+		ELSEIF LOCAL:6 == 6
+			PRINT 생당근
+			LOCAL:4 += 40
+		ELSEIF LOCAL:6 == 7
+			PRINT 후쿠진즈케
+			LOCAL:4 += 35
+		ELSEIF LOCAL:6 == 8
+			PRINT 고로케와 감자샐러드를 곁들인 크림스튜와 현미밥
+			LOCAL:4 += 128
+		ELSEIF LOCAL:6 == 9
+			PRINT 미라클 후르츠 샐러드
+			LOCAL:4 += 77
+		ELSE
+			PRINT 누릉지샐러드
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 42 && CFLAG:0
+		;사나에 님　(정력을 붙이는 요리가 줄섭니다)
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 굴껍질과 떡잡탕냄비
+			LOCAL:4 += 105
+		ELSEIF LOCAL:6 == 1
+			PRINT 해삼 기러기알 스프
+			LOCAL:4 += 85
+		ELSEIF LOCAL:6 == 2
+			PRINT 동물 거시기 요리
+			LOCAL:4 += 77
+		ELSEIF LOCAL:6 == 3
+			PRINT 장어구이
+			LOCAL:4 += 105
+		ENDIF
+	ELSEIF NO:TARGET == 43
+		;카나코
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 신의 된장국
+			LOCAL:4 += 123
+		ELSEIF LOCAL:6 == 1
+			PRINT 신의 죽
+			LOCAL:4 += 99
+		ELSE
+			PRINT 개구리 튀김
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 44
+		;케로쨩
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0
+			;브레스 오브 파이어 2의 재료
+			;그만한 값으로 팔리는 것은 요괴에 있어 인기의 메뉴 란 것으로
+			LOCAL:6 = RAND:3
+			IF LOCAL:6 == 0
+				PRINT 바퀴벌레 파 샐러드
+				LOCAL:4 += 75
+			ELSEIF LOCAL:6 == 1
+				PRINT 지렁이 카라멜 소스
+				LOCAL:4 += 90
+			ELSE
+				PRINT 금파리 푸딩
+				LOCAL:4 += 130
+			ENDIF
+		ELSEIF LOCAL:6 == 1 || LOCAL:6 == 2
+			LOCAL:6 = RAND:3
+			IF LOCAL:6 == 0
+				PRINT 후라이드 바퀴벌레
+				LOCAL:4 += 65
+			ELSEIF LOCAL:6 == 1
+				PRINT 지렁이 페페론치노
+				LOCAL:4 += 80
+			ELSE
+				PRINT 은파리 푸딩
+				LOCAL:4 += 110
+			ENDIF
+		ELSE
+			PRINT 살무사 술
+			LOCAL:4 += 55
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ENDIF
+	ELSEIF NO:TARGET == 45
+		;서니
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0 && TALENT:134
+			PRINT 서니 밀크
+			LOCAL:4 += 333
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 0
+			PRINT 계란프라이
+			LOCAL:4 += 65
+		ELSEIF LOCAL:6 == 1
+			PRINT 설탕 담뿍 계란프라이
+			LOCAL:4 += 90
+		ELSE
+			PRINT 된장국
+			LOCAL:4 += 50
+		ENDIF
+	ELSEIF NO:TARGET == 46
+		;루나
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0 && TALENT:45
+			PRINT 루나 차
+			LOCAL:4 += 300
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 부귀콩된장
+			LOCAL:4 += 75
+		ELSEIF LOCAL:6 == 2
+			PRINT 고야 챰프루
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 3
+			PRINT 피망 튀김
+			LOCAL:4 += 60
+		ELSE
+			PRINT 된장국
+			LOCAL:4 += 50
+		ENDIF
+	ELSEIF NO:TARGET == 47
+		;스타
+		;모두 꽤 높은 것은 사양이지만 밸런스 생각하지 말고 미안해
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0
+			PRINT 별사탕
+			LOCAL:4 += 120
+		ELSEIF LOCAL:6 == 1
+			PRINT 별 초콜릿
+			LOCAL:4 += 250
+		ELSEIF LOCAL:6 == 2
+			;「나의 도시락의 당근도 별의 형태가 좋다」코피페
+			PRINT 별모양 당근
+			LOCAL:4 += 10
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 3
+			;옛날에는  칠석에 먹은 것 같다
+			PRINT 삭병
+			LOCAL:4 += 320
+		ELSE
+			PRINT 된장국
+			LOCAL:4 += 50
+		ENDIF
+	ELSEIF NO:TARGET == 48
+		;앗큥
+		;염라님이 용서(허락)를 청하는→정진 요리가 이익 그렇다고 말하는 독단과 편견보다
+		PRINT 간모도키
+		LOCAL:4 += 74
+	ELSEIF NO:TARGET == 49
+		;렌코
+		IF ASSI >= 0
+			IF NO:ASSI == 50 && ABL:ASSI:13 >= 4
+				LOCAL:6 = RAND:3
+				IF LOCAL:6 == 0
+					PRINT 죽순밥
+					LOCAL:4 += 150
+				ELSEIF LOCAL:6 == 1
+					PRINT 죽만두
+					LOCAL:4 += 120
+				ELSE
+					PRINT 치쿠젠니
+					LOCAL:4 += 100
+				ENDIF
+			ELSE
+				LOCAL:6 = RAND:3
+				IF LOCAL:6 == 0
+				;비봉=유리라고 하는 안이한 생각
+					PRINT 백합뿌리 튀김
+					LOCAL:4 += 70
+				ELSEIF LOCAL:6 == 1
+					PRINT 가라시렌콘
+					LOCAL:4 += 55
+				ELSE
+					PRINT 새틀라이트 아이스커피
+					LOCAL:4 += 40
+				ENDIF
+			ENDIF
+		ELSE
+			LOCAL:6 = RAND:4
+			IF LOCAL:6 == 0
+			;비봉=유리라고 하는 안이한 생각
+				PRINT 백합뿌리 튀김
+				LOCAL:4 += 70
+			ELSEIF LOCAL:6 == 1
+				PRINT 카레
+				LOCAL:4 += 60
+			ELSEIF LOCAL:6 == 2
+				PRINT 겨자 연근
+				LOCAL:4 += 55
+			ELSE
+				PRINT 새틀라이트 아이스커피
+				LOCAL:4 += 40
+			ENDIF
+		ENDIF
+	ELSEIF NO:TARGET == 50
+		;메리
+		IF ASSI >= 0
+			IF NO:ASSI == 49 && ABL:ASSI:13 >= 4
+				LOCAL:6 = RAND:3
+				IF LOCAL:6 == 0
+					PRINT 죽순 새우 그라탕
+					LOCAL:4 += 150
+				ELSEIF LOCAL:6 == 1
+					PRINT 죽순 페페론치노
+					LOCAL:4 += 120
+				ELSE
+					PRINT 서양식 죽순프라이
+					LOCAL:4 += 100
+				ENDIF
+			ELSE
+				LOCAL:6 = RAND:3
+				IF LOCAL:6 == 0
+					PRINT 양고기 소테
+					LOCAL:4 += 80
+				ELSEIF LOCAL:6 == 1
+					PRINT 4중 베리 타르트
+					LOCAL:4 += 70
+				ELSE
+					PRINT 새틀라이트 아이스커피
+					LOCAL:4 += 40
+				ENDIF
+			ENDIF
+		ELSE
+			LOCAL:6 = RAND:4
+			IF LOCAL:6 == 0
+				PRINT 양고기 소테
+				LOCAL:4 += 80
+			ELSEIF LOCAL:6 == 1
+				PRINT 카레
+				LOCAL:4 += 60
+			ELSEIF LOCAL:6 == 2
+				PRINT 4중 베리 타르트
+				LOCAL:4 += 70
+			ELSE
+				PRINT 새틀라이트 아이스커피
+				LOCAL:4 += 40
+			ENDIF
+		ENDIF
+	ELSEIF NO:TARGET == 51
+		;이쿠 씨
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			;번개→하타하타(물고기에 에 번개)
+			PRINT 조어냄비
+			LOCAL:4 += 100
+		;류우구 요리? 느낌으로
+		ELSEIF LOCAL:6 == 1
+			PRINT 이세 새우 통구이
+			LOCAL:4 += 180
+		ELSEIF LOCAL:6 == 2
+			PRINT 전복 회전구이
+			LOCAL:4 += 170
+		ELSE
+			PRINT 쌀강정
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 52
+		;텐시
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 피치 플랑베
+			LOCAL:4 += 110
+		ELSEIF LOCAL:6 == 1
+			PRINT 복숭아 스프
+			LOCAL:4 += 80
+		ELSE
+			PRINT 복숭아 샤베트
+			LOCAL:4 += 75
+		ENDIF
+	ELSEIF NO:TARGET == 53
+		;토요히메
+		;신화의 원재료보다 상어 요리를…
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 상어 튀김
+			LOCAL:4 += 88
+		ELSE
+			PRINT 상어된장절임 사시미
+			LOCAL:4 += 75
+		ENDIF
+	ELSEIF NO:TARGET == 54
+		;요리히메
+		IF TALENT:150
+			;신에 대한 공양물
+			PRINT 신약선
+			LOCAL:4 += 150
+		ELSE
+			;쿄토 명물이라는 것이지만 말 맞추기보다
+			PRINT 도케츠키야키
+			LOCAL:4 += 92
+		ENDIF
+	ELSEIF NO:TARGET == 55
+		;레이센
+		PRINT 명과 「달토끼」
+		LOCAL:4 += 80
+	ELSEIF NO:TARGET == 56
+		;릴리 블랙
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 <= 1
+			PRINT 사쿠라모치
+			LOCAL:4 += 72
+		ELSE
+			PRINT 벚꽃밥(백미에 간장과 술을 쳐서 지은 밥)
+			LOCAL:4 += 89
+		ENDIF
+	ELSEIF NO:TARGET == 57
+		;키스메
+		PRINT 두레박주
+		LOCAL:4 += 70
+		SIF TALENT:150
+			TFLAG:202 = 1
+	ELSEIF NO:TARGET == 58
+		;야마메
+		PRINT 메뚜기 조림
+		LOCAL:4 += 66
+	ELSEIF NO:TARGET == 59
+		;파르시
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 코쿠마로 스튜
+			LOCAL:4 += 99
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSE
+			PRINT 스튜
+			LOCAL:4 += 86
+		ENDIF
+	ELSEIF NO:TARGET == 60
+		;유기
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 치어 술찜
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 1
+			PRINT 돼지고기 백채 술찜
+			LOCAL:4 += 90
+		ELSE
+			PRINT 조개 술찜
+			LOCAL:4 += 80
+		ENDIF
+	ELSEIF NO:TARGET == 61
+		;사토리
+    ;가정식 혹은 조림요리 위주
+		LOCAL:6 = RAND:9
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 지령전 특제 햄버그와 수제 가정식 디너코스
+			LOCAL:4 += 256
+		ELSEIF LOCAL:6 == 1
+			PRINT 된장 넣은 조림요리 포함 우동
+			LOCAL:4 += 66
+		ELSEIF LOCAL:6 == 2
+			PRINT 갈비찜
+			LOCAL:4 += 99
+		ELSEIF LOCAL:6 == 3
+			PRINT 치즈 크림스튜 그라탕
+			LOCAL:4 += 111
+		ELSEIF LOCAL:6 == 4
+			PRINT 아이올리 소스를 얹은 알감자 조림
+			LOCAL:4 += 77
+		ELSEIF LOCAL:6 == 5
+			PRINT 파프리카 관자 와인조림
+			LOCAL:4 += 88
+		ELSEIF LOCAL:6 == 6
+			PRINT 양파 와인 조림
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 7
+			PRINT 수제 그레이비 소스와 미트파이
+			LOCAL:4 += 122
+		ELSE
+			PRINT 호박 조림
+			LOCAL:4 += 55
+		ENDIF
+	ELSEIF NO:TARGET == 62
+		;오린
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 사로인 스테이크
+			LOCAL:4 += 80
+		ELSE
+			PRINT 소혀 스모크
+			LOCAL:4 += 78
+		ENDIF
+	ELSEIF NO:TARGET == 63
+		;오쿠
+		LOCAL:6 = RAND:6
+		IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && LOCAL:6 == 0
+			IF NOITEM == 0
+				ITEM:61 -= 1
+				SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+					CALL FILL_PLURAL_ITEM, 61
+			ENDIF
+			TFLAG:202 = 1
+			PRINT 초콜릿
+			LOCAL:4 += 30
+		ELSE
+			;우뉴∼
+			PRINT 이치고 다이후쿠
+			LOCAL:4 += 30
+		ENDIF
+	ELSEIF NO:TARGET == 64
+		;코이시
+		LOCAL:6 = RAND:6
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 푸른 장미 퀴노아 푸딩
+			LOCAL:4 += 156
+		ELSEIF LOCAL:6 == 1
+			PRINT 수제 비○코 킷
+			LOCAL:4 += 85
+		ELSEIF LOCAL:6 == 2
+			PRINTDATA
+				DATA 오리지널 
+				DATA 딸기맛 
+				DATA 녹차맛 
+				DATA 아몬드 
+				DATA 크러시 
+			ENDDATA
+			PRINT 포키
+			LOCAL:4 += 55
+		ELSEIF LOCAL:6 == 3
+			PRINT 어른의 밀크 포키
+			LOCAL:4 += 65
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 4
+;기간한정 맛의 포키
+			PRINTDATA
+				DATA 복숭아맛 
+				DATA 초코바나나 
+				DATA 판다 
+				DATA 코코넛 
+				DATA 타히티안 바닐라 
+				DATA 더블베리 
+				DATA 바삭바삭 딸기 하트풀 
+			ENDDATA
+			PRINT 포키
+			LOCAL:4 += 75
+		ELSE
+			PRINT 글○코 캬라멜
+			LOCAL:4 += 45
+		ENDIF
+	ELSEIF NO:TARGET == 66
+		;샹하이 인형
+		PRINT 상하이 게찜
+		LOCAL:4 += 80
+	ELSEIF NO:TARGET == 67
+		;호라이 인형
+		;어쩐지 호오라이=중국이라고 하는 연상이 많은 듯 하다.
+		PRINT 중화풍미 야키소바
+		LOCAL:4 += 78
+	ELSEIF NO:TARGET == 68
+		;토키코
+		;현실 세계에서는 이것은 범죄입니다.
+		PRINT 따오기즙
+		LOCAL:4 += 40
+	ELSEIF NO:TARGET == 69
+		;린노스케
+		LOCAL:6 = RAND:20
+		;주류는 잘된 것과 못된 것에 의해 크게 가격이 좌우됩니다. 원래 요리 인지 아닌지는 신경써서는 안됩니다
+		;대충 그그는 같은 상품의 명칭의 술은 없었기 때문에 괜찮아. (이)라고 생각한다
+		;또한 연재 종료시점에서는 술의 완성품은 없었기 때문에, 림지조의 주조의 솜씨는 미지수입니다(양조하고는 있었습니다만)
+		IF LOCAL:6 == 2 && ABL:12 > 4 && ABL:70 > 4
+			PRINT 지맥주 「대신주(大神主)」
+			LOCAL:4 += (RAND:200 + 201)
+		ELSEIF LOCAL:6 < 5 && ABL:12 > 3
+			PRINT 대음양 「야마타잡이」
+			LOCAL:4 += (RAND:850 - 349)
+		ELSEIF LOCAL:6 < 8  && ABL:12 > 2
+			PRINT 양조주 「마츠오 님」
+			LOCAL:4 += (RAND:50 + 51)
+		ELSEIF LOCAL:6 < 10  && ABL:12 > 1
+			PRINT 신주(新酒) 「주림(酒林)」
+			LOCAL:4 += (RAND:20 + 61)
+		ELSEIF LOCAL:6 < 13 && LOCAL:6 >= 10
+			;향림당 3화부터. 토키코 등장의 다음의 회에 토키 냄비라든지 w
+			PRINT 따오기 냄비요리
+			LOCAL:4 += 80
+		ELSEIF LOCAL:6 < 16 && LOCAL:6 >= 13
+			;안주를 만드는 것은 자신있는 것 같기 때문에, 마 리사가 밀어닥쳐 왔을 때에 작등 되어 그런 메뉴
+			PRINT 버섯버터볶음
+			LOCAL:4 += 40
+		ELSEIF LOCAL:6 < 19 && LOCAL:6 >= 16
+			;향림당 11화부터. 란 님 호이호이
+			PRINT 유부튀김
+			LOCAL:4 -= 50
+		ELSE
+			;식사가 필요없기 때문에는, 술과 김치만으로 끝내는 것은 어떨까라고 생각한다
+			PRINT 백김치
+			LOCAL:4 -= 150
+		ENDIF
+	ELSEIF NO:TARGET == 70
+		;요우키
+		;무가 요리
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 야채 덴뿌라
+			LOCAL:4 += 75
+		ELSE
+			PRINT 니신 산초절임
+			LOCAL:4 += 85
+		ENDIF
+	ELSEIF NO:TARGET == 71
+		;나즈린
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 졸참나무로 불을 피워 구운 진품 마르게리타 (포르치니 버섯 토핑)
+			LOCAL:4 += 100
+		ELSE
+			PRINT 모짜렐라 치즈와 토마토 샐러드
+			LOCAL:4 += 90
+		ENDIF
+	ELSEIF NO:TARGET == 72
+		;코가사
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 파라솔 초콜릿
+			LOCAL:4 += 60
+		ELSE
+			PRINT 낼름낼름 캔디
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 73
+		;이치린
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 솜사탕
+			LOCAL:4 += 55
+		ELSE
+			PRINT 도너츠
+			LOCAL:4 += 45
+		ENDIF
+	ELSEIF NO:TARGET == 74
+		;운잔 씨
+		PRINT 아저씨 주먹
+		LOCAL:4 += 50
+	ELSEIF NO:TARGET == 75
+		;무라사 선장
+		;선원 요리?
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 살사 베이컨
+			LOCAL:4 += 65
+		ELSE
+			PRINT 가자미조림
+			LOCAL:4 += 85
+		ENDIF
+	ELSEIF NO:TARGET == 76
+		;토라마루 쇼
+		;당연히 정진 요리와 가고 싶겠지만…
+		PRINT 쇠바리때 요리
+		LOCAL:4 += 100
+	ELSEIF NO:TARGET == 77
+		;뱌쿠렌 씨
+		;장난끼 기분 가득
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			;일단 온당한 소재를 사용하고 있지만 외형이 수풀 수풀 주위 것.
+			;결코 사람이 방심할 수 없는 것이 들어가기도 하고, 맛이 이상한이라고 하는 의미의 것은 아니다
+			PRINT 마녀 요리
+			LOCAL:4 += 170
+		ELSE
+			;원재료는인가의 유명한 비구니의 것입니다.
+			PRINT 야채찜밥
+			LOCAL:4 += 80
+		ENDIF
+	ELSEIF NO:TARGET == 78
+		;누에
+		;어느 곳(분)편으로 유명한 안에 안코가 들어간 것.
+		PRINT 벤토라구이
+		LOCAL:4 += 55
+	ELSEIF NO:TARGET == 79
+		;하타테
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 가리비 조개관자
+			LOCAL:4 += 60
+		ELSE
+			PRINT 가리비 영양밥
+			LOCAL:4 += 90
+		ENDIF
+
+;임시. 아이디어가 필요
+	ELSEIF NO:TARGET == 81
+		;쿄코
+		;목(성대)에 좋은/관련된 요리?
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 배숙
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 1
+			PRINT 모과차
+			LOCAL:4 += 65
+		ELSEIF LOCAL:6 == 2
+			PRINT 더덕차
+			LOCAL:4 += 60
+		ELSE
+			PRINT 목캔디
+			LOCAL:4 += 40
+		ENDIF
+	ELSEIF NO:TARGET == 82
+		;요시카
+    ;좀비라면 역시 뇌
+		PRINT 뇌 요리
+		LOCAL:4 += 60
+	ELSEIF NO:TARGET == 83
+		;세이가
+    ;카쿠 세이가 -> 각성(카쿠세이)->각성드링크 네타를 여기서 써도 되는가? 선단약을 가장한 붕붕드링크 개념
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 각성드링크 (수은 미첨가)
+			LOCAL:4 += 120
+			TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1
+			PRINT 백주
+			LOCAL:4 += 98
+		ELSEIF LOCAL:6 == 2
+			PRINT 복숭아주
+			LOCAL:4 += 78
+		ELSE
+    ;청아라면 역시 청주? (그건 청하지만)
+			PRINT 청주
+			LOCAL:4 += 80
+		ENDIF
+	ELSEIF NO:TARGET == 84
+		;토지코
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 가이세키 요리
+			LOCAL:4 += 120
+			TFLAG:202 = 1
+		;왜 얘만 요리가 따로 노는가? 그것은 항아리가 깨지면서 미각도 뭔가 잘못되었기 때문이다
+		ELSEIF LOCAL:6 == 1
+			PRINT 슈크림과 보드카
+			LOCAL:4 += 90
+		ELSEIF LOCAL:6 == 2
+			PRINT 화이트 러시안
+			LOCAL:4 += 85
+		ELSE
+			PRINT 새우튀김
+			LOCAL:4 += 60
+		ENDIF
+	ELSEIF NO:TARGET == 85
+		;후토
+		;생선회 접시가 배의 형태를 한 것의 정식 명칭이 필요
+		PRINT 배 모양 접시에 차린 모듬생선회
+		LOCAL:4 += 128
+	ELSEIF NO:TARGET == 86
+		;미코
+		PRINT 아스카냄비
+		LOCAL:4 += 200
+	ELSEIF NO:TARGET == 87
+		;마미조
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 너구리 우동
+			LOCAL:4 += 115
+		ELSE
+			PRINT 사와네 당고
+			LOCAL:4 += 90
+		ENDIF
+
+	ELSEIF NO:TARGET == 88
+		;코스즈
+    ;스즈나안에서 일하다가 틈틈이 먹는 도시락이 컨셉
+		PRINT 비블리오필리아의 휴식 도시락
+		LOCAL:4 += 65
+
+	ELSEIF NO:TARGET == 89
+		;코코로
+		PRINT 66가지 빛깔의 정식 「심기루」
+		LOCAL:4 += 100 + RAND:66
+
+	ELSEIF NO:TARGET == 98
+		;레이라
+		;무역상=베니스라고 하는 간편한 연상으로부터
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			;타리오리니와는 리본 모양의 파스타.
+			PRINT 바닷가재와 시금치의 탈리오리니
+			LOCAL:4 += 85
+		ELSE
+			;소금절이된 소의 고급 생햄으로부터의 요리
+			PRINT 브레사올라 햄의 루콜라 곁들임
+			LOCAL:4 += 60
+		ENDIF
+	ELSEIF NO:TARGET == 100
+		;미마
+		IF TALENT:134 && (TALENT:152 || TALENT:153) && TALENT:170
+			PRINT 특제 우유죽
+			LOCAL:4 += 250
+		ELSE
+			PRINT 우유죽
+			LOCAL:4 += 150
+		ENDIF
+	ELSEIF NO:TARGET == 101
+		;리카
+		PRINT 부드러운 전차빵
+		LOCAL:4 += 55
+	ELSEIF NO:TARGET == 102
+		;메이라
+		;요몽과 같은 칼소유로 사무라이로서 웬지 모르게
+		PRINT 청어머리구이
+		LOCAL:4 += 100
+	ELSEIF NO:TARGET == 103
+		;엘렌
+		LOCAL:6 = RAND:2
+		;둥실둥실 한 것
+		IF LOCAL:6 == 0
+			PRINT 솜사탕
+			LOCAL:4 += 60
+		ELSE
+			PRINT 머쉬멜로
+			LOCAL:4 += 50
+		ENDIF
+	ELSEIF NO:TARGET == 104
+		;코토히메
+		PRINT 장식 초밥
+		LOCAL:4 += 88
+	ELSEIF NO:TARGET == 105
+		;카나
+		;유령밥으로 그그도 참 이런 건이 있었다
+		PRINT 유령 초밥
+		LOCAL:4 += 80
+	ELSEIF NO:TARGET == 106
+		;리카코
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 ==0
+			PRINT 노니쥬스 (※노니 : 남태평양 특산의 식물)
+			LOCAL:4 += RAND:256
+		ELSE
+			PRINT 특제 영양제+드링크
+			LOCAL:4 = 512
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ENDIF
+	ELSEIF NO:TARGET == 107
+		;치유리
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 작지만 필살의 요리
+			LOCAL:4 += 99
+		ELSEIF LOCAL:6 == 1
+			PRINT 카레
+			LOCAL:4 += 60
+		ENDIF
+	ELSEIF NO:TARGET == 108
+		;유메밍
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 딸기 타르트
+			LOCAL:4 += 70
+		ELSEIF LOCAL:6 == 1
+			PRINT 딸기우유
+			LOCAL:4 += 66
+		ENDIF
+	ELSEIF NO:TARGET == 109
+		;오렌지
+		PRINT 여름귤 샤베트
+		LOCAL:4 += 45
+	ELSEIF NO:TARGET == 110
+		;쿠루미
+		PRINT 나무열매 브레드
+		LOCAL:4 += 50
+	ELSEIF NO:TARGET == 111
+		;엘리
+		;모 사신의 라이트 노벨로부터
+		PRINT 초콜릿 파르페
+		LOCAL:4 += 70
+	ELSEIF NO:TARGET == 112
+		;무게츠
+		PRINT 커피 젤리
+		LOCAL:4 += 77
+	ELSEIF NO:TARGET == 113
+		;겐게츠
+		PRINT 특제 카페오레
+		LOCAL:4 += 77
+	ELSEIF NO:TARGET == 114
+		;사라
+		;문지기=입문자의 최초의 장해=어디의 요리라도 처음은 야채의 자르는 방법으로부터=말 맞추기도 OK
+		PRINT 샐러드
+		LOCAL:4 += 50
+	ELSEIF NO:TARGET == 115
+		;루이즈
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 정진 소보로 도시락
+			LOCAL:4 += 80
+			SIF TALENT:150 && RAND:2 == 0
+				TFLAG:202 = 1
+		ELSE
+			PRINT 후지노미야 야키소바
+			LOCAL:4 += 75
+			SIF TALENT:150 && RAND:2 == 0
+				TFLAG:202 = 1
+		ENDIF
+	ELSEIF NO:TARGET == 116
+		;유키
+		PRINT 밀크 초콜릿
+		LOCAL:4 += 45
+		SIF TALENT:150
+			TFLAG:202 = 1
+	ELSEIF NO:TARGET == 117
+		;마이
+		PRINT 비터 화이트 초콜릿
+		LOCAL:4 += 45
+		SIF TALENT:150 && RAND:3 == 0
+			TFLAG:202 = 1
+	ELSEIF NO:TARGET == 118
+		;유메코
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 칼로리메이트
+			LOCAL:4 += 66
+		ELSE
+			PRINT “S0 Y-J0 Y”
+			LOCAL:4 += 60
+		ENDIF
+	ELSEIF NO:TARGET == 119
+		;신키 님
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0 && TALENT:150
+			PRINT 마계요리 풀코스
+			LOCAL:4 += 256
+			TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 1 && TALENT:153
+			PRINTW 지고의 백미와 지고의 된장국,
+			PRINTW 지고의 생선구이에 지고의 시금치 무침 요리,
+			PRINTW 그리고 지고의 매실 장아찌
+			PRINT ……를 세트로 국 하나 채소반찬 셋
+			LOCAL:4 = 800
+		ELSEIF LOCAL:6 == 2
+			PRINT 큰무 스테이크
+			LOCAL:4 += 120
+		ELSEIF LOCAL:6 == 3
+			PRINT 두부 햄버그
+			LOCAL:4 += 90
+		ELSE
+			PRINT 마계덮밥
+			LOCAL:4 += 75
+		ENDIF
+	ELSEIF NO:TARGET == 140
+		;핫카이산 타츠미
+		LOCAL:6 = RAND:4
+		IF LOCAL:6 == 0
+			PRINT 오뎅 「시라타키 랩소디」
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 1
+			PRINT 환상의 회 「천연 마리모 활어」
+			LOCAL:4 += 150
+		ELSE
+			PRINT 물수건으로 꾹꾹 짠 병아리
+			LOCAL:4 -= 50
+		ENDIF
+	ELSEIF NO:TARGET == 141
+		;아리에 루미
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 소주 칵테일 「대마왕 오렌지＆석류」
+			LOCAL:4 += 100
+		ELSEIF LOCAL:6 == 1
+			PRINT 맥주 칵테일 「기린 짠맛」
+			LOCAL:4 += 150
+		ELSE
+			PRINT 옛술 「5일 전의 소다 하이」
+			LOCAL:4 += 350
+			LOCAL:4 -= 301
+		ENDIF
+	ELSEIF NO:TARGET == 142
+		;아마카스·바 레이·텐지(연호)
+		;각 요리를 만든 판정에 CFLAG:200을 사용
+		LOCAL:6 = RAND:3
+		IF LOCAL:6 == 0
+			PRINT 팔팔 뛰는 음식 「댄싱 오니온 플라이」
+			LOCAL:4 += 150
+			CFLAG:160 |= 2
+		ELSEIF LOCAL:6 == 1
+			PRINT 광물 「브릴리언트〆사바」
+			LOCAL:4 += 200
+			CFLAG:160 |= 4
+		ELSE
+			PRINT 도수 96 「스피리터스의 대은하」
+			LOCAL:4 += 250
+			CFLAG:160 |= 8
+		ENDIF
+	ELSEIF NO:TARGET == 220
+		;와카사기히메
+    ;진짜 인어는 들어가지 않습니다. 내용물은 상상에
+    ;그래도 기대하는 사람들이 있어서 판매가격은 높다
+		PRINT 인어요리
+		LOCAL:4 += 120
+	ELSEIF NO:TARGET == 221
+		;세키반키
+    ;중2병 컨셉. 이름은 니시오 이신의 라노베 제목에서 따옴
+		LOCAL:6 = RAND:5
+		IF LOCAL:6 == 0
+    ;잘린머리+리사이클 즉 재료를 재활용한 잡탕냄비(야미나베)
+			PRINT 어둠의 전골(이라 쓰고 잡탕냄비라 읽는다)「잘린머리사이클」
+			LOCAL:4 += 66
+		ELSEIF LOCAL:6 == 1
+    ;히치하이커에 나온 가글 블래스터 같은 거라고 생각해주세요
+			PRINT 범은하적구강파괴음료 「목조르는 로맨티스트」
+			LOCAL:4 += 80
+			SIF TALENT:150
+				TFLAG:202 = 1
+		ELSEIF LOCAL:6 == 2
+			PRINT 디저트 「목매다는 하이스위트(웃음)」
+			LOCAL:4 += 55
+		ELSEIF LOCAL:6 == 3
+    ;설익은 고기는 강주약의 재료
+			PRINT 설익은 고기가 강주약이 되는 마법「카니발 매지컬」
+			LOCAL:4 += 90
+    ;신메뉴라고 하지만 내용물은 상상에 맡긴다
+		ELSE
+			PRINT 신메뉴「모든것의 래디컬」
+			LOCAL:4 += 75
+		ENDIF
+	ELSEIF NO:TARGET == 222
+		;카게로
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 팔광정식
+			LOCAL:4 += 80
+		ELSE
+			PRINT 파프리카 꼬치
+			LOCAL:4 += 65
+		ENDIF
+	ELSEIF NO:TARGET == 223
+		;벤벤
+    ;프리즘리버 자매와 반대로 일식. 현악기니까 면류
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 미소라멘
+			LOCAL:4 += 86
+		ELSE
+			PRINT 쇼유라멘
+			LOCAL:4 += 79
+		ENDIF
+	ELSEIF NO:TARGET == 224
+		;야츠하시
+    ;칠현금의 현만 들고있다->면따로 국물따로
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+			PRINT 츠케멘
+			LOCAL:4 += 84
+		ELSE
+			PRINT 마제소바
+			LOCAL:4 += 82
+		ENDIF
+	ELSEIF NO:TARGET == 225
+		;세이자
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0 && TALENT:150
+    ;애정과 반대로 행동하니까. 그래도 (비뚤어진 쪽으로) 성의가 들어가서 괜찮은 값
+			PRINT %조사처리(CALLNAME:MASTER,"가")% 싫어하는 요리 풀코스
+			LOCAL:4 += 100
+			TFLAG:202 = 1
+		ELSE
+			PRINT 뒤집힌 밥상
+			LOCAL:4 += 69
+		ENDIF
+	ELSEIF NO:TARGET == 226
+		;신묘마루
+		LOCAL:6 = RAND:2
+		IF LOCAL:6 == 0
+    ;신묘마루 기준에서는 1:1사이즈
+			PRINT 난쟁이의 과자집 (1:1스케일)
+			LOCAL:4 += 135
+		ELSE
+			PRINT 일촌법사의 밥그릇 덮밥
+			LOCAL:4 += 99
+		ENDIF
+	ELSEIF NO:TARGET == 227
+		;라이코
+    ;예의 그 태고의 달인 네타. 동+캇 = 카츠동이라는 발상으로 넣어봤습니다
+		PRINT 카츠동
+		LOCAL:4 += 90
+	ELSEIF NO:TARGET == 401
+		;촉수소녀
+		PRINT 촉수 볶음
+		;엽기적인 음식 요리이므로 기본적으로는 매각액저
+		;이따금 엽기적인 음식 취미의 인간에 해당되면(자) 매각액고
+		IF RAND:100 == 0
+			LOCAL:4 += 300
+		ELSE
+			LOCAL:4 -= 300
+		ENDIF
+		;반의 확률로 촉수의 미약들이
+		SIF RAND:2 == 0
+			TFLAG:202 = 1
+	ELSEIF TALENT:48
+		;소질【주정】소유. 닥치는 대로 발효식품인 것은 신경쓰지 말아  있고입니다
+		LOCAL:6 = RAND:4
+		PRINTDATA LOCAL
+			DATA 히키와리 낫토
+			DATA 카스피해 요구르트
+			DATA 블루 치즈
+			DATA 나레즈시
+		ENDDATA
+		LOCAL:4 += (LOCAL)*30
+;	ELSEIF NO:TARGET == 
+		;캐릭터
+;		PRINT (요리명)
+;		LOCAL:4 += 
+	ELSE
+		PRINT 도시락
+	ENDIF
+	SIF (TALENT:153 || (TALENT:152 && RAND:2 == 0)) && TFLAG:202 == 0
+		TFLAG:202 = 1
+ELSEIF LOCAL == 1 || LOCAL == 15
+	PRINT 소바
+ELSEIF LOCAL == 2 || LOCAL == 14
+	PRINT 고기감자조림
+	SIF TALENT:150
+		TFLAG:202 = 1
+ELSEIF LOCAL == 3 || LOCAL == 13
+	PRINT 케이크
+ELSEIF LOCAL == 4 || LOCAL == 12
+	PRINT 소면
+ELSEIF LOCAL == 5 || LOCAL == 11
+	SIF NO:TARGET == 5
+		PRINT 신선야채 
+	PRINT 샐러드
+ELSEIF LOCAL == 6 || LOCAL == 10
+	PRINT 햄버그
+ELSEIF LOCAL == 7 && TALENT:134
+	IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && RAND:4 == 0
+		IF NOITEM == 0
+			ITEM:61 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+				CALL FILL_PLURAL_ITEM, 61
+		ENDIF
+		TFLAG:202 = 1
+		LOCAL:4 += 100
+		PRINT 부드러운 맛이 날 듯한 모유 요리
+	ELSE
+		PRINT 모유 요리
+	ENDIF
+ELSEIF LOCAL == 9 && (TALENT:135 || TALENT:136)
+	IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && RAND:4 == 0
+		IF NOITEM == 0
+			ITEM:61 = 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+				CALL FILL_PLURAL_ITEM, 61
+		ENDIF
+		TFLAG:202 = 1
+		LOCAL:4 += 100
+		PRINT 추억의 맛이 날 듯한 오믈렛
+	ELSE
+		PRINT 오믈렛
+	ENDIF
+ELSE
+	IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && RAND:4 == 0
+		IF NOITEM == 0
+			ITEM:61 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+				CALL FILL_PLURAL_ITEM, 61
+		ENDIF
+		TFLAG:202 = 1
+		LOCAL:4 += 80
+		PRINT 달콤한 향이 나는 벚꽃 빛깔 주먹밥
+	ELSE
+		PRINT 주먹밥
+	ENDIF
+ENDIF
+PRINTW 을(를) 만들었다.
+PRINTL      ・
+PRINTL      ・
+PRINTL      ・
+;요리 기능 Lv4 또한 고유 요리의 경우, 가격은 하부수정(원래는 Lv5 전용이었으므로)
+SIF LOCAL == 0 && ABL:70 == 4 && LOCAL:1 == 0
+	TIMES LOCAL:4 , 0.75
+PRINTL 자…… 기왕 만든 요리다.
+IF TALENT:150 == 0 && (MARK:9 >= 2 || ABL:10 < 5)
+	PRINTW 고맙게 먹도록 하자…….
+	PRINTL      ・
+	PRINTL      ・
+	PRINTW      ・
+	PRINTFORM %CALLNAME:TARGET%의 요리는 
+	IF ABL:70 >= 5 || LOCAL:1 == 1
+		PRINTL 멋진 퀄리티의 요리다.
+		PRINTFORML 정신이 들었을 땐 이미 %CALLNAME:MASTER%의 접시가 텅 비어 있었다.
+		PRINTFORMW %CALLNAME:MASTER%의 먹는 모습에 %조사처리(CALLNAME:TARGET,"는")% \@(MARK:9) ? 당연하다는 듯한 # 만족한 듯한\@ 눈초리로 이쪽을 바라보고 있다…….
+	ELSEIF ABL:70 > 2 && ABL:70 <= 4
+		PRINTL 맛있다.
+		PRINTFORMW 요리를 다 먹은 %조사처리(CALLNAME:MASTER,"는")% 만족스럽게 배를 쓰다듬었다.
+	ELSEIF ABL:70 >= 0 && ABL:70 <= 2
+		PRINTL 아예 맛없지도, 아주 맛있지도 않은 레벨이다。
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"과")% \@(MARK:9) ? 어색한 침묵 속에서 # 담소하면서\@ 요리를 먹어치웠다.
+	ELSEIF ABL:70 < 1 && ABL:12 < 1
+		PRINTFORML 빈말로도 %CALLNAME:MASTER%의 입맛엔 맞지 않았던 것 같다.
+		PRINTFORMW 그러나 이러니저러니 해도 %조사처리(CALLNAME:MASTER,"는")% 요리를 남김없이 먹을 수는 있었다.
+	ENDIF
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	;도시락을 주인이 먹어 준 신부
+	CALL SELF_KOJO, TARGET, 600, LOCAL:2
+	BASE:0 += LOCAL:2 * 6
+	BASE:1 += LOCAL:2 * 3
+	BASE:MASTER:0 += LOCAL:2 * 6
+	BASE:MASTER:1 += LOCAL:2 * 3
+	PRINTFORML %CALLNAME:TARGET%의 체력과 기력이 회복했다.
+	IF CFLAG:65
+		PRINTFORML %CALLNAME:TARGET%의 스트레스가 저하했다.
+		CFLAG:65 -= LOCAL:2 * 2
+	ENDIF
+	;복종의 주
+	CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL:2*5), 0
+	;토리코모드 만복도 시스템
+	SIF FLAG:5000 & 32
+	CALL CALC_EAT_COOKING_TORIKOMODE, LOCAL:2 , TARGET
+
+ELSE
+	PRINTW 예정대로 마을에다 팔까, 아니면 여기서 둘이 함께 식사를 할까…….
+	PRINTL (어떻게 할까?)
+	DRAWLINE
+	PRINTFORML [0] - \@(TALENT:150) ?  신부와 함께 맛있게 먹는다 # 기왕이니 둘이서 먹는다\@
+	PRINTFORML [1] - \@(TALENT:150) ?  신부가 직접 만든 요리를 포교시킨다 # 요리를 팔러 나간다\@
+	DRAWLINE
+	PRINTL 
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"과")% 함께 요리를 먹기로 했다.
+		PRINTL      ・
+		PRINTL      ・
+		PRINTW      ・
+		PRINTFORM %CALLNAME:TARGET%의 요리는 
+		IF (ABL:70 >= 5 || LOCAL:1 == 1 ) && TALENT:150
+			PRINTL 이 이상의 요리가 없을 만큼 걸작이다.
+			PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 접시까지 먹을 기세로 내온 요리를 모조리 먹어치웠다.
+			PRINTFORML 너무나도 게걸스럽게 먹는 모습에 %조사처리(CALLNAME:TARGET,"는")% 순간 깜짝 놀란 표정을 지었지만
+			PRINTFORMW 자신의 요리가 마음에 들어서 그런다는 것을 알고는 만족한 듯한 미소를 띠며 한 그릇 더 먹을지를 물어왔다.
+		ELSEIF ABL:70 >= 5 || LOCAL:1 == 1
+			PRINTL 멋진 퀄리티의 요리다.
+			PRINTFORML 정신이 들었을 땐 이미 %CALLNAME:MASTER%의 접시가 텅 비어 있었다.
+			PRINTFORMW %CALLNAME:MASTER%의 먹는 모습에 %조사처리(CALLNAME:TARGET,"는")% \@(MARK:9) ? 당연하다는 듯한 # 만족한 듯한\@ 눈초리로 이쪽을 바라보고 있다…….
+		ELSEIF ABL:70 > 2
+			PRINTL 맛있다.
+			PRINTFORMW 요리를 다 먹은 %조사처리(CALLNAME:MASTER,"는")% 만족스럽게 배를 쓰다듬었다.
+		ELSEIF ABL:70 < 1 && ABL:12 < 1
+			PRINTFORML 빈말로도 %CALLNAME:MASTER%의 입맛엔 맞지 않았던 것 같다.
+			PRINTFORMW 그러나 이러니저러니 해도 %조사처리(CALLNAME:MASTER,"는")% 요리를 남김없이 먹을 수는 있었다.
+		ELSE
+			PRINTL 아예 맛없지도, 아주 맛있지도 않은 레벨이다。
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"과")% \@(MARK:9) ? 어색한 침묵 속에서 # 담소하면서\@ 요리를 먹어치웠다.
+		ENDIF
+		PRINTW      ・
+		PRINTW      ・
+		PRINTW      ・
+		;도시락을 둘이서 먹은 뒤
+		CALL SELF_KOJO, TARGET, 601, LOCAL:2
+		BASE:0 += LOCAL:2 * 5
+		BASE:1 += (LOCAL:2 * 5) / 2
+		BASE:MASTER:0 += LOCAL:2 * 5
+		BASE:MASTER:1 += (LOCAL:2 * 5) / 2
+		PRINTFORML %CALLNAME:TARGET%의 체력과 기력이 회복했다.
+		IF CFLAG:65
+			PRINTFORML %CALLNAME:TARGET%의 스트레스가 저하했다.
+			;반발 소유는 스트레스 저하 감소
+			CFLAG:65 -= (MARK:9) ?  LOCAL:2 # LOCAL:2 * 3
+		ENDIF
+		;복종의 주
+		CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL:2*3), 0
+		;토리코모드 만복도 시스템
+		SIF FLAG:5000 & 32
+		CALL CALC_EAT_COOKING_TORIKOMODE, LOCAL:2 , TARGET
+
+	ELSEIF RESULT == 1
+		LOCAL:3 = (LOCAL:2 * LOCAL:4) / 40
+		IF FLAG:3 >= 3
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 5000, 3)
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 10000, 5)
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 50000, 10)
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 100000, 25)
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 500000, 50)
+		ELSE
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 5000, 2)
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 10000, 4)
+			LOCAL:3 = TABLE_CALC(LOCAL:3, 50000, 8)
+		ENDIF
+		PRINTFORM %조사처리(CALLNAME:TARGET,"가")% 
+		IF TALENT:152
+			PRINTFORM 사랑을 담아 
+			TIMES LOCAL:3 , 1.50
+		ENDIF
+		PRINTFORML 만든 요리에는 {LOCAL:3}원의 매입가가 붙었다.
+		;도시락을 판 뒤
+		CALL SELF_KOJO, TARGET, 602, LOCAL:3
+		MONEY:1 = LOCAL:3
+		CALL SHOW_MONEY_INCREACE
+		;--------------------------------------------------
+		;도시락(노예)으로 번 최고 금액 판정 처리
+		SIF MONEY:1 > MONEY:996
+			CALL NEW_HIGH_INCOME_ALL, 996
+		SIF MONEY:1 > CFLAG:93
+			CALL NEW_HIGH_INCOME_SLAVE, 93
+		CALL TOTAL_INCOME_SLAVE, MONEY:1
+		;--------------------------------------------------
+		TFLAG:202 = 0
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ENDIF
+
+;체력·기력이 최대치를 넘고 있다면 시정
+FOR LOCAL:3, 0, 2
+	BASE:(LOCAL:3) = MIN(BASE:(LOCAL:3), MAXBASE:(LOCAL:3))
+	BASE:MASTER:(LOCAL:3) = MIN(BASE:MASTER:(LOCAL:3), MAXBASE:MASTER:(LOCAL:3))
+NEXT
+CFLAG:65 = MAX(CFLAG:65, 0)
+
+LOCAL:6 = ABL:70 + 1 + LOCAL:1
+LOCAL:5 = LOCAL:6 + RAND:5
+
+;습득의 주
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL:2*LOCAL:6), 0
+;부정의 주(반발 각인 소유라면 뜻에 맞지 않은 것을 하게 했으므로)
+SIF MARK:9
+	CALL COMMON_UP_JUEL, TARGET, 100, ((LOCAL:2*LOCAL:6)/2), 0
+;친애, 서로 사랑함 소유 또한 식후의 이벤트 발생 확정시는 애정 경험이 들어간다
+;또, 식후의 이벤트로 밀어 넘어뜨리는 것을 선택하면(자) 봉사 쾌락 경험이 들어가게 된다
+IF TFLAG:202 == 1 && (TALENT:152 || TALENT:153)
+	;애정 경험
+	CALL COMMON_UP_EXP, TARGET, 21, 2, 0
+	TFLAG:202 = 2
+;복종, 괴조인격 소유 때는 식후의 이벤트로 밀어 넘어뜨리는 것을 선택하면(자) 봉사 쾌락 경험이 들어가게 된다
+ELSEIF TFLAG:202 == 1 && (TALENT:160 || TALENT:169)
+	TFLAG:202 = 2
+ENDIF
+;조리 경험
+CALL COMMON_UP_EXP, TARGET, 70, LOCAL:5, 1
+
+;조건을 채우면(자) 식후의 운동 이벤트에
+IF (TFLAG:202 >= 1 && TFLAG:202 <= 2) && ABL:11 > 0 && (FLAG:12 & 8192) == 0
+	CALL LUNCH_EXERCISE
+ELSE
+	TFLAG:202 = 0
+ENDIF
+
+;휴식 플래그를 세운다
+FLAG:0 = 1
+BEGIN TURNEND
+RETURN 1
+
+;=============================================================================
+;도시락 처리(주인)
+;=============================================================================
+;주인이 스스로 도시락을 만들어 파는 옵션.
+
+;HYPERION 요리 긴급 지령
+;주력2기둥하, 디나니간니합와나이
+;단독 니테, 자금백만원분노 도시락 조리 세요
+;조리반스. 단독 니테, 자금백만원분노 도시락 조리 세요
+;-------------------------------------------------
+;LOCAL = 요리의 종류
+;LOCAL:1 = 요리의 가격의 보정을 결정
+;LOCAL:2 = 요리의 가격
+;LOCAL:3 = 요리의 가격의 기초
+;LOCAL:4 = 습득의 주증가량
+;TSTR: = 요리명
+;-------------------------------------------------
+@LUNCH_SELF
+VARSET LOCAL, 0
+TSTR:5 = 
+LOCAL = RAND:16
+
+;ABL:기교를 본다
+IF ABL:MASTER:12 == 0
+	LOCAL:1 = 20
+ELSEIF ABL:MASTER:12 == 1
+	LOCAL:1 = 25
+ELSEIF ABL:MASTER:12 == 2
+	LOCAL:1 = 40
+ELSEIF ABL:MASTER:12 == 3
+	LOCAL:1 = 50
+ELSEIF ABL:MASTER:12 == 4
+	LOCAL:1 = 75
+ELSE
+	LOCAL:1 = 100
+ENDIF
+
+;ABL:요리 기능을 본다
+IF ABL:MASTER:70 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:MASTER:70 == 1
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:MASTER:70 == 2
+	TIMES LOCAL:1 , 1.50
+ELSEIF ABL:MASTER:70 == 3
+	TIMES LOCAL:1 , 1.80
+ELSEIF ABL:MASTER:70 == 4
+	TIMES LOCAL:1 , 2.20
+ELSE
+	TIMES LOCAL:1 , 2.50
+ENDIF
+
+;EXP:70을 본다
+IF EXP:MASTER:70 < EXPLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF EXP:MASTER:70 < EXPLV:2
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:MASTER:70 < EXPLV:3
+	TIMES LOCAL:1 , 1.20
+ELSEIF EXP:MASTER:70 < EXPLV:4
+	TIMES LOCAL:1 , 1.40
+ELSEIF EXP:MASTER:70 < EXPLV:5
+	TIMES LOCAL:1 , 1.70
+ELSE
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+;헌신적
+SIF TALENT:MASTER:63
+	TIMES LOCAL:1 , 1.20
+
+;EASY가 아니면 제작자의 체력 소모, 기력 소모, 취해, 스트레스에 의한 마이나스 보정이 있다
+IF FLAG:3 != 1
+	;체력 소모 상태
+	SIF MAXBASE:0 > 0 && (100 * BASE:0) / MAXBASE:0 <= 25
+		TIMES LOCAL:1 , 0.90
+	;기력 소모 상태
+	SIF MAXBASE:1 > 0 && (100 * BASE:1) / MAXBASE:1 <= 25
+		TIMES LOCAL:1 , 0.90
+	;취하고 있다
+	SIF MAXBASE:8 > 0 && (100 * BASE:8) / MAXBASE:8 >= 80
+		TIMES LOCAL:1 , 0.50
+
+	;스트레스가 10000이상
+	IF CFLAG:MASTER:65 >= 10000
+		TIMES LOCAL:1 , 0.80
+	;스트레스가 1000이상
+	ELSEIF CFLAG:MASTER:65 >= 1000
+		TIMES LOCAL:1 , 0.90
+	ENDIF
+ENDIF
+
+;LOCAL = 요리의 종류
+IF TALENT:MASTER:831 && ABL:MASTER:70 >= 5 && FLAG:574 > 0
+	;야채 요리의 풀 코스
+	LOCAL = FLAG:574
+	LOCAL:3 = RAND:LOCAL
+	FLAG:574 -= LOCAL:3
+ELSEIF LOCAL == 0 && ABL:MASTER:70 >= 4
+	;향유 고래의 타츠다튀김
+	LOCAL:3 = 666
+ELSEIF LOCAL == 1 || LOCAL == 15
+	;찔러
+	LOCAL:3 = 450
+ELSEIF (LOCAL == 2 || LOCAL == 14) && TALENT:140
+	;바닐라 정식
+	LOCAL:3 = 400
+ELSEIF LOCAL == 2 || LOCAL == 14
+	;나타데코코
+	LOCAL:3 = 340
+ELSEIF LOCAL == 3 || LOCAL == 13
+	;밤크헨
+	LOCAL:3 = 280
+ELSEIF LOCAL == 4 || LOCAL == 12
+	;로스트 치킨
+	LOCAL:3 = 250
+ELSEIF LOCAL == 5 || LOCAL == 11
+	;아라릭크하마치
+	LOCAL:3 = 220
+ELSEIF LOCAL == 6 || LOCAL == 10
+	;구이 우주 맘보
+	LOCAL:3 = 200
+ELSEIF LOCAL == 9 && ABL:MASTER:70 >= 5 && CSTR:MASTER:86 != ""
+	;주인의 요리 기능 5 한정으로 csv로 지정이 있으면 전용 고유 요리(노예 때의 그것과는 별취급)
+	LOCAL:3 = 888
+ELSE
+	;전차 주먹밥
+	LOCAL:3 = 160
+ENDIF
+
+;조리 명인
+IF TALENT:MASTER:194
+	TIMES LOCAL:3 , 2.00
+;요리 이익
+ELSEIF TALENT:MASTER:193
+	TIMES LOCAL:3 , 1.50
+;요리 골칫거리
+ELSEIF TALENT:MASTER:192
+	TIMES LOCAL:3 , 0.75
+ENDIF
+
+;매력
+SIF TALENT:MASTER:90
+	TIMES LOCAL:3 , 1.10
+;수수께끼의 매력
+SIF TALENT:MASTER:92
+	TIMES LOCAL:3 , 1.10
+;인기
+SIF TALENT:MASTER:94
+	TIMES LOCAL:3 , 1.30
+;남자
+IF TALENT:MASTER:120
+	IF ABL:MASTER:70 < 3
+		TIMES LOCAL:3 , 0.75
+	ELSE
+		TIMES LOCAL:3 , 1.25
+	ENDIF
+ENDIF
+
+PRINTL 
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 스스로 요리를 만들었다
+PRINTL 
+PRINTW      ・
+PRINTW      ・
+PRINTW      ・
+PRINTW       ！
+PRINTL 
+PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 
+IF TALENT:MASTER:831 && ABL:MASTER:70 >= 5
+	TSTR:5 =야채 요리 풀 코스
+ELSEIF LOCAL == 0 && ABL:MASTER:70 >= 4
+	;G. T.!　G. T.!
+	TSTR:5 = 향유 고래의 타츠타튀김
+ELSEIF LOCAL == 1 || LOCAL == 15
+	;초세탁기
+	TSTR:5 = 복어회
+ELSEIF (LOCAL == 2 || LOCAL == 14) && TALENT:140
+	;앨리스가! 앨리스가! 앨리스!
+	TSTR:5 = 바닐라 정식
+ELSEIF LOCAL == 2 || LOCAL == 14
+	;Con-Human
+	TSTR:5 = 나타데코코
+ELSEIF LOCAL == 3 || LOCAL == 13
+	;「웨핫핫하!!」
+	TSTR:5 = 바움쿠헨
+ELSEIF LOCAL == 4 || LOCAL == 12
+	;모국 대통령 전언 요리(구멍 빈 곳 치즈 첨부)
+	;[오카부토비성]소유라면 파워업
+	IF TALENT:MASTER:98
+		TSTR:5 = 대통령혼이 담긴 로스트 치킨
+		LOCAL:3 += 150
+	ENDIF
+	TSTR:5 = %TSTR:5%로스트 치킨
+ELSEIF LOCAL == 5 || LOCAL == 11
+	;서식 땅：에트르리아 상공
+	TSTR:5 = 아라릭하마치 회
+ELSEIF LOCAL == 6 || LOCAL == 10
+	;스페이스(ry
+	TSTR:5 = 우주 개복치 통구이
+ELSEIF LOCAL == 9 && ABL:MASTER:70 >= 5 && CSTR:MASTER:86 != ""
+	;주인 전용 고유 요리(파괴력 벌 GUN! )
+	TSTR:5 = %CSTR:MASTER:86%
+ELSE
+	;“Willkommen.  Hier findest du nur dein grab! ”
+	TSTR:5 = 전차 주먹밥
+ENDIF
+PRINTFORMW %조사처리(TSTR:5,"를")% 만들었다.
+PRINTL      ・
+PRINTL      ・
+PRINTL      ・
+PRINTL 
+PRINTL 자…… 기왕 만든 요리다.
+PRINTW 예정대로 마을에다 팔까, 아니면 여기서 둘이서 함께 식사를 할까……
+PRINTL (어떻게 할까?)
+DRAWLINE
+
+PRINTFORML [0] - 기왕이니 %CALLNAME:TARGET%에게 먹인다.
+SIF ASSI >= 0
+	PRINTFORML [1] - 우선 %CALLNAME:ASSI%에게 먹인다.
+PRINTL [2] - 요리를 판다.
+
+DRAWLINE
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	;(추가) 주인의 도시락을 먹은 플래그 ON
+	CFLAG:150 |= 2048
+	CFLAG:MASTER:150 |= 4096
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:TARGET,"과")% 함께 요리를 먹기로 했다.
+	PRINTL      ・
+	PRINTL      ・
+	PRINTW      ・
+	PRINT 오늘의 요리는 
+	IF ABL:MASTER:70 >= 5 && TALENT:150
+		PRINTL 회심작이다.
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 나온 요리를 모조리 다 먹었다.
+		PRINTFORML 오죽 맛있었는지 요리를 다 먹은 %조사처리(CALLNAME:TARGET,"는")% 한 그릇 더 달라고 졸랐다가,
+		PRINTFORMW 부끄러워서 그런지 다음 순간 얼굴을 새빨갛게 물들이며 고개를 숙였다.
+		SIF RAND:4 == 0
+			TFLAG:202 = 1
+	ELSEIF ABL:MASTER:70 >= 5
+		PRINTL 내가 만든 거지만 정말 잘 만들어진 것 같다.
+		PRINTFORML 문득 고개를 들어 보니 %CALLNAME:TARGET%의 접시가 벌써 텅 비어 있었다.
+		PRINTFORMW \@(MARK:9) ? %조사처리(CALLNAME:TARGET,"는")% 분한 얼굴로 %조사처리(CALLNAME:MASTER,"를")% 노려보고 있다 # 요리가 마음에 든 건지 %조사처리(CALLNAME:TARGET,"는")% 만족스러운 미소를 띠고 있다\@…….
+	ELSEIF ABL:MASTER:70 > 2
+		PRINTL 뜻밖에 괜찮은 느낌으로 완성되었다.
+		PRINTFORMW \@(MARK:9) ? 그러나 요리를 먹는 동안에도 %조사처리(CALLNAME:TARGET,"는")% 시종일관 굳은 표정이었 # 요리를 먹고 있는 동안, %CALLNAME:TARGET%의 입가는 계속 터질 것 같았 \@다.
+	ELSEIF ABL:MASTER:70 < 1 && MARK:9 > 0
+		PRINTFORML 유감이지만 %CALLNAME:TARGET%의 입맛엔 맞지 않았던 것 같다.
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"가")% 남긴 요리를 먹기로 했다.
+	ELSE
+		PRINTL 보통이다.
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"과")% 담소하며 요리를 먹어치웠다.
+	ENDIF
+	;주인의 도시락을 먹은 노예
+	CALL SELF_KOJO, TARGET, 116, LOCAL:1
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	BASE:0 += LOCAL:1 * 5
+	BASE:1 += (LOCAL:1 * 5) / 2
+	BASE:MASTER:0 += LOCAL:1 * 5
+	BASE:MASTER:1 += (LOCAL:1 * 5) / 2
+	PRINTFORML %CALLNAME:TARGET%의 체력과 기력이 회복했다.
+	;복종의 주
+	CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL:1*4), 0
+	;부정의 주(반발 각인 소유로 주인의 요리가 좀이라면)
+	SIF MARK:9 && ABL:MASTER:70 < 1 && LOCAL:1/2 > 0
+		CALL COMMON_UP_JUEL, TARGET, 100, (LOCAL:1/2), 0
+	;토리코모드 만복도 시스템
+	SIF FLAG:5000 & 32
+	CALL CALC_EAT_COOKING_TORIKOMODE, LOCAL:1 , TARGET
+ELSEIF ASSI >= 0 && RESULT == 1
+	TFLAG:202 = 0
+	;(추가) 주인의 도시락을 먹은 플래그 ON
+	CFLAG:ASSI:150 |= 2048
+	CFLAG:MASTER:150 |= 4096
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"과")% 함께 요리를 먹기로 했다.
+	PRINTL      ・
+	PRINTL      ・
+	PRINTW      ・
+	PRINT 오늘의 요리는 
+	IF ABL:MASTER:70 >= 5 && TALENT:ASSI:150
+		PRINTL 회심작이다.
+		PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 나온 요리를 모조리 다 먹었다.
+		PRINTFORML 오죽 맛있었는지 요리를 다 먹은 %조사처리(CALLNAME:ASSI,"는")% 한 그릇 더 달라고 졸랐다가,
+		PRINTFORMW 부끄러워서 그런지 다음 순간 얼굴을 새빨갛게 물들이며 고개를 숙였다.
+	ELSEIF ABL:MASTER:70 >= 5
+		PRINTL 내가 만든 거지만 정말 잘 만들어진 것 같다.
+		PRINTFORML 문득 고개를 들어 보니 %CALLNAME:ASSI%의 접시가 벌써 텅 비어 있었다.
+		PRINTFORMW \@(MARK:9) ? %조사처리(CALLNAME:ASSI,"는")% 분한 얼굴로 %조사처리(CALLNAME:MASTER,"를")% 노려보고 있다 # 요리가 마음에 든 건지 %조사처리(CALLNAME:ASSI,"는")% 만족스러운 미소를 띠고 있다\@…….
+	ELSEIF ABL:MASTER:70 > 2
+		PRINTL 뜻밖에 괜찮은 느낌으로 완성되었다.
+		PRINTFORMW \@(MARK:9) ? 그러나 요리를 먹는 동안에도 %조사처리(CALLNAME:ASSI,"는")% 시종일관 굳은 표정이었 # 요리를 먹고 있는 동안, %CALLNAME:ASSI%의 입가는 계속 터질 것 같았 \@다
+	ELSEIF ABL:MASTER:70 < 1 && MARK:ASSI:9 > 0
+		PRINTFORML 유감이지만 %CALLNAME:ASSI%의 입맛엔 맞지 않았던 것 같다.
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"가")% 남긴 요리를 먹기로 했다.
+	ELSE
+		PRINTL 보통이다.
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ASSI,"과")% 담소하며 요리를 먹어치웠다.
+	ENDIF
+	;주인의 도시락을 먹은 노예
+	CALL SELF_KOJO, ASSI, 116, LOCAL:1
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	BASE:ASSI:0 += LOCAL:1 * 5
+	BASE:ASSI:1 += (LOCAL:1 * 5) / 2
+	BASE:MASTER:0 += LOCAL:1 * 5
+	BASE:MASTER:1 += (LOCAL:1 * 5) / 2
+	PRINTFORML %CALLNAME:ASSI%의 체력과 기력이 회복했다.
+	;복종의 주
+	CALL COMMON_UP_JUEL, ASSI, 12, (LOCAL:1*4), 0
+	;부정의 주(반발 각인 소유로 주인의 요리가 좀이라면)
+	SIF MARK:ASSI:9 && ABL:MASTER:70 < 1 && LOCAL:1/2 > 0
+		CALL COMMON_UP_JUEL, ASSI, 100, (LOCAL:1/2), 0
+	;토리코모드 만복도 시스템
+	SIF FLAG:5000 & 32
+	CALL CALC_EAT_COOKING_TORIKOMODE, LOCAL:1 , ASSI
+
+
+ELSEIF RESULT == 2
+	LOCAL:2 = (LOCAL:1 * LOCAL:3) / 40
+	IF FLAG:3 >= 3
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 5000, 3)
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 10000, 5)
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 50000, 10)
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 100000, 25)
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 500000, 50)
+	ELSE
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 5000, 2)
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 10000, 4)
+		LOCAL:2 = TABLE_CALC(LOCAL:2, 50000, 8)
+	ENDIF
+	PRINTFORML %조사처리(CALLNAME:MASTER,"가")% 만든 요리에는 {LOCAL:2}원의 매입가가 붙었다.
+	MONEY:1 = LOCAL:2
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;도시락(주인)으로 번 최고 금액 판정 처리
+	SIF MONEY:1 > MONEY:995
+		CALL NEW_HIGH_INCOME_ALL, 995
+	;--------------------------------------------------
+	TFLAG:202 = 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;체력·기력이 최대치를 넘고 있다면 시정
+FOR LOCAL:2, 0, 2
+	BASE:(LOCAL:2) = MIN(BASE:(LOCAL:2), MAXBASE:(LOCAL:2))
+	BASE:MASTER:(LOCAL:2) = MIN(BASE:MASTER:(LOCAL:2), MAXBASE:MASTER:(LOCAL:2))
+	SIF ASSI >= 0
+		BASE:ASSI:(LOCAL:2) = MIN(BASE:ASSI:(LOCAL:2), MAXBASE:ASSI:(LOCAL:2))
+NEXT
+
+LOCAL:4 = ABL:MASTER:70 + (1 + RAND:5)
+;조리 경험(주인)
+CALL COMMON_UP_EXP, MASTER, 70, LOCAL:4, 1
+
+;주인의 요리 기능 업 가능 통지 처리
+SIF BUY_SKILL_MASTER_COOKING_PRICE() > 0 && ABL:MASTER:70 < 5
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 조리의 오의에 손이 가닿을 것 같다는 생각이 들기 시작했다.
+
+;조건을 채우면(자) 식후의 운동 이벤트에
+IF TFLAG:202 == 1 && ABL:11 > 0 && (FLAG:12 & 8192) == 0
+	CALL LUNCH_EXERCISE
+ELSE
+	TFLAG:202 = 0
+ENDIF
+
+;휴식 플래그를 세운다
+FLAG:0 = 1
+BEGIN TURNEND
+RETURN 1
+
+;=============================================================================
+;식후의 운동 이벤트
+;=============================================================================
+;SELF.ERB를 기본으로 작성.
+@LUNCH_EXERCISE
+;말용 회수 카운터
+TFLAG:201 = 0
+;V감각
+IF ABL:1 == 0
+	LOCAL = 0
+ELSEIF ABL:1 == 1
+	LOCAL = 1
+ELSEIF ABL:1 < 4
+	LOCAL = 2
+ELSE
+	LOCAL = 3
+ENDIF
+
+;욕망과 봉사 정신에 의한 보너스
+IF ABL:11 >= 5 && ABL:13 >= 4
+	LOCAL += 3
+ELSEIF ABL:11 == 4 && ABL:13 >= 4
+	LOCAL += 2
+ELSEIF ABL:11 == 3 && ABL:13 >= 5 && ABL:1 >= 3
+	LOCAL += 1
+ENDIF
+
+;쾌감에 순수, 쾌감의 부정
+IF TALENT:70 && LOCAL
+	LOCAL += 1
+ELSEIF TALENT:71 && LOCAL
+	LOCAL -= 2
+ENDIF
+;음란
+SIF TALENT:170 && LOCAL
+	LOCAL += 1
+
+;낮의 경우는 밤까지 캐캐우후후
+IF TIME == 0 && LOCAL > 3
+	TIME += 1
+	LOCAL += 2
+ENDIF
+
+;공포 각인 3의 경우는 실행하기 어려워진다.
+SIF MARK:8 > 2 && LOCAL
+	LOCAL -= 1
+
+;반발 각인이 있으면(자) 실행하기 어려워진다. 또, 연모 없음 반발 3에서는 발생하지 않고
+IF MARK:9 && LOCAL
+	IF MARK:9 >= 3 && TALENT:150 == 0
+		LOCAL = 0
+	ELSE
+		LOCAL /= 1 + MARK:9
+		LOCAL -= MARK:9
+	ENDIF
+ENDIF
+IF LOCAL < 1
+	TFLAG:202 = 0
+	RETURN 0
+ENDIF
+
+DRAWLINE
+PRINTFORML 요리를 먹은 %조사처리(CALLNAME:MASTER,"와")% %조사처리(CALLNAME:TARGET,"는")% 뭐라 말 못할 감각에 습격당했다.
+PRINTL 
+PRINTL 어떻게 할까?
+PRINTL [0] - 덮치고 싶은 욕망을 참는다.
+PRINTFORML [1] - %조사처리(CALLNAME:TARGET,"를")% 덮친다.
+DRAWLINE
+$SELECT_POINT_EXERCISE
+INPUT
+IF RESULT == 0
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 휘몰아치는 욕망을 억누르고 %조사처리(CALLNAME:TARGET,"를")% 남긴 채 자기 방으로 갔다…….
+	PRINTL 
+	WAIT
+	;욕망 LV＋자위 중독 LV가 기본 회수
+	LOCAL = ABL:11 + ABL:30
+	;음란
+	SIF TALENT:170
+		LOCAL += 1
+	;자제심
+	SIF TALENT:20
+		LOCAL -= 2
+	;쾌락의 부정
+	SIF TALENT:71
+		LOCAL -= 2
+	;반발 각인
+	SIF MARK:9
+		LOCAL -= MARK:9
+	LOCAL /= 5
+	LOCAL -= 3
+	SIF TFLAG:202 == 2
+		LOCAL += 5
+
+	;애널 자위 패치가 유효해 게다가 A조교 피르타가 오프라면이라면 애널 자위의 가능성 있어, 다만 통상보다 애널 자위의 가능성을 줄이고 있다
+	IF FLAG:15 & 4 && (FLAG:2 & 2) == 0
+		;자위, 애널 자위 판정. 포인트가 같은 경우는 자위 우선(C감각이 0의 경우는 애널 자위만)
+		;A감각 본다
+		LOCAL:1 = ABL:2
+		;C감각 본다
+		LOCAL:2 = 1 + ABL:0
+
+		;항문 이상이라고 애널 자위 하기 쉽다+
+		;음핵/음경이라면 통상의 자위하기 쉽다+
+		IF TALENT:173
+			LOCAL:1 += 1
+		ELSEIF TALENT:171
+			LOCAL:2 += 1
+		ENDIF
+	ELSE
+		;애널 자위 패치가 유효하지 않으면 양쪽 모두의 판정을 0에(강제적으로 통상 자위가 된다)
+		LOCAL:1 = 0
+		LOCAL:2 = 0
+	ENDIF
+
+	IF LOCAL > 0
+		TFLAG:201 = LOCAL
+		;정조대가 자위를 방해한다(자위, 애널 자위의 차이는 이 경우는 표시만)
+		IF CFLAG:42 & 2
+			PRINTFORML 방에 홀로 남겨진 %조사처리(CALLNAME:TARGET,"는")% 결국에는 미처 참지 못해
+			PRINTFORML \@(LOCAL:1 < LOCAL:2) ? 자위 # 애널 자위\@하려고 가랑이 사이로 손을 뻗었지만,
+			PRINTW 검은 광택으로 빛나는 정조대 때문에 그 행위는 저지되고 말았다…….
+			;무척 멋진 식후의 자위를 화려하게 방어하는 정조대
+			CALL SELF_KOJO, TARGET, 117, LOCAL
+			PRINTL 
+			;V경험
+			SIF TALENT:120 == 0
+				CALL COMMON_UP_EXP, TARGET, 0, LOCAL, 0
+			;A경험
+			CALL COMMON_UP_EXP, TARGET, 1, LOCAL, 0
+			;요도 개발 경험
+			CALL COMMON_UP_EXP, TARGET, 46, LOCAL, 0
+			;쾌C의 주
+			CALL COMMON_UP_JUEL, TARGET, 0, (LOCAL*50), 0
+			;쾌V의 주
+			SIF TALENT:120 == 0
+				CALL COMMON_UP_JUEL, TARGET, 1, (LOCAL*40), 0
+			;쾌A의 주
+			CALL COMMON_UP_JUEL, TARGET, 2, (LOCAL*50), 0
+			;욕정의 주
+			CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL*70), 0
+			;굴복의 주
+			CALL COMMON_UP_JUEL, TARGET, 14, (LOCAL*120), 1
+		;통상의 자위
+		ELSEIF LOCAL:1 < LOCAL:2
+			PRINTFORML 방에 홀로 남겨진 %조사처리(CALLNAME:TARGET,"는")% 결국에는 미처 참지 못해
+			PRINTFORMW {LOCAL}번 자위를 한 모양이다.
+			;무척 멋진 식후의 자위(TFLAG:99 == 1 으로 자위)
+			CALL SELF_KOJO, TARGET, 113, 1
+			PRINTL 
+			;자위 경험
+			CALL COMMON_UP_EXP, TARGET, 10, LOCAL, 0
+			;쾌C의 주
+			CALL COMMON_UP_JUEL, TARGET, 0, (LOCAL*100), 0
+			;복종의 주
+			CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL*50), 0
+			;욕정의 주
+			CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL*70), 1
+		;식후에 애널 자위
+		ELSE
+			PRINTFORML 방에 홀로 남겨진 %조사처리(CALLNAME:TARGET,"는")% 결국에는 미처 참지 못해
+			PRINTFORMW {LOCAL}번 애널 자위를 한 모양이다.
+			;무척 멋진 식후의 애널 자위(TFLAG:99 == 2로 애널 자위, LOCAL:1<LOCAL:2의 비교는 아마 할 수 없게 된다고 생각한다)
+			CALL SELF_KOJO, TARGET, 113, 2
+			PRINTL
+			;A경험
+			CALL COMMON_UP_EXP, TARGET, 1, LOCAL, 0
+			;자위 경험
+			CALL COMMON_UP_EXP, TARGET, 10, LOCAL, 0
+			;쾌A의 주
+			CALL COMMON_UP_JUEL, TARGET, 2, (LOCAL*100), 0
+			;복종의 주
+			CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL*50), 0
+			;욕정의 주
+			CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL*100), 1
+		ENDIF
+	ENDIF
+ELSEIF RESULT == 1
+	SIF TFLAG:202 == 2
+		LOCAL += 2
+	TFLAG:201 = LOCAL
+	;타입 나누고(봉 있어 V가1,봉 있어 V없음이2,봉없음이3)
+	IF TALENT:MASTER:120 || TALENT:MASTER:121
+		IF TALENT:120 == 0
+			PRINTFORMW 둘은 후끈 달아오른 몸으로 침대에 기어들어가 {LOCAL}번 몸을 섞었다….
+			;무척 멋진 식후의 운동(TFLAG:99==1으로V성교)
+			CALL SELF_KOJO, TARGET, 112, 1
+			PRINTL
+			;V경험
+			CALL COMMON_UP_EXP, TARGET, 0, LOCAL, 0
+			;V조율 경험
+			CALL COMMON_UP_EXP, TARGET, 42, LOCAL, 0
+			;처녀 깔봐 회수 카운트(연모 소유만)
+			SIF TALENT:0 && TALENT:150
+				FLAG:400 += 1
+			;봉사 쾌락 경험(서로 사랑함·복종등을 가지고 있었을 경우)
+			SIF TFLAG:202 == 2
+				CALL COMMON_UP_EXP, TARGET, 20, 2, 0
+			;쾌V의 주
+			CALL COMMON_UP_JUEL, TARGET, 1, (LOCAL*200), 0
+			;고통의 주
+			SIF TALENT:0
+				CALL COMMON_UP_JUEL, TARGET, 16, (LOCAL*250), 0
+			;복종의 주
+			CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL*100), 0
+			;욕정의 주
+			CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL*300), 1
+			IF TALENT:0
+				IF CFLAG:TARGET:500 == 0
+					CFLAG:TARGET:500 = NO:MASTER + 1
+					CSTR:TARGET:5 = %CALLNAME:MASTER%
+				ENDIF
+				PRINTL
+				IF (TALENT:152 || TALENT:153) && TALENT:0 == 1
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:MASTER%에 순결을 바쳤다는 사실을 행복을 느끼는 것 같다…….
+				ELSEIF TALENT:150 && TALENT:0 == 1
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:MASTER%에 순결을 바쳤다는 사실에 열락을 느끼는 것 같다…….
+				ELSEIF TALENT:170
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 파과의 아픔을 느끼지 못하는지 더 큰 쾌락을 끌어내고자 허리를 구불댔다…….
+				ELSE
+					PRINTFORML %CALLNAME:TARGET%의 보지에서 배어나온 파과의 피가 시트를 더럽히는데도 불구하고
+					PRINTFORMW 섹스에 푹 빠진 두 사람은 알아채지도 못한 채 연회를 계속했다…….
+				ENDIF
+			ENDIF
+			TALENT:0 = 0
+			IF ABL:1+ABL:10+ABL:13 >= 13 || CFLAG:2 > 700
+				PRINTFORMW 이윽고 %조사처리(CALLNAME:MASTER,"와")% %조사처리(CALLNAME:TARGET,"는")% 누가 먼저라 할 것 없이 몸을 떼더니 서로를 바라보며 미소지었다.
+				PRINTFORMW 언제까지고 여기 이렇게 누워있을 수만도 없으니, %조사처리(CALLNAME:MASTER,"는")% 아쉬움을 남긴 채 방을 뒤로했다….
+			ENDIF
+		ELSE
+			PRINTFORMW 둘은 후끈 달아오른 몸으로 침대에 기어들어가 {LOCAL}번 몸을 섞었다….
+			;무척 멋진 식후의 운동 어널편(TFLAG:99==2로 어널 성교)
+			CALL SELF_KOJO, TARGET, 112, 2
+			PRINTL 
+			;A경험
+			CALL COMMON_UP_EXP, TARGET, 1, LOCAL, 0
+			;BL경험
+			CALL COMMON_UP_EXP, TARGET, 13, LOCAL, 0
+			;A쾌락 경험(서로 사랑함·복종등을 가지고 있었을 경우)
+			SIF TFLAG:202 == 2
+				CALL COMMON_UP_EXP, TARGET, 43, 2, 0
+			;쾌A의 주
+			CALL COMMON_UP_JUEL, TARGET, 2, (LOCAL*150), 0
+			;복종의 주
+			CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL*100), 0
+			;욕정의 주
+			CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL*300), 1
+			IF ABL:2+ABL:10+ABL:13 >= 13 || CFLAG:2 > 700
+				PRINTFORMW 이윽고 %조사처리(CALLNAME:MASTER,"와")% %조사처리(CALLNAME:TARGET,"는")% 누가 먼저라 할 것 없이 몸을 떼더니 서로를 바라보며 미소지었다.
+				PRINTFORMW 언제까지고 여기 이렇게 누워있을 수만도 없으니, %조사처리(CALLNAME:MASTER,"는")% 아쉬움을 남긴 채 방을 뒤로했다….
+			ENDIF
+		ENDIF
+	ELSE
+		PRINTFORMW 둘은 후끈 달아오른 몸으로 침대에 기어들어가 {LOCAL}번 몸을 섞었다….
+		;무척 멋진 식후의 운동 레즈비언편(TFLAG:99 == 3으로 레즈비언)
+		CALL SELF_KOJO, TARGET, 112, 3
+		PRINTL 
+		;레즈비언 경험
+		CALL COMMON_UP_EXP, TARGET, 12, LOCAL, 0
+		;C조율 경험
+		CALL COMMON_UP_EXP, TARGET, 41, LOCAL, 0
+		;쾌C의 주
+		CALL COMMON_UP_JUEL, TARGET, 0, (LOCAL*150), 0
+		;습득의 주
+		CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL*100), 0
+		;욕정의 주
+		CALL COMMON_UP_JUEL, TARGET, 13, (LOCAL*200), 0
+		;굴복의 주
+		CALL COMMON_UP_JUEL, TARGET, 14, (LOCAL*200), 1
+		IF ABL:0+ABL:10+ABL:13 >= 13 || CFLAG:2 > 700
+			PRINTFORMW 이윽고 %조사처리(CALLNAME:MASTER,"와")% %조사처리(CALLNAME:TARGET,"는")% 누가 먼저라 할 것 없이 몸을 떼더니 서로를 바라보며 미소지었다.
+			PRINTFORMW 언제까지고 여기 이렇게 누워있을 수만도 없으니, %조사처리(CALLNAME:MASTER,"는")% 아쉬움을 남긴 채 방을 뒤로했다….
+		ENDIF
+	ENDIF
+ELSE
+	GOTO SELECT_POINT_EXERCISE
+ENDIF
+TFLAG:202 = 0

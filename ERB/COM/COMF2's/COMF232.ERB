@@ -1,0 +1,223 @@
+﻿;=============================================================================
+;애널 피스트
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE232
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:232 > 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조교 대상のＡ확장경험이 ない場合には, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:33 <= 1
+	RETURN 0
+;작은 체형なら순종이 4이상かつ마조끼が4이상じゃないと実行できない
+IF TALENT:128
+	SIF ABL:10 < 4 || ABL:21 < 4
+		RETURN 0
+ENDIF
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;ASSI일 경우, 순종3이상이거나 새드じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:81 == 0
+		RETURN 0
+ENDIF
+;일정의 Ａ경험이 필요([巨躯]の場合は軽減)
+LOCAL = (TALENT:129) ? 75 # 150
+SIF EXP:1 < LOCAL
+	RETURN 0
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;쿠스코 채웠으면 불가
+SIF TEQUIP:21
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM232
+PRINTL 애널 피스트
+TSTR:0 = 애널 피스트
+CALL TRAIN_MESSAGE_COM232
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 600
+DOWNBASE:1 += 300
+
+SOURCE:20 = 1200
+SOURCE:12 = 1200
+SOURCE:22 = 1200
+SOURCE:31 = 1200
+SOURCE:17 = 1200
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 10
+	SOURCE:11 = 10
+	SOURCE:22 += 100
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 30
+	SOURCE:11 = 30
+	SOURCE:22 += 700
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 500
+	SOURCE:11 = 100
+	SOURCE:22 += 1500
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 1000
+	SOURCE:11 = 200
+	SOURCE:22 += 3000
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1700
+	SOURCE:11 = 450
+	SOURCE:22 += 5000
+ELSE
+	SOURCE:2 = 2200
+	SOURCE:11 = 750
+	SOURCE:22 += 8000
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.10
+	SOURCE:20 += 20000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 0.30
+	SOURCE:20 += 12000
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 0.50
+	SOURCE:20 += 5000
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 1800
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 1000
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 += 600
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 10000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 3600
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 1200
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 200
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:22 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:22 , 1.20
+ELSE
+	TIMES SOURCE:2 , 1.40
+	TIMES SOURCE:22 , 1.40
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+SIF EXP:33 == 0
+	TCVAR:50 += 1
+TCVAR:1 += 25
+TCVAR:33 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM232
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF ASSIPLAY == 0
+	PRINTFORML %CALLNAME:TARGET%의 항문은 %CALLNAME:MASTER%의 주먹으로 휘저어졌다.
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 항문은 %CALLNAME:ASSI%의 주먹으로 휘저어졌다.
+ENDIF
+PRINTL
+IF ABL:2 <= 1
+	PRINTFORMW %CALLNAME:TARGET%의 항문은 경련하고 있는 것 같이 벌름거린다.
+ELSEIF ABL:2 == 2
+	PRINTFORMW %CALLNAME:TARGET%의 항문은 뻐끔 입을 열고 있다.
+ELSEIF ABL:2 == 3
+	PRINTFORMW %CALLNAME:TARGET%의 항문은 벌려진 채로 좀처럼 돌아오지 않는다.
+ELSEIF ABL:2 == 4
+	PRINTFORML %CALLNAME:TARGET%의 항문에서는 장벽의 살들이 밀려나와,
+	PRINTFORMW 뱃속이 훤히 보이게 되어있다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자신의 항문을 손가락으로 벌리며 황홀해 하고 있다.
+ENDIF

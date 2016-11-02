@@ -1,0 +1,200 @@
+﻿;=============================================================================
+;시간 정지
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE418
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:418 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;YASAIモードか, 咲夜さん · 輝夜姫専用
+IF TALENT:PLAYER:831
+	SIF FLAG:574 < 3000
+		RETURN 0
+ELSEIF NO:PLAYER != 9 && NO:PLAYER != 30
+	RETURN 0
+ENDIF
+;実行者の기력이 100이하だと実行できない
+SIF BASE:PLAYER:1 <= 100
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:71
+	RETURN 1
+;이미 실행 중이면 불가
+SIF TFLAG:140 & 16
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM418
+IF TALENT:PLAYER:831
+	IF TEQUIP:71
+		PRINTL 볼텍스
+		TSTR:0 = 볼텍스
+	ELSE
+		PRINTFORML 야채 수：{FLAG:574} 
+		PRINTL 시간 정지를 실행하려면, 3000개의 야채를 소비할 필요가 있습니다.
+		PRINTL 시간 정지를 실행합니까?
+		PRINTL [0] 네
+		PRINTL [1] 아니오
+
+		$INPUT_LOOP
+		INPUT
+		IF RESULT == 1
+			RETURN 0
+		ELSEIF RESULT == 0
+			FLAG:574 -= 3000
+		ELSE
+			GOTO INPUT_LOOP
+		ENDIF
+
+		PRINTL 퀵타임
+		TSTR:0 = 퀵타임
+	ENDIF
+ELSEIF NO:PLAYER == 9
+	PRINTL 프라이빗 스퀘어
+	TSTR:0 = 프라이빗 스퀘어
+ELSEIF TEQUIP:71
+	PRINTL 영야 되돌리기
+	TSTR:0 = 영야 되돌리기
+ELSE
+	PRINTL 시간 정지
+	TSTR:0 = 시간 정지
+ENDIF
+CALL TRAIN_MESSAGE_COM418
+
+;멈춘 시간이 움직이기 시작한다
+IF TEQUIP:71
+	TEQUIP:71 = 0
+	TFLAG:158 = -1
+	TFLAG:251 = 1
+	TFLAG:140 |= 16
+
+	TIMES TFLAG:280 , 1.50
+	TIMES TFLAG:281 , 1.50
+	TIMES TFLAG:282 , 1.50
+
+	TIMES TFLAG:298 , 1.20
+	TIMES TFLAG:299 , 1.20
+
+	DOWNBASE:0 += TFLAG:298
+	DOWNBASE:1 += TFLAG:299
+
+	FOR LOCAL, 0, 33
+		LOCAL:1 = LOCAL + 250
+		SOURCE:LOCAL += TFLAG:(LOCAL:1)
+	NEXT
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 0
+
+TEQUIP:71 = 1
+TFLAG:158 = PLAYER
+
+RETURN 1
+
+;-------------------------------------------------
+;시간 정지중
+;-------------------------------------------------
+;때 멈춤중은 모든 파라미터(parameter)가 들어가지 않게
+@EQUIP_COM418
+IF NO:(TFLAG:158) == 9
+	PRINT <프라이빗 스퀘어 발동 중>
+ELSEIF NO:(TFLAG:158) == 30
+	PRINT <영야 되돌리기 발동 중>
+ELSE
+	PRINT <시간 정지 중>
+ENDIF
+DOWNBASE:0 += 15
+DOWNBASE:1 += 15
+
+TFLAG:298 += DOWNBASE:0
+TFLAG:299 += DOWNBASE:1
+
+DOWNBASE:0 = 0
+DOWNBASE:1 = 0
+
+FOR LOCAL , 0 , 33
+	LOCAL:1 = LOCAL + 250
+	TFLAG:(LOCAL:1) += SOURCE:LOCAL
+	SOURCE:LOCAL = 0
+NEXT
+
+;사용한 캐릭터의 기력을 저하시킨다.
+BASE:(TFLAG:158):1 = MAX(BASE:(TFLAG:158):1 - 100, 0)
+
+PRINTFORML 　실행자 나머지 기력：{BASE:(TFLAG:158):1}>
+
+RETURN 1
+
+;-------------------------------------------------
+;시간 정지의 강제 해제
+;시간 정지중에 체력 조각으로 조교 종료하지 않게 하는 처리
+;-------------------------------------------------
+@TIMESTOP_RELEASE
+TEQUIP:71 = 0
+TFLAG:158 = -1
+TFLAG:251 = 1
+TFLAG:140 |= 16
+
+TIMES TFLAG:280 , 1.50
+TIMES TFLAG:281 , 1.50
+TIMES TFLAG:282 , 1.50
+
+TIMES TFLAG:298 , 1.20
+TIMES TFLAG:299 , 1.20
+
+DOWNBASE:0 += TFLAG:298
+DOWNBASE:1 += TFLAG:299
+
+FOR LOCAL, 0, 33
+	LOCAL:1 = LOCAL + 250
+	SOURCE:LOCAL += TFLAG:(LOCAL:1)
+NEXT
+PRINTFORMW 실행자의 기력이 다해 버려, 시간 정지가 강제 해제되어 버렸습니다.
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM418
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:71
+	;소밤응의 프라이빗 스퀘어
+	IF NO:PLAYER == 9
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 시간과 공간을 조종하는 정도의 힘을 멈춰서
+		PRINTFORMW %CALLNAME:TARGET%의 시간을 재개시켰다….
+	;휘야희님의 영야반환
+	ELSEIF NO:PLAYER == 30
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 영원과 찰나를 조종하는 정도의 힘을 멈춰서
+		PRINTFORMW %CALLNAME:TARGET%의 시간을 돌려주었다….
+	;YASAI 모드 전용 시간 정지
+	ELSE
+		PRINTW 그리고 시간은 다시 흐르기 시작한다.
+	ENDIF
+ELSE
+	;소밤응의 프라이빗 스퀘어
+	IF NO:PLAYER == 9
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 시간과 공간을 조종하는 정도의 힘을 해방해,
+		PRINTFORMW %CALLNAME:TARGET%의 시간을 멈추어 버렸다….
+	;휘야희님의 영야반환
+	ELSEIF NO:PLAYER == 30
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 영원과 찰나를 조종하는 정도의 힘을 해방해,
+		PRINTFORMW %CALLNAME:TARGET%의 시간을 빼앗아 가 버렸다….
+	;YASAI 모드 전용 시간 정지
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%의 시간을 멈추었다.
+	ENDIF
+ENDIF

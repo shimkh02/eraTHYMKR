@@ -1,0 +1,251 @@
+﻿;=============================================================================
+;개에게 범하게 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE381
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:381 > 0
+	RETURN 0
+;獣姦系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8192) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;初体験のときは이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF (FLAG:25 & 1) == 0 && FLAG:2 & 4
+	RETURN 0
+;動物小屋と犬が필요
+SIF (FLAG:72 & 1) == 0 || (FLAG:72 & 2) == 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;主人に금단의 지식か狂気がないとダメ
+SIF TALENT:MASTER:56 == 0 && TALENT:MASTER:158 == 0
+	RETURN 0
+;소인체형だとダメ
+SIF TALENT:127
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;후배위를 바탕으로 작성. 다만, 개는요 상당히 굉장한 섹스 할게?
+;또한 사정 케이지 보지 않지만, 개는 반드시 사정합니다. 그것도 복수.
+@COM381
+PRINTL 개로 범한다
+TSTR:0 = 개에게 범하게 한다
+CALL TRAIN_MESSAGE_COM381
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 80
+DOWNBASE:1 += 200
+
+SOURCE:12 = 800
+SOURCE:19 = 880
+SOURCE:21 = 350
+SOURCE:30 = 13800
+SOURCE:31 = 40000
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 200
+	SOURCE:22 = 500
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 750
+	SOURCE:22 = 1500
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 2000
+	SOURCE:22 = 2500
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 5000
+	SOURCE:22 = 3500
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 8500
+	SOURCE:22 = 6000
+ELSE
+	SOURCE:1 = 11000
+	SOURCE:22 = 8500
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 = 10000
+	TCVAR:50 += 1
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 440
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 60
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 = 10
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 = 5
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 900
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 250
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;정조관념
+IF TALENT:30
+	IF TALENT:0 == 1
+		SOURCE:32 = 10000
+	ELSE
+		SOURCE:32 = 1000
+	ENDIF
+;정조무구애
+ELSEIF TALENT:31
+	IF TALENT:0 == 1
+		SOURCE:32 = 300
+	ENDIF
+ELSE
+	SIF TALENT:0 == 1
+		SOURCE:32 = 3000
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.20
+ELSE
+	TIMES SOURCE:1 , 1.50
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:32 , 1.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:32 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:32 , 0.60
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:32 , 0.30
+ENDIF
+
+;고양이혀 소유는 트라우마와 일탈 증가
+IF TALENT:54
+	TIMES SOURCE:31 , 2.0
+	SOURCE:25 = 2000
+ENDIF
+
+;노예의 V에 정액과 P의 더러움이 붙는다
+STAIN:3 |= 2
+STAIN:3 |= 4
+
+TCVAR:0 += 1
+IF (CFLAG:25 & 1) == 0
+	CFLAG:25 |= 1
+	TCVAR:50 += 1
+ENDIF
+TCVAR:56 += 2
+
+;커맨드 속성：수간
+TFLAG:98 = 9
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM381
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 개를 데려왔다. 그리고 육봉을 발기시킨 수캐는
+PRINTFORM 뒤로부터 %CALLNAME:TARGET%의 
+IF TALENT:0 == 1
+	PRINT 아직 남자를 모르는 
+ELSEIF PALAM:10 >= PALAMLV:4
+	PRINT 흥건하게 젖어있는 
+ENDIF
+SIF EX:21
+	PRINT 안타깝게 벌름거리는 
+PRINTFORML \@(TALENT:128) ? 어린 균열# 보지\@의 안쪽 깊이 찔러 넣었다.
+PRINTFORMW 그리고, 흥분했는지 우렁차게 짖으면서, %CALLNAME:TARGET%의 안에 정자를 쏟아 부었다….

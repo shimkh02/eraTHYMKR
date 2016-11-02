@@ -1,0 +1,245 @@
+﻿;[라이센스] 퍼블릭 도메인
+;본 파일에 관계된 저작권을 포기한다.
+;본 파일에 관계된 저작인격권은 행사하지 않는다.
+;2009/3/28 MinorShift(Emuera 제작자)
+
+;독자적인 세이브 · 로드 시스템의 예 (Emuera  ver 1.50 이후 대상)
+;LOADGAME 대신에 CALL LOADGAME_EX、SAVEGAME 대신에 CALL SAVEGAME_EX를 실행해주세요.
+;실제로 사용하려면 옛날 @SAVEINFO에 맞추어 @SAVEINFO_EX를 편집할 필요가 있습니다.
+;사용하고 있는 명령의 자세한 내용에 관해서는 Emuera의확장문법.txt를 참조해주세요.
+;
+
+;＊여기서부터 개조 사항.
+;・기가사의 야겜 풍미로 인터페이스를 조정.
+;・자동 세이브를 10개로 확장. GLOBAL 변수(0번) 사용.
+
+@SAVEGAME_EX
+LOCAL = 0
+
+$LIST_LOOP
+PRINTL 어디에 저장하겠습니까?
+
+CALL PRINT_SAVEDATA, LOCAL, 0
+
+PRINTL [100] 돌아가기          [101] 이전 페이지  [102] 다음 페이지
+
+$INPUT_LOOP
+INPUT
+
+IF (RESULT == 100)
+	RETURN
+ELSEIF RESULT == 101 || RESULT == 102
+	IF RESULT == 101
+		LOCAL -= 1
+		SIF LOCAL < 0
+			LOCAL = 8
+	ELSE
+		LOCAL += 1
+		SIF LOCAL > 8
+			LOCAL = 0
+	ENDIF
+	GOTO LIST_LOOP
+ELSEIF RESULT < LOCAL * 10 || RESULT >= (LOCAL + 1) * 10
+	REUSELASTLINE 
+	GOTO INPUT_LOOP
+ELSE
+	LOCAL:1 = RESULT
+	CHKDATA LOCAL:1
+	;RESULT == 1은 "파일이 없음"
+	IF RESULT != 1
+		PRINTL 이미 데이터가 존재합니다. 덮어쓰겠습니까?
+		PRINTLC [0] 예
+		PRINTLC [1] 아니오
+		PRINTL
+		$INPUT_LOOP_2
+		INPUT
+		IF RESULT == 1
+			GOTO LIST_LOOP
+		ELSEIF RESULT != 0
+			GOTO INPUT_LOOP_2
+		ENDIF
+	ENDIF
+	GLOBAL:0 = GLOBAL:0 / 100 * 100 + LOCAL:1
+	SAVEGLOBAL
+	SAVEDATA LOCAL:1, SAVEINFO_EX()
+	
+	;토리코모드용 추가부분---------------------
+	;현재의 오토세이브 옵션을 불러온다.
+	CALL DECODE_SAVEINFO_TORIKOMODE
+	;오토세이브가 켜져있다면
+	IF RESULT:1 == 1
+		;저장위치를 바꿔준다.
+		FLAG:5002 = FLAG:5002 - (FLAG:5002 % 100) + LOCAL:1
+		PRINTFORMW <<오토세이브 작동중 : 앞으로 [{LOCAL:1}]번 슬롯에 자동 저장합니다.>>
+	ELSE
+	ENDIF
+	;추가부분 종료---------------------
+
+ENDIF
+
+@LOADGAME_EX
+LOADGLOBAL
+
+LOCAL = 0
+$LIST_LOOP
+PRINTL 어떤 걸 불러오겠습니까?
+
+CALL PRINT_SAVEDATA, LOCAL, 1
+
+PRINTL [100] 돌아가기     [101] 이전 페이지  [102] 다음 페이지  
+
+$INPUT_LOOP
+INPUT
+
+IF (RESULT == 100)
+	RETURN
+ELSEIF (RESULT == 101 || RESULT == 102)
+	IF RESULT == 101
+		LOCAL -= 1
+		SIF LOCAL < 0
+			LOCAL = 9
+	ELSE
+		LOCAL += 1
+		SIF LOCAL > 9
+			LOCAL = 0
+	ENDIF
+	GOTO LIST_LOOP
+ELSEIF RESULT < LOCAL * 10 || RESULT >= (LOCAL + 1) * 10
+	REUSELASTLINE 
+	GOTO INPUT_LOOP
+ELSE
+	LOCAL = RESULT
+	CHKDATA LOCAL
+	;RESULT == 0이라면 로드 가능
+	IF (RESULT != 0 && RESULT != 3)
+		GOTO INPUT_LOOP
+	ENDIF
+	LOADDATA LOCAL
+ENDIF
+
+@PRINT_SAVEDATA, ARG:0, ARG:1
+FOR LOCAL, ARG:0 * 10, (ARG:0 + 1) * 10, 1
+	CHKDATA LOCAL
+;	마지막에 갱신된 게 어느 것인지를 표시.
+	IF RESULT != 1 && ((ARG:0 < 9 && GLOBAL:0 % 100 == LOCAL) || (ARG:0 == 9 && (!(GLOBAL:0 / 100) ? 9 # GLOBAL:0 / 100 - 1) == LOCAL - 90))
+		SETCOLOR 102, 255, 255
+		PRINT >
+	ELSE
+		PRINT  
+	ENDIF
+;	버전이 달라도 일단 읽어들이는 건 가능하도록.
+	IF ARG:1 && (RESULT == 1 || RESULT == 2 || RESULT == 4)
+		SETCOLOR 255, 191, 191
+		PRINTFORM -{ LOCAL, 2, RIGHT }-
+     
+	ELSE
+		SETCOLOR 191, 191, 255
+;	마지막에 갱신된 게 어느 것인지를 표시.
+	SIF RESULT != 1 && ((ARG:0 < 9 && GLOBAL:0 % 100 == LOCAL) || (ARG:0 == 9 && (!(GLOBAL:0 / 100) ? 9 # GLOBAL:0 / 100 - 1) == LOCAL - 90))
+		SETCOLOR 102, 255, 255
+		PRINTFORM [{ LOCAL, 2, RIGHT }] 
+	ENDIF
+	
+	IF RESULT == 1
+		PRINTFORML % "파일이 없습니다", 47, RIGHT %
+	ELSEIF RESULT == 2
+		PRINTFORML % "다른 타이틀의 세이브 파일입니다", 53, RIGHT %
+	ELSEIF RESULT == 4
+		PRINTFORML % "읽을 수 없는 형식의 파일입니다", 51, RIGHT %
+	ELSE
+		PRINTFORML % RESULTS %
+	ENDIF
+
+	RESETCOLOR
+NEXT
+
+@SAVEINFO_EX
+#FUNCTIONS
+;	SAVEDATA 명령은 @SAVEINFO 함수를 부르지 않으므로 PUTFORM 대신의 문자열을 준비할 필요가 있다
+
+	GETTIME
+	LOCALS = %RESULTS% {DAY,4,RIGHT}일째 \@ !TIME ? 낮 # 밤 \@ 
+	SIF FLAG:4 == 2
+		LOCALS = %LOCALS% 주인:%CALLNAME:MASTER% 
+	SIF TARGET >= 0
+		LOCALS = %LOCALS% %NAME:TARGET% \@ (TALENT:152 || TALENT:153) ? 열애중 # 조교중 \@
+	IF TALENT:MASTER:998
+		LOCALS = %LOCALS% DEBUG     
+	ELSEIF TALENT:MASTER:831
+		LOCALS = %LOCALS% YASAI     
+	ELSEIF FLAG:4 == 1
+		LOCALS = %LOCALS% ABNORMAL  
+	ELSEIF FLAG:4 == 2
+		LOCALS = %LOCALS% EXTRA     
+	ELSEIF FLAG:4 == 3
+		LOCALS = %LOCALS% REVERSAL  
+	ELSEIF FLAG:4 == 4
+		LOCALS = %LOCALS% PROSTITUTE
+	ELSEIF FLAG:4 >= 50
+		LOCALS = %LOCALS% CHALLENGE 
+	ELSE
+		LOCALS = %LOCALS% eratohoYM 
+	ENDIF
+	;ＰＬＨＥＮ의 표기를 변경
+	IF FLAG:3 == 7
+		LOCALS = %LOCALS% 울트라 
+	ELSEIF FLAG:3 == 6
+		LOCALS = %LOCALS% 프로 
+	ELSEIF FLAG:3 == 5
+		LOCALS = %LOCALS% 판타즘 
+	ELSEIF FLAG:3 == 4
+		LOCALS = %LOCALS% 루나틱 
+	ELSEIF FLAG:3 == 3
+		LOCALS = %LOCALS% 하드 
+	ELSEIF FLAG:3 == 2
+		LOCALS = %LOCALS% 노멀 
+	ELSEIF FLAG:3 == 1
+		LOCALS = %LOCALS% 이지 
+	ELSE
+		LOCALS = %LOCALS% 수수께끼 
+	ENDIF
+	SIF FLAG:4 == 0 || FLAG:4 == 1
+		LOCALS = %LOCALS% ({FLAG:6}회차)
+	SIF FLAG:5 & 1
+		LOCALS = %LOCALS% ∞
+
+	;노모어 글레이즈 옵션 판정
+	IF (FLAG:5002)/1000 == 1
+		LOCALS = %LOCALS% <NO MORE GLAZE>
+	ELSEIF (FLAG:5002)/1000 == 2
+		LOCALS = %LOCALS% <GAMEOVER>
+	ENDIF
+	
+	RETURNF LOCALS
+
+@TITLE_LOADGAME
+;타이틀 화면의 로드로도 독자적인 로드 화면을 사용할 경우, @TITLE_LOADGAME을 정의한다
+;@TITLE_LOADGAME이 정의되어 있으면, 표준의 로드 화면 대신에 TITLE_LOADGAME이 불린다.
+CALL LOADGAME_EX
+RETURN
+;RETURN하면 타이틀로 돌아간다.
+
+@SYSTEM_AUTOSAVE
+;오토 세이브의 처리를 독자적으로 행할 경우, @SYSTEM_AUTOSAVE를 정의한다
+;@SYSTEM_AUTOSAVE가 정의되어 있으면, 표준의 오토 세이브 대신에 SYSTEM_AUTOSAVE가 불린다.
+
+;노모어글레이즈 상태로는 저장되지 않는다.
+IF FLAG:5002 >= 1000
+	;
+ELSE
+	;글로벌 변수로 자동 세이브의 번호 확인.
+	LOADGLOBAL
+
+	LOCAL = GLOBAL:0 % 100
+	GLOBAL:0 /= 100
+
+	SAVEDATA (90 + GLOBAL:0), SAVEINFO_EX()
+
+	GLOBAL:0 += 1
+	SIF GLOBAL:0 > 9
+		GLOBAL:0 = 0
+
+	GLOBAL:0 = GLOBAL:0 * 100 + LOCAL
+
+	SAVEGLOBAL
+ENDIF

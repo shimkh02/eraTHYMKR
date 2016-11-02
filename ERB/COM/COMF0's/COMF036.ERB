@@ -1,0 +1,326 @@
+﻿;=============================================================================
+;조수의 A를 범한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE36
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:36 > 0
+	RETURN 0
+;조수가 없으면 안 됨
+SIF ASSI < 0
+	RETURN 0
+;A조교 필터가 오프가 되지 않으면 안 됨
+SIF FLAG:2 & 2
+	RETURN 0
+;주인이 아니면 안 됨
+SIF ASSIPLAY
+	RETURN 0
+;주인에게 페니스가 없는, 한편(아이템 있음 설정이라면) 페니스 밴드도 없으면 안 됨
+SIF EXIST_BAR(MASTER) == 0 && ITEM:2 == 0 && NOITEM == 0
+	RETURN 0
+;주인이 [금단의 지식] 소유가 아닐 때, 체격차이가 2 단계 이내나 조교자가 [금단의 지식] 소유가 아니면 안 됨
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, ASSI) == 0
+	RETURN 0
+;조수에 일정한 A경험이 필요
+SIF EXP:ASSI:1 < EXPLV:3
+	RETURN 0
+;대상과 조수의 궁합이 좋지 않으면 안 됨
+SIF RELATION:(NO:ASSI) <= 100
+	RETURN 0
+;수면중은 불가(그다지 의미가 없기 때문에)
+SIF EQUIP:14
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;줄사용중이나 순종이 4이상 없으면 안 됨
+SIF TEQUIP:40 == 0 && ABL:10 < 4
+	RETURN 0
+;목욕탕 플레이중은 플레이 매트가 없으면 안 됨
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;조수가 훈도시 착용중의 경우 주인의 기교 4이상 필수
+SIF ASSI >= 0 && TEQUIP:ASSI:59 == 17 && ABL:MASTER:12 < 4
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM36
+PRINTL 조수의 A를 범한다
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 조수의 A를 범한다
+CALL TRAIN_MESSAGE_COM036
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:ASSI:12 == 0
+	LOCAL = 50
+ELSEIF ABL:ASSI:12 == 1
+	LOCAL = 300
+ELSEIF ABL:ASSI:12 == 2
+	LOCAL = 800
+ELSEIF ABL:ASSI:12 == 3
+	LOCAL = 1500
+ELSEIF ABL:ASSI:12 == 4
+	LOCAL = 2000
+ELSE
+	LOCAL = 3200
+ENDIF
+
+;조수의 순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(ASSI, LOCAL)
+;조수의 봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(ASSI, LOCAL)
+;조수의 A감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_2_1(ASSI, LOCAL)
+;조수의 A경험을 본다
+LOCAL = EJACULATIONCHECK_EXP_1_1(ASSI, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 300
+
+DOWNBASE:ASSI:0 += 80
+DOWNBASE:ASSI:1 += 60
+
+SOURCE:11 = 1500
+SOURCE:31 = 800
+
+;ABL:욕망을 본다
+IF ABL:11 == 0
+	SOURCE:19 = 100
+	SOURCE:22 = 3200
+ELSEIF ABL:11 == 1
+	SOURCE:19 = 200
+	SOURCE:22 = 3800
+ELSEIF ABL:11 == 2
+	SOURCE:19 = 350
+	SOURCE:22 = 4600
+ELSEIF ABL:11 == 3
+	SOURCE:19 = 600
+	SOURCE:22 = 5400
+ELSEIF ABL:11 == 4
+	SOURCE:19 = 850
+	SOURCE:22 = 6200
+ELSE
+	SOURCE:19 = 1200
+	SOURCE:22 = 7000
+ENDIF
+
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	TIMES SOURCE:11 , 0.10
+	TIMES SOURCE:19 , 0.50
+ELSEIF ABL:13 == 1
+	TIMES SOURCE:11 , 0.40
+	TIMES SOURCE:19 , 0.80
+ELSEIF ABL:13 == 2
+	TIMES SOURCE:11 , 0.70
+	TIMES SOURCE:19 , 1.00
+ELSEIF ABL:13 == 3
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:19 , 1.50
+ELSEIF ABL:13 == 4
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:19 , 2.00
+ELSE
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:19 , 2.50
+ENDIF
+TCVAR:ASSI:1 += 1
+SIF TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1
+	CFLAG:ASSI:174 += 1
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 1
+		TIMES SOURCE:22, 1.20
+	ELSEIF ABL:31 == 2
+		TIMES SOURCE:22, 1.50
+	ELSEIF ABL:31 == 3
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 4
+		TIMES SOURCE:22, 2.50
+	ELSE
+		TIMES SOURCE:22, 3.00
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 15
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+IF TALENT:MASTER:120 || TALENT:MASTER:121
+;주인의 P⇔조수의 A의 불결이 이동
+	STAIN:MASTER:2 |= STAIN:ASSI:4
+	STAIN:ASSI:4 |= STAIN:MASTER:2
+ENDIF
+
+IF TALENT:MASTER:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:ASSI:12 += 10
+ELSEIF TALENT:MASTER:120 && TALENT:ASSI:120
+	TCVAR:ASSI:13 += 10
+ENDIF
+
+TCVAR:ASSI:98 += 1
+
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_36
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM036
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;전회의 조교가 조수의 A를 범하는이어, 뽑지 않는 플래그가 있는 경우
+IF TFLAG:102 && PREVCOM == 36
+	PRINTFORMW %CALLNAME:TARGET%에게 과시하면서, %CALLNAME:ASSI%의 애널을 계속 범했다….
+ELSE
+	PRINTFORM %CALLNAME:TARGET%에게 과시하면서, \@(MARK:ASSI:9 > 1) ? 싫어하는 # \@%CALLNAME:ASSI%의 
+	PRINTFORMW 애널을 \@(MARK:ASSI:9 > 1) ? 억지로 # \@ 꿰뚫었다….
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_36, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+;※조수 파라 관련의 숙제
+;조수의 PALAM:윤활(의 부족)
+;IF PALAM:ASSI:10 < PALAMLV:3
+;	RESULTS = %RESULTS% - 
+;	LOCAL:99 = 5
+;	TFLAG:240 -= LOCAL:99
+;	RESULTS = %RESULTS% 조수의 윤활 부족({LOCAL:99})
+;ENDIF
+;조수의 ABL:A감각
+IF ABL:ASSI:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:ASSI:2
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% 조수의 A감각 LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+;조수가 음고
+IF TALENT:ASSI:173
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 음고({LOCAL:99})
+ENDIF
+;조수의 ABL:노출벽
+IF ABL:ASSI:14
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:ASSI:14
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% 조수의 노출벽 LV{LOCAL:99}({LOCAL:99 * 2})
+	LOCAL:99 = 1
+ENDIF
+
+;조수가 연모
+IF TALENT:ASSI:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 연모({LOCAL:99})
+ENDIF
+
+TFLAG:241 = 40

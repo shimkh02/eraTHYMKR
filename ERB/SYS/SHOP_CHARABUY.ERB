@@ -1,0 +1,434 @@
+﻿;=====================================================================
+;대인원수 대응 캐릭터 구입 처리 Emuera 재구성판
+;=====================================================================
+;함수의 설명-----------------------------------------------------------
+;@CHARA_BUY                SHOP.ERBから呼び出される奴隷購入の本処理
+;@CHARA_BUY_AFTER          SHOP.ERBに戻る直前に必ず通る奴隷以外のITEMの再陳列の処理
+;@CHARA_BUY_PRICE          奴隷の値段をITEMPRICEから読み取る処理
+;@CHARA_BUY_RESET          盛大に汚した一文字変数を綺麗(0)に
+
+;여기서 사용하는 변수---------------------------------------------------
+;ITEMSALES:n ＝購入可能かの判定.購入可能な場合, キャラの値段が代入される
+;LOCAL:0 値段表示のために使用
+;LOCAL:1 購入処理のアイテム番号(霊夢なら101)
+;LOCAL:2 購入処理のキャラ番号　(霊夢なら1)
+;LOCAL:3 どこまで陳列したか
+;LOCAL:4 大人買いモード判別用　(1:購入後大人買いするかの選択肢が出る)
+@CHARA_BUY_MAIN
+;변수의 리셋
+VARSET LOCAL, 0
+
+$CHARA_BUY_PAGE
+;対象の価格・購入可否を調べる.購入可能な場合のみ, ITEMSALES:nに値段を入れて返ってくる
+;토리코모드 - 경비 시스템
+IF FLAG:5003 & 2
+	CALL CHARA_BUY_PRICE_TORIKOMODE
+;일반모드
+ELSE
+	CALL CHARA_BUY_PRICE
+ENDIF
+
+;구입 가능한 캐릭터 수를 조사해, 표시 페이지의 값을 결정
+LOCAL:12 = 0
+FOR COUNT, 100, 600
+	SIF ITEMSALES:COUNT == 0
+		CONTINUE
+
+	;전용 대사가 있는지를 검색한다
+	RESULT = 0
+	TRYCALLFORM TRY_{COUNT-100}
+	CALLF SET_LIST, COUNT, RESULT
+
+	LOCAL:12 += 1
+NEXT
+LOCAL:11 = (LOCAL:12 - 1) / 30
+
+;ページをめくったときなどはここから
+$PRINT_LIST
+;購入メニュー描画処理
+DRAWLINE
+PRINTFORM {DAY}일째\@(TIME == 0) ? (낮) # (밤)\@
+SIF TARGET >= 0
+	PRINTFORM  %CALLNAME:TARGET% 조교중
+SIF ASSI >= 0
+	PRINTFORM  (조수：%CALLNAME:ASSI%)
+PRINTL 
+IF CALC_SLAVE_CAPACITY() - CHARANUM <= 0 || MONEY <= 0
+	PRINTFORML 더 이상 노예를 구입할 수 없습니다.
+	DRAWLINE
+ELSE
+	PRINTFORML 누구를 구입하겠습니까? (소지금{MONEY}원) ＜page.{LOCAL:10+1}/{LOCAL:11+1}＞
+	DRAWLINE
+	LOCAL:3 = 0
+	FOR COUNT, 100, 600
+		;ITEMSALES:n(선택 가부)이 0일 경우에는 제외
+		SIF ITEMSALES:COUNT == 0
+			CONTINUE
+		;어디서부터 어디까지를 진열할까
+		LOCAL:3 += 1
+		IF LOCAL:3 <= (LOCAL:10 + 1) * 30 && LOCAL:3 > LOCAL:10 * 30
+			LOCAL = ITEMSALES:COUNT
+			;전용 대사가 존재한다
+			SIF GET_LIST(COUNT) == 1
+				FONTBOLD
+			;시리즈에 따른 칼라 표시 추가. 토리코 모드 사양.
+			SIF FLAG:5003 & 2 
+				CALL CHARA_BUY_COLOR_TORIKOMODE, COUNT
+			;오리지날
+			PRINTFORMLC [{COUNT}] %ITEMNAME:COUNT%(%SHOW_YEN(LOCAL)%)
+			FONTREGULAR
+			RESETCOLOR
+		ENDIF
+	NEXT
+	IF MONEY >= 500 && (FLAG:570 & 2) == 0
+		PRINTLC [95] 액봉투(랜덤)
+		PRINTLC [96] 아무거나(매번 다름)
+	ENDIF
+	PRINTLC [97] 오늘의 추천(200원)
+	PRINTLC [98] 무명 캐릭터 랜덤(500원)
+ENDIF
+SIF (FLAG:570 & 2) == 0
+	PRINTFORMLC [99] 무명 캐릭터 대량 구매 설정(현재:\@(LOCAL:4 == 0) ? 무효 # 유효\@)
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL:10 <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL:10 >= LOCAL:11) ? %" " * 16% # [1009] 다음페이지로\@
+
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	CALL CHARA_BUY_AFTER
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL:10 > 0
+	LOCAL:10 -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL:10 < LOCAL:11
+	LOCAL:10 += 1
+	GOTO PRINT_LIST
+;名無しキャラの大人買い切り替え処理はここで行う
+ELSEIF RESULT == 99
+	IF (FLAG:570 & 2) == 0
+		PRINTFORMW 무명 캐릭터 대량 구매를 \@(LOCAL:4 == 0) ? 유효화 # 무효화\@했습니다
+		LOCAL:4 = (LOCAL:4 == 0) ? 1 # 0
+	ENDIF
+	GOTO PRINT_LIST
+ELSEIF CALC_SLAVE_CAPACITY() - CHARANUM <= 0 || MONEY <= 0
+	GOTO INPUT_LOOP
+
+;厄袋はここで処理
+ELSEIF RESULT == 95 && MONEY >= 500 && (FLAG:570 & 2) == 0
+	CALL SLAVE_BUY_YAKUBUKURO
+;何でもいいはここで処理
+ELSEIF RESULT == 96 && MONEY >= 500 && (FLAG:570 & 2) == 0
+	CALL SLAVE_BUY_ANYONE
+;今日のオススメ, ランダムはここで処理
+ELSEIF RESULT == 98 || RESULT == 97
+	CALL SLAVE_BUY_RANDOM
+ELSEIF RESULT < 100 || RESULT > 600 || ITEMSALES:RESULT == 0
+	GOTO PRINT_LIST
+ENDIF
+
+;アイテム番号とキャラ番号に選択したキャラを入れる
+LOCAL:1 = RESULT
+LOCAL:2 = LOCAL:1 - 100
+
+;最初に購入したかどうか, してなければ選んだ番号を入れる
+SIF FLAG:250 == 0
+	FLAG:250 = LOCAL:2
+
+;キャラ解説, 厄袋購入判定用
+TFLAG:201 = LOCAL:2
+;厄袋フラグがONの時は厄袋の説明.それ以外はキャラ解説を入れる
+IF TFLAG:209 == 1
+	CALL YAKUBUKURO_MANUAL
+ELSE
+	CALL CHARA_MANUAL
+ENDIF
+;いいえを選ぶと再入力
+IF TFLAG:201 == 0
+	GOTO PRINT_LIST
+;ITEMSALES:n＝値段が所持金より大きい場合再入力
+ELSEIF MONEY < ITEMSALES:(LOCAL:1)
+	PRINTL 자금이 부족합니다.
+	GOTO PRINT_LIST
+;大人買いモード時でなく, 上記処理を抜けてきた＝購入可能で所持金が売値以上
+ELSEIF LOCAL:2 >= 150 && LOCAL:2 < 200 && LOCAL:4 == 1
+	LOCALS = 
+ELSE
+	LOCALS = ＜%조사처리(CSVNAME(LOCAL:2,0),"를")% 구입했다.＞
+	MONEY -= ITEMSALES:(LOCAL:1)
+ENDIF
+
+;購入した奴隷を表記
+SIF TFLAG:209 == 1
+
+	PRINTFORML 액봉투를 열어보니 %조사처리(CSVNAME(LOCAL:2,0),"가")% 들어있었다.
+SIF LOCALS != ""
+	PRINTFORML %LOCALS%
+SIF NO:MASTER == 400 && FLAG:570 & 2
+	FLAG:570 |= 8
+
+
+IF LOCAL:2 >= 150 && LOCAL:2 < 200
+	;大人買いモード時は専用処理に飛ぶ
+	IF LOCAL:4 == 1
+		CALL SLAVE_BULK_BUYING, LOCAL:2
+	ELSE
+		CALL CHARA_INIT, LOCAL:2
+	ENDIF
+	FLAG:570 &= 55
+ELSE
+	CALL CHARA_INIT, LOCAL:2
+ENDIF
+
+;액봉투 플래그 해제
+TFLAG:209 = 0
+;페이지 수 부활
+GOTO CHARA_BUY_PAGE
+
+;-----------------------------------------------
+;캐릭터 초기화 처리
+;-----------------------------------------------
+@CHARA_INIT, ARG
+;캐릭터 추가 및 초기 설정의 처리로
+CALL CHARA_STATE_BASIC, ARG
+;구입 인원수 추가
+FLAG:39 += 1
+;입수 방법의 기록(액봉투 패치 변경 ＆추가)
+CSTR:3  = \@(TFLAG:209 == 1) ? 액봉투에 들어있었음 # 노예상에게 구입\@
+;구입된 날을 기록
+CFLAG:3111 = DAY
+
+;구입 가능한 노예의 인원수 산출
+LOCAL = CALC_SLAVE_CAPACITY() - CHARANUM
+IF ARG == 8 && FLAG:570 & 1 && LOCAL > 0
+	CALL ROYALFLARE, LOCAL
+	PRINTW  
+ELSEIF ARG == 8 && TALENT:MASTER:834
+	PRINTFORMW ＜파츄리를 구입한 덕에, 파츄리의 Spell Card를 구입할 수 있게 되었습니다＞
+ELSEIF ARG == 14
+	PRINTFORMW ＜앨리스를 구입한 덕에, 상하이 · 호라이 · 골리아테 인형을 살 수 있게 되었습니다＞
+ELSEIF ARG == 19
+	PRINTFORMW ＜요우무를 구입한 덕에, 요우무의 반령을 살 수 있게 되었습니다＞
+ELSEIF ARG == 70
+	PRINTFORMW ＜요우키를 구입한 덕에, 요우키의 반령을 살 수 있게 되었습니다＞
+ELSE
+	PRINTW  
+ENDIF
+TFLAG:201 = 0
+;다음 처리에서 TFLAG:208에 1이 들어가 있으면 ＥＸ화 선택 처리가 회피된다
+TFLAG:208 = 0
+;구입한 캐릭터의 대사에서의 특수 초기 설정 처리용 명령 호출
+CALL SET_CHARA_KOJO_EXTRA, TARGET
+;구입된 직후의 이벤트 대사 호출
+CALL SELF_KOJO, TARGET, 198
+
+;처음부터 EX(SP) 캐릭터를 구입할 수 있는 경우 있음.
+IF (ARG == 2 || ARG == 14 || ARG == 129) && TFLAG:208 == 0
+	;마리사의 경우
+	IF ARG == 2
+		PRINTFORML 처음부터 「구작 마리사」화 할 수 있다.
+		PRINTL [0] 구작 마리사화 한다
+	;앨리스의 경우
+	ELSEIF ARG == 14
+		PRINTFORML 처음부터 「꼬마 앨리스」화 할 수 있다.
+		PRINTL [0] 꼬마 앨리스화 한다
+	;히라노의 경우
+	ELSEIF ARG == 129
+		PRINTFORML 처음부터 「히라노(신 Ver.)」화 할 수 있다.
+		PRINTL [0] 히라노(신 Ver.)화 한다
+	ENDIF
+	PRINTFORML [1] %조사처리(ITEMNAME:(100+ARG),"는")% 유지한다.
+
+	DRAWLINE
+	$INPUT_LOOP
+	INPUT
+	IF RESULT != 0 && RESULT != 1
+		GOTO INPUT_LOOP
+	ELSEIF RESULT == 0
+		TFLAG:225 = 1
+		CALL EX_EVENT, TARGET
+		TFLAG:225 = 0
+	ENDIF
+ENDIF
+TFLAG:208 = 0
+
+FLAG:996 = -1
+IF TARGET >= 0
+	RESULT = -1
+	TRYCALLFORM TRY_{NO}
+	FLAG:996 = RESULT
+ENDIF
+
+;-----------------------------------------------
+;구입 후 처리
+;-----------------------------------------------
+;奴隷の陳列をすべて消す
+@CHARA_BUY_AFTER
+;アイテム・奴隷陳列フラグの削除
+VARSET ITEMSALES, 0
+
+;厄袋フラグも掃除
+TFLAG:209 = 0
+
+IF FLAG:570 & 8
+	FLAG:570 &= 55
+	FLAG:0 = 1
+	BEGIN TURNEND
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-----------------------------------------------
+;대량 구입 처리
+;-----------------------------------------------
+@SLAVE_BULK_BUYING, ARG
+LOCAL:2 = CALC_SLAVE_CAPACITY() - CHARANUM
+PRINTFORML %조사처리(ITEMNAME:(100 + ARG),"를")% 몇 명 구입하겠습니까? (1-{LOCAL:2}명)
+PRINTLC [1] 1명
+SIF LOCAL:2 >= 5
+	PRINTLC [5] 5명
+SIF LOCAL:2 >= 10
+	PRINTLC [10] 10명
+SIF LOCAL:2 != 1 && LOCAL:2 != 5 && LOCAL:2 != 10
+	PRINTFORMLC [{LOCAL:2}]명 구입
+$INPUT_LOOP_MATOME_1
+INPUT
+
+LOCAL = RESULT
+LOCAL:1 = ITEMPRICE:(100 + ARG) * LOCAL
+;20개체 이상 사면 슬쩍 1할 할인으로
+SIF LOCAL >= 20
+	TIMES LOCAL:1 , 0.90
+
+;구입 한계수를 넘으면 안 됨
+IF LOCAL > LOCAL:2
+	PRINTL 그렇게 많이 구입할 수 없습니다!
+	GOTO INPUT_LOOP_MATOME_1
+ELSEIF MONEY < LOCAL:1
+	PRINTFORML 자금이 부족합니다. (필요액{LOCAL:1}원)
+	GOTO INPUT_LOOP_MATOME_1
+ELSEIF LOCAL > 0
+	MONEY -= LOCAL:1
+ELSE
+	GOTO INPUT_LOOP_MATOME_1
+ENDIF
+
+FOR LOCAL:10, 0, LOCAL
+	CALL CHARA_INIT, ARG
+NEXT
+
+;-----------------------------------------------
+;액봉투 처리
+;-----------------------------------------------
+;ランダムに選ばれた数字をRETURNで返し, 
+;直前のRESULTの数値を強引に上書きする処理
+;↓の「何でもいいの処理」を参考に.
+@SLAVE_BUY_YAKUBUKURO
+;厄袋フラグ
+TFLAG:209 = 1
+
+$RANDOMSELECT_LOOP
+LOCAL = 101 + RAND:215
+SIF ITEMSALES:LOCAL == 0 || MONEY < ITEMSALES:LOCAL
+	GOTO RANDOMSELECT_LOOP
+RETURN LOCAL
+
+;-----------------------------------------------
+;아무거나 좋다의 처리
+;-----------------------------------------------
+;LOCALをRETURNで返し, 直前のRESULTの数値を強引に上書きする処理
+@SLAVE_BUY_ANYONE
+$RANDOMSELECT_LOOP
+LOCAL = 101 + RAND:215
+SIF ITEMSALES:LOCAL == 0 || MONEY < ITEMSALES:LOCAL
+	GOTO RANDOMSELECT_LOOP
+RETURN LOCAL
+
+;-----------------------------------------------
+;오늘의 강추
+;-----------------------------------------------
+;卿のオススメ, と掛けてあるらしい.妖精しか選ばれない筈
+;LOCALをRETURNで返し, 直前のRESULTの数値を強引に上書きする処理
+@SLAVE_BUY_RANDOM
+IF RESULT == 97
+	LOCAL = 250 + (DAY%7)*2
+	SIF LOCAL == 257 || LOCAL == 258 || LOCAL == 259
+		LOCAL += 3
+	ITEMSALES:LOCAL = 200
+ELSEIF RESULT == 98
+	$INPUT_LOOP_RANDOM
+	LOCAL = 250 + RAND:50
+	SIF ITEMPRICE:LOCAL == 0
+		GOTO INPUT_LOOP_RANDOM
+	ITEMSALES:LOCAL = 500
+ENDIF
+RETURN LOCAL
+
+;-----------------------------------------------
+;노예 가격의 처리
+;-----------------------------------------------
+;ITEMSALES:100～に各奴隷の値段を格納するが, 購入不可であるならば0になる
+@CHARA_BUY_PRICE
+;アイテム・奴隷陳列フラグの削除
+VARSET ITEMSALES, 0
+;ITEMSALES:n に値段格納
+FOR COUNT, 100, 600
+	ITEMSALES:COUNT = ITEMPRICE:COUNT
+	;IRCキャラは通常購入不可能(YASAIモード以外で主人が[地獄の勲章]持ちのときは購入可能)
+	;なお, YASAIモードの場合のこの辺のキャラは専用コマンドと処理で購入する.
+	SIF COUNT > 500 && (TALENT:MASTER:831 || TALENT:MASTER:834 == 0)
+		ITEMSALES:COUNT = 0
+NEXT
+;아나타와 자식 컷
+ITEMSALES:100 = 0
+ITEMSALES:248 = 0
+ITEMSALES:249 = 0
+;Ｓ패치 추가분. 창관 손님 컷
+ITEMSALES:246 = 0
+ITEMSALES:500 = 0
+;반령 · 상하이 인형 · 호라이 인형 · 오오에도 인형 · 골리아테 인형 · 반령(요우키) 컷
+ITEMSALES:165 = 0
+ITEMSALES:166 = 0
+ITEMSALES:167 = 0
+ITEMSALES:196 = 0
+ITEMSALES:197 = 0
+ITEMSALES:199 = 0
+;비비트를 구입하려면 신사적인 촉수의 ON과 진화의 비법을 소지하는 것이 필요하다.
+SIF (FLAG:15 & 4096) == 0 || (ITEM:59 == 0 && NOITEM == 0)
+	ITEMSALES:236 = 0
+
+;파츄리가 있으면(주인이 [지옥의 훈장] 갖고 있을 때만)
+IF GETCHARA(8) >= 0 && TALENT:MASTER:834
+	ITEMSALES:523 = ITEMPRICE:523
+	ITEMSALES:524 = ITEMPRICE:524
+	ITEMSALES:525 = ITEMPRICE:525
+	ITEMSALES:526 = ITEMPRICE:526
+	ITEMSALES:527 = ITEMPRICE:527
+	ITEMSALES:528 = ITEMPRICE:528
+	ITEMSALES:529 = ITEMPRICE:529
+ENDIF
+;앨리스가 있으면
+IF GETCHARA(14) >= 0
+	ITEMSALES:166 = ITEMPRICE:166
+	ITEMSALES:167 = ITEMPRICE:167
+	ITEMSALES:196 = ITEMPRICE:196
+	ITEMSALES:197 = ITEMPRICE:197
+ENDIF
+;요우무가 있으면
+SIF GETCHARA(19) >= 0
+	ITEMSALES:165 = ITEMPRICE:165
+;요우키가 있으면
+SIF GETCHARA(70) >= 0
+	ITEMSALES:199 = ITEMPRICE:199
+
+FOR COUNT, 100, 600
+	;キャラカードを所持していてかつ, 汎用キャラでは無い場合値段を0に
+	SIF ITEM:COUNT == 1 && (COUNT < 248 || COUNT >= 300)
+		ITEMSALES:COUNT = 0
+	;ある条件を満たしている場合, キャラの値段が倍に(YASAIモード限定)
+	SIF NO:MASTER == 400 && FLAG:570 & 2
+		ITEMSALES:COUNT *= 2
+NEXT

@@ -1,0 +1,1175 @@
+﻿;=============================================================================
+;야외 플레이
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE104
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:104 > 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;解除は裸体盛り中以外ならいつでも可能
+SIF TEQUIP:52 && TEQUIP:60 == 0
+	RETURN 1
+;아이템｢リード付き首輪｣を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:41 == 0 && NOITEM == 0
+	RETURN 0
+;主人か対象か조수가 吸血鬼で, 時間が昼の場合, 特注日傘をもっているか, 아이템なし設定でないとダメ
+IF TIME == 0 && ITEM:48 == 0 && NOITEM == 0
+	SIF TALENT:MASTER:205 || TALENT:205
+		RETURN 0
+	SIF ASSI >= 0 && TALENT:ASSI:205
+		RETURN 0
+ENDIF
+;순종か마조끼が3이상 없으면 안 됨
+SIF ABL:10 < 3 && ABL:21 < 3
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;蜘蛛の巣にかけているときは移動できない
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;수치 플레이 중에는 불가
+SIF TEQUIP:56
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM104
+IF NO:TARGET == 41 || NO:TARGET == 222
+	PRINTL 늑대 산책
+	TSTR:0 = 늑대 산책
+ELSE
+	PRINTL 야외 플레이
+	TSTR:0 = 야외 플레이
+ENDIF
+CALL TRAIN_MESSAGE_COM104
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+IF TEQUIP:52
+	IF FLAG:15 & 256
+		TFLAG:150 = 0
+		TFLAG:151 = 0
+	ENDIF
+	TEQUIP:52 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 150
+
+LOCAL:1 = 500
+LOCAL:2 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 50
+	SOURCE:19 += 50
+	TIMES LOCAL:1, 1.20
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	TIMES LOCAL:1, 1.40
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 400
+	SOURCE:19 += 400
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 750
+	SOURCE:19 += 750
+	TIMES LOCAL:1, 2.00
+ELSE
+	SOURCE:24 += 1300
+	SOURCE:19 += 1300
+	TIMES LOCAL:1, 3.00
+ENDIF
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1 , 1.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:2 , 2.00
+
+SOURCE:25 += LOCAL:2 / 2
+SOURCE:28 += LOCAL:1 / 2
+SOURCE:31 = LOCAL:2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES SOURCE:31 , 2.00
+
+SOURCE:12 = LOCAL:1
+SOURCE:17 = LOCAL:1 / 2
+TEQUIP:52 = 1
+
+TFLAG:151 = 0
+;자기 방의 경우, 아무것도 없다.
+SIF FLAG:15 & 256
+	CALL OUTDOOR_GO_WHERE
+RETURN 1
+
+;-------------------------------------------------
+;야외 플레이중
+;-------------------------------------------------
+@EQUIP_COM104
+IF NO:TARGET == 41 || NO:TARGET == 222
+	PRINTL <늑대와 함께 산책 중>
+ELSE
+	PRINTL <야외 플레이 중>
+ENDIF
+
+;야외 플레이 확장 처리
+;다른 장소에 있을 때는 콘피그를 무효로 해도 효과는 종료시 계속된다
+SIF TFLAG:150
+	CALL OUTDOOR_SITUATION_CHANGE
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 100
+
+LOCAL = 500
+LOCAL:1 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 50
+	SOURCE:19 += 50
+	TIMES LOCAL, 1.20
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	TIMES LOCAL, 1.40
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 400
+	SOURCE:19 += 400
+	TIMES LOCAL, 1.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 750
+	SOURCE:19 += 750
+	TIMES LOCAL, 2.00
+ELSE
+	SOURCE:24 += 1300
+	SOURCE:19 += 1300
+	TIMES LOCAL, 3.00
+ENDIF
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL , 2.00
+ELSE
+	TIMES LOCAL , 3.00
+ENDIF
+
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL , 1.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:1 , 2.00
+
+IF TFLAG:150
+	;상황에 의한 변화
+	IF TFLAG:151 == 1
+		TIMES LOCAL , 0.80
+		TIMES LOCAL:1 , 0.80
+	ELSEIF TFLAG:151 == 2
+		TIMES LOCAL , 0.90
+		TIMES LOCAL:1 , 0.90
+	ELSEIF TFLAG:151 == 3
+		TIMES LOCAL , 2.00
+		TIMES LOCAL:1 , 2.00
+	ELSEIF TFLAG:151 == 4
+		TIMES LOCAL , 1.20
+		TIMES LOCAL:1 , 1.20
+	ENDIF
+ENDIF
+
+SOURCE:25 += LOCAL:1 / 2
+SOURCE:28 += LOCAL / 2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:12 += LOCAL
+SOURCE:31 += LOCAL:1
+SOURCE:17 += LOCAL / 2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:14 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM104
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:52
+	IF FLAG:15 & 256 && TFLAG:899 == 0
+		IF TFLAG:151 == 4
+			PRINTFORM %조사선택(CALLNAME:MASTER, "가")% 집에 돌아간다고 하자 
+			CALL OUTDOOR_GALLERY_NAME
+			PRINTW 은 실망스러운 표정을 지었다.
+		ELSEIF TFLAG:151 == 3
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 도망치듯이 집으로 돌아갔다.
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 누구에게도 발견되지 않게 집으로 돌아갔다.
+		ENDIF
+	ELSE
+		PRINTW 방으로 돌아왔다….
+	ENDIF
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%에게 목걸이를 씌우고 밖으로 데려나갔다.
+ENDIF
+
+;-------------------------------------------------
+;외출처 선택
+;-------------------------------------------------
+@OUTDOOR_GO_WHERE
+;선택할 수 있는 외출처의 조건
+;박려신사의 조건：영몽, , 앨리스, 보라색, 수박, 아―, 매마, 마을의 인간
+;홍마관의 조건：영몽, , 미령, 소야, 파체, 개아, , 프랑, 메이드 요정, 흑메이드 요정, 여기
+;명계의 조건：영몽, , 소야, 등, 프리즘 리버 3인조, 요몽, 코코코, 람, 자, 반령, 요기, 반령(기), 망령
+;타케바야시의 조건：영몽, , 소야, 레미리아, 앨리스, 요몽, 코코코, 보라색, -군요, , 이나바, 네-응, 비쳐, 매자, 지상의 토끼
+;피안의 조건：영몽, , 치르노, 소야, 홍천세 명집, 요몽,―, , 이나바, 무늬나, 독, 합격해 , 네-와, 코마치, 망령, 지옥귀신, 죽음의 신
+;요괴의 산의 조건：주인이[갓빠]인가, 영몽, , 가을 자매, hina, 에 있어, 전나무도 보고, 문장, 사나에, 뱀, 개구리, 한층 더 췌향과 용의, 아텐구, 흰색이리 텐구, 구도귀신
+;구지옥자취 시외의 조건：주인이[주정]인가, 영몽, , 키스메, 야마메, 해―, 유희왕, 깨닫아, 린, 먹는, 진하고, 좀비 페어리, 흑주정, 지옥아, 망령, 구도귀신
+;요정의 숲의 조건：주인이[주정]을 가지지 않는[요정]인가, 대요정, 치르노, 릴리 화이트, 3월정령, 릴리 블랙, 빨강 요정, 파랑 요정, 초록 요정, 노랑 요정, 주홍 요정, 창요정, 취요정, 금 요정
+;기쁨의 절정의 조건：영몽, , 파체, 소야, 레미리아, 앨리스, 요몽, 유들자, 보라색, 췌향, 이나바, 문장, 코마치, 전쟁응, 이라고 개, 천인
+;태양의 하타(주)：대 요정, 치르노, 릴리 W, 사니, 르나체, 스타, 릴리 B, 무명 요정들
+;태양의 밭(밤)：영몽, 마리사, 리리카, 메르란, 르나사, 미스티아, 메디슨, 유향, 해바라기 요정, 흑해바라기 요정, 야작
+;달속에 있다는 궁전：보라색, 에이린, 루나 차일드, 메리, 유타카 공주, 의희, 레이센, 옥토, 키나코
+;악마의 세계：영몽, 마리사, 매마, 사라, 르이즈, 유키, 마이, 몽자, 신기, 나즈린, 코가사, 한송이, 쿠모야마, 무라사, 별, 백련, 네, 악마의 세계인
+;지옥계：(미실장)
+;명련사의 조건：영몽, 마리사, 사나에, 나즈린, 코가사, 한송이, 쿠모야마, 무라사, 별, 백련, 꿰매어라(미실장)
+
+;마을의 조건：당신, 영몽, , 소야, -군요, 네-응, 매자, 에 있어, 사나에, 아―, 응감색, 엘리, 린노스케, 마을의 인간(요몽, 비쳐, 요기를 제외하는, 사람의 피를 가지는 인＋양자＋에 있어＋앨리스의 인형＋갓빠), 나즈린, 코가사, 한송이, 쿠모야마, 무라사, 별, 백련, 꿰매어라
+;당신관의 조건：영몽님, IRC 당신, 촉수딸(아가씨), 드리아드, 릴리 그레이
+;그 밖에도, 여러가지 추가해 보면 어떨까요?
+LOCAL:1 = 0
+REPEAT 20
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	SIF CFLAG:MASTER:300 & LOCAL || CFLAG:300 & LOCAL || (ASSI >= 0 && CFLAG:ASSI:300 & LOCAL)
+		LOCAL:1 |= LOCAL
+REND
+
+PRINTW 그런데, 어디에 갈까.
+PRINTL [0]집 뜰
+SIF LOCAL:1 & 1
+	PRINTL [1]하쿠레이신사
+SIF LOCAL:1 & 2
+	PRINTL [2]홍마관
+SIF LOCAL:1 & 4
+	PRINTL [3]명계
+SIF LOCAL:1 & 8
+	PRINTL [4]대나무 밭
+SIF LOCAL:1 & 16
+	PRINTL [5]피안
+SIF LOCAL:1 & 32
+	PRINTL [6]요괴의 산
+SIF LOCAL:1 & 64
+	PRINTL [7]구지옥 시외
+SIF LOCAL:1 & 128
+	PRINTL [8]요정의 숲
+SIF LOCAL:1 & 256
+	PRINTL [9]유정천
+SIF LOCAL:1 & 512
+	PRINTL [10]태양의 밭
+SIF LOCAL:1 & 1024
+	PRINTL [11]태양의 밭
+SIF LOCAL:1 & 2048
+	PRINTL [12]달궁전
+SIF LOCAL:1 & 4096
+	PRINTL [13]마계
+;SIF LOCAL:1 & 8192
+;	PRINTL [14]지옥계
+;SIF LOCAL:1 & 32768
+;	PRINTL [15]명련사
+SIF LOCAL:1 & 16384
+	PRINTL [99]마을
+SIF LOCAL:1 & 524288
+	PRINTL [831]조교의 관
+
+$INPUT_LOOP2
+INPUT
+IF RESULT == 0
+	;집안뜰
+	TFLAG:150 = 0
+ELSEIF RESULT == 1 && LOCAL:1 & 1
+	;박려신사
+	TFLAG:150 = 1
+ELSEIF RESULT == 2 && LOCAL:1 & 2
+	;홍마관
+	TFLAG:150 = 2
+ELSEIF RESULT == 3 && LOCAL:1 & 4
+	;명계
+	TFLAG:150 = 3
+ELSEIF RESULT == 4 && LOCAL:1 & 8
+	;타케바야시
+	TFLAG:150 = 4
+ELSEIF RESULT == 5 && LOCAL:1 & 16
+	;피안
+	TFLAG:150 = 5
+ELSEIF RESULT == 6 && LOCAL:1 & 32
+	;요괴의 산
+	TFLAG:150 = 6
+ELSEIF RESULT == 7 && LOCAL:1 & 64
+	;구지옥 시외
+	TFLAG:150 = 7
+ELSEIF RESULT == 8 && LOCAL:1 & 128
+	;요정의 숲
+	TFLAG:150 = 8
+ELSEIF RESULT == 9 && LOCAL:1 & 256
+	;기쁨의 절정
+	TFLAG:150 = 9
+ELSEIF RESULT == 10 && LOCAL:1 & 512
+	;태양의 밭(낮)
+	TFLAG:150 = 10
+ELSEIF RESULT == 11 && LOCAL:1 & 1024
+	;태양의 밭(밤)
+	TFLAG:150 = 10
+ELSEIF RESULT == 12 && LOCAL:1 & 2048
+	;달속에 있다는 궁전
+	TFLAG:150 = 11
+ELSEIF RESULT == 13 && LOCAL:1 & 4096
+	;악마의 세계
+	TFLAG:150 = 12
+;다른 장소를 추가한다면 여기
+;ELSEIF RESULT == 15 && LOCAL:1 & 32768
+;	;나무삼
+;	TFLAG:150 = 15
+ELSEIF RESULT == 99 && LOCAL:1 & 16384
+	;마을
+	TFLAG:150 = 99
+ELSEIF RESULT == 831 && LOCAL:1 & 524288
+	;당신관
+	TFLAG:150 = 831
+ELSE
+	GOTO INPUT_LOOP2
+ENDIF
+;야외 플레이의 상황을 리셋
+TFLAG:151 = 1
+CALL OUTDOOR_MESSAGE_TRAVEL
+
+;--------------------------------------------------
+;장소 이동 메시지
+;--------------------------------------------------
+@OUTDOOR_MESSAGE_TRAVEL
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+SELECTCASE TFLAG:150
+	CASE 0
+		;집안뜰
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%에게 목걸이를 씌우고 집 뜰로 끌어내서 조교를 했다.
+		PRINTFORMW 집 밖으로 목소리가 들릴지도 모른다는 상황에, %조사선택(CALLNAME:TARGET, "는")%\@(ABL:14 >= 3) ? 흥분했다. # 새빨갛게 되었다.\@
+	CASE 1
+		;신사
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")%\@(TIME == 0) ? 낮 # 밤\@의 하쿠레이 신사로 갔다.
+		PRINTFORMW \@(TIME == 0) ? 상쾌한 바람이 기분 좋다. 다행히도 # 주위의 숲에서 쉬쉬거리는 소리가 들린다.　밤이라 \@ 참배객은 없는 것 같다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 1
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 2
+		;홍
+		IF CFLAG:MASTER:300 & 2
+			PRINTFORM %조사선택(CALLNAME:MASTER, "가")% 승낙을 하자 
+		ELSEIF CFLAG:300 & 2 && NO:TARGET != 151 && NO:TARGET != 161
+			PRINTFORM %CALLNAME:TARGET%의 이름을 대고 
+		ELSEIF NO:TARGET == 151 || NO:TARGET == 161
+			PRINTFORM %CALLNAME:TARGET%에게 승낙을 받고 
+		ELSEIF ASSI >= 0
+			SIF CFLAG:ASSI:300 & 2
+				PRINTFORM %조사선택(CALLNAME:ASSI, "가")% 승낙을 해서, 
+		ENDIF
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 홍마관 복도에서 조교를 했다.
+		PRINTW 주위의 메이드 요정들은, 명령에 따라 못 본척하며 청소에 힘쓰고 있다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 2
+			PRINTFORMW 주위의 메이드 요정의 시선을 느끼고 \@(ABL:14 >= 3) ? 두근두근 거리며 몸을 떨고 있다. # 부끄러워하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 3
+		;명계
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 사람이 없는 계단에서 조교를 하고 있다.
+		PRINTW 주위엔 영혼만 떠다닐 뿐.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 4
+			PRINTFORMW 주위의 메이드 요정의 시선을 느끼고 \@(ABL:14 >= 3) ? 두근두근 거리며 몸을 떨고 있다. # 부끄러워하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 4
+		;타케바야시
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")%\@(TIME == 0) ? 낮에도 어두운 # 달빛도 잘 안 보이는\@ 대나무 밭으로 갔다.
+		PRINTW 주위에서 대나무를 스치는 바람소리가 들린다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 8
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 5
+		;피안
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")%\@(TIME == 0) ? 꽃이 잔뜩 핀 # 피안화가 흐드러지게 핀 밤의\@ 강변으로 갔다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 16
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 6
+		;요괴의 산
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")%\@(TIME == 0) ? 텐구들의 감시를 피해 # 어둠에 묻혀서 \@, 요괴의 산으로 갔다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 32
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 7
+		;구지옥 시외
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 지저의 구지옥 시외 뒷골목으로 갔다.
+		PRINTW 큰길에서 요괴들의 소란이 희미하게 들려 온다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTFORMW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 64
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 8
+		;요정의 숲
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 요정의 숲의 나무 그늘로 발길을 옮겼다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 128
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 9
+		;기쁨의 절정
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 유정천으로 갔다.
+		IF TIME == 0
+			PRINTL 햇빛이 지상보다 훨씬 더 세다.
+		ELSE
+			PRINTFORML 지상에서 보는 것보다 더 크게 보이는 달이 %CALLNAME:TARGET%의 불안을 가중시키고 있다.
+		ENDIF
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 256
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 10
+		;태양의 밭
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 태양의 밭에 발길을 옮겼다.
+		IF TIME == 0
+			PRINTL 일광욕하는 요정들이 보인다.
+		ELSE
+			PRINTL 조금 떨어진 곳에서는 쾌활한 요괴들이 라이브공연을 하고 있다.
+		ENDIF
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF TIME == 0 && CFLAG:300 & 512
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSEIF TIME == 1 && CFLAG:300 & 1024
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 11
+		;달속에 있다는 궁전
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 환상향에서 떨어진 달로 갔다.
+		IF TEQUIP:41 == 0 && CFLAG:300 & 2048
+			PRINTFORML 여기가 어디인지 이해한 %조사선택(CALLNAME:TARGET, "는")% 순간적으로 몸이 움츠러든다.
+		ELSE
+			IF TIME == 0
+				PRINTL 환상향엔 본적 없는 고도의 차이에 위압감을 느끼고 있다.
+			ELSE
+				PRINTFORML 별이 반짝이는 중, 달만이 존재하지 않는 기묘한 밤의 공간이 %CALLNAME:MASTER% 위에 있다.
+			ENDIF
+		ENDIF
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 2048
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 12
+		;악마의 세계
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 환상향과는 다른 이세계로 발을 옮겼다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 4096
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+;	CASE 15
+		;나무삼
+;		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 명련사로 갔다.
+;		IF TIME == 0
+;			PRINTL 설법을 들으러 온 사람들이 보인다.
+;		ELSE
+;			PRINTL 연등만이 켜져 있고 어둑어둑 하다.
+;		ENDIF
+;		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+;;		IF TEQUIP:43
+;			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+;		ELSEIF CFLAG:300 & 32768
+;			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+;		ELSE
+;			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+;		ENDIF
+	CASE 99
+		;마을
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:MASTER, "와")% 함께 
+		IF TIME == 0
+			PRINTL 마을 근처 숲으로 발을 옮겼다.
+			PRINTW 멀리서 아이들이 뛰어 노는 목소리가 들려 온다.
+		ELSE
+			PRINTL 이미 어두워진 마을 근처 숲으로 갔다.
+			PRINTW 멀리서, 아이들을 부르는 목소리가 들려 온다.
+		ENDIF
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 16384
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+	CASE 831
+		;당신관
+		IF NO:MASTER == 400
+			PRINTFORM %CALLNAME:MASTER%의 결정으로 
+		ELSEIF CFLAG:MASTER:300 & 32768 || (NO:MASTER == 1 && CFLAG:MASTER:0 == 2)
+			PRINTFORM %조사선택(CALLNAME:MASTER, "가")% 승낙을 받아 
+		ELSEIF CFLAG:300 & 32768 || (NO:TARGET == 1 && CFLAG:0 == 2)
+			PRINTFORM %CALLNAME:TARGET%의 이름을 대고 
+		ELSEIF ASSI >= 0
+			IF NO:ASSI == 400
+				PRINTFORM %CALLNAME:ASSI%의 결정으로 
+			ELSEIF CFLAG:ASSI:300 & 32768 || (NO:ASSI == 1 && CFLAG:ASSI:0 == 2)
+				PRINTFORM %조사선택(CALLNAME:MASTER, "가")% 승낙을 받아 
+			ENDIF
+		ENDIF
+		PRINTFORML %CALLNAME:MASTER%들은 조교관의 복도에서 조교를 개시했다.
+		PRINTW 멀리서, 야채 요정들의 떠들썩한 목소리가 들려 온다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TEQUIP:41
+			PRINTW 여기가 어딘지 몰라서 불안한 것 같다.
+		ELSEIF CFLAG:300 & 32768 || (NO:TARGET == 1 && CFLAG:0 == 2)
+			PRINTFORMW 아는 사람을 만나지 않을까 \@(ABL:14 >= 3) ? 기대하고 있다. # 불안해 하고 있다.\@
+		ELSE
+			PRINTW 따분한 듯이 주위를 둘러보고 있다.
+		ENDIF
+ENDSELECT
+
+;--------------------------------------------------
+;상황 변화
+;--------------------------------------------------
+@OUTDOOR_SITUATION_CHANGE
+;야외 조교, 집단시간모드
+IF TFLAG:151 == 4
+	CALL OUTDOOR_SITUATION_6
+;야외 조교, 발견될지 어떨지 두근두근 하는 모드
+ELSE
+	LOCAL = RAND:10
+	;상황 악화
+	IF LOCAL <= ABL:14
+		;집단시간모드에
+		IF TFLAG:151 == 3
+			CALL OUTDOOR_SITUATION_5
+			TFLAG:151 = 4
+		ELSEIF TFLAG:151 == 2
+			CALL OUTDOOR_SITUATION_4
+			TFLAG:151 = 3
+		ELSEIF TFLAG:151 == 1
+			CALL OUTDOOR_SITUATION_3
+			TFLAG:151 = 2
+		ENDIF
+	;발견자, 도망
+	ELSEIF LOCAL >= ABL:14 && TFLAG:151 == 3
+		CALL OUTDOOR_SITUATION_2
+		TFLAG:151 = 1
+	;상황, 회복
+	ELSEIF LOCAL >= 7 && TFLAG:151 == 2
+		CALL OUTDOOR_SITUATION_1
+		TFLAG:151 = 1
+	;현상 유지
+	ELSE
+		CALL OUTDOOR_SITUATION_0
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;야외 조교, 집단시간모드시의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_6
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+PRINT 모인 
+CALL OUTDOOR_GALLERY_NAME
+LOCAL = RAND:4
+IF LOCAL == 0 && (TALENT:120 == 0 || (TALENT:120 && TALENT:PLAYER:120))
+	PRINTFORMW 은 뚫어져라 %CALLNAME:TARGET%의 부끄럽기 짝이 없는 모습을 보고 있다.
+ELSEIF LOCAL == 0 && TALENT:PLAYER:120 == 0
+	PRINTW 은 뚫어져라 좁혀졌다 넓혀지는 부끄러운 모습을 바라보고 있다.
+ELSEIF LOCAL == 1 && TFLAG:150 == 3
+	PRINTW 은 자신의 고간을 문지르면서, 뚫어져라 바라보고 있다.
+ELSEIF LOCAL == 2 && TALENT:120 == 0
+	PRINTFORMW 은 부러운 듯이 %조사선택(CALLNAME:PLAYER, "를")% 바라보고 있다.
+ELSEIF LOCAL == 2 && TALENT:PLAYER:120 == 0
+	PRINTW 은 부러운 듯이 이쪽을 바라보고 있다.
+ELSEIF LOCAL == 2
+	PRINTFORMW 은 양손으로 얼굴을 가리고, 손가락의 틈새로 %조사선택(CALLNAME:PLAYER, "를")% 바라보고 있다.
+ELSEIF TALENT:120 == 0 || (TALENT:120 && TALENT:PLAYER:120)
+	PRINTFORMW 은 %CALLNAME:TARGET%의 모습에 눈에서 하트를 날려대고 있다.
+ELSEIF TALENT:PLAYER:120 == 0
+	PRINTW 은 이쪽의 행동에, 눈에서 하트를 날려대고 있다….
+ENDIF
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+;그 회에 공개 노출 라이브로 난교되고 있는 경우는 전용
+IF TFLAG:176 == 1
+	PRINTW 능욕당한 직후라 녹초가 되어 있다.
+ELSEIF TFLAG:176 == 2
+	PRINTW 새로운 사냥감이 없는지 주위를 둘러보고 있다.
+ELSEIF ABL:14 >= 3
+	LOCAL = RAND:3
+	IF PALAM:13 >= PALAMLV:8
+		PRINTW 너무나도 느끼고 있어, 온전히 상황을 파악할 수 없는 것 같다.
+	ELSEIF LOCAL == 0
+		PRINTW 사람들이 보고 있는 것이 기쁜지 손을 흔들며 응답하고 있다.
+	ELSEIF LOCAL == 1
+		PRINTW 수줍어하는 모습을 보였고, 주위는 더욱더 끓어오르고 있다….
+	ELSEIF LOCAL == 2
+		PRINTW 누가 보고 있다는 걸 느낀 건지 얼굴이 더 빨개졌다.
+	ENDIF
+ELSE
+	PRINTW 필사적으로 부끄러움을 참고 있다….
+ENDIF
+
+;--------------------------------------------------
+;야외 조교, 상황 악화 3 단계눈(집단시간모드에 이행)의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_5
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+IF TFLAG:150 == 2
+	PRINTW 아무래도, 메이드 요정들은 열기에 취한 것 같다.
+ELSEIF TFLAG:150 == 3
+	PRINTW 아무래도, 부유령들의 마음에 든 것 같다.
+ELSE
+	PRINTFORM %조사선택(CALLNAME:TARGET, "를")% 발견한 것은 
+	CALL OUTDOOR_GALLERY_NAME
+	PRINTW 이었다.
+ENDIF
+PRINTFORM 모여든 
+CALL OUTDOOR_GALLERY_NAME
+PRINTW 은 매우 흥분하고 있는 것 같다.
+IF (TFLAG:150 == 1 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 3 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 4 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 6 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 7 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 9 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 10 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 11 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 12 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) || (TFLAG:150 == 99 && (TALENT:120 == 0 || TALENT:PLAYER:120 == 0)) 
+	PRINT 그들은 
+ELSE
+	PRINT 그녀들은 
+ENDIF
+LOCAL = 0
+IF TFLAG:150 == 99
+	;마을
+	IF CFLAG:MASTER:300 & 16384
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 16384
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 16384
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 831
+	;당신관
+	IF CFLAG:MASTER:300 & 524288
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 524288
+		PRINTFORM 조교되고 있는 것이 %CALLNAME:TARGET%인걸 눈치채자 얼굴을 붉히면서 
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 524288
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 1
+	;박려신사
+	IF CFLAG:MASTER:300 & 1
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 1
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 1
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 2
+	;홍마관
+	IF CFLAG:MASTER:300 & 2
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 2 && NO:TARGET != 151 && NO:TARGET != 161
+		PRINTFORM 조교되고 있는 %CALLNAME:TARGET%에게 몇 번이나 사과하면서, 
+	ELSEIF NO:TARGET == 151 || NO:TARGET == 161
+		LOCAL = 4
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 2
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 3
+	;명계
+	IF CFLAG:MASTER:300 & 4
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 4
+		PRINTFORM 조교되고 있는 것이, %CALLNAME:TARGET%인 것이 기분 좋은지 
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 4
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 4
+	;타케바야시
+	IF CFLAG:MASTER:300 & 8
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 8
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 8
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 5
+	;피안
+	IF CFLAG:MASTER:300 & 16
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 16
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 8
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 6
+	;요괴의 산
+	IF CFLAG:MASTER:300 & 32
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 32
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 32
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 7
+	;구지옥자취 시외
+	IF CFLAG:MASTER:300 & 64
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 64
+		LOCAL = 2
+	ELSEIF ASSI >= 0
+		SIF CFLAG:ASSI:300 & 64
+			LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 8
+	;요정의 숲
+	IF CFLAG:MASTER:300 & 128
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 128
+		LOCAL = 4
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 128
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 9
+	;기쁨의 절정
+	IF CFLAG:MASTER:300 & 256
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 256
+		PRINTFORM 조교되고 있는 것이, %CALLNAME:TARGET%인걸 알아내고 술병을 들고 
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 256
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 10 && TIME == 0
+	;태양의 밭(낮)
+	IF CFLAG:MASTER:300 & 512
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 512
+		LOCAL = 4
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 512
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 10
+	;태양의 밭(밤)
+	IF CFLAG:MASTER:300 & 1024
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 1024
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 1024
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 11
+	;달속에 있다는 궁전
+	IF CFLAG:MASTER:300 & 2048
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 2048
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 2048
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 12
+	;악마의 세계
+	IF CFLAG:MASTER:300 & 4096
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 4096
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 4096
+		LOCAL = 3
+	ENDIF
+ELSEIF TFLAG:150 == 12
+	;악마의 세계
+	IF CFLAG:MASTER:300 & 4096
+		LOCAL = 1
+	ELSEIF CFLAG:300 & 4096
+		LOCAL = 2
+	ELSEIF ASSI >= 0 && CFLAG:ASSI:300 & 4096
+		LOCAL = 3
+	ENDIF
+ENDIF
+IF LOCAL == 1
+	PRINTFORM %CALLNAME:MASTER%의 승낙을 받고 
+ELSEIF LOCAL == 2
+	PRINTFORM 조교되고 있는 것이, %CALLNAME:TARGET%인걸 발견하고 능글능글 웃으며 
+ELSEIF LOCAL == 3
+	PRINTFORM %CALLNAME:ASSI%의 승낙을 받고 
+ELSEIF LOCAL == 4
+	PRINTFORM 조교되고 있는 것이, %CALLNAME:TARGET%인걸 발견하고 와글와글 거리며 
+ENDIF
+PRINTFORML 눈으로 음미하듯 %CALLNAME:TARGET%의 부끄러운 모습을 응시하기 시작했다.
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% \@(ABL:14 >= 3) ? 매우 기쁜 듯이 웃었다. # 당장 울기 시작할 것 같다. \@
+
+;--------------------------------------------------
+;야외 조교, 상황 악화 2 단계눈의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_4
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+IF TFLAG:150 == 2
+	PRINT 주위를 둘러보니, 주위의 메이드들은 명확하게 
+ELSEIF TFLAG:150 == 3
+	PRINT 주위를 둘러보니, 주위의 영혼은 명확하게 
+ELSE
+	PRINT 문득 둘러보니, 누군가가 
+ENDIF
+PRINTFORMW %CALLNAME:TARGET%의 일을 바라보고 있다.
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% \@(ABL:14 >= 3) ? 기대로 가득 찬 시선을 그 쪽에 보냈다. # 시선을 딴 데로 돌렸다. \@
+
+;--------------------------------------------------
+;야외 조교, 상황 악화 1 단계눈의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_3
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+SELECTCASE TFLAG:150
+	CASE 1
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	CASE 2
+		PRINT 어쩐지, 주위의 메이드들이 이쪽을 보고 있는 것 같은 생각이 든다.
+	CASE 3
+		PRINT 어쩐지, 주위의 부유령들이 이쪽을 보고 있는 것 같은 생각이 든다.
+	CASE 4
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	CASE 5
+		PRINT 근처에서, 누군가의 노래가 들려온다.
+	CASE 6
+		PRINT 근처에서, 바람을 가르는 소리가 들려온다.
+	CASE 7
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	CASE 8
+		PRINT 근처에서, 누군가의 노래가 들려온다.
+	CASE 9
+		PRINT 근처에서, 누군가의 노래가 들려온다.
+	CASE 10
+		PRINTFORM 근처에서, 누군가의 \@(TIME == 0) ? 노래 # 열광적인 환호소리\@가 들려 온다.
+	CASE 11
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	CASE 12
+		PRINT 근처에서, 누군가의 노래가 들려온다.
+	CASE 98
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	CASE 99
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	CASE 831
+		PRINT 어쩐지, 뜰의 야채 요정들이 이쪽을 보고 있는 것 같은 생각이 든다.
+ENDSELECT
+PRINTL
+PRINTFORMW %CALLNAME:TARGET%\@(ABL:14 >= 3) ? 의 눈동자는 기대로 가득 찼다. # (은)는 공포와 부끄러움에 몸이 굳어졌다. \@
+
+;--------------------------------------------------
+;야외 조교, 발견자 도망시의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_2
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+IF TFLAG:150 == 2
+	PRINTFORML 주위의 메이드들은 %CALLNAME:MASTER%의 시선을 눈치채자
+	PRINTW 당황해서 시선을 딴 데로 돌렸다.
+ELSEIF TFLAG:150 == 3
+	PRINTFORML 주위의 영혼은 %CALLNAME:MASTER%의 시선을 눈치채자
+	PRINTW 무슨 일도 없는 것처럼 또 감돌기 시작했다.
+ELSE
+	PRINTFORML 발견한 누군가는 %CALLNAME:TARGET%들의 모습과 행위를 보고
+	PRINTW 도망가 버렸다.
+ENDIF
+
+;--------------------------------------------------
+;야외 조교, 상황 회복시의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_1
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+IF TFLAG:150 == 2
+	PRINTL 잠시 후, 주위의 메이드들은 사라졌다.
+ELSEIF TFLAG:150 == 3
+	PRINTL 잠시 후, 주위의 영혼은 다시 감돌기 시작했다.
+ELSE
+	PRINTL 잠시 후, 주위는 또 조용하게 되었다.
+ENDIF
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% \@(ABL:14 >= 3) ? 유감스럽게 여기면서 행위를 계속했다. # 조금 침착했지만, 아직 긴장은 풀리지 않았다. \@
+
+;--------------------------------------------------
+;야외 조교, 현상 유지시의 메시지
+;--------------------------------------------------
+@OUTDOOR_SITUATION_0
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+IF TFLAG:151 == 2
+	PRINTFORM 변함 없이, 
+	IF TFLAG:150 == 99
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	ELSEIF TFLAG:150 == 831
+		PRINT 근처에서, 야채 요정들의 떠들썩한 목소리가 들려 온다.
+	ELSEIF TFLAG:150 == 1
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	ELSEIF TFLAG:150 == 2
+		PRINT 주위의 메이드들이 이쪽을 보고 있는 것 같은 생각이 든다.
+	ELSEIF TFLAG:150 == 3
+		PRINT 주위의 부유령들이 이쪽을 보고 있는 것 같은 생각이 든다.
+	ELSEIF TFLAG:150 == 4
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	ELSEIF TFLAG:150 == 5
+		PRINT 근처에서, 누군가 즐거워하는 목소리가 들린다.
+	ELSEIF TFLAG:150 == 6
+		PRINT 근처에서, 바람을 자르는 소리가 들려 온다.
+	ELSEIF TFLAG:150 == 7
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	ELSEIF TFLAG:150 == 8
+		PRINT 근처에서, 누군가 즐거워하는 목소리가 들린다.
+	ELSEIF TFLAG:150 == 9
+		PRINT 근처에서, 누군가 즐거워하는 목소리가 들린다.
+	ELSEIF TFLAG:150 == 10 && TIME == 0
+		PRINT 근처에서, 누군가 즐거워하는 목소리가 들린다.
+	ELSEIF TFLAG:150 == 10
+		PRINT 근처에서, 누군가의 열광적인 절규가 들려 온다.
+	ELSEIF TFLAG:150 == 11
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	ELSEIF TFLAG:150 == 12
+		PRINT 근처에서, 누군가 즐거워하는 목소리가 들린다.
+	ELSEIF TFLAG:150 == 98
+		PRINT 근처에서, 누군가의 발소리가 들려 온다.
+	ENDIF
+	PRINTL
+	PRINTFORMW %CALLNAME:TARGET%의 \@(ABL:14 >= 3) ? 눈동자는 기대로 가득 찼다. # 얼굴은 부끄러운 나머지 새빨갛게 되어 있다. \@
+ELSE
+	PRINTFORM 변함 없이, 
+	IF TFLAG:150 == 2
+		PRINT 주위의 메이드들은 보지 않으려 고개를 돌리고 있다.
+	ELSEIF TFLAG:150 == 3
+		PRINT 주위의 부유영혼에 변화는 볼 수 없다.
+	ELSE
+		PRINT 주위에 사람의 기색은 없다.
+	ENDIF
+	PRINTL
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% \@(ABL:14 >= 3) ? 아쉬워 하고 있다 # 언제 누가 올까 제정신이 아니다\@.
+ENDIF
+
+;--------------------------------------------------
+;구경꾼의 이름
+;--------------------------------------------------
+@OUTDOOR_GALLERY_NAME
+;주로 나의 정신 안정을 위해♂×♂때는, 구경꾼을 여성에게
+IF TFLAG:150 == 99 && TALENT:120 && TALENT:PLAYER:120
+	PRINT 마을의 아가씨들
+ELSEIF TFLAG:150 == 99
+	PRINT 마을의 남자들
+ELSEIF TFLAG:150 == 831
+	PRINT 야채 요정들
+ELSEIF TFLAG:150 == 1 && TALENT:120 && TALENT:PLAYER:120
+	PRINT 참배객의 소녀들
+ELSEIF TFLAG:150 == 1
+	PRINT 참배객의 남자들
+ELSEIF TFLAG:150 == 2
+	PRINT 메이드 요정들
+ELSEIF TFLAG:150 == 3
+	PRINT 부유령들
+ELSEIF TFLAG:150 == 4
+	PRINT 토끼들
+ELSEIF TFLAG:150 == 5
+	PRINT 꽃의 요정들
+ELSEIF TFLAG:150 == 6 && TALENT:120 && TALENT:PLAYER:120
+	PRINT 여자 텐구들
+ELSEIF TFLAG:150 == 6
+	PRINT 남자 텐구들
+ELSEIF TFLAG:150 == 7
+	PRINT 지옥의 주민들
+ELSEIF TFLAG:150 == 8
+	PRINT 요정들
+ELSEIF TFLAG:150 == 9 && TALENT:120 && TALENT:PLAYER:120
+	PRINT 천인 아가씨들
+ELSEIF TFLAG:150 == 9
+	PRINT 남자 천인들
+ELSEIF TFLAG:150 == 10 && TIME == 0
+	PRINT 해바라기 요정들
+ELSEIF TFLAG:150 == 10 && TALENT:120 && TALENT:PLAYER:120
+	PRINT 요괴 소녀들
+ELSEIF TFLAG:150 == 10
+	PRINT 남자요괴들
+ELSEIF TFLAG:150 == 11
+	PRINT 옥토들
+ELSEIF TFLAG:150 == 12
+	PRINT 마계인들
+ENDIF

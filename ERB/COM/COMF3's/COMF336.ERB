@@ -1,0 +1,199 @@
+﻿;=============================================================================
+;보지를 닦는다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE336
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:336 > 0
+	RETURN 0
+;Ｖ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2) == 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;中出しされてて, ∨に精液汚れが無いとダメ
+SIF (STAIN:3 & 4) == 0 || TFLAG:103 <= 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;그밖의 Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;욕실 플레이 중, ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:53 || TEQUIP:55
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;질내사정한 정액을 닦는다.
+;V경험은 증가하지 않지만 쾌V를 주는 것과 동시에 C에도 자극이 간다.
+;내용적으로는 소음순 애무를 유용
+@COM336
+PRINTL 보지를 닦는다
+TSTR:0 = 보지를 닦는다
+CALL TRAIN_MESSAGE_COM336
+
+DOWNBASE:0 += 30
+DOWNBASE:1 += 80
+
+;접촉
+SOURCE:10 = 300
+;노출
+SOURCE:12 = 300
+;성행동
+SOURCE:15 = 150
+;욕정 추가
+SOURCE:18 = 100
+;수치 선정
+SOURCE:28 = 1000
+;일탈
+SOURCE:31 = 20
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 10
+	SOURCE:11 = 25
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 50
+	SOURCE:11 = 50
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 100
+	SOURCE:11 = 80
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 250
+	SOURCE:11 = 100
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 500
+	SOURCE:11 = 115
+ELSE
+	SOURCE:0 = 800
+	SOURCE:11 = 125
+ENDIF
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 5
+	SOURCE:22 = 15
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 25
+	SOURCE:22 = 25
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 75
+	SOURCE:22 = 40
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 150
+	SOURCE:22 = 70
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 300
+	SOURCE:22 = 130
+ELSE
+	SOURCE:1 = 600
+	SOURCE:22 = 200
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.00
+	TIMES SOURCE:22 , 0.20
+	SOURCE:20 = 100
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.25
+	TIMES SOURCE:22 , 0.50
+	SOURCE:20 = 60
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:22 , 0.80
+	SOURCE:20 = 20
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 0.75
+	TIMES SOURCE:22 , 1.00
+	SOURCE:20 = 5
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:22 , 1.10
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:22 , 1.20
+	SOURCE:20 = 0
+ENDIF
+
+;V민감, 둔감을 본다
+;쾌V자체의 체크는 다음에 정리해 준다
+IF TALENT:103
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+ELSEIF TALENT:102
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+ENDIF
+
+;친애·상애
+SIF TALENT:152 || TALENT:153
+	TIMES SOURCE:11 , 1.20
+
+;정액 닦아내.
+SIF STAIN:3 & 4
+	STAIN:3 -= 4
+
+;우선 발실구.
+TFLAG:102 = 0
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM336
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 \@(TALENT:128) ? 어린 균열 # 보지\@로부터 넘쳐 나오는 
+IF STAIN:3 & 4 && STAIN:3 & 64 && TFLAG:103 > 0
+	SIF STAIN:3 & 32
+		PRINT 파과의 피와 
+	PRINT 정액과 촉수의 체액이 서로 뒤섞인 액체를 
+ELSEIF STAIN:3 & 4 && TFLAG:103 > 0
+	SIF STAIN:3 & 32
+		PRINT 파과의 피와 뒤섞여 생생한 핑크색의 액체가 된 
+	PRINT 정액을 
+ENDIF
+PRINTW 살그머니 닦아 주었다.

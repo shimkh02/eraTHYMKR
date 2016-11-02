@@ -1,0 +1,166 @@
+﻿;=============================================================================
+;털 뽑기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE113
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:113 > 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;[パイパン]だと不可, 生えそろっていないと無理
+SIF TALENT:65 || (CFLAG:36 && BASE:5 < 250)
+	RETURN 0
+;テキストより[작은 체형]はデフォでツルツル。[소인체형]もそれに準じる
+SIF (TALENT:128 || TALENT:127) && CFLAG:36 == 0
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;귀갑 묶기일 때는 무리
+SIF TEQUIP:40 == 5
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;시체는 안됨
+SIF TALENT:226 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM113
+PRINTL 털 뽑기
+TSTR:0 = 털 뽑기
+CALL TRAIN_MESSAGE_COM113
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 130
+
+LOCAL:1 = 500
+SOURCE:16 = 750
+SOURCE:24 = 500
+SOURCE:10 = 800
+SOURCE:12 = 1000
+SOURCE:31 = 1200
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	SOURCE:20 = 600
+ELSEIF PALAM:10 < PALAMLV:2
+	SOURCE:20 = 250
+ELSEIF PALAM:10 < PALAMLV:3
+	SOURCE:20 = 100
+ELSEIF PALAM:10 < PALAMLV:4
+	SOURCE:20 = 30
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:14 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:14 == 2
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:14 == 3
+	TIMES LOCAL:1 , 1.50
+ELSEIF ABL:14 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 2.60
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.40
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.70
+ELSE
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+SOURCE:24 += LOCAL:1
+SOURCE:18 += LOCAL:1
+SOURCE:12 += LOCAL:1
+
+;小柄体型、小人体型
+SIF TALENT:128 || TALENT:127
+	TIMES SOURCE:12 , 2.50
+
+IF TALENT:65 == 0
+	PRINTL
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [%TALENTNAME:65%]가 되었다.
+	TALENT:65 = 1
+ENDIF
+;毛は後から生えてこないようになる
+CFLAG:36 = 1
+;ツルツルになる
+BASE:5 = 0
+
+;陰毛入手イベント
+SIF FLAG:12 & 8 && (TFLAG:996 & 64) == 0 
+	CALL SWEET_POTATO_PUBLIC_HAIR
+
+;露出快楽経験入手判定
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM113
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 음모를 한올 한올 당겨 뽑았다.
+;睡眠中と失神中は反応できない. 
+IF EQUIP:14 == 0 && TFLAG:899 <= 0
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF TALENT:40
+		PRINTW 음모를 뽑힐 때 마다 비명을 지르며, 폭포 같은 눈물을 쏟아내고 있다….
+	ELSEIF TALENT:41
+		PRINTW 눈을 질끈 감고, 음모를 뽑힐 때 마다 작은 목소리로 신음하고 있다….
+	ELSE
+		PRINTW 음모를 뽑힐 때 마다 비명을 질렀다….
+	ENDIF
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 의식이 없음에도 불구하고, 음모를 뽑힐 때 마다 아픈듯한 표정을 지었다….
+ENDIF

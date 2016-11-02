@@ -1,0 +1,214 @@
+﻿;************************************
+;*체력바, 기력바 등
+;*BAR 감각에서 사용하는 컬러 바를 묘화하는 함수군
+;eraMeiQ 외전을 참고로 만들었다
+;************************************
+;------------------------------------
+;색이 있는 BAR를 불러낸다
+;묘화의 사양인지는 모르겠지만 그라데이션을 하면 어째서인지 길이가 달라지므로、
+;세로로 쭉 늘어놓으면 길이차가 신경쓰일지도
+;ARG	=	대상의 변수
+;ARG:1	=	그 변수의 최대치
+;ARG:2	=	길이
+;ARG:3	=	색（0xXXXXXX지정）
+;ARG:4	=	배경색（0xXXXXXX지정）
+;ARG:5	=	그라데이션 폭（0xXXXXXX지정）（숫자지만 비트 단위로 생각한다）0이라면 그라데이션 없음
+;ARGS	=	좌측 게이지 부분의 UNICODE 문자
+;ARGS:1	=	배경 부분（줄어든 부분）의 UNICODE 문자
+;------------------------------------
+@PRINT_COLORBAR_P, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARGS, ARGS:1
+;현재 수치의 비율. 일단 나누는 것을 제일 마지막으로 하고 있다
+LOCAL = ARG * ARG:2 / ARG:1
+
+;COUNT는 전부 공용이므로 일시적으로 퇴피시켜둔다
+LOCAL:2 = COUNT
+LOCAL:3 = GETCOLOR()
+
+;길이만큼 묘화해나간다()
+REPEAT ARG:2
+	;게이지 좌측이라면 ARG:3의 색
+	IF COUNT < LOCAL
+		;그라데이션
+		SETCOLOR ARG:3 - (COUNT * ARG:5)
+		PRINTFORM %ARGS%
+	ELSE
+		SETCOLOR ARG:4
+		PRINTFORM %ARGS:1%
+	ENDIF
+REND
+;COUNT 반환
+COUNT = LOCAL:2
+;색 반환
+SETCOLOR LOCAL:3
+
+
+;------------------------------------
+;빨간색 체력 BAR를 묘화
+;ARG	=	현재값
+;ARG:1	=	최대치
+;ARG:2	=	길이
+;------------------------------------
+@PRINT_LIFEBAR, ARG, ARG:1, ARG:2
+LOCAL = ARG
+;일단 0 미만은 0으로
+SIF LOCAL < 0
+	LOCAL = 0
+PRINT 체력(
+CALL PRINT_COLORBAR_P, LOCAL, ARG:1, ARG:2, 0xffaa33, 0x665555, 768, UNICODE(0x2585), UNICODE(0x2585)
+PRINTFORML )({LOCAL}/{ARG:1})
+
+;------------------------------------
+;파란색 체력 BAR를 묘화
+;ARG	=	현재값
+;ARG:1	=	최대치
+;ARG:2	=	길이
+;------------------------------------
+@PRINT_VITALBAR, ARG, ARG:1, ARG:2
+LOCAL = ARG
+;일단 0 미만은 0으로
+SIF LOCAL < 0
+	LOCAL = 0
+PRINT 기력(
+CALL PRINT_COLORBAR_P, LOCAL, ARG:1, ARG:2, 0x33aaff, 0x555566, -512, UNICODE(0x2585), UNICODE(0x2585)
+PRINTFORML )({LOCAL}/{ARG:1})
+
+;------------------------------------
+;하얀색 사정 BAR를 묘화
+;ARG	=	현재값
+;ARG:1	=	최대치
+;ARG:2	=	길이
+;ARGS	=	（조수）라던가도 있는 것 같으니 문자열삽입
+;------------------------------------
+@PRINT_SHOOTBAR, ARG, ARG:1, ARG:2, ARGS
+LOCAL = ARG
+;일단 0 미만은 0으로
+SIF LOCAL < 0
+	LOCAL = 0
+PRINTFORM 사정%ARGS%
+CALL PRINT_COLORBAR_P, LOCAL, ARG:1, ARG:2, 0xffffff, 0x555555, 0, "▃", "▃"
+PRINTFORML ({LOCAL}/{ARG:1})
+
+;------------------------------------
+;하얀색 분유 BAR를 묘화　사정과 디자인이 같지만… 필요하다면 변경하세요
+;ARG	=	현재값
+;ARG:1	=	최대치
+;ARG:2	=	길이
+;ARGS	=	（조수）라던가도 있는 것 같으니 문자열삽입
+;------------------------------------
+@PRINT_MILKBAR, ARG, ARG:1, ARG:2, ARGS
+LOCAL = ARG
+;일단 0 미만은 0으로
+SIF LOCAL < 0
+	LOCAL = 0
+PRINTFORM 모유(%ARGS%)
+CALL PRINT_COLORBAR_P, LOCAL, ARG:1, ARG:2, 0xffffff, 0x555555, 0, "▃", "▃"
+PRINTFORML ({LOCAL}/{ARG:1})
+
+@NEW_PRINT_PALAM_BAR
+;각 패러미터의 현재 수치와 레벨의 수치를 비교해 L에 패러미터 레벨을 대입
+#DIM LV, 1
+
+VARSET LOCALS,""
+SPLIT "0,1,2,3,10,11,12,13,14,15,16,17,30,31,32,20,21,22",",",LOCALS
+;패러미터를 표시하는 순번을 다시 나열한다
+REPEAT 18
+	LOCAL = TOINT(LOCALS:COUNT)
+	
+;현재의 패러미터 레벨 취득
+GETPALAMLV PALAM:LOCAL, (TALENT:150 || TALENT:160 || TALENT:170) ? 14 # 13
+LV = RESULT
+
+[SKIPSTART]
+IF PALAM:COUNT < PALAMLV:1
+	LV = 0
+ELSEIF PALAM:COUNT < PALAMLV:2
+	LV = 1
+ELSEIF PALAM:COUNT < PALAMLV:3
+	LV = 2
+ELSEIF PALAM:COUNT < PALAMLV:4
+	LV = 3
+ELSEIF PALAM:COUNT < PALAMLV:5
+	LV = 4
+ELSEIF PALAM:COUNT < PALAMLV:6
+	LV = 5
+ELSEIF PALAM:COUNT < PALAMLV:7
+	LV = 6
+ELSEIF PALAM:COUNT < PALAMLV:8
+	LV = 7
+ELSEIF PALAM:COUNT < PALAMLV:9
+	LV = 8
+ELSE
+	LV = 9
+ENDIF
+[SKIPEND]
+CALL PRINT_PALAMBAR, LOCAL, LV, 10
+
+	;3회마다 개행
+	SIF COUNT%3 == 2
+		PRINTL 
+REND
+
+;------------------------------------
+;각종 패러미터 BAR를 묘화
+;부위쾌락：	핑크
+;감정：		물색
+;부정감정：	보라색
+;ARG	=	패러미터번호
+;ARG:1	=	패러미터레벨
+;ARG:2	=	길이
+;------------------------------------
+@PRINT_PALAMBAR, ARG, ARG:1, ARG:2
+;현재경험치 - 한 단계 레벨의 경험치
+IF 0 < ARG:1
+	LOCAL = PALAM:ARG - PALAMLV:(ARG:1-1)
+ELSE
+	LOCAL = PALAM:ARG
+ENDIF
+
+;현재 레벨의 경험치에서 NEXT로 가기 위해 필요한 경험치　예）2→3이라면 7000
+;9를 넘으면 0이 되어버리므로 그에 대한 대처
+IF ARG:1 < 9
+	LOCAL:1 = PALAMLV:(ARG:1+1) - PALAMLV:(ARG:1)
+ELSE
+	;1/1로 해서 항상 100％로
+	LOCAL:1 = 1
+	LOCAL = LOCAL:1
+ENDIF
+	
+
+;각종 게이지의 구분＆색 설정
+;여기에 패러미터의 첨자를 넣어 수정
+IF ARG < 4
+	;쾌락계
+	LOCAL:2 = 0xff88dd
+	LOCAL:3 = 0x553344
+ELSEIF ARG == 20 || ARG == 21 || ARG == 22 || ARG == 100
+	;부정계
+	LOCAL:2 = 0xbb55dd
+	LOCAL:3 = 0x554455
+ELSEIF ARG == 30 || ARG == 31 || ARG == 32
+	;특수
+	LOCAL:2 = 0xCC8899
+	LOCAL:3 = 0x223322
+ELSE
+	;감정계
+	LOCAL:2 = 0x55eeff
+	LOCAL:3 = 0x224455
+ENDIF
+
+;컬러바 우측 경험치 표시 관련
+;윤활만 특수 표시
+IF ARG == 10 && PALAM:ARG >= 20000
+	LOCALS:20 = 젖음
+;1억으로 카운터스톱되도록 하고 있으니 메가 이후는 삭제
+ELSEIF PALAM:ARG > 999999
+	LOCALS:20 = {PALAM:ARG / 1000}k
+;여섯 자리까지 노멀 표시
+ELSE
+	LOCALS:20 = {PALAM:ARG}
+ENDIF
+
+PRINTFORM %PALAMNAME:ARG%LV{ARG:1, 2}[
+CALL PRINT_COLORBAR_P, LOCAL, LOCAL:1, ARG:2, LOCAL:2, LOCAL:3, 0, "▃", "▃"
+PRINTFORM ]%LOCALS:20, 6% 
+

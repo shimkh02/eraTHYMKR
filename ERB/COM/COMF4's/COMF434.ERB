@@ -1,0 +1,114 @@
+﻿;=============================================================================
+;뿔 애무
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE434
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:434 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 助手でcaved!!!!イベントを体験しているとトラウマで実行できない
+SIF ASSIPLAY && CFLAG:PLAYER:20 & 4096
+	RETURN 0
+;既にcaved!!!!が発動しているとダメ
+SIF TFLAG:140 & 32
+	RETURN 0
+;조교 대상이 [鬼]またはハクタク化している[半白澤]ないとダメ
+SIF TALENT:212 != 2 && TALENT:214 == 0
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM434
+;조교 대상이 긴박 하고 있지 않는 반발 각인 3의 하크타크였던 경우, 역습 될 가능성대
+IF NO:TARGET == 26 && TFLAG:199 && MARK:9 >= 3 && TEQUIP:40 == 0 && FLAG:15 & 32768
+	IF RAND:4 > 0 && (TFLAG:140 & 32) == 0
+		TFLAG:140 |= 32
+		JUMP CAVED
+	ENDIF
+ENDIF
+
+PRINTL 뿔 애무
+TSTR:0 = 뿔 애무
+CALL TRAIN_MESSAGE_COM434
+
+DOWNBASE:0 += 15
+DOWNBASE:1 += 80
+
+SOURCE:31 = 400
+
+;ABL:욕망을 본다
+IF ABL:11 == 0
+	SOURCE:24 = 50
+	SOURCE:22 = 50
+ELSEIF ABL:11 == 1
+	SOURCE:24 = 100
+	SOURCE:22 = 100
+ELSEIF ABL:11 == 2
+	SOURCE:24 = 250
+	SOURCE:22 = 200
+ELSEIF ABL:11 == 3
+	SOURCE:24 = 500
+	SOURCE:22 = 400
+ELSEIF ABL:11 == 4
+	SOURCE:24 = 1000
+	SOURCE:22 = 800
+ELSE
+	SOURCE:24 = 2000
+	SOURCE:22 = 1600
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 = 50
+ELSEIF ABL:14 == 1
+	SOURCE:12 = 100
+ELSEIF ABL:14 == 2
+	SOURCE:12 = 200
+ELSEIF ABL:14 == 3
+	SOURCE:12 = 600
+ELSEIF ABL:14 == 4
+	SOURCE:12 = 1000
+ELSE
+	SOURCE:12 = 1500
+ENDIF
+
+IF STAIN:PLAYER:0
+;주인의 입의 더러움이 있으면(자) 불결 추가
+	SOURCE:30 = 300
+	;악취 둔감
+	SIF TALENT:61
+		SOURCE:30 /= 4
+	;악취 민감
+	SIF TALENT:62
+		SOURCE:30 *= 3
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM434
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 뿔에 키스 하고 매만졌다.
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 뿔에 전해지는 자극에 곤혹스런 표정을 짓고 있다….

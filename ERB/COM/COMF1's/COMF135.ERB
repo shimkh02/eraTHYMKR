@@ -1,0 +1,516 @@
+﻿;=============================================================================
+;음핵 측정
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE135
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:135 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;남자 또는 후타나리면 불가
+SIF EXIST_PENIS(TARGET)
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;클리토리스를 성장시키지 않으면 불가
+SIF BASE:7 == 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;처리 간략화를 위해[남자],[후타나리]에는 사용할 수 없게
+;동시에 지문에 죽어 판정이 발생(향후의 확장성을 전망해 굳이 남기고 있습니다)
+@COM135
+PRINTL 음핵 측정
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+;속박되지 않으면 실행 판정
+IF TEQUIP:40 == 0
+	IF TFLAG:699 == 0
+		CALL COM_ORDER
+		;실행할 수 없다
+		SIF RESULT == 0
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 음핵 측정
+CALL TRAIN_MESSAGE_COM135
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 50
+DOWNBASE:1 += 90
+
+SOURCE:10 = 200
+SOURCE:12 = 250
+SOURCE:22 = 250
+SOURCE:31 = 500
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 100
+	SOURCE:22 += 200
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 200
+	SOURCE:22 += 300
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 350
+	SOURCE:22 += 600
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 700
+	SOURCE:22 += 900
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1400
+	SOURCE:22 += 1300
+ELSE
+	SOURCE:0 = 1800
+	SOURCE:22 += 1700
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 += 1500
+	SOURCE:30 = 2000
+ELSEIF ABL:14 == 1
+	SOURCE:12 += 1250
+	SOURCE:30 = 1000
+ELSEIF ABL:14 == 2
+	SOURCE:12 += 750
+	SOURCE:30 = 500
+ELSEIF ABL:14 == 3
+	SOURCE:12 += 500
+	SOURCE:30 = 200
+ELSEIF ABL:14 == 4
+	SOURCE:12 += 250
+	SOURCE:30 = 100
+ELSE
+	SOURCE:30 = 50
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:10 , 0.50
+	TIMES SOURCE:30 , 1.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:10 , 0.80
+	TIMES SOURCE:30 , 1.50
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:10 , 1.20
+	TIMES SOURCE:30 , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:10 , 1.50
+	TIMES SOURCE:30 , 0.80
+ELSE
+	TIMES SOURCE:10 , 1.80
+	TIMES SOURCE:30 , 0.50
+ENDIF
+
+;부끄럼쟁이·부끄럼없음
+IF TALENT:35
+	TIMES SOURCE:30 , 1.20
+ELSEIF TALENT:36
+	TIMES SOURCE:30 , 0.50
+ENDIF
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:100
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:101
+	TIMES SOURCE:0 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 1.50
+ENDIF
+
+;처녀, 정조관념
+IF TALENT:0
+	TIMES SOURCE:30 , 1.20
+	IF TALENT:0 == 1
+		SOURCE:12 += 2000
+		TIMES SOURCE:22 , 2.00
+		TIMES SOURCE:30 , 2.00
+		SIF TALENT:30
+			TIMES SOURCE:12 , 2.00
+	ENDIF
+ENDIF
+
+IF ABL:10 < 3 && MARK:2 > 0 && MARK:9 < 3
+	;EXP:자위 경험을 본다
+	IF EXP:10 < EXPLV:1
+		TIMES SOURCE:30 , 1.50
+		TIMES SOURCE:22 , 0.20
+	ELSEIF EXP:10 < EXPLV:2
+		TIMES SOURCE:30 , 1.20
+		TIMES SOURCE:22 , 0.50
+	ELSEIF EXP:10 < EXPLV:3
+		TIMES SOURCE:30 , 1.00
+		TIMES SOURCE:22 , 0.80
+	ELSEIF EXP:10 < EXPLV:4
+		TIMES SOURCE:30 , 0.80
+		TIMES SOURCE:22 , 1.00
+	ELSEIF EXP:10 < EXPLV:5
+		TIMES SOURCE:30 , 0.50
+		TIMES SOURCE:22 , 1.20
+	ELSE
+		TIMES SOURCE:30 , 0.20
+		TIMES SOURCE:22 , 1.50
+	ENDIF
+
+	SIF ABL:14 >= 3
+		TCVAR:10 += 1
+ENDIF
+;노예의 V⇔손가락의 불결이 이동
+STAIN:3 |= STAIN:1
+STAIN:1 |= STAIN:3
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 1
+
+CALL PENIS_SMESSAGE
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_135
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:120 || TALENT:121
+	PRINT 페니스의 길이
+ELSE
+	SIF TALENT:1
+		PRINT 거대한 
+	PRINT 클리토리스의 길이
+ENDIF
+PRINTL 를 측정하려고 했지만, 거절되었다.
+PRINTW 조금 더 조교가 필요한 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM135
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF ABL:10 < 3 && MARK:2 <= 2
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+	IF TALENT:11 || TALENT:12 || TALENT:16
+		PRINTL 몸을 흔들어대며 저항하고 있다.
+	ELSEIF TALENT:10 || TALENT:14
+		PRINTL 눈을 들어 째려보고 있다.
+	ELSE
+		PRINTL 싫다는 듯이 고개를 젓고 있다.
+	ENDIF
+	SIF TALENT:128
+		PRINT 아담한 체격의 
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 껴안아 테이블의 위에 다리를 벌리게 앉혔다.
+ELSE
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	;음란 or음핵/음경
+	IF TALENT:170 || TALENT:171
+		PRINTL 황홀한 표정으로 가랑이에 손을 가져가
+		PRINTFORML 기대하는 듯한 눈동자로 %조사선택(CALLNAME:PLAYER, "를")% 바라보며
+	;연모 or망신 or상애 or친애
+	ELSEIF TALENT:150 || TALENT:151 || TALENT:152 || TALENT:153
+		PRINTL 수치감에  떨리는 손을 억지로 움직이며
+	ELSE
+		PRINTL 얼굴을 새빨갛게 하고 흠칫 흠칫 손을 움직여
+	ENDIF
+		IF TALENT:120 || TALENT:121
+			PRINT 페니스를 
+		ELSE
+			SIF TALENT:1
+				PRINT 거대한 
+			PRINT 클리토리스를 
+		ENDIF
+	PRINTW 드러냈다….
+ENDIF
+PRINTL
+
+PRINT 측정기에 
+IF TALENT:120 || TALENT:121
+	PRINT 페니스를 
+ELSE
+	SIF TALENT:1
+		PRINT 거대한 
+	PRINT 클리토리스를 
+ENDIF
+PRINTL 끼워 
+IF TALENT:65
+	PRINT 매끌매끌한 음부의 감촉을 즐기면서 
+ELSEIF BASE:5 > 50 && BASE:5 < 251
+	PRINT 털이 나기 시작해 까끌까끌 한 피부의 감촉을 즐기면서 
+ELSE
+	PRINT 음모의 감촉을 즐기며 
+ENDIF
+PRINTW 차분히 길이를 재었다….
+
+;---------------------------------------------------------------------
+;조교 커맨드로 사용
+;---------------------------------------------------------------------
+@PENIS_SMESSAGE
+PRINTW  ·
+PRINTW  ·
+PRINTW  ·
+;일단 한계치를 설정
+IF BASE:7 >= 250
+	BASE:7 = 250
+	PRINTFORM 아무래도 %CALLNAME:TARGET%의 
+	IF TALENT:1
+		PRINT 클리토리스가 
+	ELSE
+		PRINT 페니스가 
+	ENDIF
+	PRINTW 더 이상 성장하는 건 무리일 듯 싶다….
+;이상한 사이즈가 되면(자) AV계 커맨드로 확장 경험이 나오게 될……예정
+;특수 커맨드 전용 커맨드 이외만으로도 대응할 수 있으면 좋겠다
+ELSEIF BASE:7 > 200
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:1
+		PRINT 클리토리스는 
+	ELSE
+		PRINT 페니스는 
+	ENDIF
+	PRINTW 이미 상식 밖의 사이즈가 돼버렸다….
+	IF (CFLAG:37 & 4) == 0
+		TCVAR:50 += 1
+		CFLAG:37 |= 4
+	ENDIF
+;음핵 비대 이벤트
+ELSEIF BASE:7 >= 150
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:120 || TALENT:121
+		PRINT 페니스는 
+	ELSE
+		PRINT 클리토리스는 
+	ENDIF
+	PRINTW 발기한 페니스 정도 길이다.
+	IF TALENT:1 == 0 && TALENT:120 == 0 && TALENT:121 == 0
+		PRINTFORMW %CALLNAME:TARGET%의 클리토리스는 [비대 음핵]이 되었다.
+		TALENT:1 = 1
+		IF (CFLAG:37 & 2) == 0
+			TCVAR:50 += 1
+			CFLAG:37 |= 2
+		ENDIF
+	ENDIF
+ELSEIF BASE:7 > 100
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:120 || TALENT:121
+		PRINT 페니스는 
+	ELSE
+		PRINT 클리토리스는 
+	ENDIF
+	PRINTW 보통 페니스 정도의 길이다.
+ELSEIF TALENT:120 || TALENT:121
+	PRINTFORMW %CALLNAME:TARGET%의 페니스는 약간 좀 작은 크기다.
+ELSEIF BASE:7 > 50
+	PRINTFORMW %CALLNAME:TARGET%의 클리토리스는 새끼 손가락 만큼 성장하고 있다.
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%의 클리토리스는 아직 보통 사이즈다.
+ENDIF
+
+;음핵 사이즈 표시 일시 보존 변수로 LOCAL:150을 사용
+LOCAL:150 = BASE:7 * BASE:7 / 150
+PRINTFORMW 대체로 {LOCAL:150 / 10}. {LOCAL:150 % 10}cm 일까…
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_135, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+;ABL:V감각
+IF ABL:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:1
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:1%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+;ABL:봉사 정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+;ABL:노출벽
+IF ABL:14
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:14
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:14%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+;ABL:정액 중독
+IF ABL:31
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:31
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:31%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;PALAM:윤활(의 부족)
+IF PALAM:10 < PALAMLV:3
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 윤활 부족({LOCAL:99})
+ENDIF
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 2
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;남자 싫다
+IF TALENT:37 && TALENT:PLAYER:120
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:37%({LOCAL:99})
+;여자 증오
+ELSEIF TALENT:38 && TALENT:PLAYER:120 == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:38%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+;처녀
+IF TALENT:0 == 1
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 20
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:0%({LOCAL:99})
+ELSEIF EXP:0 < EXPLV:2
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %EXPNAME:0%부족({LOCAL:99})
+ENDIF
+
+;조교자가 후타나리
+IF TALENT:PLAYER:121
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 4
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:121%({LOCAL:99})
+ENDIF
+
+;미약
+IF TEQUIP:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ITEMNAME:61%({LOCAL:99})
+ENDIF
+
+;합계를 표시(18이상으로 실행)
+TFLAG:241 = 18

@@ -1,0 +1,556 @@
+﻿;=============================================================================
+;삽입 G스팟 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE614
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM614
+TFLAG:132 = 0
+IF SELECTCOM == 24
+	PRINTL 승마 G스팟 고문
+	TSTR:0 = 승마 G스포 고문
+ELSE
+	PRINTL 삽입 G스팟 고문
+	TSTR:0 = 삽입 G스포 고문
+ENDIF
+
+SELECTCOM = 614
+CALL TRAIN_MESSAGE_COM614
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+SIF TALENT:0 && TALENT:150 && ASSIPLAY == 0
+	TFLAG:2 = TALENT:0
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 500
+ELSEIF ABL:12 == 1
+	LOCAL = 600
+ELSEIF ABL:12 == 2
+	LOCAL = 700
+ELSEIF ABL:12 == 3
+	LOCAL = 900
+ELSEIF ABL:12 == 4
+	LOCAL = 1200
+ELSE
+	LOCAL = 1400
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_4(TARGET, LOCAL)
+;윤활을 본다
+LOCAL = EJACULATIONCHECK_PALAM_10_1(TARGET, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+IF PREVCOM == 24
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 150
+	SOURCE:12 = 1300
+ELSE
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 100
+	SOURCE:12 = 900
+ENDIF
+
+;혼란 모란 직후의 파생은 효과 증강
+SIF PREVCOM == 612
+	SOURCE:12 += 2500
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 150
+	SOURCE:11 = 100
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 200
+	SOURCE:11 = 180
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 600
+	SOURCE:11 = 250
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 2000
+	SOURCE:11 = 380
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 2600
+	SOURCE:11 = 500
+ELSE
+	SOURCE:1 = 3400
+	SOURCE:11 = 800
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 = 300
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 100
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 10
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 = 0
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 1000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 300
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;대면좌위라면 효과가 낮다
+IF PREVCOM == 22 || PREVCOM == 617
+	TIMES SOURCE:1 , 0.70
+	TIMES SOURCE:11 , 0.90
+;배면좌위라면 효과가 높다
+ELSEIF PREVCOM == 23 || PREVCOM == 612
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:11 , 1.10
+ENDIF
+
+;조교자가[남자]
+SIF TALENT:PLAYER:120
+	TIMES SOURCE:1 , 2.50
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;정조관념
+IF TALENT:30
+	IF TALENT:0 == 1
+		TIMES SOURCE:11 , 0.60
+		TIMES SOURCE:31, 5.00
+		SOURCE:32 = 2000
+	ELSE
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 1000
+	ENDIF
+;정조무구애
+ELSEIF TALENT:31
+	IF TALENT:0 == 1
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 300
+	ENDIF
+ELSE
+	SIF TALENT:0 == 1
+		SOURCE:32 = 3000
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:11 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:11 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:11 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:11 , 1.50
+ELSE
+	TIMES SOURCE:1 , 1.50
+	TIMES SOURCE:11 , 1.80
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:11 , 0.60
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:32 , 1.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:32 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:32 , 0.60
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:32 , 0.30
+ENDIF
+
+IF PREVCOM == 24
+	;ABL:봉사 정신을 본다
+	IF ABL:13 == 0
+		SOURCE:15 = 200
+		SOURCE:16 = 50
+		SOURCE:31 = 300
+	ELSEIF ABL:13 == 1
+		SOURCE:15 = 250
+		SOURCE:16 = 200
+		SOURCE:31 = 100
+	ELSEIF ABL:13 == 2
+		SOURCE:15 = 350
+		SOURCE:16 = 550
+		SOURCE:31 = 30
+	ELSEIF ABL:13 == 3
+		SOURCE:15 = 450
+		SOURCE:16 = 900
+		SOURCE:31 = 0
+	ELSEIF ABL:13 == 4
+		SOURCE:15 = 600
+		SOURCE:16 = 1500
+		SOURCE:31 = 0
+	ELSE
+		SOURCE:15 = 750
+		SOURCE:16 = 2200
+		SOURCE:31 = 0
+	ENDIF
+	;ABL:기교를 본다
+	IF ABL:12 == 0
+		TIMES SOURCE:1 , 0.30
+		TIMES SOURCE:11 , 0.30
+	ELSEIF ABL:12 == 1
+		TIMES SOURCE:1 , 0.60
+		TIMES SOURCE:11 , 0.60
+	ELSEIF ABL:12 == 2
+		TIMES SOURCE:1 , 1.00
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:12 == 3
+		TIMES SOURCE:1 , 1.10
+		TIMES SOURCE:11 , 1.10
+	ELSEIF ABL:12 == 4
+		TIMES SOURCE:1 , 1.30
+		TIMES SOURCE:11 , 1.20
+	ELSE
+		TIMES SOURCE:1 , 1.50
+		TIMES SOURCE:11 , 1.40
+	ENDIF
+ENDIF
+
+;혼란 모란으로부터의 파생
+IF PREVCOM == 612
+	;ABL:B감각을 본다
+	IF ABL:3 == 0
+		SOURCE:3 = 50
+		SOURCE:11 += 50
+		SOURCE:15 += 50
+	ELSEIF ABL:3 == 1
+		SOURCE:3 = 200
+		SOURCE:11 += 200
+		SOURCE:15 += 200
+	ELSEIF ABL:3 == 2
+		SOURCE:3 = 500
+		SOURCE:11 += 500
+		SOURCE:15 += 400
+	ELSEIF ABL:3 == 3
+		SOURCE:3 = 1000
+		SOURCE:11 += 600
+		SOURCE:15 += 600
+	ELSEIF ABL:3 == 4
+		SOURCE:3 = 1600
+		SOURCE:11 += 1000
+		SOURCE:15 += 1000
+	ELSE
+		SOURCE:3 = 2100
+		SOURCE:11 += 1400
+		SOURCE:15 += 1400
+	ENDIF
+
+	;ABL:C감각을 본다
+	IF ABL:0 == 0
+		SOURCE:0 += 40
+		SOURCE:15 += 50
+	ELSEIF ABL:0 == 1
+		SOURCE:0 += 160
+		SOURCE:15 += 200
+	ELSEIF ABL:0 == 2
+		SOURCE:0 += 700
+		SOURCE:15 += 400
+	ELSEIF ABL:0 == 3
+		SOURCE:0 += 1500
+		SOURCE:15 += 600
+	ELSEIF ABL:0 == 4
+		SOURCE:0 += 2400
+		SOURCE:15 += 1000
+	ELSE
+		SOURCE:0 += 3600
+		SOURCE:15 += 1400
+	ENDIF
+
+	;플레이어의 ABL:기교를 본다
+	IF ABL:PLAYER:12 == 0
+		SOURCE:0 += 100
+		SOURCE:1 += 100
+		SOURCE:3 += 50
+		SOURCE:11 += 100
+		SOURCE:15 += 50
+		SOURCE:19 += 0
+		SOURCE:18 += 0
+		LOCAL:1 = 0
+	ELSEIF ABL:PLAYER:12 == 1
+		SOURCE:0 += 200
+		SOURCE:1 += 200
+		SOURCE:3 += 150
+		SOURCE:11 += 150
+		SOURCE:15 += 100
+		SOURCE:19 += 50
+		SOURCE:18 += 100
+		LOCAL:1 = 0
+	ELSEIF ABL:PLAYER:12 == 2
+		SOURCE:0 += 300
+		SOURCE:1 += 300
+		SOURCE:3 += 250
+		SOURCE:11 += 200
+		SOURCE:15 += 200
+		SOURCE:19 += 100
+		SOURCE:18 += 200
+		LOCAL:1 = 50
+	ELSEIF ABL:PLAYER:12 == 3
+		SOURCE:0 += 500
+		SOURCE:1 += 400
+		SOURCE:3 += 500
+		SOURCE:11 += 300
+		SOURCE:15 += 300
+		SOURCE:19 += 150
+		SOURCE:18 += 300
+		LOCAL:1 = 100
+	ELSEIF ABL:PLAYER:12 == 4
+		SOURCE:0 += 800
+		SOURCE:1 += 500
+		SOURCE:3 += 800
+		SOURCE:11 += 500
+		SOURCE:15 += 400
+		SOURCE:19 += 250
+		SOURCE:18 += 400
+		LOCAL:1 = 300
+	ELSE
+		SOURCE:0 += 1200
+		SOURCE:1 += 600
+		SOURCE:3 += 1200
+		SOURCE:11 += 800
+		SOURCE:15 += 600
+		SOURCE:19 += 400
+		SOURCE:18 += 500
+		LOCAL:1 = 500
+	ENDIF
+
+	;ABL:노출벽을 본다
+	IF ABL:14 == 0
+		SOURCE:24 += 100
+		SOURCE:19 += 100
+		TIMES LOCAL:1, 0.60
+	ELSEIF ABL:14 == 1
+		SOURCE:24 += 200
+		SOURCE:19 += 200
+		TIMES LOCAL:1, 1.00
+	ELSEIF ABL:14 == 2
+		SOURCE:24 += 400
+		SOURCE:19 += 400
+		TIMES LOCAL:1, 1.50
+	ELSEIF ABL:14 == 3
+		SOURCE:24 += 700
+		SOURCE:19 += 700
+		TIMES LOCAL:1, 2.40
+	ELSEIF ABL:14 == 4
+		SOURCE:24 += 1200
+		SOURCE:19 += 1200
+		TIMES LOCAL:1, 3.60
+	ELSE
+		SOURCE:24 += 2000
+		SOURCE:19 += 2000
+		TIMES LOCAL:1, 5.80
+	ENDIF
+
+	SOURCE:0 += LOCAL:1
+	SOURCE:1 += LOCAL:1
+	SOURCE:3 += LOCAL:1
+
+	SIF EXP:0 >= EXPLV:3
+		SOURCE:1 += LOCAL:1
+
+	;TALENT:연모를 본다
+	SIF TALENT:150
+		TIMES SOURCE:11 , 2.00
+ENDIF
+
+TCVAR:0 += 1
+IF PLAYER == MASTER
+	TCVAR:42 += 2
+	SIF TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1
+		CFLAG:173 += 1
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	IF ABL:10 >= 3 && ABL:11 >= 3 && FLAG:10
+		PRINTFORML %CALLNAME:TARGET%의 질 벽을 후비며, %조사선택(CALLNAME:PLAYER, "는")% 정액을 방출했다….
+		PRINTL
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 1
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+;노예의 V⇔조교자의 P의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:3
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 4
+
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:1 >= 3) ?  2 # 1
+
+;처녀 상실의 후에 페니스를 뽑고 있을까
+TFLAG:101 = (TFLAG:101 == 2) ?  1 # 0
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM614
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;승마 G스포 고문
+IF PREVCOM == 24
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 상체를 크게 젖혀, 질의 천정에 페니스를 부딪혔다….
+	IF EXP:0 <= 30
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 당황하면서도 그 행위를 계속하고 있다….
+	ELSEIF EXP:0 <= 50
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 쾌감을 쫓아 허리를 비틀어대고 있다….
+	ELSEIF EXP:0 <= 80
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 엉덩이를 움츠려 조금씩 허리를 떨\@(TEQUIP:42) ? # 며 교성을 올리\@고 있다….
+	ELSEIF EXP:0 <= 120
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 뒤로 손을 가져가, 허리를 움찔 움찔 경련시키며 쾌락을 탐내고 있다….
+		PRINTW 젖혀져 돌아간 페니스의 끄트머리가 날카로운 각도로 G스팟을 쑤시고 있다….
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 여자의 급소를, 스스로 허리를 경련시키며 마음껏 자극하고 있다….
+		PRINTW 쿨럭 하고 무거운 물소리가 할 때 마다, 코에서는 음란하기 그지없는 소리가 흘러나온다….
+	ENDIF
+;초조하게 해 삽입 G스포 고문
+ELSEIF TEQUIP:68
+	;정상위
+	IF PREVCOM == 20
+		PRINTFORML 허리를 치켜 올려, %CALLNAME:TARGET%의 질의 천정에 딱 맞혔다….
+	;후배위
+	ELSEIF PREVCOM == 21
+		PRINTFORML 상체를 구부려 %CALLNAME:TARGET%의 질 내의 천정을 천천히 눌렀다….
+	;대면좌위
+	ELSEIF PREVCOM == 22
+		PRINTFORML 상체를 기울여, %CALLNAME:TARGET%의 아랫배를 배 너머로 눌렀다….
+	;배면좌위
+	ELSEIF PREVCOM == 23
+		PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 들어 올려 그 상체를 손 앞에 받들었다….
+	;혼란 모란
+	ELSEIF PREVCOM == 612
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 거울의 앞에서 %CALLNAME:PLAYER%의 치태를 과시하듯이,
+		PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 들어 올려 상체를 앞에 기울이게 했다….
+	ENDIF
+	IF EXP:0 <= 30
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 침착해 하고 있다….
+	ELSEIF EXP:0 <= 50
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 쾌감을 얻으려고 허리를 움직이지만, 능숙하게 되지 않는다….
+	ELSEIF EXP:0 <= 80
+		PRINTFORMW %CALLNAME:TARGET%의 허리가 날뛰는 것을 열심히 억누른다….
+	ELSEIF EXP:0 > 80 && EX:21
+		PRINTFORML %CALLNAME:TARGET%의 신체가 부자연스럽게 경련한다….
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "를")% 짜내듯이 날뛰며 절정을 요구하고 있다….
+	ENDIF
+;삽입 G스포 고문
+ELSE
+	;정상위
+	IF PREVCOM == 20
+		PRINTFORML 허리를 치켜 올려, %CALLNAME:TARGET%의 질의 천정에 딱 맞혔다….
+	;후배위
+	ELSEIF PREVCOM == 21
+		PRINTFORML 상체를 구부려 %CALLNAME:TARGET%의 질 내의 천정을 천천히 눌렀다….
+	;대면좌위
+	ELSEIF PREVCOM == 24
+		PRINTFORML 상체를 기울여, %CALLNAME:TARGET%의 아랫배를 배 너머로 눌렀다….
+	;배면좌위
+	ELSEIF PREVCOM == 23
+		PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 들어 올려 그 상체를 손 앞에 받들었다….
+	;혼란 모란
+	ELSEIF PREVCOM == 612
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 거울의 앞에서 %CALLNAME:PLAYER%의 치태를 과시하듯이,
+		PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 들어 올려 상체를 앞에 기울이게 했다….
+	ENDIF
+	IF EXP:0 <= 30
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 허리를 흔들고 있다….
+	ELSEIF EXP:0 <= 50
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% \@(TEQUIP:42) ? 몸을 흔들면서# 입을 앙다물고\@ 서투르게 쾌락을 참아내고 있다….
+	ELSEIF EXP:0 <= 80
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 약점을 공략당해, 지나친 쾌감에 눈을 깜빡깜빡 하고 있다….
+	ELSEIF EXP:0 <= 120
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 허리에 힘을 넣어, 질 내에서 부들부들 진동시켜 주었다….
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 민감한 천정을 두드리는 감촉에, \@(TEQUIP:42) ? 몸을 뜨겁게 떨고# 뜨거운 한숨을 흘리고\@ 있다….
+	ELSEIF TEQUIP:42
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 질로부터의 자극에 격렬하게 머리를 저으며 부정하려 한다….
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 꿀꺽 군침을 삼키고 발가락을 구부리고 머리를 흔들며 번뇌하고 있다.
+		PRINTW 그 쾌감에 온전히 호흡도 하지 못해, 입을 뻐끔거리며 들리지 않는 비명을 계속해서 질러대고 있다….
+	ENDIF
+ENDIF

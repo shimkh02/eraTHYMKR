@@ -1,0 +1,179 @@
+﻿;=============================================================================
+;조수주인보지공연
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE118
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:118 > 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;조수로는 안 됨
+SIF ASSIPLAY
+	RETURN 0
+;주인과 조수 중 한쪽이라도 남자면 안 됨
+SIF TALENT:MASTER:120 || TALENT:ASSI:120
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;眼隠しと耳栓両方つけていた場合は意味がないので実行できない
+SIF TEQUIP:41 && TEQUIP:45
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;조수가 훈도시 착용 중일 경우 ダメ
+SIF ASSI >= 0 && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM118
+;특정의 주인과 조수의 편성을 조사한다
+CALL JUDGE_TRAIN_PAIR, MASTER, ASSI
+IF TFLAG:175 == 1
+	LOCALS = 홍마자매 경연에 의한
+ELSEIF TFLAG:175 == 2
+	LOCALS = 겨드랑이 무녀 두 명에 의한 신성한
+ELSEIF TFLAG:175 == 3
+	LOCALS = 가을의 소득을 축하하는 2기둥의
+ELSEIF TFLAG:175 == 4
+	LOCALS = 달 자매에 의한
+ELSEIF TFLAG:175 == 5
+	LOCALS = 비봉클럽판
+ELSEIF TFLAG:175 == 6
+	LOCALS = 춘고정, W릴리에 의한
+ELSEIF TFLAG:175 == 7
+	LOCALS = 사토리 자매에 의한 추잡한
+ELSEIF TFLAG:175 == 8
+	LOCALS = 몽환 자매에 의한 환상적인
+ELSEIF TFLAG:175 == 9
+	LOCALS = 유유유 경연에 의한
+ELSEIF TFLAG:175 == 10 || TFLAG:175 == 11 || TFLAG:175 == 12
+	LOCALS = 소령자매에 의한
+ELSE
+	LOCALS = 
+ENDIF
+PRINTFORML %LOCALS% 조수주인 보지공연
+TSTR:0 = %LOCALS%조수주인보지공연
+CALL TRAIN_MESSAGE_COM118
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 5
+DOWNBASE:1 += 20
+
+SOURCE:12 = 120
+SOURCE:15 = 30
+SOURCE:22 = 20
+SOURCE:30 = 100
+SOURCE:31 = 400
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:18 = 15
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:18 = 30
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:18 = 60
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:18 = 120
+ELSE
+	SOURCE:18 = 240
+ENDIF
+
+SIF ABL:MASTER:14 >= 3
+	TCVAR:MASTER:10 += 1
+
+SIF ABL:ASSI:14 >= 3
+	TCVAR:ASSI:10 += 1
+
+;주인의 V⇔손가락의 불결이 이동
+STAIN:MASTER:3 |= STAIN:MASTER:1
+STAIN:MASTER:1 |= STAIN:MASTER:3
+;조수의 V⇔손가락의 불결이 이동
+STAIN:ASSI:3 |= STAIN:ASSI:1
+STAIN:ASSI:1 |= STAIN:ASSI:3
+
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM118
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:MASTER%에게 명령되어 %조사선택(CALLNAME:ASSI, "는")% 
+IF ABL:ASSI:14 == 0
+	PRINTFORML 울 것 같은 얼굴을 하면서 %조사선택(CALLNAME:MASTER, "를")% 바라보았지만,
+	PRINT 다시 명령하자 마지못해 
+	IF TALENT:ASSI:128
+		PRINT 어린 균열에 
+	ELSE
+		PRINT 보지에 
+	ENDIF
+	PRINTL 손가락을 찔러 넣어 좌우로 넓혀 보였다.
+ELSEIF ABL:ASSI:14 == 1
+	PRINTL 얼굴을 새빨갛게 하면서도 흠칫 흠칫 자신의 음순을 펼쳐 보였다.
+ELSEIF ABL:ASSI:14 == 2
+	PRINTFORML 아랫배에 손을 가져가, 집게 손가락과 중지로 브이자를 그리듯이 %CALLNAME:TARGET%에게 자신의 부끄러운 곳을 노출했다.
+	SIF STAIN:ASSI:3 & 6 == 0
+		PRINTL 벌려진 음문에서 이쪽을 바라보고 있는 질구는 마치 무언가를 기다리고 있, 요사스럽게 꿈틀대고 있다….
+ELSEIF ABL:ASSI:14 == 3
+	PRINTL 익숙해진 모습으로 한 손으로 음순을 열어, 다른 손으로 음핵을 만지작거리기 시작했다….
+	PRINTFORML %CALLNAME:ASSI%의 손이 음핵에 닿을 때마다 질구에서 애액이 방울져 떨어지고 있다….
+ELSEIF ABL:ASSI:14 == 4
+	PRINTL 양손의 손가락을 사용해 음순 뿐만이 아니라, 질구도 동시에 펼쳤다….
+	PRINTFORML 질 안을 보여지고 있는 것에 느끼고 있는지, %CALLNAME:ASSI%의 뺨은 은은하게 다홍색으로 물들고 있다….
+ELSE
+	PRINTFORML 양손의 손가락을 음순에 걸쳐, 질구를 %CALLNAME:TARGET%에게 과시하듯이 크게 벌렸다.
+ENDIF
+PRINTFORM 동시에, %조사선택(CALLNAME:MASTER, "는")% 자신의 
+IF TALENT:MASTER:128
+	PRINT 어린 균열에 
+ELSE
+	PRINT 보지에 
+ENDIF
+PRINTFORML 손가락을 찔러 넣어 좌우로 넓혀 %CALLNAME:TARGET%에게 보였다….
+SIF STAIN:MASTER:3 & 6 == 0
+	PRINTFORML 벌려진 음문에서 이쪽을 바라보고 있는 질구는 마치 무언가를 기다리고 있듯이, 요사스럽게 꿈틀대고 있다….
+
+IF TALENT:35
+	PRINTL
+	PRINTFORML %조사선택(CALLNAME:MASTER, "와")% %CALLNAME:ASSI%의 부끄럽기 짝이 없는 모습을 눈앞에 둔 %조사선택(CALLNAME:TARGET, "는")%
+	PRINTW 치밀어 오르는 수치심에, 붉게 물든 얼굴을 돌리지 않을 수 없었다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:MASTER, "와")% %CALLNAME:ASSI%의 치태를 %조사선택(CALLNAME:TARGET, "는")% 지긋이 바라보고 있다….
+ENDIF

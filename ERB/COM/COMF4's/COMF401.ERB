@@ -1,0 +1,190 @@
+﻿;=============================================================================
+;암흑
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE401
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:401 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 루미아가 아니면 불가
+SIF NO:PLAYER != 3
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;아이마스크의 카피
+;요구의 기능은 거의 COMABLE.ERB의 (분)편으로 실현되고 있다
+@COM401
+PRINTL 암흑
+TSTR:0 = 어두운 곳
+CALL TRAIN_MESSAGE_COM401
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 50
+
+LOCAL:1 = 250
+SOURCE:12 = 1000
+SOURCE:31 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES SOURCE:31 , 2.00
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:19 += LOCAL:1
+SOURCE:18 += LOCAL:1
+
+;아이마스크의 착탈
+IF TEQUIP:70
+	TEQUIP:70 = 0
+ELSE
+	TEQUIP:70 = 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;어두운 곳 전개중
+;--------------------------------------------------
+@EQUIP_COM401
+PRINTL <암흑전개 중>
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 50
+
+LOCAL = 250
+LOCAL:1 = 1000
+LOCAL:2 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL , 2.00
+ELSE
+	TIMES LOCAL , 3.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL , 2.00
+
+SOURCE:25 += LOCAL:2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:2 , 2.00
+
+SOURCE:19 += LOCAL
+SOURCE:12 += LOCAL:1
+SOURCE:31 += LOCAL:2
+SOURCE:18 += LOCAL
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM401
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:70
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 능력을 해제했다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 능력을 전개해, 근처는 어둠에 싸였다.
+ENDIF

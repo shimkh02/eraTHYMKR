@@ -1,0 +1,358 @@
+﻿;=============================================================================
+;수세미 세탁
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE354
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:354 > 0
+	RETURN 0
+;욕실 플레이中でプレイマットが無いとダメ
+IF TEQUIP:53 == 1
+	SIF ITEM:42 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	RETURN 0
+ENDIF
+;순종4미만 · 레즈끼(BL끼)3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;[パイパン]だと不可, 生えそろっていないと無理
+SIF TALENT:65 || (CFLAG:36 && BASE:5 < 250)
+	RETURN 0
+;テキストより[작은 체형]はデフォでツルツル。[소인체형]もそれに準じる
+SIF (TALENT:128 || TALENT:127) && CFLAG:36 == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;패닉 중에는 불가
+SIF TFLAG:108 > 0
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;아이마스크사용 중에는 불가
+SIF TEQUIP:41
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;조수가 スク水とビキニと褌以外のコスプレ中はだめ
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 > 1 && TEQUIP:ASSI:59 != 2 && TEQUIP:ASSI:59 != 12 && TEQUIP:ASSI:59 != 17
+	RETURN 0
+;ビキニ以外のコスプレ中はだめ
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 12
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;인어는 안됨
+SIF TALENT:229 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;조교자의 다리에 걸쳐 노예가 음모로 씻어 주는 플레이
+@COM354
+PRINTL 다리 비비기
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 수세미 세탁
+CALL TRAIN_MESSAGE_COM354
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 40
+DOWNBASE:1 += 160
+
+SOURCE:22 = 1800
+SOURCE:31 = 1500
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 500
+	SOURCE:16 = 200
+	SOURCE:30 = 200
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 700
+	SOURCE:16 = 400
+	SOURCE:30 = 1500
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 900
+	SOURCE:16 = 650
+	SOURCE:30 = 100
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 1100
+	SOURCE:16 = 950
+	SOURCE:30 = 50
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 1300
+	SOURCE:16 = 1450
+	SOURCE:30 = 20
+ELSE
+	SOURCE:15 = 1500
+	SOURCE:16 = 1850
+	SOURCE:30 = 0
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 0
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 50
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 200
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 400
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1000
+ELSE
+	SOURCE:0 = 2000
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.30
+	TIMES SOURCE:16 , 1.30
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:16 , 1.60
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 1.90
+	TIMES SOURCE:16 , 1.90
+ELSE
+	TIMES SOURCE:15 , 2.30
+	TIMES SOURCE:16 , 2.30
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+;조교자의 다리←대상의 V의 불결이 이동한다
+STAIN:PLAYER:6 |= STAIN:3
+
+;입과 가슴 이외의 노예의 더러움이 리셋, 이 플레이에서는 조교자의 더러움은 리셋 되지 않는다.
+STAIN:1 = 0
+STAIN:2 = 2
+STAIN:3 = 1
+STAIN:4 = 8
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && EXP:22 >= EXPLV:3
+	TFLAG:50 += 1
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_354
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM354
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TFLAG:699 > 0
+	PRINTFORM %조사선택(CALLNAME:MASTER, "가")% 아무것도 명령하지 않았는데도 
+	IF TALENT:81
+		PRINTL 남자가 기뻐하는 행위를 이미 다 알고 있다는 듯이
+	ELSE
+		PRINTL 생각났다는 듯이
+	ENDIF
+ENDIF
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 비누로 거품을 일으켜 음모에 흠뻑 묻히고는, 
+SIF TALENT:150
+	PRINT 넋이 나간 표정으로 
+IF TALENT:127 || TALENT:128
+	PRINTFORMW %CALLNAME:PLAYER%의 다리를 자신의 가랑이 사이에 끼우고, 전신을 흔들어대며 음모로 힘껏 문질렀다.
+ELSE
+	PRINTFORMW %CALLNAME:PLAYER%의 다리를 자신의 가랑이 사이에 끼우고, 음모로 문질렀다.
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_354, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:봉사 정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;남자 싫다
+IF TALENT:37 && TALENT:PLAYER:120
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:37%({LOCAL:99})
+;여자 증오
+ELSEIF TALENT:38 && TALENT:PLAYER:120 == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:38%({LOCAL:99})
+ENDIF
+;악취 둔감
+IF TALENT:61
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:61%({LOCAL:99})
+;악취 민감
+ELSEIF TALENT:62
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:62%({LOCAL:99})
+ENDIF
+;헌신적
+IF TALENT:63
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:63%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+
+;조교자가 후타나리
+IF TALENT:PLAYER:121
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:121%({LOCAL:99})
+ENDIF
+
+;조교자의 다리의 더러움
+TFLAG:242 = COMORDER_STAIN_CALC(6, 0)
+
+;서로 불결
+IF TFLAG:242
+	RESULTS = %RESULTS% - 
+	TFLAG:240 -= TFLAG:242
+	RESULTS = %RESULTS% 서로 불결
+	;악취 둔감
+	IF TALENT:61
+		RESULTS = %RESULTS%, %TALENTNAME:61%
+	ELSEIF TALENT:62
+		RESULTS = %RESULTS%, %TALENTNAME:62%
+	ENDIF
+	RESULTS = %RESULTS%({TFLAG:242})
+	LOCAL:99 = 1
+ENDIF
+
+TFLAG:241 = 30

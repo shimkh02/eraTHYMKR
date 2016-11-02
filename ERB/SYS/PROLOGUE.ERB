@@ -1,0 +1,218 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;프롤로그 관계의 처리
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;eratohoYM용의 프롤로그
+;=============================================================================
+;--------------------------------------------------
+;프롤로그를 볼까의 선택
+;--------------------------------------------------
+@PROLOGUE_SELECT_YM
+DRAWLINE
+PRINTL 적절한 eratohoYM의 프롤로그입니다. 보시겠습니까?
+PRINTL [0] 필요 없어!
+PRINTL [1] 예
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	CALL PROLOGUE_MENU_YM
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;볼 프롤로그의 선택
+;--------------------------------------------------
+@PROLOGUE_MENU_YM
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT 1000
+	TRYCALLFORM EXIST_PROLOGUE_YM_{COUNT}
+	IF RESULT == 1
+		RESULT = 0
+		CALLF SET_LIST, COUNT, 1
+		LOCAL:3 += 1
+		SIF (LOCAL:3%20) == 1 && LOCAL:3 > 20
+			LOCAL:1 += 1
+	ENDIF
+REND
+SIF LOCAL:1 < 0
+	LOCAL:1 = 0
+
+;페이지를 넘겼을 때 등은 여기로부터
+$PRINT_LIST_PAGE
+DRAWLINE
+PRINTFORML 프롤로그를 선택해 주세요\@(LOCAL:1 == 0) ?  .  # .  ＜page. {LOCAL+1}/{LOCAL:1+1}＞\@
+DRAWLINE
+LOCAL:2 = 0
+REPEAT 1000
+	;표시반대의 경우는 제외
+	SIF GET_LIST(COUNT) == 0
+		CONTINUE
+	;어디에서 어디까지를 진열할까
+	LOCAL:2 += 1
+	SIF LOCAL:2 > (LOCAL * 20) && LOCAL:2 <= ((LOCAL + 1) * 20)
+		TRYCALLFORM SHOW_PROLOGUE_YM_{COUNT}
+REND
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ?  %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 그만둔다
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ?  %" " * 16% # [1009] 다음페이지\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST_PAGE
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST_PAGE
+ELSEIF RESULT < 0 || RESULT > 1000 || GET_LIST(RESULT) == 0
+	CLEARLINE 1
+	REUSELASTLINE 
+	GOTO INPUT_LOOP
+ELSE
+	LOCAL = RESULT
+	TRYCALLFORM EXE_PROLOGUE_YM_{LOCAL}
+	FLAG:994 |= 1
+	FLAG:995 = LOCAL
+ENDIF
+
+;=============================================================================
+;프롤로그 No. 0 -동방조교전-
+;=============================================================================
+;--------------------------------------------------
+;프롤로그 No. 0의 존재 판정
+;--------------------------------------------------
+@EXIST_PROLOGUE_YM_0
+RETURN 1
+
+;--------------------------------------------------
+;프롤로그 No. 0의 표시
+;--------------------------------------------------
+@SHOW_PROLOGUE_YM_0
+PRINTL [000] 프롤로그 No. 000 -동방조교전-
+
+;--------------------------------------------------
+;프롤로그 No. 0 -동방조교전-본문
+;--------------------------------------------------
+@EXE_PROLOGUE_YM_0
+DRAWLINE
+DRAWLINE
+DRAWLINE
+PRINTW ―――프롤로그―――
+PRINTW ……
+PRINTW …………
+PRINTW ………………
+PRINTW ……………………
+PRINTW 언제부터 이곳에 있었는지 모르겠다.
+PRINTW 어떻게 이곳에 왔는지도 모르겠다.
+PRINTW 정신이 들고 보니 들고 있던 건 한 권의 수상쩍은 서적.
+PRINTW 원래는 아름다운 검정색이었을지도 모를 겉피는 너덜너덜했으며,
+PRINTW 안의 종이도 끝이 누래지고 적혀 있는 글씨 또한 군데군데 잔줄이 갔다.
+PRINTW 그러나 묵직한 그 물건은 마치 사악한 의지가 깃들어 있는 것처럼 느껴진다.
+PRINTW 글씨의 금박은 벗겨진 상태지만 가까스로 제목만은 읽을 수 있었다.
+PRINTL 
+PRINTW ――――《동방조교전》이라고.
+PRINTL 
+PRINTW …………지금, 눈앞에 오래된 저택이 모습을 드러냈다.
+PRINTW 무언가에 홀린 듯이 안에 들어가봤지만, 폐가인지 사람의 기척은 전혀 느껴지지 않았다.
+PRINTW 하지만 좀 전까지 사람이 있었다는 생각마저 들 만큼 저택 전체는 깔끔했다.
+PRINTW 일단 당분간 생활할 정도는 될 듯하다.
+PRINTW ……그렇게 조금 안도하고, 아무 생각이 없이 손에 든 서적을 펼쳐봤다.
+PRINTW ………………
+PRINTW …………
+PRINTW ……알아낸 점은 두 개.
+PRINTL ・이 《동방조교전》은 모종의 힘(필시 마술적인 부류)으로써,
+PRINTW 　『소유자」가 『노예』를 『조교』하기 쉬운 환경을 만들어내는 행위가 가능하다.
+PRINTL ・대가로서 『소유자』는 모종의 저주를 받아, 일정 기한까지 해주할 필요가 있다.
+PRINTW 　가장 확실한 방법은 기일까지 『소지금이 100만 원 이상일 것』이라는 모양이다.
+PRINTW ……정체 모를 책으로부터 얻은 지식이라 불안하긴 하지만, 일단 행동을 벌이기로 하자.
+PRINTW  
+PRINTW 　　　　　　　　―― Prologue No. 000 -동방조교전-
+PRINTW  
+DRAWLINE
+PRINTL -------------------------------------GOODLUCK------------------------------------
+DRAWLINE
+PRINTW  
+
+;=============================================================================
+;EXTRA용의 프롤로그
+;=============================================================================
+;장래적으로는 대사(EXTRA용 주인 대사 근처)로부터 읽히는 선택사항도 부가하고 싶은 곳
+;--------------------------------------------------
+;프롤로그를 볼까의 선택
+;--------------------------------------------------
+@PROLOGUE_SELECT_EXTRA
+DRAWLINE
+PRINTL EXTRA의 프롤로그입니다. 보시겠습니까?
+PRINTL [0] 필요 없어!
+PRINTL [1] 예
+TRYCALLFORM EXIST_PROLOGUE_EXTRA_{NO:MASTER}
+IF RESULT == 1
+	PRINTFORML [2] %조사처리(CALLNAME:MASTER,"가")% 조교사가 된 경위를 배운다.
+	LOCAL:2 = 1
+ENDIF
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	RETURN 0
+ELSEIF RESULT == 1
+	CALL EXE_PROLOGUE_EXTRA_0
+ELSEIF RESULT == 2 && LOCAL:2 == 1
+	CALLFORM EXE_PROLOGUE_EXTRA_{NO:MASTER}
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+FLAG:994 |= 2
+FLAG:995 = NO:MASTER
+
+;--------------------------------------------------
+;EXTRA용 프롤로그(통상)
+;--------------------------------------------------
+@EXE_PROLOGUE_EXTRA_0
+DRAWLINE
+DRAWLINE
+DRAWLINE
+PRINTW ―――프롤로그―――
+PRINTW ……
+PRINTW …………
+PRINTW ………………
+PRINTW ……………………
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 따분한 하루하루를 마음속 깊이 진저리치며 살고 있었다….
+PRINTFORMW 그런 \@(TALENT:MASTER:120) ? 그 # 그녀\@의 앞에 돌연 커다란 서적이 떨어져 나타났다.
+PRINTW 원래는 아름다운 검정색이었을지도 모를 겉피는 너덜너덜했으며,
+PRINTW 안의 종이도 끝이 누래지고 적혀 있는 글씨 또한 군데군데 잔줄이 갔다.
+PRINTW 그러나 묵직한 그 물건은 마치 사악한 의지가 깃들어 있는 것처럼 느껴진다.
+PRINTW 글씨의 금박은 벗겨진 상태지만 가까스로 제목만은 읽을 수 있었다.
+PRINTL 
+PRINTW ――――《동방조교전》이라고.
+PRINTL 
+PRINTFORMW …………책에서 눈을 뗀 %조사처리(CALLNAME:MASTER,"는")% 어쩐지 가벼운 현기증을 느끼면서도, 
+STRLENS CSTR:MASTER:1
+IF RESULT > 0
+	LOCALS = %CSTR:MASTER:1%
+ELSE
+	LOCALS = 자신의 집
+ENDIF
+PRINTFORMW %LOCALS%에 들어갔다.
+PRINTFORMW 그리고 그곳이 지금까지의 %LOCALS% 따위가 아니라는 사실을 곧바로 절감하게 되었다.
+PRINTW 뭐지, 이건? 그렇게 생각하면서도 어느새 손에 들고 있던 서적을 아무 생각 없이 펼쳐본다.
+PRINTW ………………
+PRINTW …………
+PRINTW ……알아낸 점은 두 개.
+PRINTL ・이 《동방조교전》은 모종의 힘(필시 마술적인 부류)으로써,
+PRINTW 　『소유자」가 『노예』를 『조교』하기 쉬운 환경을 만들어내는 행위가 가능하다.
+PRINTL ・대가로서 『소유자』는 모종의 저주를 받아, 더 이상 지금까지의 자신일 수가 없다고.
+PRINTW 　그리고 그 저주는 영원히 풀 수 없다고 한다….
+PRINTW ……정체 모를 책으로부터 얻은 지식이라 불안하긴 하지만, 왠지 모르게 『조교』라는 데에
+PRINTFORMW 흥미를 가지고 있었던 %조사처리(CALLNAME:MASTER,"는")% 일단 『조교사』로서의 생활을 시작하기로 했다.
+PRINTW  
+PRINTW 　　　　　　　　―― EXTRA Prologue No. 000
+PRINTW  
+DRAWLINE
+PRINTL ------------------------------------LET＇S ENJOY----------------------------------
+DRAWLINE
+PRINTW  

@@ -1,0 +1,593 @@
+﻿;=============================================================================
+;펠라치오
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE41
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:41 > 0
+	RETURN 0
+;조교자에게 페니스가 없으면 안 됨
+SIF EXIST_BAR(PLAYER) == 0
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;패닉중은 불가
+SIF TFLAG:108 > 0
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;대상이 고양이혀라면 고양이 페라 패치 유효하지 않으면 안 됨
+SIF TALENT:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;고양이혀라면 기교 5·봉사 정신 4·순종 3이 필요
+SIF TALENT:54 && (ABL:12 < 5 || ABL:13 < 4 || ABL:10 < 3)
+	RETURN 0
+;밧줄 사용 중에는 목분리시만 가능
+SIF TEQUIP:40 && TALENT:230 == 0
+	RETURN 0
+;볼 개그 사용중은 불가
+SIF TEQUIP:42
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43 && TALENT:230 == 0
+	RETURN 0
+;조수가 훈도시 착용중의 경우는 안 됨
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;나체정식 중에는 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+;촉수 관통중은 안됨
+SIF TEQUIP:90 && TEQUIP:25 == 3
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM41
+
+;마음대로 실행시는 이 근처에 스르 해 둔다
+IF TFLAG:699 == 0
+	;목욕탕 플레이 중에는 잠망경으로 변화. 라고 해도 그렇게 변함없지만도
+	IF TEQUIP:53
+		CALL EXCOM_ABLE601
+		SIF RESULT == 1
+			JUMP COM601
+	ENDIF
+
+	;전회의 조교가 둘이서 범하는 것이라고 하고 둘이서 범하는에
+	TFLAG:132 = 0
+	IF PREVCOM == 610
+		CALL EXCOM_ABLE610
+		IF RESULT == 1
+			TFLAG:132 = 1
+			JUMP COM610
+		ENDIF
+	;조교자가 전회:조수로 이번:주인인가, 전회:주인으로 이번:조수 때
+	ELSEIF (ASSIPLAY && TFLAG:133 == 0) || (ASSIPLAY == 0 && TFLAG:133)
+		;전회의 조교가 정상위나 후배위나 후배위 애널 때는 둘이서 범하는에
+		IF PREVCOM == 20 || PREVCOM == 21 || PREVCOM == 31
+			CALL EXCOM_ABLE610
+			SIF RESULT == 1
+				JUMP COM610
+		ENDIF
+	ENDIF
+
+	;전회의 조교가 2 개 펠라치오 때 2 개 펠라치오에
+	IF PREVCOM == 304
+		CALL COM_ABLE304
+		SIF RESULT == 1
+			JUMP COM304
+	;조교자가 전회:조수로 이번:주인인가, 전회:주인으로 이번:조수 때
+	ELSEIF (ASSIPLAY && TFLAG:133 == 0) || (ASSIPLAY == 0 && TFLAG:133)
+		;전회의 조교가 펠라치오라면 2 개 펠라치오에
+		IF PREVCOM == 41
+			CALL COM_ABLE304
+			SIF RESULT == 1
+				JUMP COM304
+		ENDIF
+	ENDIF
+
+	;전회와 이번 조교자가 같다
+	IF (ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0)
+		;줄사용중이 아니고, 전회의 조교가 펠라치오나 기러기가 목이라면 기러기가 목에
+		IF (PREVCOM == 41 || PREVCOM == 604) && TEQUIP:40 == 0
+			CALL EXCOM_ABLE604
+			SIF RESULT == 1
+				JUMP COM604
+		;줄사용중이 아니고, 전회의 조교가 커닐링구스나 펠라할까 69라면 69에
+		ELSEIF (PREVCOM == 1 || PREVCOM == 5 || PREVCOM == 602) && TEQUIP:40 == 0
+			CALL EXCOM_ABLE602
+			SIF RESULT == 1
+				JUMP COM602
+		ENDIF
+	ENDIF
+ENDIF
+
+LOCAL:99 = 0
+;캐릭터 전용 커맨드가 온의 경우, 대상이[연모]와 마음의 눈을 닫지 않은[깨닫고]소유라면 변화
+SIF TALENT:213 == 1 && TALENT:150 && (FLAG:15 & 16384)
+	LOCAL:99 = 1
+;오나호 장착이라면 표시 변화
+IF TEQUIP:30 == 2
+	PRINT 오나홀 
+ELSEIF TEQUIP:30 == 6
+	PRINT 전극 오나홀 
+ENDIF
+IF LOCAL:99 == 1
+	PRINTL 독심 펠라
+ELSE
+	PRINTL 펠라치오
+ENDIF
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+IF LOCAL:99 == 1
+	TSTR:0 = 독심 펠라
+ELSE
+	TSTR:0 = 펠라치오
+ENDIF
+CALL TRAIN_MESSAGE_COM041
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 1200
+ELSEIF ABL:12 == 1
+	LOCAL = 1700
+ELSEIF ABL:12 == 2
+	LOCAL = 2300
+ELSEIF ABL:12 == 3
+	LOCAL = 3000
+ELSEIF ABL:12 == 4
+	LOCAL = 3600
+ELSE
+	LOCAL = 4200
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL)
+;정액 중독을 본다
+LOCAL = EJACULATIONCHECK_ABL_31_1(TARGET, LOCAL)
+
+;TALENT:혀사용을 본다
+SIF TALENT:52
+	TIMES LOCAL , 2.00
+
+;TALENT:고양이혀을 본다
+SIF TALENT:54
+	TIMES LOCAL , 0.70
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 150
+
+SOURCE:14 = 1200
+SOURCE:22 = 1500
+SOURCE:31 = 500
+
+;위 쪽으로 계산한 더러운 데이터
+SOURCE:30 = TFLAG:242*40 + 100
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 420
+	SOURCE:16 = 150
+	TIMES SOURCE:30 , 4.00
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 500
+	SOURCE:16 = 300
+	TIMES SOURCE:30 , 2.50
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 580
+	SOURCE:16 = 600
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 660
+	SOURCE:16 = 900
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 740
+	SOURCE:16 = 1500
+	TIMES SOURCE:30 , 0.50
+ELSE
+	SOURCE:15 = 820
+	SOURCE:16 = 2200
+	TIMES SOURCE:30 , 0.10
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.50
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:16 , 1.50
+ELSE
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+ENDIF
+
+;-------------------------------------------------
+;독심 펠라의 경우 효과 업(2배)
+;-------------------------------------------------
+IF LOCAL:99 == 1
+	TIMES SOURCE:14 , 2.00
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+	SIF TALENT:PLAYER:121 || TALENT:PLAYER:122
+		BASE:PLAYER:2 += LOCAL
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+LOCAL:2 = TFLAG:91
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	TIMES SOURCE:15 , 3.00
+
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 = 0
+		TIMES SOURCE:16 , 2.00
+		TIMES SOURCE:22, 4.00
+	ELSEIF ABL:31 == 1
+		SOURCE:24 = 500
+		TIMES SOURCE:16 , 3.00
+		TIMES SOURCE:22, 3.00
+	ELSEIF ABL:31 == 2
+		SOURCE:24 = 1200
+		TIMES SOURCE:16 , 4.00
+		TIMES SOURCE:22, 2.50
+	ELSEIF ABL:31 == 3
+		SOURCE:24 = 3000
+		TIMES SOURCE:16 , 6.00
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 4
+		SOURCE:24 = 6000
+		TIMES SOURCE:16 , 9.00
+		TIMES SOURCE:22, 1.50
+	ELSE
+		SOURCE:24 = 12000
+		TIMES SOURCE:16 , 15.00
+		TIMES SOURCE:22, 1.00
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 4
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 1
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+TCVAR:22 += 1
+
+;노예의 입⇔조교자의 P의 불결이 이동
+STAIN:0 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:0
+
+;봉사 정신 LV2 이상, 기교 LV2 이상이라면 P의 더러움을 없는 취한다
+;다만 대상이 고양이혀의 경우, 고양이 펠라 패치 유효해 게다가
+;봉사 정신 LV4 이상, 기교 LV5, 순종 LV3 이상 없으면 않은 취하지 않는다
+IF (TALENT:54 == 0 && ABL:13 >= 2 && ABL:12 >= 2) || (TALENT:54 && FLAG:14 & 16 && ABL:13 >= 4 && ABL:12 >= 5 && ABL:10 >=3)
+	STAIN:PLAYER:2 = 2
+	SIF LOCAL:2 >= 1
+		TFLAG:21 = 1
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && EXP:22 >= EXPLV:3
+	TFLAG:50 += 1
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;처녀 상실의 후에 페니스를 뽑고 있을까
+TFLAG:101 = (TFLAG:101 == 2) ?  1 # 0
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_41
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF ASSIPLAY
+	PRINTFORML %CALLNAME:TARGET%에게 %CALLNAME:PLAYER%의 페니스에 펠라치오를 명령해 보았지만 거절당했다.
+ELSE
+	PRINTFORML %CALLNAME:TARGET%에게 자신의 페니스를 물도록 명령해 보았지만 거절당했다.
+ENDIF
+PRINTW 좀 더 조교가 필요한 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM041
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL  
+;전회도 펠라치오였던 경우(대부분 대상은 긴박 되고 있다고 생각한다)
+IF PREVCOM == 41
+	;대상이 마음대로 했을 경우
+	IF TFLAG:699 > 0
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 계속 펠라치오를 하고 있다.
+		PRINTW 멈추지를 않는다.
+	ELSE
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 계속 
+		SIF TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0 && MARK:9 > 1
+			PRINT 싫다는 표정을 지으며 
+		SIF TALENT:150
+			PRINT 사랑스러운 표정으로 
+		SIF TALENT:170
+			PRINT 맛있게 
+		;오나호 장착
+		SIF TEQUIP:PLAYER:30 == 2
+			PRINT 오나홀의 끝에 얼굴을 내민 
+		;전극 오나호 장착
+		SIF TEQUIP:PLAYER:30 == 6
+			PRINT 전극 오나홀의 끝에 얼굴을 내민 
+		PRINTFORM %CALLNAME:PLAYER%의 페니스 
+		;고양이혀 펠라
+		IF TALENT:54
+			PRINTW 를 물고 혀끝과 턱 안쪽의 껄끄러운 표면을 이용해 교묘하게 자극하고 있다….
+		;펠라치오
+		ELSE
+			PRINTW 를 맛있다는 듯이 혀를 감고 돌려대고 있다….
+		ENDIF
+	ENDIF
+ELSE
+	;대상이 마음대로 했을 경우
+		IF TFLAG:699 > 0
+			PRINTFORML %조사선택(CALLNAME:MASTER, "가")% 아무것도 하지 않자 명령하지도 않았는데 %조사선택(CALLNAME:TARGET, "는")% 스스로 
+		SIF TALENT:170 || TEQUIP:11 == 1
+			PRINT 참을 수 없다는 듯한 표정을 하곤 
+		SIF TALENT:81
+			PRINTFORM 욕정을 부채질하는 듯한 시선을 %CALLNAME:MASTER%에게 보내곤 
+		SIF TALENT:157
+			PRINT 질투의 원념을 보이듯이 
+		SIF TALENT:158
+			PRINT 미쳐버린 듯한 웃음소리를 내며 
+	ELSE
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		SIF TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0 && MARK:9 > 1
+			PRINT 싫어하는 기색을 보이며 
+		SIF TALENT:150
+			PRINT 사랑스러운 표정으로 
+		SIF TALENT:170
+			PRINT 자발적으로 
+	ENDIF
+	;오나호 장착
+	SIF TEQUIP:PLAYER:30 == 2
+		PRINT 오나홀의 끝에 얼굴을 내민 
+	;전극 오나호 장착
+	SIF TEQUIP:PLAYER:30 == 6
+		PRINT 전극 오나홀의 끝에 얼굴을 내민 
+	PRINTFORM %CALLNAME:PLAYER%의 페니스를 
+	;고양이혀 펠라
+	IF TALENT:54
+		PRINTW 물고 혀끝과 턱 안쪽의 껄끄러운 표면을 이용해 교묘하게 자극하고 있다….
+	;펠라치오
+	ELSE
+		PRINTW 맛있다는 듯이 혀를 감고 돌려대고 있다….
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_41, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:봉사 정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+;ABL:BL기분＆TALENT:남자
+IF TALENT:PLAYER:120 && TALENT:120
+	SIF LOCAL:99
+		RESULTS = %RESULTS% - 
+	;↓의 LOCAL:99의 기준(자위 5, 펠라/A애무 강제 10)
+	LOCAL:99 = 10
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:120%같은 종류({LOCAL:99})
+	IF ABL:23
+		LOCAL:99 = ABL:23
+		TFLAG:240 += LOCAL:99 * 4
+		RESULTS = %RESULTS% + %ABLNAME:23%LV{LOCAL:99}({LOCAL:99 * 4})
+	ENDIF
+ENDIF
+;ABL:정액 중독
+IF ABL:31
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:31
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:31%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;남자 싫다
+IF TALENT:37 && TALENT:PLAYER:120
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:37%({LOCAL:99})
+;여자 증오
+ELSEIF TALENT:38 && TALENT:PLAYER:120 == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:38%({LOCAL:99})
+ENDIF
+;악취 둔감
+IF TALENT:61
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:61%({LOCAL:99})
+;악취 민감
+ELSEIF TALENT:62
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:62%({LOCAL:99})
+ENDIF
+;헌신적
+IF TALENT:63
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:63%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+
+;조교자가 후타나리
+IF TALENT:PLAYER:121
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:121%({LOCAL:99})
+ENDIF
+
+;조교자의 P의 더러움
+TFLAG:242 = COMORDER_STAIN_CALC(2, 0)
+
+;서로불결
+IF TFLAG:242
+	RESULTS = %RESULTS% - 
+	TFLAG:240 -= TFLAG:242
+	RESULTS = %RESULTS% 서로 불결
+	;악취 둔감
+	IF TALENT:61
+		RESULTS = %RESULTS%, %TALENTNAME:61%
+	ELSEIF TALENT:62
+		RESULTS = %RESULTS%, %TALENTNAME:62%
+	ENDIF
+	RESULTS = %RESULTS%({TFLAG:242})
+	LOCAL:99 = 1
+ENDIF
+
+;난이도 상승
+;오나홀로+5
+TFLAG:241 = 24
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	TFLAG:241 += 5
+	

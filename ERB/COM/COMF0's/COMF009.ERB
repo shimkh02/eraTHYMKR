@@ -1,0 +1,481 @@
+﻿;=============================================================================
+;아무것도 안 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE9
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:9 > 0
+	RETURN 0
+;연속에서는 사용할 수 없다
+SIF PREVCOM == 9
+	RETURN 0
+;PHANTASM의 경우만 한 번이라도 실행하고 있으면(자) 안 됨
+SIF TFLAG:140 & 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM9
+
+CALL AUTONOMOUSLY
+
+TFLAG:699 = 0
+IF NO:TARGET == 6
+	PRINTL 문지기 씨의 우아한 낮잠
+	TSTR:0 = 문지기 씨의 우아한 낮잠
+ELSE
+	PRINTL 아무것도 안 한다
+	TSTR:0 = 아무것도 안 한다
+ENDIF
+CALL TRAIN_MESSAGE_COM009
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 10
+
+;노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 = 10
+ELSEIF ABL:14 == 1
+	SOURCE:12 = 30
+ELSEIF ABL:14 == 2
+	SOURCE:12 = 60
+ELSEIF ABL:14 == 3
+	SOURCE:12 = 100
+ELSEIF ABL:14 == 4
+	SOURCE:12 = 150
+ELSE
+	SOURCE:12 = 200
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:12 , 0.80
+	SOURCE:18 = 0
+	SOURCE:19 = 0
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:12 , 1.00
+	SOURCE:18 = 30
+	SOURCE:19 = 20
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:12 , 1.20
+	SOURCE:18 = 70
+	SOURCE:19 = 40
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:12 , 1.40
+	SOURCE:18 = 120
+	SOURCE:19 = 70
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:12 , 1.50
+	SOURCE:18 = 180
+	SOURCE:19 = 110
+ELSE
+	TIMES SOURCE:12 , 1.70
+	SOURCE:18 = 250
+	SOURCE:19 = 150
+ENDIF
+
+SIF PALAM:13 >= PALAMLV:3
+	TFLAG:82 = 1
+
+;PHANTASMの場合一度実行したらその調教中は使えない
+SIF FLAG:3 >= 5
+	TFLAG:140 |= 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM009
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+	PRINTL
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 잠깐 조교를 멈추었다.
+IF (EQUIP:14 || TFLAG:899 > 0 ) && PALAM:13 >= PALAMLV:3
+	PRINTFORMW 그러나 이미 욕정에 잠겨버린 %CALLNAME:TARGET%의 몸은 참을 수 없어 살짝 떨고 있었다….
+ELSEIF EQUIP:14 || TFLAG:899 > 0
+	WAIT
+ELSEIF PALAM:13 >= PALAMLV:3
+	PRINTFORMW 그러나 이미 욕정에 잠겨버린 %조사선택(CALLNAME:TARGET, "는")% 욕망하는 눈빛을 보내고 있다….
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%도 조금 몸을 추슬렀다….
+ENDIF
+
+;-------------------------------------------------
+;調教対象が勝手にコマンドを実行する処理
+;-------------------------------------------------
+@AUTONOMOUSLY
+
+;犯されパッチ無効なら判定必要なし
+SIF (FLAG:1600 & 1) == 0
+	RETURN 0
+;主人に服従する系統の素質を持っていたら判定無し
+SIF TALENT:151 || TALENT:160 || TALENT:161 || TALENT:162 || TALENT:164 || TALENT:168 || TALENT:169
+	RETURN 0
+;縛られてたり촉수拘束中三角木馬騎乗中は何もできない
+SIF TEQUIP:40 || TEQUIP:90 || TEQUIP:43
+	RETURN 0
+;睡眠・失神中・時止め・パニック中は何もできない
+SIF EQUIP:14 || TEQUIP:71 || TFLAG:899 || TFLAG:108
+	RETURN 0
+;裸体盛りの最中も何も出来ない
+SIF TEQUIP:60
+	RETURN 0
+
+;素質と能力を見る
+VARSET LOCAL, 0
+
+;反抗的
+SIF TALENT:11
+	LOCAL += 3000
+;素直
+SIF TALENT:13
+	LOCAL -= 3000
+;生意気
+SIF TALENT:15
+	LOCAL += 500
+;プライド高い
+SIF TALENT:16
+	LOCAL += 1000
+;プライド低い
+SIF TALENT:17
+	LOCAL -= 1000
+;ツンデレ
+SIF TALENT:18
+	LOCAL += 500
+;자제심
+SIF TALENT:20
+	LOCAL -= 2000
+;無関心
+SIF TALENT:21
+	LOCAL -= 1000
+;好奇心
+SIF TALENT:23
+	LOCAL += 1000
+;保守的
+SIF TALENT:24
+	LOCAL -= 500
+;一線越えない
+SIF TALENT:27
+	LOCAL -= 3000
+;目立ちたがり
+SIF TALENT:28
+	LOCAL += 1000
+;부끄럼쟁이
+SIF TALENT:35
+	LOCAL -= 1000
+;恥薄い
+SIF TALENT:36
+	LOCAL += 1000
+;男嫌い
+SIF TALENT:37 && TALENT:PLAYER:120
+	LOCAL -= 5000
+;女嫌い
+SIF TALENT:38 && TALENT:PLAYER:120 == 0
+	LOCAL -= 5000
+;弱味
+SIF TALENT:39
+	LOCAL -= 3000
+;自慰しやすい
+SIF TALENT:60
+	LOCAL += 1000
+;헌신적
+SIF TALENT:63
+	LOCAL -= 2000
+;精液味覚
+SIF TALENT:66
+	LOCAL += 2000
+;쾌감에 솔직
+SIF TALENT:70
+	LOCAL += 1000
+;快楽の否定
+SIF TALENT:71
+	LOCAL -= 1000
+;サド
+SIF TALENT:81
+	LOCAL += 5000
+;プレイヤーが魅惑
+SIF TALENT:PLAYER:91
+	LOCAL += 500
+;プレイヤーが謎の魅力
+SIF TALENT:PLAYER:92
+	LOCAL += 500
+;小悪魔
+SIF TALENT:93
+	LOCAL += 1000
+;嫉妬
+SIF TALENT:157
+	LOCAL += 5000
+;狂気
+SIF TALENT:158
+	LOCAL += 5000
+;淫乱
+SIF TALENT:170
+	LOCAL += 5000
+;淫魔
+SIF TALENT:180
+	LOCAL += 5000
+;媚薬使用中
+SIF TEQUIP:11
+	LOCAL += 7000
+;興奮剤使用中
+SIF TEQUIP:14
+	LOCAL += 4000
+;애태우기플레이 중
+SIF TEQUIP:68
+	LOCAL += 8000
+;異常経験の回数
+SIF EXP:50 > 0
+	LOCAL:1 = EXP:50 * 500
+	LOCAL += LOCAL:1
+;반발각인
+IF MARK:9 == 0
+	LOCAL -= 1000
+ELSEIF MARK:9 == 1
+	LOCAL += 500
+ELSEIF MARK:9 == 2
+	LOCAL += 1000
+ELSEIF MARK:9 >= 3
+	LOCAL += 1500
+ENDIF
+;恐怖刻印
+IF MARK:8 == 1
+	LOCAL -= 500
+ELSEIF MARK:8 == 2
+	LOCAL -= 800
+ELSEIF MARK:8 >= 3
+	LOCAL -= 1500
+ENDIF
+
+;순종의 레벨
+LOCAL -= ABL:10 * 1000
+;욕망의 레벨
+LOCAL += ABL:11 * 500
+
+;一旦条件を満たすと毎回実行してくれちゃうので勝手に行動すると補正をかける
+SIF TFLAG:698 > 0
+	LOCAL -= TFLAG:698 * 50000
+
+;욕정との合計
+;욕정を直接足すと簡単に実行してくれちゃうので条件は厳しめに
+LOCAL:2 = POWER(SQRT(SQRT(PALAM:13)), 3) + LOCAL
+
+;実行コマンド選別
+;無いとは思うけれど愛撫の可能性も考慮して-1
+LOCAL:99 = -1
+
+;욕망が3以上で縄や촉수を装備していない
+IF ABL:11 >= 3
+	;実行値が50000以上
+	IF LOCAL:2 >= 50000
+		TFLAG:699 = 3
+		;淫乱系部位素質持ちだと1/3の確立で素質に応じたコマンド実行
+		IF (TALENT:171 || TALENT:172 || TALENT:173 || TALENT:174) && RAND:3 == 0
+			;음고
+			IF TALENT:173
+				IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+					LOCAL:99 = 34
+				ELSE
+					LOCAL:99 = 182
+				ENDIF
+			;淫壺（非処女）
+			ELSEIF TALENT:172 && TALENT:120 == 0 && TALENT:0 == 0 && EXP:0 > 0
+				IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+					LOCAL:99 = 24
+				ELSE
+					LOCAL:99 = 7
+				ENDIF
+			;음유
+			ELSEIF TALENT:174
+				;絶壁でなくて相手に棒があればパイズリでなければ胸自慰か自慰
+				IF TALENT:110 == 0 && (TALENT:PLAYER:120 || TALENT:PLAYER:121)
+					LOCAL:99 = 42
+				ELSEIF TALENT:120 == 0
+					LOCAL:99 = 205
+				ELSE
+					LOCAL:99 = 7
+				ENDIF
+			;淫核（陰茎）
+			ELSE
+				LOCAL:99 = 7
+			ENDIF
+		;乱数にひっかからなければランダムで実行コマンド決定（ここでひっかからなければ何もしない）
+		ELSE
+			IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+				IF RAND:11 == 0 && TFLAG:143 <= 2 && (NO:PLAYER == 7 || NO:TARGET == 7) && TEQUIP:42 == 0
+					LOCAL:99 = 349
+				ELSEIF RAND:10 == 0
+					LOCAL:99 = 7
+				ELSEIF RAND:9 == 0
+					LOCAL:99 = 40
+				ELSEIF RAND:8 == 0 && TEQUIP:42 == 0
+					LOCAL:99 = 41
+				ELSEIF RAND:7 == 0 && TALENT:110 == 0
+					LOCAL:99 = 42
+				ELSEIF RAND:6 == 0
+					LOCAL:99 = 43
+				ELSEIF RAND:5 == 0 && TALENT:TARGET:0 == 0 && TALENT:120 == 0
+					LOCAL:99 = 24
+				ELSEIF RAND:4 == 0 && TEQUIP:53
+					LOCAL:99 = 352
+				ELSEIF RAND:3 == 0 && ABL:2 >= 3
+					LOCAL:99 = 34
+				ENDIF
+			ELSE
+				IF RAND:7 == 0 && TFLAG:143 <= 2 && (NO:PLAYER == 7 || NO:TARGET == 7) && TEQUIP:42 == 0
+					LOCAL:99 = 349
+				ELSEIF RAND:6 == 0
+					LOCAL:99 = 7
+				ELSEIF RAND:5 == 0 && TALENT:TARGET:120 == 0
+					LOCAL:99 = 110
+				ELSEIF RAND:4 == 0
+					LOCAL:99 = 327
+				ELSEIF RAND:3 == 0 && TALENT:TARGET:120 == 0
+					LOCAL:99 = 205
+				ENDIF
+			ENDIF
+		ENDIF
+	;実行値が30000以上
+	ELSEIF LOCAL:2 >= 30000
+		TFLAG:699 = 2
+		;入れっぱなしの場合
+		IF TFLAG:102
+			IF PREVCOM >= 20 && PREVCOM <= 24 && TALENT:120 == 0
+				LOCAL:99 = 24
+			ELSE
+				LOCAL:99 = 34
+			ENDIF
+		;バイブ挿入中
+		ELSEIF TEQUIP:20 == 1 || TEQUIP:25 == 1
+			LOCAL:99 = 7
+		;그 외
+		ELSE
+			IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+				IF RAND:4 == 0 && TEQUIP:42 == 0
+					LOCAL:99 = 41
+				ELSEIF RAND:3 == 0 && TALENT:110 == 0
+					LOCAL:99 = 42
+				ELSEIF RAND:2 == 0 && ABL:2 >= 3
+					LOCAL:99 = 34
+				ELSEIF TALENT:120 == 0
+					LOCAL:99 = 24
+				ENDIF
+			ELSE
+				IF RAND:3 == 0
+					LOCAL:99 = 327
+				ELSEIF RAND:2 == 0
+					LOCAL:99 = 7
+				ENDIF
+			ENDIF
+		ENDIF
+	;実行値が15000以上
+	ELSEIF LOCAL:2 >= 15000
+		TFLAG:699 = 1
+		;入れっぱなしの場合
+		IF TFLAG:102
+			IF PREVCOM >= 20 && PREVCOM <= 24
+				LOCAL:99 = 24
+			ELSE
+				LOCAL:99 = 34
+			ENDIF
+		;バイブ挿入中
+		ELSEIF TEQUIP:20 == 1 || TEQUIP:25 == 1
+			IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+				IF RAND:10 < 3
+					LOCAL:99 = 7
+				ELSEIF RAND:7 == 0
+					LOCAL:99 = 40
+				ELSEIF RAND:6 == 0 && TEQUIP:42 == 0
+					LOCAL:99 = 41
+				ELSEIF RAND:5 == 0 && TALENT:110 == 0
+					LOCAL:99 = 42
+				ELSEIF RAND:4 == 0 && TALENT:TARGET:0 == 0 && TEQUIP:25 == 1 && TALENT:120 == 0
+					LOCAL:99 = 24
+				ELSEIF RAND:3 == 0 && ABL:2 >= 3 && TEQUIP:20 == 1
+					LOCAL:99 = 34
+				ENDIF
+			ELSE
+				SIF RAND:3 == 0
+					LOCAL:99 = 7
+			ENDIF
+		;二穴バイブ挿入中
+		ELSEIF TEQUIP:20 == 1 && TEQUIP:25 == 1
+			IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+				IF RAND:10 < 4
+					LOCAL:99 = 7
+				ELSEIF RAND:6 == 0
+					LOCAL:99 = 40
+				ELSEIF RAND:5 == 0 && TEQUIP:42 == 0
+					LOCAL:99 = 41
+				ELSEIF RAND:4 == 0 && TALENT:110 == 0
+					LOCAL:99 = 42
+				ENDIF
+			ELSE
+				SIF RAND:3 == 0
+					LOCAL:99 = 7
+			ENDIF
+		;그 외
+		ELSE
+			IF TALENT:PLAYER:120 || TALENT:PLAYER:121
+				IF RAND:11 == 0 && TFLAG:143 <= 2 && (NO:PLAYER == 7 || NO:TARGET == 7) && TEQUIP:42 == 0
+					LOCAL:99 = 349
+				ELSEIF RAND:10 == 0
+					LOCAL:99 = 7
+				ELSEIF RAND:9 == 0
+					LOCAL:99 = 40
+				ELSEIF RAND:8 == 0 && TEQUIP:42 == 0
+					LOCAL:99 = 41
+				ELSEIF RAND:7 == 0 && TALENT:110 == 0
+					LOCAL:99 = 42
+				ELSEIF RAND:6 == 0
+					LOCAL:99 = 43
+				ELSEIF RAND:5 == 0 && TALENT:TARGET:0 == 0 && TALENT:120 == 0
+					LOCAL:99 = 24
+				ELSEIF RAND:4 == 0 && TEQUIP:53
+					LOCAL:99 = 352
+				ELSEIF RAND:3 == 0 && ABL:2 >= 3
+					LOCAL:99 = 34
+				ENDIF
+			ELSE
+				IF RAND:7 == 0 && TFLAG:143 <= 2 && (NO:PLAYER == 7 || NO:TARGET == 7) && TEQUIP:42 == 0
+					LOCAL:99 = 349
+				ELSEIF RAND:6 == 0
+					LOCAL:99 = 7
+				ELSEIF RAND:5 == 0 && TALENT:TARGET:120 == 0
+					LOCAL:99 = 110
+				ELSEIF RAND:4 == 0
+					LOCAL:99 = 327
+				ELSEIF RAND:3 == 0 && TALENT:TARGET:120 == 0
+					LOCAL:99 = 205
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;실행하는 커맨드가 있으면
+IF LOCAL:99 > -1
+	;
+	RESULT = 0
+	;COM_ABLE 함수에서 실행 판정
+	CALLFORM COM_ABLE{LOCAL:99}
+	
+	;실행 불가라면 종료
+	SIF RESULT == 0
+		RETURN 0
+	
+	SELECTCOM = LOCAL:99
+	JUMPFORM COM{LOCAL:99}
+ENDIF
+
+RETURN 0

@@ -1,0 +1,466 @@
+﻿;---------------------------------------------------------
+; SHOP_WORKSHOP_JUDGE 技師パッチ 工房イベントファイル 判定部
+;---------------------------------------------------------
+;中毒者曰く：
+;処理終了部
+;工房作業の結果どうなったかの結果を求めて発表する関数群
+;ここで経験や珠や、場合によっては工作技能やアイテム類が手に入る
+;　　　　　　　　　~~~~~~~~~~~~~~
+;……んー？逆だったかなァー？
+
+;以下関数群。大まかにニ種。
+
+;1. 結果関数群。技能・アイテムの取得と口上の呼び出し用。
+;@JUDGE_WORKSHOP_RESULT                     工房結果判定
+;@JUDGE_WORKSHOP_RESULT_DO_SOMETHING        工房待機組行動判定
+;@JUDGE_WORKSHOP_RESULT_SELECT_TEACHER      工房待機組先生選択
+;@JUDGE_WORKSHOP_RESULT_SELECT_CRAFT        工房待機組作業者選択
+
+;2. 結果報告。経験・珠の取得用。
+;@RESULT_WORKSHOP                           工房結果報告
+
+;以下外部関数
+;@JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT    工作技能教習結果(先生側)
+;@JUDGE_WORKSHOP_RESULT_TAUGHT_HANDYCRAFT   工作技能教習結果(生徒側)
+;@JUDGE_WORKSHOP_RESULT_ONANISM             工房自慰判定
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY         工房乱交結果判定
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT 工房結果判定
+;LOCAL変数
+;  0 : 待機者の人数
+;  1 : 先生の人数
+;  2 : 生徒の人数
+;  3 : 工作作業中の人数
+; 10 : 関数呼び出し回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공방 결과 판정 개시
+LOCAL:0 = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = 0
+;結果計算用領域保持関数群のLOCAL変数初期化
+CALL VALUE_WORKSHOP_INIT
+;行動内容確認
+REPEAT CHARANUM
+	;工房に居ないならスキップ
+	SIF CFLAG:COUNT:4 != 3
+		CONTINUE
+	SELECTCASE CFLAG:COUNT:690
+		CASE 0
+			;作業が待機であれば人数をカウントする
+			LOCAL:0 += 1
+		CASE 1
+			;作業が工作技能講座実施中であれば人数をカウントする
+			LOCAL:1 += 1
+		CASE 2
+			;作業が工作技能講座受講中であれば人数をカウントする
+			LOCAL:2 += 1
+		CASE 3, 4
+			;ついでに作業が調教器具開発作業中か大型特殊調教器具開発中なら作業人数としてカウント
+			LOCAL:3 += 1
+	ENDSELECT
+REND
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 작업 내역 대기：{LOCAL:0}人 선생：{LOCAL:1}人 학생：{LOCAL:2}人 공작 작업：{LOCAL:3}人
+;待機組の行動選択
+IF LOCAL:0 > 0
+	LOCAL:10 = 0
+	REPEAT CHARANUM
+		;工房に居ないならスキップ
+		SIF CFLAG:COUNT:4 != 3
+			CONTINUE
+		;作業があるならスキップ
+		SIF CFLAG:COUNT:690 != 0 && CFLAG:COUNT:690 != 5
+			CONTINUE
+		CALL JUDGE_WORKSHOP_RESULT_DO_SOMETHING, LOCAL:10, LOCAL:1, LOCAL:2, LOCAL:3
+		;呼び出し回数をカウントしておく
+		LOCAL:10 += 1
+	REND
+ENDIF
+;授業組の結果判定 (生徒の結果もここで判定)
+IF LOCAL:1 > 0
+	REPEAT CHARANUM
+		;工房に居ないならスキップ
+		SIF CFLAG:COUNT:4 != 3
+			CONTINUE
+		;作業が工作技能講座実施中でないならスキップ
+		SIF CFLAG:COUNT:690 != 1
+			CONTINUE
+		CALL JUDGE_WORKSHOP_RESULT_TEACH_HANDYCRAFT
+	REND
+ENDIF
+;工作組の結果確認(次回導入)
+;IF LOCAL:3 > 0
+;	REPEAT CHARANUM
+;		;工房に居ないならスキップ
+;		SIF CFLAG:COUNT:4 != 3
+;			CONTINUE
+;		;作業が工作技能講座受講中でないならスキップ
+;		SIF CFLAG:COUNT:690 != 2
+;			CONTINUE
+;		CALL
+;	REND
+;ENDIF
+;乱交組の結果確認
+IF FLAG:1136 > 0
+	CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공방 결과 판정 종료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_DO_SOMETHING 工房待機組行動判定
+;ARG引数
+; 0 : このターンでの呼び出し回数(0～)
+; 1 : 先生人数
+; 2 : 生徒人数
+; 3 : 工作人数
+;LOCAL変数
+;   0 : 可能な行動種類
+;   1 : 授業にまぎれられるか
+;   2 : 授業のサポートができるか
+;   3 : 製作作業を手伝えるか
+;   4 : 高性能道具を開発できるか
+;  10 : 選択した行動(乱数)
+;  11 : 反復子
+;  12 : 選択した行動(行動番号0～4)
+;;  13 : 反復子(キャラ選択)
+;;  14 : 選択したキャラ(乱数)
+;;  15 : 対象の人数
+;  20 : JUDGE_WORKSHOP_RESULT_SELECT_TEACHER 呼び出し回数
+;  21 : JUDGE_WORKSHOP_RESULT_SELECT_CRAFT 呼び出し回数
+; 100 : 結局待機してる人数
+; 101 : 授業をサポートした人数
+; 102 : 授業にまぎれた人数
+; 103 : 製作作業を手伝った人数
+; 104 : 高性能道具開発してる人数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_DO_SOMETHING, ARG:0 ,ARG:1, ARG:2, ARG:3
+;このターン初めて呼び出された際にLOCAL変数を初期化する
+SIF ARG:0 == 0
+	VARSET LOCAL, 0
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 대기 행동 설정 시작
+CFLAG:COUNT:690 = 100
+;サボりの場合作業内容番号+10
+SIF CFLAG:COUNT:691 & 1p2
+	CFLAG:COUNT:690 += 10
+;乱交してる場合は乱交組のところで判定
+IF CFLAG:COUNT:691 & 1p7
+	CFLAG:COUNT:690 += 20
+	IF CFLAG:COUNT:691 & 1p3 == 0
+		CFLAG:COUNT:690 += 40
+	ENDIF
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+		PRINTFORML ;;; %CALLNAME:COUNT%의 대기 행동 설정 완료  행동 내용:{CFLAG:COUNT:690}
+	RETURN 0
+ENDIF
+;自慰してる場合は自慰結果処理を実施して終了
+IF CFLAG:COUNT:691 & 1p8
+	CFLAG:COUNT:690 += 40
+	CALL JUDGE_WORKSHOP_RESULT_ONANISM, COUNT
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+		PRINTFORML ;;; %CALLNAME:COUNT%의 대기 행동 설정 완료  행동 내용:{CFLAG:COUNT:690}
+	RETURN 0
+ENDIF
+;サボってる場合は何もしないのでここで終了
+IF CFLAG:COUNT:691 & 1p2
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+		PRINTFORML ;;; %CALLNAME:COUNT%의 대기 행동 설정 완료  행동 내용:{CFLAG:COUNT:690}
+	RETURN 0
+ENDIF
+;工作技能や教育経験で行動が分かれる
+;“何もしない”も選択のひとつ
+LOCAL:0 = 1
+;工作技能が無く、先生がいて、生徒が先生の数以上にいる場合、授業にまぎれられる
+IF ABL:COUNT:73 == 0 && ARG:1 > 0 && ARG:2 > ARG:1
+	LOCAL:0 += 1
+	LOCAL:1 = 1
+ELSE
+	LOCAL:1 = 0
+ENDIF
+;工作技能が1以上あり、先生がいて、生徒が先生の数以上にいる場合、授業をサポートできる
+IF ABL:COUNT:73 > 0 && ARG:1 > 0 && ARG:2 > ARG:1
+	LOCAL:0 += 1
+	LOCAL:2 = 1
+ELSE
+	LOCAL:2 = 0
+ENDIF
+;工作技能が3以上あり、工作作業中のメンバーがいる場合、作業をサポートできる
+IF ABL:COUNT:73 > 0 && ARG:3 > 0
+	LOCAL:0 += 1
+	LOCAL:3 = 1
+ELSE
+	LOCAL:3 = 0
+ENDIF
+;工作技能が3以上あり、部屋が十分に広く(先生と製作作業者はそれぞれ2人分のスペースが必要)、高性能道具開発状態フラグ管理フラグが開発中である場合、何かの開発を完了できる
+IF ABL:COUNT:73 > 0 && FLAG:1100 > (FLAG:1130 + ARG:1 + ARG:3) && ((CFLAG:COUNT:799 & 2) || (CFLAG:COUNT:799 & 4))
+	LOCAL:0 += 1
+	LOCAL:4 = 1
+ELSE
+	LOCAL:4 = 0
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 대기 행동 선택지  단순대기\@ LOCAL:1 == 1 ? ・수업관찰 # \@\@ LOCAL:2 == 1 ? ・수업지원 # \@\@ LOCAL:3 == 1 ? ・공작지원 # \@\@ LOCAL:4 == 1 ? ・도구강화 # \@
+;行動を選ぶ
+LOCAL:10 = RAND:(LOCAL:0) + 1
+FOR LOCAL:11, 0, 5
+	SIF LOCAL:(LOCAL:11)
+		LOCAL:10 -= 1
+	SIF LOCAL:10 == 0
+		BREAK
+NEXT
+IF LOCAL:10 == 0
+	;BREAK時に番号がズレるため-1が必要
+	LOCAL:12 = LOCAL:11 - 1
+	SELECTCASE LOCAL:12
+		CASE 0
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; 대기 행동 설정：%CALLNAME:COUNT% 단순 대기
+		CASE 1, 2
+			CALL JUDGE_WORKSHOP_RESULT_SELECT_TEACHER, LOCAL:20
+			LOCAL:13 = RESULT 
+			LOCAL:20 += 1
+			IF LOCAL:13 > -1
+				CFLAG:COUNT:692 = LOCAL:13
+				SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+					PRINTFORML ;;; 대기 행동 설정：%조사선택(CALLNAME:COUNT, "는")% %CALLNAME:(LOCAL:13)%의 수업 \@ LOCAL:12 == 1 ? 을 지원 # 을 듣는다 \@
+			ELSE
+				SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+					PRINTFORML ;;; 대기 행동 설정：%CALLNAME:COUNT%의 행동 설정 이상  행동 번호:{LOCAL:12} => 0 (선생 선택 실패)
+				LOCAL:12 = 0
+			ENDIF
+		CASE 3
+			CALL JUDGE_WORKSHOP_RESULT_SELECT_CRAFT, LOCAL:21
+			LOCAL:13 = RESULT 
+			LOCAL:21 += 1
+			IF LOCAL:13 > -1
+				CFLAG:COUNT:692 = LOCAL:13
+				SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+					PRINTFORML ;;; 대기 행동 설정：%조사선택(CALLNAME:COUNT, "는")% %CALLNAME:(LOCAL:13)%의 공작 지원
+			ELSE
+				SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+					PRINTFORML ;;; 대기 행동 설정：%CALLNAME:COUNT%의 행동 설정 이상  행동 번호:{LOCAL:12} => 0 (작업자 선택 실패)
+				LOCAL:12 = 0
+			ENDIF
+		CASE 4
+			;結果発表時にDEVELOPED_CUSTOMTOOLを呼び出す
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; 대기 행동 설정：%CALLNAME:COUNT% 조교 도구 개량
+		CASEELSE
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; 대기 행동 설정：%CALLNAME:COUNT%의 행동 설정 이상  행동 번호:{LOCAL:12} => 0
+			LOCAL:12 = 0
+	ENDSELECT
+	CFLAG:COUNT:690 += LOCAL:12
+ELSE
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+		PRINTFORML ;;; 대기 행동 설정：%CALLNAME:COUNT%의 행동 설정 이상  행동 번호 나머지:{LOCAL:10}
+	LOCAL:12 = 0
+ENDIF
+LOCAL:(100 + LOCAL:12) += 1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:COUNT%의 대기 행동 설정 완료  행동 번호:{LOCAL:12} ({LOCAL:(100 + LOCAL:12)}명째)
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_SELECT_TEACHER 工房待機組先生選択
+;ARG引数
+; 0 : このターンでの呼び出し回数(0～)
+;返り値
+;RETURN : 選択されたキャラ番号(CHARANUM)
+;LOCAL変数
+; 0 : 授業形態を取っている先生の人数
+; 1 : 反復子(キャラ選択)
+; 2 : 選択したキャラ(乱数)
+;※暫定版につき相性関係なしで選ぶ
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_SELECT_TEACHER, ARG:0
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 교사 선택 개시
+;このターン初めて呼び出された際にLOCAL変数を初期化する
+IF ARG:0 == 0
+	VARSET LOCAL, 0
+	;授業の形態を取っているキャラを数える
+	LOCAL:1 = -1
+	LOCAL:0 = 0
+	WHILE 1
+		SIF (LOCAL:1 + 1) == CHARANUM
+			BREAK
+		FINDCHARA CFLAG:COUNT:690, 1, LOCAL:1 + 1
+		LOCAL:1 = RESULT
+		SIF LOCAL:1 < 0
+			BREAK
+		;生徒が一人でなく、工房にいればカウント
+		SIF CFLAG:(LOCAL:1):4 == 3 && CFLAG:(LOCAL:1):692 == -1
+			LOCAL:0 += 1
+	WEND
+ENDIF
+;乱数により対象を選ぶ
+LOCAL:2 = RAND:(LOCAL:0) + 1
+;対象を探す
+LOCAL:1 = -1
+WHILE 1
+	FINDCHARA CFLAG:COUNT:690, 1, LOCAL:1 + 1
+	LOCAL:1 = RESULT
+	;人数超えたら脱出
+	SIF LOCAL:1 < 0
+		BREAK
+	;生徒が一人でなく、工房にいればカウント
+	SIF CFLAG:(LOCAL:1):4 == 3 && CFLAG:(LOCAL:1):692 == -1
+		LOCAL:2 -= 1
+	;乱数で示された者になった時点で脱出
+	SIF LOCAL:2 == 0
+		BREAK
+WEND
+IF LOCAL:1 > -1
+	CFLAG:COUNT:692 = LOCAL:1
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+		PRINTFORML ;;; 교사 선택：대상 => %CALLNAME:(LOCAL:1)%의 수업
+ELSE
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+		PRINTFORML ;;; 교사 선택 이상 {LOCAL:12} => 0 (선생 선택 실패)
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 교사 선택 완료  대상 번호:{LOCAL:1}
+RETURN LOCAL:1
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_SELECT_CRAFT 工房待機組作業者選択
+;ARG引数
+; 0 : このターンでの呼び出し回数(0～)
+;返り値
+;RETURN : 選択されたキャラ番号(CHARANUM)
+;LOCAL変数
+; 0 : 作業者の人数
+; 1 : 反復子(キャラ選択)
+; 2 : 選択したキャラ(乱数)
+;※暫定版につき相性関係なしで選ぶ
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_SELECT_CRAFT, ARG:0
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 작업자 선택 개시
+;このターン初めて呼び出された際にLOCAL変数を初期化する
+IF ARG:0 == 0
+	VARSET LOCAL, 0
+	LOCAL:1 = -1
+	LOCAL:0 = 0
+	WHILE 1
+		SIF (LOCAL:1 + 1) == CHARANUM
+			BREAK
+		;作業内容が工作であるキャラを探す
+		FINDCHARA CFLAG:COUNT:690, 3, LOCAL:1 + 1
+		LOCAL:1 = RESULT
+		SIF LOCAL:1 < 0
+			BREAK
+		;念のため工房での作業であることを確認
+		SIF CFLAG:(LOCAL:1):4 == 3
+			LOCAL:0 += 1
+	WEND
+ENDIF
+;乱数により対象を選ぶ
+LOCAL:2 = RAND:(LOCAL:0) + 1
+;対象を探す
+LOCAL:1 = -1
+WHILE 1
+	SIF (LOCAL:1 + 1) == CHARANUM
+		BREAK
+	;作業内容が工作であるキャラを探す
+	FINDCHARA CFLAG:COUNT:690, 3, LOCAL:1 + 1
+	LOCAL:1 = RESULT
+	;人数超えたらループを脱出
+	SIF LOCAL:1 < 0
+		BREAK
+	;念のため工房での作業であることを確認
+	SIF CFLAG:(LOCAL:1):4 == 3
+		LOCAL:2 -= 1
+	;乱数で示された者になった時点で脱出
+	SIF LOCAL:2 == 0
+		BREAK
+WEND
+IF LOCAL:1 > -1
+	CFLAG:COUNT:692 = LOCAL:13
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+		PRINTFORML ;;; 작업자 선택：대상 => %CALLNAME:(LOCAL:1)%의 작업
+ELSE
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+		PRINTFORML ;;; 작업자 선택 이상 {LOCAL:12} => 0 (작업자 선택 실패)
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 작업자 선택 완료  대상 번호:{LOCAL:1}
+RETURN LOCAL:1
+
+;=======================================;
+;RESULT_WORKSHOP 工房結果報告
+;表示順：授業組＞工作組＞乱交組＞待機組の順
+;=======================================;
+@RESULT_WORKSHOP
+;授業組の表示
+CALL RESULT_WORKSHOP_THEACH
+;工作組の表示
+;CALL 
+;乱交組の表示
+CALL RESULT_WORKSHOP_PROMISCUITY
+;自慰してたかホントに何もしてなかった待機組の表示
+CALL RESULT_WORKSHOP_OTHERS
+RETURN 0
+
+;=======================================;
+;RESULT_WORKSHOP_OTHERS 待機結果表示
+;LOCAL変数
+; 0 : 反復子
+;LOCALS変数
+; 0 : 作業内容
+;=======================================;
+@RESULT_WORKSHOP_OTHERS
+FOR LOCAL:0, 0, CHARANUM
+	;工房に居なければスキップ
+	SIF CFLAG:(LOCAL:0):4 != 3
+		CONTINUE
+	;表示済みであればスキップ
+	SIF CFLAG:(LOCAL:0):691 & 1p9
+		CONTINUE
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 대기 결과 표시  CFLAG:%CALLNAME:(LOCAL:0)%:690 = {CFLAG:(LOCAL:0):690}
+	SELECTCASE CFLAG:(LOCAL:0):690
+		CASE 100, 110
+			PRINTFORML %조사선택(CALLNAME:(LOCAL:0), "는")% 지시대로, 아무것도 \@ CFLAG:(LOCAL:0):690 == 100 ? 하지 않았 # 하지 않고 지루하게 있었 \@다.
+			LOCALS = 대기
+		CASE 104
+			;暫定的にここで表示(本当は開発組扱い？)
+			CALL DEVELOPED_CUSTOMTOOL, 1, LOCAL:0
+			IF CFLAG:(LOCAL:0):690 == 105
+				LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:0) += 2
+			ELSE
+				LOCAL@VALUE_WORKSHOP_EXP_74:(LOCAL:0) += 1
+			ENDIF
+			LOCALS = 도구개조
+		CASE 140, 150
+			PRINTFORML %조사선택(CALLNAME:(LOCAL:0), "는")% 대기하다가, \@ CFLAG:(LOCAL:0):690 == 100 ? 견디지 못하 # 시간을 때우려 \@고 자위했다.
+			LOCALS = 자위
+	ENDSELECT
+	;改造者以外は口上表示
+	IF CFLAG:(LOCAL:0):690 != 104 && CFLAG:(LOCAL:0):690 != 105
+		RESULT = -1
+		TRYCALLFORM KOJO_WORKSHOP_{NO}, CFLAG:(LOCAL:0):690
+		SIF RESULT == -1
+			TRYCALLFORM KOJO_WORKSHOP_XX, CFLAG:(LOCAL:0):690
+	ENDIF
+	;パラメ表示
+	PRINTW 
+	PRINTFORML %CALLNAME:(LOCAL:0)% %LOCALS%
+	CALL VALUE_WORKSHOP_SUM, LOCAL:0, 0, 2
+	;作業内容を待機に戻す
+	CFLAG:(LOCAL:0):690 = 0
+	;表示完了フラグをセット
+	SIF (CFLAG:(LOCAL:0):691 & 1p9) == 0
+		CFLAG:(LOCAL:0):691 |= 1p9
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; %CALLNAME:(LOCAL:0)%의 대기 결과 표시 종료  CFLAG:%CALLNAME:(LOCAL:0)%:690 = {CFLAG:(LOCAL:0):690}
+	PRINTW 
+NEXT
+RETURN 0

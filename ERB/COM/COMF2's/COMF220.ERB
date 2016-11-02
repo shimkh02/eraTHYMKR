@@ -1,0 +1,97 @@
+﻿;=============================================================================
+;스팽킹
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE220
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:220 > 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;실제로는 고통이 있기 (위해)때문에 좀 더 체력 기력을 갖고 있고 쉰다
+@COM220
+IF NO:TARGET == 11
+	PRINTL 엉덩이 팡팡
+	TSTR:0 = 엉덩이 팡팡
+ELSE
+	PRINTL 스팽킹
+	TSTR:0 = 스팽킹
+ENDIF
+CALL TRAIN_MESSAGE_COM220
+
+DOWNBASE:0 += 80
+DOWNBASE:1 += 40
+
+SOURCE:12 = 200
+SOURCE:31 = 500
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 300
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 500
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 800
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 1200
+ELSE
+	SOURCE:20 = 1800
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 1
+	TFLAG:50 += 1
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM220
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;반항적인가 저항을 가져 함락 하고 있지 않는 경우
+IF (TALENT:11 || TALENT:34) && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORML 격렬하게 거부하는 %CALLNAME:TARGET%의 \@(TALENT:120 == 0 || TALENT:130) ? 사랑스러운 # \@ 엉덩이를 억지로 노출시켜, 손바닥으로 강하게 때렸다.
+;겁쟁이 소유나 공포 각인 2이상으로 기장과 감정결여를 가지지 않고, 함락 하고 있지 않는 경우
+ELSEIF (TALENT:10 || MARK:8 >= 2) && TALENT:12 == 0 && TALENT:22 == 0 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORML 공포에 질려 몸을 바둥대는 %조사선택(CALLNAME:TARGET, "를")% 억눌러 \@(TALENT:120 == 0 || TALENT:130) ? 사랑스러운 # \@ 엉덩이를 손바닥으로 강하게 때렸다.
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 \@(TALENT:120 == 0 || TALENT:130) ? 사랑스러운 # \@ 엉덩이를 손바닥으로 강하게 때렸다.
+ENDIF
+PRINTFORM 몇 번이나 몇 번이나 얻어맞고 있는 동안에, %CALLNAME:TARGET%의 
+IF ABL:21 >= 2 && TALENT:120 == 0
+	PRINTW 가랑이는 자신의 애액으로 젖기 시작하고 있다….
+ELSE
+	PRINTW 엉덩이는 새빨갛게 부어 오르고 있다….
+ENDIF

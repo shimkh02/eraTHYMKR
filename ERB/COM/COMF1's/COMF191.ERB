@@ -1,0 +1,354 @@
+﻿;=============================================================================
+;착유기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE191
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:191 > 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:35 == 2
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:21 == 0 && NOITEM == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;모유체질이 아니면 쓸 수 없다
+SIF TALENT:134 == 0
+	RETURN 0
+;소인체형 보유자는, 쌍방이 조교자와 조교 대상이라면 OK
+;그 외의 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && (TALENT:MASTER:56 == 0 && TALENT:PLAYER:127 == 0)
+	RETURN 0
+;Ｂ감각 3미만은 불가
+SIF ABL:3 < 3
+	RETURN 0
+;ASSI일 경우, 기교3이상이 아니면 쓸 수 없다。
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 3
+		RETURN 0
+ENDIF
+;그밖의 Ｂ계 장착구 사용 중에는 불가
+SIF (TEQUIP:35 && TEQUIP:35 != 2) || TEQUIP:36
+	RETURN 0
+;훈도시와 알몸 와이셔츠 외의 코스프레 중에는 안 됨
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 11 && TEQUIP:59 != 17
+	RETURN 0
+;사라시 장착 중에는 불가
+SIF TEQUIP:76
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수 착유는 COMF500.ERB로부터 JUMP 해 온다.
+@COM191
+IF TEQUIP:90
+	PRINTL 촉수 착유
+	TSTR:0 = 촉수 착유
+ELSE
+	TSTR:7 = 착유기
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 21
+		CALL NAMECHECK_CUSTOMTOOL
+	ELSE
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = %TSTR:7%
+	ENDIF
+	PRINTFORML %TSTR:8%
+	TSTR:0 = 착유기
+ENDIF
+CALL TRAIN_MESSAGE_COM191
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 100
+
+SOURCE:12 = 100
+SOURCE:15 = 100
+SOURCE:16 = 100
+SOURCE:17 = 100
+SOURCE:20 = 100
+SOURCE:22 = 100
+SOURCE:24 = 100
+SOURCE:31 = 200
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	LOCAL:1 = 200
+ELSEIF ABL:3 == 1
+	LOCAL:1 = 400
+ELSEIF ABL:3 == 2
+	LOCAL:1 = 900
+ELSEIF ABL:3 == 3
+	LOCAL:1 = 1600
+ELSEIF ABL:3 == 4
+	LOCAL:1 = 2400
+ELSE
+	LOCAL:1 = 3000
+ENDIF
+
+;ABL:분유중독을 본다
+IF ABL:34 == 0
+	SOURCE:24 += 0
+	TIMES LOCAL:1 , 1.00
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:34 == 1
+	SOURCE:24 += 60
+	TIMES LOCAL:1 , 1.10
+	TIMES SOURCE:31 , 1.10
+ELSEIF ABL:34 == 2
+	SOURCE:24 += 120
+	TIMES LOCAL:1 , 1.15
+	TIMES SOURCE:31 , 1.25
+ELSEIF ABL:34 == 3
+	SOURCE:24 += 240
+	TIMES LOCAL:1 , 1.25
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:34 == 4
+	SOURCE:24 += 480
+	TIMES LOCAL:1 , 1.30
+	TIMES SOURCE:31 , 1.75
+ELSE
+	SOURCE:24 += 960
+	TIMES LOCAL:1 , 1.50
+	TIMES SOURCE:31 , 2.00
+ENDIF
+
+;음유
+SIF TALENT:174
+	TIMES LOCAL:1 , 1.20
+
+;B둔감과 B민감
+IF TALENT:106
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:107
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;큰 가슴과 폭유, 빈유와 절벽
+IF TALENT:110
+	TIMES SOURCE:20 , 1.75
+ELSEIF TALENT:111
+	TIMES SOURCE:20 , 1.50
+ELSEIF TALENT:112
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:113
+	TIMES LOCAL:1 , 1.75
+ENDIF
+
+SOURCE:3 += LOCAL:1
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 21
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:3
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:3 = FLAG:1120
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;착유기의 착탈
+IF TEQUIP:35 == 2
+	TEQUIP:35 = 0
+ELSE
+	IF TEQUIP:90
+		STAIN:5 |= 2
+		STAIN:5 |= 4
+		STAIN:5 |= 64
+	ENDIF
+	TEQUIP:35 = 2
+ENDIF
+
+;커맨드 속성：촉수
+IF TEQUIP:90
+	TFLAG:98 = 8
+;커맨드 속성：도구(조교자)
+ELSE
+	TFLAG:98 = 1
+ENDIF
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;착유기 장비중
+;-------------------------------------------------
+@EQUIP_COM191
+IF TEQUIP:90
+	PRINTL <촉수 착유 중>
+ELSE
+	TSTR:7 = 착유기
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 21
+		CALL NAMECHECK_CUSTOMTOOL
+	ENDIF
+	PRINTFORML <%TSTR:7% 장비 중>
+ENDIF
+
+DOWNBASE:0 += 15
+DOWNBASE:1 += 15
+
+LOCAL:1 = 100
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	LOCAL = 40
+ELSEIF ABL:3 == 1
+	LOCAL = 120
+ELSEIF ABL:3 == 2
+	LOCAL = 250
+ELSEIF ABL:3 == 3
+	LOCAL = 450
+ELSEIF ABL:3 == 4
+	LOCAL = 600
+ELSE
+	LOCAL = 750
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;EXP:분유경험을 본다
+IF EXP:5 <= EXPLV:0
+	TIMES LOCAL , 1.00
+ELSEIF EXP:5 <= EXPLV:1
+	TIMES LOCAL , 1.20
+ELSEIF EXP:5 <= EXPLV:2
+	TIMES LOCAL , 1.40
+ELSEIF EXP:5 <= EXPLV:3
+	TIMES LOCAL , 1.80
+ELSEIF EXP:5 <= EXPLV:4
+	TIMES LOCAL , 2.25
+ELSE
+	TIMES LOCAL , 4.00
+ENDIF
+
+;B둔감과 B민감
+IF TALENT:106
+	TIMES LOCAL , 1.40
+ELSEIF TALENT:107
+	TIMES LOCAL , 0.60
+ENDIF
+
+;큰 가슴과 폭유, 빈유와 절벽
+IF TALENT:110
+	TIMES LOCAL:1 , 1.75
+ELSEIF TALENT:111
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:112
+	TIMES LOCAL , 1.30
+ELSEIF TALENT:113
+	TIMES LOCAL , 1.50
+ENDIF
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 21
+	FLAG:1111 = 0
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:3 += LOCAL
+SOURCE:12 += 50
+SOURCE:15 += 150
+SOURCE:17 += 50
+SOURCE:18 += 50
+SOURCE:20 += LOCAL:1
+SOURCE:22 += 50
+SOURCE:24 += 100
+SOURCE:31 += 50
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+IF TEQUIP:90
+	TFLAG:90 += 1
+	CALL SYOKUSYU_MILK
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM191
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:35 == 2
+	IF TEQUIP:90
+		PRINTFORMW 촉수는 %CALLNAME:TARGET%의 유두를 해방했다.
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "로")%부터 %조사선택(TSTR:7, "를")% 떼어냈다.
+	ENDIF
+ELSE
+	IF TEQUIP:90
+		PRINTFORMW 촉수는 흡판으로 %CALLNAME:TARGET%의 유두를 감싸 달라붙었다.
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%에게 %조사선택(TSTR:9, "를")% 달았다.
+	ENDIF
+ENDIF

@@ -1,0 +1,428 @@
+﻿;=============================================================================
+;군고구마 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE403
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:403 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ｖ경험レベルが0일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:0 < EXPLV:1
+	RETURN 0
+;조교자가 아키 자매か[야채의 연금술사]でないとダメ
+SIF NO:PLAYER != 37 && NO:PLAYER != 38 && TALENT:PLAYER:831 == 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:20 == 9
+	RETURN 1
+;처녀で, 순종4미만 · 레즈끼4이하의 ASSI일 경우焼芋責めはできない(새드または새드끼Lv3이상ならＯＫ)
+IF TALENT:0 == 1 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 5 || ((TALENT:120 == 0 && ABL:ASSI:22 < 5) || (TALENT:120 && ABL:ASSI:23 < 5))) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3
+		RETURN 0
+ENDIF
+;윤활 부족이고, 순종4미만 · 레즈끼3이하의 ASSI일 경우焼芋責めはできない(새드または새드끼Lv3이상ならＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3
+		RETURN 0
+ENDIF
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;체력이 1000미만으로는 장착 불가능
+SIF BASE:0 < 1000
+	RETURN 0
+;기력이 0일 때는 불가
+SIF BASE:1 <= 0
+	RETURN 0
+;Ｖ확장경험 적으면 안 됨
+SIF EXP:32 < 5
+	RETURN 0
+;그밖의 Ｖ계 장착구 사용 중에는 불가
+SIF (TEQUIP:20 && TEQUIP:20 != 9) || TEQUIP:21
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM403
+IF NO:TARGET == 8 || NO:TARGET == 22
+	PRINTL 구운 자색고구마 고문
+	TSTR:0 = 구운 자색고구마 고문
+ELSEIF NO:TARGET == 31
+	PRINTL 돌 구이 고구마 고문
+	TSTR:0 = 돌 구이 고구마 고문
+ELSE
+	PRINTL 군고구마 고문
+	TSTR:0 = 군고구마 고문
+ENDIF
+CALL TRAIN_MESSAGE_COM403
+
+DOWNBASE:0 += 400
+DOWNBASE:1 += 500
+
+SOURCE:12 = 1000
+SOURCE:17 = 800
+SOURCE:22 = 1500
+SOURCE:31 = 1800
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 2000
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 2500
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 3000
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 3500
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 4000
+ELSE
+	SOURCE:1 = 5000
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 = 7000
+	TCVAR:50 += 2
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 3500
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 1000
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 = 250
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.40
+	SOURCE:20 = 50
+ELSE
+	TIMES SOURCE:1 , 1.60
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 1000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 400
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.10
+ELSE
+	TIMES SOURCE:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.20
+ELSE
+	TIMES SOURCE:1 , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;야채성활
+IF TEQUIP:25 == 9 && TEQUIP:32 == 9
+	TIMES SOURCE:1 , 1.80
+ELSEIF TEQUIP:25 == 9 || TEQUIP:32 == 9
+	TIMES SOURCE:1 , 1.20
+ENDIF
+
+IF NO:TARGET == 8 || NO:TARGET == 22
+	TIMES SOURCE:1 , 1.50
+ELSEIF NO:TARGET == 31
+	TIMES SOURCE:20 , 1.50
+ENDIF
+
+TCVAR:0 += 3
+TCVAR:32 += 4
+
+;군고구마의 착탈
+IF TEQUIP:20 == 9
+	TEQUIP:20 = 0
+	TFLAG:163 += 5
+ELSE
+	TEQUIP:20 = 9
+	TFLAG:163 += 10
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;군고구마 삽입중
+;--------------------------------------------------
+@EQUIP_COM403
+IF NO:TARGET == 8 || NO:TARGET == 22
+	PRINTL <구운 자색고구마 삽입 중>
+ELSEIF NO:TARGET == 31
+	PRINTL <돌 구이 고구마 삽입 중>
+ELSE
+	PRINTL <군고구마 삽입 중>
+ENDIF
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+DOWNBASE:0 += 100
+DOWNBASE:1 += 90
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	LOCAL = 40
+ELSEIF ABL:1 == 1
+	LOCAL = 120
+ELSEIF ABL:1 == 2
+	LOCAL = 360
+ELSEIF ABL:1 == 3
+	LOCAL = 600
+ELSEIF ABL:1 == 4
+	LOCAL = 900
+ELSE
+	LOCAL = 1300
+ENDIF
+
+;EXP:V경험을 본다
+;처녀는 있을 수 없다
+IF EXP:0 < EXPLV:2
+	TIMES LOCAL , 0.60
+	LOCAL:1 = 240
+ELSEIF EXP:0 < EXPLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:1 = 120
+ELSEIF EXP:0 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:1 = 60
+ELSEIF EXP:0 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:1 = 30
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.10
+	LOCAL:1 += 400
+	TIMES LOCAL:1 , 3.00
+	LOCAL:2 += 1000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.40
+	LOCAL:1 += 150
+	TIMES LOCAL:1 , 1.00
+	LOCAL:2 += 200
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.50
+	LOCAL:2 += 80
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.20
+ELSE
+	TIMES LOCAL , 1.80
+	TIMES LOCAL:1 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 2.00
+
+;정조관념(처녀는 있을 수 없다)
+SIF TALENT:30
+	TIMES LOCAL:2, 3.00
+
+IF NO:TARGET == 8 || NO:TARGET == 22
+	TIMES LOCAL , 1.20
+ELSEIF NO:TARGET == 31
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+SOURCE:1 += LOCAL
+SOURCE:20 += LOCAL:1
+SOURCE:22 += LOCAL:2
+
+;자위 실행시는 경험＋1
+IF SELECTCOM == 7 || SELECTCOM == 124 || SELECTCOM == 125 || SELECTCOM == 127 || SELECTCOM == 182 || SELECTCOM == 205 || SELECTCOM == 628
+	TCVAR:0 += 3
+	TCVAR:32 += 3
+ELSE
+	TCVAR:0 += 2
+	TCVAR:32 += 2
+ENDIF
+
+TFLAG:163 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM403
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:20 == 9
+	PRINTFORML %CALLNAME:TARGET%의 성기에 박혀있는 커다란 군고구마를 천천히 뽑아 냈다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF EXP:32 >= 100 && TALENT:170
+		PRINT 조교된 질로, 새로운 쾌락을 탐내는 것 같이 군고구마를 얽어대고 있다
+	ELSEIF TALENT:150 && TALENT:170
+		PRINT 고구마에서 난 수염 같은 뿌리가 질 내의 주름을 스칠 때 마다, 마치 경련하듯이 사지를 떨고 있다
+	ELSEIF TALENT:150
+		PRINTFORM 거친 숨을 몰아 쉬면서도, %조사선택(CALLNAME:PLAYER, "와")% 시선이 마주치자 만족스런 표정을 짓고 있다
+	ELSEIF TALENT:170
+		PRINT 고구마를 뽑히는 쾌감에 야무지지 못하게도 혀를 늘어뜨리고 교성을 지르고 있다
+	ELSEIF TALENT:40
+		PRINT 거대한 질량을 자랑하는 물체가 빠져나가는 감각에 결국 참지 못하고, 듣기 싫은 절규를 질러댔다
+	ELSE
+		PRINT 고구마가 뽑혀진 순간 안심한 표정을 지었지만, 곧 질 내의 상실감에 위화감을 느껴 곤란한 표정이 돼버렸다
+	ENDIF
+	PRINTW ……….
+ELSE
+	TEQUIP:20 = 9
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	SIF PALAM:10 >= PALAMLV:5
+		PRINT 마루에 웅덩이가 생길 정도로 
+	SIF PALAM:10 >= PALAMLV:3
+		PRINT 애액으로 흘러 넘치고 있는 
+	IF TALENT:128
+		PRINT 어린 균열에 
+	ELSE
+		PRINT 보지에 
+	ENDIF
+	PRINTL 주먹보다 큰 군고구마를 쑤셔 넣었다….
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF TALENT:0 == 1
+		IF TALENT:150 && TALENT:170
+			PRINT 처녀란 것을 의심하고 싶을 정도로 음란한 미소를 지으며, 안으로 들어오기 쉽도록 허리를 움찔거리고
+		ELSEIF TALENT:150
+			PRINTFORM 눈을 동그랗게 뜨고 %CALLNAME:PLAYER%의 손에 있는 것을 응시한 채로
+		ELSEIF TALENT:170
+			PRINT 처녀란 것도 상관없이, 스스로 음순을 크게 펼쳐 삽입되는 것을 기다리고
+		ELSEIF TALENT:27
+			PRINT 눈가에 눈물을 맺으면서 질끈 눈을 감아 눈앞의 현실을 부정하려는 듯이 목을 좌우로 흔들고
+		ELSEIF TALENT:40
+			PRINT 반미치광이가 되어 어떻게든 도망치려고 결사적으로 저항하고
+		ELSE
+			PRINT 얼굴이 하얗게 질려 자신의 성기에 들어오려는 물건을 바라보고
+		ENDIF
+	ELSE
+		IF TALENT:150 && TALENT:170
+			PRINT 열기가 가득한 시선으로 “그것”을 응시하며, 스스로 밀어 넣으려고 질구를 크게 벌리고
+		ELSEIF TALENT:150
+			PRINTFORM 미소를 띠고는 있지만 당혹스러운 표정을 감추지 못한 채 %조사선택(CALLNAME:PLAYER, "를")% 보고
+		ELSEIF TALENT:170
+			PRINT 삽입되는 쾌감을 한계까지 끌어내려 질을 자신의 손가락으로 휘저어 음순에서 애액을 뚝뚝 떨어지게 하고
+		ELSEIF TALENT:40
+			PRINT 눈물을 흘리며 비명을 지르고, 음부에 기어드는 물건을 어떻게든 빼내려 하고
+		ELSE
+			PRINTFORM 건조한 미소를 지으며 %CALLNAME:PLAYER%의 손 안의 고구마를 바라보고
+		ENDIF
+	ENDIF
+	PRINTW  있다….
+ENDIF

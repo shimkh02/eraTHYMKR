@@ -1,0 +1,968 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;일상 이벤트 관련
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+;	はじめに
+;
+;	このファイルは"eratohoYM v0-proto2"に同梱されているDAILY_LIFE.ERBを、
+;	"eratohoYM Mk-0 Rev.11"に使用できないかと考え(休憩パートが寂しく感じたので)、自分の理解の範囲内で修正したものが始まりです.
+;	そのためもしかしたら致命的なバグ、エラーが発生するかもしれないですのであらかじめご了承ください.
+;
+;使用させていただいたCFLAGとその内容
+;
+;	CFLAG:1600 = 体力上昇累積分(日常生活イベントにおける上昇分:3500を上限) ※男女で上限の差は無いとする(説教や薬で上がったものに差が出るのかが疑問なのと、処理の簡略化のため)
+;	CFLAG:1601 = 気力上昇累積分(日常生活イベントにおける上昇分:3500を上限) ※男女で上限の差は無いとする(説教や薬で上がったものに差が出るのかが疑問なのと、処理の簡略化のため)
+;	CFLAG:1602 = 永琳の懲らしめイベント発生回数(2回までを上限とする)
+;	CFLAG:1603 = 永琳に"素質:55"(TALENT:55)を得るために師事した経験値(50で習得、他にも前提条件をかなり厳しめに(触手の類がどうしても苦手な人向けなので))
+;	CFLAG:1604 = デートに誘うイベントを解禁するフラグ
+;	CFLAG:1605 = 紫の境界弄りイベント発生回数(3回までを上限とする)
+;	CFLAG:1606 = 各キャラ専用イベントのフラグ管理(今のところ幽香専用イベントで使用、それぞれの専用イベントでは、そのキャラしかフラグ加算しないので簡単なフラグ管理はこれで統一)
+;	CFLAG:1607 = 罠にかけた事があるかを判定
+;	CFLAG:1608 = シェイプアップ・エクササイズ(二の腕、くびれ、お尻)をした回数
+;	CFLAG:1609 = バストアップ・エクササイズをした回数
+;	CFLAG:1610 = 調教した事の有無を判定
+;	CFLAG:1611 = 記念日フラグ(他の記念日等のイベントを後に拡張しやすいようにビット演算の形式をとってます 4=誕生日を祝った, 16=結婚記念日を祝った ※以下振り分け予定 1=購入記念日用, 2=連行され記念日用, 8=契約記念日用)
+;	CFLAG:1612 = 料理を特訓した回数
+;	CFLAG:1613 = MASTERを看病した回数
+;	CFLAG:1614 = MASTER以外を看病した回数
+;	CFLAG:1615 = MASTERから看病された回数
+;	CFLAG:1616 = MASTER以外から看病された回数
+;	CFLAG:1617 = MASTERから貰った事のあるプレゼント(衣類・装飾品等のオシャレ関係)
+;	※ CFLAG:1617の詳細 1 = ネックレス, 2 = ヘアバンド, 4 = ブレスレット, 8 = リストバンド, 16 = スカーフ, 32 = リボン, 64 = 手袋, 128 = バッグ, 256 = ブーツ, 512 = ブレザー,
+;		1024 = "拡張枠", 2048 = "拡張枠", 4096 = "拡張枠", 8192 = "拡張枠",(以降はMASTERの私物予定) 16384 = MASTERのYシャツ
+;	CFLAG:1618 = MASTERからのプレゼントの数(衣類・装飾品等のオシャレ関係)
+;	CFLAG:1619 = 作成中の編み物(-1 = 作成中の物は無い)
+;	CFLAG:1620 = 作成中の編み物の進捗状況(-1 = 作成中の編み物無し(編み物の本購入直後含む), 1以上 = 作成中、値を減少させ0以下で完成、直後-1に再設定)
+;	CFLAG:1621 = 裁縫経験(回数)
+;	CFLAG:1622 = プレゼントされた編み物(1 = 帽子, 2 = マフラー)
+;	CFLAG:1623 = プレゼントされた編み物の数(キャラ→MASTER,キャラ同士の場合)
+;	CFLAG:1624 = 試作:蓬莱の薬の生成進捗状況(永琳・輝夜必須)
+
+;	前提条件メモ
+;	9回以上クリアかつ蒐集品を12種のうち7種目(ざっと種類を見たら7種はあまり抵抗なく取れるはず)で40種類以上集め、MASTERが大甲斐性を持ち、
+;	永琳が相愛持ち(恐怖・反発刻印無)、好感度が30000以上、愛情経験が3000以上の場合、調合知識を得るために師事するイベント発生
+;
+;	※ 本ファイルが無駄なところで冗長的なるのを防ぐため更新履歴はreadmeに書くことにしました
+;
+;	元々の日常生活パッチの作者様及びバリアントの作者様に敬意と感謝をいたします
+;	by YMに賛同した名も無きデバッグ協力者の一人
+;
+;	いつの間にやら日常パッチが高難度キャラの簡単攻略法みたいな存在になってきているので、
+;	それはこのパッチの方向性からずれてるよね？ということで、是正する方向で調整
+;	ノーリスクで何度も珠取得可能なのが明らかに癌になっているので、
+;	珠取得を1調教につき1回だけ制限することで安易に稼げないように変更
+;	また、一定以上の調教を行わないと再度珠発生しないようにすることで
+;	日常での珠取得をあくまでもおまけ程度に抑制する方向に調整
+;	一応旧処理もコンフィグから選択可能にしてみた
+
+;	追加フラグ
+;	FLAG:12 & 128 = コンフィグで新処理を旧処理どちらを使うかの処理用
+;	FLAG:997 = 珠取得関係の処理用
+;
+;	この変更についてああだこうだ議論した諸々の関係者および元作者に謝意をいたします
+;	by 妊）|дﾟ)の人
+;
+;
+;	暇だったのでれいぽぉしてみた(某眼鏡さん風に)byCPMの人
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+;=============================================================================
+;일상 이벤트 분기 처리
+;=============================================================================
+@DAILY_LIFE
+;修正(追加)：夜の場合の集団入浴イベントチェックを先に実行する.
+;日常パッチ珠入手発生フラグの仮フラグを本フラグにする
+SIF FLAG:997 == 2
+	FLAG:997 = 1
+IF TIME == 1
+	TRYCCALL GROUP_BATH_CHECK
+		SIF RESULT == 1
+			RETURN 0
+	CATCH
+	ENDCATCH
+ENDIF
+
+;キャラをランダムに選ぶ行程
+;借りるフラグをお掃除
+CALL RESET_CFLAG75
+;今までに重複数えずに選んだ回数をリセット
+LOCAL:1 = 0
+$SET_LOOP
+;適当にキャラ登録番号を取得
+LOCAL = RAND:CHARANUM
+;既に選んだキャラ
+IF CFLAG:LOCAL:75
+	;戻ります
+	GOTO SET_LOOP
+ELSE
+	;選んだフラグを立てる
+	CFLAG:LOCAL:75 = 1
+	;選んだ回数を増やす
+	++LOCAL:1
+ENDIF
+;日常イベントに登場出来る
+IF ABLE_DAILY_LIFE(LOCAL)
+	;フラグのお掃除して次へ進む
+	CALL RESET_CFLAG75
+ELSE
+	;選んだ回数がキャラ数を越えている
+	IF LOCAL:1 >= CHARANUM
+		;フラグのお掃除してｶｴﾚ
+		CALL RESET_CFLAG75
+		RETURN 0
+	ELSE
+		;選ぶ余地があるのでもう少し頑張る
+		GOTO SET_LOOP
+	ENDIF
+ENDIF
+
+;選んだキャラについて口上を呼んでみる
+CALL DAILY_LIFE_MESSAGE, LOCAL
+
+;CFLAG:406が立っていなかったら口上があったとしよう
+IF !CFLAG:LOCAL:406
+	;汎用イベントを呼ぶ
+	CALL DAILY_LIFE_MESSAGE_COMMON, LOCAL
+ENDIF
+
+
+
+;-------------------------------------------------
+;汎用日常イベント
+;-------------------------------------------------
+@DAILY_LIFE_MESSAGE_COMMON, ARG
+;検証(追加)　現在体力と最大体力の表示(デバッグモードのみ)
+SIF TALENT:MASTER:998
+	PRINTFORMW %CALLNAME:ARG%의 현재 체력/최대 체력:({BASE:ARG:0}/{MAXBASE:ARG:0})
+
+IF GET_DAILY_LIFE_VIT(ARG)
+	;休むとき
+	CALL DAILY_LIFE_MESSAGE_COMMON_REST, ARG
+	RETURN 1
+ENDIF
+
+VARSET LOCAL, 0
+TRYCCALL COUNT_DAILY_LIFE_MESSAGE_COMMON
+	LOCAL:998 = LIMIT(RESULT, 100, 900)
+CATCH
+	LOCAL:998 = 100
+ENDCATCH
+LOCAL:997 = 0
+
+
+;調合知識習得イベント、蓬莱の薬生成イベント発生中なら25%の確率で優先的に発生させる
+IF (CFLAG:MASTER:1624 > 0 && CFLAG:MASTER:1624 < 20) || (CFLAG:MASTER:1603 > 0 && CFLAG:MASTER:1603 < 50) || (CFLAG:ARG:1624 > 0 && CFLAG:ARG:1624 < 20) && RAND:4 == 0
+
+	;調合知識習得イベント・蓬莱の薬生成イベント(MASTER・嫁)の3つそれぞれは排他的
+	;蓬莱の薬生成イベント(嫁)が発生中
+	IF CFLAG:ARG:1624 > 0 && CFLAG:ARG:1624 < 20
+		CALL THE_HOURAINOKUSURI_IS_GENERATED, ARG
+		SIF RESULT
+			RETURN 1
+
+	;調合知識習得・蓬莱の薬生成イベント(MASTER)
+	ELSE
+
+		;対象が永琳になっているか
+		IF NO:ARG == 29
+			CALL DAILY_LIFE_WITH_EIRIN, ARG
+			SIF RESULT
+				RETURN 1
+		ELSE
+
+			;永琳を探して、いた場合イベントに飛ばす
+			CALL DAILY_LIFE_PICKCHARA_NO, ARG, 29
+			LOCAL:300 = RESULT
+			IF LOCAL:300 > 0
+				CALL DAILY_LIFE_WITH_EIRIN, LOCAL:300
+				SIF RESULT
+					RETURN 1
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+$SET_LOOP
+LOCAL:999 = RAND:(LOCAL:998)
+SIF LOCAL:(LOCAL:999)
+	GOTO SET_LOOP
+LOCAL:(LOCAL:999) = 1
+++LOCAL:997
+RESULT = 0
+TRYCALLFORM DAILY_LIFE_MESSAGE_COMMON_{TIME != 0}_{LOCAL:999}, ARG
+SIF !RESULT && LOCAL:997 < LOCAL:998
+	GOTO SET_LOOP
+
+
+
+;-------------------------------------------------
+;日常宝珠変動汎用ルーチン(難易度により変化をつける)
+;-------------------------------------------------
+@COMMON_DAILYJUEL, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+;主人調教経験により補正を掛けるか
+SIF ARG:4
+	ARG:2 = LIMIT_DAILY_LIFE_GOT(ARG, ARG:2)
+;変動しないなら戻る
+SIF ARG:2 == 0
+	RETURN 0
+;陥落素質無し
+IF !TALENT:ARG:150 && !TALENT:ARG:160 && !TALENT:ARG:170
+	;否定的な珠が増加する　もしくは　否定的でない珠が減少する
+	IF (ARG:1 == 20 || ARG:1 == 21 || ARG:1 == 22 || ARG:1 == 100) ^^ (ARG:2 < 0)
+		ARG:2 = (ARG:1 == 20 || ARG:1 == 21 || ARG:1 == 100) ? CALC_NEGATIVE_DAILYJUEL(ARG, ARG:1, ARG:2) # ARG:2
+	;否定的な珠が減少する　もしくは　否定的でない珠が増加する
+	ELSE
+		ARG:2 = (ARG:1 != 20 && ARG:1 != 21 && ARG:1 != 22 && ARG:1 != 100) ? CALC_POSITIVE_DAILYJUEL(ARG, ARG:1, ARG:2) # ARG:2
+	ENDIF
+ENDIF
+
+;補正結果により珠変動が発生したら日常パッチ珠入手発生の仮フラグを立てる
+SIF ARG:2 != 0 && !FLAG:997
+	FLAG:997 = 2
+;CFLAG:45加算処理
+SIF ARG:2 > 0 && ARG:1 != 20 && ARG:1 != 21 && ARG:1 != 22 && ARG != 100
+	CFLAG:ARG:45 = LIMIT(CFLAG:ARG:45 + ARG:2, 0, 9223372036854775806)
+
+;後は丸投げ.変動0でも補正してくれるはず
+CALL COMMON_MOVE_JUEL, ARG, ARG:1, ARG:2 , ARG:3, ARG:5
+RETURN RESULT
+
+
+
+;-------------------------------------------------
+;珠入手の補正
+;-------------------------------------------------
+@LIMIT_DAILY_LIFE_GOT(ARG, ARG:1)
+#FUNCTION
+RETURNF MARK:ARG:2 < 2 && EXP:ARG:98 < 100 ? ARG:1 / 2 # ARG:1
+
+
+
+;-------------------------------------------------
+;日常用CFLAG変動
+;-------------------------------------------------
+@DAILY_LIFE_MOVE_CFLAG, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+;主人調教経験により補正を掛けるか
+SIF ARG:4
+	ARG:2 = LIMIT_DAILY_LIFE_GOT(ARG, ARG:2)
+;変動しないなら戻る
+SIF ARG:2 == 0
+	RETURN 0
+CALL COMMON_MOVE_CFLAG, ARG, ARG:1, ARG:2 , ARG:3, ARG:5
+RETURN RESULT
+
+
+
+;-------------------------------------------------
+;相性上昇汎用処理
+;-------------------------------------------------
+;ARGのARG:1に対する相性の変更処理をここで行う
+;ARG:2の値はイベントの種類(値によって上昇幅が変化)
+;なお、相性上昇の上限値はLOCAL:1で変更可能に
+@DAILY_RELATION_UP, ARG, ARG:1, ARG:2
+;へる子さん専用素質の対策:強制的に相性50%(相愛等は53%)扱いになるので、表示上の相性値との不一致が発生してしまう(バグだと誤解してしまう)のを防止
+;スペルカードもｶｴﾚ
+SIF TALENT:ARG:830 || TALENT:ARG:833
+	RETURN 0
+
+;上限値を決定
+;日常パッチの強化有無で処理を変える
+IF FLAG:12 & 128
+	;対主人
+	IF ARG:1 == MASTER
+		IF (TALENT:ARG:153 && ITEM:99) || (TALENT:ARG:162 && ITEM:98) || TALENT:ARG:169 || (NO:ARG == 149 && (CFLAG:ARG:3100 == NO:MASTER || CFLAG:ARG:3103 == NO:MASTER) && TALENT:ARG:153)
+			LOCAL:1 = 1000
+		ELSEIF (TALENT:ARG:153 && ITEM:96) || (TALENT:ARG:162 && ITEM:95)
+			LOCAL:1 = 750
+		ELSEIF NO:ARG == 149 && (CFLAG:ARG:3100 == NO:MASTER || CFLAG:ARG:3103 == NO:MASTER) && TALENT:ARG:152
+			LOCAL:1 = 500
+		ELSEIF NO:ARG == 149 && (CFLAG:ARG:3100 == NO:MASTER || CFLAG:ARG:3103 == NO:MASTER || (CFLAG:ARG:3101 == NO:MASTER && TALENT:ARG:152))
+			LOCAL:1 = 400
+		ELSEIF NO:ARG == 149 && CFLAG:ARG:3101 == NO:MASTER
+			LOCAL:1 = 200
+		ELSEIF TALENT:ARG:152
+			LOCAL:1 = 125
+		ELSE
+			LOCAL:1 = 110
+		ENDIF
+	ELSE
+		;調教経験で変動
+		SELECTCASE CFLAG:ARG:(1000+NO:(ARG:1))
+			CASE IS >= 10000
+				LOCAL:1 = 1000
+			CASE IS >= 5000
+				LOCAL:1 = 750
+			CASE IS >= 3000
+				LOCAL:1 = 500
+			CASE IS >= 2000
+				LOCAL:1 = 250
+			CASE IS >= 1000
+				LOCAL:1 = 125
+			CASEELSE
+				LOCAL:1 = 110
+		ENDSELECT
+	ENDIF
+ELSE
+	LOCAL:1 = 110
+ENDIF
+;初期値より小さければ補正
+IF CFLAG:ARG:0
+	CALLFORMF EX_RELATION_{NO:ARG}_{CFLAG:ARG:0}, NO:(ARG:1)
+	LOCAL:1 = (LOCAL:1 == 0) ? 100 # RESULT
+ELSE
+	LOCAL:1 = MAX(LOCAL:1, CSVRELATION(NO:ARG, NO:(ARG:1),0))
+ENDIF
+
+;相性値を取得
+LOCAL:2 = RELATION:ARG:(NO:(ARG:1)) ? RELATION:ARG:(NO:(ARG:1)) # 100
+
+;既に上限以上
+SIF LOCAL:2 >= LOCAL:1
+	RETURN 0
+
+;変動値を計算
+SELECTCASE ARG:2
+	CASE 1
+		LOCAL:3 = 1 + RAND:10
+	CASE 2
+		LOCAL:3 = 1 + RAND:7
+	CASE 3
+		LOCAL:3 = 1 + RAND:3
+	CASE 4
+		LOCAL:3 = 1 + RAND:5
+	CASEELSE
+		LOCAL:3 = 0
+ENDSELECT
+LOCAL:3 *= 5
+
+;相性変動
+RELATION:ARG:(NO:(ARG:1)) = LIMIT(LOCAL:2+LOCAL:3, 0, LOCAL:1)
+
+;相性表示
+PRINTFORMW %CALLNAME:ARG%의 %ITEMNAME:(NO:(ARG:1) + 100)%에 대한 궁합이,{RELATION:ARG:(NO:(ARG:1))}퍼센트가 되었습니다.
+
+;日常パッチ珠入手発生の仮フラグを立てる
+FLAG:997 = 2
+
+
+;-------------------------------------------------
+;ランダムで選んだかの判定用に借りたフラグのお掃除
+;-------------------------------------------------
+@RESET_CFLAG75
+CVARSET CFLAG, 75, 0
+
+
+
+;-------------------------------------------------
+;説教イベントなどのBASE値上昇
+;-------------------------------------------------
+@DAILY_LIFE_BASEUP, ARG, ARG:1, ARG:2
+;最大体力/気力上昇処理
+FOR LOCAL, 0, 2
+	IF CFLAG:ARG:(1600+LOCAL) < MAX_DAILY_LIFE_BASEUP()
+		IF ARG:2
+			LOCAL:1 = MIN(100 + RAND:51, MAX_DAILY_LIFE_BASEUP()-CFLAG:ARG:(1600+LOCAL))
+		ELSE
+			LOCAL:1 = MIN(RAND:55 + 1 + (ABL:(ARG:1):10 * 3) + ((BASE:(ARG:1):0 + BASE:(ARG:1):1) / 450) + (CFLAG:(ARG:1):2 / 1024) + (EXP:(ARG:1):21 / 75), 255, MAX_DAILY_LIFE_BASEUP()-CFLAG:ARG:(1600+LOCAL))
+		ENDIF
+		CFLAG:ARG:(1600+LOCAL) += LOCAL:1
+		MAXBASE:ARG:0 += LOCAL:1
+		PRINTFORMW %CALLNAME:ARG%의 최대 %BASENAME:LOCAL%+{LOCAL:1}
+	ENDIF
+NEXT
+
+
+
+;-------------------------------------------------
+;説教イベントのBASE値上昇最大値
+;-------------------------------------------------
+@MAX_DAILY_LIFE_BASEUP
+#FUNCTION
+RETURNF 3500
+
+
+
+;-------------------------------------------------
+;否定的珠の日常増加時の補正処理
+;-------------------------------------------------
+@CALC_NEGATIVE_DAILYJUEL(ARG, ARG:1, ARG:2)
+#FUNCTION
+;MARK:0をみる(恐怖のみ)
+IF ARG:1 == 16
+	IF MARK:ARG:1 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF MARK:ARG:1 == 1
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:1 == 2
+		TIMES ARG:2 , 0.10
+	ELSE
+		TIMES ARG:2 , 0.05
+	ENDIF
+ENDIF
+;MARK:1をみる(快C～快Bのみ)
+IF ARG:1 >= 0 && ARG:1 <= 9
+	IF MARK:ARG:1 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF MARK:ARG:1 == 1
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:1 == 2
+		TIMES ARG:2 , 0.10
+	ELSE
+		TIMES ARG:2 , 0.05
+	ENDIF
+ENDIF
+;MARK:2をみる(屈服・恥情・苦痛・恐怖のみ)
+IF ARG:1 >= 14 && ARG:1 <= 17
+	IF MARK:ARG:2 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF MARK:ARG:2 == 1
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:2 == 2
+		TIMES ARG:2 , 0.10
+	ELSE
+		TIMES ARG:2 , 0.05
+	ENDIF
+ENDIF
+;MARK:4をみる(欲情・屈服・恥情のみ)
+IF ARG:1 >= 13 && ARG:1 <= 15
+	IF MARK:ARG:4 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF MARK:ARG:4 == 1
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:4 == 2
+		TIMES ARG:2 , 0.10
+	ELSE
+		TIMES ARG:2 , 0.05
+	ENDIF
+ENDIF
+;MARK:8をみる(恭順・苦痛のみ)
+IF ARG:1 == 12 || ARG:1 == 16
+	IF MARK:ARG:8 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF MARK:ARG:8 == 1
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:8 == 2
+		TIMES ARG:2 , 0.10
+	ELSE
+		TIMES ARG:2 , 0.05
+	ENDIF
+ENDIF
+;MARK:9をみる
+IF MARK:ARG:9 == 0
+	TIMES ARG:2 , 0.25
+ELSEIF MARK:ARG:9 == 1
+	TIMES ARG:2 , 0.50
+ELSEIF MARK:ARG:9 == 2
+	TIMES ARG:2 , 0.75
+ELSE
+	TIMES ARG:2 , 1.00
+ENDIF
+
+;ABL:10をみる(恭順・欲情・屈服・恐怖のみ)
+IF ARG:1 == 12 || ARG:1 == 13 || ARG:1 == 14 || ARG:1 == 17
+	IF ABL:ARG:10 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF ABL:ARG:10 == 1
+		TIMES ARG:2 , 0.75
+	ELSEIF ABL:ARG:10 == 2
+		TIMES ARG:2 , 0.50
+	ELSEIF ABL:ARG:10 == 3
+		TIMES ARG:2 , 0.10
+	ELSEIF ABL:ARG:10 == 4
+		TIMES ARG:2 , 0.05
+	ELSE
+		TIMES ARG:2 , 0.01
+	ENDIF
+ENDIF
+;ABL:11をみる(欲情・先導のみ)
+IF ARG:1 == 13 || ARG:1 == 32
+	IF ABL:ARG:11 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF ABL:ARG:11 == 1
+		TIMES ARG:2 , 0.75
+	ELSEIF ABL:ARG:11 == 2
+		TIMES ARG:2 , 0.50
+	ELSEIF ABL:ARG:11 == 3
+		TIMES ARG:2 , 0.10
+	ELSEIF ABL:ARG:11 == 4
+		TIMES ARG:2 , 0.05
+	ELSE
+		TIMES ARG:2 , 0.01
+	ENDIF
+ENDIF
+;ABL:12をみる(習得・先導のみ)
+IF ARG:1 == 10 || ARG:1 == 32
+	IF ABL:ARG:12 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF ABL:ARG:12 == 1
+		TIMES ARG:2 , 0.75
+	ELSEIF ABL:ARG:12 == 2
+		TIMES ARG:2 , 0.50
+	ELSEIF ABL:ARG:12 == 3
+		TIMES ARG:2 , 0.10
+	ELSEIF ABL:ARG:12 == 4
+		TIMES ARG:2 , 0.05
+	ELSE
+		TIMES ARG:2 , 0.01
+	ENDIF
+ENDIF
+;ABL:13をみる(習得・恭順・屈服のみ)
+IF ARG:1 == 11 || ARG:1 == 12 || ARG:1 == 14
+	IF ABL:ARG:13 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF ABL:ARG:13 == 1
+		TIMES ARG:2 , 0.75
+	ELSEIF ABL:ARG:13 == 2
+		TIMES ARG:2 , 0.50
+	ELSEIF ABL:ARG:13 == 3
+		TIMES ARG:2 , 0.10
+	ELSEIF ABL:ARG:13 == 4
+		TIMES ARG:2 , 0.05
+	ELSE
+		TIMES ARG:2 , 0.01
+	ENDIF
+ENDIF
+;ABL:14をみる(恥情のみ)
+IF ARG:1 == 15
+	IF ABL:ARG:14 == 0
+		TIMES ARG:2 , 1.00
+	ELSEIF ABL:ARG:14 == 1
+		TIMES ARG:2 , 0.75
+	ELSEIF ABL:ARG:14 == 2
+		TIMES ARG:2 , 0.50
+	ELSEIF ABL:ARG:14 == 3
+		TIMES ARG:2 , 0.10
+	ELSEIF ABL:ARG:14 == 4
+		TIMES ARG:2 , 0.05
+	ELSE
+		TIMES ARG:2 , 0.01
+	ENDIF
+ENDIF
+
+;CFLAG:好感度をみる
+IF CFLAG:ARG:2 <= 0
+	TIMES ARG:2 , 1.00
+ELSEIF CFLAG:ARG:2 < 100
+	TIMES ARG:2 , 0.75
+ELSEIF CFLAG:ARG:2 < 250
+	TIMES ARG:2 , 0.50
+ELSEIF CFLAG:ARG:2 < 500
+	TIMES ARG:2 , 0.25
+ELSEIF CFLAG:ARG:2 < 750
+	TIMES ARG:2 , 0.10
+ELSEIF CFLAG:ARG:2 < 1000
+	TIMES ARG:2 , 0.02
+ELSE
+	TIMES ARG:2 , 0.01
+ENDIF
+
+;FLAG:難易度をみる
+;HARDは1.2倍
+IF FLAG:3 == 3
+	TIMES ARG:2 , 1.2
+;LUNATIC以上は1.4倍
+ELSEIF FLAG:3 >= 4
+	TIMES ARG:2 , 1.4
+ENDIF
+
+RETURNF ARG:2
+
+
+
+;-------------------------------------------------
+;肯定的珠の日常増加時の補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL(ARG, ARG:1, ARG:2)
+#FUNCTION
+;MARK:0をみる(恐怖のみ)
+IF ARG:1 == 16
+	IF MARK:ARG:1 == 0
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:1 == 1
+		TIMES ARG:2 , 0.65
+	ELSEIF MARK:ARG:1 == 2
+		TIMES ARG:2 , 0.80
+	ELSE
+		TIMES ARG:2 , 1.00
+	ENDIF
+ENDIF
+;MARK:1をみる(快C～快Bのみ)
+IF ARG:1 >= 0 && ARG:1 <= 9
+	IF MARK:ARG:1 == 0
+		TIMES ARG:2 , 0.25
+	ELSEIF MARK:ARG:1 == 1
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:1 == 2
+		TIMES ARG:2 , 0.75
+	ELSE
+		TIMES ARG:2 , 1.00
+	ENDIF
+ENDIF
+;MARK:2をみる(屈服・恥情・苦痛・恐怖のみ)
+IF ARG:1 >= 14 && ARG:1 <= 17
+	IF MARK:ARG:2 == 0
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:2 == 1
+		TIMES ARG:2 , 0.65
+	ELSEIF MARK:ARG:2 == 2
+		TIMES ARG:2 , 0.80
+	ELSE
+		TIMES ARG:2 , 1.00
+	ENDIF
+ENDIF
+;MARK:4をみる(欲情・屈服・恥情のみ)
+IF ARG:1 >= 13 && ARG:1 <= 15
+	IF MARK:ARG:4 == 0
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:4 == 1
+		TIMES ARG:2 , 0.65
+	ELSEIF MARK:ARG:4 == 2
+		TIMES ARG:2 , 0.80
+	ELSE
+		TIMES ARG:2 , 1.00
+	ENDIF
+ENDIF
+;MARK:8をみる(苦痛のみ)
+IF ARG:1 == 16
+	IF MARK:ARG:8 == 0
+		TIMES ARG:2 , 0.50
+	ELSEIF MARK:ARG:8 == 1
+		TIMES ARG:2 , 0.65
+	ELSEIF MARK:ARG:8 == 2
+		TIMES ARG:2 , 0.80
+	ELSE
+		TIMES ARG:2 , 1.00
+	ENDIF
+ENDIF
+;MARK:9をみる
+IF MARK:ARG:9 == 0
+	TIMES ARG:2 , 1.00
+ELSEIF MARK:ARG:9 == 1
+	TIMES ARG:2 , 0.75
+ELSEIF MARK:ARG:9 == 2
+	TIMES ARG:2 , 0.50
+ELSE
+	TIMES ARG:2 , 0.50
+ENDIF
+
+;珠の種類により個々の補正を掛ける
+SELECTCASE ARG:1
+	CASE 0
+	CASE 1
+	CASE 2
+	CASE 3
+	CASE 11
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_11(ARG, ARG:2)
+	CASE 12
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_12(ARG, ARG:2)
+	CASE 13
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_13(ARG, ARG:2)
+	CASE 14
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_14(ARG, ARG:2)
+	CASE 15
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_15(ARG, ARG:2)
+	CASE 16
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_16(ARG, ARG:2)
+	CASE 17
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_17(ARG, ARG:2)
+	CASE 32
+		ARG:2 = CALC_POSITIVE_DAILYJUEL_32(ARG, ARG:2)
+ENDSELECT
+
+;CFLAG:好感度をみる
+IF CFLAG:ARG:2 <= 0
+	TIMES ARG:2 , 0.50
+ELSEIF CFLAG:ARG:2 < 100
+	TIMES ARG:2 , 0.55
+ELSEIF CFLAG:ARG:2 < 250
+	TIMES ARG:2 , 0.60
+ELSEIF CFLAG:ARG:2 < 500
+	TIMES ARG:2 , 0.65
+ELSEIF CFLAG:ARG:2 < 750
+	TIMES ARG:2 , 0.70
+ELSEIF CFLAG:ARG:2 < 1000
+	TIMES ARG:2 , 0.75
+ELSE
+	TIMES ARG:2 , 1.00
+ENDIF
+
+;FLAG:難易度をみる
+;HARDは0.8倍
+IF FLAG:3 == 3
+	TIMES ARG:2 , 0.8
+;LUNATIC以上は0.6倍
+ELSEIF FLAG:3 >= 4
+	TIMES ARG:2 , 0.6
+ENDIF
+
+;FLAG:997の本フラグが立っている(日常にて珠取得後、一定時間調教を行っていない)場合は更にマイナス補正
+SIF FLAG:997 == 1
+	TIMES ARG:2 , 0.25
+
+;従順Lv,欲望Lv,技巧Lv,奉仕精神Lv,露出癖Lvの合計値が10以下の場合、珠取得量を50までに抑制
+SIF ARG:2 > 50 && (ABL:ARG:10 + ABL:ARG:11 + ABL:ARG:12 + ABL:ARG:13 + ABL:ARG:14) <= 10
+	ARG:2 = 50
+
+RETURNF ARG:2
+
+
+
+;-------------------------------------------------
+;習得の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_11, ARG, ARG:1
+#FUNCTION
+
+;ABL:12をみる
+IF ABL:ARG:12 == 0
+	TIMES ARG:1 , 0.30
+ELSEIF ABL:ARG:12 == 1
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:12 == 2
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:12 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:12 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+;ABL:13をみる
+IF ABL:ARG:13 == 0
+	TIMES ARG:1 , 0.30
+ELSEIF ABL:ARG:13 == 1
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:13 == 2
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:13 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:13 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;恭順の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_12, ARG, ARG:1
+#FUNCTION
+
+;ABL:10をみる
+IF ABL:ARG:10 == 0
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:10 == 1
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:10 == 2
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:10 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:10 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+;ABL:13をみる
+IF ABL:ARG:13 == 0
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:13 == 1
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:13 == 2
+	TIMES ARG:1 , 0.70
+ELSEIF ABL:ARG:13 == 3
+	TIMES ARG:1 , 0.80
+ELSEIF ABL:ARG:13 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;欲情の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_13, ARG, ARG:1
+#FUNCTION
+
+;ABL:10をみる
+IF ABL:ARG:10 == 0
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:10 == 1
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:10 == 2
+	TIMES ARG:1 , 0.70
+ELSEIF ABL:ARG:10 == 3
+	TIMES ARG:1 , 0.80
+ELSEIF ABL:ARG:10 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+;ABL:11をみる
+IF ABL:ARG:11 == 0
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:11 == 1
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:11 == 2
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:11 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:11 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;屈服の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_14, ARG, ARG:1
+#FUNCTION
+
+;ABL:10をみる
+IF ABL:ARG:10 == 0
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:10 == 1
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:10 == 2
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:10 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:10 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+;ABL:13をみる
+IF ABL:ARG:13 == 0
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:13 == 1
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:13 == 2
+	TIMES ARG:1 , 0.70
+ELSEIF ABL:ARG:13 == 3
+	TIMES ARG:1 , 0.80
+ELSEIF ABL:ARG:13 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;恥情の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_15, ARG, ARG:1
+#FUNCTION
+
+;ABL:14をみる
+IF ABL:ARG:14 == 0
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:14 == 1
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:14 == 2
+	TIMES ARG:1 , 0.60
+ELSEIF ABL:ARG:14 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:14 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;苦痛の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_16, ARG, ARG:1
+#FUNCTION
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;恐怖の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_17, ARG, ARG:1
+#FUNCTION
+
+;ABL:10をみる
+IF ABL:ARG:10 == 0
+	TIMES ARG:1 , 0.30
+ELSEIF ABL:ARG:10 == 1
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:10 == 2
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:10 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:10 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+
+
+;-------------------------------------------------
+;先導の珠上昇補正処理
+;-------------------------------------------------
+@CALC_POSITIVE_DAILYJUEL_32, ARG, ARG:1
+#FUNCTION
+
+;ABL:11をみる
+IF ABL:ARG:11 == 0
+	TIMES ARG:1 , 0.30
+ELSEIF ABL:ARG:11 == 1
+	TIMES ARG:1 , 0.40
+ELSEIF ABL:ARG:11 == 2
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:11 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:11 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+;ABL:12をみる
+IF ABL:ARG:12 == 0
+	TIMES ARG:1 , 0.25
+ELSEIF ABL:ARG:12 == 1
+	TIMES ARG:1 , 0.35
+ELSEIF ABL:ARG:12 == 2
+	TIMES ARG:1 , 0.50
+ELSEIF ABL:ARG:12 == 3
+	TIMES ARG:1 , 0.75
+ELSEIF ABL:ARG:12 == 4
+	TIMES ARG:1 , 0.90
+ELSE
+	TIMES ARG:1 , 1.00
+ENDIF
+
+RETURNF ARG:1
+
+

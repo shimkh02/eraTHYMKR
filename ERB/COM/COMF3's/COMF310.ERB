@@ -1,0 +1,105 @@
+﻿;=============================================================================
+;더블스팽킹
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE310
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:310 > 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;노예와 조수의 양쪽 모두의 엉덩이를 펜 펜 합니다
+@COM310
+PRINTL 더블스팽킹
+TSTR:0 = 더블스팽킹
+CALL TRAIN_MESSAGE_COM310
+
+DOWNBASE:0 += 70
+DOWNBASE:1 += 30
+
+SOURCE:12 = 300
+SOURCE:31 = 700
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 240
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 400
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 640
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 960
+ELSE
+	SOURCE:20 = 1440
+ENDIF
+
+;조수의 체력·기력 감소
+DOWNBASE:ASSI:0 += 70
+DOWNBASE:ASSI:1 += 30
+
+;조수의 고통의 주
+JUEL:ASSI:16 += 100
+PRINTFORML 고통의 구슬( %CALLNAME:ASSI%)＋100 
+
+;마스터와 노예 레즈비언 orBL
+IF TALENT:120 == 0 && TALENT:MASTER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 == 1 && TALENT:MASTER:120 == 1
+	TCVAR:13 += 7
+ENDIF
+
+;마스터와 조수 레즈비언 orBL
+IF TALENT:ASSI:120 == 0 && TALENT:MASTER:120 == 0
+	TCVAR:ASSI:12 += 2
+ELSEIF TALENT:ASSI:120 == 1 && TALENT:MASTER:120 == 1
+	TCVAR:ASSI:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ABL:21 >= 1
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM310
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %조사선택(CALLNAME:TARGET, "와")% %CALLNAME:ASSI%에게 엉덩이를 쳐들어 올리게 했다.
+PRINTL 그리고 둘의 엉덩이를 손바닥으로 교대로 때리기 시작했다.
+PRINTFORM 몇 번이나 몇 번이나 얻어맞고 있는 동안에, %CALLNAME:ASSI%의 
+IF ABL:ASSI:21 >= 2 && TALENT:ASSI:120 == 0
+	PRINTL 가랑이는 애액으로 축축히 젖기 시작한다….
+ELSE
+	PRINTL 엉덩이는 새빨갛게 부어 오르고 있다….
+ENDIF
+PRINTFORM 그리고, %CALLNAME:TARGET%도 같이 
+IF ABL:21 >= 2 && TALENT:120 == 0
+	PRINTW 가랑이를 애액으로 적시기 시작하고 있었다….
+ELSE
+	PRINTW 엉덩이가 새빨갛게 부어 올랐다….
+ENDIF

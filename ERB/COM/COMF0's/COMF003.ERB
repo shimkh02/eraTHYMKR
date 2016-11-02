@@ -1,0 +1,164 @@
+﻿;=============================================================================
+;가슴 애무
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE3
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:3 > 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM3
+;Ｖ계 확장 커맨드 유효시에 전회와 금회의 조교자 동일하며 후배위 혹은 후배위 가슴 애무에의 경우 후배위 가슴 애무로
+IF FLAG:15 & 2
+	IF (PREVCOM == 21 || PREVCOM == 616) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+		CALL EXCOM_ABLE616
+		SIF RESULT == 1
+			JUMP COM616
+	;Ｖ계 확장 커맨드 유효시에 전회와 금회의 조교자 동일하며 대면좌위 혹은 대면 가슴 애무에의 경우 대면 가슴 애무로	
+	ELSEIF (PREVCOM == 22 || PREVCOM == 617) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+		CALL EXCOM_ABLE617
+		SIF RESULT == 1
+			JUMP COM617
+	ENDIF
+ENDIF
+;Ａ계 확장 커맨드有効時に前回と今回の조교자同じかつ後背位アナルもしくは後背位アナル胸愛撫への場合後背位アナル胸愛撫へ
+IF FLAG:15 & 4
+	IF (PREVCOM == 31 || PREVCOM == 618) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+		CALL EXCOM_ABLE618
+		SIF RESULT == 1
+			JUMP COM618
+	;Ｖ계 확장 커맨드有効時に前回と今回の조교자同じかつ対面座位アナルもしくは対面アナル胸愛撫への場合対面アナル胸愛撫へ
+	ELSEIF (PREVCOM == 32 || PREVCOM == 619) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+		CALL EXCOM_ABLE619
+		SIF RESULT == 1
+			JUMP COM619
+	ENDIF
+ENDIF
+
+PRINTL 가슴 애무
+TSTR:0 = 가슴 애무
+CALL TRAIN_MESSAGE_COM003
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 100
+SOURCE:15 = 60
+SOURCE:30 = 20
+
+;ABL:Ｂ감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 20
+	SOURCE:11 = 50
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 100
+	SOURCE:11 = 100
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 500
+	SOURCE:11 = 160
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1200
+	SOURCE:11 = 200
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 2000
+	SOURCE:11 = 230
+ELSE
+	SOURCE:3 = 2800
+	SOURCE:11 = 250
+ENDIF
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:30 , 0.80
+ENDIF
+
+;조교자가 ［유아］또는［유치］
+IF TALENT:PLAYER:130 || TALENT:PLAYER:131
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+ENDIF
+;조교자가 ［유아퇴행］
+SIF TALENT:PLAYER:159
+	TIMES SOURCE:11 , 1.20
+
+IF TEQUIP:90
+	;노예의 Ｂに촉수의 더러움がつく
+	STAIN:5 |= 2
+	STAIN:5 |= 4
+ELSE
+	;조교자가 고양이혀ではなく노예의 胸의 더러움がなければ口をつかう（愛液と母乳よごれはＯＫ불결무시か助手調教時は問題なし）
+	IF TALENT:PLAYER:54 == 0 && (STAIN:5 < 2 || STAIN:5 == 16 || STAIN:5 == 17 || ASSIPLAY == 1 || TALENT:MASTER:64)
+		;조교자의 TALENT:혀놀림을 본다
+		IF TALENT:PLAYER:52
+			TIMES SOURCE:3 , 1.40
+			SOURCE:17 += SOURCE:3 / 20
+		ENDIF
+
+		;노예의 Ｂ⇔조교자의 입의 불결이 이동
+		STAIN:5 |= STAIN:PLAYER:0
+		STAIN:PLAYER:0 |= STAIN:5
+	ENDIF
+
+	;노예의 Ｂ⇔조교자의 손가락의 불결이 이동
+	STAIN:5 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:5
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+;촉수調教やＢ感覚4未満[母乳体質][남자][小人体型][小柄体型][貧乳][絶壁]持ちでは発生しない. 
+SIF ABL:3 > 3 && TEQUIP:90 == 0 && TALENT:120 == 0  && TALENT:134 == 0 && TALENT:127 == 0 && TALENT:128 == 0 && TALENT:110 == 0  && TALENT:111 == 0
+	CALL YOUJI
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM003
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:110
+	PRINT 거의 없는 거나 마찬가지인 
+ELSEIF TALENT:128 && TALENT:111
+	PRINT 약간 부풀어 오른 게 느껴질 정도의 
+ELSEIF TALENT:111
+	PRINT 표준보다 약간 작은 크기의 
+ELSEIF TALENT:112
+	PRINT 손에서 흘러 넘칠 정도의 
+ELSEIF TALENT:113
+	PRINT 감당할 수 없을 만큼 큰 
+ENDIF
+IF TEQUIP:90
+	PRINTW 가슴을 쥐어짜려 하듯이 수많은 촉수가 달려들었다….
+ELSEIF TEQUIP:68
+	PRINTW 가슴을, 유두만은 만지지 않으며 상냥하게 주물렀다….
+ELSEIF PALAM:13 > PALAMLV:3 && TEQUIP:35 == 0
+	PRINTW 가슴 끝의 딱딱해진 돌기를 손가락으로 쥐었다….
+ELSEIF TALENT:110
+	PRINTW 가슴을 상냥하게 쓰다듬듯이 만졌다….
+ELSE
+	PRINTW 가슴을 주물러댔다….
+ENDIF

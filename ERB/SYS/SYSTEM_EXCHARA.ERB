@@ -1,0 +1,2011 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;캐릭터의 EX화에 관련된 특수 처리
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;인계시의 통상 캐릭터 되돌리기 처리 및 검은 사탕, XEXTRA 모드의 소질 변동 캐릭터 개별 처리를 여기서 실행한다
+;=============================================================================
+;인계시의 EX화 캐릭터 개별 되돌리기 범용 처리
+;=============================================================================
+@RESET_EX_COMMON, ARG
+;이름도 원래대로 되돌린다
+NAME:ARG = %CSVNAME(NO:ARG,0)%
+CALLNAME:ARG = %CSVCALLNAME(NO:ARG,0)%
+;종족 문자열도 원래대로 되돌린다
+CSTR:ARG:32 = %CSVCSTR(NO:ARG, 32, 0)%
+CSTR:ARG:33 = %CSVCSTR(NO:ARG, 33, 0)%
+;체력, 기력의 최대치는 초기치로 되돌린다
+MAXBASE:ARG:0 = CSVBASE(NO:ARG, 0, 0)
+MAXBASE:ARG:1 = CSVBASE(NO:ARG, 1, 0)
+;상성 초기화 · 각종 소질도 초기치로 되돌린다(최악의 경우 정합성에 관해서는 불문함)
+REPEAT 500
+	RELATION:ARG:COUNT = CSVRELATION(NO:ARG, COUNT, 0)
+	SIF COUNT != 0
+		TALENT:ARG:COUNT = CSVTALENT(NO:ARG, COUNT, 0)
+REND
+;모종의 방법으로 종족이 바뀐 플래그, 체력 상승 · 기력 상승의 누계분을 기억하고 있는 CFLAG 초기화
+CFLAG:ARG:5 = 0
+CFLAG:ARG:6 = 0
+CFLAG:ARG:7 = 0
+;신체측정 플래그를 재운다(다음 번 신체측정을 실행하기 때문)
+CFLAG:ARG:8 = 0
+;소질 변동을 기억하고 잇는 CFLAG 초기화
+CFLAG:ARG:12 = 0
+CFLAG:ARG:13 = 0
+;비대음핵 플래그 리셋([비대음핵] 때는 제외하고)
+IF TALENT:ARG:1 == 0
+	BASE:ARG:7 = 0
+	MAXBASE:ARG:7 = 0
+ENDIF
+;범용 대사(역 대사)의 성격 설정 CFLAG 초기화
+CFLAG:ARG:43 = 0
+CFLAG:ARG:44 = 0
+;행선지 가능 플래그도 리셋
+CFLAG:ARG:300 = CSVCFLAG(NO:ARG, 300, 0)
+;일상생활 플래그의 일부를 리셋(체력기력 상승분)
+CFLAG:ARG:1600 = 0
+CFLAG:ARG:1601 = 0
+;종족치를 초기치로 리셋
+FOR COUNT , 3200 , 3400
+	CFLAG:ARG:COUNT = CSVCFLAG(NO:ARG, COUNT, 0)
+NEXT
+;성격반전각인 리셋(라는 건 위의 처리에서 분명히 성격반전처리가 되감기고 있으므로)
+MARK:ARG:80 = 0
+;요정화 플래그 리셋(이것도 되감기므로)
+MARK:ARG:87 = 0
+;SP 캐릭터 플래그 삭제
+CFLAG:ARG:0 = 0
+
+;=============================================================================
+;검은 사탕의 캐릭터별 소질 변동 처리
+;=============================================================================
+;--------------------------------------------------
+;검은 사탕：레이무 님의 이벤트 함수
+;--------------------------------------------------
+;IRCネタ.eratohoLやeratohoJの레이무 님csvの能力を擬似的に再現
+;검은 사탕発のＥＸキャラでは多分最高の難易度を誇る
+@EX_CHARA01
+PRINTFORMW ＜%CALLNAME:TARGET%의 봉인을 해제했다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 레이무 님이 되었다＞
+NAME:TARGET = 레이무 님
+CALLNAME:TARGET = 레이무 님
+NICKNAME:TARGET = 귀무녀
+CFLAG:0 = 2
+;記念日、結婚 · 契約 · 陥落(これは淫乱がないときだけ)の日時を抹消
+CFLAG:3113 = 0
+CFLAG:3114 = 0
+SIF TALENT:170 == 0
+	CFLAG:3115 = 0
+;체력+500,기력+300
+MAXBASE:0 += 500
+MAXBASE:1 += 300
+;일선을 넘지 않음을 없애던 플래그를 없앤다
+SIF CFLAG:13 & 64
+	CFLAG:13 -= 64
+;삭감 소질：楽観的,일선을 넘지 않음,貞操無頓着,痛みに強い,弱味,淫乱と淫魔以外の淫乱系,恋慕系,服従系,崩壊系,○민감
+TALENT:25 = 0
+TALENT:27 = 0
+TALENT:31 = 0
+TALENT:33 = 0
+TALENT:35 = 0
+TALENT:39 = 0
+TALENT:41 = 0
+TALENT:42 = 0
+TALENT:100 = 0
+TALENT:102 = 0
+TALENT:104 = 0
+TALENT:106 = 0
+REPEAT 4
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	IF TALENT:(150+COUNT)
+		CFLAG:14 -= LOCAL
+		TALENT:(150+COUNT) = 0
+	ENDIF
+REND
+SIF TALENT:160
+	CFLAG:15 -= 1
+TALENT:160 = 0
+IF TALENT:161
+	TALENT:161 = 0
+	TALENT:163 = 1
+	SIF CFLAG:15 & 2
+		CFLAG:15 -= 2
+ENDIF
+SIF TALENT:162
+	CFLAG:15 -= 4
+TALENT:162 = 0
+SIF TALENT:167
+	CFLAG:17 -= 4
+TALENT:167 = 0
+SIF TALENT:168
+	CFLAG:17 -= 8
+TALENT:168 = 0
+SIF TALENT:169
+	CFLAG:17 -= 32
+TALENT:169 = 0
+FOR COUNT,1,10
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	IF TALENT:(170+COUNT)
+		CFLAG:16 -= LOCAL
+		TALENT:(170+COUNT) = 0
+	ENDIF
+NEXT
+;추가 소질 : 반항적,気丈,건방짐,프라이드 높음,抑圧,저항,恥薄い,濡れにくい,薬毒耐性,汚れ無視,
+;快感の否定,淫乱,倒錯的,サド,Ｃ둔감,Ｖ둔감,Ａ둔감,Ｂ둔감,狂気
+TALENT:11 = 1
+IF TALENT:13
+	TALENT:13 = 0
+	SIF CFLAG:12 & 2048
+		CFLAG:12 -= 2048
+ENDIF
+TALENT:12 = 1
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:32 = 1
+TALENT:34 = 1
+TALENT:36 = 1
+TALENT:43 = 1
+TALENT:44 = 1
+TALENT:64 = 1
+TALENT:71 = 1
+TALENT:80 = 1
+TALENT:81 = 1
+TALENT:101 = 1
+TALENT:103 = 1
+TALENT:105 = 1
+TALENT:107 = 1
+TALENT:158 = 1
+SIF TALENT:170 == 0
+	CFLAG:16 |= 1
+TALENT:170 = 1
+;공통 이벤트도 포함해, 순종 소멸
+ABL:10 = (ABL:10 > 0) ? 1 # 0
+;技巧1追加
+ABL:12 = MIN(ABL:12 + 1, 5)
+;好感度大幅減少
+CFLAG:2 = MIN(CFLAG:2, 5000) / 10
+;恐怖の相性10
+VARSET RELATION:TARGET:0, 10, 2, 200
+;移動可能場所にあなた館追加
+CFLAG:300 |= 524288
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：구작 마리사의 이벤트 함수
+;--------------------------------------------------
+;구작의 마리사화
+;한자로는 이름 구별하기 쉽도록 「魔梨沙」라고 쓰지만 한글판에 그런 건 없다
+@EX_CHARA02
+PRINTFORMW ＜봉인되어 있던 %CALLNAME:TARGET%의 기억을 해방했다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 구작 마리사(魔梨沙)가 되었다＞
+NAME:TARGET = 구작 마리사
+CALLNAME:TARGET = 마리사
+NICKNAME:TARGET = 마법과 홍몽으로 이루어진 존재
+;체력-400(단, 최저치 600),기력-200(단, 최저치 600)
+MAXBASE:0 = MAX(MAXBASE:0 - 400, 600)
+MAXBASE:1 = MAX(MAXBASE:1 - 200, 600)
+;삭감 소질 : 쾌감에 솔직
+TALENT:70 = 0
+;추가 소질 : 気丈,舌使い
+TALENT:12 = 1
+TALENT:52 = 1
+;능력의 변동
+ABL:0 = MAX(ABL:0, 1)
+ABL:12 = MAX(ABL:12, 1)
+;절정経験が5未満なら5に増加
+EXP:2 = MAX(EXP:2, 5)
+;自慰経験が60未満なら60に増加
+EXP:10 = MAX(EXP:10, 60)
+;상성 변동
+RELATION:9 = 0
+RELATION:69 = 0
+RELATION:100 = 200
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ루미아의 이벤트 함수
+;--------------------------------------------------
+;ロダにあったＥＸ루미아csvとＥＸ루미아追加パッチの能力を擬似的に再現
+;魅惑的なお姉さん風?
+@EX_CHARA03
+PRINTFORMW ＜%CALLNAME:TARGET%의 봉인을 풀었다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% EX루미아가 되었다＞
+NAME:TARGET = ＥＸ루미아
+;체력+200,기력+500
+MAXBASE:0 += 200
+MAXBASE:1 += 500
+;유치를 없애던 플래그를 없앤다
+SIF CFLAG:13 & 128
+	CFLAG:13 -= 128
+;삭감 소질 : 프라이드 낮음,好奇心,貞操無頓着,恥薄い,쾌감에 솔직,작은체형,빈유(절벽),유치
+TALENT:17 = 0
+TALENT:23 = 0
+TALENT:31 = 0
+TALENT:36 = 0
+TALENT:70 = 0
+TALENT:110 = 0
+TALENT:111 = 0
+TALENT:127 = 0
+TALENT:128 = 0
+TALENT:131 = 0
+;추가 소질 : 気丈,프라이드 높음,自制心,保守的,貞操観念,痛みに強い,汚臭민감,献身的,サド,中毒しやすい,魅力,月光浴
+TALENT:12 = 1
+TALENT:16 = 1
+TALENT:20 = 1
+TALENT:24 = 1
+TALENT:30 = 1
+TALENT:41 = 1
+TALENT:62 = 1
+TALENT:63 = 1
+TALENT:81 = 1
+TALENT:84 = 1
+TALENT:90 = 1
+TALENT:115 = 1
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ대요정의 이벤트 함수
+;--------------------------------------------------
+;IRCネタの巨대요정.
+;書き込みを元にいくつかの素質を独断と偏見で追加 · 削除
+;ちなみに最初に巨대요정と言いだしたのも自分だったｒ(ｒｙ
+@EX_CHARA04
+PRINTFORMW ＜%CALLNAME:TARGET%의 몸은 급격하게 성장했다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% EX대요정이 되었다＞
+NAME:TARGET = ＥＸ대요정
+;체력+500
+MAXBASE:0 += 500
+BASE:0 = MAXBASE:0
+BASE:1 = MAXBASE:1
+;삭감 소질：솔직함,프라이드 낮음(있었을 경우),절벽,빈유,소인체형,작은체형
+TALENT:13 = 0
+TALENT:17 = 0
+TALENT:110 = 0
+TALENT:111 = 0
+TALENT:127 = 0
+TALENT:128 = 0
+;추가 소질 : 건방짐,프라이드 높음,Ｃ민감,거유(폭유 외)
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:100 = 1
+SIF TALENT:113 == 0
+	TALENT:112 = 1
+;경험 추가:Ｖ확장경험,Ａ확장경험,Ｕ확장경험(10 미만일 경우, 각각 10까지 증가)
+EXP:32 = MAX(EXP:32, 10)
+EXP:33 = MAX(EXP:33, 10)
+EXP:34 = MAX(EXP:34, 10)
+;상성 변동
+RELATION:5 = 300
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ치르노의 이벤트 함수(어드벤트 치르노)
+;--------------------------------------------------
+;ロダに上がっていた어드벤트 치르노の能力を元に作成
+;元ネタに関してはググればすぐに分かるはず
+;ちょっとたくましくなった?
+@EX_CHARA05_1
+PRINTFORMW ＜%CALLNAME:TARGET%의 외형이 갑자기 늠름해졌다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 어드벤트 치르노가 되었다＞
+NAME:TARGET = 어드벤트 치르노
+;체력+500,기력+200
+MAXBASE:0 += 500
+MAXBASE:1 += 200
+;유치를 없애던 플래그를 없앤다
+SIF CFLAG:13 & 128
+	CFLAG:13 -= 128
+;삭감 소질：習得遅い,유치,回復遅い,妖精
+TALENT:51 = 0
+TALENT:131 = 0
+TALENT:138 = 0
+TALENT:200 = 0
+;추가 소질 : 楽観的,저항,痛みに強い,献身的,両刀(武器的な意味合いで),人気,鼓舞,回復早い
+TALENT:25 = 1
+TALENT:34 = 1
+TALENT:41 = 1
+TALENT:63 = 1
+TALENT:83 = 1
+TALENT:94 = 1
+TALENT:95 = 1
+TALENT:137 = 1
+;종족 변수 변경
+CSTR:32 = 인간
+CSTR:33 = 인간
+;상성 변동
+RELATION:6 = 150
+RELATION:15 = 0
+RELATION:25 = 150
+RELATION:28 = 150
+;종족치를 인간 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3201
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ치르노의 이벤트 함수(바이 치르노)
+;--------------------------------------------------
+;ロダに上がっていた⑱(바이 치르노)の能力を元に作成
+;ちなみに元ネタは(多分)クーリエ様の絵板にて一時期投稿された赤っぽい치르노である
+;原作通り、少しえろい
+@EX_CHARA05_2
+PRINTFORMW ＜%CALLNAME:TARGET%의 모습이 붉게 변화했다＞
+;원래 2배 치르노인데, 최근에는 아치치르노 쪽이 좀 더 익숙하니 아치치르노로 해야 되는 건 아닐까
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 2배 치르노가 되었다＞
+NAME:TARGET = 2배 치르노
+CFLAG:0 = 2
+;체력+200,기력+500
+MAXBASE:0 += 200
+MAXBASE:1 += 500
+;삭감 소질：習得遅い
+TALENT:51 = 0
+;추가 소질 : 해방,恥薄い,習得早い,舌使い,禁断の知識,汚臭둔감,汚れ無視,サド,両刀,中毒しやすい,소악마,鼓舞,回復早い
+TALENT:33 = 1
+TALENT:36 = 1
+TALENT:50 = 1
+TALENT:52 = 1
+TALENT:56 = 1
+TALENT:61 = 1
+TALENT:64 = 1
+TALENT:81 = 1
+TALENT:83 = 1
+TALENT:84 = 1
+TALENT:93 = 1
+TALENT:95 = 1
+TALENT:137 = 1
+;능력의 변동
+ABL:11 = MAX(ABL:11, 3)
+ABL:12 = MAX(ABL:12, 2)
+ABL:14 = MAX(ABL:14, 1)
+ABL:22 = MAX(ABL:22, 3)
+ABL:30 = MAX(ABL:30, 1)
+;상성 변동
+RELATION:40 = 150
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ소악마의 이벤트 함수(라바스 코아)
+;--------------------------------------------------
+;IRCで上がっていた案を採用.素質はお嬢様と勇儀姐さんを足して2で割った感じに
+;弱点は左の乳首だ！でも防御(ガード)が堅いから気をつけろ！
+@EX_CHARA07_1
+PRINTFORMW ＜%CALLNAME:TARGET%로부터 수상쩍은 기색이 느껴진다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 라바스 코아가 되었다＞
+NAME:TARGET = 라바스 코아
+;체력+28000,기력+9000(체력：30000　기력：10000は某ラスボスのHPより)
+MAXBASE:0 += 28000
+MAXBASE:1 += 9000
+;삭감 소질：Ｖ민감
+TALENT:102 = 0
+;추가 소질 : 반항적,프라이드 높음,楽観的,痛みに強い,汚臭둔감,Ｖ둔감,Ｂ민감,구현,回復早い
+TALENT:11 = 1
+TALENT:16 = 1
+TALENT:25 = 1
+TALENT:41 = 1
+TALENT:62 = 1
+TALENT:103 = 1
+TALENT:106 = 1
+TALENT:123 = 1
+TALENT:137 = 1
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ소악마의 이벤트 함수(빅 코아)
+;--------------------------------------------------
+;IRCで上がっていた案を独自解釈.モチーフはもちろん、某巨大戦艦
+;色々ビッグになります.さらに遮蔽板も復活します
+@EX_CHARA07_2
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 어딘지 모르게 커진 것 같다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 거대악마 빅 코아가 되었다＞
+NAME:TARGET = 빅 코아
+CFLAG:0 = 2
+;기력+500
+MAXBASE:1 += 500
+;삭감 소질：소악마
+TALENT:93 = 0
+;추가 소질 : 처녀,大乳導,人気,大甲斐性,Ｂ민감,거유,巨躯
+;강제적으로 거유,巨躯にする
+TALENT:0 = 1
+TALENT:93 = 1
+TALENT:94 = 1
+TALENT:98 = 1
+TALENT:106 = 1
+TALENT:110 = 0
+TALENT:111 = 0
+TALENT:112 = 1
+TALENT:113 = 0
+TALENT:127 = 0
+TALENT:128 = 0
+TALENT:129 = 1
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ소악마의 이벤트 함수(크리스탈 코아)
+;--------------------------------------------------
+;触手使えないかというロクでも無い思いつきによって誕生.モチーフはもちろん、某巨大戦艦
+;もちろん遮蔽板は復活します.さらに촉수사역술を覚えています.さりげなく촉수사역もLv3です
+;意味があるのかは不明です
+@EX_CHARA07_3
+PRINTFORMW ＜%CALLNAME:TARGET%의 마음은 수정과 같이 투명하게 비치고 있다 ……＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 크리스탈 소악마가 되었다＞
+NAME:TARGET = 크리스탈 코아
+CFLAG:0 = 3
+;체력+500,기력+500
+MAXBASE:0 += 500
+MAXBASE:1 += 500
+;삭감 소질：Ｃ둔감
+TALENT:101 = 0
+;추가 소질 : 처녀,Ｃ민감, 촉수사역술
+;강제적으로 거유,巨躯にする
+TALENT:0 = 1
+TALENT:100 = 1
+TALENT:149 = 1
+;촉수사역Lv3
+ABL:98 = MAX(ABL:98, 3)
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：ＥＸ앨리스의 이벤트 함수
+;--------------------------------------------------
+;csvファイルにあったちび앨리스を擬似的に再現
+@EX_CHARA14
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 어릴 적 모습으로 돌아갔다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 꼬마 앨리스가 되었다＞
+NAME:TARGET = 꼬마 앨리스
+NICKNAME:TARGET = 죽음의 소녀
+;체력-500(단, 최저치 600),기력+300
+MAXBASE:0 = MAX(MAXBASE:0 - 500, 600)
+MAXBASE:1 += 300
+;삭감 소질1：調合知識,倒錯的,Ｃ민감,Ｂ민감,소인체형,大柄
+TALENT:55 = 0
+TALENT:80 = 0
+TALENT:100 = 0
+TALENT:106 = 0
+TALENT:127 = 0
+TALENT:129 = 0
+;삭감 소질2：淫乱,淫核,淫壷,淫尻,淫乳,キス魔,マゾ,妊娠,懐卵,恋慕,妄信,親愛,相愛,服従,烙印,隷属
+TALENT:140 = 0
+TALENT:145 = 0
+REPEAT 4
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	IF TALENT:(150+COUNT)
+		CFLAG:14 -= LOCAL
+		TALENT:(150+COUNT) = 0
+	ENDIF
+REND
+SIF TALENT:160
+	CFLAG:15 -= 1
+TALENT:160 = 0
+IF TALENT:161
+	TALENT:161 = 0
+	TALENT:163 = 1
+	SIF CFLAG:15 & 2
+		CFLAG:15 -= 2
+ENDIF
+SIF TALENT:162
+	CFLAG:15 -= 4
+TALENT:162 = 0
+FOR COUNT,0,9
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	IF TALENT:(170+COUNT)
+		CFLAG:16 -= LOCAL
+		TALENT:(170+COUNT) = 0
+	ENDIF
+NEXT
+;추가 소질 : 처녀,好奇心,習得早い,禁断の知識,작은체형,빈유,유치
+;강제적으로 빈유にする
+TALENT:0 = 1
+TALENT:23 = 1
+TALENT:50 = 1
+TALENT:56 = 1
+TALENT:128 = 1
+TALENT:131 = 1
+TALENT:110 = 0
+TALENT:111 = 1
+TALENT:112 = 0
+TALENT:113 = 0
+;능력과 경험을 리셋
+REPEAT 100
+	IF COUNT == 10 && ABL:10 > 0
+		ABL:10 = 1
+	ELSE
+		ABL:COUNT = 0
+	ENDIF
+	EXP:COUNT = 0
+REND
+;欲望、技巧、レズっ気の数値を調整
+ABL:11 = 1
+ABL:12 = 1
+ABL:22 = 3
+;호감도 리셋
+CFLAG:2 = 0
+;상성을 변화
+REPEAT 200
+	IF COUNT == 1 || COUNT == 2 || COUNT == 119
+		RELATION:COUNT = 200
+	ELSEIF COUNT == 34 || COUNT == 100
+		RELATION:COUNT = 80
+	ELSE
+		RELATION:COUNT = 0
+	ENDIF
+REND
+;記念日、結婚 · 契約 · 陥落の日時を抹消
+CFLAG:3113 = 0
+CFLAG:3114 = 0
+CFLAG:3115 = 0
+
+;종족치를 마계인 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3240
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：생전 유유 님의 이벤트 함수
+;--------------------------------------------------
+;ささやき　―　えいしょう　―　いのり　―　ねんじろ！
+;ゆゆこ　は　げんきになりました.
+@EX_CHARA20
+PRINTFORMW ＜기분 탓인지 %CALLNAME:TARGET%의 얼굴이 생기를 띤 것 같다……＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 인간으로 돌아왔다＞
+;체력-400(단, 최저치 600),기력-200(단, 최저치 600)
+MAXBASE:0 = MAX(MAXBASE:0 - 400, 600)
+MAXBASE:1 = MAX(MAXBASE:1 - 200, 600)
+;무관심을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 4
+	CFLAG:13 -= 4
+;삭감 소질：프라이드 높음,무관심,貞操無頓着,痛みに強い,濡れにくい,魅力,魅惑,소악마,霊体
+TALENT:16 = 0
+TALENT:21 = 0
+TALENT:31 = 0
+TALENT:41 = 0
+TALENT:43 = 0
+TALENT:90 = 0
+TALENT:91 = 0
+TALENT:93 = 0
+TALENT:207 = 0
+;추가 소질 : 처녀,臆病,프라이드 낮음,好奇心,悲観的,일선을 넘지 않음,貞操観念,抑圧,恥じらい,濡れやすい,禁断の知識,献身的,謎の魅力,回復遅い
+TALENT:0 = 1
+TALENT:10 = 1
+TALENT:17 = 1
+TALENT:23 = 1
+TALENT:26 = 1
+TALENT:27 = 1
+TALENT:30 = 1
+TALENT:32 = 1
+TALENT:35 = 1
+TALENT:42 = 1
+TALENT:56 = 1
+TALENT:63 = 1
+TALENT:92 = 1
+TALENT:138 = 1
+;종족 변수 변경
+CSTR:32 = 인간
+CSTR:33 = 인간
+;능력의 변동
+;감각계의 능력을 리셋
+VARSET ABL:TARGET:0, 0, 0, 10
+ABL:10 = MAX(ABL:10, 1)
+ABL:11 = MAX(ABL:11 - 1, 0)
+;이상경험이 2 미만이라면 2로 끌어올림
+EXP:50 = MAX(EXP:50, 2)
+;상성을 변화
+REPEAT 200
+	IF COUNT == 19
+		RELATION:COUNT = 110
+	ELSEIF COUNT == 22
+		RELATION:COUNT = 120
+	ELSEIF COUNT == 70
+		RELATION:COUNT = 200
+	ELSE
+		RELATION:COUNT = 0
+	ENDIF
+REND
+;종족치를 인간 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3201
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+
+;--------------------------------------------------
+;검은 사탕：귀족 아가씨 모코우의 이벤트 함수
+;--------------------------------------------------
+;蓬莱の薬を飲む前…まだ貴族として暮らしていたころの妹紅を再現してみた
+@EX_CHARA31
+PRINTFORMW ＜%CALLNAME:TARGET%의 머리칼이 아름다운 칠흑의 빛으로 물들더니、뭔가 분위기가 부드러워진 듯하다……＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 봉래인이 아니게 되었다＞
+;체력-500(단, 최저치 600),기력-200(단, 최저치 600)
+MAXBASE:0 = MAX(MAXBASE:0 - 500, 600)
+MAXBASE:1 = MAX(MAXBASE:1 - 200, 600)
+;반항적을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 8
+	CFLAG:13 -= 8
+;저항을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 2
+	CFLAG:13 -= 2
+;삭감 소질：반항적、저항、蓬莱人、倒錯的、구현
+TALENT:11 = 0
+TALENT:34 = 0
+TALENT:49 = 0
+TALENT:80 = 0
+TALENT:123 = 0
+;추가 소질 : 처녀,気丈,貞操観念,恥じらい
+TALENT:0 = 1
+TALENT:12 = 1
+TALENT:30 = 1
+TALENT:35 = 1
+;능력의 변동
+;감각계의 능력을 리셋
+VARSET ABL:TARGET:0, 0, 0, 10
+ABL:10 = MAX(ABL:10, 1)
+ABL:11 = MAX(ABL:11 - 1, 0)
+;이상경험이 3 미만이라면 3으로 끌어올림
+EXP:50 = MAX(EXP:50, 3)
+;상성을 변화
+VARSET RELATION:TARGET:0, 0, 0, 200
+
+;--------------------------------------------------
+;검은 사탕：미노리코(稔子)의 이벤트 함수
+;--------------------------------------------------
+;모 오식 드립에서
+;名前を間違えられたせいか拗ねてしまったようです
+@EX_CHARA38
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 이름을 잘못 부르자 삐쳐 버렸다＞
+;원문은 稔子. 다만 한국어에서 이 네타를 어떻게 활용해야 할지 몰라서 아키자매의 존재감 없음과 연결시켜 투명드립으로
+PRINTFORMW ＜%CALLNAME:TARGET%의 이름은 alshflzh로 고정되었다＞
+NAME:TARGET = dkzl alshflzh
+CALLNAME:TARGET = alshflzh
+;해방를 없애던 플래그를 없앤다
+SIF CFLAG:13 & 2048
+	CFLAG:13 -= 2048
+;삭감 소질：해방,楽観的,쾌감에 솔직,절벽,빈유
+TALENT:25 = 0
+TALENT:33 = 0
+TALENT:70 = 0
+TALENT:110 = 0
+TALENT:111 = 0
+;추가 소질 : 반항적,悲観的,中毒しやすい
+TALENT:11 = 1
+TALENT:26 = 1
+TALENT:84 = 1
+;공통 이벤트도 포함해, 순종 소멸
+ABL:10 = (ABL:10 > 0) ? 1 # 0
+;奉仕精神も低下
+ABL:13 = 0
+;이상경험이 2 미만이라면 2로 끌어올림
+EXP:50 = MAX(EXP:50, 2)
+;상성 변동
+RELATION:37 = 150
+RELATION:MASTER = 50
+
+;--------------------------------------------------
+;검은 사탕：그린댐(ぐりんだむ)의 이벤트 함수
+;--------------------------------------------------
+;某ネット検閲ソフトの萌え擬人化がにとりそっくりだったというネタより.流石○国.
+;外部パッチのものを参考.風紀
+@EX_CHARA40
+IF CFLAG:99 == 0
+	PRINTW ……
+	PRINTW 「아, 아―……응, 일본어 말할 수 있어」
+	PRINTW ……
+	PRINTW 「야한 건 안된다고 생각합니다!」
+	PRINTW 너 누구?
+	PRINTW …………
+ENDIF
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 수수께끼의 프로그램에 침식 되었다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 그린댐이 되었다＞
+NAME:TARGET = 그린댐
+CALLNAME:TARGET = 그린댐
+;체력+400
+MAXBASE:0 += 400
+;삭감 소질：臆病,好奇心,濡れやすい,習得早い,自慰しやすい,汚臭둔감,쾌감에 솔직,Ａ민감,河童
+TALENT:10 = 0
+TALENT:23 = 0
+TALENT:42 = 0
+TALENT:50 = 0
+TALENT:60 = 0
+TALENT:61 = 0
+TALENT:70 = 0
+TALENT:104 = 0
+TALENT:210 = 0
+;추가 소질 : 반항적,프라이드 높음,ツンデレ,保守的,일선을 넘지 않음,目立ちたがり,男嫌い,習得遅い,汚臭민감,快感の否定Ｖ민감
+TALENT:0 = 1
+TALENT:11 = 1
+TALENT:16 = 1
+TALENT:18 = 1
+TALENT:24 = 1
+TALENT:27 = 1
+TALENT:28 = 1
+TALENT:37 = 1
+TALENT:51 = 1
+TALENT:62 = 1
+TALENT:71 = 1
+TALENT:102 = 1
+;상성 변동
+REPEAT 150
+	SIF COUNT != NO:MASTER
+		RELATION:COUNT = 0
+REND
+RELATION:40 = 80
+
+;--------------------------------------------------
+;검은 사탕：사나에 님의 이벤트 함수
+;--------------------------------------------------
+;IRCネタ.とっても淫乱で酒豪な사나에 님(後者に関してはいろんな要素があってあまり特徴を出せず…
+;能力はeratohoJ用사나에 님口上のものを擬似的に再現
+@EX_CHARA42
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 사로잡혀 있던 상식에서 해방되었다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 사나에 님이 되었다＞
+NAME:TARGET = 사나에 님
+CALLNAME:TARGET = 사나에 님
+CFLAG:0 = 2
+;恋慕も淫乱もない場合陥落の日時を抹消
+SIF TALENT:150 == 0 && TALENT:170 == 0
+	CFLAG:3115 = 0
+;기력+250
+MAXBASE:1 += 250
+;해방를 없애던 플래그를 없앤다
+SIF CFLAG:13 & 2048
+	CFLAG:13 -= 2048
+;삭감 소질1：大人しい,献身的,魅力,Ｃ민감,Ｖ민감
+TALENT:14 = 0
+TALENT:63 = 0
+TALENT:90 = 0
+TALENT:100 = 0
+TALENT:102 = 0
+;삭감 소질2：솔직함,프라이드 낮음,해방,弱味,痛みに強い,濡れやすい,習得早い,服従系
+TALENT:13 = 0
+TALENT:17 = 0
+TALENT:33 = 0
+TALENT:39 = 0
+TALENT:41 = 0
+TALENT:42 = 0
+TALENT:50 = 0
+SIF TALENT:160
+	CFLAG:15 -= 1
+TALENT:160 = 0
+IF TALENT:161
+	TALENT:161 = 0
+	TALENT:163 = 1
+	SIF CFLAG:15 & 2
+		CFLAG:15 -= 2
+ENDIF
+SIF TALENT:162
+	CFLAG:15 -= 4
+TALENT:162 = 0
+;추가 소질 : 臆病,반항적,気丈,건방짐,프라이드 높음,ツンデレ,自制心,悲観的,抑圧,저항,痛みに弱い,濡れにくい,習得遅い,中毒しやすい,黄昏の怪物
+TALENT:10 = 1
+TALENT:11 = 1
+TALENT:12 = 1
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:18 = 1
+TALENT:20 = 1
+TALENT:26 = 1
+TALENT:32 = 1
+TALENT:34 = 1
+TALENT:40 = 1
+TALENT:43 = 1
+TALENT:51 = 1
+TALENT:84 = 1
+TALENT:221 = 1
+;능력의 변동
+ABL:12 = (ABL:12 < 1) ? 1 # ABL:12
+ABL:11 = 0
+ABL:13 = 0
+ABL:22 = MAX(ABL:22 - 1 ,0)
+ABL:10 = MAX(ABL:10, 1)
+;自慰経験が40未満なら40に増加
+EXP:10 = MAX(EXP:10, 40)
+;상성 변동
+RELATION:1 = 10
+RELATION:43 = 200
+RELATION:44 = 200
+RETURN 1
+
+;--------------------------------------------------
+;검은 사탕：평범한 지옥까마귀 오쿠의 이벤트 함수
+;--------------------------------------------------
+;八咫烏を取り込む前のお空.もっともあんまり変わらないが.
+@EX_CHARA63
+PRINTFORMW ＜%CALLNAME:TARGET%의 가슴의 문양이 사라지더니만, 몸에서 발하는 열량이 점차 줄어들어간다……＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 야타가라스의 힘을 잃었다＞
+;체력-500(단, 최저치 600),기력-200(단, 최저치 600)
+MAXBASE:0 = MAX(MAXBASE:0 - 500, 600)
+;반항적을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 8
+	CFLAG:13 -= 8
+;삭감 소질：반항적、일광욕、구현
+TALENT:11 = 0
+TALENT:114 = 0
+TALENT:123 = 0
+;추가 소질 : 솔직함
+TALENT:13 = 1
+;능력의 변동
+;감각계의 능력을 리셋
+VARSET ABL:TARGET:0, 0, 0, 10
+ABL:10 = MAX(ABL:10, 1)
+ABL:11 = MAX(ABL:11 - 1, 0)
+;이상경험이 1 미만이라면 1로 끌어올림
+EXP:50 = MAX(EXP:50, 1)
+;상성을 변화
+REPEAT 200
+	IF COUNT == 61
+		RELATION:COUNT = 120
+	ELSEIF COUNT == 62
+		RELATION:COUNT = 150
+	ELSEIF COUNT == 64
+		RELATION:COUNT = 110
+	ELSE
+		RELATION:COUNT = 0
+	ENDIF
+REND
+
+;종족치를 지옥까마귀 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3242
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+
+;--------------------------------------------------
+;검은 사탕：이치린의 들클플스화
+;--------------------------------------------------
+;미노리코처럼 이름 잘못 불러서 생기는 EX가 하나쯤 있어도 좋지 아니한가
+@EX_CHARA73
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 주인이 이름을 잊어버리자 그대로 존재감이 사라져버렸다＞
+PRINTFORMW ＜%CALLNAME:TARGET%의 이름은 dlclfls이 되었다＞
+NAME:TARGET = znahdl dlclfls
+CALLNAME:TARGET = 들클플스
+;일선을 넘지 않음을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 64
+	CFLAG:13 -= 64
+;삭감 소질：꿋꿋함, 정조관념, 일선을 넘지 않음, 부끄럼쟁이, 민감소질
+TALENT:12 = 0
+TALENT:27 = 0
+TALENT:30 = 0
+TALENT:35 = 0
+TALENT:102 = 0
+TALENT:106 = 0
+;추가 소질 :  프라이드가 낮음, 무관심, 비관적, 정조무관심, 눈에띄고 싶어함, 약점, 민감을 전부 둔감으로
+TALENT:17 = 1
+TALENT:21 = 1
+TALENT:26 = 1
+TALENT:28 = 1
+TALENT:31 = 1
+TALENT:39 = 1
+TALENT:103 = 1
+TALENT:107 = 1
+;공통 이벤트도 포함해, 순종 소멸
+ABL:10 = (ABL:10 > 0) ? 1 # 0
+;이상경험이 2 미만이라면 2로 끌어올림
+EXP:50 = MAX(EXP:50, 2)
+;상성 변동
+RELATION:74 = 300
+
+;--------------------------------------------------
+;검은 사탕：생전 요시카의 이벤트 함수
+;--------------------------------------------------
+;피깃사용함
+@EX_CHARA82_1
+PRINTFORMW ＜%CALLNAME:TARGET%의 얼굴이 생기를 띤 것 같다……＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 인간모습으로 돌아왔다＞
+;체력-400(단, 최저치 600),기력-200(단, 최저치 600)
+MAXBASE:0 = MAX(MAXBASE:0 - 2400, 600)
+MAXBASE:1 = MAX(MAXBASE:1 - 200, 600)
+;무관심을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 4
+	CFLAG:13 -= 4
+;제거소질 무관심,감정결여,비관적,선안넘음,정조관념무ㅡ,억압,
+TALENT:21 = 0
+TALENT:22 = 0
+TALENT:26 = 0
+TALENT:27 = 0
+TALENT:31 = 0
+TALENT:32 = 0
+TALENT:41 = 0
+TALENT:43 = 0
+TALENT:44 = 0
+TALENT:51 = 0
+TALENT:226 = 0
+;습득 소질 : 
+TALENT:0 = 1
+TALENT:10 = 1
+TALENT:23 = 1
+TALENT:26 = 1
+TALENT:30 = 1
+TALENT:35 = 1
+TALENT:38 = 1
+TALENT:42 = 1
+TALENT:70 = 1
+TALENT:106 = 1
+TALENT:102 = 1
+TALENT:138 = 1
+;종족 변수 변경
+CSTR:32 = 인간
+CSTR:33 = 인간
+;능력의 변동
+;감각계의 능력을 리셋
+VARSET ABL:TARGET:0, 0, 0, 10
+ABL:10 = MAX(ABL:10, 1)
+ABL:11 = MAX(ABL:11 - 1, 0)
+;이상경험이 2 미만이라면 2로 끌어올림
+EXP:50 = MAX(EXP:50, 2)
+;상성을 변화
+REPEAT 200
+RELATION:COUNT = 0
+REND
+;종족치를 인간 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3201
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+
+;--------------------------------------------------
+;검은 사탕：카시와데노호키키미노이라츠메
+;--------------------------------------------------
+;소가노 토지코는 말하지 않는다에 나왔던 요시카
+@EX_CHARA82_2
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 생전의 기억을 되찾고 인간이 되더니, 아련한 시구를 읊기 시작했다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 카시와데노미노이라츠메가 되었다＞
+NAME:TARGET = 카시와데노미노이라츠메
+CALLNAME:TARGET = 미노이라츠메
+;체력 -500(단 최저값 600), 기력 -200(단 최저값 600)
+MAXBASE:0 = MAX(MAXBASE:0 - 500, 600)
+MAXBASE:1 = MAX(MAXBASE:1 - 200, 600)
+;무관심을 순애 모드에서 지우던 플래그를 지운다
+;SIF CFLAG:13 & 4
+;	CFLAG:13 -= 4
+;소멸 소질：반항적, 무관심, 보수적, 낙관적, 자제심, 젖기 어려움, 약물내성, 냄새둔감, 월광욕, 회복빠름, 전신둔감, 강시
+TALENT:11 = 0
+TALENT:20 = 0
+TALENT:21 = 0
+TALENT:24 = 0
+TALENT:25 = 0
+TALENT:43 = 0
+TALENT:44 = 0
+TALENT:61 = 0
+TALENT:115 = 0
+TALENT:101 = 0
+TALENT:103 = 0
+TALENT:105 = 0
+TALENT:107 = 0
+TALENT:137 = 0
+TALENT:226 = 0
+;추가 소질: 쾌감에 솔직, 젖기 쉬움, 해방, 부끄럼없음, 냄새민감, 수수께끼의 매력, V민감, 음란, 광기
+TALENT:33 = 1
+TALENT:36 = 1
+TALENT:42 = 1
+TALENT:62 = 1
+TALENT:70 = 1
+TALENT:92 = 1
+TALENT:102 = 1
+TALENT:158 = 1
+TALENT:170 = 1
+;종족 변수 변경
+CSTR:32 = 인간
+CSTR:33 = 인간
+;능력의 변동
+;감각계의 능력을 리셋
+VARSET ABL:TARGET:0, 0, 0, 10
+ABL:10 = MAX(ABL:10, 1)
+ABL:11 = 5
+;이상경험이 2 미만이라면 2로 끌어올림
+EXP:50 = MAX(EXP:50, 2)
+REPEAT 200
+	IF COUNT == 83
+		RELATION:COUNT = 120
+	ELSEIF COUNT == 85
+		RELATION:COUNT = 50
+	ELSEIF COUNT == 86
+		RELATION:COUNT = 300
+	ELSE
+		RELATION:COUNT = 0
+	ENDIF
+REND
+;종족치를 인간 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3201
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+
+;--------------------------------------------------
+;검은 사탕：소가나이판 토지코
+;--------------------------------------------------
+;소가노 토지코는 말하지 않는다에 나왔던 토지코
+@EX_CHARA84
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 생전의 기억을 되찾고 인간이 되었지만, 아무것도 말하지 않는다＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 토지코노이라츠메가 되었다＞
+NAME:TARGET = 토지코노이라츠메
+;반항적을 순애 모드에서 지우던 플래그를 지운다
+SIF CFLAG:13 & 8
+	CFLAG:13 -= 8
+;원래의 느긋한 아가씨에서 태자님 일직선의 얀데레 소녀가 되어버린다
+;삭감 소질：낙관적, 냄새둔감, 영체, V둔감, B둔감
+TALENT:25 = 0
+TALENT:61 = 0
+TALENT:103 = 0
+TALENT:107 = 0
+TALENT:207 = 0
+;추가 소질 :  솔직, 반항적 복귀, 프라이드가 낮음, 질투하기 쉬움, 비관적, 정조관념, 조합지식, 헌신적, 중독되기 쉬움, 회복느림, 작은체형, B민감
+TALENT:11 = 1
+TALENT:13 = 1
+TALENT:17 = 1
+TALENT:19 = 1
+TALENT:26 = 1
+TALENT:30 = 1
+TALENT:55 = 1
+TALENT:63 = 1
+TALENT:84 = 1
+TALENT:106 = 1
+TALENT:128 = 1
+TALENT:138 = 1
+;종족 변수 변경
+CSTR:32 = 인간
+CSTR:33 = 인간
+;능력의 변동
+;감각계의 능력을 리셋
+VARSET ABL:TARGET:0, 0, 0, 10
+ABL:10 = MAX(ABL:10, 1)
+ABL:11 = MAX(ABL:11 - 1, 0)
+;이상경험이 2 미만이라면 2로 끌어올림
+EXP:50 = MAX(EXP:50, 2)
+REPEAT 200
+	IF COUNT == 82
+		RELATION:COUNT = 80
+	ELSEIF COUNT == 83
+		RELATION:COUNT = 110
+	ELSEIF COUNT == 85
+		RELATION:COUNT = 130
+	ELSEIF COUNT == 86
+		RELATION:COUNT = 300
+	ELSE
+		RELATION:COUNT = 0
+	ENDIF
+REND
+;종족치를 인간 100%로 세트
+FOR LOCAL , 3200 , 3400
+	IF LOCAL == 3201
+		CFLAG:LOCAL = 100
+	ELSE
+		CFLAG:LOCAL = 0
+	ENDIF
+NEXT
+;--------------------------------------------------
+;검은 사탕：히라노(신Ver.)의 이벤트 함수
+;--------------------------------------------------
+;新Ver.のツンデレを再現…できるのか？
+;なお、従順さがるけど、恋慕や服従系素質は消えない.
+@EX_CHARA129
+PRINTFORMW ＜%CALLNAME:TARGET%의 분위기가 바뀐 것 같다……＞
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 가지고 있던 츤데레 정신을 표출했다＞
+NAME:TARGET = 사쿠라자키 히라노(신판)
+;삭감 소질：낙관적, 정조관둔감
+TALENT:25 = 0
+TALENT:41 = 0
+;추가 소질 : 반항적, 프라이드 높음, 츤데레
+TALENT:11 = 1
+TALENT:16 = 1
+TALENT:18 = 1
+;능력의 변동
+;공통 이벤트도 포함해, 순종 소멸
+ABL:10 = (ABL:10 > 0) ? 1 # 0
+;봉사정신도 저하
+ABL:13 = 0
+;이상경험이 1 미만이라면 1로 끌어올림
+EXP:50 = MAX(EXP:50, 1)
+
+;=============================================================================
+;XEXTRA 모드의 ＥＸ화 캐릭터 개별 처리
+;=============================================================================
+;-------------------------------------------------
+;XEXTRA 모드：죄주머니
+;-------------------------------------------------
+@EXTRA_MASTER_00_1
+NO:TARGET = 0
+NAME:TARGET = 츠미부쿠로
+CALLNAME:TARGET = 츠미부쿠로
+MAXBASE:0 = 2500
+MAXBASE:1 = 2000
+MAXBASE:2 = 10000
+ABL:11 = 2
+ABL:12 = 2
+ABL:13 = 5
+ABL:14 = 2
+ABL:21 = 5
+TALENT:82 = 1
+TALENT:120 = 1
+TALENT:178 = 1
+RELATION:22 = 500
+
+;-------------------------------------------------
+;XEXTRA 모드：카도케지 씨
+;-------------------------------------------------
+@EXTRA_MASTER_00_2
+NO:TARGET = 0
+NAME:TARGET = 카도케지
+CALLNAME:TARGET = 카도케지
+MAXBASE:0 = 1600
+MAXBASE:1 = 1300
+ABL:12 = 1
+TALENT:0 = 1
+TALENT:11 = 1
+TALENT:15 = 1
+TALENT:23 = 1
+TALENT:25 = 1
+TALENT:28 = 1
+TALENT:30 = 1
+TALENT:42 = 1
+TALENT:50 = 1
+TALENT:52 = 1
+TALENT:61 = 1
+TALENT:80 = 1
+TALENT:100 = 1
+TALENT:128 = 1
+
+;-------------------------------------------------
+;XEXTRA 모드：타카히로
+;-------------------------------------------------
+@EXTRA_MASTER_00_3
+NO:TARGET = 0
+NAME:TARGET = 타카히로
+CALLNAME:TARGET = 타카히로
+MAXBASE:0 = 2500
+MAXBASE:1 = 2000
+MAXBASE:2 = 10000
+ABL:12 = 2
+ABL:13 = 1
+ABL:72 = 3
+EXP:73 = 50
+TALENT:28 = 1
+TALENT:120 = 1
+RELATION:16 = 150
+RELATION:17 = 150
+RELATION:18 = 150
+RELATION:25 = 120
+
+;-------------------------------------------------
+;XEXTRA 모드：쟈미
+;-------------------------------------------------
+@EXTRA_MASTER_00_4
+NO:TARGET = 0
+NAME:TARGET = 쟈미
+CALLNAME:TARGET = 쟈미
+MAXBASE:0 = 1200
+MAXBASE:1 = 3800
+MAXBASE:2 = 10000
+ABL:11 = 2
+ABL:12 = 2
+EXP:10 = 30
+TALENT:31 = 1
+TALENT:64 = 1
+TALENT:81 = 1
+TALENT:116 = 1
+TALENT:120 = 1
+
+;-------------------------------------------------
+;XEXTRA 모드：레이무 님
+;-------------------------------------------------
+@EXTRA_MASTER_01_2
+NO:TARGET = 1
+NAME:TARGET = 레이무 님
+CALLNAME:TARGET = 레이무님
+MAXBASE:0 = 2500
+MAXBASE:1 = 1500
+ABL:12 = 1
+EXP:50 = 255
+TALENT:0 = 1
+TALENT:11 = 1
+TALENT:12 = 1
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:32 = 1
+TALENT:34 = 1
+TALENT:36 = 1
+TALENT:43 = 1
+TALENT:44 = 1
+TALENT:53 = 1
+TALENT:64 = 1
+TALENT:71 = 1
+TALENT:80 = 1
+TALENT:81 = 1
+TALENT:92 = 1
+TALENT:94 = 1
+TALENT:101 = 1
+TALENT:103 = 1
+TALENT:105 = 1
+TALENT:107 = 1
+TALENT:158 = 1
+TALENT:170 = 1
+VARSET RELATION:TARGET:0, 10, 2, 200
+
+;-------------------------------------------------
+;XEXTRA 모드：구작 마리사
+;-------------------------------------------------
+@EXTRA_MASTER_02_1
+NO:TARGET = 2
+NAME:TARGET = 구작 마리사
+CALLNAME:TARGET = 마리사
+MAXBASE:0 = 1900
+MAXBASE:1 = 1300
+ABL:0 = 1
+ABL:11 = 1
+ABL:12 = 1
+EXP:2 = 5
+EXP:10 = 60
+TALENT:0 = 1
+TALENT:12 = 1
+TALENT:15 = 1
+TALENT:23 = 1
+TALENT:28 = 1
+TALENT:50 = 1
+TALENT:52 = 1
+TALENT:55 = 1
+TALENT:59 = 1
+TALENT:111 = 1
+RELATION:1 = 200
+RELATION:100 = 200
+
+;-------------------------------------------------
+;XEXTRA 모드：초 마리사
+;-------------------------------------------------
+@EXTRA_MASTER_02_2
+NO:TARGET = 2
+NAME:TARGET = 초마리사
+CALLNAME:TARGET = 마리사
+MAXBASE:0 = 3000
+MAXBASE:1 = 1000
+;ABL:10 = 1
+EXP:50 = 255
+TALENT:0 = 1
+TALENT:12 = 1
+TALENT:14 = 1
+TALENT:20 = 1
+TALENT:24 = 1
+TALENT:25 = 1
+TALENT:27 = 1
+TALENT:30 = 1
+TALENT:41 = 1
+TALENT:43 = 1
+TALENT:50 = 1
+TALENT:59 = 1
+TALENT:63 = 1
+TALENT:71 = 1
+TALENT:101 = 1
+TALENT:103 = 1
+TALENT:105 = 1
+TALENT:107 = 1
+TALENT:137 = 1
+RELATION:1 = 200
+RELATION:100 = 200
+
+;-------------------------------------------------
+;XEXTRA 모드：ＥＸ루미아
+;-------------------------------------------------
+@EXTRA_MASTER_03_1
+NO:TARGET = 3
+NAME:TARGET = ＥＸ루미아
+CALLNAME:TARGET = 루미아
+MAXBASE:0 = 2200
+MAXBASE:1 = 1500
+TALENT:0 = 1
+TALENT:12 = 1
+TALENT:20 = 1
+TALENT:24 = 1
+TALENT:30 = 1
+TALENT:41 = 1
+TALENT:62 = 1
+TALENT:63 = 1
+TALENT:84 = 1
+TALENT:90 = 1
+TALENT:115 = 1
+CFLAG:0 = 1
+
+;-------------------------------------------------
+;XEXTRA 모드：ＥＸ대요정
+;-------------------------------------------------
+@EXTRA_MASTER_04_1
+NO:TARGET = 4
+NAME:TARGET = ＥＸ대요정
+CALLNAME:TARGET = 대요정
+MAXBASE:0 = 2500
+MAXBASE:1 = 1000
+ABL:0 = 1
+;ABL:10 = 1
+ABL:11 = 1
+EXP:2 = 1
+EXP:10 = 3
+EXP:32 = 10
+EXP:33 = 10
+EXP:34 = 10
+TALENT:0 = 1
+TALENT:10 = 1
+TALENT:14 = 1
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:23 = 1
+TALENT:35 = 1
+TALENT:37 = 1
+TALENT:100 = 1
+TALENT:112 = 1
+TALENT:200 = 1
+RELATION:5 = 300
+
+;-------------------------------------------------
+;XEXTRA 모드：Ｂ대요정
+;-------------------------------------------------
+@EXTRA_MASTER_04_2
+NO:TARGET = 4
+NAME:TARGET = Ｂ대요정
+CALLNAME:TARGET = 대요정
+MAXBASE:0 = 2200
+MAXBASE:1 = 1200
+ABL:0 = 1
+ABL:11 = 1
+ABL:12 = 1
+ABL:20 = 5
+EXP:2 = 5
+EXP:10 = 30
+EXP:30 = 20
+EXP:31 = 20
+EXP:39 = 100
+TALENT:0 = 1
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:23 = 1
+TALENT:33 = 1
+TALENT:37 = 1
+TALENT:41 = 1
+TALENT:52 = 1
+TALENT:53 = 1
+TALENT:71 = 1
+TALENT:80 = 1
+TALENT:81 = 1
+TALENT:84 = 1
+TALENT:93 = 1
+TALENT:100 = 1
+TALENT:158 = 1
+TALENT:177 = 1
+TALENT:200 = 1
+RELATION:5 = 300
+
+;-------------------------------------------------
+;XEXTRA 모드：어드벤트 치르노
+;-------------------------------------------------
+@EXTRA_MASTER_05_1
+NO:TARGET = 5
+NAME:TARGET = 어드벤트 치르노
+CALLNAME:TARGET = 치르노
+MAXBASE:0 = 2500
+MAXBASE:1 = 1300
+TALENT:0 = 1
+TALENT:15 = 1
+TALENT:23 = 1
+TALENT:25 = 1
+TALENT:28 = 1
+TALENT:34 = 1
+TALENT:41 = 1
+TALENT:42 = 1
+TALENT:63 = 1
+TALENT:83 = 1
+TALENT:94 = 1
+TALENT:95 = 1
+TALENT:102 = 1
+TALENT:128 = 1
+TALENT:137 = 1
+RELATION:4 = 200
+RELATION:6 = 150
+RELATION:12 = 200
+RELATION:24 = 200
+RELATION:25 = 150
+RELATION:28 = 150
+RELATION:31 = 50
+RELATION:45 = 150
+RELATION:46 = 150
+RELATION:47 = 150
+FOR COUNT , 3200 , 3400
+	IF COUNT == 3201
+		CFLAG:COUNT = 100
+	ELSE
+		CFLAG:COUNT = 0
+	ENDIF
+NEXT
+
+;-------------------------------------------------
+;XEXTRA 모드：바이 치르노
+;-------------------------------------------------
+@EXTRA_MASTER_05_2
+NO:TARGET = 5
+NAME:TARGET = 2배 치르노
+CALLNAME:TARGET = 치르노
+MAXBASE:0 = 2200
+MAXBASE:1 = 1600
+ABL:1 = 3
+ABL:2 = 2
+ABL:3 = 2
+;ABL:10 = 1
+ABL:11 = 2
+ABL:14 = 1
+ABL:21 = 3
+EXP:2 = 100
+EXP:10 = 100
+EXP:40 = 25
+EXP:50 = 1
+TALENT:0 = 1
+TALENT:15 = 1
+TALENT:23 = 1
+TALENT:28 = 1
+TALENT:33 = 1
+TALENT:36 = 1
+TALENT:42 = 1
+TALENT:50 = 1
+TALENT:52 = 1
+TALENT:56 = 1
+TALENT:61 = 1
+TALENT:64 = 1
+TALENT:81 = 1
+TALENT:83 = 1
+TALENT:84 = 1
+TALENT:93 = 1
+TALENT:95 = 1
+TALENT:102 = 1
+TALENT:111 = 1
+TALENT:128 = 1
+TALENT:131 = 1
+TALENT:137 = 1
+TALENT:200 = 1
+RELATION:4 = 200
+RELATION:12 = 200
+RELATION:15 = 50
+RELATION:24 = 200
+RELATION:31 = 50
+RELATION:40 = 150
+RELATION:45 = 150
+RELATION:46 = 150
+RELATION:47 = 150
+
+;-------------------------------------------------
+;XEXTRA 모드：꼬마 앨리스
+;-------------------------------------------------
+@EXTRA_MASTER_14_1
+NO:TARGET = 14
+NAME:TARGET = 꼬마 앨리스
+CALLNAME:TARGET = 앨리스
+MAXBASE:0 = 1500
+MAXBASE:1 = 1500
+ABL:11 = 1
+ABL:12 = 1
+ABL:22 = 3
+TALENT:0 = 1
+TALENT:11 = 1
+TALENT:16 = 1
+TALENT:23 = 1
+TALENT:50 = 1
+TALENT:56 = 1
+TALENT:60 = 1
+TALENT:84 = 1
+TALENT:110 = 1
+TALENT:128 = 1
+TALENT:131 = 1
+RELATION:1 = 200
+RELATION:2 = 200
+RELATION:34 = 80
+RELATION:100 = 80
+RELATION:119 = 200
+FOR COUNT , 3200 , 3400
+	IF COUNT == 3240
+		CFLAG:COUNT = 100
+	ELSE
+		CFLAG:COUNT = 0
+	ENDIF
+NEXT
+
+;-------------------------------------------------
+;XEXTRA 모드：생전 유유 님
+;-------------------------------------------------
+@EXTRA_MASTER_20_1
+NO:TARGET = 20
+NAME:TARGET = 사이교우지 유유코(생전)
+CALLNAME:TARGET = 유유코
+MAXBASE:0 = 1600
+MAXBASE:1 = 1300
+;ABL:10 = 1
+EXP:50 = 2
+TALENT:0 = 1
+TALENT:10 = 1
+TALENT:14 = 1
+TALENT:17 = 1
+TALENT:23 = 1
+TALENT:26 = 1
+TALENT:27 = 1
+TALENT:30 = 1
+TALENT:32 = 1
+TALENT:35 = 1
+TALENT:42 = 1
+TALENT:56 = 1
+TALENT:63 = 1
+TALENT:92 = 1
+TALENT:112 = 1
+TALENT:138 = 1
+RELATION:19 = 110
+RELATION:22 = 120
+RELATION:70 = 200
+FOR COUNT , 3200 , 3400
+	IF COUNT == 3201
+		CFLAG:COUNT = 100
+	ELSE
+		CFLAG:COUNT = 0
+	ENDIF
+NEXT
+
+;-------------------------------------------------
+;XEXTRA 모드：테위 사부
+;-------------------------------------------------
+@EXTRA_MASTER_27_2
+NO:TARGET = 27
+NAME:TARGET = 테위 사부
+CALLNAME:TARGET = 테위
+MAXBASE:0 = 2000
+MAXBASE:1 = 1000
+ABL:12 = 2
+TALENT:0 = 1
+TALENT:15 = 1
+TALENT:20 = 1
+TALENT:21 = 1
+TALENT:27 = 1
+TALENT:34 = 1
+TALENT:36 = 1
+TALENT:37 = 1
+TALENT:43 = 1
+TALENT:51 = 1
+TALENT:56 = 1
+TALENT:62 = 1
+TALENT:70 = 1
+TALENT:81 = 1
+TALENT:90 = 1
+TALENT:92 = 1
+TALENT:93 = 1
+TALENT:94 = 1
+TALENT:95 = 1
+TALENT:101 = 1
+TALENT:103 = 1
+TALENT:105 = 1
+TALENT:107 = 1
+TALENT:111 = 1
+TALENT:116 = 1
+TALENT:128 = 1
+TALENT:138 = 1
+TALENT:158 = 1
+
+;-------------------------------------------------
+;XEXTRA 모드：미노리코(稔子)
+;-------------------------------------------------
+@EXTRA_MASTER_38_1
+NO:TARGET = 38
+NAME:TARGET = alshflzh
+CALLNAME:TARGET = alshflzh
+MAXBASE:0 = 2000
+MAXBASE:1 = 1000
+ABL:1 = 1
+ABL:11 = 1
+ABL:12 = 1
+ABL:22 = 1
+EXP:0 = 50
+EXP:2 = 20
+EXP:4 = 10
+EXP:20 = 10
+EXP:22 = 10
+TALENT:11 = 1
+TALENT:26 = 1
+TALENT:28 = 1
+TALENT:31 = 1
+TALENT:83 = 1
+TALENT:84 = 1
+TALENT:94 = 1
+RELATION:37 = 150
+
+;-------------------------------------------------
+;XEXTRA 모드：그린댐
+;-------------------------------------------------
+@EXTRA_MASTER_40_1
+NO:TARGET = 40
+NAME:TARGET = 그린댐
+CALLNAME:TARGET = 그린댐
+MAXBASE:0 = 2400
+MAXBASE:1 = 1000
+TALENT:0 = 1
+TALENT:11 = 1
+TALENT:16 = 1
+TALENT:18 = 1
+TALENT:24 = 1
+TALENT:27 = 1
+TALENT:28 = 1
+TALENT:37 = 1
+TALENT:51 = 1
+TALENT:62 = 1
+TALENT:71 = 1
+TALENT:102 = 1
+RELATION:40 = 80
+
+;-------------------------------------------------
+;XEXTRA 모드：사나에 님
+;-------------------------------------------------
+@EXTRA_MASTER_42_2
+NO:TARGET = 42
+NAME:TARGET = 사나에 님
+CALLNAME:TARGET = 사나에 님
+MAXBASE:0 = 2000
+MAXBASE:1 = 1750
+ABL:12 = 1
+ABL:30 = 1
+EXP:10 = 50
+EXP:12 = 10
+EXP:50 = 1
+TALENT:0 = 1
+TALENT:10 = 1
+TALENT:11 = 1
+TALENT:12 = 1
+TALENT:15 = 1
+TALENT:16 = 1
+TALENT:18 = 1
+TALENT:20 = 1
+TALENT:24 = 1
+TALENT:26 = 1
+TALENT:27 = 1
+TALENT:30 = 1
+TALENT:32 = 1
+TALENT:34 = 1
+TALENT:35 = 1
+TALENT:40 = 1
+TALENT:43 = 1
+TALENT:51 = 1
+TALENT:84 = 1
+RELATION:1 = 10
+RELATION:43 = 200
+RELATION:44 = 200
+
+;-------------------------------------------------
+;XEXTRA 모드：むっつりさとりん
+;-------------------------------------------------
+@EXTRA_MASTER_61_2
+NO:TARGET = 61
+NAME:TARGET = 과묵 사토링
+CALLNAME:TARGET = 사토리
+MAXBASE:0 = 1300
+MAXBASE:1 = 2000
+ABL:11 = 2
+ABL:14 = 2
+ABL:21 = 2
+ABL:22 = 1
+EXP:50 = 1
+TALENT:0 = 1
+TALENT:13 = 1
+TALENT:15 = 1
+TALENT:23 = 1
+TALENT:31 = 1
+TALENT:33 = 1
+TALENT:36 = 1
+TALENT:50 = 1
+TALENT:60 = 1
+TALENT:70 = 1
+TALENT:80 = 1
+TALENT:81 = 1
+TALENT:83 = 1
+TALENT:84 = 1
+TALENT:111 = 1
+TALENT:128 = 1
+TALENT:213 = 1
+RELATION:62 = 200
+RELATION:63 = 120
+RELATION:64 = 200
+
+;-------------------------------------------------
+;XEXTRA 모드：쥴리앙
+;-------------------------------------------------
+@EXTRA_MASTER_156_2
+NO:TARGET = 156
+NAME:TARGET = 쥴리앙
+CALLNAME:TARGET = 쥴리앙
+MAXBASE:0 = 2000
+MAXBASE:1 = 1000
+;ABL:10 = 1
+ABL:13 = 1
+TALENT:0 = 1
+TALENT:13 = 1
+TALENT:14 = 1
+TALENT:20 = 1
+TALENT:24 = 1
+TALENT:30 = 1
+TALENT:35 = 1
+TALENT:40 = 1
+TALENT:42 = 1
+TALENT:48 = 1
+TALENT:53 = 1
+TALENT:62 = 1
+TALENT:63 = 1
+TALENT:90 = 1
+TALENT:128 = 1
+TALENT:200 = 1
+RELATION:1 = 150
+
+;=============================================================================
+;ＥＸ 캐릭터의 초기 상성 계산용 참조 함수군
+;=============================================================================
+;레이무 님의 초기 상성 참조 함수
+@EX_RELATION_1_2, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 0 || ARG == 1
+	RESULT = 0
+ELSE
+	RESULT = 10
+ENDIF
+RETURNF RESULT
+
+;구작 마리사의 초기 상성 참조 함수
+@EX_RELATION_2_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 100
+	RESULT = 200
+ELSE
+	RESULT = CSVRELATION(2,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;EX루미아의 초기 상성 참조 함수
+@EX_RELATION_3_1, ARG
+#FUNCTION
+RESULT = CSVRELATION(3,ARG,0)
+RETURNF RESULT
+
+;EX대요정의 초기 상성 참조 함수
+@EX_RELATION_4_1, ARG
+#FUNCTION
+IF ARG == 5
+	RESULT = 300
+ELSE
+	RESULT = CSVRELATION(4,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;어드벤트 치르노의 초기 상성 참조 함수
+@EX_RELATION_5_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 6 || ARG == 25 || ARG == 28
+	RESULT = 150
+ELSEIF ARG == 15
+	RESULT = 0
+ELSE
+	RESULT = CSVRELATION(5,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;바이 치르노의 초기 상성 참조 함수
+@EX_RELATION_5_2, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 40
+	RESULT = 150
+ELSE
+	RESULT = CSVRELATION(5,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;러버스 코아의 초기 상성 참조 함수
+@EX_RELATION_7_1, ARG
+#FUNCTION
+RESULT = CSVRELATION(7,ARG,0)
+RETURNF RESULT
+
+;빅코아의 초기 상성 참조 함수
+@EX_RELATION_7_2, ARG
+#FUNCTION
+RESULT = CSVRELATION(7,ARG,0)
+RETURNF RESULT
+
+;크리스탈 코아의 초기 상성 참조 함수
+@EX_RELATION_7_3, ARG
+#FUNCTION
+RESULT = CSVRELATION(7,ARG,0)
+RETURNF RESULT
+
+;EX앨리스의 초기 상성 참조 함수
+@EX_RELATION_14_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 1 || ARG == 2 || ARG == 119
+	RESULT = 200
+ELSEIF ARG == 34 || ARG == 100
+	RESULT = 80
+ELSE
+	RESULT = 0
+ENDIF
+RETURNF RESULT
+
+;생전 유유 님의 초기 상성 참조 함수
+@EX_RELATION_20_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 19
+	RESULT = 110
+ELSEIF ARG == 22
+	RESULT = 120
+ELSEIF ARG == 70
+	RESULT = 200
+ELSE
+	RESULT = 0
+ENDIF
+RETURNF RESULT
+
+;귀족 아가씨 모코우의 초기 상성 참조 함수
+@EX_RELATION_31_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG < 200
+	RESULT = 100
+ELSE
+	RESULT = CSVRELATION(31,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;미노리콩(稔子)의 초기 상성 참조 함수
+@EX_RELATION_38_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == NO:MASTER
+	RESULT = 50
+ELSEIF ARG == 37
+	RESULT = 150
+ELSE
+	RESULT = CSVRELATION(38,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;글린덤(ぐりんだむ)의 초기 상성 참조 함수
+@EX_RELATION_40_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 40
+	RESULT = 80
+ELSEIF ARG < 150 && ARG != NO:MASTER
+	RESULT = 0
+ELSE
+	RESULT = CSVRELATION(40,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;사나에 님의 초기 상성 참조 함수
+@EX_RELATION_42_2, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 1
+	RESULT = 10
+ELSEIF ARG == 43 || ARG == 44
+	RESULT = 200
+ELSE
+	RESULT = CSVRELATION(42,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;단순한 지옥까마귀 오쿠의 초기 상성 참조 함수
+@EX_RELATION_63_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 61
+	RESULT = 120
+ELSEIF ARG == 62
+	RESULT = 150
+ELSEIF ARG == 64
+	RESULT = 110
+ELSEIF ARG < 200
+	RESULT = 100
+ELSE
+	RESULT = CSVRELATION(31,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;히라노(신 Ver.)의 초기 상성 참조 함수
+@EX_RELATION_129_1, ARG
+#FUNCTION
+RESULT = CSVRELATION(129,ARG,0)
+RETURNF RESULT
+
+;죄주머니(罪袋)의 초기 상성 참조 함수
+@EX_RELATION_0_1, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 22
+	RESULT = 500
+ELSE
+	RESULT = CSVRELATION(0,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;カドケシさん의 초기 상성 참조 함수
+@EX_RELATION_0_2, ARG
+#FUNCTION
+RESULT = CSVRELATION(0,ARG,0)
+RETURNF RESULT
+
+;타카히로의 초기 상성 참조 함수
+@EX_RELATION_0_3, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 16 || ARG == 17 || ARG == 18
+	RESULT = 150
+ELSEIF ARG == 25
+	RESULT = 120
+ELSE
+	RESULT = CSVRELATION(0,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;ジャミ의 초기 상성 참조 함수
+@EX_RELATION_0_4, ARG
+#FUNCTION
+RESULT = CSVRELATION(0,ARG,0)
+RETURNF RESULT
+
+;초 마리사의 초기 상성 참조 함수
+@EX_RELATION_2_2, ARG
+#FUNCTION
+RESULT = 0
+IF ARG == 100
+	RESULT = 200
+ELSE
+	RESULT = CSVRELATION(2,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;Ｂ대요정의 초기 상성 참조 함수
+@EX_RELATION_4_2, ARG
+#FUNCTION
+IF ARG == 5
+	RESULT = 300
+ELSE
+	RESULT = CSVRELATION(4,ARG,0)
+ENDIF
+RETURNF RESULT
+
+;테위 사부의 초기 상성 참조 함수
+@EX_RELATION_27_2, ARG
+#FUNCTION
+RESULT = CSVRELATION(27,ARG,0)
+RETURNF RESULT
+
+;むっつりさとりん의 초기 상성 참조 함수
+@EX_RELATION_61_2, ARG
+#FUNCTION
+RESULT = CSVRELATION(61,ARG,0)
+RETURNF RESULT
+
+;ジュリアン의 초기 상성 참조 함수
+@EX_RELATION_156_2, ARG
+#FUNCTION
+IF ARG == 1
+	RESULT = 150
+ELSE
+	RESULT = CSVRELATION(156,ARG,0)
+ENDIF
+RETURNF RESULT

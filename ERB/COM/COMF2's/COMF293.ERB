@@ -1,0 +1,159 @@
+﻿;=============================================================================
+;정액 키스
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE293
+;直前にフェラするで射精させていないとダメ
+;もしくはコンドーム精飲で조수가 精液を口に含んでいるのが条件
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:293 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+;直前がフェラかコンドーム精飲(助手)じゃないとダメ
+SIF PREVCOM != 5 && PREVCOM != 292
+	RETURN 0
+;直前の커맨드がフェラの場合
+IF PREVCOM == 5
+	;コンドーム装着中はダメ
+	SIF TEQUIP:31
+		RETURN 0
+	;直前のフェラするで射精してないとダメ
+	SIF TFLAG:145 < 1
+		RETURN 0
+ELSEIF PREVCOM == 292
+	;コンドーム精飲直後に레즈끼3이상の조수가 조교자でないとダメ
+	SIF ASSIPLAY == 0 || ((TALENT:ASSI:120 && ABL:ASSI:23 < 3) || (TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3))
+		RETURN 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM293
+PRINTL 정액 키스
+TSTR:0 = 정액 키스
+CALL TRAIN_MESSAGE_COM293
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+;PLAYER가 무리하게 하므로 실행은 언제라도 가능
+
+;더러움의 계산
+TFLAG:242 = 0
+;애액의 더러움
+SIF STAIN:PLAYER:2 & 1
+	TFLAG:242 += 1
+;정액의 더러움
+SIF STAIN:PLAYER:2 & 4
+	TFLAG:242 += 3
+;애널의 더러움
+SIF STAIN:PLAYER:2 & 8
+	TFLAG:242 += 7
+SIF STAIN:PLAYER:2 & 16
+	TFLAG:242 += 15
+
+SIF TALENT:61
+	TFLAG:242 /= 3
+SIF TALENT:62
+	TFLAG:242 *= 2
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 80
+
+SOURCE:22 = 1500
+SOURCE:31 = 500
+
+;위 쪽으로 계산한 더러운 데이터
+SOURCE:30 = TFLAG:242*40 + 100
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 420
+	SOURCE:16 = 150
+	TIMES SOURCE:30 , 4.00
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 500
+	SOURCE:16 = 300
+	TIMES SOURCE:30 , 2.50
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 580
+	SOURCE:16 = 600
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 660
+	SOURCE:16 = 900
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 740
+	SOURCE:16 = 1500
+	TIMES SOURCE:30 , 0.50
+ELSE
+	SOURCE:15 = 820
+	SOURCE:16 = 2200
+	TIMES SOURCE:30 , 0.10
+ENDIF
+
+;조교자의 입의 더러움과 노예의 입의 더러움을 처리
+LOCAL = STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:0
+STAIN:0 |= LOCAL
+
+;키스 경험
+TCVAR:23 += 1
+TCVAR:PLAYER:23 += 1
+CFLAG:172 += (ASSIPLAY == 0) ?  1 # 0
+
+;정액을 마신 플래그
+TFLAG:3 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM293
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF PREVCOM == 5
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 입 안 가득한 정액을 타액과 혼합해 키스로 건네주었다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:ASSI, "는")% 입 안 가득한 정액을 타액과 혼합해 키스로 건네주었다….
+ENDIF
+
+;정액 중독 없음
+IF ABL:31 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 눈물이 그렁그렁해져 도망가려 한다….
+	PRINTFORMW 그러나 %조사선택(CALLNAME:PLAYER, "는")% 그것을 허락하지 않고 양손으로 %CALLNAME:TARGET%의 머리를 잡아, 혀로 입술을 비틀어 열었다….
+;정액 중독 1이상 3 미만
+ELSEIF ABL:31 < 3
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 정액을 먹으며, 굴욕으로 가득 찬 표정을 하고 있다….
+;정액 중독 3이상 5 미만
+ELSEIF ABL:31 < 5
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 황홀해 하면서, 정액을 %CALLNAME:PLAYER%의 혀로 주고받고 있다….
+;정액 중독 5이상
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 타액을 탐욕스럽게 빨아들이고,
+	PRINTFORMW 다시금 %CALLNAME:PLAYER%의 입 안을 빨고 돌리며 남아있는 정액의 냄새를 즐기고 있다….
+ENDIF

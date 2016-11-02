@@ -1,0 +1,3066 @@
+﻿;-------------------------------------------------
+;운잔 대사
+;한국에서 누가 반령(요우무) 대사 복붙해서 땜빵한 것.
+;-------------------------------------------------
+
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+;대사의 존재 판정(YM판)
+@TRY_74
+RETURN 1
+
+@EVENTTRAIN
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+@EVENTEND
+#LATER
+
+;--------------------------------------------------
+;EVENTTRAIN関係（XXXをキャラ番号に置換）
+;調教開始時のセリフ CFLAG 201～210を使用
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 74
+	RETURN 0
+
+;--------------------------------------------------
+;エキストラモード構文 CFLAG:5220を使用
+;はいを選択した時に初調教時に口上設定用の素質に変更できます
+;下記に処女化する場合の構文をサンプルとして載せておきます
+;-------------------------------------------------
+;IF CFLAG:5220 == 0
+;	PRINTL ！
+;	PRINTL （※訳：요우무가 처녀라면 반령도 처녀다！）
+;	PRINTL [0] 윈！
+;	PRINTL [1] 윈윈
+;	$INPUT_LOOP
+;	INPUT
+;	IF RESULT == 0
+;		PRINTFORMW ―처녀모드로 소질、능력을 변화시킵니다―
+;		;素質：処女を得る、能力：V感覚を0にする、経験：V経験を0にする
+;		TALENT:0 = 1
+;;		ABL:1 = 0
+;		EXP:0 = 0
+;	ELSEIF RESULT == 1
+;		PRINTFORMW ―통상모드로 조교를 시작합니다―
+;	ELSE
+;		GOTO INPUT_LOOP
+;	ENDIF
+;	CFLAG:5220 = 1
+;ENDIF
+
+
+;-------------------------------------------------
+;初調教時 CFLAG201
+;-------------------------------------------------
+IF CFLAG:5201 == 0
+	DRAWLINE
+	PRINTFORMW 방에 들어가자、거대한 구름이 불안한 시선으로 %조사처리(CALLNAME:MASTER,"를")% 바라보고 있다……
+	PRINTFORMW 「오라? 오라오라? 오라오라오라오라?……！？」
+	PRINTFORMW 「윈……！」
+;訳。
+;으우？ ……당신이 여기로 데려온거야？ 빨리 내보내줘！ 그러지 않으면、내 반신이……！？
+;뭐、뭐하는거야……！
+	CFLAG:5201 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;調教開始時（一回のみ） CFLAG201
+;-------------------------------------------------
+
+;屈服刻印Lv1
+ELSEIF CFLAG:5201 < 2 && MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 「……윈 윈윈윈! 윈윈」
+;訳。
+;……내보내줘。
+	CFLAG:5201 = 2
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF CFLAG:5201 < 3 && MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「……윈……」
+;訳。
+;……내보내주세요
+	CFLAG:5201 = 3
+	RETURN 1
+
+;屈服刻印Lv3
+ELSEIF CFLAG:5201 < 4 && MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「윈……윈……」
+;訳。
+;나가고 싶을……텐데……
+	CFLAG:5201 = 4
+	RETURN 1
+
+;屈服刻印Lv3+恋慕
+ELSEIF CFLAG:5201 < 5 && MARK:2 == 3 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「……윈」
+	PRINTFORMW 방에 들어가자、운잔은 구름을 작게 분산시켜 글씨를 쓰기 시작했다.
+	PRINTFORMW 「오라오라오라오라오라오라오라오라」
+
+;訳。
+;……아。
+;나。당신이 싫어。……싫어 싫어！ 싫어！
+;……알고 있어。나、말할 수 없는걸……
+;그러니까、이러는거야……
+	DRAWLINE
+	PRINTFORML [0] 「……읭?」
+	PRINTFORML [1] 「……긔?」
+	$INPUT_LOOP
+	INPUT
+	IF RESULT != 0 && RESULT != 1
+		GOTO INPUT_LOOP
+	ELSEIF RESULT == 0
+	DRAWLINE
+	PRINTFORMW 「……의、읭！？」
+	PRINTFORMW 「읭！ 읭읭！ 읭！」
+	PRINTFORMW 「……읭？ 읭」
+;訳。
+;……토、통했다！？
+;해냈다！ 사랑의 승리！ 해냈어！
+;……시끄러워？ 미안……
+	ELSEIF RESULT == 1
+	DRAWLINE
+	PRINTFORMW 「……긔、긔！？」
+	PRINTFORMW 「긔！ 긔긔！ 긔！」
+	PRINTFORMW 「……긔？ 긔」
+;어느 쪽을 고르던 답은 같다。
+	ENDIF 
+	CFLAG:5201 = 5
+	RETURN 1
+
+;助手の有無をチェック（いない場合は二回目以降へ飛ぶ）
+ELSEIF ASSI < 0
+	CALL K74_KOJO2
+
+;-------------------------------------------------
+;助手との掛け合い(XXを助手のキャラ番号に置換、CALL KXXX_KOJO2のXXXをキャラ番号に変更する) CFLAG202 
+;掛け合いをするキャラを増やす場合は、コピー＆ペーストをして、CFLAGの数を203、204と増やす
+;-------------------------------------------------
+;助手が妖夢
+ELSEIF ASSINO() == 73
+	DRAWLINE
+	;初めて
+	IF CFLAG:5202 == 0
+		;恋慕＋恋慕時初口上（陥落イベント）が発生済み
+		IF TALENT:150 == 1 && CFLAG:5201 == 5
+			PRINTFORMW 「의、윈！？」
+			PRINTFORMW 『본、본체！？』
+			PRINTFORMW 「윈、윈윈윈！ 의읜！」
+			PRINTFORMW 『……그런 일 없었다니깐……그래도 무사해서 다행이야……』
+			PRINTFORMW 두 사람이 서로의 무사를 확인하자、%조사처리(CALLNAME:MASTER,"를")% 향해、음탕한 미소를 미었다……
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、읜！？」
+			PRINTFORMW 『보、본체！？』
+			PRINTFORMW 「의、의의읜！ 윈읜！」
+			PRINTFORMW 『우、울지 말라니깐……괜찮아、괜찮으니까……』
+;ここの訳は各自で妄想してくださいNE！
+		ENDIF
+			CFLAG:5202 = 1
+			RETURN 1
+	;二回目以降
+	ELSEIF CFLAG:5202 == 1 && FLAG:11 == 2
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읜」
+			PRINTFORMW 『칑』
+			PRINTFORMW 「읜」
+			PRINTFORMW 『칑』
+			PRINTFORMW ……저걸로 통하고 있는 걸까……
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈」
+			PRINTFORMW 『칑』
+			PRINTFORMW 「으의읭」
+			PRINTFORMW 『칭칭!』
+			PRINTFORMW ……저걸로 통하고 있는 걸까……
+		ENDIF
+			RETURN 1
+	ENDIF
+
+
+;口上のある助手が居ない場合は、通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K74_KOJO2
+ENDIF
+
+
+;-------------------------------------------------
+;調教開始時（2回目以降、@KXXX_KOJO2のXXXをキャラ番号に変更する） CFLAGなし 
+;-------------------------------------------------
+
+@K74_KOJO2
+;反発刻印Lv3
+IF MARK:9 == 3 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「윈！ 윈、윈윈윈윈！ 의！？」
+	PRINTFORMW 「……윈」
+	RETURN 1
+
+;屈服刻印Lv0
+ELSEIF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「윈……！」
+	RETURN 1
+
+;屈服刻印Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「윈……윈윈」
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「의、윈？」
+	PRINTFORMW 「……윈」
+	RETURN 1
+
+;屈服刻印Lv3＋恋慕無し
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「윈……」
+	RETURN 1
+
+;屈服刻印Lv3+恋慕
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	;ランダムで口上が変化する（使わない場合はすべて同じにすればよい）
+	IF RAND:3 == 0
+		PRINTFORMW 「윈」
+		PRINTFORMW 「윈윈윈」
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「윈」
+		PRINTFORMW 「의ー옹？ ……윈！」
+	ELSE
+		PRINTFORMW 「윈」
+		PRINTFORMW 「윈윈！ 윈！」
+		PRINTFORMW 「의ー옹……윈」
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND関係（XXXをキャラ番号に置換）
+;調教終了時のセリフ CFLAG 211～219を使用
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 74
+	RETURN 0
+
+;反発刻印Lv3
+IF MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「윈……」
+	RETURN 1
+
+;屈服刻印Lv1未満
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「윈……」
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「……윈、윈윈」
+	RETURN 1
+
+;屈服刻印Lv3+恋慕無し
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「……의、윈？」
+	PRINTFORMW 「의ー옹……」
+	RETURN 1
+
+;屈服刻印Lv3＋恋慕＋体力500未満
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「의、의ー옹……」
+	RETURN 1
+
+;屈服刻印Lv3＋恋慕
+ELSEIF MARK:2 == 3 && TALENT:150 == 1
+	DRAWLINE
+	IF RAND:3 == 0
+		PRINTFORMW 「윈」
+		PRINTFORMW 「윈 의ー옹」
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「윈……」
+		PRINTFORMW 「의ー옹？ ……윈……」
+	ELSE
+		PRINTFORMW 「……윈？」
+		PRINTFORMW 「윈윈！ 윈 의윈！ 윈！」
+		PRINTFORMW 「……윈」
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM関係（XXXをキャラ番号に置換）
+;コマンド実行時に出力されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_74
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0
+;ボールギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;-------------------------------------------------
+;コマンド実行時のセリフ CFLAG 221～270を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;愛撫 CFLAG221
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;初めて
+	IF CFLAG:5221 == 0
+		;屈服刻印Lv2以上
+		IF MARK:2 >= 2
+			PRINTFORMW 「의ー옹……의、윈」
+			;아우……부、부끄럽다니
+		;それ以外
+		ELSE
+			PRINTFORMW 「의윈……！」
+			;그렇게 하지 말아줘……！
+		ENDIF
+			CFLAG:5221 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕+屈服刻印Lv3
+		IF TALENT:150 == 1 && MARK:2 == 3 && (CFLAG:5221 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읫……윈……♪」
+			;앗……거기이……♪
+			CFLAG:5221 = 5
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5221 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「읫、윈……！」
+			CFLAG:5221 = 4
+		;屈服刻印Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:5221 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의、옹……의오옹……」
+			;싫、엇……느끼고 싶지 않아……
+			CFLAG:5221 = 3
+		;それ以外
+		ELSEIF MARK:2 <= 1 && (CFLAG:5221 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「……윈……」
+			CFLAG:5221 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クンニ CFLAG222
+;岩清水 CFLAG328
+;-------------------------------------------------
+;クンニ
+IF SELECTCOM == 1 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:5222 == 0
+		;屈服刻印Lv2以上
+		IF MARK:2 >= 2
+			PRINTFORMW 「의、윈！」
+			PRINTFORMW 「의、의ー옹……」
+			;싫、안됏！
+			;여、역시 괜찮아……
+		;それ以外
+		ELSE
+			PRINTFORMW 「읫、의윈！ 의ー옹！」
+		ENDIF
+			CFLAG:5222 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5222 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈！ 의、의오옹！！」
+			CFLAG:5222 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5222 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의옷、윈！ 윈！！」
+			CFLAG:5222 = 3
+		;それ以外
+		ELSEIF CFLAG:5222 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의、윈！」
+			CFLAG:5222 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;岩清水
+ELSEIF SELECTCOM == 1 && TEQUIP:56
+	;恋慕+露出癖Lv3以上+C感覚Lv3以上
+	IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:0 >= 3 && (CFLAG:5328 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「읫……의옹……」
+		CFLAG:5328 = 6
+	;恋慕
+	ELSEIF TALENT:150 == 1 && (CFLAG:5328 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「윈、윈윈윈！」
+		CFLAG:5328 = 5
+	;屈服刻印Lv3+露出癖Lv3以上+C感覚Lv3以上
+	ELSEIF MARK:2 == 3 && ABL:0 >= 3 && ABL:14 >= 3 && (CFLAG:5328 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「의、윈！ 의옹！ 의ー옹！」
+		CFLAG:5328 = 4
+	;屈服刻印Lv3
+;	ELSEIF MARK:2 == 3 && (CFLAG:5328 <= 2 || FLAG:11 == 2)
+;		PRINTFORMW 「윈……！」
+;		CFLAG:5328 = 3
+	;それ以外
+	ELSEIF CFLAG:5328 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「윈！ 윈！」
+		CFLAG:5328 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナル愛撫 CFLAG223
+;A敏感はマイジャスティス。
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;初めて
+	IF CFLAG:5223 == 0
+		PRINTFORMW 「밋……！？ 의、윈！ 윈！ 의오오오옹！！！」
+		;힛……！？ 싫、싫엇！ 핥지 말아줘！아히우우우웃！？
+		CFLAG:5223 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		P = PALAM:10 + UP:10
+		;恋慕+潤滑Lv2以上
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:5223 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「윈……의……의、의오오옹！」
+			;뜨거운게……나……나、놔줘어어！
+			CFLAG:5223 = 5
+		;恋慕+潤滑Lv2未満
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:5223 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「밋！ 윈！ 윈！」
+			CFLAG:5223 = 4
+		;潤滑Lv2以上＋A感覚Lv3以上
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:5223 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「밋！ 읫！ 윈！ 윈！？」
+			CFLAG:5223 = 3
+		;それ以外
+		ELSEIF CFLAG:5223 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈！ 윈！ 의、윈、의、윈！！」
+			;싫어！ 만지지 마！ 싫어、싫어、싫、싫어엇！！
+			CFLAG:5223 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;自慰 CFLAG224
+;シャワーオナニー CFLAG312
+;-------------------------------------------------
+;通常自慰（シャワー無し）
+IF SELECTCOM == 7 && TEQUIP:54 == 0
+	;初めて
+	IF CFLAG:5224 == 0
+		PRINTFORMW 「윈……」
+		;악취미ー……
+		CFLAG:5224 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋自慰中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:5224 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「윈……윈？ ……윈、읫」
+			;어때……보여？ ……후후、읏
+			CFLAG:5224 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5224 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……」
+			CFLAG:5224 = 4
+		;自慰中毒Lv3以上
+		ELSEIF ABL:30 >= 3 && (CFLAG:5224 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈、윈윈、윈！」
+			CFLAG:5224 = 3
+		;それ以外
+		ELSEIF CFLAG:5224 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……의ー옹……」
+			CFLAG:5224 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;シャワーオナニー
+ELSEIF SELECTCOM == 7 && TEQUIP:54
+	;初めて
+	IF CFLAG:5312 == 0
+		PRINTFORMW 「みょーん……」
+		CFLAG:5312 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋自慰中毒Lv3以上
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:5312 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「윈……윈？ ……윈、읏」
+			;어때……보여？ ……후후、읏
+			CFLAG:5312 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5312 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……」
+			CFLAG:5312 = 4
+		;自慰中毒Lv3以上
+		ELSEIF ABL:30 >= 3 && (CFLAG:5312 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈、윈윈、윈！」
+			CFLAG:5312 = 3
+		;それ以外
+		ELSEIF CFLAG:5312 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……의ー옹……」
+			CFLAG:5312 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラされる(ふたなり/オトコのみ) CFLAG225
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;初めて
+	IF CFLAG:5225 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「의、윈！？ 읫、윈！！」
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、윈！？ 의、의오옹！？」
+		ENDIF
+			CFLAG:5225 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5225 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、……윈、의、오옹！」
+			CFLAG:5225 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5225 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……윈윈……」
+			CFLAG:5225 = 3
+		;それ以外
+		ELSEIF CFLAG:5225 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈……읫、윈！！」
+			CFLAG:5225 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸愛撫 CFLAG226
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;初めて
+	IF CFLAG:5226 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「……윈？ ……윈、윈윈」
+			PRINTFORMW 「윈」
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈？ ……윈！ 의의윈！」
+		ENDIF
+			CFLAG:5226 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5226 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……의……옹！」
+			CFLAG:5226 = 4
+		;B感覚Lv3以上
+		ELSEIF ABL:3 >= 3 && (CFLAG:5226 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈、윈！」
+			CFLAG:5226 = 3
+		;それ以外
+		ELSEIF CFLAG:5226 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의ー옹……」
+			CFLAG:5226 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;キス CFLAG227
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;初めて
+	IF CFLAG:5227 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「응 의……윈、윈……」
+			;응 츄……더、좀 더……
+		;それ以外
+		ELSE
+			PRINTFORMW 「읫！？ 윈！ 윈！」
+		ENDIF
+			CFLAG:5227 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5227 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윈……」
+			CFLAG:5227 = 4
+		;従順Lv2以上
+		ELSEIF ABL:10 >=2 && (CFLAG:5227 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈……」
+			CFLAG:5227 = 3
+		;それ以外
+		ELSEIF CFLAG:5227 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈……！」
+			CFLAG:5227 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;何もしない CFLAG228
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;初めて
+	IF CFLAG:5228 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「의ー옹ー……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「……윈？」
+		ENDIF
+			CFLAG:5228 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋欲情Lv3以上
+		IF TALENT:150 == 1 && PALAM:13 >= PALAMLV:3 && (CFLAG:5228 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……」
+			CFLAG:5228 = 4
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5228 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……윈？」
+			CFLAG:5228 = 3
+		;それ以外
+		ELSEIF CFLAG:5228 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……윈？」
+			CFLAG:5228 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ローター CFLAG229
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;初めて
+	IF CFLAG:5229 == 0
+		;屈服刻印Lv3+恋慕
+		IF MARK:2 == 3 && TALENT:150 == 1
+			PRINTFORMW 「의、윈？」
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、윈？」
+		ENDIF
+			CFLAG:5229 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋屈服刻印Lv3
+		IF TALENT:150 == 1 && MARK:2 == 3 && (CFLAG:5229 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈！ 윈！」
+			CFLAG:5229 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5229 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈！ 윈！」
+			CFLAG:5229 = 3
+		;それ以外
+		ELSEIF CFLAG:5229 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의、윈！ 윈！」
+			CFLAG:5229 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;バイブ CFLAG230 CFLAG301
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 12 && TEQUIP:20 == 1
+	;初めて
+	IF CFLAG:5230 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 == 5
+				PRINTFORMW 「의……윈！ 윈！ 윈윈윈윈！」
+				PRINTFORMW 「윈！ 윈！ 의、의오오옹……！」
+			;それ以外
+			ELSE
+				PRINTFORMW 「의ー옹……」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+			IF TALENT:150 == 1
+				PRINTFORMW 「의ー옹……」
+			;それ以外
+			ELSE
+				PRINTFORMW 「의ー옹……」
+			ENDIF
+		ENDIF
+			CFLAG:5230 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5230 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윈、의、윈……」
+			CFLAG:5230 = 4
+		;V感覚Lv3以上
+		ELSEIF ABL:1 >= 3 && (CFLAG:5230 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈、윈！」
+			CFLAG:5230 = 3
+		;それ以外
+		ELSEIF CFLAG:5230 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의、윈、윈！」
+			CFLAG:5230 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5301 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「의……옹……」
+		CFLAG:5301 = 2
+	;それ以外
+	ELSEIF CFLAG:5301 < 1 || FLAG:11 == 2
+		PRINTFORMW 「윈、윈、윈！」
+		CFLAG:5301 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;Ｅマッサージャ CFLAG231
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;初めて
+	IF CFLAG:5231 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「……윈？ ……윈！ 의오오옹！」
+		;それ以外
+		ELSE
+			PRINTFORMW 「……윈？ ……윈！ 의오오옹！」
+		ENDIF
+			CFLAG:5231 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5231 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의……의……윈？ 읫、윈？ ――의ー옹！！」
+			;시……시……싫다고？ 에、그만두는 거야？ ――역시 거짓말이구나！？
+			CFLAG:5231 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5231 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읫、윈！ 의、윈！？」
+			CFLAG:5231 = 3
+		;それ以外
+		ELSEIF CFLAG:5231 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읫、윈！ 의、윈！？」
+			CFLAG:5231 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルバイブ CFLAG232 CFLAG302
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 13 && TEQUIP:25 == 1
+	;初めて
+	IF CFLAG:5232 == 0
+		;恋慕
+		IF TALENT:2 == 0
+			PRINTFORMW 「윈……？ 의？윈？ ……읜」
+			PRINTFORMW 「읭읭읭읭의! 읭읭」
+			PRINTFORMW 운잔이 자신을 붙잡고 애원하는 눈초리를 보였다.
+		;설마 그걸로?
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「윈……？ 의？윈？ ……윈」
+			PRINTFORMW 「의……의ー옹！？」
+			;바이브……？ 가는데？ 설마？ ……그렇지
+			;그럴리……무리라고욧ー！？
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈……의、윈……윈！ 윈！？」
+		ENDIF
+			CFLAG:5232 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋A感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:5232 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읫！의、옹！？ 의옷！！」
+			CFLAG:5232 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5232 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의……의……윈？ ――의ー옹！！」
+			CFLAG:5232 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:5232 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의……의……윈？ ――의ー옹！！」
+			CFLAG:5232 = 3
+		;それ以外
+		ELSEIF  CFLAG:5232 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의……의……윈？ ――의ー옹！！」
+			CFLAG:5232 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5302 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「밋……미잇……」
+		CFLAG:5302 = 3
+	;A感覚Lv3以上
+	ELSEIF ABL:2 >= 3 && (CFLAG:5302 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「의……옹……」
+		CFLAG:5302 = 2
+	;それ以外
+	ELSEIF CFLAG:5302 < 1 || FLAG:11 == 2
+		PRINTFORMW 「의、옹……！」
+		CFLAG:5302 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;クリキャップ CFLAG233 CFLAG303
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 14 && TEQUIP:30 == 1
+	;初めて
+;	IF CFLAG:5233 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+			PRINTFORMW 「의、의ー옹……！」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5233 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5233 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5233 = 3
+		;それ以外
+;		ELSEIF CFLAG:5233 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5233 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 14 && TEQUIP:30 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5303 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「의、의옹……」
+;		CFLAG:5303 = 2
+	;それ以外
+;	ELSEIF CFLAG:5303 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5303 = 1
+;	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;ニプルキャップ CFLAG234 CFLAG304
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 15 && TEQUIP:35 == 1
+	;初めて
+;	IF CFLAG:5234 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+			PRINTFORMW 「의、의윈」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5234 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5234 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5234 = 3
+		;それ以外
+;		ELSEIF CFLAG:5234 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5234 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 15 && TEQUIP:35 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5304 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「의、의오옹……」
+;		CFLAG:5304 = 2
+	;それ以外
+;	ELSEIF CFLAG:5304 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5304 = 1
+;	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;搾乳機(母乳体質のみ) CFLAG235 CFLAG305
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 191 && TEQUIP:35 == 2
+	;初めて
+;	IF CFLAG:5235 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+			PRINTFORMW 「읫！？ ……의、윈」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5235 = 1
+			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5235 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5235 = 3
+		;それ以外
+;		ELSEIF CFLAG:5235 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5235 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 191 && TEQUIP:35 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5305 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「의ー옹……윈？ 의윈」
+;		CFLAG:5305 = 2
+	;それ以外
+;	ELSEIF CFLAG:5305 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5305 = 1
+;	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;オナホール(ふたなり/オトコのみ) CFLAG236 CFLAG306
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 16 && TEQUIP:30 == 2
+	;初めて
+	IF CFLAG:5236 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+			PRINTFORMW 「윈！？ 윈、윈 의、윈……！」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+			CFLAG:5236 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5236 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈、윈……의、윈！」
+;			CFLAG:5236 = 3
+		;それ以外
+;		ELSEIF CFLAG:5236 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5236 = 2
+;		ENDIF
+;			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 16 && TEQUIP:30 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5306 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「윈、윈 의……」
+;		CFLAG:5306 = 2
+	;それ以外
+;	ELSEIF CFLAG:5306 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5306 = 1
+;	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;正常位 CFLAG237
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;初めて
+	IF CFLAG:5237 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 == 5
+				PRINTFORMW 「윈……윈윈」
+				PRINTFORMW 「……윈」
+				PRINTFORMW 「……윈……윈……」
+				;그래……해주는거구나……
+				;……좋아。
+				;……상냥하게……해줘……
+			;それ以外
+			ELSE
+				PRINTFORMW 「윈！ 윈！？」
+				PRINTFORMW 「윈！ 윈윈윈윈 의의의！ 의ー옹！」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+;			IF TALENT:150 == 1
+;				PRINTFORMW 
+			;それ以外
+;			ELSE
+				PRINTFORMW 「윈……윈……！」
+;			ENDIF
+		ENDIF
+			CFLAG:5237 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5237 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「의！ 옹！의오옹！」
+			CFLAG:5237 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5237 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、옹！ 윈！！」
+			CFLAG:5237 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5237 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의、옹！ 윈！！」
+			CFLAG:5237 = 3
+		;それ以外
+		ELSEIF CFLAG:5237 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의、옹！ 윈！！」
+			CFLAG:5237 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位 CFLAG238
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;初めて
+	IF CFLAG:5238 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 == 5
+				PRINTFORMW 「윈……윈윈」
+				PRINTFORMW 「……윈」
+				PRINTFORMW 「……윈……윈……」
+				;그래……해주는거구나……
+				;……좋아。
+				;……상냥하게……해줘……
+			;それ以外
+			ELSE
+				PRINTFORMW 「윈！ 윈！？」
+				PRINTFORMW 「윈！ 윈윈윈윈 의의의！ 의ー옹！」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+;			IF TALENT:150 == 1
+;				PRINTFORMW 
+			;それ以外
+;			ELSE
+				PRINTFORMW 「윈……윈……！」
+;			ENDIF
+		ENDIF
+			CFLAG:5238 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5238 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「의！ 옹！ 의오옹！」
+			CFLAG:5238 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5238 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윈……윈……！」
+			CFLAG:5238 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5238 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈……윈……！」
+			CFLAG:5238 = 3
+		;それ以外
+		ELSEIF CFLAG:5238 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈……윈……！」
+			CFLAG:5238 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルセックス CFLAG239
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;初めて
+	IF CFLAG:5239 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「읫……！？」
+			PRINTFORMW 「의……윈」
+			PRINTFORMW 「윈윈……」
+			PRINTFORMW 「……윈……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈！？ 윈！ 윈윈！」
+			PRINTFORMW 「의、윈！ 읫、의오오옹！！！
+		ENDIF
+			CFLAG:5239 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋A感覚Lv3以上
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:5239 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읫！ 의옷！ 의、옹！！」
+			PRINTFORMW 「의、윈、윈、윈、윈윈윈！」
+			PRINTFORMW 「읫、읫、읫！ 의――옹！！！」
+			CFLAG:5239 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5239 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의！ 옹！ 의오옹！」
+			CFLAG:5239 = 4
+		;A感覚Lv3以上
+		ELSEIF ABL:2 >= 3 && (CFLAG:5239 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의！ 옹！ 의오옹！」
+			CFLAG:5239 = 3
+		;それ以外
+		ELSEIF  CFLAG:5239 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의！ 옹！ 의오옹！」
+			CFLAG:5239 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;逆レイプ CFLAG240
+;(主人が非オトコ、奴隷がオトコ/ふたなりのみ)
+;-------------------------------------------------
+;IF SELECTCOM == 25
+	;初めて
+;	IF CFLAG:5240 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5240 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5240 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5240 = 3
+		;それ以外
+;		ELSEIF CFLAG:5240 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5240 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;手淫 CFLAG241
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;初めて
+	IF CFLAG:5241 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「의～옹？ 의ー옹……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、윈……윈……」
+		ENDIF
+		CFLAG:5241 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5241 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5241 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5241 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5241 = 3
+		;それ以外
+		ELSEIF CFLAG:5241 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의ー옹……윈……」
+			CFLAG:5241 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラチオ CFLAG242
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;初めて
+	IF CFLAG:5242 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「의～옹？ 의ー옹……」
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、윈……윈……」
+		ENDIF
+			CFLAG:5242 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5242 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5242 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5242 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5242 = 3
+		;それ以外
+		ELSEIF CFLAG:5242 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의ー옹……윈……」
+			CFLAG:5242 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリ CFLAG243
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;初めて
+	IF CFLAG:5243 == 0
+		;奉仕精神Lv3以上
+		IF ABL:13 >= 3
+			PRINTFORMW 「의、의윈……」
+			PRINTFORMW 「윈、윈 의……」
+			;가、가슴으로요……
+			;이、이런 느낌인가요……
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、윈！？」
+			PRINTFORMW 「윈 의의……윈」
+			;가、가슴으로！？
+			;그런거……우우」
+		ENDIF
+		CFLAG:5243 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5243 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、옹……윈、윈……」
+			CFLAG:5243 = 4
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5243 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏、윈、윈……！」
+			CFLAG:5243 = 3
+		;それ以外
+		ELSEIF  CFLAG:5243 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈……의의윈」
+			CFLAG:5243 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;素股 CFLAG244
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;初めて
+	IF CFLAG:5244 == 0
+		;恋慕有り
+		IF TALENT:150 == 1
+			PRINTFORMW 「의、윈 의의윈？」
+			PRINTFORMW 「윈 의……의、의의의의의」
+			;에、이걸로 된건가요？
+			;전 별로……아、아뇨 아무것도 아니에요
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈？　의의윈 윈？」
+			PRINTFORMW 「윈 의윈、의의의윈……」
+			;이렇게 하는거야？　이렇게 끼워서？
+			;이런게 좋다니、이해 못하겠어……
+		ENDIF
+		CFLAG:5244 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕有り
+		IF TALENT:150 == 1 && (CFLAG:5244 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈、읏、윈……」
+			CFLAG:5244 = 3
+		;それ以外
+		ELSEIF CFLAG:5244 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈……윈、윈」
+			CFLAG:5244 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位 CFLAG245
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;初めて
+	IF CFLAG:5245 == 0
+		;処女
+		IF TALENT:0 == 1
+			;恋慕＋従順Lv5
+			IF TALENT:150 == 1 && ABL:10 == 5
+				PRINTFORMW 「윈……윈」
+				PRINTFORMW 「윈……윈윈」
+				PRINTFORMW 「윈、의윈……」
+				;드디어……인거네
+				;저를……당신에게 드리겠습니다
+				;받아、주세요……
+			;それ以外
+			ELSE
+				PRINTFORMW 「읫！ 윈！ 윈！！」
+			ENDIF
+		;非処女
+		ELSE
+			;恋慕
+;			IF TALENT:150 == 1
+;				PRINTFORMW 
+			;それ以外
+;			ELSE
+				PRINTFORMW 「윈、윈！」
+;			ENDIF
+		ENDIF
+			CFLAG:5245 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5245 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「읫읫읫！！ 윈、윈、읫……！」
+			CFLAG:5245 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+;		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5245 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5245 = 4
+		;屈服刻印Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5245 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5245 = 3
+		;それ以外
+		ELSEIF CFLAG:5245 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읫、읫、의、옹……！」
+			CFLAG:5245 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;スパンキング CFLAG246
+;-------------------------------------------------
+IF SELECTCOM == 220
+	;初めて
+	IF CFLAG:5246 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「윈！　오옹！　의의의의의의윈！」
+			;아팟！　아읏！　그만둬주세요！
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈！　윈 의윈、의의의윈……」
+			;아팟！ 대체 내가、뭘 했다는 겁니까……
+		ENDIF
+		CFLAG:5246 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5246 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윈！ 윈！」
+			CFLAG:5246 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5246 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈！　윈！」
+			CFLAG:5246 = 3
+		;それ以外
+		ELSEIF CFLAG:5246 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「윈ー！」
+			CFLAG:5246 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;鞭 CFLAG247
+;-------------------------------------------------
+IF SELECTCOM == 221
+	;初めて
+	IF CFLAG:5247 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「윈！　으읏！　의의의의의윈！」
+			;아팟！　아읏！　그만둬주세요！
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈！　윈 의윈、의의의윈……」
+			;아팟！　대체 제가、뭘 했다는 겁니까……
+		ENDIF
+		CFLAG:5247 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5247 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윈……！ 윈！」
+			CFLAG:5247 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5247 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈！　윈！」
+			CFLAG:5247 = 3
+		;それ以外
+		ELSEIF CFLAG:5247 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「윈！　윈！ 의ー옹！」
+			CFLAG:5247 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;針 CFLAG248
+;-------------------------------------------------
+IF SELECTCOM == 222
+	;初めて
+	IF CFLAG:5248 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+			PRINTFORMW 「의、윈……의ー옹！！！」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+			CFLAG:5248 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕＋マゾっ気Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5248 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……！ 윈、윈……」
+			CFLAG:5248 = 4
+		;マゾっ気Lv3
+		ELSEIF ABL:21 >= 3 && (CFLAG:5248 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의、윈……！ 윈、윈……」
+			CFLAG:5248 = 3
+		;それ以外
+		ELSEIF CFLAG:5248 <= 1 && FLAG:11 == 2
+			PRINTFORMW 「윈！ 윈、윈、의――옹！」
+			CFLAG:5248 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アイマスク CFLAG250 CFLAG:5307
+;-------------------------------------------------
+;開始時
+;IF SELECTCOM == 225 && TEQUIP:41 == 1
+	;初めて
+;	IF CFLAG:5250 == 0
+;		PRINTFORMW 
+;		CFLAG:5250 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋マゾっ気Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5250 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5250 = 4
+		;マゾっ気Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5250 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5250 = 3
+		;それ以外
+;		ELSEIF CFLAG:5250 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5250 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;終了時
+;ELSEIF SELECTCOM == 225 && TEQUIP:41 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5307 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5307 = 2
+	;それ以外
+;	ELSEIF CFLAG:5307 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5307 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+
+;-------------------------------------------------
+;縄 CFLAG251 CFLAG:5308
+;-------------------------------------------------
+;開始時
+;IF SELECTCOM == 224 && TEQUIP:40
+	;初めて
+;	IF CFLAG:5251 == 0
+;		PRINTFORMW 
+;		CFLAG:5251 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋マゾっ気Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5251 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5251 = 4
+		;マゾっ気Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5251 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5251 = 3
+		;それ以外
+;		ELSEIF CFLAG:5251 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5251 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;終了時
+;ELSEIF SELECTCOM == 224 && TEQUIP:40 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5308 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5308 = 2
+	;それ以外
+;	ELSEIF CFLAG:5308 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5308 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+
+;-------------------------------------------------
+;ボールギャグ CFLAG252 CFLAG:5309
+;-------------------------------------------------
+;開始時
+;IF SELECTCOM == 226 && TEQUIP:42 == 1
+	;初めて
+;	IF CFLAG:5252 == 0
+;		PRINTFORMW 
+;		CFLAG:5252 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋マゾっ気Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5252 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5252 = 4
+		;マゾっ気Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5252 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5252 = 3
+		;それ以外
+;		ELSEIF CFLAG:5252 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5252 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;終了時
+;ELSEIF SELECTCOM == 226 && TEQUIP:42 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5309 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5309 = 2
+	;それ以外
+;	ELSEIF CFLAG:5309 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5309 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+
+;-------------------------------------------------
+;浣腸 CFLAG253
+;-------------------------------------------------
+;IF TEQUIP:25 == 1 && SELECTCOM == 174
+	;初めて
+;	IF CFLAG:5253 == 0
+;		PRINTFORMW 
+;		CFLAG:5253 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋マゾっ気Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5253 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5253 = 4
+		;マゾっ気Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5253 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5253 = 3
+		;それ以外
+;		ELSEIF CFLAG:5253 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5253 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;排泄 CFLAG254
+;-------------------------------------------------
+;IF TEQUIP:25 == 0 && SELECTCOM == 174
+	;初めて
+;	IF CFLAG:5254 == 0
+;		PRINTFORMW 
+;		CFLAG:5254 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋マゾっ気Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5254 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5254 = 4
+		;マゾっ気Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5254 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5254 = 3
+		;それ以外
+;		ELSEIF CFLAG:5254 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5254 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;ローション使用 CFLAG255
+;-------------------------------------------------
+;IF SELECTCOM == 60
+	;初めて
+;	IF CFLAG:5255 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5255 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5255 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5255 = 3
+		;それ以外
+;		ELSEIF CFLAG:5255 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5255 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;媚薬使用 CFLAG256
+;-------------------------------------------------
+;IF SELECTCOM == 61
+	;初めて
+;	IF CFLAG:5256 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		CFLAG:5256 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5256 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5256 = 3
+		;それ以外
+;		ELSEIF CFLAG:5256 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5256 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;ビデオカメラ使用 CFLAG257
+;-------------------------------------------------
+;IF SELECTCOM == 100 && TEQUIP:50
+	;初めて
+;	IF CFLAG:5257 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5257 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5257 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5257 = 3
+		;それ以外
+;		ELSEIF CFLAG:5257 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5257 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;野外プレイ CFLAG258 CFLAG:5310
+;-------------------------------------------------
+;開始時
+;IF SELECTCOM == 104 && TEQUIP:52
+	;初めて
+;	IF CFLAG:5258 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5258 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋露出癖Lv3以上
+;		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:5258 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5258 = 4
+		;露出癖Lv3以上
+;		ELSEIF ABL:14 >= 3 && (CFLAG:5258 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5258 = 3
+		;それ以外
+;		ELSEIF CFLAG:5258 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5258 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;終了時
+;ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;恋慕
+;	IF TALENT:150 == 1 && (CFLAG:5310 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5310 = 2
+	;それ以外
+;	ELSEIF CFLAG:5310 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5310 = 1
+;	ENDIF
+;	RETURN 0
+;ENDIF
+
+;-------------------------------------------------
+;助手を犯す CFLAG259
+;-------------------------------------------------
+;IF SELECTCOM == 26
+	;初めて
+;	IF CFLAG:5259 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5259 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5259 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5259 = 3
+		;それ以外
+;		ELSEIF CFLAG:5259 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5259 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;イラマチオ CFLAG260
+;-------------------------------------------------
+;IF SELECTCOM == 230
+	;初めて
+;	IF CFLAG:5260 == 0
+		;奉仕精神Lv3以上
+;		IF ABL:13 >= 3
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5260 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋奉仕精神Lv5
+;		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5260 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5260 = 4
+		;奉仕精神Lv3以上
+;		ELSEIF ABL:13 >= 3 && (CFLAG:5260 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5260 = 3
+		;それ以外
+;		ELSEIF CFLAG:5260 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5260 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;フィスト系コマンド CFLAG261
+;-------------------------------------------------
+;IF SELECTCOM == 231 || SELECTCOM == 232 || SELECTCOM == 233
+	;初めて
+;	IF CFLAG:5261 == 0
+;		PRINTFORMW 
+;		CFLAG:5261 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋マゾっ気Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5261 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5261 = 4
+		;マゾっ気Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5261 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5261 = 3
+		;それ以外
+;		ELSEIF CFLAG:5261 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5261 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;触手召喚 CFLAG262 CFLAG:5311
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 500 && TEQUIP:90
+	;初めて
+	IF CFLAG:5262 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「윈ー！？　윈、의의의윈！？」
+			;와ー앗！？　그、그건 대체 뭔가요！？
+		;それ以外
+		ELSE
+			PRINTFORMW 「의、윈！　윈 의……읫、의윈！」
+			;괴、괴물！　건드리면 벤다……아앗、검이 없어！
+		ENDIF
+		CFLAG:5262 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5262 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈 의……옹 윈。윈、윈윈윈윈」
+			;해는 끼치지……않는 것 같네요。그럼、잘 부탁드립니다
+			CFLAG:5262 = 3
+		;それ以外
+		ELSEIF CFLAG:5262 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의、윈윈윈윈윈윈……」
+			;큿、이런 괴물따위에게 능욕당하다니……
+			CFLAG:5262 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 90 && TEQUIP:90 == 0
+	;恋慕
+	IF TALENT:150 == 1 && (CFLAG:5311 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「읫、의、윈윈」
+		;저、저기、수고하셨습니다
+		CFLAG:5311 = 2
+	;それ以外
+	ELSEIF CFLAG:5311 < 1 || FLAG:11 == 2
+		PRINTFORMW 「윈、윈윈윈……」
+		;하아、드디어 해방됐다……
+		CFLAG:5311 = 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+;追加コマンド CFLAG313以降を使用
+;～～～～～～～～～～～～～～～～～～～～～～～～～
+
+;-------------------------------------------------
+;指挿入れ CFLAG313
+;Gスポット刺激 CFLAG323
+;-------------------------------------------------
+;IF SELECTCOM == 4
+	;Gスポット刺激
+;	IF PREVCOM == 4 && ABL:PLAYER:12 >= 3 || PREVCOM == 600
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5323 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5323 = 4
+		;V感覚Lv3以上
+;		ELSEIF ABL:1 >= 3 && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5323 = 3
+		;それ以外
+;		ELSEIF CFLAG:5323 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5323 = 2
+;		ENDIF
+;		RETURN 0
+	;指挿入れ
+;	ELSE
+		;初めて
+;		IF CFLAG:5313 == 0
+			;処女（処女でないキャラの場合は無記入でよい）
+;			IF TALENT:0 == 1 && EXP:0 == 0
+				;恋慕+従順Lv5
+;				IF TALENT:150 == 1 && ABL:10 == 5
+;					PRINTFORMW 
+				;それ以外
+;				ELSE
+;					 PRINTFORMW
+;				ENDIF
+;					CFLAG:5313 = 1
+;					RETURN 0
+			;非処女
+;			ELSE
+				;恋慕
+;				IF TALENT:150 == 1
+;					PRINTFORMW 
+				;V感覚Lv3以上
+;				ELSEIF ABL:1 >= 3
+;					PRINTFORMW 
+				;それ以外
+;				ELSE
+;					PRINTFORMW 
+;				ENDIF
+;					CFLAG:5313 = 1
+;					RETURN 0
+;			ENDIF
+		;二回目以降
+;		ELSE
+			;恋慕
+;			IF TALENT:150 == 1 && (CFLAG:5313 <= 3 || FLAG:11 == 2)
+;				PRINTFORMW 
+;				CFLAG:5313 = 4
+			;V感覚Lv3以上
+;			ELSEIF ABL:1 >= 3 && (CFLAG:5313 <= 2 || FLAG:11 == 2)
+;				PRINTFORMW 
+;				CFLAG:5313 = 3
+			;それ以外
+;			ELSEIF CFLAG:5313 <= 1 || FLAG:11 == 2
+;				PRINTFORMW 
+;				CFLAG:5313 = 2
+;			ENDIF
+;			RETURN 0
+;		ENDIF
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;シャワー CFLAG314
+;-------------------------------------------------
+IF SELECTCOM == 351 && TEQUIP:54
+	;初めて
+	IF CFLAG:5314 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「윈！？　윈、윈윈윈……」
+			;햐아！？　아、뜨거운 물이 나오는군요……
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈！？　윈윈윈、윈윈……」
+			;햐아！？　갑자기 뜨거운 물이 나오니까、깜짝 놀랐다……
+		ENDIF
+		CFLAG:5314 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5314 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「윈～……윈、윈 의의윈윈」
+			;후우～……가끔씩은、느긋하게 씻는 것도 괜찮네요
+			CFLAG:5314 = 3
+		;それ以外
+		ELSEIF CFLAG:5314 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윈……윈、윈 의의윈윈」
+			;저기……저는、딱히 씻지 않아도 됩니다만
+			CFLAG:5314 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位 CFLAG315
+;-------------------------------------------------
+;IF SELECTCOM == 22
+	;初めて
+;	IF CFLAG:5315 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5315 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5315 <= 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5315 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+;		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5315 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5315 = 4
+		;屈服刻印Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5315 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5315 = 3
+		;それ以外
+;		ELSEIF CFLAG:5315 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5315 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;背面座位 CFLAG316
+;乱れ牡丹 CFLAG317
+;-------------------------------------------------
+;背面座位
+;IF SELECTCOM == 23 && TEQUIP:56 == 0
+	;初めて
+;	IF CFLAG:5316 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5316 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5316 <= 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5316 = 5
+		;屈服刻印Lv3＋V感覚Lv3以上
+;		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:5316 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5316 = 4
+		;屈服刻印Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5316 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5316 = 3
+		;それ以外
+;		ELSEIF CFLAG:5316 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5316 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;乱れ牡丹
+;ELSEIF SELECTCOM == 23 && TEQUIP:56
+	;初めて
+;	IF CFLAG:5317 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5317 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕+露出癖Lv3以上+V感覚Lv3以上
+;		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:5317 <= 5 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5317 = 6
+		;恋慕
+;		ELSEIF TALENT:150 == 1 && (CFLAG:5317 <= 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5317 = 5
+		;屈服刻印Lv3+露出癖Lv3以上+V感覚Lv3以上
+;		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && ABL:14 >= 3 && (CFLAG:5317 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5317 = 4
+		;屈服刻印Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5317 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5317 = 3
+		;それ以外
+;		ELSEIF CFLAG:5317 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5317 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;泡踊り CFLAG318
+;-------------------------------------------------
+;IF SELECTCOM == 352
+	;初めて
+;	IF CFLAG:5318 == 0
+		;奉仕精神Lv3以上
+;		IF ABL:13 >= 3
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5318 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕＋奉仕精神Lv5
+;		IF TALENT:150 == 1 && ABL:13 == 5 && (CFLAG:5318 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5318 = 4
+		;奉仕精神Lv3以上
+;		ELSEIF ABL:13 >= 3 && (CFLAG:5318 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5318 = 3
+		;それ以外
+;		ELSEIF  CFLAG:5318 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5318 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;利尿剤 CFLAG319
+;-------------------------------------------------
+;IF SELECTCOM == 62
+	;恋慕+おもらし癖
+;	IF TALENT:150 && TALENT:45 && (CFLAG:5319 < 4 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5319 = 4
+	;恋慕
+;	ELSEIF TALENT:150 && (CFLAG:5319 < 3 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5319 = 3
+	;屈服刻印Lv3
+;	ELSEIF MARK:2 == 3 && (CFLAG:5319 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5319 = 2
+	;それ以外
+;	ELSEIF CFLAG:5319 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5319 = 1
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;羞恥プレイ CFLAG320 解除 CFLAG321
+;-------------------------------------------------
+IF SELECTCOM == 103 && TEQUIP:56
+	;初めて
+	IF CFLAG:5320 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 「윈 의윈……」
+			;아무 것도 비치지 않아……
+		;露出癖Lv3以上
+		ELSEIF ABL:1 >= 3
+			PRINTFORMW 「윈 의윈……」
+			;아무 것도 비치지 않아……
+		;それ以外
+		ELSE
+			PRINTFORMW 「윈 의윈윈」
+			;헛 짓이에요
+		ENDIF
+			CFLAG:5320 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕+露出癖Lv3以上
+		IF TALENT:150 == 1 && ABL:1 >= 3 && (CFLAG:5320 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「윈 의윈의윈、윈 의ー옹 윈……」
+			;당신의 눈동자에 비친다면、그걸로 충분해요……
+			CFLAG:5320 = 5
+		;恋慕
+		ELSEIF TALENT:150 == 1 && (CFLAG:5320 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윈 의윈의윈、윈 의ー옹 윈……」
+			;당신의 눈동자에 비친다면、그걸로 충분해요……
+			CFLAG:5320 = 4
+		;露出癖Lv3以上
+		ELSEIF ABL:1 >= 3
+			PRINTFORMW 
+			;
+			CFLAG:5320 = 3
+		;それ以外
+		ELSEIF CFLAG:5272 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5320 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:5321 == 0
+		;恋慕
+		IF TALENT:150 == 1
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+			CFLAG:5321 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5321 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:5321 = 3
+		;それ以外
+		ELSEIF CFLAG:5321 <= 1 || FLAG:11 == 2
+			PRINTFORMW 
+			CFLAG:5321 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;お風呂場プレイ CFLAG322 解除 CFLAG323
+;-------------------------------------------------
+;IF SELECTCOM == 350 && TEQUIP:53
+	;初めて
+;	IF CFLAG:5322 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		CFLAG:5322 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5322 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5322 = 3
+		;それ以外
+;		ELSEIF CFLAG:5322 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5322 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;終了時
+;ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;初めて
+;	IF CFLAG:5323 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		CFLAG:5323 = 1
+;		RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5323 = 3
+		;それ以外
+;		ELSEIF CFLAG:5323 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5323 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;新妻プレイ CFLAG324 解除 CFLAG325
+;-------------------------------------------------
+;開始時
+;IF SELECTCOM == 90 && TEQUIP:59
+	;初めて
+;	IF CFLAG:5324 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5324 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5324 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5324 = 3
+		;それ以外
+;		ELSEIF CFLAG:5324 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5324 = 2
+;		ENDIF
+;		RETURN 0
+;	ENDIF
+;終了時
+;ELSEIF SELECTCOM == 90 && TEQUIP:59 == 0
+	;初めて
+;	IF CFLAG:5325 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5325 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5325 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5325 = 3
+		;それ以外
+;		ELSEIF CFLAG:5325 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5325 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;放尿 CFLAG326
+;強制放尿 CFLAG327
+;-------------------------------------------------
+;IF SELECTCOM == 111
+	;強制放尿
+;	IF (TALENT:45 && ABL:10 >= 3 && ABL:21 >= 3) || (TALENT:45 && TEQUIP:12 == 0)
+		;恋慕+おもらし癖+野外プレイ
+;		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5327 < 5 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 5
+		;恋慕+おもらし癖
+;		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5327 < 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 4
+		;露出癖Lv5
+;		ELSEIF ABL:14 >= 5 && (CFLAG:5327 < 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 3
+		;屈服刻印Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5327 < 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 2
+		;それ以外
+;		ELSEIF CFLAG:5327 < 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5327 = 1
+;		ENDIF
+	;放尿
+;	ELSE
+		;恋慕+おもらし癖+野外プレイ
+;		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5326 < 5 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 5
+		;恋慕+おもらし癖
+;		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5326 < 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 4
+		;露出癖Lv5
+;		ELSEIF ABL:14 >= 5 && (CFLAG:5326 < 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 3
+		;屈服刻印Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5326 < 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 2
+		;それ以外
+;		ELSEIF CFLAG:5326 < 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5326 = 1
+;		ENDIF
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG関係（XXXをキャラ番号に置換）
+;パラメータ変動をトリガーにした口上
+;パラメータ変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_74
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボールギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;-------------------------------------------------
+;パラメータ変動時のセリフ CFLAG 271～296を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;初めて潤滑がLV2超えた CFLAG271
+;-------------------------------------------------
+P = PALAM:10 + UP:10
+IF P > PALAMLV:2
+	;初めて
+	IF CFLAG:5271 == 0
+		;ローションを使った場合
+;		IF SELECTCOM == 60
+			PRINTFORMW 「……의、윈？」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+			CFLAG:5271 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めて欲情がLV2超えた CFLAG272
+;-------------------------------------------------
+P = PALAM:13 + UP:13
+IF P > PALAMLV:2
+	IF CFLAG:5272 == 0
+		;媚薬を使った場合
+;		IF SELECTCOM == 61
+			PRINTFORMW 「의、의ー옹……」
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+			CFLAG:5272 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めて恥情がLV2超えた CFLAG273
+;-------------------------------------------------
+P = PALAM:15 + UP:15
+IF P > PALAMLV:2
+	IF CFLAG:5273 == 0
+		PRINTFORMW 「윈……」
+		CFLAG:5273 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めて恐怖がLV2超えた CFLAG274
+;-------------------------------------------------
+P = PALAM:17 + UP:17
+IF P > PALAMLV:2
+	IF CFLAG:5274 == 0
+		PRINTFORMW 「윈、윈 의윈！」
+		CFLAG:5274 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてC절정 CFLAG275
+;-------------------------------------------------
+IF NOWEX:0 > 0
+	IF CFLAG:5275 == 0
+		PRINTFORMW 「의……옷！？ 의、옹！ 의ー옹！！」
+		CFLAG:5275 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてV절정 CFLAG276
+;-------------------------------------------------
+IF NOWEX:1 > 0
+	IF CFLAG:5276 == 0
+		PRINTFORMW 「의、옹！ 윈、의……의오오옹！！」
+		PRINTFORMW 「……의、의ー옹……」
+		CFLAG:5276 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてA절정 CFLAG277
+;-------------------------------------------------
+IF NOWEX:2 > 0
+	IF CFLAG:5277 == 0
+		PRINTFORMW 「윈！？ 의、윈！」
+		PRINTFORMW 「윈、윈윈윈、의……의오옹！！！」
+		CFLAG:5277 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;初めてB절정 CFLAG278
+;-------------------------------------------------
+IF NOWEX:3 > 0
+	IF CFLAG:5278 == 0
+		PRINTFORMW 「의……옹、윈……！ 의ーーー옹！！！」
+		CFLAG:5278 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;処女喪失(処女のみ) CFLAG279
+;-------------------------------------------------
+IF TFLAG:0 == 2
+	;恋慕かつ主人のセックスによる処女喪失
+	IF TFLAG:2
+		;恋慕＋従順Lv5
+		IF TALENT:150 == 1 && ABL:10 == 5 && CFLAG:5279 == 0
+			PRINTFORMW 「윈……」
+			PRINTFORMW 「윈……、윈、윈윈……！」
+			PRINTFORMW 「……윈……」
+		ENDIF
+	;指挿入れで処女喪失（反感がかなり少ない）
+	ELSEIF SELECTCOM == 4
+		;恋慕＋従順Lv5
+		IF TALENT:150 == 1 && ABL:10 == 5 && CFLAG:5279 == 0
+			PRINTFORMW 「윈！？ 윈、윈윈！」
+			PRINTFORMW 「……윈」
+		;それ以外
+		ELSEIF CFLAG:5279 == 0
+			PRINTFORMW 「윈！？ 윈！ 윈윈 의……！？」
+			PRINTFORMW 「윈……」
+		ENDIF
+	;それ以外の時に処女喪失
+	ELSE
+		;恋慕＋従順Lv5
+		IF TALENT:150 == 1 && ABL:10 == 5 && CFLAG:5279 == 0
+			PRINTFORMW 「의、윈……윈윈……」
+		;それ以外
+		ELSEIF CFLAG:5279 == 0
+			PRINTFORMW 「의……옹、윈윈윈……！」
+		ENDIF
+	ENDIF
+		CFLAG:5279 = 1
+ENDIF
+
+;-------------------------------------------------
+;セックスで射精させた CFLAG280 CFLAG290
+;-------------------------------------------------
+IF TFLAG:9 > 0 || TFLAG:10 > 0
+	;アナルセックスか？
+	IF TFLAG:9 > 0
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5290 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의윈、의、……옹」
+			CFLAG:5290 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5290 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의윈、의、……옹」
+			CFLAG:5290 = 3
+		;それ以外
+		ELSEIF CFLAG:5290 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의윈、의、……옹」
+			CFLAG:5290 = 2
+		ENDIF
+		;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:150 == 1 && (CFLAG:5280 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「의윈、의、……옹」
+			CFLAG:5280 = 4
+		;屈服刻印Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5280 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「의윈、의、……옹」
+			CFLAG:5280 = 3
+		;それ以外
+		ELSEIF CFLAG:5280 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의윈、의、……옹」
+			CFLAG:5280 = 2
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手で射精させた CFLAG281
+;-------------------------------------------------
+IF TFLAG:12 > 0
+	;奉仕精神Lv5
+	IF ABL:13 >= 5 && (CFLAG:5281 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「읫！？ 의……윈……」
+		CFLAG:5281 = 3
+	;奉仕精神Lv3
+	ELSEIF ABL:13 >= 3 && (CFLAG:5281 <= 1 || FLAG:11 == 2)
+		PRINTFORMW 「읫！？ 의……윈……」
+		CFLAG:5281 = 2
+	;それ以外
+	ELSEIF CFLAG:5281 <= 0 || FLAG:11 == 2
+		PRINTFORMW 「읫！？ 의……윈……」
+		CFLAG:5281 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;口で射精させた CFLAG282
+;-------------------------------------------------
+IF TFLAG:11 > 0
+	;フェラ、イラマチオの場合
+	IF SELECTCOM == 41 || SELECTCOM == 230
+		;精液中毒Lv5
+		IF ABL:31 >= 5 && (CFLAG:5282 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「응 밋！ 의……옹……」
+			CFLAG:5282 = 5
+		;精液中毒Lv3
+		ELSEIF ABL:31 >= 3 && (CFLAG:5282 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「응 밋！？ 읫！ 읍！ 윈……」
+			CFLAG:5282 = 3
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5282 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「응 밋！？ 읫！ 읍！ 윈……」
+			CFLAG:5282 = 2
+		;それ以外
+		ELSEIF CFLAG:5282 < 1 || FLAG:11 == 2
+			PRINTFORMW 「응 밋！？ 읫！ 읍！ 윈……」
+			CFLAG:5282 = 1
+		ENDIF
+	;パイズリの場合(CFLAG289)
+	ELSEIF SELECTCOM == 42
+		;奉仕精神Lv5
+		IF ABL:13 >= 5 && (CFLAG:5289 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「읫！？ 의……윈……」
+			CFLAG:5289 = 3
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3 && (CFLAG:5289 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「읫！？ 의……윈……」
+			CFLAG:5289 = 2
+		;それ以外
+		ELSEIF CFLAG:5289 < 1 || FLAG:11 == 2
+		PRINTFORMW 「읫！？ 의……윈……」
+			CFLAG:5289 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;射精した(ふたなり/オトコのみ) CFLAG283
+;-------------------------------------------------
+;IF TFLAG:30 > 0
+	;初めて
+;	IF CFLAG:5283 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5283 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5283 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5283 = 3
+		;それ以外
+;		ELSEIF CFLAG:5283 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5283 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;噴乳した(母乳体質のみ) CFLAG284
+;-------------------------------------------------
+;IF TFLAG:31 > 0
+	;初めて
+;	IF CFLAG:5284 == 0
+		;従順Lv4以上
+;		IF ABL:10 >= 4
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5284 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;従順Lv4以上
+;		IF ABL:10 >= 4 && (CFLAG:5284 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5284 = 3
+		;それ以外
+;		ELSEIF CFLAG:5284 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5284 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;Ｃ感覚Lv5でＣ절정50以上 CFLAG285
+;-------------------------------------------------
+;IF ABL:0 >= 5 && EX:0 >= 50
+	;初めて
+;	IF CFLAG:5285 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5285 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5285 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5285 = 3
+		;それ以外
+;		ELSEIF CFLAG:5285 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5285 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;Ｖ感覚Lv5でＶ절정50以上 CFLAG286
+;-------------------------------------------------
+;IF ABL:1 >= 5 && EX:1 >= 50
+	;初めて
+;	IF CFLAG:5286 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5286 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5286 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5286 = 3
+		;それ以外
+;		ELSEIF CFLAG:5286 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5286 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;Ａ感覚Lv5でＡ절정50以上 CFLAG287
+;-------------------------------------------------
+;IF ABL:2 >= 5 && EX:2 >= 50
+	;初めて
+;	IF CFLAG:5287 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5287 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5287 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5287 = 3
+		;それ以外
+;		ELSEIF CFLAG:5287 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5287 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;Ｂ感覚Lv5でＢ절정50以上 CFLAG288
+;-------------------------------------------------
+;IF ABL:3 >= 5 && EX:3 >= 50
+	;初めて
+;	IF CFLAG:5288 == 0
+		;恋慕
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5288 = 1
+;			RETURN 0
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:150 == 1 && (CFLAG:5288 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5288 = 3
+		;それ以外
+;		ELSEIF CFLAG:5288 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5288 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG関係（XXXをキャラ番号に置換）
+;刻印変動をトリガーにした口上
+;刻印変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_19
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0
+;ボールギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 == 1
+	RETURN 0
+;-------------------------------------------------
+;苦痛刻印Lv3取得 CFLAG297
+;-------------------------------------------------
+IF TFLAG:40 == 3
+	IF CFLAG:5297 == 0
+		PRINTFORMW 「윈윈！ 윈、의윈！ 윈！」
+		PRINTFORMW 「……윈……」
+		CFLAG:5297 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;快楽刻印Lv3取得 CFLAG298
+;-------------------------------------------------
+IF TFLAG:41 == 3
+	IF CFLAG:5298 == 0
+		PRINTFORMW 「의ー옹……윈、의의ー옹……」
+		CFLAG:5298 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;屈服刻印Lv3取得 CFLAG299
+;-------------------------------------------------
+IF TFLAG:42 == 3
+	IF CFLAG:5299 == 0
+		PRINTFORMW 「윈……윈、의윈……」
+		PRINTFORMW 「윈……」
+		CFLAG:5299 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;反発刻印Lv3取得 CFLAG300
+;-------------------------------------------------
+IF TFLAG:44 == 3
+	IF CFLAG:5300 == 0
+		PRINTFORMW 「윈……」
+		PRINTFORMW 「……윈、윈윈윈、윈……！」
+		CFLAG:5300 = 1
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;イベント口上集（X1、X2をキャラ番号に置換する）
+;-------------------------------------------------
+@SELF_KOJO_K74
+;-------------------------------------------------
+
+;-------------------------------------------------
+;売却
+;-------------------------------------------------
+IF TFLAG:200 == 130
+	;恋慕+反発刻印Lv3未満
+	IF TALENT:150 && MARK:9 < 3
+		PRINTFORMW 「……윈？」
+		PRINTFORMW 「……윈」
+		PRINTFORMW 「……의、옹」
+		PRINTFORMW 「……의、윈……！」
+		;……에？
+		;……그래
+		;……그런거、네
+		;……그런거、구나……！
+	;反発刻印Lv3
+	ELSEIF MARK:9 == 3
+		PRINTFORMW 「……윈 의윈」
+		PRINTFORMW 「윈……윈윈윈！ 윈！」
+		;……말이 통하지 않더라도 말하겠어
+		;나는……반드시 너를 죽이겠어！ 반드시！
+	;淫乱
+	ELSEIF TALENT:170
+		PRINTFORMW 「의－옹……」
+		PRINTFORMW 「……윈。윈윈、의윈윈」
+		;에ー……
+		;……어쩔 수 없나。내 반신에게도、이걸 가르쳐주면 기쁠텐데
+	;それ以外
+	ELSE
+		PRINTFORMW 「의ー옹……」
+		PRINTFORMW 「윈。윈윈」
+	ENDIF
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+
+;-------------------------------------------------
+;@単体エンディング関係(X1、X2をキャラ番号に置換する)
+;半身が惚れた相手だもの、妖夢が惚れたっていいよね、と思いながら書いたけどこれなんて妖夢エンド？
+;-------------------------------------------------
+@SINGLE_ENDING_K74
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW  
+PRINTFORMW ――명련사
+PRINTFORMW 「의～옹！」
+PRINTFORMW ……아침。오싹한 감각에、%조사처리(CALLNAME:MASTER,"는")% 눈을 떴다。
+PRINTFORMW 「윈？ 윈윈」
+PRINTFORMW 눈을 뜨자、운잔이 %CALLNAME:MASTER%의 목덜미를 덮고 있었다……
+PRINTFORMW ……%CALLNAME:MASTER%는、아아、라며 수긍한다。눈이 뜨였어、라고。
+PRINTFORMW 「윈！」
+PRINTFORMW 운잔은 웃으면서 수긍해、일어선다。
+PRINTFORMW 『남편님、아침의 준비가……랄까、윈！윈윈윈！』
+;반신！？ 뭘 멋대로 깨우러 오는거야！
+PRINTFORMW 「의의～옹。의ー옹 의ー옹」
+PRINTFORMW 『뭣……！ 윈！ 의의의！ 의～옹！』
+PRINTFORMW ……아무래도 말싸움 같지만、%조사처리(CALLNAME:MASTER,"는")% 내용을 전혀 이해할 수 없다。
+PRINTFORMW 옷을 갈아 입으면서、그 부자연스러운 자연을 관찰한다。
+PRINTFORMW 운잔이란、이치린의 본체로서의 측면이다。
+PRINTFORMW 「……윈？ 윈。의ー옹 의ー옹」
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 자신있는 듯이 미소짓는 운잔의 머리를 쓰다듬고、――미소짓고 있는 자신을 깨닫는다。
+PRINTFORMW 「……윈、윈……」
+PRINTFORMW 귓가에 속삭인 말에、아까와 같은 말에、――나도다、라며――대답하고、%CALLNAME:MASTER%는、운잔을 강하게 껴안았다……
+PRINTFORMW  
+PRINTFORMW 　　　　　　　　―― Ending No.1065 (운잔 엔딩)
+
+RETURN 0
+
+

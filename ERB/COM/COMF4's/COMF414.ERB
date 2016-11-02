@@ -1,0 +1,146 @@
+﻿;=============================================================================
+;유두 지지기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE414
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:414 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 ＥＸ化していない妹紅でないとダメ
+SIF ( NO:PLAYER != 31 || CFLAG:PLAYER:0) && NO:PLAYER != 85
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM414
+PRINTL 유두 지지기
+TSTR:0 = 유두 지지기
+CALL TRAIN_MESSAGE_COM414
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 300
+SOURCE:22 = 300
+SOURCE:31 = 400
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 40
+	SOURCE:20 = 100
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 160
+	SOURCE:20 = 500
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 700
+	SOURCE:20 = 750
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1500
+	SOURCE:20 = 1500
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 2400
+	SOURCE:20 = 2500
+ELSE
+	SOURCE:3 = 3300
+	SOURCE:20 = 3000
+ENDIF
+
+;조교자의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:3 , 0.60
+	TIMES SOURCE:20 , 4.00
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:3 , 0.80
+	TIMES SOURCE:20 , 2.00
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:3 , 1.00
+	TIMES SOURCE:20 , 1.50
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:20 , 1.20
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:3 , 1.40
+	TIMES SOURCE:20 , 1.10
+ELSE
+	TIMES SOURCE:3 , 1.60
+	TIMES SOURCE:20 , 1.00
+ENDIF
+
+;새드을 본다
+SIF TALENT:81
+	TIMES SOURCE:20 , 2.00
+;B민감, 둔감을 본다
+SIF TALENT:107
+	TIMES SOURCE:3 , 0.60
+SIF TALENT:106
+	TIMES SOURCE:3 , 1.50
+;불길에 약할 것 같은 분들(치르노, 레티, 리굴, 미스티아)
+IF NO:TARGET == 5 || NO:TARGET == 12 || NO:TARGET == 24 || NO:TARGET == 25
+	TIMES SOURCE:20 , 2.00
+	SOURCE:25 += 3000
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM414
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 손가락 끝에 작은 불을 만들어내
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:110 || TALENT:111
+	PRINT 아주 조금 부풀어 오른 작은 가슴의 끝에 달려있는 
+ELSEIF TALENT:112 || TALENT:113
+	PRINT 풍만한 가슴의 꼭대기에 달려있는 
+ELSE
+	PRINT 아름다운 가슴의 끄트머리에 달려있는 
+ENDIF
+SIF ABL:3 >= 3
+	PRINT 뾰족할 정도로 솟아있는 
+PRINT 유두를 
+SIF TALENT:81
+	PRINT 지긋이 
+;불길에 약할 것 같은 여러분
+IF NO:TARGET == 5 || NO:TARGET == 12 || NO:TARGET == 24 || NO:TARGET == 25
+	PRINTL 지졌다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 너무나 뜨거워서, 울부짖어 버렸다….
+;그 외
+ELSE
+	PRINTW 지졌다….
+ENDIF

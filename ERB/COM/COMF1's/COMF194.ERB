@@ -1,0 +1,270 @@
+﻿;=============================================================================
+;사라시
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE194
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:194 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;解除は裸体盛り中以外ならいつでも可能
+SIF TEQUIP:36 && TEQUIP:60 == 0
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:24 == 0 && NOITEM == 0
+	RETURN 0
+;기교3이하의 ASSI일 경우, うまくサラシを巻けない(霊夢, 요우무, 早苗の誰かならＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 4 && SARASHI_ANSHIN_BONUS(ASSI) == 0
+		RETURN 0
+ENDIF
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;그밖의 Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35
+	RETURN 0
+;긴박 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;훈도시와 알몸 와이셔츠 외의 코스프레 중에는 안 됨
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 11 && TEQUIP:59 != 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM194
+TSTR:7 = 사라시
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 24
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 사라시
+CALL TRAIN_MESSAGE_COM194
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 70
+
+SOURCE:12 = 100
+SOURCE:31 = 90
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	LOCAL:1 = 50
+ELSEIF ABL:3 == 1
+	LOCAL:1 = 100
+ELSEIF ABL:3== 2
+	LOCAL:1 = 300
+ELSEIF ABL:3 == 3
+	LOCAL:1 = 600
+ELSEIF ABL:3 == 4
+	LOCAL:1 = 1200
+ELSE
+	LOCAL:1 = 2100
+ENDIF
+
+;B민감
+IF TALENT:106
+	TIMES LOCAL:1 , 1.50
+;B둔감
+ELSEIF TALENT:107
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;절벽
+IF TALENT:110
+	TIMES LOCAL:1 , 1.80
+	SOURCE:12 += 1000
+;빈유
+ELSEIF TALENT:111
+	TIMES LOCAL:1 , 1.50
+	SOURCE:12 += 700
+;큰 가슴
+ELSEIF TALENT:112
+	TIMES LOCAL:1 , 0.80
+	SOURCE:20 = 300
+;폭유
+ELSEIF TALENT:113
+	TIMES LOCAL:1 , 0.50
+	SOURCE:20 = 800
+ENDIF
+
+SOURCE:3 += LOCAL:1
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 24
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:3
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:3 = FLAG:1120
+ENDIF
+
+;사라시의 착탈
+IF TEQUIP:36
+	TEQUIP:36 = 0
+ELSE
+	TEQUIP:36 = 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;사라시 장비중
+;--------------------------------------------------
+@EQUIP_COM194
+TSTR:7 = 사라시
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 24
+	CALL NAMECHECK_CUSTOMTOOL
+ENDIF
+PRINTFORML <%TSTR:7% 장착 중>
+;가슴이 크면 체력이 보다 소모
+IF TALENT:113
+	DOWNBASE:0 += 15
+ELSEIF TALENT:112
+	DOWNBASE:0 += 10
+ELSE
+	DOWNBASE:0 += 5
+ENDIF
+DOWNBASE:1 += 20
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	LOCAL = 20
+ELSEIF ABL:3 == 1
+	LOCAL = 40
+ELSEIF ABL:3 == 2
+	LOCAL = 80
+ELSEIF ABL:3 == 3
+	LOCAL = 160
+ELSEIF ABL:3 == 4
+	LOCAL = 320
+ELSE
+	LOCAL = 640
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;절벽
+IF TALENT:110
+	TIMES LOCAL , 1.30
+	SOURCE:12 += 1000
+;빈유
+ELSEIF TALENT:111
+	TIMES LOCAL , 1.10
+	SOURCE:12 += 700
+;큰 가슴
+ELSEIF TALENT:112
+	TIMES LOCAL , 0.90
+	SOURCE:20 += 100
+;폭유
+ELSEIF TALENT:113
+	TIMES LOCAL , 0.70
+	SOURCE:20 += 300
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 24
+	FLAG:1111 = 0
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:3 += LOCAL
+SOURCE:18 += 10
+SOURCE:12 += 50
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM194
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:36
+	PRINTFORMW %CALLNAME:TARGET%에게 감아 있는 %조사선택(TSTR:7, "를")% 벗겼다.
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 가슴에 %조사선택(TSTR:9, "를")% 휘감았다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF (NO:TARGET == 1 || NO:TARGET == 19 || NO:TARGET == 42) && TSTR:7 == "사라시"
+		PRINTW 이게 제일 편안하다는 듯이 안심한 표정을 짓고 있다.
+	ELSEIF TALENT:110
+		PRINTW 납작한 가슴에 컴플렉스를 느끼고 있는지, 얼굴을 새빨갛게 물들인 채로 숙이고 있다.
+	ELSEIF TALENT:111
+		PRINTW 재차 자신의 가슴이 작은 것을 신경쓰기 시작했는지, 뺨을 주홍으로 물들이고 있다.
+	ELSEIF TALENT:112
+		PRINTW 조금 거북한 듯한 표정으로 흰 옷감에 의해 단단히 조여진 자신의 풍만한 가슴을 내려다 보고 있다.
+	ELSEIF TALENT:113
+		PRINTW 거북하단 표정으로 흰 옷감에 꽉 조여져 비져나와 버린 가슴을 내려다 보고 있다.
+	ELSE
+		PRINTW 가슴을 감고 있는 것에 위화감을 느끼는지, 곤혹스런 표정으로 끊임없이 옷감을 쭉쭉 잡아당기고 있다….
+	ENDIF
+ENDIF

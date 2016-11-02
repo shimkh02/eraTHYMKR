@@ -1,0 +1,177 @@
+﻿;=============================================================================
+;촛농
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE223
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:223 > 0
+	RETURN 0
+;低温蝋燭を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:80 == 0 && NOITEM == 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;바늘을 기본으로 작성. 마조끼에 의해 기력 감소가 변화
+;그대로 사용하면(자) 최악채찍 이하가 될 수도 있는 이,
+;긴박중, 혹은 CB 민감하기도 하고 감각이 자라고 있으면(자) 효과가 상승하도록(듯이)
+@COM223
+PRINTL 촛농
+TSTR:0 = 촛농
+CALL TRAIN_MESSAGE_COM223
+
+DOWNBASE:0 += 60
+
+SOURCE:31 = 10000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 2500
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 2700
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 3000
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 3500
+ELSE
+	SOURCE:20 = 4000
+ENDIF
+
+;C계 장착 도구를 사용하고 있지 않는 경우
+IF TEQUIP:30 == 0 && ((TALENT:120 && TEQUIP:31 == 0 && TEQUIP:32 == 0) || TALENT:120 == 0)
+	;C감각이 4이상
+	SIF ABL:0 > 3
+		TIMES SOURCE:20 , 1.20
+	;C민감
+	IF TALENT:100
+		TIMES SOURCE:20 , 1.50
+	;C둔감
+	ELSEIF TALENT:101
+		TIMES SOURCE:20 , 0.50
+	ENDIF
+ENDIF
+;B계 장착 도구를 사용하고 있지 않는 경우
+IF TEQUIP:35 == 0 && TEQUIP:36 == 0
+	;B감각이 4이상
+	SIF ABL:3 > 3
+		TIMES SOURCE:20 , 1.20
+	;B민감
+	IF TALENT:106
+		TIMES SOURCE:20 , 1.50
+	;B둔감
+	ELSEIF TALENT:107
+		TIMES SOURCE:20 , 0.50
+	ENDIF
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:24 = 10
+	SOURCE:31 += 40000
+	DOWNBASE:1 += 120
+ELSEIF ABL:21 == 1
+	SOURCE:24 = 50
+	SOURCE:31 += 10000
+	DOWNBASE:1 += 100
+ELSEIF ABL:21 == 2
+	SOURCE:24 = 250
+	SOURCE:31 += 5000
+	DOWNBASE:1 += 80
+ELSEIF ABL:21 == 3
+	SOURCE:24 = 1000
+	SOURCE:31 += 1000
+	DOWNBASE:1 += 60
+ELSEIF ABL:21 == 4
+	SOURCE:24 = 1600
+	SOURCE:31 += 100
+	DOWNBASE:1 += 50
+ELSE
+	SOURCE:24 = 2500
+	SOURCE:31 += 50
+	DOWNBASE:1 += 40
+ENDIF
+
+;긴박 하고 있으면(자) 효과 업
+IF TEQUIP:40
+	TIMES SOURCE:20 , 1.20
+	TIMES SOURCE:24 , 1.10
+ENDIF
+;연속으로 사용하면(자) 효과가 업
+IF SELECTCOM == PREVCOM
+	TIMES SOURCE:20 , 1.25
+	TIMES SOURCE:24 , 1.20
+	TIMES DOWNBASE:1 , 1.10
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 3
+
+IF NOITEM == 0
+	ITEM:80 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:80
+		CALL FILL_PLURAL_ITEM, 80
+ENDIF
+
+;동일 커맨드 연속 실행 패널티 회피
+TFLAG:96 = 1
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM223
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 초에 불을 붙여 뜨거워진 촛농을 
+SIF TEQUIP:40
+	PRINT 결박되어 움직일 수 없는 
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:PLAYER:81 || TALENT:PLAYER:177
+	PRINT 민감한 부분에 집중적으로 
+ELSE
+	;(eraElona용 소질[아르비노]의 대신 )
+	IF TALENT:40
+		PRINT 진주와 같이 새하얗고 요염한 맨 살에 
+	ELSE
+		PRINT 몸 위에 
+	ENDIF
+ENDIF
+PRINTW 떨어뜨렸다.

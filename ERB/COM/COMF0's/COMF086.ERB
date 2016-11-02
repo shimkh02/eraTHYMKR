@@ -1,0 +1,294 @@
+﻿;=============================================================================
+;C현자의 피 주사
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE86
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:86 > 0
+	RETURN 0
+;강력 아이템·커맨드 무효시는 안 됨
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;주사계 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 64) == 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;기교 3 이하의 ASSI의 경우 주사할 수 없다(바늘 다루기라면 OK)
+IF ASSIPLAY
+	SIF ABL:ASSI:12 <= 3 && TALENT:ASSI:53 == 0
+		RETURN 0
+ENDIF
+;주사 세트와 현자의 피를 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF (ITEM:53 == 0 || ITEM:66 == 0) && NOITEM == 0
+	RETURN 0
+;산란촉진제를 사용 중이면 사용할 수 없다
+SIF TEQUIP:9
+	RETURN 0
+;효과 발휘중·반동 중에는 불가
+SIF TEQUIP:13
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;C계 장착도구 사용중은 불가
+SIF TEQUIP:30
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;웨딩 드레스·고스로리 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 19 || TEQUIP:59 == 20
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM86
+PRINTL C현자의 피 주사
+TSTR:0 = C현자의 피 주사
+CALL TRAIN_MESSAGE_COM086
+
+;조제 지식이 있으면 소비를 억제한다
+LOCAL:3 = (TALENT:MASTER:55) ?  1 # 0
+SIF ASSI >= 0 && TALENT:ASSI:55
+	LOCAL:3 = 1
+
+LOCAL:1 = (LOCAL:3) ?  55 # 70
+LOCAL:2 = (LOCAL:3) ?  205 # 270
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:2
+
+SOURCE:0 = 1200
+SOURCE:24 = 500
+SOURCE:26 = 18750
+SOURCE:31 = 5000
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:31 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:31 , 1.80
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:31 , 1.20
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:31 , 1.00
+ELSE
+	TIMES SOURCE:31 , 0.80
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	TIMES SOURCE:0 , 0.50
+ELSEIF ABL:0 == 1
+	TIMES SOURCE:0 , 0.75
+ELSEIF ABL:0 == 2
+	TIMES SOURCE:0 , 1.00
+ELSEIF ABL:0 == 3
+	TIMES SOURCE:0 , 1.25
+ELSEIF ABL:0 == 4
+	TIMES SOURCE:0 , 1.50
+	EX:0 += RAND:2
+ELSE
+	TIMES SOURCE:0 , 2.00
+	EX:0 += 1
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:24 , 0.80
+	TIMES DOWNBASE:0 , 1.20
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:24 , 1.10
+	TIMES DOWNBASE:0 , 1.10
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:24 , 1.30
+	TIMES DOWNBASE:0 , 1.00
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:24 , 1.50
+	TIMES DOWNBASE:0 , 0.90
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:24 , 1.70
+	TIMES DOWNBASE:0 , 0.80
+ELSE
+	TIMES SOURCE:24 , 2.10
+	TIMES DOWNBASE:0 , 0.70
+ENDIF
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 3000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 3300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 3600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 4000
+ELSE
+	SOURCE:20 = 4500
+ENDIF
+
+;반항적
+SIF TALENT:11
+	TIMES SOURCE:20 , 1.10
+;저항
+SIF TALENT:34
+	TIMES SOURCE:20 , 1.10
+;C민감
+IF TALENT:100
+	IF ABL:0 <= 3
+		TIMES SOURCE:0 , 1.20
+	ELSEIF ABL:0 == 4
+		TIMES SOURCE:0 , 1.50
+	ELSE
+		TIMES SOURCE:0 , 1.80
+		EX:0 += RAND:2
+	ENDIF
+;C둔감
+ELSEIF TALENT:101
+	EX:0 -= (EX:0 > 1) ?  1 # 0
+	IF ABL:0 <= 3
+		TIMES SOURCE:0 , 0.60
+	ELSEIF ABL:0 == 4
+		TIMES SOURCE:0 , 0.70
+	ELSE
+		TIMES SOURCE:0 , 0.80
+	ENDIF
+ENDIF
+
+;조교자가 바늘 다루기
+SIF TALENT:PLAYER:53
+	TIMES SOURCE:20 , 0.90
+;조교자가 유치
+SIF TALENT:PLAYER:131
+	TIMES SOURCE:20 , 1.20
+
+;레이센이나 에이린에 의한 사용
+IF TEQUIP:90 == 0
+	SIF NO:PLAYER == 28
+		TIMES SOURCE:20 , 0.70
+	SIF NO:PLAYER == 29
+		TIMES SOURCE:20 , 0.50
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;약물 경험
+TCVAR:40 += 3
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 2
+
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+
+;현자의 피 1개 소비
+IF NOITEM == 0
+	ITEM:66 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:66
+		CALL FILL_PLURAL_ITEM, 66
+ENDIF
+
+TEQUIP:13 = 8
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM086
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%에게 지금부터 하려는 것을 듣자 
+;괴조인격, 괴뢰, 정신 붕괴
+IF TALENT:167 || TALENT:168 || TALENT:169
+	PRINTW 잠시나마 싫어하는 표정을 보였다….
+;속박되고 있다
+ELSEIF TEQUIP:40
+	PRINT 자유를 빼앗긴 모습으로 
+	IF ABL:10 < 3 || MARK:2 < 1 || MARK:9 > 0
+		IF TALENT:11 || TALENT:12 || TALENT:16
+			PRINTW 다부지게도 이쪽을 째려보고 있다.
+		ELSEIF TALENT:10 || TALENT:14
+			PRINTW 눈에 눈물을 머금고 무서워하고 있다.
+		ELSE
+			PRINTW 창백해진 표정을 하고 고개를 숙이고 있다….
+		ENDIF
+	ELSEIF TALENT:160 || TALENT:161 || TALENT:162 || TALENT:164
+		PRINTW 어딘지 모르게 기대로 가득 찬 시선을 하고 있다.
+	ELSE
+		PRINTW 저항을 단념하고 고개를 숙였다.
+	ENDIF
+;속박되지 않았다
+ELSE
+	IF ABL:10 < 3 || MARK:2 < 1 || MARK:9 > 0
+		PRINT 도망치려다 억지로 붙잡혀 
+		IF TALENT:11 || TALENT:12 || TALENT:16
+			PRINTW 다부지게도 이쪽을 째려보고 있다.
+		ELSEIF TALENT:10 || TALENT:14
+			PRINTW 이빨을 부딪히며 떨고 있다.
+		ELSE
+			PRINTW 창백해진 표정을 하고 고개를 숙였다.
+		ENDIF
+	ELSEIF TALENT:160 || TALENT:161 || TALENT:162 || TALENT:164
+		PRINTW 주인의 명령에 따라, 스스로 보지를 넓게 벌렸다….
+	ELSE
+		PRINTW 저항을 단념하고 스스로 보지를 벌리고 있다….
+	ENDIF
+ENDIF
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+;여체 광란보다 발췌입니다
+SIF ABL:PLAYER:20 > 3 || TALENT:PLAYER:81 || TALENT:PLAYER:177
+	PRINTL 주사를 놓으려면 마취를 해야 하잖냐는 농담을 던지며 
+PRINTFORM %CALLNAME:TARGET%의 
+SIF TALENT:1 && BASE:7 > 150
+	PRINT 거대한 
+PRINTL 클리토리스에 가차 없이 주사바늘을 꽂았다….
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 통증으로 몸을 떨고 있다.
+
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF ABL:10 > 3 && MARK:9 < 3
+	PRINTFORMW 곤혹한 표정을 지으며 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 바라보고 있다….
+ELSEIF MARK:9 >= 3
+	PRINTFORMW 경계를 하며 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 째려보고 있다….
+ELSE
+	PRINTFORMW 놀란 표정을 지었지만 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 보며 긴장하고 있다….
+ENDIF

@@ -1,0 +1,79 @@
+﻿;=============================================================================
+;따귀 치기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE251
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:251 > 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드거나 새드끼Lv3이상か狂気, 또는 망신이나 복종이 있다면 ＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;실제로는 고통이 있기 (위해)때문에 좀 더 체력 기력을 갖고 있고 쉰다
+@COM251
+PRINTL 따귀 치기
+TSTR:0 = 따귀 치기
+CALL TRAIN_MESSAGE_COM251
+
+DOWNBASE:0 += 80
+DOWNBASE:1 += 50
+
+SOURCE:12 = 100
+SOURCE:31 = 700
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 330
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 550
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 880
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 1320
+ELSE
+	SOURCE:20 = 1980
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 1
+	TFLAG:50 += 1
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM251
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%의 뺨을 손바닥으로 강하게 때렸다.
+PRINTFORMW 몇 번이나 몇 번이나 얻어맞고 있는 동안에, %CALLNAME:TARGET%의 뺨은 새빨갛게 부어 오르고 있다….

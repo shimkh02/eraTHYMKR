@@ -1,0 +1,232 @@
+﻿;=============================================================================
+;안면기승위 애널
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE187
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:187 > 0
+	RETURN 0
+;Ａ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;주인이 [금단의 지식]持ちじゃないとき, 体格差が2段階以内か조교자가 [금단의 지식]持ちじゃないとダメ
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, TARGET) == 0
+	RETURN 0
+;애널が汚れており, 汚臭敏感で순종5미만의 ASSI일 경우顔面騎乗애널はできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+IF STAIN:4 >= 8 && (STAIN:4 != 16 && STAIN:4 != 17) && ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼) 4 미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;조교자가 고양이혀일 경우 고양이 펠라 패치 유효가 아니면 불가
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀일 경우 조교자에게 기교4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;대상에게 페니스가 있다면 불가
+SIF EXIST_BAR(TARGET)
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 훈도시 착용 중일 경우에는 불가
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;eratohoDC의 동명 커맨드를 참고로 했으나 여기는 밀어 넘어뜨려지고 전용은 아니다.
+@COM187
+PRINTL 안면 기승위 애널
+TSTR:0 = 안면 기승위 애널
+CALL TRAIN_MESSAGE_COM187
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 300
+SOURCE:18 = 240
+SOURCE:19 = 60
+SOURCE:31 = 750
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 5
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 50
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 200
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 500
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1000
+ELSE
+	SOURCE:2 = 1800
+ENDIF
+
+;조교자의 TALENT:혀사용을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:2 , 2.00
+	SOURCE:17 += SOURCE:2/20
+ENDIF
+;조교자의 고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:2 , 0.70
+
+;대상이 새드이나 왕S나 새드끼 Lv3 이상 때
+IF TALENT:81 || TALENT:177 || ABL:20 > 2
+	;조교자의 마조끼를 본다
+	IF ABL:PLAYER:20 == 0
+		TIMES SOURCE:18 , 0.50
+		TIMES SOURCE:19 , 0.90
+	ELSEIF ABL:PLAYER:20 == 1
+		TIMES SOURCE:18 , 0.75
+		TIMES SOURCE:19 , 1.00
+	ELSEIF ABL:PLAYER:20 == 2
+		TIMES SOURCE:18 , 1.00
+		TIMES SOURCE:19 , 1.10
+	ELSEIF ABL:PLAYER:20 == 3
+		TIMES SOURCE:18 , 1.10
+		TIMES SOURCE:19 , 1.20
+	ELSEIF ABL:PLAYER:20 == 4
+		TIMES SOURCE:18 , 1.20
+		TIMES SOURCE:19 , 1.25
+	ELSE
+		TIMES SOURCE:18 , 1.30
+		TIMES SOURCE:19 , 1.30
+	ENDIF
+ENDIF
+
+;대상이 음마나 음고나 음란 때
+IF TALENT:180 || TALENT:173 || TALENT:170
+	;조교자의 기교를 본다
+	IF ABL:PLAYER:12 == 0
+		TIMES SOURCE:2 , 0.80
+		TIMES SOURCE:17 , 0.80
+	ELSEIF ABL:PLAYER:12 == 1
+		TIMES SOURCE:2 , 0.90
+		TIMES SOURCE:17 , 0.90
+	ELSEIF ABL:PLAYER:12 == 2
+		TIMES SOURCE:2 , 1.00
+		TIMES SOURCE:17 , 1.00
+	ELSEIF ABL:PLAYER:12 == 3
+		TIMES SOURCE:2 , 1.10
+		TIMES SOURCE:17 , 1.10
+	ELSEIF ABL:PLAYER:12 == 4
+		TIMES SOURCE:2 , 1.20
+		TIMES SOURCE:17 , 1.20
+	ELSE
+		TIMES SOURCE:2 , 1.30
+		TIMES SOURCE:17 , 1.30
+	ENDIF
+ENDIF
+
+TCVAR:1 += 1
+
+;노예의 A⇔조교자의 입의 불결이 이동
+STAIN:4 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:4
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM187
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;고양이혀
+IF TALENT:PLAYER:54
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "가")% %CALLNAME:TARGET%의 
+		SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINT 항문을 혀끝으로 조금씩 비비며 
+	SIF EXP:1 >= 100 && PALAM:13 >= PALAMLV:3 && TEQUIP:68 == 0
+		PRINT 동그랗게 만 한 혀를 구멍 안에 꽂아 넣자 
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 그 항문을
+	;대상이 새드이나 왕S나 새드끼 Lv3 이상으로, 음마나 음고나 음란 때
+	IF (TALENT:81 || TALENT:177 || ABL:20 > 2) && (TALENT:180 || TALENT:173 || TALENT:170)
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꾸욱하고 아플 정도로 누르고 새로운 쾌감을 얻으려 하고 있다….
+	;대상이 새드이나 왕S나 새드끼 Lv3 이상 때
+	ELSEIF TALENT:81 || TALENT:177 || ABL:20 > 2
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꾸욱하고 아플 정도로 눌러 왔다….
+	;대상이 음마나 음고나 음란 때
+	ELSEIF TALENT:180 || TALENT:173 || TALENT:170
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꽉 누르고 새로운 쾌감을 얻으려 하고 있다….
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 주뼛주뼛 눌러 왔다….
+	ENDIF
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "가")% %CALLNAME:TARGET%의 
+		SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINT 항문을 상냥하게 핥아 
+	SIF EXP:1 >= 100 && PALAM:13 >= PALAMLV:3 && TEQUIP:68 == 0
+		PRINT 혀끝을 찔러 넣어 구멍 안까지 휘저어 
+	PRINTFORML 주자, %조사선택(CALLNAME:TARGET, "는")% 그 항문을
+	;대상이 새드이나 왕S나 새드끼 Lv3 이상으로, 음마나 음고나 음란 때
+	IF (TALENT:81 || TALENT:177 || ABL:20 > 2) && (TALENT:180 || TALENT:173 || TALENT:170)
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꾸욱하고 아플 정도로 꽉 누르고 새로운 쾌감을 얻으려 하고 있다….
+	;대상이 새드이나 왕S나 새드끼 Lv3 이상 때
+	ELSEIF TALENT:81 || TALENT:177 || ABL:20 > 2
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꾸욱하고 아플 정도로 꽉 눌러 왔다….
+	;대상이 음마나 음고나 음란 때
+	ELSEIF TALENT:180 || TALENT:173 || TALENT:170
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꽉 누르고 새로운 쾌감을 얻으려 하고 있다….
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 주뼛주뼛 눌러 왔다….
+	ENDIF
+ENDIF

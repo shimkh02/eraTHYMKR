@@ -1,0 +1,2417 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;조교시에 녹화한 비디오의 매각
+;TODO 가격 설정 재고 · 상황에 따른 가격을 플러스할 수 있는가(처녀 개통시 따위)
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;LOCAL = 비디오를 매각할 때의 매각 가격
+;LOCAL:1 = 비디오의 처리　0-판다,1-색시와 감상,2-보관한다 (촬영 확장이 유효할 때만. 무효일 때에는 팔 수밖에 없다)
+@SELL_VIDEO
+;컨피그에서 촬영 확장 기능을 유효로 하고 있는지 아닌지로 변화
+IF FLAG:15 & 128
+	;ビデオを嫁と見る？YESなら口上へ, NOならビデオ売却, 一度見たビデオは消滅します
+	IF TFLAG:121 > 1
+		CALL LOOKVIDEO_1
+		LOCAL:1 = RESULT
+	ENDIF
+ENDIF
+
+;촬영中のまま売却まで来た場合はテープの数を減らす
+;テープの減数は촬영後処理のため
+IF TEQUIP:50 && NOITEM == 0
+	ITEM:75 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:75
+		CALL FILL_PLURAL_ITEM, 75
+ENDIF
+
+;録画してなければスキップ
+SIF TFLAG:121 == 1
+	RETURN 0
+;売却価格判定
+LOCAL = CALC_VIDEO_PRICE(LOCAL:1)
+
+;ビデオのボーナス
+IF FLAG:15 & 128
+	LOCAL = VIDEO_EDIT_BONUS(LOCAL)
+ELSE
+	TIMES LOCAL , 1.50
+ENDIF
+
+;토리코모드 보정
+IF FLAG:5000 & 2
+	TIMES LOCAL , 0.2
+	LOCAL = MIN(LOCAL, 700)
+ENDIF
+
+
+;HARD 모드 이상
+SIF FLAG:3 >= 3 && LOCAL > 75000
+	LOCAL = 75000
+;売却価格が1圓未満の場合は売り物にならないので処理終了(嫁と一緒に鑑賞や保管や경험値獲得処理もしない)
+IF LOCAL < 1
+	PRINTW 녹화한 비디오는 도저히 팔 퀄리티가 아니었습니다.
+	RETURN 0
+ENDIF
+
+IF FLAG:15 & 128
+	;ビデオを売却する場合
+	IF LOCAL:1 == 0
+		;イベント口上呼び出し
+		CALL SELF_KOJO, TARGET, 131, LOCAL
+		PRINTFORMW 조교시에 녹화한 비디오 『%TSTR:0%』를 팔아서, {LOCAL}원을 손에 넣었다.
+		MONEY:1 = LOCAL
+		CALL SHOW_MONEY_INCREACE
+		;--------------------------------------------------
+		;ビデオで稼いだ最高金額判定処理
+		SIF MONEY:1 > MONEY:970
+			CALL NEW_HIGH_INCOME_ALL, 970
+		SIF MONEY:1 > CFLAG:82
+			CALL NEW_HIGH_INCOME_SLAVE, 82
+		CALL TOTAL_INCOME_SLAVE, MONEY:1
+		;--------------------------------------------------
+	ELSEIF LOCAL:1 == 1 || LOCAL:1 == 2
+		;一緒にビデオ를 본다→CALL LOOKVIDEO_2へ
+		CALL LOOKVIDEO_2, LOCAL:1
+	ENDIF
+
+	;촬영機材があると촬영경험＋2に
+	SELECTCASE FLAG:61
+		;촬영자 주인
+		CASE 1
+			EXP:MASTER:71 += (ITEM:58) ? 2 # 1
+			EXP:ASSI:72 += 1
+			PRINTFORML 주인촬영경험＋\@(ITEM:58) ? 2 # 1\@
+			PRINTL 조수피사경험＋1
+		;촬영자 조수
+		CASE 2
+			EXP:ASSI:71 += (ITEM:58) ? 2 # 1
+			EXP:MASTER:72 += 1
+			PRINTFORML 조수촬영경험＋\@(ITEM:58) ? 2 # 1\@
+			PRINTL 주인피사경험＋1
+		;床置き촬영
+		CASEELSE
+			EXP:MASTER:71 += (ITEM:58) ? 2 # 1
+			EXP:MASTER:72 += 1
+			PRINTFORML 주인촬영경험＋\@(ITEM:58) ? 2 # 1\@
+			PRINTL 주인피사경험＋1
+	ENDSELECT
+	EXP:72 += 1
+	PRINTL 노예피사경험＋1
+
+	;주인の촬영기능アップ可能通知処理
+	SIF BUY_SKILL_MASTER_CAMERA_PRICE() > 0 && ABL:MASTER:71 < 5
+		PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 촬영의 기술을 좀 더 연마할 수 있을 것 같은 기분이 들었다.
+ELSE
+	;イベント口上呼び出し
+	CALL SELF_KOJO, TARGET, 131, LOCAL
+	PRINTFORMW 조교시에 녹화한 비디오를 팔아서, {LOCAL}원을 손에 넣었다.
+	MONEY:1 = LOCAL
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;ビデオで稼いだ最高金額判定処理
+	SIF MONEY:1 > MONEY:970
+		CALL NEW_HIGH_INCOME_ALL, 970
+	SIF MONEY:1 > CFLAG:82
+		CALL NEW_HIGH_INCOME_SLAVE, 82
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+ENDIF
+
+RETURN 1
+
+;=============================================================================
+;비디오의 매각치 계산
+;=============================================================================
+;ARG …　0のときは売却なので売却値の一部を表示してみる
+@CALC_VIDEO_PRICE(ARG)
+#FUNCTION
+VARSET LOCAL, 0
+CALLF CLEAR_GENRE
+;ビデオの売値初期化
+LOCAL:3 = 0
+
+;노예의 캐릭터 번호를 기록
+LOCAL:1 = NO:TARGET
+;조교자의 캐릭터 번호를 기록
+SIF ASSI >= 0
+	LOCAL:2 = NO:ASSI
+
+;eratohoYMかABNORMAL모드에서는 비디오 매매가에 출연 캐릭터의 가격의 일부를 가산 (노예と조수のみ)
+IF FLAG:4 == 0 || FLAG:4 == 1
+	LOCAL:3 += MIN(ITEMPRICE:(100 + LOCAL:1) / 10, 1000)
+	SIF ARG == 0
+		PRINTFORML 출연자　　：%CALLNAME:TARGET, 28, LEFT%　＋{MIN(ITEMPRICE:(100 + LOCAL:1) / 10, 1000), 7}원
+	IF ASSI >= 0
+		LOCAL:3 += MIN(ITEMPRICE:(100 + LOCAL:2) / 20, 500)
+		SIF ARG == 0
+			PRINTFORML 조연자　　：%CALLNAME:ASSI, 28, LEFT%　＋{MIN(ITEMPRICE:(100 + LOCAL:2) / 10, 500), 7}원
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;録画した커맨드の判定
+;-------------------------------------------------
+FOR COUNT, 40, 39+TFLAG:121
+	COUNT:1 = LOCAL:3
+	SELECTCASE FLAG:COUNT
+;愛撫계 커맨드------------------------------------
+		;COM:愛撫를 본다
+		CASE 0
+			LOCAL:3 += 60
+		;COM:クンニ를 본다
+		CASE 1
+			LOCAL:3 += 60
+			CALLF COUNT_GENRE, 0
+		;COM:애널愛撫를 본다
+		CASE 2
+			LOCAL:3 += 90
+			CALLF COUNT_GENRE, 2
+		;COM:胸愛撫를 본다
+		CASE 3
+			LOCAL:3 += 90
+			CALLF COUNT_GENRE, 3
+		;COM:指挿入れ를 본다
+		CASE 4
+			LOCAL:3 += 120
+			CALLF COUNT_GENRE, 1
+		;COM:フェラする를 본다
+		CASE 5
+			LOCAL:3 += 180
+			CALLF COUNT_GENRE, 4
+		;COM:キスする를 본다
+		CASE 6
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 11
+		;COM:自慰를 본다(自動的に公開자위になる)
+		CASE 7
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 10
+		;COM:何もしない를 본다
+		CASE 9
+			LOCAL:3 -= 100
+;基本道具使用커맨드------------------------------
+		;COM:ローター를 본다
+		CASE 10
+			LOCAL:3 += 225
+			CALLF COUNT_GENRE, 0
+		;COM:電気按摩를 본다
+		CASE 11
+			LOCAL:3 += 420
+			CALLF COUNT_GENRE, 0
+		;COM:바이브를 본다
+		CASE 12
+			LOCAL:3 += 500
+			CALLF COUNT_GENRE, 1
+		;COM:애널바이브를 본다
+		CASE 13
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 2
+		;COM:クリキャップ를 본다
+		CASE 14
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 0
+		;COM:ニプルキャップ를 본다
+		CASE 15
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 3
+		;COM:オナホール를 본다
+		CASE 16
+			LOCAL:3 += 320
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:電極ホール를 본다
+		CASE 17
+			LOCAL:3 += 120
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+;セックス계 커맨드--------------------------------
+		;COM:正常位를 본다
+		CASE 20
+			LOCAL:3 += 1200
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:後背位를 본다
+		CASE 21
+			LOCAL:3 += 900
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:対面座位를 본다
+		CASE 22
+			LOCAL:3 += 1100
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:背面座位를 본다
+		CASE 23
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:騎乗位를 본다
+		CASE 24
+			LOCAL:3 += 1600
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:逆レイプ를 본다
+		CASE 25
+			LOCAL:3 += 1200
+			CALLF COUNT_GENRE, 1
+		;COM:조수を犯す를 본다
+		CASE 26
+			LOCAL:3 += 800
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 10
+		;COM:対面立位를 본다
+		CASE 27
+			LOCAL:3 += 1100
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:背面立位를 본다
+		CASE 28
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+;애널セックス계 커맨드--------------------------
+		;COM:正常位애널를 본다
+		CASE 30
+			LOCAL:3 += 900
+			CALLF COUNT_GENRE, 2
+		;COM:後背位애널를 본다
+		CASE 31
+			LOCAL:3 += 1200
+			CALLF COUNT_GENRE, 2
+		;COM:対面座位애널를 본다
+		CASE 32
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 2
+		;COM:背面座位애널를 본다
+		CASE 33
+			LOCAL:3 += 1100
+			CALLF COUNT_GENRE, 2
+		;COM:騎乗位애널를 본다
+		CASE 34
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 2
+		;COM:逆애널レイプ를 본다
+		CASE 35
+			LOCAL:3 += 1300
+			CALLF COUNT_GENRE, 2
+		;COM:조수のＡを犯す를 본다
+		CASE 36
+			LOCAL:3 += 800
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:対面立位애널를 본다
+		CASE 37
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 2
+		;COM:背面立位애널를 본다
+		CASE 38
+			LOCAL:3 += 1100
+			CALLF COUNT_GENRE, 2
+;奉仕계 커맨드------------------------------------
+		;COM:手淫를 본다
+		CASE 40
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 4
+		;COM:フェラチオ를 본다
+		CASE 41
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 4
+		;COM:パイズリ를 본다
+		CASE 42
+			LOCAL:3 += 570
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 4
+		;COM:素股를 본다
+		CASE 43
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:애널舐め強制를 본다
+		CASE 44
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 2
+		;COM:애널おねだり를 본다
+		CASE 45
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 2
+		;COM:足舐め強制를 본다
+		CASE 46
+			LOCAL:3 += 225
+		;COM:足扱き를 본다
+		CASE 47
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 4
+		;COM:髪扱き를 본다
+		CASE 48
+			LOCAL:3 += 270
+		;COM:腋扱き를 본다
+		CASE 49
+			LOCAL:3 += 375
+		;COM:全身扱き를 본다
+		CASE 50
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 4
+		;COM:尻扱き를 본다
+		CASE 51
+			LOCAL:3 += 265
+			CALLF COUNT_GENRE, 2
+		;COM:竿扱き를 본다
+		CASE 52
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 4
+		;COM:玉揉み強制를 본다
+		CASE 53
+			LOCAL:3 += 115
+		;COM:玉舐め強制를 본다
+		CASE 54
+			LOCAL:3 += 265
+		;COM:애널愛撫強制를 본다
+		CASE 55
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 2
+;薬品계 커맨드------------------------------------
+		;COM:ローション를 본다
+		CASE 60
+			LOCAL:3 += 5
+		;COM:媚薬를 본다
+		CASE 61
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 15
+		;COM:利尿剤를 본다
+		CASE 62
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 15
+		;COM:座薬를 본다
+		CASE 63
+			LOCAL:3 += 90
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 15
+		;COM:座薬(膣)를 본다
+		CASE 64
+			LOCAL:3 += 90
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 15
+		;COM:強精神薬를 본다
+		CASE 65
+			LOCAL:3 += 25
+			CALLF COUNT_GENRE, 15
+		;COM:排卵誘発剤를 본다
+		CASE 66
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 15
+		;COM:緊急避妊薬를 본다
+		CASE 67
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 15
+		;COM:産卵促進剤를 본다
+		CASE 68
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 15
+		;COM:陰核成長剤를 본다
+		CASE 69
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 15
+		;COM:興奮剤를 본다
+		CASE 70
+			LOCAL:3 += 25
+			CALLF COUNT_GENRE, 15
+		;COM:조수避妊薬를 본다
+		CASE 71
+			LOCAL:3 += 20
+			CALLF COUNT_GENRE, 15
+		;COM:感覚増幅薬를 본다
+		CASE 72
+			LOCAL:3 += 25
+			CALLF COUNT_GENRE, 15
+;주사계 커맨드------------------------------------
+		;COM:クリトリス주사를 본다
+		CASE 80
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 15
+		;COM:ヴァギナ주사를 본다
+		CASE 81
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 15
+		;COM:애널주사를 본다
+		CASE 82
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 15
+		;COM:バスト주사를 본다
+		CASE 83
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 15
+		;COM:尿道주사를 본다
+		CASE 84
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 15
+			CALLF COUNT_GENRE, 5
+		;COM:Ｃ肥大주사를 본다
+		CASE 85
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 15
+		;COM:Ｃ強精神薬주사를 본다
+		CASE 86
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 15
+		;COM:採血주사를 본다
+		CASE 88
+			LOCAL:3 += 50
+;羞恥プレイ系＋α----------------------------------
+		;COM:裸エプロン를 본다
+		CASE 90
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 11
+		;COM:スク水プレイ를 본다
+		CASE 91
+			LOCAL:3 += 400
+		;COM:お医者プレイ를 본다
+		CASE 92
+			LOCAL:3 += 400
+		;COM:コスプレ를 본다
+		CASE 93
+			LOCAL:3 += 400
+		;COM:조수がコスプレ를 본다
+		CASE 94
+			LOCAL:3 += 400
+		;COM:ビデオ観賞를 본다
+		CASE 101
+			LOCAL:3 += 0
+		;COM:写真촬영를 본다
+		CASE 102
+			LOCAL:3 += 150
+		;COM:羞恥プレイ를 본다
+		CASE 103
+			LOCAL:3 += 350
+		;COM:野外プレイ를 본다
+		CASE 104
+			LOCAL:3 += 450
+		;COM:公開野外ライブ를 본다
+		CASE 105
+			LOCAL:3 += 900
+		;COM:公衆便所プレイ를 본다
+		CASE 106
+			LOCAL:3 += 2000
+		;COM:裸体盛り를 본다
+		CASE 107
+			LOCAL:3 += 250
+		;COM:ベビープレイ를 본다
+		CASE 108
+			LOCAL:3 += 400
+		;COM:秘貝開帳를 본다
+		CASE 110
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 10
+		;COM:放尿를 본다
+		CASE 111
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 14
+		;COM:剃毛プレイ를 본다
+		CASE 112
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 10
+		;COM:毛抜き를 본다
+		CASE 113
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 10
+		;COM:毛を抜かせる를 본다
+		CASE 114
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 10
+		;COM:自慰見せつけ를 본다
+		CASE 115
+			LOCAL:3 += 375
+		;COM:二人自慰見せつけ를 본다
+		CASE 116
+			LOCAL:3 += 425
+		;COM:秘貝開帳見せつけ를 본다
+		CASE 117
+			LOCAL:3 += 625
+		;COM:二人秘貝見せつけ를 본다
+		CASE 118
+			LOCAL:3 += 675
+;Ｃ계 확장 커맨드----------------------------------
+		;COM:焦らしプレイ를 본다
+		CASE 120
+			LOCAL:3 += 125
+		;COM:射精止め를 본다
+		CASE 121
+			LOCAL:3 += 125
+		;COM:豆責め를 본다
+		CASE 122
+			LOCAL:3 += 70
+			CALLF COUNT_GENRE, 0
+		;COM:豆絞り를 본다
+		CASE 123
+			LOCAL:3 += 70
+			CALLF COUNT_GENRE, 0
+		;COM:ローター自慰를 본다
+		CASE 124
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 10
+		;COM:電マ自慰를 본다
+		CASE 125
+			LOCAL:3 += 870
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 10
+		;COM:顔面騎乗를 본다
+		CASE 126
+			LOCAL:3 += 80
+			CALLF COUNT_GENRE, 0
+		;COM:亀頭責め를 본다
+		CASE 128
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 0
+		;COM:陰核クリップ를 본다
+		CASE 130
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 0
+		;COM:陰核電極를 본다
+		CASE 131
+			LOCAL:3 += 425
+			CALLF COUNT_GENRE, 0
+		;COM:ペニスローター를 본다
+		CASE 132
+			LOCAL:3 += 125
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:電摩ペニス責め를 본다
+		CASE 133
+			LOCAL:3 += 310
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:陰核測定를 본다
+		CASE 135
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 0
+		;COM:割礼를 본다
+		CASE 136
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 0
+		;COM:射精機能開発를 본다
+		CASE 137
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 0
+		;COM:尿道綿棒를 본다
+		CASE 140
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 5
+		;COM:カテーテル를 본다
+		CASE 141
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 5
+		;COM:採尿器를 본다
+		CASE 142
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 5
+		;COM:風船カテーテル를 본다
+		CASE 143
+			LOCAL:3 += 650
+			CALLF COUNT_GENRE, 5
+		;COM:電極カテーテル를 본다
+		CASE 144
+			LOCAL:3 += 700
+			CALLF COUNT_GENRE, 5
+		;COM:飲尿する를 본다
+		CASE 145
+			LOCAL:3 += 425
+			CALLF COUNT_GENRE, 14
+		;COM:尿道挿入를 본다
+		CASE 146
+			LOCAL:3 += 825
+			CALLF COUNT_GENRE, 5
+;Ｖ계 확장 커맨드----------------------------------
+		;COM:クスコ를 본다
+		CASE 150
+			LOCAL:3 += 375
+		;COM:ローター挿入를 본다
+		CASE 151
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 1
+		;COM:小陰唇指愛撫를 본다
+		CASE 152
+			LOCAL:3 += 120
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+		;COM:愛液採集器를 본다
+		CASE 153
+			LOCAL:3 += 500
+			CALLF COUNT_GENRE, 1
+		;COM:ヴァギナ電極를 본다
+		CASE 155
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 1
+		;COM:ヴァギナバーベル를 본다
+		CASE 156
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 1
+		;COM:ヴァギナバルーン를 본다
+		CASE 157
+			LOCAL:3 += 400
+			CALLF COUNT_GENRE, 1
+;Ａ계 확장 커맨드----------------------------------
+		;COM:ローターＡ挿入를 본다
+		CASE 170
+			LOCAL:3 += 175
+			CALLF COUNT_GENRE, 14
+		;COM:애널電極를 본다
+		CASE 171
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 14
+		;COM:애널ビーズ를 본다
+		CASE 172
+			LOCAL:3 += 565
+			CALLF COUNT_GENRE, 2
+		;COM:拡張バルーン를 본다
+		CASE 173
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 14
+		;COM:浣腸プレイ를 본다
+		CASE 174
+			LOCAL:3 += 565
+			CALLF COUNT_GENRE, 14
+		;COM:空気浣腸를 본다
+		CASE 175
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 14
+		;COM:조수に浣腸를 본다
+		CASE 178
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 14
+		;COM:애널バーベル를 본다
+		CASE 179
+			LOCAL:3 += 500
+			CALLF COUNT_GENRE, 14
+		;COM:애널舐め를 본다
+		CASE 180
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 2
+		;COM:애널綿棒를 본다
+		CASE 181
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 2
+		;COM:アナニー를 본다
+		CASE 182
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 10
+			CALLF COUNT_GENRE, 14
+		;COM:尻素股를 본다
+		CASE 183
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 4
+		;COM:フリスク挿入를 본다
+		CASE 184
+			LOCAL:3 += 90
+			CALLF COUNT_GENRE, 2
+		;COM:尻愛撫를 본다
+		CASE 186
+			LOCAL:3 += 70
+		;COM:顔面騎乗애널를 본다
+		CASE 187
+			LOCAL:3 += 170
+			CALLF COUNT_GENRE, 2
+		;COM:애널の皺を数え上げる를 본다
+		CASE 188
+			LOCAL:3 += 200
+		;COM:浣腸垂れ流し를 본다
+		CASE 189
+			LOCAL:3 += 500
+			CALLF COUNT_GENRE, 2
+;Ｂ계 확장 커맨드----------------------------------
+		;COM:乳首ローター를 본다
+		CASE 190
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 3
+		;COM:搾乳器를 본다
+		CASE 191
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 3
+			;ところで魅魔さまの搾乳なら見てみたいかも…
+			SIF LOCAL:1 == 100
+				LOCAL:3 += 301
+		;COM:乳腺開発를 본다
+		CASE 192
+			LOCAL:3 += 265
+			CALLF COUNT_GENRE, 3
+		;COM:乳房電極를 본다
+		CASE 193
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 3
+		;COM:サラシ를 본다
+		CASE 194
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 3
+		;COM:乳首クリップ를 본다
+		CASE 195
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 3
+		;COM:乳パッド를 본다
+		CASE 196
+			LOCAL:3 += 398
+			CALLF COUNT_GENRE, 3
+		;COM:胸揉み를 본다
+		CASE 200
+			LOCAL:3 += 90
+			CALLF COUNT_GENRE, 3
+		;COM:乳首舐め를 본다
+		CASE 201
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 3
+		;COM:乳首責め를 본다
+		CASE 202
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 3
+		;COM:乳首吸い를 본다
+		CASE 203
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 3
+		;COM:母乳飲み를 본다
+		CASE 204
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 3
+		;COM:胸自慰를 본다
+		CASE 205
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 3
+		;COM:乳スパンキング를 본다
+		CASE 206
+			LOCAL:3 += 275
+			CALLF COUNT_GENRE, 3
+		;COM:乳ファック를 본다
+		CASE 207
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 3
+		;COM:縦パイズリ를 본다
+		CASE 208
+			LOCAL:3 += 640
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 4
+		;COM:パイズリフェラ를 본다
+		CASE 209
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 4
+		;COM:乳合わせ를 본다
+		CASE 210
+			LOCAL:3 += 225
+			CALLF COUNT_GENRE, 3
+		;COM:乳合わせ見せつけ를 본다
+		CASE 211
+			LOCAL:3 += 200
+		;COM:二人羽織プレイ를 본다
+;		CASE 21X
+;			LOCAL:3 += 0
+;			CALLF COUNT_GENRE, 3
+;ＳＭ계, 하드한 조교 커맨드----------------------
+		;COM:スパンキング를 본다
+		CASE 220
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 14
+		;COM:鞭를 본다
+		CASE 221
+			LOCAL:3 += 340
+			CALLF COUNT_GENRE, 14
+		;COM:針를 본다
+		CASE 222
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 14
+		;COM:蝋燭를 본다
+		CASE 223
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 14
+		;COM:縄를 본다
+		CASE 224
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 14
+		;COM:アイマスク를 본다
+		CASE 225
+			LOCAL:3 += 115
+			CALLF COUNT_GENRE, 14
+		;COM:ボールギャグ를 본다
+		CASE 226
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 14
+		;COM:罵倒를 본다
+		CASE 227
+			LOCAL:3 += 40
+		;COM:鼻フック를 본다
+		CASE 228
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 14
+		;COM:強制開口器를 본다
+		CASE 229
+			LOCAL:3 += 115
+			CALLF COUNT_GENRE, 14
+		;COM:イマラチオ를 본다
+		CASE 230
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 4
+			CALLF COUNT_GENRE, 14
+		;COM:フィストファック를 본다
+		CASE 231
+			LOCAL:3 += 1800
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 14
+		;COM:애널フィスト를 본다
+		CASE 232
+			LOCAL:3 += 1800
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 14
+		;COM:両穴フィスト를 본다
+		CASE 233
+			LOCAL:3 += 2850
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 14
+		;COM:ヴァギナダイビング를 본다
+		CASE 234
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 14
+		;COM:애널ダイビング를 본다
+		CASE 235
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 14
+		;COM:ツボを突く를 본다
+		CASE 236
+			LOCAL:3 += 5
+		;COM:鼻クリップ를 본다
+		CASE 237
+			LOCAL:3 += 15
+			CALLF COUNT_GENRE, 14
+		;COM:スタンガン를 본다
+		CASE 238
+			LOCAL:3 += 5
+			CALLF COUNT_GENRE, 14
+;拷問系, 精神操作계 커맨드------------------------
+		;COM:足で踏む를 본다
+		CASE 240
+			LOCAL:3 += 180
+			CALLF COUNT_GENRE, 14
+		;COM:腹パン를 본다
+		CASE 241
+			LOCAL:3 += 200
+			CALLF COUNT_GENRE, 14
+		;COM:三角木馬를 본다
+		CASE 242
+			LOCAL:3 += 1350
+			CALLF COUNT_GENRE, 14
+		;COM:杭를 본다
+		CASE 243
+			LOCAL:3 += 250
+			CALLF COUNT_GENRE, 14
+		;COM:ナイフ를 본다
+		CASE 244
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 14
+		;COM:鉈를 본다
+		CASE 245
+			LOCAL:3 += 325
+			CALLF COUNT_GENRE, 14
+		;COM:鉄の乙女를 본다
+		CASE 252
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 14
+		;COM:ビンタを張る를 본다
+		CASE 251
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 14
+;마조계 커맨드
+		;COM:罵ってもらう
+		CASE 270
+			LOCAL:3 += 40
+		;COM:足を舐める
+		CASE 271
+			LOCAL:3 += 225
+		;COM:叩いてもらう
+		CASE 272
+			LOCAL:3 += 190
+			CALLF COUNT_GENRE, 14
+		;COM:鞭で打ってもらう를 본다
+		CASE 273
+			LOCAL:3 += 340
+			CALLF COUNT_GENRE, 14
+;임신 패치의 커맨드------------------------------
+		;COM:콘돔를 본다
+		CASE 290
+			LOCAL:3 += 25
+		;COM:콘돔精飲(奴)를 본다
+		CASE 291
+			LOCAL:3 += 75
+		;COM:콘돔精飲(助)를 본다
+		CASE 292
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 14
+		;COM:ザーメンキス를 본다
+		CASE 293
+			LOCAL:3 += 150
+;조수에 의한 커맨드--------------------------------
+		;COM:クンニ強制를 본다
+		CASE 300
+			LOCAL:3 += 450
+		;COM:貝あわせ를 본다
+		CASE 301
+			LOCAL:3 += 1800
+			CALLF COUNT_GENRE, 0
+		;COM:足コキ를 본다
+		CASE 302
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:二人フェラチオ를 본다
+		CASE 303
+			LOCAL:3 += 1050
+			CALLF COUNT_GENRE, 4
+		;COM:二本フェラチオ를 본다
+		CASE 304
+			LOCAL:3 += 1050
+			CALLF COUNT_GENRE, 10
+			CALLF COUNT_GENRE, 4
+		;COM:二人で素股를 본다
+		CASE 305
+			LOCAL:3 += 900
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:二人でパイズリ를 본다
+		CASE 306
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 4
+		;COM:조수を犯させる를 본다
+		CASE 307
+			LOCAL:3 += 1275
+			CALLF COUNT_GENRE, 1
+		;COM:조수のＡを犯させる를 본다
+		CASE 308
+			LOCAL:3 += 1275
+			CALLF COUNT_GENRE, 2
+		;COM:조수とキスする를 본다
+		CASE 309
+			LOCAL:3 += 75
+		;COM:二人の尻を叩く를 본다
+		CASE 310
+			LOCAL:3 += 380
+			CALLF COUNT_GENRE, 10
+			CALLF COUNT_GENRE, 14
+		;COM:尻を二人で叩く를 본다
+		CASE 311
+			LOCAL:3 += 380
+			CALLF COUNT_GENRE, 14
+		;COM:二人のＶをフィスト를 본다
+		CASE 312
+			LOCAL:3 += 2700
+			CALLF COUNT_GENRE, 1
+		;COM:二人の애널をフィスト를 본다
+		CASE 313
+			LOCAL:3 += 2700
+			CALLF COUNT_GENRE, 2
+;逆奉仕, ウフフ계 커맨드--------------------------
+		;COM:優しくする를 본다
+		CASE 320
+			LOCAL:3 += 25
+			CALLF COUNT_GENRE, 11
+		;COM:手淫する를 본다
+		CASE 321
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 11
+		;COM:パイズリする를 본다
+		CASE 322
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 11
+		;COM:正常位させる를 본다
+		CASE 323
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:後背位させる를 본다
+		CASE 324
+			LOCAL:3 += 900
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:騎乗位する를 본다
+		CASE 325
+			LOCAL:3 += 1050
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:ペニバン挿入를 본다
+		CASE 326
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:指チュパ를 본다
+		CASE 327
+			LOCAL:3 += 40
+			CALLF COUNT_GENRE, 11
+		;COM:首筋耳裏責め를 본다
+		CASE 328
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 11
+		;COM:玉愛撫를 본다
+		CASE 329
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 11
+		;COM:玉を舐める를 본다
+		CASE 330
+			LOCAL:3 += 100
+			CALLF COUNT_GENRE, 11
+		;COM:二人でフェラする를 본다
+		CASE 331
+			LOCAL:3 += 220
+			CALLF COUNT_GENRE, 4
+			CALLF COUNT_GENRE, 10
+		;COM:Ａ正常位させる를 본다
+		CASE 332
+			LOCAL:3 += 550
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 11
+		;COM:Ａ後背位させる를 본다
+		CASE 333
+			LOCAL:3 += 925
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 11
+		;COM:Ａ騎乗位する를 본다
+		CASE 334
+			LOCAL:3 += 1075
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 11
+		;COM:パイズリフェラする를 본다
+		CASE 335
+			LOCAL:3 += 425
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 4
+			CALLF COUNT_GENRE, 11
+		;COM:ヴァギナを拭く를 본다
+		CASE 336
+			LOCAL:3 += 10
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:二人で首筋耳裏責め를 본다
+		CASE 337
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 11
+		;COM:二人に犯させる를 본다
+		CASE 338
+			LOCAL:3 += 1250
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 11
+		;COM:ぱふぱふ를 본다
+		CASE 340
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 11
+		;COM:胸枕를 본다
+		CASE 341
+			LOCAL:3 += 250
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 11
+		;COM:乳繰り合う를 본다
+		CASE 342
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 11
+		;COM:乳ビンタ를 본다
+		CASE 343
+			LOCAL:3 += 125
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 11
+		;COM:乳の揉み合い를 본다
+		CASE 344
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 11
+		;COM:お風呂を楽しむ를 본다
+		CASE 345
+			LOCAL:3 += 200
+			CALLF COUNT_GENRE, 11
+		;COM:お外を楽しむ를 본다
+		CASE 346
+			LOCAL:3 += 200
+			CALLF COUNT_GENRE, 11
+		;COM:お嫁さんで楽しむ를 본다
+		CASE 347
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 11
+		;COM:お酒を飲ませる를 본다
+		CASE 348
+			LOCAL:3 += 10
+			CALLF COUNT_GENRE, 11
+		;COM:ふぉーゆーっ！를 본다
+		CASE 349
+			;こぁ補正
+			IF NO:PLAYER == 7
+				LOCAL:3 += 25
+			ELSEIF NO:TARGET == 7
+				LOCAL:3 += 20
+			ELSE
+				LOCAL:3 += 10
+			ENDIF
+			CALLF COUNT_GENRE, 11
+;목욕계 커맨드------------------------------------
+		;COM:お風呂場プレイ를 본다
+		CASE 350
+			LOCAL:3 += 250
+		;COM:シャワー를 본다
+		CASE 351
+			LOCAL:3 += 75
+		;COM:泡踊り를 본다
+		CASE 352
+			LOCAL:3 += 250
+		;COM:泡踊りする를 본다
+		CASE 353
+			LOCAL:3 += 250
+			CALLF COUNT_GENRE, 11
+		;COM:たわし洗い를 본다
+		CASE 354
+			LOCAL:3 += 200
+		;COM:蟲風呂를 본다
+		CASE 360
+			LOCAL:3 += 150
+		;COM:鰻風呂를 본다
+		CASE 361
+			LOCAL:3 += 250
+		;COM:ローション風呂를 본다
+		CASE 362
+			LOCAL:3 += 50
+		;COM:スライム風呂를 본다
+		CASE 363
+			LOCAL:3 += 100
+		;COM:媚薬風呂를 본다
+		CASE 364
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 15
+		;COM:水牢를 본다
+		CASE 365
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 14
+		;COM:精液風呂를 본다
+		CASE 366
+			LOCAL:3 += 125
+			CALLF COUNT_GENRE, 12
+		;COM:酒風呂를 본다
+		CASE 367
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 0
+		;COM:トロロ風呂를 본다
+		CASE 368
+			LOCAL:3 += 75
+		;COM:毛玉風呂를 본다
+		CASE 369
+			LOCAL:3 += 75
+		;COM:蒸し風呂를 본다
+		CASE 370
+			LOCAL:3 += 50
+		;COM:国士無双の薬風呂를 본다
+		CASE 371
+			LOCAL:3 += 80
+		;COM:厄毒風呂를 본다
+		CASE 372
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 15
+		;COM:岩盤浴를 본다
+		CASE 373
+			LOCAL:3 += 50
+		;COM:札束風呂를 본다
+		CASE 374
+			LOCAL:3 += 50
+;수간계 커맨드------------------------------------
+		;COM:バター犬プレイ를 본다
+		CASE 380
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 13
+		;COM:犬を犯させる를 본다
+		CASE 381
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 13
+		;COM:犬を犯させる를 본다
+		CASE 382
+			LOCAL:3 += 650
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 13
+		;COM:豚に犯させる를 본다
+		CASE 383
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 13
+		;COM:豚を犯させる를 본다
+		CASE 384
+			LOCAL:3 += 650
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 13
+		;COM:馬のをフェラさせる를 본다
+		CASE 385
+			LOCAL:3 += 825
+			CALLF COUNT_GENRE, 13
+			CALLF COUNT_GENRE, 4
+		;COM:馬に犯させる를 본다
+		CASE 386
+			LOCAL:3 += 950
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 13
+		;COM:犬とキスさせる를 본다
+		CASE 387
+			LOCAL:3 += 380
+			CALLF COUNT_GENRE, 13
+		;COM:豚とキスさせる를 본다
+		CASE 388
+			LOCAL:3 += 380
+			CALLF COUNT_GENRE, 13
+;고유 커맨드--------------------------------------
+		;COM:흡혈을 본다
+		CASE 400
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 14
+		;COM:暗闇를 본다(見えないだろうから減算)
+		CASE 401
+			LOCAL:3 -= 300
+		;COM:尻子玉抜き를 본다
+		CASE 402
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 2
+		;COM:焼き芋責め를 본다
+		CASE 403
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 1
+		;COM:巨峰責め를 본다
+		CASE 404
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 2
+		;COM:石勺柏責め를 본다
+		CASE 405
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 5
+		;COM:荊で緊縛를 본다
+		CASE 406
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 14
+		;COM:荊の鞭를 본다
+		CASE 407
+			LOCAL:3 += 420
+			CALLF COUNT_GENRE, 14
+		;COM:蜘蛛の糸를 본다
+		CASE 408
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 14
+		;COM:独楽回し를 본다
+		CASE 409
+			LOCAL:3 += 25
+		;COM:蜘蛛脚愛撫를 본다
+		CASE 410
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 10
+			CALLF COUNT_GENRE, 14
+		;COM:人形愛撫를 본다
+		CASE 411
+			LOCAL:3 += 225
+		;COM:操りの糸를 본다
+		CASE 412
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 14
+		;COM:豆炙り를 본다
+		CASE 413
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 14
+		;COM:乳豆炙り를 본다
+		CASE 414
+			LOCAL:3 += 225
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 14
+		;COM:読心를 본다
+		CASE 415
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 10
+		;COM:思姦를 본다
+		CASE 416
+			LOCAL:3 += 25
+		;COM:筆責め를 본다
+		CASE 417
+			LOCAL:3 += 150
+		;COM:時止め를 본다
+		CASE 418
+			LOCAL:3 += 0
+		;COM:狂気の目를 본다
+		CASE 419
+			LOCAL:3 += 50
+		;COM:鈴蘭の毒를 본다
+		CASE 420
+			LOCAL:3 += 50
+		;COM:昆虫採集セットの薬를 본다
+		CASE 421
+			LOCAL:3 += 50
+		;COM:媚薬漬け를 본다
+		CASE 422
+			LOCAL:3 += 200
+			CALLF COUNT_GENRE, 15
+		;COM:酒漬け를 본다
+		CASE 423
+			LOCAL:3 += 100
+			CALLF COUNT_GENRE, 15
+		;COM:わかめ酒를 본다
+		CASE 424
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 0
+		;COM:お嬢様の華麗なガード！를 본다
+		CASE 425
+			LOCAL:3 += 100
+			CALLF COUNT_GENRE, 11
+		;COM:陰毛炙り를 본다
+		CASE 427
+			LOCAL:3 += 325
+			CALLF COUNT_GENRE, 10
+		;COM:御所車를 본다
+		CASE 430
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 1
+		;COM:一人四連携를 본다
+		CASE 431
+			LOCAL:3 += 3333
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 3
+		;COM:氷柱責め를 본다
+		CASE 432
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 2
+		;COM:애널卒塔婆를 본다
+		CASE 433
+			LOCAL:3 += 1050
+			CALLF COUNT_GENRE, 2
+		;COM:角愛撫를 본다
+		CASE 434
+			LOCAL:3 += 75
+		;COM:角挿入를 본다
+		CASE 435
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 1
+		;COM:角애널挿入를 본다
+		CASE 436
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 2
+		;COM:ヴァギナ要石를 본다
+		CASE 437
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 1
+		;COM:애널要石를 본다
+		CASE 438
+			LOCAL:3 += 1875
+			CALLF COUNT_GENRE, 2
+		;COM:両穴要石를 본다
+		CASE 439
+			LOCAL:3 += 2250
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+		;COM:半霊を犯す를 본다
+		CASE 440
+			LOCAL:3 += 300
+		;COM:半霊を挿入(前)를 본다
+		CASE 441
+			LOCAL:3 += 940
+			CALLF COUNT_GENRE, 1
+		;COM:半霊を挿入(後)를 본다
+		CASE 442
+			LOCAL:3 += 960
+			CALLF COUNT_GENRE, 2
+		;COM:幽明の苦輪를 본다
+		CASE 443
+			LOCAL:3 += 100
+		;COM:半霊再構成를 본다
+		CASE 444
+			LOCAL:3 += 100
+		;COM:薀蓄語り를 본다
+		CASE 445
+			LOCAL:3 += 0
+		;COM:説教を受ける를 본다
+		CASE 446
+			LOCAL:3 += 0
+		;COM:傘を愛撫する를 본다
+		CASE 447
+			LOCAL:3 += 80
+		;COM:房中術를 본다
+		CASE 448
+			LOCAL:3 += 50
+		;COM:フィーバー！를 본다
+		CASE 449
+			LOCAL:3 += 10
+			CALLF COUNT_GENRE, 11
+		;COM:まずは二杯いきましょう를 본다
+		CASE 450
+			LOCAL:3 += 20
+			CALLF COUNT_GENRE, 11
+		;COM:これが酒飲みたちの幻想郷를 본다
+		CASE 451
+			LOCAL:3 += 69
+			CALLF COUNT_GENRE, 11
+		;COM:超凝視를 본다
+		CASE 452
+			LOCAL:3 += 50
+		;COM:傘に舐めさせる를 본다
+		CASE 453
+			LOCAL:3 += 150
+;촉수계 커맨드------------------------------------
+		;COM:触手召喚를 본다
+		CASE 500
+			LOCAL:3 += 50
+			CALLF COUNT_GENRE, 12
+		;COM:触手挿入를 본다
+		CASE 501
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:애널触手를 본다
+		CASE 502
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手クリ責め를 본다
+		CASE 503
+			LOCAL:3 += 225
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手乳首責め를 본다
+		CASE 504
+			LOCAL:3 += 225
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 12
+		;COM:触手ペニス責め를 본다
+		CASE 505
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手口辱를 본다
+		CASE 506
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 12
+		;COM:触手緊縛를 본다
+		CASE 507
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手鼻穴挿入를 본다
+		CASE 508
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 12
+		;COM:触手メイデン를 본다
+		CASE 509
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+;신사적인 촉수계 커맨드----------------------------
+		;COM:触手寄生를 본다
+		CASE 510
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 12
+		;COM:触手くすぐり를 본다
+		CASE 511
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 12
+		;COM:触手秘貝開き를 본다
+		CASE 512
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 10
+			CALLF COUNT_GENRE, 12
+		;COM:触手パイズリ를 본다
+		CASE 513
+			LOCAL:3 += 490
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 12
+		;COM:触手素股를 본다
+		CASE 514
+			LOCAL:3 += 580
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手放電ペニス責め를 본다
+		CASE 515
+			LOCAL:3 += 950
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手Ｇスポ責め를 본다
+		CASE 520
+			LOCAL:3 += 900
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:触手子宮責め를 본다
+		CASE 521
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:触手浣腸를 본다
+		CASE 522
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手小腸責め를 본다
+		CASE 523
+			LOCAL:3 += 1200
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手貫通를 본다
+		CASE 524
+			LOCAL:3 += 1600
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手搾乳를 본다
+		CASE 525
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 12
+			;ところで魅魔様の搾乳なら見てみたいかも…
+			SIF LOCAL:1 == 100
+				LOCAL:3 += 301
+		;COM:触手乳腺挿入를 본다
+		CASE 526
+			LOCAL:3 += 570
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 12
+		;COM:触手カテーテル를 본다
+		CASE 527
+			LOCAL:3 += 975
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 5
+			CALLF COUNT_GENRE, 12
+		;COM:触手採尿를 본다
+		CASE 528
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 5
+			CALLF COUNT_GENRE, 12
+		;COM:触手耳穴挿入를 본다
+		CASE 529
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 12
+		;COM:触手ヴァギナ拡張를 본다
+		CASE 530
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:触手애널拡張를 본다
+		CASE 531
+			LOCAL:3 += 1875
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手両穴拡張를 본다
+		CASE 532
+			LOCAL:3 += 2250
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手産卵를 본다
+		CASE 533
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:触手애널産卵를 본다
+		CASE 534
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手愛液採集를 본다
+		CASE 535
+			LOCAL:3 += 650
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:触手口内洗浄를 본다
+		CASE 540
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 12
+		;COM:触手膣内洗浄를 본다
+		CASE 541
+			LOCAL:3 += 675
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+		;COM:触手腸内洗浄를 본다
+		CASE 542
+			LOCAL:3 += 525
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手膀胱洗浄를 본다
+		CASE 543
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手鼻腔洗浄를 본다
+		CASE 544
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 12
+		;COM:触手鼻腔洗浄를 본다
+		CASE 544
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 12
+		;COM:触手耳穴洗浄를 본다
+		CASE 545
+			LOCAL:3 += 400
+			CALLF COUNT_GENRE, 12
+		;COM:触手全穴洗浄를 본다
+		CASE 546
+			LOCAL:3 += 2222
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手催眠를 본다
+		CASE 550
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 12
+		;COM:触手鞭打ち를 본다
+		CASE 551
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手針責め를 본다
+		CASE 552
+			LOCAL:3 += 900
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手放電를 본다
+		CASE 553
+			LOCAL:3 += 1125
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手吸血를 본다
+		CASE 554
+			LOCAL:3 += 975
+			CALLF COUNT_GENRE, 12
+		;COM:触手丸呑み를 본다
+		CASE 555
+			LOCAL:3 += 1050
+			CALLF COUNT_GENRE, 12
+		;COM:触手チキチキ를 본다
+		CASE 556
+			LOCAL:3 += 2222
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手強制回復를 본다
+		CASE 560
+			LOCAL:3 += 570
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 15
+		;COM:触手排卵誘発를 본다
+		CASE 561
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 15
+		;COM:触手避妊膜塗布를 본다
+		CASE 562
+			LOCAL:3 += 375
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 15
+		;COM:触手発毛剤를 본다
+		CASE 563
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 12
+		;COM:触手脱毛剤를 본다
+		CASE 564
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 12
+		;COM:触手読心責め를 본다
+		CASE 580
+			LOCAL:3 += 250
+			CALLF COUNT_GENRE, 12
+		;COM:触手潮干狩り를 본다
+		CASE 581
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 14
+			CALLF COUNT_GENRE, 12
+		;COM:触手幽霊膣鏡를 본다
+		CASE 582
+			LOCAL:3 += 500
+			CALLF COUNT_GENRE, 12
+		;COM:触手強制飲酒를 본다
+		CASE 583
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 11
+			CALLF COUNT_GENRE, 12
+		;COM:触手精神制御를 본다
+		CASE 584
+			LOCAL:3 += 300
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+		;COM:触手厄落とし를 본다
+		CASE 585
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 12
+		;COM:触手腸内촬영를 본다
+		CASE 586
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 12
+		;COM:触手言葉責め를 본다
+		CASE 587
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 12
+		;COM:触手鈴蘭媚薬를 본다
+		CASE 588
+			LOCAL:3 += 200
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 15
+		;COM:触手官能図書를 본다
+		CASE 589
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 12
+		;COM:触手妖精按摩를 본다
+		CASE 590
+			LOCAL:3 += 350
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手氷精手淫를 본다
+		CASE 591
+			LOCAL:3 += 350
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 12
+		;COM:触手淫脈探査를 본다
+		CASE 592
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 12
+		;COM:触手最終審判를 본다
+		CASE 593
+			LOCAL:3 += 125
+			CALLF COUNT_GENRE, 12
+		;COM:触手百裂紅葉를 본다
+		CASE 594
+			LOCAL:3 += 800
+			CALLF COUNT_GENRE, 12
+			CALLF COUNT_GENRE, 14
+;파생 커맨드--------------------------------------
+		;COM:Ｇスポット刺激를 본다
+		CASE 600
+			LOCAL:3 += 380
+			CALLF COUNT_GENRE, 1
+		;COM:潜望鏡를 본다
+		CASE 601
+			LOCAL:3 += 460
+		;COM:シックスナイン를 본다
+		CASE 602
+			LOCAL:3 += 460
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:６９パイズリ를 본다
+		CASE 603
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 3
+		;COM:雁が首를 본다
+		CASE 604
+			LOCAL:3 += 825
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:指でＶを撫でる를 본다
+		CASE 605
+			LOCAL:3 += 110
+			CALLF COUNT_GENRE, 1
+		;COM:二人で犯す를 본다
+		CASE 610
+			LOCAL:3 += 2400
+			CALLF COUNT_GENRE, 10
+		;COM:岩清水를 본다
+		CASE 611
+			LOCAL:3 += 550
+			CALLF COUNT_GENRE, 0
+		;COM:乱れ牡丹를 본다
+		CASE 612
+			LOCAL:3 += 1400
+			CALLF COUNT_GENRE, 1
+		;COM:騎乗乳房自慰를 본다
+		CASE 613
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 3
+		;COM:挿入Ｇスポ責め를 본다
+		CASE 614
+			LOCAL:3 += 800
+			CALLF COUNT_GENRE, 1
+		;COM:挿入子宮口責め를 본다
+		CASE 615
+			LOCAL:3 += 950
+			CALLF COUNT_GENRE, 1
+		;COM:後背位胸愛撫를 본다
+		CASE 616
+			LOCAL:3 += 1300
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 3
+		;COM:対面胸愛撫를 본다
+		CASE 617
+			LOCAL:3 += 1100
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 3
+		;COM:後背位애널胸愛撫를 본다
+		CASE 618
+			LOCAL:3 += 1600
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 3
+		;COM:対面애널胸愛撫를 본다
+		CASE 619
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 3
+		;COM:強制放尿를 본다
+		CASE 620
+			LOCAL:3 += 550
+			CALLF COUNT_GENRE, 14
+		;COM:口移し를 본다
+		CASE 621
+			LOCAL:3 += 75
+			CALLF COUNT_GENRE, 11
+			CALLF COUNT_GENRE, 15
+		;COM:四肢緊縛를 본다
+		CASE 622
+			LOCAL:3 += 350
+			CALLF COUNT_GENRE, 14
+		;COM:亀甲縛り를 본다
+		CASE 623
+			LOCAL:3 += 550
+			CALLF COUNT_GENRE, 14
+		;COM:吊り下げ를 본다
+		CASE 624
+			LOCAL:3 += 800
+			CALLF COUNT_GENRE, 14
+		;COM:ローションプレイ를 본다
+		CASE 625
+			LOCAL:3 += 25
+		;COM:搾乳를 본다
+		CASE 626
+			LOCAL:3 += 450
+			CALLF COUNT_GENRE, 3
+			;ところで魅魔様の搾乳なら見てみたいかも？
+			SIF LOCAL:1 == 100
+				LOCAL:3 += 301
+		;COM:乳首甘噛み를 본다
+		CASE 627
+			LOCAL:3 += 250
+			CALLF COUNT_GENRE, 3
+		;COM:相互自慰를 본다(自動的に公開相互자위になる)
+		CASE 628
+			LOCAL:3 += 700
+			CALLF COUNT_GENRE, 10
+		;COM:サンドイッチ를 본다
+		CASE 629
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 4
+		;COM:後背位手淫를 본다
+		CASE 630
+			LOCAL:3 += 1275
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 11
+		;COM:相互秘貝開帳를 본다
+		CASE 631
+			LOCAL:3 += 685
+		;COM:イきつけ三杯를 본다
+		CASE 649
+			LOCAL:3 += 250
+			CALLF COUNT_GENRE, 11
+		;COM:浄玻璃の鏡를 본다
+		CASE 650
+			LOCAL:3 += 375
+		;COM:御所車(逆レイプ)를 본다
+		CASE 651
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 1
+		;COM:一人四連携(ふたなり)를 본다
+		CASE 652
+			LOCAL:3 += 3333
+			CALLF COUNT_GENRE, 10
+		;COM:蜘蛛の巣를 본다
+		CASE 653
+			LOCAL:3 += 150
+			CALLF COUNT_GENRE, 14
+		;COM:蜘蛛脚六点責め를 본다
+		CASE 654
+			LOCAL:3 += 1700
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 3
+			CALLF COUNT_GENRE, 10
+			CALLF COUNT_GENRE, 14
+		;COM:蜘蛛の巣姦를 본다
+		CASE 655
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 1
+		;COM:蜘蛛の巣肛門姦를 본다
+		CASE 656
+			LOCAL:3 += 1500
+			CALLF COUNT_GENRE, 2
+		;COM:蓑虫プレイ를 본다
+		CASE 657
+			LOCAL:3 += 1800
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 10
+		;COM:拘束∇를 본다
+		CASE 658
+			LOCAL:3 += 2100
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 14
+;派生自慰커맨드----------------------------------
+		;COM:바이브전기안마자위를 본다
+		CASE 971
+			LOCAL:3 += 1170
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 10
+		;COM:애널전기안마바이브자위를 본다
+		CASE 972
+			LOCAL:3 += 1420
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:二穴바이브전기안마자위를 본다
+		CASE 973
+			LOCAL:3 += 1720
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:シャワー전기안마자위를 본다
+		CASE 974
+			LOCAL:3 += 1070
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 10
+		;COM:読心전기안마자위를 본다
+		CASE 975
+			LOCAL:3 += 1020
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 10
+		;COM:바이브ローター자위를 본다
+		CASE 981
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 10
+		;COM:애널바이브ローター자위를 본다
+		CASE 982
+			LOCAL:3 += 1225
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:二穴바이브ローター자위를 본다
+		CASE 983
+			LOCAL:3 += 1525
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:シャワーローター자위를 본다
+		CASE 984
+			LOCAL:3 += 875
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 10
+		;COM:読心ローター자위를 본다
+		CASE 985
+			LOCAL:3 += 825
+			CALLF COUNT_GENRE, 0
+			CALLF COUNT_GENRE, 10
+		;COM:바이브자위를 본다
+		CASE 991
+			LOCAL:3 += 750
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 10
+		;COM:애널바이브자위를 본다
+		CASE 992
+			LOCAL:3 += 1000
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:二穴바이브자위를 본다
+		CASE 993
+			LOCAL:3 += 1300
+			CALLF COUNT_GENRE, 1
+			CALLF COUNT_GENRE, 2
+			CALLF COUNT_GENRE, 10
+		;COM:シャワー자위를 본다
+		CASE 994
+			LOCAL:3 += 650
+			CALLF COUNT_GENRE, 10
+		;COM:読心자위를 본다
+		CASE 995
+			LOCAL:3 += 600
+			CALLF COUNT_GENRE, 10
+	ENDSELECT
+
+	IF ARG == 0
+		;토리코모드
+		IF FLAG:5000 & 2
+			LOCAL:99 = (LOCAL:3 - COUNT:1) / 5
+			PRINTFORML 촬영장면{COUNT-39, 2}：%VIDEO_COMF(FLAG:COUNT), 28, LEFT%　\@SIGN(LOCAL:99) == 1 ?  ＋ # －\@{ABS(LOCAL:99 ), 7}원
+		;일반모드
+		ELSE
+			PRINTFORML 촬영장면{COUNT-39, 2}：%VIDEO_COMF(FLAG:COUNT), 28, LEFT%　\@SIGN(LOCAL:3 - COUNT:1) == 1 ?  ＋ # －\@{ABS(LOCAL:3 - COUNT:1), 7}원
+		ENDIF
+	ENDIF
+NEXT
+;売値が0未満の時は修正
+LOCAL:3 = MAX(LOCAL:3, 0)
+
+;-------------------------------------------------
+;매각치 조정
+;-------------------------------------------------
+;HARD 모드 이상
+IF FLAG:3 >= 3
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 5000, 2)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 10000, 5)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 50000, 10)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 100000, 25)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 500000, 50)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 750000, 100)
+ELSE
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 5000, 2)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 50000, 4)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 500000, 8)
+ENDIF
+
+;-------------------------------------------------
+;비디오의 소질 보너스
+;-------------------------------------------------
+LOCAL:3 = VIDEO_TALENT_BONUS(LOCAL:3)
+
+;-------------------------------------------------
+;씬 보너스
+;-------------------------------------------------
+;酒恥肉倫シーンがあれば加算
+;文字を変えていることも, 本来の意味とは違う意味で使用したのも意図的です。一応
+IF TFLAG:153 == 99
+	LOCAL:3 += 6400
+	PRINTFORML 비디오에는 %CALLNAME:TARGET%의 주치육륜 신이 기록되어 있다.
+ENDIF
+;ＣＡＶＥＤ!!!!シーンがあれば加算
+IF TFLAG:140 & 32
+	LOCAL:3 += 5000
+	PRINTFORML 비디오에는 %조사처리(CALLNAME:TARGET,"가")% 역습하는 신이 기록되어 있다.
+ENDIF
+
+;処女喪失シーンがあれば加算
+IF TFLAG:120 & 1
+	LOCAL:3 += 10000
+	CFLAG:11 |= 4
+	EXP:50 += 1
+	PRINTFORML 비디오에는 %CALLNAME:TARGET%의 처녀상실 신이 기록되어 있다.
+	PRINTFORML %EXPNAME:50%＋1
+ENDIF
+
+;-------------------------------------------------
+;タイトルボーナス
+;-------------------------------------------------
+LOCAL:3 += VIDEO_TITLE_BONUS(LOCAL:1, LOCAL:2)
+
+RETURNF LOCAL:3
+
+;-------------------------------------------------
+;ビデオの素質ボーナス
+;-------------------------------------------------
+@VIDEO_TALENT_BONUS, ARG
+#FUNCTION
+;[自制心]를 본다
+SIF TALENT:20 && ABL:11 < 4
+	TIMES ARG , 0.75
+;[無関心]를 본다
+SIF TALENT:21
+	TIMES ARG , 0.70
+;[感情乏しい]를 본다
+SIF TALENT:22
+	TIMES ARG , 0.70
+;[目立ちたがり]를 본다
+SIF TALENT:28 && ABL:14 >= 4
+	TIMES ARG , 1.20
+;[恥じらい]를 본다
+SIF TALENT:35
+	TIMES ARG , 1.15
+
+;[魅力]를 본다
+SIF TALENT:90
+	TIMES ARG , 1.25
+;[謎の魅力]를 본다
+SIF TALENT:92
+	TIMES ARG , 1.25
+;[小悪魔]를 본다
+SIF TALENT:93
+	TIMES ARG , 1.20
+;[人気]를 본다
+SIF TALENT:94
+	TIMES ARG , 1.50
+
+;[動物耳]를 본다
+SIF TALENT:116
+	TIMES ARG , 1.30
+;[ふたなり]를 본다
+SIF TALENT:121
+	TIMES ARG , 1.10
+;[小人体型]를 본다
+SIF TALENT:127
+	TIMES ARG , 1.10
+;[小柄体型]를 본다
+SIF TALENT:128
+	TIMES ARG , 1.10
+;[母乳体質]를 본다
+SIF TALENT:134
+	TIMES ARG , 1.20
+;[烙印]를 본다
+SIF TALENT:161
+	TIMES ARG , 0.50
+;[精神崩壊]をみる
+SIF TALENT:167
+	TIMES ARG , 0.25
+
+;[요정]을 본다
+SIF TALENT:200
+	TIMES ARG , 1.10
+;[요호]를 본다
+SIF TALENT:211
+	TIMES ARG , 1.20
+;[오니]를 본다
+SIF TALENT:214
+	TIMES ARG , 1.20
+;[누에]를 본다
+SIF TALENT:217
+	TIMES ARG , 1.50
+;[하쿠레이의 무녀]를 본다
+SIF TALENT:218
+	TIMES ARG , 1.30
+;[카제하후리]를 본다
+SIF TALENT:219
+	TIMES ARG , 1.25
+RETURNF ARG
+
+;=============================================================================
+;비디오 확장시의 처리군
+;=============================================================================
+;-----------------------------------------------------------
+;촬영기능・촬영(피사)경험による価格補正
+;-----------------------------------------------------------
+@VIDEO_EDIT_BONUS, ARG
+#FUNCTION
+;노예의 피사경험을 본다
+SIF EXP:72 >= EXPLV:3
+	TIMES ARG , 1.10
+
+;촬영자를 본다
+;주인
+IF FLAG:61 == 1
+	;촬영기능을 본다
+	IF ABL:MASTER:71 == 0
+		TIMES ARG , 0.70
+	ELSEIF ABL:MASTER:71 == 1
+		TIMES ARG , 0.80
+	ELSEIF ABL:MASTER:71 == 2
+		TIMES ARG , 0.90
+	ELSEIF ABL:MASTER:71 == 3
+		TIMES ARG , 1.00
+	ELSEIF ABL:MASTER:71 == 4
+		TIMES ARG , 1.25
+	ELSE
+		TIMES ARG , 1.50
+	ENDIF
+	;보도자
+	SIF TALENT:MASTER:196
+		TIMES ARG , 1.25
+;조수
+ELSEIF FLAG:61 == 2
+	;촬영기능을 본다
+	IF ABL:ASSI:71 == 0
+		TIMES ARG , 0.70
+	ELSEIF ABL:ASSI:71 == 1
+		TIMES ARG , 0.80
+	ELSEIF ABL:ASSI:71 == 2
+		TIMES ARG , 0.90
+	ELSEIF ABL:ASSI:71 == 3
+		TIMES ARG , 1.00
+	ELSEIF ABL:ASSI:71 == 4
+		TIMES ARG , 1.25
+	ELSE
+		TIMES ARG , 1.50
+	ENDIF
+	;보도자
+	SIF TALENT:ASSI:196
+		TIMES ARG , 1.25
+;床置き時々手ぶれ
+ELSEIF TALENT:MASTER:189 == 0
+	;주인の피사경험が20回以下の場合減額(주인が[家電使役知識]持ちなら除外)
+	IF EXP:MASTER:72 <= 10
+		TIMES ARG , 0.80
+	ELSEIF EXP:MASTER:72 <= 20
+		TIMES ARG , 0.90
+	ENDIF
+ENDIF
+
+;アイテム:編集機材를 본다
+SIF ITEM:58
+	TIMES ARG , 1.20
+
+;現在不人気のジャンル
+IF GET_GENRE(FLAG:77) >= 8
+	TIMES ARG , 1.50
+ELSEIF GET_GENRE(FLAG:77) >= 5
+	TIMES ARG , 1.25
+ENDIF
+;現在人気のジャンル
+IF GET_GENRE(FLAG:78) >= 8
+	TIMES ARG , 0.50
+ELSEIF GET_GENRE(FLAG:78) >= 5
+	TIMES ARG , 0.75
+ENDIF
+RETURNF ARG
+
+;-----------------------------------------------------------
+;조교 후 비디오 감상
+;-----------------------------------------------------------
+;調教終了時のビデオの確認時の最初に呼び出し, 売るか見るか選べます
+;展示室, 촬영拡張, ビデオ観賞全て開放している場合, ビデオを展示室に保管することが可能
+@LOOKVIDEO_1
+LOCAL = 0
+PRINTFORML %조사처리(CALLNAME:TARGET,"과")%의 난행을 녹화한 비디오를…
+PRINTL [0] - 판다
+PRINTFORML [1] - %조사처리(CALLNAME:TARGET,"과")% 같이 감상한다
+IF FLAG:12 & 8
+	PRINTFORML [2] - 비디오를 전시실에 보관한다\@(CFLAG:10 & 128) ? (%CALLNAME:TARGET%의 비디오는 보관되고 있습니다) # (%CALLNAME:TARGET%의 비디오는 없습니다)\@
+ELSE
+	PRINTL [2] - 비디오를 보관한다(최대 한 편까지)
+ENDIF
+DRAWLINE
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	LOCAL = 0
+ELSEIF RESULT == 1
+	LOCAL = 1
+ELSEIF RESULT == 2
+	LOCAL = 2
+	SIF FLAG:12 & 8
+		TFLAG:996 |= 32
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RETURN LOCAL
+
+;-----------------------------------------------------------
+;調教後ビデオ観賞処理
+;-----------------------------------------------------------
+;%CALLNAME:TARGET%と一緒にビデオ를 본다
+@LOOKVIDEO_2, ARG
+SIF ARG == 1
+	PRINTL 당신은 예전에 찍었던 비디오를 기기에 세팅했다
+;以下は何を行ったかのチェック ﾃﾞﾌｫﾙﾄでは333行目で封印してます
+;FLAG:40～FLAG:49に촬영した커맨드（COMFと同じ番号)が記録されます, FLAG:40が1回目(残り9回)です
+;FLAG:40～FLAG:49を使えば촬영内容を口上に反映させることが可能です
+;FLAG:40～FLAG:49は調教（ビデオ촬영）するごとに上書されます。
+
+FOR COUNT, 1, TFLAG:121
+	PRINTFORM {COUNT}/{TFLAG:121 - 1}번째 내용:
+	PRINTFORML [%VIDEO_COMF(FLAG:(COUNT + 39))%]
+NEXT
+;録画してないフラグを-1にする
+FOR COUNT, 1, 11
+	SIF COUNT < TFLAG:121
+		CONTINUE
+	FLAG:(COUNT + 39) = -1
+NEXT
+
+;촬영回数→鑑賞可能回数
+LOCAL:1 = NO:TARGET
+SIF ASSI >= 0
+	LOCAL:2 = NO:ASSI
+
+IF ARG == 1
+	CALL LOOK_VIDEO
+ELSEIF ARG == 2
+	PRINTW 당신은 녹화 비디오를 가지고 돌아갔다
+	;ビデオの保存 FLAGが-1なら커맨드および対象, 조수はなし
+	;録画ビデオ所持
+	;録画ビデオ内容
+	;初期化
+	VARSET FLAG, -1, 51, 61
+	FLAG:62 = 1
+	VARSET FLAG, -1, 63, 65
+	;録画
+	FOR COUNT, 51, 61
+		FLAG:COUNT = (FLAG:(COUNT - 11) != -1) ? FLAG:(COUNT - 11) # -1
+	NEXT
+
+	FLAG:63 = (LOCAL:1 == -1) ? -1 # LOCAL:1
+	FLAG:64 = (LOCAL:2 == -1) ? -1 # LOCAL:2
+ENDIF
+
+;=============================================================================
+;ビデオに録画された커맨드の鑑賞
+;=============================================================================
+@VIDEO_COMF(ARG)
+#FUNCTIONS
+SELECTCASE ARG
+	;通常・派生커맨드--------------------------------
+	CASE IS < 660
+		RETURNF @"%TRAINNAME:ARG%"
+	;派生自慰커맨드----------------------------------
+	CASE 971
+		RETURNF "바이브 전동안마기 자위"
+	CASE 972
+		RETURNF "애널 바이브 전동안마기 자위"
+	CASE 973
+		RETURNF "양구멍 바이브 전동안마기 자위"
+	CASE 974
+		RETURNF "샤워 전동안마기 자위"
+	CASE 975
+		RETURNF "독심 전동안마기 자위"
+	CASE 981
+		RETURNF "바이브 로터 자위"
+	CASE 982
+		RETURNF "애널 바이브 로터 자위"
+	CASE 983
+		RETURNF "양구멍 바이브 로터 자위"
+	CASE 984
+		RETURNF "샤워 로터 자위"
+	CASE 985
+		RETURNF "독심 로터 자위"
+	CASE 991
+		RETURNF "바이브 자위"
+	CASE 992
+		RETURNF "애널 바이브 자위"
+	CASE 993
+		RETURNF "양구멍 바이브 자위"
+	CASE 994
+		RETURNF "샤워 자위"
+	CASE 995
+		RETURNF "독심 자위"
+ENDSELECT
+RETURNF ""
+
+;セッターゲッター
+@GET_GENRE(ARG)
+#FUNCTION
+RETURNF VIDEO_GENRE("GET", ARG)
+
+@COUNT_GENRE(ARG)
+#FUNCTION
+RETURNF VIDEO_GENRE("PLUS", ARG)
+
+@CLEAR_GENRE
+#FUNCTION
+RETURNF VIDEO_GENRE("CLEAR")
+
+@VIDEO_GENRE(ARGS, ARG)
+#FUNCTION
+IF ARGS == "PLUS"
+	LOCAL:ARG += 1
+	RETURNF ARG:1
+ELSEIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+ELSEIF ARGS == "CLEAR"
+	VARSET LOCAL, -1
+	RETURNF -1
+ELSE
+	RETURNF -1
+ENDIF

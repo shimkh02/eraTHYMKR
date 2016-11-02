@@ -1,0 +1,95 @@
+﻿;=============================================================================
+;카리스마 가드
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE425
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:425 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;조교자가 レミリアお嬢様じゃないとダメだよ
+SIF NO:PLAYER != 10
+	RETURN 0
+;조교자가 [精神崩壊], [傀儡]だとダメ
+SIF TALENT:PLAYER:167 || TALENT:PLAYER:168
+	RETURN 0
+;조교 대상이 [精神崩壊], [傀儡]だとダメ
+SIF TALENT:167 || TALENT:168
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;目隠し, 耳栓, 暗闇展開をしていた場合効果は無し
+SIF TEQUIP:41 || TEQUIP:45 || TEQUIP:70
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;완전 취미 커맨드이므로 실용성 미묘
+@COM425
+PRINTL 카리스마 가드
+TSTR:0 = 카리스마 가드
+CALL TRAIN_MESSAGE_COM425
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 5
+DOWNBASE:1 += 30
+
+SOURCE:16 = 50
+SOURCE:24 = 100
+
+;ABL:조교자의 봉사 정신을 본다
+IF ABL:PLAYER:13 == 0
+	SOURCE:11 = 20
+ELSEIF ABL:PLAYER:13 == 1
+	SOURCE:11 = 50
+ELSEIF ABL:PLAYER:13 == 2
+	SOURCE:11 = 80
+ELSEIF ABL:PLAYER:13 == 3
+	SOURCE:11 = 125
+ELSEIF ABL:PLAYER:13 == 4
+	SOURCE:11 = 200
+ELSE
+	SOURCE:11 = 350
+ENDIF
+
+;노예가 소야 혹은 파츄리라면 효과 증강
+SIF NO:TARGET == 9 || NO:TARGET == 8
+	SOURCE:11 += 500
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM425
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;대소밤응(다만 반발  3이외)
+IF NO:TARGET == 9 && MARK:9 < 3
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 사랑스럽게 주저앉아 가드 하는 자세를 취했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 그것을 미소 짓고 바라보고 있다.
+;대파체씨(다만 반발 없는 것)
+ELSEIF NO:TARGET == 8 && MARK:9 == 0
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 사랑스럽게 주저앉아 가드 하는 자세를 취했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거기에 쓴웃음을 지으면서도 상냥한 눈으로 바라보고 있는 것 같다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 사랑스럽게 주저앉아 가드 하는 자세를 취했다.
+ENDIF

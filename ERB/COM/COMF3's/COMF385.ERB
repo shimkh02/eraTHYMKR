@@ -1,0 +1,321 @@
+﻿;=============================================================================
+;말을 펠라 하게 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE385
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:385 > 0
+	RETURN 0
+;獣姦系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8192) == 0
+	RETURN 0
+;初体験のときは이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF (FLAG:25 & 16) == 0 && FLAG:2 & 4
+	RETURN 0
+;動物小屋と馬が필요
+SIF (FLAG:72 & 1) == 0 || (FLAG:72 & 8) == 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;主人に금단의 지식か狂気がないとダメ
+SIF TALENT:MASTER:56 == 0 && TALENT:MASTER:158 == 0
+	RETURN 0
+;소인체형だとダメ
+SIF TALENT:127
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;対象が猫舌だと猫フェラパッチ有効でないとダメ
+SIF TALENT:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;猫舌だと기교5 · 奉仕精神4 · 순종3が필요
+SIF TALENT:54 && (ABL:12 < 5 || ABL:13 < 4 || ABL:10 < 3)
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;フェラチオから作成. 
+@COM385
+PRINTL 말을 펠라하게 한다
+
+;-------------------------------------------------
+;실행할 수 있는가 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 말을 펠라하게 한다
+CALL TRAIN_MESSAGE_COM385
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 150
+
+SOURCE:30 = 2500
+SOURCE:22 = 6500
+SOURCE:31 = 45000
+
+;ABL:봉사정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 420
+	SOURCE:16 = 150
+	TIMES SOURCE:30 , 4.00
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 500
+	SOURCE:16 = 300
+	TIMES SOURCE:30 , 2.50
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 580
+	SOURCE:16 = 600
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 660
+	SOURCE:16 = 900
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 740
+	SOURCE:16 = 1500
+	TIMES SOURCE:30 , 0.80
+ELSE
+	SOURCE:15 = 820
+	SOURCE:16 = 2200
+	TIMES SOURCE:30 , 0.50
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.50
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:16 , 1.50
+ELSE
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+ENDIF
+
+;ABL:정액중독을 본다
+IF ABL:31 == 0
+	SOURCE:24 = 0
+	TIMES SOURCE:16 , 2.00
+	TIMES SOURCE:22, 4.00
+ELSEIF ABL:31 == 1
+	SOURCE:24 = 500
+	TIMES SOURCE:16 , 3.00
+	TIMES SOURCE:22, 3.00
+ELSEIF ABL:31 == 2
+	SOURCE:24 = 1200
+	TIMES SOURCE:16 , 4.00
+	TIMES SOURCE:22, 2.50
+ELSEIF ABL:31 == 3
+	SOURCE:24 = 3000
+	TIMES SOURCE:16 , 6.00
+	TIMES SOURCE:22, 2.00
+ELSEIF ABL:31 == 4
+	SOURCE:24 = 6000
+	TIMES SOURCE:16 , 9.00
+	TIMES SOURCE:22, 1.50
+ELSE
+	SOURCE:24 = 12000
+	TIMES SOURCE:16 , 15.00
+	TIMES SOURCE:22, 1.00
+ENDIF
+
+;노예의 입と手にＰ汚れがつく、また口と手と胸と髪に精液汚れがつく
+STAIN:0 |= 2
+STAIN:1 |= 2
+STAIN:0 |= 4
+STAIN:1 |= 4
+STAIN:5 |= 4
+STAIN:7 |= 4
+
+TCVAR:22 += 1
+IF (CFLAG:25 & 16) == 0
+	CFLAG:25 |= 16
+	TCVAR:50 += 1
+ENDIF
+TCVAR:56 += 1
+
+;커맨드 속성：獣姦
+TFLAG:98 = 9
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_385
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM385
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+SIF TALENT:170
+	PRINT 스스로 
+PRINT 숫말의 거대한 페니스를 
+;고양이혀フェラ
+IF TALENT:54
+	PRINTL 물고, 혀끝과 턱의 안쪽, 때로는 거친 표면을 이용해서 말을 자극했다….
+;フェラチオ
+ELSE
+	PRINTL 혀를 감아 핥아 돌리고 있다….
+ENDIF
+PRINTFORMW %CALLNAME:TARGET%의 혀 놀림에 절정해버린 말은, %CALLNAME:TARGET%의 전신에 정액을 뿌려댔다….
+
+;-------------------------------------------------
+;고유 실행 판정
+;-------------------------------------------------
+@COM_ORDER_385, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:봉사정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+
+;ABL:정액중독
+IF ABL:31
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:31
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:31%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;쾌락각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+
+;냄새둔감
+IF TALENT:61
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:61%({LOCAL:99})
+;냄새민감
+ELSEIF TALENT:62
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:62%({LOCAL:99})
+ENDIF
+;헌신적
+IF TALENT:63
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:63%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+
+;実行値は84
+TFLAG:241 = 84

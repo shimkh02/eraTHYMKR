@@ -1,0 +1,119 @@
+﻿;=============================================================================
+;우산을 애무한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE447
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:447 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;対象が小傘でないとダメ
+SIF NO:TARGET != 72
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;코가사의 우산은 성감대야. 만져지면(자) 이제(벌써) 흠뻑 젖음♪
+@COM447
+PRINTL 우산을 애무한다
+TSTR:0 = 우산을 애무한다
+CALL TRAIN_MESSAGE_COM447
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 80
+
+SOURCE:12 = 50
+SOURCE:15 = 80
+SOURCE:30 = 10
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 30
+	SOURCE:11 = 50
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 150
+	SOURCE:11 = 100
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 750
+	SOURCE:11 = 160
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1800
+	SOURCE:11 = 200
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 3000
+	SOURCE:11 = 230
+ELSE
+	SOURCE:0 = 4200
+	SOURCE:11 = 250
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.80
+	SOURCE:19 = 100
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.90
+	SOURCE:19 = 200
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	SOURCE:19 = 350
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.10
+	SOURCE:19 = 600
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 1.20
+	SOURCE:19 = 850
+ELSE
+	TIMES SOURCE:0 , 1.50
+	SOURCE:19 = 1200
+ENDIF
+
+;악취 둔감
+IF TALENT:61
+	SOURCE:30 /= 4
+;악취 민감
+ELSEIF TALENT:62
+	SOURCE:30 *= 3
+ENDIF
+;프라이드 높다
+SIF TALENT:16
+	SOURCE:30 *= 2
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SOURCE:11 *= 2
+	SOURCE:30 /= 10
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM447
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;연모로 주인 조교
+IF TALENT:150 && ASSIPLAY == 0
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 본체인 우산을 정성스럽게 애무했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 본체에 사랑하는 사람의 애무를 받아, 깊은 쾌감과 애정을 느끼고 있다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 본체인 우산을 정성스럽게 애무했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 본체로부터 전해지는 자극을 받고 있다….
+ENDIF

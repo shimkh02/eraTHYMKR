@@ -1,0 +1,148 @@
+﻿;=============================================================================
+;풋잡한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE302
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:302 > 0
+	RETURN 0
+;オトコか후타나리じゃないとダメ
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM302
+PRINTL 풋잡한다
+TSTR:0 = 풋잡한다
+CALL TRAIN_MESSAGE_COM302
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 30
+DOWNBASE:1 += 150
+
+SOURCE:31 = 100
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 40
+	SOURCE:22 = 40
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 160
+	SOURCE:22 = 160
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 700
+	SOURCE:22 = 700
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1500
+	SOURCE:22 = 1500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2400
+	SOURCE:22 = 2400
+ELSE
+	SOURCE:0 = 3300
+	SOURCE:22 = 3300
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:16 = 150
+ELSEIF ABL:21 == 1
+	SOURCE:16 = 300
+ELSEIF ABL:21 == 2
+	SOURCE:16 = 600
+ELSEIF ABL:21 == 3
+	SOURCE:16 = 900
+ELSEIF ABL:21 == 4
+	SOURCE:16 = 1500
+ELSE
+	SOURCE:16 = 2200
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:22 , 0.50
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:22 , 0.80
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:22 , 1.50
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:22 , 2.50
+ELSE
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:22 , 4.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES SOURCE:16 , 1.80
+
+;대상의 P⇔조교자의 다리의 더러움이 서로 이동
+STAIN:2 |= STAIN:PLAYER:6
+STAIN:PLAYER:6 |= STAIN:2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 4
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 4
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM302
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 페니스를 
+IF TEQUIP:68
+	PRINTW 다리의 안쪽으로 빙글빙글 돌리고 있다.
+ELSE
+	SIF ABL:PLAYER:20 > 2 || TALENT:PLAYER:83 || TALENT:PLAYER:177
+		PRINT 짓밟는 것 처럼 
+	PRINTW 발로 비벼대고 있다….
+ENDIF

@@ -1,0 +1,182 @@
+﻿;=============================================================================
+;사정중독
+;=============================================================================
+@ABLUP37
+DRAWLINE
+IF TALENT:120 == 0 && TALENT:121 == 0
+	RETURN 0
+ELSEIF ABL:37 >= 5
+	JUMP ABLUP_MAX
+ENDIF
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要(素質：[Ｃ敏感][中毒しやすい][淫乱]なら無視できる)
+SIF COST37(4)
+	PRINTFORM %EXPNAME:50% {COST37(4)} 이상, 그리고 
+;Ｃ感覚が必要
+PRINTFORML %ABLNAME:0% {ABL:37 + 1}LV 이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:0%의 구슬×{COST37(0)}, %PALAMNAME:13%의 구슬×{COST37(1)}, %PALAMNAME:14%의 구슬×{COST37(2)}, %EXPNAME:3% {COST37(3)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN37(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN37(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:0 -= COST37(0)
+	JUEL:13 -= COST37(1)
+	JUEL:14 -= COST37(2)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:37 += 1
+PRINTFORMW %ABLNAME:37%의 레벨이 %조사처리(ABL:37,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP37
+SIF ABL:37 >= 5 || (TALENT:120 == 0 && TALENT:121 == 0)
+	RETURN 0
+
+CALLF CALC_COST37, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP37("CHECK")
+
+@COST37(ARG)
+#FUNCTION
+RETURNF CALC_COST37("GET", ARG)
+
+@CALC_COST37(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:37 == 0
+	LOCAL:0 = 6000
+	LOCAL:1 = 2500
+	LOCAL:2 = 1000
+	LOCAL:3 = 10
+ELSEIF ABL:37 == 1
+	LOCAL:0 = 14000
+	LOCAL:1 = 5000
+	LOCAL:2 = 2500
+	LOCAL:3 = 25
+ELSEIF ABL:37 == 2
+	LOCAL:0 = 27000
+	LOCAL:1 = 9000
+	LOCAL:2 = 4800
+	LOCAL:3 = 80
+ELSEIF ABL:37 == 3
+	LOCAL:0 = 65000
+	LOCAL:1 = 17000
+	LOCAL:2 = 10000
+	LOCAL:3 = 150
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:2 , 2.00
+		TIMES LOCAL:3 , 2.00
+	ENDIF
+ELSEIF ABL:37 == 4
+	LOCAL:0 = 130000
+	LOCAL:1 = 30000
+	LOCAL:2 = 25000
+	LOCAL:3 = 300
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:2 , 3.00
+		TIMES LOCAL:3 , 3.00
+	ENDIF
+ENDIF
+
+;中毒しやすい
+IF TALENT:84
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+;中毒しにくい
+ELSEIF TALENT:85
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 1.50
+ENDIF
+;[中毒扇動]有効
+IF TFLAG:995 == 1
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+	TIMES LOCAL:3 , 0.80
+ENDIF
+;倒錯的
+IF TALENT:80
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 0.75
+ENDIF
+;淫核
+IF TALENT:171
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+ENDIF
+;Ｃ鈍感
+IF TALENT:101
+	TIMES LOCAL:0 , 1.20
+;Ｃ敏感
+ELSEIF TALENT:100
+	TIMES LOCAL:0 , 0.80
+ENDIF
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要(素質：[Ｃ敏感][中毒しやすい][淫核]なら無視できる)
+SIF ABL:37 >= 2 && TALENT:84 == 0 && TALENT:100 == 0 && TALENT:171 == 0
+	LOCAL:4 = ABL:37
+
+RETURNF 0
+
+@CAN37(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP37("GET", ARG)
+
+@CAN_ABLUP37(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;異常経験が必要な場合
+SIF EXP:50 < COST37(4)
+	LOCAL:0 |= 2
+
+;Ｃ感覚が必要
+SIF ABL:0 < ABL:37 + 1
+	LOCAL:0 |= 4
+
+;快Ｃ의 구슬で上げる
+SIF JUEL:0 < COST37(0)
+	LOCAL:0 |= 1
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST37(1)
+	LOCAL:0 |= 1
+;屈服의 구슬で上げる
+SIF JUEL:14 < COST37(2)
+	LOCAL:0 |= 1
+;射精経験が必要
+SIF EXP:3 < COST37(3)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

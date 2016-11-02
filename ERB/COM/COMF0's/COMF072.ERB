@@ -1,0 +1,116 @@
+﻿;=============================================================================
+;감각증폭약
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE72
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:72 > 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:70 == 0 && NOITEM == 0
+	RETURN 0
+;약물경험이 너무 낮으면 안 됨
+SIF EXP:40 < EXPLV:3
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;산란촉진제를 사용 중이면 사용할 수 없다
+SIF TEQUIP:9
+	RETURN 0
+;효과 발휘 중에는 불가
+SIF TEQUIP:7
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;수커맨드의 사이, 이키없음이 될 수도 있는  위험한 약을 먹인다.
+;그 대신 트라우마·약물 습윤·불결·일탈·술에 취함·무서운 살인의 효과를 증강한다
+@COM72
+PRINTL 감각증폭약
+TSTR:0 = 감각증폭약
+CALL TRAIN_MESSAGE_COM072
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 100
+
+SOURCE:26 = 3300
+SOURCE:31 = 3100
+
+IF NOITEM == 0
+	ITEM:70 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:70
+		CALL FILL_PLURAL_ITEM, 70
+ENDIF
+TEQUIP:7 = 8
+
+;약물 경험
+TCVAR:40 += 4
+
+RETURN 1
+
+;--------------------------------------------------
+;감각 증폭 약효과발휘중
+;--------------------------------------------------
+@EQUIP_COM72
+PRINTL <감각증폭약 효과 발휘 중>
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 10
+
+TEQUIP:7 -= 1
+
+TIMES SOURCE:25 , 1.30
+TIMES SOURCE:26 , 1.30
+TIMES SOURCE:30 , 1.30
+TIMES SOURCE:31 , 1.30
+TIMES SOURCE:40 , 1.30
+TIMES SOURCE:41 , 1.30
+
+;약물 경험
+TCVAR:40 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM072
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%에게 
+SIF ABL:PLAYER:12 >= 3
+	PRINT 입으로 
+SIF ABL:10 == 0
+	PRINT 억지로 
+PRINTL 감각 증폭약을 먹였다.
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF ABL:10 > 3 && MARK:9 < 3
+	PRINTFORMW 곤혹한 표정을 지으며, 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 불안하게 보고 있다.
+ELSEIF MARK:9 >= 3
+	PRINTFORMW 경계하며, 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 째려보고 있다.
+ELSE
+	PRINTFORMW 놀란 표정을 지으며, 능글능글 웃는 %조사선택(CALLNAME:MASTER, "를")% 보고 있다.
+ENDIF

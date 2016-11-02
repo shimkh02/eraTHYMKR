@@ -1,0 +1,1111 @@
+﻿;=============================================================================
+;아이템 관련의 처리
+;=============================================================================
+;--------------------------------------------------
+;아이템 구입 처리
+;--------------------------------------------------
+@TOOL_BUY_MAIN
+;팔고 있는 아이템을 확인
+CALL SALEITEM_CHECK
+
+DRAWLINE
+PRINTFORML 각종 도구를 살 수 있습니다. 무엇을 사겠습니까? (소지금 {MONEY} 원)
+DRAWLINE
+;매물 표시
+REPEAT 100
+	;購入費用が足りないアイテムを非表示にしたい場合は右のカッコ内の構文を直下の行の右端に追加してください.「 && ITEMPRICE:COUNT <= MONEY」
+	SIF ITEMSALES:COUNT == 1 && ITEMPRICE:COUNT > 0
+		CALL PRINT_NEW_SHOPITEM, COUNT
+REND
+IF LINEISEMPTY()
+	PRINTL  살 게 없습니다.
+ELSE
+	PRINTL 
+ENDIF
+DRAWLINE
+PRINTLC [100] 돌아가기
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	VARSET ITEMSALES, 0
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 100 || ITEMSALES:RESULT == 0
+	CLEARLINE 1
+	GOTO INPUT_LOOP
+ELSEIF  MONEY < ITEMPRICE:RESULT
+	CLEARLINE 1
+	REUSELASTLINE 자금이 부족합니다.
+	GOTO INPUT_LOOP
+ENDIF
+LOCAL = RESULT
+;소모품
+IF LOCAL >= 60 && LOCAL < 90
+	CALL BUY_PLURAL, LOCAL
+;단독 엔딩 등
+ELSEIF LOCAL >= 95 && LOCAL < 100
+	CALL USE_ITEM, LOCAL
+ELSE
+	PRINTFORMW ＜%조사처리(ITEMNAME:LOCAL,"를")% 구입했습니다.＞
+	MONEY -= ITEMPRICE:LOCAL
+	ITEM:LOCAL = 1
+	;Ｓ패치 추가분
+	SIF LOCAL == 90
+	 CALL SPRING_0
+	CALL MESSAGE_ITEM_BUY
+ENDIF
+;단독 엔딩 아이템은 SHOP 메뉴로 돌아가도록.
+IF LOCAL == 98 || LOCAL == 99
+	VARSET ITEMSALES, 0
+	RETURN 0
+ENDIF
+RESTART
+
+;--------------------------------------------------
+;매물 표시
+;--------------------------------------------------
+@PRINT_NEW_SHOPITEM, ARG
+LOCAL = ITEMPRICE:ARG
+PRINTFORMLC [{ARG, 2}] %ITEMNAME:ARG%(%SHOW_YEN(LOCAL)%)
+
+;--------------------------------------------------
+;아이템 출현 조건
+;--------------------------------------------------
+@SALEITEM_CHECK
+;아이템 · 노예 진열 플래그의 삭제
+VARSET ITEMSALES, 0
+
+;확장 커맨드용 아이템
+REPEAT 60
+	ITEMSALES:COUNT = 1
+	;봉인 아이템 · 커맨드
+	IF (COUNT == 1 || COUNT == 6 || COUNT == 15 || COUNT == 20 || COUNT == 21 || COUNT == 37 || COUNT == 41 || COUNT == 43 || COUNT == 44 || COUNT == 46 || COUNT == 48 || COUNT == 50 || COUNT == 53 || COUNT == 75) && (FLAG:13 & 2) == 0
+		ITEMSALES:COUNT = 0
+	;Ｖ계 확장 커맨드
+	ELSEIF (COUNT >= 4 && COUNT <= 8) && (FLAG:15 & 2) == 0
+		ITEMSALES:COUNT = 0
+	;Ａ계 확장 커맨드
+	ELSEIF (COUNT == 4 || COUNT >= 10 && COUNT <= 14) && (FLAG:15 & 4) == 0
+		ITEMSALES:COUNT = 0
+	;Ｃ계 확장 커맨드
+	ELSEIF ((COUNT >= 17 && COUNT <= 19) || (COUNT >= 25 && COUNT <= 28) || (COUNT >= 38 && COUNT <= 39)) && (FLAG:15 & 1) == 0
+		ITEMSALES:COUNT = 0
+	;Ｂ계 확장 커맨드
+	ELSEIF (COUNT >= 21 && COUNT <= 24) && (FLAG:15 & 8) == 0
+		ITEMSALES:COUNT = 0
+	;羞恥プレイ계 확장 커맨드
+	ELSEIF (COUNT == 40 || (COUNT >= 43 && COUNT <= 47) || COUNT == 49) && (FLAG:15 & 512) == 0
+		ITEMSALES:COUNT = 0
+	;撮影계 확장 커맨드
+	ELSEIF COUNT == 51 && (FLAG:15 & 128) == 0
+		ITEMSALES:COUNT = 0
+	;注射계 확장 커맨드
+	ELSEIF COUNT == 53 && (FLAG:15 & 64) == 0
+		ITEMSALES:COUNT = 0
+	;購入済み・未定義
+	ELSEIF ITEM:COUNT || ITEMPRICE:COUNT == 0
+		ITEMSALES:COUNT = 0
+	ENDIF
+REND
+
+;強力アイテム販売設定
+SIF FLAG:3 >= 3 && TALENT:MASTER:998 == 0 && FLAG:13 & 2
+	CALL SALEITEM_CHECK_EX
+
+;スタンガンは失神パッチ無効ならここで弾く
+SIF FLAG:3999 == 0
+	ITEMSALES:37 = 0
+
+;編集機材(ビデオカメラがあり, 編集機材が未購入で, 撮影コマンド拡張が有効な場合には店頭に並ぶ)
+ITEMSALES:58 = 0
+SIF ITEM:50 && ITEM:58 == 0 && FLAG:15 & 128
+	ITEMSALES:58 = 1
+
+;進化の秘法(進化の秘法未購入で, 主人が禁断の知識と触手使役術を持っており, 紳士的な触手系コマンドが有効の場合は店頭に並ぶ)
+ITEMSALES:59 = 0
+SIF TALENT:MASTER:56 && TALENT:MASTER:149 && ITEM:59 == 0 && FLAG:15 & 4096
+	ITEMSALES:59 = 1
+;Ｓパッチ追加分, 娼館はコンフィグのみで制御
+ITEMSALES:90 = 0
+SIF ITEM:90 == 0 && FLAG:13 & 1024
+	ITEMSALES:90 = 1
+;ローション, 媚薬, ビデオテープはとりあえず99個まで
+FOR LOCAL, 60, 90
+	ITEMSALES:LOCAL = 1
+	;未実装アイテム
+	IF ITEMPRICE:LOCAL == 0
+		ITEMSALES:LOCAL = 0
+	;特殊な薬系(特殊な薬が無効なら販売されない)
+	ELSEIF LOCAL >= 62 && LOCAL < 75 && (FLAG:13 & 1) == 0
+		ITEMSALES:LOCAL = 0
+	;ビデオテープ(既にビデオカメラを購入してないと販売されない)
+	ELSEIF LOCAL == 75 && ITEM:50 == 0
+		ITEMSALES:LOCAL = 0
+	;フィルム(既にカメラを購入していないと販売されないし, 撮影コマンド拡張を無効にしていても販売されない)
+	ELSEIF LOCAL == 76 && (ITEM:51 == 0 || (FLAG:15 & 128) == 0)
+		ITEMSALES:LOCAL = 0
+	;具材セット(羞恥プレイ계 확장 커맨드無効なら販売されない)
+	ELSEIF LOCAL == 77 && (FLAG:15 & 512) == 0
+		ITEMSALES:LOCAL = 0
+	;コンドーム(調教者奉仕・ウフフ계 확장 커맨드無効なら販売されない)
+	ELSEIF LOCAL == 78 && (FLAG:15 & 2048) == 0
+		ITEMSALES:LOCAL = 0
+	;綿棒(Ｃ계 확장 커맨드とＡ계 확장 커맨드がいずれも無効なら販売されない)
+	ELSEIF LOCAL == 79 && (FLAG:15 & 1) == 0 && (FLAG:15 & 4) == 0
+		ITEMSALES:LOCAL = 0
+	;蓋付き瓶(展示室が無効なら販売されない)
+	ELSEIF LOCAL == 81 && (FLAG:12 & 8) == 0
+		ITEMSALES:LOCAL = 0
+	;ヲトナのオムツ(羞恥プレイ계 확장 커맨드無効なら販売されない)
+	ELSEIF LOCAL == 82 && (FLAG:15 & 512) == 0
+		ITEMSALES:LOCAL = 0
+	;フリスク(Ａ계 확장 커맨드無効だと販売されない)
+	ELSEIF LOCAL == 83 && (FLAG:15 & 4) == 0
+		ITEMSALES:LOCAL = 0
+	ENDIF
+	;既に99個持っているアイテムは販売されない
+	SIF ITEM:LOCAL >= 99
+		ITEMSALES:LOCAL = 0
+NEXT
+
+;공정석 목걸이
+ITEMSALES:95 = 0
+IF TALENT:MASTER:998 && CHARANUM > 1 && ITEM:98 == 0 && FLAG:15 & 16
+	;デバッグモードのときは動作チェック用に販売
+	ITEMSALES:95 = 1
+;大甲斐性必須・赤い首輪を所持していないも条件
+ELSEIF TALENT:MASTER:98 && CHARANUM > 1 && ITEM:98 == 0 && FLAG:15 & 16
+	;通常の예속イベント用
+	REPEAT CHARANUM
+		SIF SALE_ITEM_95(COUNT)
+			ITEMSALES:95 = 1
+	REND
+ENDIF
+
+;청산호의 반지
+ITEMSALES:96 = 0
+IF TALENT:MASTER:998 && CHARANUM > 1 && ITEM:99 == 0 && FLAG:15 & 2048
+	;デバッグモードのときは動作チェック用に販売
+	ITEMSALES:96 = 1
+;大甲斐性必須
+ELSEIF TALENT:MASTER:98 && CHARANUM > 1 && ITEM:99 == 0 && FLAG:15 & 2048
+	;通常の상애イベント用
+	REPEAT CHARANUM
+		SIF SALE_ITEM_96(COUNT)
+			ITEMSALES:96 = 1
+	REND
+ENDIF
+
+;예속의 증표
+ITEMSALES:97 = 0
+IF TALENT:MASTER:998 && CHARANUM > 1
+	;デバッグモードのときは動作チェック用に販売
+	ITEMSALES:97 = 1
+ELSEIF CHARANUM > 1
+	;通常の낙인イベント用
+	REPEAT CHARANUM
+		SIF SALE_ITEM_97(COUNT)
+			ITEMSALES:97 = 1
+	REND
+ENDIF
+
+;붉은 개목걸이(노예 엔딩 조건은 여기서 처리)
+ITEMSALES:98 = 0
+;渡したい相手が調教対象であり, ゲームモードがeratohoYMかABNORMALかREVERSALでまだエンディングを迎えておらず, エンゲージリングと赤い首輪を未所持であること
+IF TARGET >= 0 && (FLAG:4 < 2 || FLAG:4 == 3 || FLAG:4 == 9) && FLAG:5 == 0 && ITEM:98 == 0 && ITEM:99 == 0
+	IF TALENT:MASTER:998
+		;デバッグモードのときは動作チェック用に販売
+		ITEMSALES:98 = 1
+	;연모か복종か괴조인격のいずれかを持ち, 음란であり, 낙인, 예속, 정신붕괴, 괴뢰がなく, 굴복각인이 3で반발각인이 0, 순종＋욕망＋봉사정신Lv의 합계가 15이상で, 기교＋マゾっ気＋精液中毒Lv의 합계가 13이상で, Ｖ経験＋Ａ経験의 합계가 200이상で調教自慰経験とフェラ経験がいずれも150이상で, 호감도가 2500이상.
+	ELSEIF (TALENT:150 || TALENT:160 || TALENT:169) && TALENT:170 && TALENT:161 == 0 && TALENT:162 == 0 && TALENT:167 == 0 && TALENT:168 == 0 && MARK:2 >= 3 && MARK:9 == 0 && (ABL:10+ABL:11+ABL:13 >= 15) && (ABL:12+ABL:21+ABL:31 >= 13) && (EXP:0+EXP:1 >= 200) && EXP:11 >= 150 && EXP:22 >= 150 && CFLAG:2 >= 2500
+		;通常の奴隷エンド用
+		;主人が大甲斐性を持ち, この周回が５周目以降であり対象が引き継ぎキャラであるor主人が男の場合には対象のレズ経験が500未満であること.主人が女の場合には対象のＢＬ経験が500未満であること.
+		SIF (TALENT:MASTER:120 && EXP:12 < 500) || (TALENT:MASTER:120 == 0 && EXP:13 < 500) || (TALENT:MASTER:98 && FLAG:6 >= 5 && CFLAG:18)
+			ITEMSALES:98 = 1
+	ENDIF
+ENDIF
+
+;약혼 반지(단독 엔딩 조건은 여기서 처리)
+ITEMSALES:99 = 0
+;渡したい相手が調教対象であり, 助手がおらず, ゲームモードがeratohoYMかABNORMALかREVERSALでまだエンディングを迎えておらず, エンゲージリングと赤い首輪と青珊瑚の指輪を未所持であること.
+IF ASSI < 0 && TARGET >= 0 && (FLAG:4 < 2 || FLAG:4 == 3 || FLAG:4 == 9) && FLAG:5 == 0 && ITEM:96 == 0 && ITEM:98 == 0 && ITEM:99 == 0
+	RESULT = 0
+	;口上呼び出し.口上側で単体エンディングが設定されておればその帰り値によってはエンゲージリングが購入可能になる.
+	TRYCALLFORM EX_ENDING_{NO:TARGET}
+	IF TALENT:MASTER:998
+		;デバッグモードのときは動作チェック用に販売
+		ITEMSALES:99 = 1
+	;大甲斐性がない場合には主人と対象キャラの２人きりであること（失踪中や幽閉中であっても他のキャラがいてはだめ）
+	ELSEIF CHARANUM == 2 && TALENT:MASTER:98 == 0
+		;통상의 단독 엔딩용
+		;연모があり, 상애, 낙인, 예속, 사역마, 정신붕괴, 괴뢰, 괴조인격のいずれもなく, 약물각인과 공포각인과 반발각인이 0で, 対象の순종＋욕망＋기교＋봉사정신Lv의 합계가 17이상で, 호감도가 3000이상あり, 同一周回中に陥落させた奴隷が一人だけである
+		IF TALENT:150 && TALENT:153 == 0 && TALENT:161 == 0 && TALENT:162 == 0 && TALENT:164 == 0 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0 && MARK:3 == 0 && MARK:8 == 0 && MARK:9 == 0 && (ABL:10+ABL:11+ABL:12+ABL:13 >= 17) && CFLAG:MASTER:98 == 1 && CFLAG:2 >= 3000
+			;主人が男の場合には対象のレズ経験が500未満であること.主人が女の場合には対象のＢＬ経験が500未満であること.
+			SIF (TALENT:MASTER:120 && EXP:12 < 500) || (TALENT:MASTER:120 == 0 && EXP:13 < 500)
+				ITEMSALES:99 = 1
+		ENDIF
+	ELSEIF TALENT:MASTER:98
+		;主人が[大甲斐性]を持っていた場合, 条件次第でエンゲージリングが購入可能に
+		;연모があり, 상애, 낙인, 예속, 사역마, 정신붕괴, 괴뢰, 괴조인격のいずれもなく, 약물각인과 공포각인과 반발각인이 0で, 対象の순종＋욕망＋기교＋봉사정신Lv의 합계가 17이상で, 호감도가 3500이상ある
+		IF TALENT:150 && TALENT:153 == 0 && TALENT:161 == 0 && TALENT:162 == 0 && TALENT:164 == 0 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0 && MARK:3 == 0 && MARK:8 == 0 && MARK:9 == 0 && (ABL:10+ABL:11+ABL:12+ABL:13 >= 17) && CFLAG:2 >= 3500
+			;この周回が５周目以降であり対象が引き継ぎキャラであるor主人が男の場合には対象のレズ経験が500未満であること.主人が女の場合には対象のＢＬ経験が500未満であること.
+			SIF (TALENT:MASTER:120 && EXP:12 < 500) || (TALENT:MASTER:120 == 0 && EXP:13 < 500) || (FLAG:6 >= 5 && CFLAG:18)
+				ITEMSALES:99 = 1
+		ENDIF
+	ELSEIF RESULT
+		;특수 단독 엔딩 조건이 존재하며, 그것을 충족했을 경우 구입 가능하게
+		ITEMSALES:99 = 1
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;강력 아이템 출현 조건
+;--------------------------------------------------
+;アイテム発売解禁の個別設定私案より頂きました.一文字変数Iの代わりにLOCALを使用
+;이하各種道具販売解禁のための条件
+;電気按摩：存在している奴隷の内誰かが「음란」を持っている
+;愛液採集器:存在している奴隷の内誰かが「淫壷」を持っている
+;クリキャップ：存在している奴隷の内誰かが「淫核／淫茎」を持っている
+;ニプルキャップ：存在している奴隷の内誰かが「淫乳」を持っている
+;搾乳器：存在している奴隷の内誰かが「母乳体質」を持っている
+;スタンガン：主人調教師Lv1이상
+;首輪＋リード：存在している奴隷の内誰かが「복종」を持っている
+;プラカード：存在している奴隷の内誰かが「망신」を持っている
+;エプロン：存在している奴隷の内誰かが「연모」を持っている
+;聴診器・注射セット：存在している奴隷の内誰かが「治療」を持っている
+;ビデオカメラ・ビデオテープ：主人撮影技能Lv1이상
+;特注日傘:助手可能な奴隷の中に美鈴・咲夜のいずれかがいるか主人が美鈴・咲夜のいずれかである.
+@SALEITEM_CHECK_EX
+LOCAL = 0
+;電気按摩
+ITEMSALES:1 = 0
+;愛液採集器
+ITEMSALES:6 = 0
+;クリキャップ
+ITEMSALES:15 = 0
+;ニプルキャップ
+ITEMSALES:20 = 0
+;搾乳器
+ITEMSALES:21 = 0
+;スタンガン
+ITEMSALES:37 = 0
+;首輪＋リード
+ITEMSALES:41 = 0
+;プラカード
+ITEMSALES:43 = 0
+;エプロン
+ITEMSALES:44 = 0
+;聴診器・注射セット
+ITEMSALES:46 = 0
+ITEMSALES:53 = 0
+;ビデオカメラ・ビデオテープ
+ITEMSALES:50 = 0
+ITEMSALES:75 = 0
+;특주양산
+ITEMSALES:48 = 0
+
+REPEAT CHARANUM
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;美鈴・咲夜のいずれかが主人または助手可能な奴隷にいる
+	SIF (NO:COUNT == 6 || NO:COUNT == 9) && (COUNT == MASTER || CFLAG:COUNT:1 == 2)
+		LOCAL |= 256
+	;MASTER는 제외
+	SIF COUNT == 0
+		CONTINUE
+	;음란
+	SIF TALENT:COUNT:170
+		LOCAL |= 1
+	;淫核／淫茎
+	SIF TALENT:COUNT:171
+		LOCAL |= 2
+	;淫乳
+	SIF TALENT:COUNT:174
+		LOCAL |= 4
+	;母乳体質
+	SIF TALENT:COUNT:134
+		LOCAL |= 8
+	;복종
+	SIF TALENT:COUNT:160
+		LOCAL |= 16
+	;망신
+	SIF TALENT:COUNT:151
+		LOCAL |= 32
+	;연모
+	SIF TALENT:COUNT:150
+		LOCAL |= 64
+	;治療
+	SIF TALENT:COUNT:59
+		LOCAL |= 128
+	;淫壷
+	SIF TALENT:COUNT:172
+		LOCAL |= 512
+REND
+
+SIF LOCAL & 1 && ITEM:1 == 0
+	ITEMSALES:1 = 1
+SIF LOCAL & 2 && ITEM:15 == 0
+	ITEMSALES:15 = 1
+SIF LOCAL & 4 && ITEM:20 == 0
+	ITEMSALES:20 = 1
+SIF LOCAL & 8 && ITEM:21 == 0
+	ITEMSALES:21 = 1
+SIF LOCAL & 16 && ITEM:41 == 0
+	ITEMSALES:41 = 1
+SIF LOCAL & 32 && ITEM:43 == 0
+	ITEMSALES:43 = 1
+SIF LOCAL & 64 && ITEM:44 == 0
+	ITEMSALES:44 = 1
+IF LOCAL & 128
+	SIF ITEM:46 == 0
+		ITEMSALES:46 = 1
+	SIF FLAG:15 & 64 && ITEM:53 == 0
+		ITEMSALES:53 = 1
+ENDIF
+SIF LOCAL & 256 && ITEM:48 == 0
+	ITEMSALES:48 = 1
+IF ABL:MASTER:71 >= 1
+	SIF ITEM:50 == 0
+		ITEMSALES:50 = 1
+	SIF ITEM:50 && ITEM:75 < 99
+		ITEMSALES:75 = 1
+ENDIF
+SIF LOCAL & 512 && ITEM:6 == 0
+	ITEMSALES:6 = 1
+;スタンガン（失神パッチ無効時は別所で弾く）
+SIF ABL:MASTER:99 >= 1 && ITEM:37 == 0
+	ITEMSALES:37 = 1
+
+;--------------------------------------------------
+;여러 개 소유 가능한 아이템 구입 처리
+;--------------------------------------------------
+;複数個所持可能なアイテムについて, 同時購入個数を選択
+;LOCALは購入可能個数を示す
+@BUY_PLURAL, ARG
+LOCAL = MIN(MONEY / ITEMPRICE:ARG, MAX(99-ITEM:ARG, 0))
+DRAWLINE
+PRINTFORML %조사처리(ITEMNAME:ARG,"을")% 몇 개 구입하겠습니까? (자금 {MONEY}원)
+PRINTFORML {LOCAL}개까지 구입할 수 있습니다. (현재 {ITEM:ARG}개 보유중)
+PRINTLC [0] 구입하지 않는다.
+PRINTLC [1] 1개
+SIF LOCAL >= 5
+	PRINTLC [5] 5개
+SIF LOCAL >= 10
+	PRINTLC [10] 10개
+SIF LOCAL != 1 && LOCAL != 5 && LOCAL != 10
+	PRINTFORMLC [{LOCAL}]개 구입합니다.
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	RETURN 0
+ELSEIF RESULT < 0
+	CLEARLINE 1
+	REUSELASTLINE  
+	GOTO INPUT_LOOP
+ELSEIF ITEMPRICE:ARG * RESULT > MONEY
+	CLEARLINE 1
+	REUSELASTLINE 돈이 모자랍니다.
+	GOTO INPUT_LOOP
+ELSEIF RESULT > LOCAL
+	CLEARLINE 1
+	REUSELASTLINE 그렇게 가질 수 없습니다.
+	GOTO INPUT_LOOP
+ELSE
+	PRINTFORMW ＜%조사처리(ITEMNAME:ARG,"를")% {RESULT}개 구입했습니다＞
+	ITEM:ARG += RESULT
+	MONEY -= ITEMPRICE:ARG * RESULT
+	CALL MESSAGE_ITEM_BUY
+ENDIF
+
+;--------------------------------------------------
+;아이템 구입에 대한 캐릭터 대사
+;--------------------------------------------------
+@MESSAGE_ITEM_BUY
+;アイテムを購入したことに対する助手の口上
+TFLAG:99 = 0
+SIF ASSI > 0
+	CALL SELF_KOJO, ASSI, 35, 0
+;アイテムを購入したことに対する奴隷の口上
+SIF TARGET > 0 && TFLAG:99 == 0
+	CALL SELF_KOJO, TARGET, 36
+
+;--------------------------------------------------
+;아이템 사용 처리
+;--------------------------------------------------
+@USE_ITEM, ARG
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;失踪中のキャラは排除
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;공정석 목걸이
+	IF ARG == 95
+		IF SALE_ITEM_95(COUNT)
+			PRINT 
+		ELSE
+			CONTINUE
+		ENDIF
+	;青珊瑚の指輪
+	ELSEIF ARG == 96
+		IF SALE_ITEM_96(COUNT)
+			PRINT 
+		ELSE
+			CONTINUE
+		ENDIF
+	;예속의 증표
+	ELSEIF ARG == 97
+		IF SALE_ITEM_97(COUNT)
+			PRINT 
+		ELSE
+			CONTINUE
+		ENDIF
+	;赤い首輪
+	ELSEIF ARG == 98 && COUNT != TARGET
+		CONTINUE
+	;エンゲージリング
+	ELSEIF ARG == 99 && COUNT != TARGET
+		CONTINUE
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORM %ITEMNAME:ARG%：
+;아이템 효과를 표시한다
+SIF ARG == 95
+	PRINTL 성적인 계약을 맺습니다.
+SIF ARG == 96
+	PRINTL 사랑의 서약을 합니다.
+SIF ARG == 97
+	PRINTL 노예에게 낙인을 찍습니다.
+SIF ARG == 98
+	PRINTL 최고의 노예라는 증표를 수여합니다.
+SIF ARG == 99
+	PRINTL 자신의 마음을 전합니다.
+PRINTFORML 누구에게 \@(ARG == 95 || ARG == 97 || ARG == 98) ? 부여하겠습니까? # 건네겠습니까? \@  ＜page.{LOCAL+1}＞
+
+CALL USE_ITEM_LIST, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_0
+ENDIF
+
+MONEY -= ITEMPRICE:ARG
+ITEM:ARG += 1
+;공정석 목걸이(예속)・青珊瑚の指輪(친애)・예속의 증표(낙인)
+IF ARG == 95 || ARG == 96 || ARG == 97
+	LOCAL:98 = TARGET
+	TARGET = RESULT
+	CALLFORM USE_ITEM_{ARG}
+	TARGET = LOCAL:98
+;赤い首輪(奴隷エンド)・エンゲージリング(단독 엔딩)
+ELSEIF ARG == 98 || ARG == 99
+	CALLFORM USE_ITEM_{ARG}
+ENDIF
+
+;-------------------------------------------------
+;아이템을 사용시의 캐릭터 일람 표시 처리
+;-------------------------------------------------
+@USE_ITEM_LIST, ARG
+IF MARK:MASTER:98 == 1
+	DRAWLINE
+	PRINTFORML 　[0] %CALLNAME:MASTER%(주인)　체력 ({BASE:MASTER:0, 4}/{MAXBASE:MASTER:0, 4})
+ENDIF
+DRAWLINE
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+	SIF CFLAG:LOCAL:4 == 1
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF CFLAG:LOCAL:4 == 4
+		PRINT ◆
+		LOCAL:3 = 1
+	ELSEIF CFLAG:LOCAL:4 == 2048 || CFLAG:LOCAL:4 == 4096
+		PRINT ▽
+	ELSEIF CFLAG:LOCAL:4 == 1024
+		PRINT ▼
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT ●
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	SIF CFLAG:LOCAL:1 == 2
+		PRINT 조수가능
+	PRINTL 
+REND
+
+
+;--------------------------------------------------
+;특수 아이템 판매 가능 판정 처리
+;--------------------------------------------------
+;………………………………………………
+;공정석 목걸이
+;………………………………………………
+@SALE_ITEM_95, ARG
+#FUNCTION
+;그 자리에 없으면 불가
+SIF CFLAG:ARG:4
+	RETURNF 0
+;[음란]を持っている, かつ[연모][복종][괴조인격]のいずれかを持っている
+SIF TALENT:ARG:170 == 0 || (TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:169 == 0)
+	RETURNF 0
+
+;원래 조건
+;이미 [상애][낙인][예속][정신붕괴][괴뢰]を취득している, あるいは호감도가 2500未満だとダメ
+;SIF TALENT:ARG:153 || TALENT:ARG:161 || TALENT:ARG:162 || TALENT:ARG:167 || TALENT:ARG:168 || CFLAG:ARG:2 < 2500
+
+;즉각함락이 없는 상태에서 [상애][낙인] 보유하고 있거나 [정신 붕괴][괴뢰]을 보유하고 있거나 호감도가 2500 미만 이라고 안
+SIF (TALENT:ARG:179 == 0 && (TALENT:ARG:153 || TALENT:ARG:161 )) || TALENT:ARG:162 || TALENT:ARG:167 || TALENT:ARG:168 || CFLAG:ARG:2 < 2500
+	RETURNF 0
+;Ｖ経験＋Ａ経験의 합계가 200이상, 調教自慰経験とフェラ経験がそれぞれ150이상
+SIF (EXP:ARG:0+EXP:ARG:1 < 200) || EXP:ARG:11 < 150 || EXP:ARG:22 < 150
+	RETURNF 0
+
+;원래 조건 - 굴복각인이 3, 반발각인이 0, 순종＋욕망＋봉사정신의 합계가 15이상, 기교＋マゾっ気＋精液中毒의 합계가 13이상
+;SIF MARK:ARG:2 < 3 || MARK:ARG:9 || (ABL:ARG:10 + ABL:ARG:11 + ABL:ARG:13 < 15) || (ABL:ARG:12 + ABL:ARG:21 + ABL:ARG:31 < 13)
+
+;굴복각인이 3, 반발각인이 0, 순종＋욕망＋봉사정신의 합계가 15이상, 기교＋マゾっ気＋精液中毒의 합계가 13이상, 마스터가 남자도 후타나리도 아닐 시 8 이상
+SIF MARK:ARG:2 < 3 || MARK:ARG:9 || (ABL:ARG:10 + ABL:ARG:11 + ABL:ARG:13 < 15) || ((TALENT:MASTER:120 == 1 || TALENT:MASTER:121 == 1) && (ABL:ARG:12 + ABL:ARG:21 + ABL:ARG:31 < 13)) || (ABL:ARG:12 + ABL:ARG:21 + ABL:ARG:31 < 8)
+	RETURNF 0
+;男主人なら対象のレズ経験が, 女主人なら対象のＢＬ経験が500未満じゃないとダメ
+;ただしこのプレイが5周目이상, 引き継ぎキャラであった場合はレズ経験, ＢＬ経験の判定は免除
+;相手が[両刀]で男主人のときは対象のＢＬ中毒がLV5이상, 女主人のときは対象のレズ中毒がLV5の場合もレズ経験, ＢＬ経験の判定は免除
+SIF (TALENT:MASTER:120 && ((TALENT:ARG:83 && ABL:ARG:33 >= 5) || EXP:ARG:12 < 500)) || (TALENT:MASTER:120 == 0 && ((TALENT:ARG:83 && ABL:ARG:32 >= 5) || EXP:ARG:13 < 500)) || (FLAG:6 >= 5 && CFLAG:ARG:18)
+	RETURNF 1
+RETURNF 0
+
+;………………………………………………
+;청산호의 반지
+;………………………………………………
+@SALE_ITEM_96, ARG
+#FUNCTION
+;그 자리에 없으면 불가
+SIF CFLAG:ARG:4
+	RETURNF 0
+;[친애]를 소유하고 있다, 또는 호감도가 3500이상에다 애정경험이 500이상이며 [망신]을 가지고 있다
+SIF ((TALENT:ARG:151 == 0 || EXP:ARG:21 < 500 || CFLAG:ARG:2 < 3500) && TALENT:ARG:152 == 0)
+	RETURNF 0
+
+;원래 조건 - 이미 [상애][낙인][흠집][사역마][정신붕괴][괴뢰][괴조인격]을 취득하고 있으면 불가
+;SIF TALENT:ARG:153 || TALENT:ARG:161 || TALENT:ARG:163 || TALENT:ARG:164 || TALENT:ARG:167 || TALENT:ARG:168 || TALENT:ARG:169
+
+;즉각함락이 없는 상황에서 [상애][낙인][흠집] 보유하고 있거나 [사역마][정신붕괴][괴뢰][괴조인격]을 취득하고 있으면 불가
+SIF (TALENT:ARG:179 == 0 && ( TALENT:ARG:161 || TALENT:ARG:163 || TALENT:ARG:164 )) || TALENT:ARG:167 || TALENT:ARG:168 || TALENT:ARG:153 || TALENT:ARG:169
+	RETURNF 0
+;약물각인과 공포각인과 반발각인이 0, 순종＋욕망＋기교＋봉사정신의 합계가 17이상
+SIF MARK:ARG:3 || MARK:ARG:8 || MARK:ARG:9 || (ABL:ARG:10 + ABL:ARG:11 + ABL:ARG:12 + ABL:ARG:13 < 17)
+	RETURNF 0
+;[예속]이 있을 경우에는, 즉각함락을 가지고 있거나 호감도가 35000이상에다 애정경험이 5000이상 없으면 불가
+SIF TALENT:ARG:162 && TALENT:ARG:179 == 0 && (CFLAG:ARG:2 < 35000 || EXP:ARG:21 < 5000)
+	RETURNF 0
+;男主人なら対象のレズ経験が, 女主人なら対象のＢＬ経験が500未満じゃないとダメ
+;ただしこのプレイが5周目이상, 引き継ぎキャラであった場合はレズ経験, ＢＬ経験の判定は免除
+;相手が[両刀]で男主人のときは対象のＢＬ中毒がLV5이상, 女主人のときは対象のレズ中毒がLV5の場合もレズ経験, ＢＬ経験の判定は免除
+SIF (TALENT:MASTER:120 && ((TALENT:ARG:83 && ABL:ARG:33 >= 5) || EXP:ARG:12 < 500)) || (TALENT:MASTER:120 == 0 && ((TALENT:ARG:83 && ABL:ARG:32 >= 5) || EXP:ARG:13 < 500)) || (FLAG:6 >= 5 && CFLAG:ARG:18)
+	RETURNF 1
+RETURNF 0
+
+;………………………………………………
+;예속의 증표
+;………………………………………………
+@SALE_ITEM_97, ARG
+#FUNCTION
+;그 자리에 없으면 불가
+SIF CFLAG:ARG:4
+	RETURNF 0
+;호감도가 500이상, 연모, 복종, 괴조인격, 음란のうちどれかが必要.また, すでに낙인を押されているとダメ
+SIF (TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:169 == 0 && TALENT:ARG:170 == 0) || TALENT:ARG:161 || TALENT:ARG:163 || CFLAG:ARG:2 < 500
+	RETURNF 0
+;굴복각인이 2이하, または반발각인이 1이상, Ｖ経験＋Ａ経験의 합계가 100未満, 調教自慰経験とフェラ経験のどちらかが50未満だとダメ
+SIF MARK:ARG:2 < 3 || MARK:ARG:9 || (EXP:ARG:0 + EXP:ARG:1 < 100) || EXP:ARG:11 < 50 || EXP:ARG:22 < 50
+	RETURNF 0
+
+;원래 조건 - 순종＋욕망의 합계가 8이상, 기교＋봉사정신의 합계가 7이상, マゾっ気と自慰中毒と精液中毒が全て2이상必要
+;SIF (ABL:ARG:10 + ABL:ARG:11 < 8) || (ABL:ARG:12 + ABL:ARG:13 < 7) || ABL:ARG:21 < 2 || ABL:ARG:30 < 2 || ABL:ARG:31 < 2
+
+;순종＋욕망의 합계가 8이상, 기교＋봉사정신의 합계가 7이상, マゾっ気と自慰中毒と精液中毒が全て2이상必要 (남자가 아니고 후타나리가 아닌 여주인의 경우 정액중독 조건은 무시)
+SIF (ABL:ARG:10 + ABL:ARG:11 < 8) || (ABL:ARG:12 + ABL:ARG:13 < 7) || ABL:ARG:21 < 2 || ABL:ARG:30 < 2 || ((TALENT:MASTER:120 == 1 || TALENT:MASTER:121 == 1) && ABL:ARG:31 < 2)
+	RETURNF 0
+;男主人なら対象のレズ経験が, 女主人なら対象のＢＬ経験が1500未満じゃないとダメ
+;ただし主人が[大甲斐性]持ちで, このプレイが5周目이상, 引き継ぎキャラであった場合はレズ経験, ＢＬ経験の判定は免除
+SIF (TALENT:MASTER:120 && ((TALENT:ARG:83 && ABL:ARG:33 >= 5) || EXP:ARG:12 < 1500)) || (TALENT:MASTER:120 == 0 && ((TALENT:ARG:83 && ABL:ARG:32 >= 5) || EXP:ARG:13 < 1500)) || (TALENT:MASTER:98 && FLAG:6 >= 5 && CFLAG:ARG:18)
+	RETURNF 1
+RETURNF 0
+
+;=============================================================================
+;단독 엔딩계 아이템, 특수 소질 부가계 아이템의 처리
+;=============================================================================
+;--------------------------------------------------
+;약혼 반지(단독 엔딩)
+;--------------------------------------------------
+;엔딩 번호는 500＋캐릭터 번호를 상정
+@USE_ITEM_99
+TFLAG:201 = 1
+;지문 컷
+IF CFLAG:99 == 1
+	CALL SELF_KOJO, TARGET, 200
+;지문 표시
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 왼손을 끌어당겨서, 약지에 반지를 끼워줬다.
+	CALL SELF_KOJO, TARGET, 200
+	;지문 컷
+	IF !CFLAG:99 || RESULT == 2
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 뺨을 붉히며 %CALLNAME:MASTER%의 마음을 받아들이겠다고 말했다.
+	IF TALENT:27
+		PRINTFORMW 그 얼굴은 지금까지는 없던 행복에 가득차, 모든 괴로움을 날려버린 듯이 보였다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:27%]를 잃었다.
+	ENDIF
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"과")% 붙어서, 오랜 시간 포옹을 나누고 있었다…….
+		SIF TALENT:153 == 0 && TALENT:161 == 0
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:153%]를 얻었다.
+		SIF RELATION:MASTER < 200
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"과")% %조사처리(CALLNAME:MASTER,"는")% 보다 깊은 인연으로 맺어졌다.
+	ENDIF
+ENDIF
+;일선을 넘지 않음 소멸
+IF TALENT:27
+	TALENT:27 = 0
+	CFLAG:13 |= 64
+ENDIF
+;상애 취득
+IF TALENT:153 == 0 && TALENT:161 == 0
+	TALENT:153 = 1
+	CFLAG:14 |= 8
+	FLAG:35 += 1
+ENDIF
+;범용 대사용 플래그
+CFLAG:43 = 0
+;상성 업
+RELATION:MASTER = MAX(RELATION:MASTER, 200)
+PRINTW  
+
+;매각 불가 플래그
+CFLAG:3 |= 1
+
+;후일담 표시 판별 플래그
+TFLAG:205 = 0
+
+;결혼기념일
+CFLAG:3113 = DAY
+
+;칭호 ＧＥＴ!
+IF TALENT:120
+	NICKNAME:TARGET = 『가장 사랑하는 남편』
+ELSE
+	NICKNAME:TARGET = 『가장 사랑하는 아내』
+ENDIF
+
+IF FLAG:5 == 0 && TFLAG:124 == 0
+	;단독 엔딩 판별용
+	LOCAL = 4500 + NO:TARGET
+	FLAG:LOCAL |= 1
+	IF FLAG:11 > 0
+		CALL SINGLE_ENDING
+	ELSE
+		PRINTW ―――단독 엔딩 조건 달성―――
+		PRINTW ………………
+		PRINTW …………
+		PRINTW ……
+	ENDIF
+	SIF TFLAG:201 == 1
+		LOCAL = 1000 + NO:TARGET
+	CALL GAME_CONTINUE, 0, LOCAL
+	;단독 엔딩 계속 대사
+	SIF FLAG:11 > 0 && !TFLAG:994
+		CALL SINGLE_ENDING_AFTER
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;붉은 개목걸이(노예 엔딩)
+;--------------------------------------------------
+;엔딩 번호는 500＋캐릭터 번호i를 상정
+@USE_ITEM_98
+TFLAG:201 = 1
+;지문 컷
+IF CFLAG:99 == 1
+	CALL SELF_KOJO, TARGET, 201
+;지문 표시
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 몸을 끌어당겨, 목에 붉은 개목걸이를 채웠다.
+	CALL SELF_KOJO, TARGET, 201
+	;지문 컷
+	IF !CFLAG:99 || RESULT == 2
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 순간 멍한 표정을 지었지만, 
+	PRINTFORMW 정신을 차리곤 %CALLNAME:MASTER%에게 달라붙어선 녹아내릴 듯한 눈동자로 올려다보며 복종의 맹세를 읊었다.
+	PRINTFORM %CALLNAME:TARGET%의 이름이 각인된 이름표가 
+		IF TIME == 0
+		PRINT 저녁 노을을 받아 
+		ELSE
+		PRINT 달빛을 받아 
+		ENDIF
+	PRINTW 반짝 빛나고 있었다…….
+	PRINTL 
+	SIF TALENT:27
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:27%]을 잃었다.
+	SIF TALENT:30
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:30%]을 잃었다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 달라붙어 있는 %CALLNAME:TARGET%의 머리를 오랫동안 쓰다듬으며 
+	PRINTFORMW 하늘을 올려다보곤, 이후 조교에 대한 생각으로 가득했다…….
+	PRINTL 
+	SIF TALENT:160 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:160%]을 얻었다.
+	SIF TALENT:153 == 0 && TALENT:162 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:162%]을 얻었다.
+	SIF RELATION:MASTER < 200
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"과")% %조사처리(CALLNAME:MASTER,"는")% 보다 깊은 인연으로 맺어졌다.
+	ENDIF
+ENDIF
+;일선을 넘지 않음 소멸
+IF TALENT:27
+	TALENT:27 = 0
+	CFLAG:13 |= 64
+ENDIF
+;정조관념 소멸
+IF TALENT:30
+	TALENT:30 = 0
+	CFLAG:13 |= 256
+ENDIF
+;복종 취득
+IF TALENT:160 == 0
+	TALENT:160 = 1
+	CFLAG:15 |= 1
+ENDIF
+;예속 취득
+IF TALENT:153 == 0 && TALENT:162 == 0
+	TALENT:162 = 1
+	CFLAG:15 |= 4
+	FLAG:36 += 1
+ENDIF
+;범용 대사용 플래그
+CFLAG:43 = 0
+;상성 업
+RELATION:MASTER = MAX(RELATION:MASTER, 200)
+PRINTW  
+
+;매각 불가 플래그
+CFLAG:3 |= 2
+
+;후일담 표시 판별 플래그
+TFLAG:205 = 0
+
+;계약기념일
+CFLAG:3114 = DAY
+
+;칭호 ＧＥＴ!
+NICKNAME:TARGET = 『최고의 종자』
+
+IF FLAG:5 == 0 && TFLAG:124 == 0
+	;노예 엔딩 판별용
+	LOCAL = 4500 + NO:TARGET
+	FLAG:LOCAL |= 2
+	IF FLAG:11 > 0
+		CALL SLAVE_ENDING
+	ELSE
+		PRINTW ―――노예 엔딩 조건 달성―――
+		PRINTW ………………
+		PRINTW …………
+		PRINTW ……
+	ENDIF
+	SIF TFLAG:201 == 1
+		LOCAL = 2000 + NO:TARGET
+	CALL GAME_CONTINUE, 0, LOCAL
+	;노예 엔딩 계속 대사
+	SIF FLAG:11 > 0 && !TFLAG:994
+		CALL SLAVE_ENDING_AFTER
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;예속의 증표(낙인)
+;--------------------------------------------------
+@USE_ITEM_97
+PRINTFORMW ※주의！　%CALLNAME:TARGET%에게 낙인을 찍으면 두 번 다시 매각할 수 없게 됩니다.
+PRINTW 그래도 되겠습니까?
+DRAWLINE
+PRINTFORML [0] - %CALLNAME:TARGET%에게 낙인을 찍는다
+IF FLAG:15 & 16
+	;고문계, 정신조작계 커맨드 유효면 선택지 증가
+	PRINTFORML [1] - %CALLNAME:TARGET%의 몸에 매직으로 낙인을 그린다
+	PRINTFORML [2] - %CALLNAME:TARGET%에게 인두로 낙인 시술을 한다
+	PRINTFORML [3] - %CALLNAME:TARGET%의 몸에 %CALLNAME:MASTER%의 낙인을 새긴다
+	PRINTFORML [4] - %CALLNAME:TARGET%에게 노예용의 검은 쵸커를 달아준다
+ENDIF
+PRINTL [100] - 그만둔다
+DRAWLINE
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 || (RESULT >= 1 && RESULT <= 4 && FLAG:15 & 16)
+	LOCAL = RESULT
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;지문 컷
+IF CFLAG:99 == 1
+	CALL SELF_KOJO, TARGET, 202, LOCAL
+;지문 표시
+ELSE
+	IF LOCAL == 1 && FLAG:15 & 16
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 특수 매직펜으로 %CALLNAME:TARGET%의 몸에 낙인을 그려넣었다.
+	ELSEIF LOCAL == 2 && FLAG:15 & 16
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 인두로 %CALLNAME:TARGET%에게 낙인을 찍었다.
+	ELSEIF LOCAL == 3 && FLAG:15 & 16
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에게 %CALLNAME:MASTER%의 낙인으로 문신을 새겼다.
+	ELSEIF LOCAL == 4 && FLAG:15 & 16
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"를")% 끌어당겨 목에 검은 쵸커를 걸어줬다.
+	ELSE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에게 낙인을 찍었다.
+	ENDIF
+	CALL SELF_KOJO, TARGET, 202, LOCAL
+	;지문 컷
+	IF !CFLAG:99 || RESULT == 2
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:MASTER%의 소유물이 되었다는 것에 
+	PRINTFORMW 이 이상 없는 기쁨을 느끼고 있는 것 같다…….
+	SIF TALENT:27
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:27%]을 잃었다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 몸에 새겨진 낙인을 손가락으로 쓰다듬으며, 
+	PRINTFORMW %CALLNAME:TARGET%의 복속심을 부채질했다.
+	PRINTL 
+	SIF TALENT:160 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:160%]을 얻었다.
+	SIF TALENT:161 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:161%]을 얻었다.
+ENDIF
+ENDIF
+PRINTW  
+;일선을 넘지 않음 소멸
+IF TALENT:27
+	TALENT:27 = 0
+	CFLAG:13 |= 64
+ENDIF
+;복종 취득
+IF TALENT:160 == 0
+	TALENT:160 = 1
+	CFLAG:15 |= 1
+ENDIF
+;낙인 취득
+IF TALENT:161 == 0
+	TALENT:161 = 1
+	CFLAG:15 |= 2
+ENDIF
+FLAG:31 += 1
+;범용 대사용 플래그
+CFLAG:43 = 0
+;매각 불가 플래그
+CFLAG:3 |= 2
+
+;칭호 ＧＥＴ!
+IF RAND:2 == 0
+	NICKNAME:TARGET = 『%CALLNAME:MASTER%의 애완동물』
+ELSE
+	NICKNAME:TARGET = 『%CALLNAME:MASTER%의 장난감』
+ENDIF
+
+PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 몸도 마음도 %CALLNAME:MASTER%의 지배하에 놓였습니다―――
+PRINTW …………
+PRINTW ………
+PRINTW ……
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 매각할 수 없게 되었습니다＞
+PRINTL 
+RETURN 1
+
+;--------------------------------------------------
+;청산호의 반지(상애)
+;--------------------------------------------------
+@USE_ITEM_96
+;지문 컷
+IF CFLAG:99 == 1
+	CALL SELF_KOJO, TARGET, 205
+;지문 표시
+ELSE
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"를")% 끌어당겨선, 약지에 청산호의 반지를 끼워줬다.
+	CALL SELF_KOJO, TARGET, 205
+	;지문 컷
+	IF !CFLAG:99 || RESULT == 2
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 뺨을 붉히며 %CALLNAME:MASTER%의 마음을 받아들이겠다고 말했다.
+	IF TALENT:27
+		PRINTFORMW 그 얼굴은 지금까지는 없던 행복에 가득차, 모든 괴로움을 날려버린 듯이 보였다.
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:27%]를 잃었다.
+	ENDIF
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"과")% 붙어서, 오랜 시간 포옹을 나누고 있었다…….
+	SIF TALENT:153 == 0 && TALENT:161 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:153%]를 얻었다.
+	SIF RELATION:MASTER < 150 || (TALENT:151 && RELATION:MASTER < 170)
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"과")% %조사처리(CALLNAME:MASTER,"는")% 보다 깊은 인연으로 맺어졌다.
+	ENDIF
+ENDIF
+PRINTW  
+;일선을 넘지 않음 소멸
+IF TALENT:27
+	TALENT:27 = 0
+	CFLAG:13 |= 64
+ENDIF
+;상애 취득
+IF TALENT:153 == 0
+;IF TALENT:153 == 0 && TALENT:161 == 0
+	TALENT:153 = 1
+	CFLAG:14 |= 8
+	FLAG:35 += 1
+ENDIF
+;범용 대사용 플래그
+CFLAG:43 = 0
+;상성 업
+RELATION:MASTER = (TALENT:151) ? MAX(RELATION:MASTER, 170) # MAX(RELATION:MASTER, 150)
+;매각 불가 플래그
+CFLAG:3 |= 1
+;결혼기념일
+CFLAG:3113 = DAY
+PRINTFORMW ―――%조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"과")% 같이 행복의 맹세를 했습니다―――
+PRINTW …………
+PRINTW ………
+PRINTW ……
+PRINTFORMW ＜%ITEMNAME:99%는 다 팔렸습니다＞
+PRINTL 
+
+;칭호 ＧＥＴ!
+IF RAND:3 == 0
+	IF TALENT:120
+		NICKNAME:TARGET = 『가장 사랑하는 남편』
+	ELSE
+		NICKNAME:TARGET = 『가장 사랑하는 아내』
+	ENDIF
+ELSEIF RAND:2 == 0
+	IF TALENT:120
+		NICKNAME:TARGET = 『만점 파파』
+	ELSE
+		NICKNAME:TARGET = 『무적의 마마』
+	ENDIF
+ELSE
+	IF TALENT:120
+		NICKNAME:TARGET = 『운명의 남자』
+	ELSE
+		NICKNAME:TARGET = 『운명의 여자』
+	ENDIF
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;공정석 목걸이(예속)
+;--------------------------------------------------
+@USE_ITEM_95
+;지문 컷
+IF CFLAG:99 == 1
+	CALL SELF_KOJO, TARGET, 206
+;지문 표시
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 몸을 끌어당겨, 목에 공정석의 목걸이를 채웠다.
+	CALL SELF_KOJO, TARGET, 206
+	;지문 컷
+	IF !CFLAG:99 || RESULT == 2
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 순간 멍한 표정을 지었지만, 
+	PRINTFORMW 정신을 차리곤 %CALLNAME:MASTER%에게 달라붙어선 녹아내릴 듯한 눈동자로 올려다보며 복종의 맹세를 읊었다.
+	PRINTFORM %CALLNAME:TARGET%의 이름이 각인된 이름표가 
+	IF TIME == 0
+		PRINT 저녁 노을을 받아 
+	ELSE
+		PRINT 달빛을 받아 
+	ENDIF
+	PRINTW 반짝하고 빛나고 있었다……
+	PRINTL 
+	SIF TALENT:27
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:27%]을 잃었다.
+	SIF TALENT:30
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:30%]을 잃었다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 달라붙어 있는 %CALLNAME:TARGET%의 머리를 오랫동안 쓰다듬으며 
+	PRINTFORMW 하늘을 올려다보곤, 이후 조교에 대한 생각으로 가득했다…….
+	PRINTL 
+	SIF TALENT:160 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:160%]을 얻었다.
+	SIF TALENT:153 == 0 && TALENT:162 == 0
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:162%]을 얻었다.
+	SIF RELATION:MASTER < 200
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"과")% %조사처리(CALLNAME:MASTER,"는")% 보다 깊은 인연으로 맺어졌다.
+	ENDIF
+ENDIF
+;일선을 넘지 않음 소멸
+IF TALENT:27
+	TALENT:27 = 0
+	CFLAG:13 |= 64
+ENDIF
+;정조관념 소멸
+IF TALENT:30
+	TALENT:30 = 0
+	CFLAG:13 |= 256
+ENDIF
+;복종 취득
+IF TALENT:160 == 0
+	TALENT:160 = 1
+	CFLAG:15 |= 1
+ENDIF
+;예속 취득
+;IF TALENT:153 == 0 && TALENT:162 == 0
+IF TALENT:162 == 0
+	TALENT:162 = 1
+	CFLAG:15 |= 4
+	FLAG:36 += 1
+ENDIF
+;범용 대사용 플래그
+CFLAG:43 = 0
+;상성 업
+RELATION:MASTER = (TALENT:151) ? MAX(RELATION:MASTER, 170) # MAX(RELATION:MASTER, 150)
+PRINTW  
+
+;매각 불가 플래그
+CFLAG:3 |= 2
+;계약기념일
+CFLAG:3114 = DAY
+PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 영원히 %CALLNAME:MASTER%의 노예가 되었습니다―――
+PRINTW …………
+PRINTW ………
+PRINTW ……
+PRINTFORMW ＜%조사처리(CALLNAME:TARGET,"는")% 매각할 수 없게 되었습니다＞
+PRINTFORMW ＜%ITEMNAME:98%는 다 팔렸습니다＞
+PRINTL 
+
+;칭호 ＧＥＴ!
+IF RAND:3 == 0
+	NICKNAME:TARGET = 『최고의 종자』
+ELSEIF RAND:2 == 0
+	NICKNAME:TARGET = 『전용 성노예』
+ELSE
+	IF TALENT:120
+		NICKNAME:TARGET = 『수퇘지』
+	ELSE
+		NICKNAME:TARGET = 『암퇘지』
+	ENDIF
+ENDIF
+RETURN 1

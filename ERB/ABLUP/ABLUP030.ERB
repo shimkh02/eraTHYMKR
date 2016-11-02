@@ -1,0 +1,273 @@
+﻿;=============================================================================
+;자위중독
+;=============================================================================
+@ABLUP30
+DRAWLINE
+SIF ABL:30 >= 5
+	JUMP ABLUP_MAX
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要（素質：[自慰しやすい][中毒しやすい][淫乱]なら無視できる）
+SIF COST30(6)
+	PRINTFORM %EXPNAME:50% {COST30(6)} 이상, 그리고 
+;Ｃ感覚と露出癖が必要
+PRINTFORML %ABLNAME:0% {ABL:30 + 1}LV 이상, 그리고 %ABLNAME:14% {ABL:30 + 1}LV 이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:0%의 구슬×{COST30(0)}, %PALAMNAME:13%의 구슬×{COST30(2)}, %PALAMNAME:15%의 구슬×{COST30(3)}, %EXPNAME:10% {COST30(4)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN30(0)
+
+PRINTFORM [1] - %PALAMNAME:0%의 구슬×{COST30(0)}, %PALAMNAME:13%의 구슬×{COST30(2)}, %PALAMNAME:15%의 구슬×{COST30(3)}, %EXPNAME:11% {COST30(5)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN30(1)
+
+;以下快Ａ의 구슬対応版
+PRINTL 또는, 
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要（素質：[自慰しやすい][中毒しやすい][淫乱]なら無視できる）
+SIF COST30(6)
+	PRINTFORM %EXPNAME:50% {COST30(6)} 이상, 그리고 
+;Ａ感覚と露出癖が必要(Ｃ感覚よりは厳しめに, 尻穴狂いがあればＣ感覚と同等)
+PRINTFORML %ABLNAME:2% {COST30(7)}LV 이상, 그리고 %ABLNAME:14% {ABL:30 + 1}LV 이상, 그리고 
+
+PRINTFORM [2] - %PALAMNAME:2%의 구슬×{COST30(1)}, %PALAMNAME:13%의 구슬×{COST30(2)}, %PALAMNAME:15%의 구슬×{COST30(3)}, %EXPNAME:10% {COST30(4)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN30(2)
+
+PRINTFORM [3] - %PALAMNAME:2%의 구슬×{COST30(1)}, %PALAMNAME:13%의 구슬×{COST30(2)}, %PALAMNAME:15%의 구슬×{COST30(3)}, %EXPNAME:11% {COST30(5)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN30(3)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF (RESULT >= 0 && RESULT <= 3) && CAN30(RESULT) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0 || RESULT == 1
+	JUEL:0 -= COST30(0)
+	JUEL:13 -= COST30(2)
+	JUEL:15 -= COST30(3)
+ELSEIF RESULT == 2 || RESULT == 3
+	JUEL:2 -= COST30(1)
+	JUEL:13 -= COST30(2)
+	JUEL:15 -= COST30(3)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:30 += 1
+PRINTFORMW %ABLNAME:30%의 레벨이 %조사처리(ABL:30,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP30
+SIF ABL:30 >= 5
+	RETURN 0
+
+CALLF CALC_COST30, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP30("CHECK")
+
+@COST30(ARG)
+#FUNCTION
+RETURNF CALC_COST30("GET", ARG)
+
+@CALC_COST30(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:30 == 0
+	LOCAL:0 = 10000
+	LOCAL:1 = 10000
+	LOCAL:2 = 3000
+	LOCAL:3 = 1000
+	LOCAL:4 = 100
+	LOCAL:5 = 20
+ELSEIF ABL:30 == 1
+	LOCAL:0 = 25000
+	LOCAL:1 = 25000
+	LOCAL:2 = 6000
+	LOCAL:3 = 3000
+	LOCAL:4 = 250
+	LOCAL:5 = 40
+ELSEIF ABL:30 == 2
+	LOCAL:0 = 50000
+	LOCAL:1 = 50000
+	LOCAL:2 = 12000
+	LOCAL:3 = 6000
+	LOCAL:4 = 500
+	LOCAL:5 = 60
+ELSEIF ABL:30 == 3
+	LOCAL:0 = 100000
+	LOCAL:1 = 100000
+	LOCAL:2 = 20000
+	LOCAL:3 = 15000
+	LOCAL:4 = 1000
+	LOCAL:5 = 100
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:2 , 2.00
+		TIMES LOCAL:3 , 2.00
+		TIMES LOCAL:4 , 2.00
+		TIMES LOCAL:5 , 2.00
+	ENDIF
+ELSEIF ABL:30 == 4
+	LOCAL:0 = 300000
+	LOCAL:1 = 300000
+	LOCAL:2 = 40000
+	LOCAL:3 = 40000
+	LOCAL:4 = 2000
+	LOCAL:5 = 160
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:2 , 3.00
+		TIMES LOCAL:3 , 3.00
+		TIMES LOCAL:4 , 3.00
+		TIMES LOCAL:5 , 3.00
+	ENDIF
+ENDIF
+
+;自慰しやすい
+IF TALENT:60
+	TIMES LOCAL:0 , 0.25
+	TIMES LOCAL:1 , 0.25
+	TIMES LOCAL:2 , 0.25
+	TIMES LOCAL:3 , 0.25
+	TIMES LOCAL:4 , 0.25
+ENDIF
+;倒錯的
+IF TALENT:80
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 0.75
+	TIMES LOCAL:4 , 0.75
+ENDIF
+;中毒しやすい
+IF TALENT:84
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.50
+	TIMES LOCAL:5 , 0.50
+;中毒しにくい
+ELSEIF TALENT:85
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 1.50
+	TIMES LOCAL:5 , 1.50
+ENDIF
+;[中毒扇動]有効
+IF TFLAG:995 == 1
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+	TIMES LOCAL:3 , 0.80
+	TIMES LOCAL:4 , 0.80
+	TIMES LOCAL:5 , 0.80
+ENDIF
+;淫乱
+IF TALENT:170
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.50
+ENDIF
+;淫核／淫茎・淫尻
+SIF TALENT:171
+	TIMES LOCAL:0 , 0.50
+SIF TALENT:173
+	TIMES LOCAL:1 , 0.50
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要（素質：[自慰しやすい][中毒しやすい][淫乱]なら無視できる）
+SIF ABL:30 >= 2 && TALENT:60 == 0 && TALENT:84 == 0 && TALENT:170 == 0
+	LOCAL:6 = ABL:30 - 1
+
+;Ａ感覚
+LOCAL:7 = ABL:30 + 2 - TALENT:170 - ((ABL:30 + 2 - TALENT:173) / 6)
+
+RETURNF 0
+
+@CAN30(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP30("GET", ARG)
+
+@CAN_ABLUP30(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;異常経験が必要な場合
+IF EXP:50 < COST30(6)
+	LOCAL:0 |= 2
+	LOCAL:1 |= 2
+	LOCAL:2 |= 2
+	LOCAL:3 |= 2
+ENDIF
+
+;Ｃ感覚が必要
+IF ABL:0 < ABL:30 + 1
+	LOCAL:0 |= 4
+	LOCAL:1 |= 4
+ENDIF
+;Ａ感覚が必要
+IF ABL:2 < COST30(7)
+	LOCAL:2 |= 4
+	LOCAL:3 |= 4
+ENDIF
+;露出癖が必要
+IF ABL:14 < ABL:30 + 1
+	LOCAL:0 |= 4
+	LOCAL:1 |= 4
+	LOCAL:2 |= 4
+	LOCAL:3 |= 4
+ENDIF
+
+;快Ｃ의 구슬で上げる
+IF JUEL:0 < COST30(0)
+	LOCAL:0 |= 1
+	LOCAL:1 |= 1
+ENDIF
+;快Ａ의 구슬で上げる
+IF JUEL:2 < COST30(1)
+	LOCAL:2 |= 1
+	LOCAL:3 |= 1
+ENDIF
+;欲情의 구슬で上げる
+IF JUEL:13 < COST30(2)
+	LOCAL:0 |= 1
+	LOCAL:1 |= 1
+	LOCAL:2 |= 1
+	LOCAL:3 |= 1
+ENDIF
+;恥情의 구슬で上げる
+IF JUEL:15 < COST30(3)
+	LOCAL:0 |= 1
+	LOCAL:1 |= 1
+	LOCAL:2 |= 1
+	LOCAL:3 |= 1
+ENDIF
+
+;自慰経験が必要
+IF EXP:10 < COST30(4)
+	LOCAL:0 |= 2
+	LOCAL:2 |= 2
+ENDIF
+;調教自慰経験が必要
+IF EXP:11 < COST30(5)
+	LOCAL:1 |= 2
+	LOCAL:3 |= 2
+ENDIF
+
+RETURNF (LOCAL:0 == 0 || LOCAL:1 == 0 || LOCAL:2 == 0 || LOCAL:3 == 0)

@@ -1,0 +1,172 @@
+﻿;=============================================================================
+;이와시미즈
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE611
+RETURN 0
+
+@EXCOM_ABLE611
+;수치 플레이中じゃないとダメ
+SIF TEQUIP:56 == 0
+	RETURN 0
+;性器が汚れているとMASTERの場合クンニはできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+SIF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && ASSIPLAY == 0 && TALENT:MASTER:64 == 0
+	RETURN 0
+;性器が汚れており, 汚臭敏感で순종4미만의 ASSI일 경우クンニはできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+IF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && ASSIPLAY
+	SIF ABL:ASSI:10 <= 3 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;조교자가 고양이혀일 경우 고양이 펠라 패치 유효가 아니면 불가
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀일 경우 조교자에게 기교4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;인어는 안됨
+SIF TALENT:229 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM611
+PRINTL 이와시미즈
+TSTR:0 = 이와시미즈
+SELECTCOM = 611
+CALL TRAIN_MESSAGE_COM611
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 150
+
+SOURCE:19 += 1000
+SOURCE:12 += 300
+SOURCE:31 += 500
+
+LOCAL:1 = 500
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 += 50
+ELSEIF ABL:0 == 1
+	SOURCE:0 += 260
+ELSEIF ABL:0 == 2
+	SOURCE:0 += 800
+ELSEIF ABL:0 == 3
+	SOURCE:0 += 1600
+ELSEIF ABL:0 == 4
+	SOURCE:0 += 2500
+ELSE
+	SOURCE:0 += 3400
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:0 += 10
+	SOURCE:19 += 100
+	SOURCE:22 += 800
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:0 += 150
+	SOURCE:19 += 500
+	SOURCE:22 += 700
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 2
+	SOURCE:0 += 300
+	SOURCE:19 += 1000
+	SOURCE:22 += 600
+	TIMES LOCAL:1, 2.40
+ELSEIF ABL:14 == 3
+	SOURCE:0 += 700
+	SOURCE:19 += 1800
+	SOURCE:22 += 500
+	TIMES LOCAL:1, 3.60
+ELSEIF ABL:14 == 4
+	SOURCE:0 += 1200
+	SOURCE:19 += 3000
+	SOURCE:22 += 400
+	TIMES LOCAL:1, 4.80
+ELSE
+	SOURCE:0 += 1800
+	SOURCE:19 += 5000
+	SOURCE:22 += 300
+	TIMES LOCAL:1, 6.00
+ENDIF
+
+SOURCE:12 += LOCAL:1
+SOURCE:22 += LOCAL:1
+SOURCE:17 += LOCAL:1 /2
+SOURCE:19 += LOCAL:1
+SOURCE:28 += LOCAL:1
+
+;조교자의 TALENT:혀사용을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:0 , 2.00
+	SOURCE:17 += SOURCE:0/20
+ENDIF
+
+;조교자의 TALENT:고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:0 , 0.70
+
+;노예의 V⇔조교자의 입의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:3
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 2
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM611
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 얼굴 위에 올라타게 한 후, 일부러 소리를 내며 보지를 핥았다….

@@ -1,0 +1,109 @@
+﻿;=============================================================================
+;전기안마기 페니스 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE133
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:133 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;電気按摩を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:1 == 0 && NOITEM == 0
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;ASSI일 경우, 기교3이상이거나 새드가 아니면 쓸 수 없다.
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 3 && TALENT:ASSI:81 == 0
+		RETURN 0
+ENDIF
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM133
+PRINTL 전동 마사지 페니스 고문
+TSTR:0 = 전기안마기 페니스 고문
+CALL TRAIN_MESSAGE_COM133
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 30
+DOWNBASE:1 += 180
+
+SOURCE:12 = 280
+SOURCE:31 = 400
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 1000
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 1500
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 2000
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 2500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2800
+ELSE
+	SOURCE:0 = 3300
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;커맨드 속성:도구(조교자)
+TFLAG:98 = 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM133
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 페니스에 전기 안마기를 대고 자극했다.

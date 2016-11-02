@@ -1,0 +1,4179 @@
+﻿;-------------------------------------------------
+;RR판 마리사 대사
+;대사 타입 판별용 플래그는 CFLAG:7900
+
+;마리사 촉수 대사 ver1.02ABC 2009/03/01
+;
+;2009/01/06
+;屈服させてる様な気がしないのはキノセイ
+;甘さ控え目淫語控え目、ついでに魔理沙の胸も控え目
+;→1.02　エンディング追加。魔理沙はやはり明るくあるべきだと思うね
+;最後の最後にちょっとだけコメントアウトあり
+;→1.02+
+;勝手にエンディングに分岐つけた
+;あと一部コマンドにも口上つけてみた
+;あくまで1.01、1.02の人とは別人加筆なので注意
+;別人加筆なので1.03ではなく1.02+にしてみた
+;
+;→1.02AB 09/02/07 추가
+;1.02+の更に別人による触手口上、触手END（魔理沙C END）追加です
+;+、魔改造では表記が分かりづらいので勝手ながら1.02Aと解釈させて頂き、このバージョンを1.02ABとします
+;このバージョンでは触手口上の追加、及び
+;CFLAG番号を新口上テンプレ準拠に整理させて頂きました
+;元からある口上で削ったものはありませんが
+;女主人でも違和感のないよう男主人用口上は一部分岐させています
+;
+;→1.02ABC 09/03/01 추가
+;촉수 제물만 가필. 일단 AB에 C를 붙여봤음.
+
+;--------------------------------------------------
+;대사 파일의 존재 판정(X2를 캐릭터 번호에 치환)
+;--------------------------------------------------
+;대사의 존재 판정(YM판)
+@TRY_2
+RETURN 1
+
+@EVENTTRAIN
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+@EVENTEND
+#LATER
+
+;--------------------------------------------------
+;엑스트라 모드 구문　CFLAG:7899을 사용
+;네를 선택했을 때에 첫조교시에 말설정용의 소질로 변경할 수 있습니다
+;아래와 같이에 처녀화하는 경우의 구문을 샘플로서 실어 둡니다
+;-------------------------------------------------;
+@SET_CHARA_KOJO_EXTRA_K2
+IF CFLAG:7899 == 0
+	PRINTL 마리사의 대사 타입을 선택해주세요.
+	PRINTL [0] RR판!
+	PRINTL [1] YM판!
+	$INPUT_LOOP_TYPE
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―RR 타입 대사로 개시합니다―
+	ELSEIF RESULT == 1
+		PRINTFORMW ―YM 타입 대사로 개시합니다―
+		CFLAG:7900 = 1
+	ELSE
+		GOTO INPUT_LOOP_TYPE
+	ENDIF
+ENDIF
+CFLAG:7899 = 1
+
+;--------------------------------------------------
+;EVENTTRAIN 관계
+;조교 개시시의 대사
+;--------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO != 2
+	RETURN 0
+;2주차 이후, 조교 개시시에 엑스트라 모드의 설정을 시행하지 않으면 설정 이벤트를 CALL
+SIF CFLAG:7899 == 0
+	CALL SET_CHARA_KOJO_EXTRA_K2
+
+;--------------------------------------------------
+;특정 조수, 주인시에 특수 조수 말을 호출한다(Y1를 특정 조수의 캐릭터 번호에 치환)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTTRAIN_K2_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_EVENTTRAIN_K2_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;--------------------------------------------------
+;간이 조수 말의 발동시에 첫조교시 말을 스킵(Y1를 조수의 캐릭터 번호로 한다)
+;복수인 있으려면 , SIF ASSINO() == Y1 || ASSINO() == Z1와 추가해 나간다
+;--------------------------------------------------
+;IF CFLAG:7021 == 0 && ASSI > 0
+;	SIF ASSINO() == Y1
+;		CFLAG:7021 =1
+;ENDIF
+;-------------------------------------------------
+;첫조교시 CFLAG:5001
+;-------------------------------------------------
+;YM 타입 호출
+IF CFLAG:7900 == 1
+	CALL K2_START_YM
+	RETURN 0
+ENDIF
+IF CFLAG:5001 == 0
+	DRAWLINE
+	PRINTFORMW 「나 같이 착한 사람을 잡아서 어쩌겠다는 거야?」
+	PRINTFORMW 「이래 봬도 난 제법 바쁘다고. 알아들었으면 후딱 해방해주실까?」
+	PRINTFORMW  마리사는 그렇게 말을 내뱉고 팔짱을 끼더니, %CALLNAME:MASTER%에게서 얼굴을 돌렸다.
+	PRINTFORMW  세게 나오는 말과는 정반대로 조금 전부터 자꾸 머리카락을 조물락거리며 침착치 못한 기색이다.
+	PRINTFORMW  몸은 파르라니 떨고 있으며 옷을 세게 부여잡고 있는 모습이 %CALLNAME:MASTER% 위치에서도 뻔히 보인다.
+	PRINTFORMW  %조사처리(CALLNAME:MASTER,"는")% 입가에 희미한 미소를 띠며 강한 어조로 마리사더러 옷을 벗어 알몸이 되도록 명령했다.
+	CFLAG:5001 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;조교 개시시(1회만) CFLAG:5001
+;-------------------------------------------------
+;굴복각인 Lv1
+ELSEIF CFLAG:5001 < 2 && MARK:2 == 2
+	PRINTFORMW 「……무슨 용무야? 공교롭게도 난 너랑 어울릴 생각은 없다구」
+	PRINTFORMW  마리사는 그렇게 내뱉더니 한숨을 쉬고, %조사처리(CALLNAME:MASTER,"로")%부터 얼굴을 피했다.
+	CFLAG:5001 = 3
+	RETURN 1
+
+;굴복각인 Lv2
+ELSEIF CFLAG:5001 < 3 && MARK:2 == 2
+	PRINTFORMW 「질리지도 않고 하는군. 더 가치가 있는 일을 찾아보는 건 어때?」
+	PRINTFORMW  마리사는 기가 막힌다는 한숨을 토해내며, 마지못해 옷을 벗는다. 
+	CFLAG:5001 = 3
+	RETURN 1
+
+;굴복각인 Lv3
+ELSEIF CFLAG:5001 < 4 && MARK:2 == 3
+	DRAWLINE
+	PRINTFORMW 「……참, 나 말고도 여자는 있을 텐데…… 어쩔 수 없는 놈이군」
+	PRINTFORMW  마리사는 그렇게 말하며 한숨을 토하지만 뺨은 홍조로 물들어, 어딘가 기쁜 듯 하다.
+	CFLAG:5001 = 4
+	RETURN 1
+
+;연모
+ELSEIF CFLAG:5001 < 5 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW  %조사처리(CALLNAME:MASTER,"가")% 방에 들어가면, 전라가 된 마리사가 침대에 앉아 있다. 
+	PRINTFORMW  마리사는 옷으로 몸을 숨기고 있었지만, %조사처리(CALLNAME:MASTER,"를")% 보면 부끄러운 듯 손을 놓는다. 
+	PRINTFORMW 「……슬슬, 올 거라고 생각했어」
+	PRINTFORMW  마리사는 얼굴을 붉히면서 시선을 허공에 향하고, 머리카락을 만지작거리고 있다. 
+	PRINTFORMW  뭔가 말하려 하는 듯 하지만, 결심이 서지 않는 것 같다. 
+	PRINTFORMW  이윽고 마리사는 뜻을 결정한 듯, 주먹을 꽉 쥐고 곧은 시선을 %CALLNAME:MASTER%에게로 향했다.
+	PRINTFORMW 「저기, 나에게 매력을 느끼고 있어서 이런 일을 하고 있는 거야?」
+	PRINTFORMW 「아니, 대답하지 않아도 좋아. 대답하지 않아도 좋으니까, 그렇게 생각해 줘」
+	PRINTFORMW  마리사는 그렇게 말하며, 천천히 일어서 %CALLNAME:MASTER%에게로 가까워져왔다. 
+	PRINTFORMW 「나는 너를, 좋아하고 있다구」
+	PRINTFORMW 「이런 추잡한 일인데도……. 나, 이상한 여자지?」
+	PRINTFORMW  마리사는 울면서 %CALLNAME:MASTER%에게 기대어, 자신의 나체를 들이민다. 
+	PRINTFORMW  그렇게 초조한 눈동자를 바라보고 있다가, 상냥한 키스를 했다. 
+	PRINTFORMW 「바보 같은 여자라고 생각해도 괜찮으니까, 조금 더 여기 있게 해줘……」
+	PRINTFORMW  마리사는 아까운 듯이 %CALLNAME:MASTER%로부터 멀어지면서, 그렇게 미소지었다. 
+	CFLAG:5001 = 5	
+	RETURN 1
+	
+;조수의 유무를 체크(없는 경우는 2회째 이후에 난다)
+ELSEIF ASSI < 0
+	CALL K2_KOJO2
+;-------------------------------------------------
+;간이 조수 말(Y1를 조수의 캐릭터 번호에 치환, X1를 캐릭터 번호로 변경한다) CFLAG:5002
+;교섭을 하는 캐릭터를 늘리는 경우는, 카피＆페이스트를 해, CFLAG의 수를 5003, 5004로 늘린다
+;-------------------------------------------------
+;말이 있는 조수가 없는 경우는, 통상의 2회째 이후의 말에 난다
+ELSE
+	CALL K2_KOJO2
+ENDIF
+
+;-------------------------------------------------
+;조교 개시시(2회째 이후, X1를 캐릭터 번호로 변경한다) CFLAG 없음 
+;-------------------------------------------------
+@K2_KOJO2
+;반발 각인 Lv3
+IF MARK:9 == 3 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「……이제 겨우 온 건가」
+	PRINTFORMW 「네가 올 것을 기다리고 있었다고, 어떤 의미로」
+	PRINTFORMW  마리사는 꼿꼿이 선 채로 %조사처리(CALLNAME:MASTER,"를")% 바라보았다. 
+	PRINTFORMW  그 눈동자에서는 살기마저 느껴졌다. 
+	RETURN 1
+	
+;굴복 각인 Lv0
+ELSEIF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「납치, 감금은 훌륭한 범죄라고? 빨리 죄를 갚으면 어떨까」
+	PRINTFORMW  마리사는 %조사처리(CALLNAME:MASTER,"를")% 쫒아내려는 듯이, 손을 흔들었다. 
+	RETURN 1
+
+;굴복 각인 Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「또 왔네. 이야, 매일 한가한 것 같고, 부러워」
+	PRINTFORMW  마리사는 기가 막힌 듯한 한숨을 쉬고, 과장되게 어깨를 으쓱해 보였다. 
+	RETURN 1
+
+;굴복 각인 Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「나는 널 만나고 싶지 않은데. 이따금은 내 의견을 존중해 줘」
+	PRINTFORMW  마리사는 깊게 한숨을 토해내고, 옷을 벗으면서 익살스럽게 %CALLNAME:MASTER%에게 말해왔다. 
+	RETURN 1
+
+;굴복 각인 Lv3＋연모 없음
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「에휴, 오늘도냐. 난 앞으로 당신이 언제 나에게 질려질지 기다려진다고」
+	PRINTFORMW  마리사는 그렇게 말하며, 입고 있는 것을 벗어 알몸이 되었다. 
+	PRINTFORMW  말은 그렇게 했지만 뺨은 홍조를 띠고 있으며, 시선은 기대로 가득 차 있다. 
+	RETURN 1
+
+;연모
+ELSEIF TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	;랜덤으로 대사가 변화한다
+	IF RAND:3 == 0
+		PRINTFORMW 「에휴, 또 왔네」
+		PRINTFORMW 「언제부터인지, 네가 오는 게 몹시 기다려졌어」
+		PRINTFORMW  마리사는 %CALLNAME:MASTER%의 손을 잡아, 자신의 작은 유방으로 이끌었다. 
+		PRINTFORMW 「이런 나지만, 아무쪼록 부탁해」
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「아, 늦었잖아」
+		PRINTFORMW 「아니, 내가 기다렸기 때문에 그렇게 느껴진 건가, 아니면 진짜로 늦은 걸까?」
+		PRINTFORMW  마리사는 허겁지겁 옷을 벗어, 침대에 앉아 %조사처리(CALLNAME:MASTER,"를")% 기다리고 있다. 
+		PRINTFORMW 「뭐가 좋을까. 자, 무엇을 할래?」
+	ELSE
+		PRINTFORMW  마리사는 침대에 걸터앉아, 발가벗은 채로 있었다. 
+		PRINTFORMW 「으음……. 아, 안녕」
+		PRINTFORMW 「네가 너무도 늦어서, 졸려졌단 말이야」
+		PRINTFORMW 「내가 감기에 걸리지 않게, 지금부터는 빨리 와 줘」
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND 관계(X1를 캐릭터 번호에 치환)
+;조교 종료시의 대사
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 == 0
+	RETURN 0
+SIF NO:TARGET != 2
+	RETURN 0
+;--------------------------------------------------
+;특정 조수, 주인시에 특수 조수 말을 호출한다(Y1를 특정 조수, X1를 주인의 캐릭터 번호에 치환)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTEND_K2_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	SIF ASSINO() == Y1
+;	CALL LES_EVENTEND_K2_MY1
+;	RETURN 0
+;ENDIF
+;--------------------------------------------------
+;조교 종료시의 대사
+;--------------------------------------------------
+;YM 타입 호출
+IF CFLAG:7900 == 1
+	CALL K2_END_YM
+	RETURN 0
+ENDIF
+;반발 각인 Lv3
+IF MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「……두고보라고. 반드시 되갚아주겠어」
+	PRINTFORMW  마리사는 눈물을 닦고, 혐오에 가득 찬 눈동자로 %조사처리(CALLNAME:MASTER,"를")% 노려보았다. 
+	RETURN 1
+	
+;굴복 각인 Lv1 이하
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「이제야 끝났나. 쓸데없는 시간이었어」
+	PRINTFORMW  마리사는 깊게 한숨을 토하며, %CALLNAME:MASTER%로부터 빼앗은 타올로 나신을 숨겼다. 
+	RETURN 1
+
+;굴복 각인 Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「이번엔 이걸로 끝이야? 그렇다면, 나가는 길은 저쪽이야」
+	PRINTFORMW  마리사는 %조사처리(CALLNAME:MASTER,"를")% 바보취급하며 출구를 가리켰다. 
+	RETURN 1
+
+;굴복 각인 Lv3+연모 없음
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「……벌써 이런 시간인가. 최근에는 시간이 지나는 게 빠르게 느껴지는데?」
+	PRINTFORMW  마리사는 몸을 닦고, 옷을 입으며 그렇게 중얼거렸다. 
+	PRINTFORMW  그리고 떠나가는 %CALLNAME:MASTER%에게로 손을 뻗어, 닿지 않지만 그를 붙잡아본다. 
+	PRINTFORMW  마리사는 %조사처리(CALLNAME:MASTER,"가")% 시야에서 사라질 때까지, 그를 쳐다보고 있었다. 
+	RETURN 1
+	
+;연모+체력 500 미만
+ELSEIF TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「――윽! 하아, 하아…… 역시 지쳤는데」
+	PRINTFORMW  마리사는 대자로 누워, 작은 가슴을 상하로 움직이며 난폭한 호흡을 반복한다.
+	PRINTFORMW 「하지만, 이런 것도 나쁘진 않네。잠시 이리로 와 봐」
+	PRINTFORMW  마리사는 다가온 %CALLNAME:MASTER%의 목을 끌어당겨, 재빨리 입술을 빼앗았다.
+	PRINTFORMW 「너도 땀 냄새나. 특히 나는 다른 냄새도 나니까, 여러 의미로 굉장한 일이 됐네」
+	PRINTFORMW  마리사는 자신의 팔을 코에 가까이 해, 냄새를 맡는 행동을 보이며 힘 없이 드러눕는다.
+	PRINTFORMW 「그 이전에, 한계다. 조금 쉬게 해 줘.」
+	PRINTFORMW  %조사처리(CALLNAME:MASTER,"는")% 수긍해, 마리사의 목에 타올을 걸어주고 방을 나왔다.
+	PRINTFORMW 「우으, 이대로 자면 저 녀석에게 미움받을 거야……」
+	PRINTFORMW  %조사처리(CALLNAME:MASTER,"가")% 나가자, 마리사는 목욕통에 들어갔다.
+	PRINTFORMW  그리고 콧노래를 부르며, 행복하게 몸을 씻기 시작했다.
+	RETURN 1
+
+;연모
+ELSEIF TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「……그런가, 벌써 그런 시간인가」
+	PRINTFORMW  마리사는 %조사처리(CALLNAME:MASTER,"가")% 준 타올로 몸을 숨기며, 그렇게 중얼거렸다. 
+	PRINTFORMW 「네가 미웠던 때는 그렇게 길게 느껴졌는데――」
+	PRINTFORMW  그리고 뭔가를 그리워하듯, 천장을 올려보며 작게 한숨을 토한다. 
+	PRINTFORMW 「지금 너와 있는 시간은 곧바로 지나가 버려」
+	PRINTFORMW  마리사는 그렇게 말하며 일어서, %CALLNAME:MASTER%에게 눈을 맞추었다. 
+	PRINTFORMW 「다음엔 빨리 와 줘? 약속이야」
+	PRINTFORMW  마리사는 %CALLNAME:MASTER%의 뺨에 키스를 하고, 기쁘게 미소지었다. 
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_COM 관계
+;커맨드 실행시에 출력됩니다
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_2
+;YM 타입시에는 전용 대사로 넘어감
+IF CFLAG:7900 == 1
+	CALL KOJO_MESSAGE_COM_2_YM
+	RETURN 0
+ENDIF
+;조수가 조교했을 때에 말을 스킵 한다(기호에 응해 사용하는, 줄머리의 것;을 지우면(자) 스킵 하게 된다)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;眠ってる場合は表示しない
+SIF EQUIP:14
+	RETURN 1
+;口枷がある場合は表示しない
+SIF TEQUIP:42
+	RETURN 1
+;失神回復時は表示しない
+SIF TFLAG:898 == 1
+	RETURN 1
+;精神崩壊の場合は表示しない
+SIF TALENT:167
+	RETURN 1
+;--------------------------------------------------
+;특정 조수, 주인시에 특수 조수 말을 호출한다(Y1를 특정 조수, X1를 주인의 캐릭터 번호에 치환)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_COM_K2_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_COM_K2_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;커맨드 실행시의 대사 CFLAG 9000~를 사용
+;-------------------------------------------------
+;-------------------------------------------------
+;애무 CFLAG:9000
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;처음
+	IF CFLAG:9000 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응…… 부드럽게 만져주라」
+		;굴복 각인 Lv2 이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「응――아아――!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「제길, 그런 더러운 손으로 날 만지지 마!」
+		ENDIF
+		CFLAG:9000 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9000 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「앙! ……더, 더 해주지 않을래?」
+			CFLAG:9000 = 5
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9000 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 후우, 하아――」
+			CFLAG:9000 = 4
+		;굴복 각인 Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:9000 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……우……」
+			CFLAG:9000 = 3
+		;그 외
+		ELSEIF MARK:2 <= 1 && (CFLAG:9000 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「앗! ……뭐야」
+			CFLAG:9000 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;쿤닐링구스	CFLAG:9001
+;이와시미즈	CFLAG:9611
+;-------------------------------------------------
+;쿤니
+IF SELECTCOM == 1 && TEQUIP:56 == 0
+	;처음
+	IF CFLAG:9001 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「아……더럽지 않을까?」
+		;처녀
+		ELSEIF TALENT:0 == 1
+			PRINTFORMW 「!? 그런 곳을 핥지 마! 어떻게 생각해도 이상해!」
+		;그 외
+		ELSE
+			PRINTFORMW 「히익, 멈춰……제발 그만해……」
+		ENDIF
+			CFLAG:9001= 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9001 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 거기…… 더 계속해주지 않을래?」
+			CFLAG:9001 = 4
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9001 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아아……응……」
+			CFLAG:9001 = 3
+		;그 외
+		ELSEIF CFLAG:9001 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「멈춰……그런 곳 빨지 말아줘……」
+			CFLAG:9001 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;이와시미즈
+IF SELECTCOM == 611 || (SELECTCOM == 1 && TEQUIP:56)
+	;연모+노출벽 Lv3 이상+C감각 Lv3 이상
+	IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:0 >= 3 && (CFLAG:9611 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「……이, 이건 제법 창피한데」
+		PRINTFORMW 「그래도 벌써 이렇게나 젖었어……. 기대하고 있다구」
+		CFLAG:9611 = 6
+	;연모
+	ELSEIF TALENT:TARGET:85 == 1 && (CFLAG:9611 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「……이, 이건 제법 창피한데」
+		PRINTFORMW 「……아무리 나라도 얼굴에서 불이 날 것 같다구」
+		CFLAG:9611 = 5
+	;굴복각인 Lv3+노출벽 Lv3이상+C감각 Lv3이상
+	ELSEIF MARK:2 == 3 && ABL:0 >= 3 && ABL:14 >= 3 && (CFLAG:9611 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「앙! 거기, 더어――!!」
+		CFLAG:9611 = 4
+	;굴복각인 Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:9611 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「…………」
+		PRINTFORMW  마리사는 눈을 감고, 그저 시간이 지나가기를 기다리고 있다.
+		CFLAG:9611 = 3
+	;그 외
+	ELSEIF CFLAG:9611 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「……제길, 변태놈. 네 머리는 돌았다구」
+		PRINTFORMW  마리사는 욕설을 뱉고, 눈을 감으며 주먹을 부여쥐었다.
+		CFLAG:9611 = 2
+	ENDIF
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;애널 애무	CFLAG:9002
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;처음
+	IF CFLAG:9002 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……그쪽은 안 돼. 더럽잖아」
+			PRINTFORMW 「어차피 할 거라면, 앞쪽에 하자고, 어?」
+		;그 외
+		ELSE
+			PRINTFORMW 「히잇!? 어, 어딜 만지는거야, 변태!」
+		ENDIF
+		CFLAG:9002= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+윤활 Lv2 이상
+		IF TALENT:150 == 1 && P >= PALAMLV:2 && (CFLAG:9002 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응! 괜찮아……. 계속해 줘」
+			CFLAG:9002 = 5
+		;연모+윤활 Lv2 미만
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:9002 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응! 지금은, 조금 아팠어……. 좀 더 상냥히 해 줘」
+			CFLAG:9002 = 4
+		;윤활 Lv2 이상＋A감 Lv3 이상
+		ELSEIF P >= PALAMLV:2 && ABL:2 >= 3 && (CFLAG:9002 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으읏――! 이, 이런 곳이 기분이 좋다니――」
+			CFLAG:9002 = 3
+		;그 외
+		ELSEIF CFLAG:9002 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아파! 그런 곳에 손가락 넣지 마, 변태!」
+			CFLAG:9002 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;가슴 애무	CFLAG:9003
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;처음
+	IF CFLAG:9003 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「좋아하는 녀석이 만져주면 가슴이 커진다─라는 이야기가 있는데」
+			PRINTFORMW 「마침 잘 됬으니 그 이야기가 사실인가 확인해 보도록 할까」
+		;그 외
+		ELSE
+			PRINTFORMW 「내 가슴 만지면 좋냐, 이 변태놈」
+		ENDIF
+		CFLAG:9003= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9003 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응! 헤헷, 더 만져도 좋아」
+			CFLAG:9003 = 4
+		;B감 Lv3 이상
+		ELSEIF ABL:3 >= 3 && (CFLAG:9003 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아――거기를, 더 강하게――」
+			CFLAG:9003 = 3
+		;그 외
+		ELSEIF CFLAG:9003 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우우……유두 건들지마……내 가슴 손대도 재미없을 텐데」
+			CFLAG:9003 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;키스한다	CFLAG:9006
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;처음
+	IF CFLAG:9006 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……아―, 그……고마워」
+			PRINTFORMW 「퍼스트 키스, 였다고?」
+		;그 외
+		ELSE
+			PRINTFORMW 「아―아, 이런 녀석에게 퍼스트 키스를 빼앗기다니……」
+		ENDIF
+		CFLAG:9006 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9006 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「좀 더 해줘도 좋다구?」
+			CFLAG:9006 = 4
+		;순종 Lv2 이상
+;		ELSEIF ABL:10 >=2 && (CFLAG:9006 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:9006 = 3
+		;그 외
+		ELSEIF CFLAG:9006 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「뭐랄까, 마음이라거나 분위기가 없으면 싫은 느낌이군」
+			CFLAG:9006 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;자위	CFLAG:9007
+;샤워기 자위	CFLAG:8022
+;-------------------------------------------------
+;통상 자위(샤워기 없음)
+IF SELECTCOM == 7 && TEQUIP:20 == 0 && TEQUIP:25 == 0 && TEQUIP:50 == 0 && TEQUIP:52 == 0
+	;처음
+	IF CFLAG:9007 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……아니, 뭐라고나 할까……. 취미가 못 됐군」
+			PRINTFORMW 「아니면 성질이 못 되어먹은 건가. 어느 쪽이 맞으려나」
+		;그 외
+		ELSE
+			PRINTFORMW 「우우…… 사람 앞에서 이런 짓을 시키려고 하다니, 바보의 발상은 엄청나기도 하지」
+		ENDIF
+		CFLAG:9007 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+자위중독 Lv3 이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:9007 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「……하아, 하아, 벌써 이렇게나 젖었구만……」
+			PRINTFORMW 「음탕한 난 싫어――할 리, 없나. 날 이렇게 만든 장본인이고 말이지」
+			CFLAG:9007 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9007 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……내가 하는 모습 보면, 너도 기분 좋아?」
+			PRINTFORMW 「그럼, 좀 기쁜 듯도」
+			CFLAG:9007 = 4
+		;자위중독 Lv3 이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:9007 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……으, 손이, 멈추질 않아! 왜?! 보고 있는데……」
+			CFLAG:9007 = 3
+		;그 외
+		ELSEIF CFLAG:9007 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……또냐……. 이런 짓 시켜서, 뭐가 재미있어……」
+			CFLAG:9007 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;샤워기 자위
+ELSEIF SELECTCOM == 7 && TEQUIP:54
+	;처음
+	IF CFLAG:8022 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……으읏……너무 부끄러운 거 시키지 마……」
+			PRINTFORMW 「……이런 건 남 앞에서 할 만한 게 아니라구」
+		;그 외
+		ELSE
+			PRINTFORMW 「……그냥 하는 거랑 뭐가 다르단 거야」
+		ENDIF
+		CFLAG:8022= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+자위중독 Lv3 이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:8022 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「여전히 스스로 하라고 시키는 걸 좋아하는군」
+			PRINTFORMW 「아니, 나도 스스로 하는 건 좋아하지만……」
+			PRINTFORMW 「네가 있으니, 역시 네가 챙겨주길 바란다구」
+			CFLAG:8022 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:8022 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……즈응말, 어쩔 수 없는 놈이군」
+			PRINTFORMW 「보고 만족했으면, 꼭 만져주라」
+			CFLAG:8022 = 4
+		;자위중독 Lv3 이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:8022 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앙―― 하아, 하아……」
+			CFLAG:8022 = 3
+		;그 외
+		ELSEIF CFLAG:8022 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또냐……. 참 좋은 취미셔」
+			CFLAG:8022 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;아무것도 하지 않는다	CFLAG:9009
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;처음
+	IF CFLAG:9009 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「그렇게 보고 있는 것도, 기분나쁘진 않네」
+		;그 외
+		ELSE
+			PRINTFORMW 「이대로 아무것도 하지 않고 풀어줘도 좋다구?」
+		ENDIF
+		CFLAG:9009 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋욕정 Lv3 이상
+		IF TALENT:150 == 1 && PALAM:13 >= PALAMLV:3 
+			PRINTFORMW 「아―, 잘 보고 있는데 미안하지만, 그럴 거라면 키스라도 해 주면 좋겠는데……」
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;로터 CFLAG:9010
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;처음
+	IF CFLAG:9010 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이런 물건 쓰지 않아도……」
+			PRINTFORMW  마리사는 명백하게 기분나쁜 듯한 얼굴을 하며, 한숨을 토했다. 
+		;그 외
+		ELSE
+			PRINTFORMW 「……읏, 또 이상한 도구를 꺼냈군」
+		ENDIF
+			CFLAG:9010 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋굴복 각인 Lv3
+		IF TALENT:150 == 1 && MARK:2 == 3 && (CFLAG:9010 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「그러니까 이런 물건을 사용하지 않아도……」
+			PRINTFORMW 「네가 직접 해 주는 게, 나는 훨씬 기분이 좋아」
+			CFLAG:9010  = 4
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5229 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아――응――아아――!!」
+			CFLAG:9010 = 3
+		;그 외
+		ELSEIF CFLAG:5229 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「도구가 기분이 좋을 지도」
+			PRINTFORMW 「적어도, 네가 손대는 것보다 만 배는 나아」
+			CFLAG:9010 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;바이브	CFLAG:9012	CFLAG:8027
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 12 && TEQUIP:20 == 1
+	;처음
+	IF CFLAG:9012 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「기, 기다려 줘……. 부탁이야, 처음 정도는 너의 그것으로……」
+				PRINTFORMW  마리사는 눈물을 흘리며, 필사적으로 %CALLNAME:MASTER%에게 애원해온다. 
+			;그 외
+			ELSE
+				PRINTFORMW 「기, 기다려 줘……. 부탁이야, 거기만은 용서해주지 않겠냐」
+				PRINTFORMW 「……부탁합니다」
+				PRINTFORMW  마리사는 눈물을 흘리면서, %조사처리(CALLNAME:MASTER,"를")% 향해서 고개를 숙였다. 
+			ENDIF
+		;비처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「……하아, 어떻게 해야 알아줄까?」
+				PRINTFORMW  마리사는 큰 한숨을 토하며, 고개를 좌우로 흔들고 어깨를 움츠렸다. 
+			;그 외
+			ELSE
+				PRINTFORMW 「……멈추라고 해도 쓸데없는 짓이겠지……. 마음대로 해 줘」
+			ENDIF
+		ENDIF
+			CFLAG:9012 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9012 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우읏……어쩔 수 없는 놈이다……」
+			CFLAG:9012 = 4
+		;V감각Lv3이상
+		ELSEIF ABL:1 >= 3 && (CFLAG:9012 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아읏――젠장……이런……장난감에……」
+			CFLAG:9012 = 3
+		;그 외
+		ELSEIF CFLAG:9012 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「젠장, 또냐고……」
+			PRINTFORMW 「뭐, 좋아. 네 물건이 들어오는 것보다는 훨씬 낫지」
+			CFLAG:9012 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8027 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「이제야 끝인가?」
+		PRINTFORMW 「자, 구멍이 열렸다고. 내가 무슨 말을 하고 싶은지, 알겠지?」
+		CFLAG:8027 = 2
+	;그 외
+	ELSEIF CFLAG:8027 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……겨우 끝났나」
+		PRINTFORMW 「이런 완구는, 적당히 졸업하는 게 어때?」
+		CFLAG:8027 = 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;애널 바이브	CFLAG:9013	CFLAG:8029
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 13 && TEQUIP:25 == 1
+	;처음
+	IF CFLAG:9013 == 0
+		;연모＋A감 Lv3 이상
+		IF TALENT:150 == 1 && ABL:2 >= 3
+			PRINTFORMW 「……이런 물건 정말로 어디서 사 오는 거야?」
+		;연모
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「……아니, 아무리 그래도 무리잖아」
+			PRINTFORMW 「그만하고 다른 걸로 하자고, 응?」
+		;A감 Lv3 이상
+		ELSEIF ABL:2 >= 3
+			PRINTFORMW 「……구우……하아, 하아……으읏――!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「……일단, 네가 어쩔 수 없는 변태라는 건 알겠어」
+		ENDIF
+		CFLAG:9013= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감 Lv3 이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9013 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「……나도 자꾸자꾸 변태가 되어 가는군」
+			PRINTFORMW 「어디서부턴가 잘못됐어, 정말로」
+			PRINTFORMW  마리사는 %조사처리(CALLNAME:MASTER,"를")% 보며, 한숨을 토했다. 
+			CFLAG:9013 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9013 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또냐…… 어째서 그런 물건을……」
+			CFLAG:9013 = 4
+		;A감 Lv3 이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9013 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……크으……하아, 하아……으읏――!!」
+			CFLAG:9013 = 3
+		;그 외
+		ELSEIF  CFLAG:9013 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……」
+			PRINTFORMW  마리사는 눈을 감으며 참고 있다. 
+			CFLAG:9013 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	IF TALENT:150 == 1 && (CFLAG:8029 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「후우…… 도구 같은 건 쓰지 말고, 보통으로 하자구」
+		CFLAG:8029 = 3
+	;A감 Lv3 이상
+	ELSEIF ABL:2 >= 3 && (CFLAG:8029 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아앗…… 벌써 뽑아?」
+		CFLAG:8029 = 2
+	;그 외
+	ELSEIF CFLAG:8029 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……간신히 뽑았는가…… 싶네」
+		CFLAG:8029 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;정상위	CFLAG:9020
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;처음
+	IF CFLAG:9020 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「그……처음이야. 그러니까, 이번만은 상냥하게 해 줘」
+				PRINTFORMW  마리사는 양 다리를 펼쳐, 스스로 보지를 열어 삽입을 가만히 기다리고 있다. 
+				PRINTFORMW  그 얼굴은 긴장과 불안함, 그리고 혼잡함으로 차 있지만, 눈동자는 곧게 %CALLNAME:MASTER%에게 향해 있었다. 
+				PRINTFORMW  %조사처리(CALLNAME:MASTER,"는")% 천천히 마리사의 몸으로, 자신의 몸을 묻어 간다. 
+				PRINTFORMW 「읏――! 아니, 괜찮아……걱정하지 마……」
+				PRINTFORMW  마리사는 이를 악물며, 시트를 꽉 쥐고 필사적으로 아픔을 참고 있다. 
+				PRINTFORMW 「괜찮으니까, 그러니까, 움직여……네가 좋은 대로 해도 좋아고?」
+				PRINTFORMW  결합부로부터 순결의 증거가 흐르고, 마리사는 힘껏 웃으며 %조사처리(CALLNAME:MASTER,"를")% 보았다. 
+			;그 외
+			ELSE
+				PRINTFORMW 「!? 거짓말이겠지, 부탁이야, 멈춰 줘! 
+				PRINTFORMW 「아우읏! ……부탁이야, 뽑아줘…… 뽑아, 주세요……」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「왠지 뭣한걸. 첫 경험이 아닌데 평범한 체위는 첫 경험이라니」
+				PRINTFORMW  마리사는 기가 막힌 기색으로 말했지만, 그 얼굴은 어딘가 기쁜 듯하다. 
+			;굴복각인Lv3
+			ELSEIF MARK:2 == 3
+				PRINTFORMW 「…………하지 말라고 해봤자 소용없겠지……. 마음대로 해 줘」
+			;그 외
+			ELSE
+				PRINTFORMW 「흥, 하고 싶다면 마음대로 해라」
+				PRINTFORMW 「이 원한은, 언젠가 절대로 갚아주겠어」
+			ENDIF
+		ENDIF
+		CFLAG:9020= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9020 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「요새는 아프지 않아졌더라. 조금 무리해도 아무렇지도 않거든?」
+			PRINTFORMW  그렇게 말하더니 마리사는 미소지으며, %CALLNAME:MASTER%에게 살며시 입술을 맞댔다.
+			CFLAG:9020 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9020 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우응―― 하아, 하아…… 나도 상당히 익숙해진 것 같은데」
+			PRINTFORMW  마리사는 쾌락의 물결에 쓸려갔는지, 드물게도 솔직한 면을 보인 것 같다.
+			CFLAG:9020 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9020 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응…… 크으……」
+			CFLAG:9020 = 3
+		;그 외
+		ELSEIF CFLAG:9020 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「윽…… 뽑아 줘, 부탁이니까 뽑아 줘」
+			CFLAG:9020 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;후배위	CFLAG:9021
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;처음
+	IF CFLAG:9021 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「아니, 하는 것은 기쁘지만……」
+				PRINTFORMW  마리사는 복잡한 표정으로 %CALLNAME:MASTER%의 얼굴을 응시하고 있다. 
+				PRINTFORMW 「처음 정도는 보통으로……」
+				PRINTFORMW  그렇게 말하는 마리사는 한숨을 토하며, 단념한 것 같은 표정을 보인다. 
+				PRINTFORMW 「너에게 보통을 기대하는 게 실수였나?」
+				PRINTFORMW 「뭐, 그래도 기쁘지만. 반해버린 내가 잘못이다」
+			;그 외
+			ELSE
+				PRINTFORMW 「!? 거짓말이지, 부탁이야, 멈춰 줘! 
+				PRINTFORMW 「크웃! ……부, 부탁이야……. 뽑아, 주세요……」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「뒤에서!? 아아, 그렇게 하는 것도 있는 건가……」
+				PRINTFORMW  마리사는 %CALLNAME:MASTER%에게서 등을 돌렸지만, 불안한 듯 뒤돌아 본다. 
+				PRINTFORMW 「……얼굴이 안 보이면 불안해서……저기, 상냥하게 해 줘?」
+			;굴복각인Lv3
+			ELSEIF MARK:2 == 3
+				PRINTFORMW 「…………하지 말라고 해봤자 소용없겠지……. 마음대로 해 줘」
+			;그 외
+			ELSE
+				PRINTFORMW 「응, 하고 싶다면 마음대로 해라.
+				PRINTFORMW 「이 빚은 언제고 갚아주겠어」
+			ENDIF
+		ENDIF
+		CFLAG:9021= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9021 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「마주보고 하는 게 좋은데……」
+			PRINTFORMW 「뭐 그래도, 네가 그렇게 하고 싶다고 한다면 거절하지는 않지만」
+			CFLAG:9021 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9021 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……할 수 있으면 마주보며…… 아니, 아무 것도 아니야」
+			PRINTFORMW  마리사는 %조사처리(CALLNAME:MASTER,"를")% 받아들인 후, 그렇게 중얼거렸다. 
+			CFLAG:9021 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9021 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으응……쿠우……」
+			CFLAG:9021 = 3
+		;그 외
+		ELSEIF CFLAG:9021 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으읏――뽑아 줘……부탁이야, 빨리!!」
+			CFLAG:9021 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;대면좌위	CFLAG:9022
+;-------------------------------------------------
+IF SELECTCOM == 22
+	;처음
+	IF CFLAG:9022 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이 체위는 좋은데. 너와도 얼굴이 가깝고, 안고 있을 수 있어」
+			PRINTFORMW 「왠지 마음에 들 것 같다구」
+			PRINTFORMW  마리사는 %CALLNAME:MASTER%의 입술을 빼앗고는, 천천히 허리를 움직이기 시작했다.
+		;굴복각인 Lv3
+		ELSEIF MARK:2 == 3
+			PRINTFORMW 「…………하지 말라고 해봤자 소용없겠지……. 마음대로 해 줘」
+		;그 외의 경우
+		ELSE
+			PRINTFORMW 「……너무 더듬더듬 만지지 마라, 기분 더러워」
+		ENDIF
+		CFLAG:9022 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9022 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이번은 이걸로 하나」
+			PRINTFORMW 「음…… 다정하게 해주라」
+			PRINTFORMW  마리사는 %CALLNAME:MASTER%의 목에 팔을 두르고는 그 뺨에 키스했다.
+			CFLAG:9022 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9022 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으…… 이런 걸로, 이런 걸로――!!」
+			PRINTFORMW  마리사는 얼굴이 새빨개지면서도 스스로 요분질 치며 쾌락을 탐하고 있다.
+			CFLAG:9022 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9022 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으응…… 크으……」
+			CFLAG:9022 = 3
+		;그 외
+		ELSEIF CFLAG:9022 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「제길, 이런 놈한테……」
+			PRINTFORMW  마리사는 눈을 감아 %조사처리(CALLNAME:MASTER,"를")% 보지 않도록 하고 있다.
+			CFLAG:9022 = 2
+		ENDIF		
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;배면좌위	CFLAG:9023
+;노니는 모란	CFLAG:9612
+;-------------------------------------------------
+;배면좌위
+IF SELECTCOM == 23
+	;처음
+	IF CFLAG:9023 == 0
+		;연모
+		IF TALENT:150 == 1
+			;조교자가 남자
+			IF TALENT:PLAYER:120 == 1
+				PRINTFORMW 「음…… 헤헤, 네 가슴팍은 꽤 탄탄한걸」
+			ENDIF
+			PRINTFORMW 「네게 안겨 있다고 생각하니 좀 진정된다」
+		;굴복각인 Lv3
+		ELSEIF MARK:2 == 3
+			PRINTFORMW 「……하지 말라고 해도 헛수고겠지……. 맘대로 해주셔」
+		;그 외
+		ELSE
+			PRINTFORMW 「……너무 더듬더듬 만지지 마라, 기분 더러워」
+		ENDIF
+		CFLAG:9023 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9023 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이 체위도 꽤나……」
+			PRINTFORMW 「보고 하는 거랑은 또 달라서 괜찮을지도 모르겠어」
+			CFLAG:9023 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9023 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「――읍!!」
+			PRINTFORMW  마리사는 입을 필사적으로 막으면서 쾌락에 허덕이고 있다.
+			CFLAG:9023 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9023 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「뭐야, 또냐……」
+			CFLAG:9023 = 3
+		;그 외
+		ELSEIF CFLAG:9023 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「제길, 왜 이런 상황이……」
+			PRINTFORMW  마리사는 그렇게 내뱉고, 눈을 감으며 가만히 참고 있다.
+			CFLAG:9023 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;노니는 모란
+IF SELECTCOM == 612 || (SELECTCOM == 23 && TEQUIP:56)
+	;처음
+	IF CFLAG:9612 == 0
+		;연모
+		IF TALENT:150 == 1			
+			PRINTFORMW 「……그렇게 날 괴롭히고 싶으냐」
+			PRINTFORMW 「그나저나 새삼 연결된 부분을 보면 창피하군……」
+			PRINTFORMW  마리사는 얼굴이 새빨개지면서, 거울에서 눈을 피했다.
+		;그 외
+		ELSE
+			PRINTFORMW 「넌 머리 나쁘다, 야. 물론 나쁜 의미로」
+		ENDIF
+		CFLAG:9612 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+노출벽 Lv3 이상+V감각 Lv3 이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:9612 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「……그나저나, 왜 그거야. 이건 좀 중독될 것 같다구」
+			PRINTFORMW  마리사는 얼굴이 새빨개지면서 쓴웃음 지어보였다.
+			CFLAG:9612 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9612 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「……넌 정말로 성깔이 못 된 거냐, 단순한 변태인 거냐」
+			PRINTFORMW 「판단하는데 고민될 지경이라구」
+			CFLAG:9612 = 5
+		;굴복각인Lv3＋노출벽 Lv3 이상+V감각 Lv3 이상
+		ELSEIF MARK:2 == 3 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:9612 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윽――이상해라 이럴 리 있나」
+			PRINTFORMW 「난 대체 어떻게 된 거야……」
+			PRINTFORMW  마리사는 흥분을 감추지 못하고 달콤한 신음을 지르기 시작했다.
+			CFLAG:9612 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9612 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……왜 이런 자세를……」
+			CFLAG:9612 = 3
+		;그 외
+		ELSEIF CFLAG:9612 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……바보의 생각은 모르겠구만」
+			CFLAG:9612 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;기승위	CFLAG:9024
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;처음
+	IF CFLAG:9024 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「아니, 하는 것은 좋지만……」
+				PRINTFORMW  마리사는 복잡한 표정으로 %CALLNAME:MASTER%의 얼굴을 응시하고 있다. 
+				PRINTFORMW 「처음 정도는 보통으로……」
+				PRINTFORMW  그렇게 말하는 마리사는 한숨을 토하며, 단념한 것 같은 표정을 보인다. 
+				PRINTFORMW 「너에게 보통을 기대하는 게 실수였나?」
+				PRINTFORMW 「뭐, 그래도 기쁘지만. 반한 내가 잘못이지」
+			;그 외
+			ELSE
+				PRINTFORMW 「!? 거짓말이지, 부탁이야, 멈춰 줘! 
+				PRINTFORMW 「구웃! ……부, 부탁이야……뽑아, 주세요……」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「내가 위에? ……아―, 그, 뭐냐……상냥하게 해 달라구?」
+				PRINTFORMW  마리사는 %CALLNAME:MASTER% 위에 올라, 천천히 허리를 내렸다. 
+				PRINTFORMW 「크으――괜찮아, 잘 움직일 수 있을까……」
+				PRINTFORMW 「그럴 생각으로 나를 위로 한 거야? 그러면, 기대에 응하지 않으면」
+			;굴복각인Lv3
+			ELSEIF MARK:2 == 3
+				PRINTFORMW 「…………하지 말라고 해봤자 소용없겠지……. 마음대로 해 줘」
+			;그 외
+			ELSE
+				PRINTFORMW 「흥, 하고 싶다면 마음대로 해라」
+				PRINTFORMW 「이 빚은 언제고 갚아주겠어」
+			ENDIF
+		ENDIF
+		CFLAG:9024= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9024 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응! 좋아, 전부 들어갔다……」
+			PRINTFORMW 「마주보고 하는 것도 좋지만, 응, 이것도, 웃―― 좋은 느낌이야」
+				CFLAG:9024 = 5
+		;굴복각인Lv3＋V감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9024 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……응…… 좋아 움직인다……」
+			PRINTFORMW  마리사는 싫어하는 표정도 보이지 않으며, 허리를 흔들기 시작했다.
+			CFLAG:9024 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9024 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……마음대로 해」
+			CFLAG:9024 = 3
+		;그 외
+		ELSEIF CFLAG:9024 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우우…… 뽑아 줘, 부탁이니, 빨리 끝내 줘……」
+			PRINTFORMW  마리사는 두 눈으로부터 눈물을 방울방울 흘리며, 필사적으로 %CALLNAME:MASTER%에게 간절히 애원하고 있다. 
+			CFLAG:9024 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;정상위 애널	CFLAG:9030
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;처음
+	IF CFLAG:9030 == 0
+		;연모＋A감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3
+			PRINTFORMW 「내가 이런 일을 하고……기분 좋아하다니」
+			PRINTFORMW 「과거의 나에게 이야기해도, 절대로 믿어주지 않을 거야」
+		;연모
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「이런 곳에 하는 건가……정말 괜찮아?」
+			PRINTFORMW 「……저, 손…… 안 잡아줘?」
+		;A감각Lv3이상
+		ELSEIF ABL:2 >= 3
+			PRINTFORMW 「……구우……하아, 하아……으응――!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「……네가 어쩔 수 없는 변태라는 건 알겠어」
+		ENDIF
+		CFLAG:9030= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋A감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9030 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「나도 변태에 동참했군―― 이렇게나, 기분, 좋아지다니」
+			CFLAG:9030 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9030 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……하고 싶다고 하면 거절하지는 않겠지만…… 상냥하게 해주라?」
+			CFLAG:9030 = 4
+		;A감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9030 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 어째서 이런 곳이…… 으응――」
+			CFLAG:9030 = 3
+		;그 외
+		ELSEIF  CFLAG:9030 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으―― 그, 그만둬 줘」
+			CFLAG:9030 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;수음	CFLAG:9040
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;처음
+	IF CFLAG:9040 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이걸 잡는 건가……」
+			PRINTFORMW 「응, 이런 식으로 하면 돼?」
+		;그 외
+		ELSE
+			PRINTFORMW 「그런 걸 눈앞에다 들이밀지 말라고! ……젠장!」
+		ENDIF
+		CFLAG:9040= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9040 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「커졌군. 안달하지 말라고,  더 기분 좋게 해줄 테니 말이야」
+			CFLAG:9040 = 4
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9040 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「어때? 이런 식으로 하면 돼?」
+			CFLAG:9040 = 3
+		;그 외
+		ELSEIF CFLAG:9040 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「변함없이 그로테스크하군……」
+			CFLAG:9040 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;펠라치오	CFLAG:9041
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;처음
+	IF CFLAG:9041 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「큰데……. 들어가나?」
+		;그 외
+		ELSE
+			PRINTFORMW 「윽!? 그딴 데에 입을 댈 수 있을 리 없잖아!?」
+		ENDIF
+		CFLAG:9041= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋봉사정신 Lv5
+		IF TALENT:150 == 1 && (CFLAG:9041 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 헤헷, 건강해지기 시작했잖아」
+			PRINTFORMW 「하지만 말야, 이제 막 시작이라구?」
+			CFLAG:9041 = 4
+		;봉사정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9041 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 왠지 요령이 잡히기 시작했군……. 이런 식으로 하면 되지?」
+			CFLAG:9041 = 3
+		;그 외
+		ELSEIF CFLAG:9041 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……젠장, 빨면 되잖아」
+			CFLAG:9041 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;파이즈리	CFLAG:9042
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;처음
+	IF CFLAG:9042 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「끼우지 않아도 좋아? ……가슴 작아서 미안하다 그래」
+		;그 외
+		ELSE
+			PRINTFORMW 「……그런 걸 가슴에 꽉 눌러서 어쩌란 말이야」
+		ENDIF
+		CFLAG:9042= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9042 <= 3 || FLAG:11 == 2)
+			PRINTFORMW  「너도 별 걸 다 좋아하네. 어, 내가 할 말이 아닌가」
+			CFLAG:9042 = 4
+		;봉사정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9042 <= 2 || FLAG:11 == 2)
+			PRINTFORMW  「……에휴, 뭐가 좋은 건지」
+			CFLAG:9042 = 3
+		;그 외
+		ELSEIF  CFLAG:9042 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「웃……」
+			CFLAG:9042 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;스마타	CFLAG:9043
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;처음
+	IF CFLAG:9043 == 0
+		;연모 있음
+		IF TALENT:150 == 1
+			PRINTFORMW 「응, 뭔가 이상한 느낌이야……. 넌 기분 좋아?」
+		;그 외
+		ELSE
+			PRINTFORMW 「멈춰, 뭘 할 셈이야……. 젠장 기분 나쁘다구……」
+		ENDIF
+		CFLAG:9043= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모 있음
+		IF TALENT:150 == 1 && (CFLAG:9043 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「헤헷, 상냥하게 해주라?」
+			CFLAG:9043 = 3
+		;그 외
+		ELSEIF CFLAG:9043 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또냐……. 후딱 끝마쳐 줘」
+			CFLAG:9043 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;로션	CFLAG:9060
+;-------------------------------------------------
+IF SELECTCOM == 60
+	;처음
+	IF CFLAG:9060 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「그런 게 없어도, 나는 언제나 만반의 준비가 되어있다구?」
+		;그 외
+		ELSE
+			PRINTFORMW 「읏, 차가워……이상한 감촉……」
+		ENDIF
+		CFLAG:9060= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9060 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그거 쓰는 게 좋으냐? 그렇다면 그런대로 뭐 상관없지만」
+			CFLAG:9060 = 3
+		;그 외
+		ELSEIF CFLAG:9060 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「끈적끈적해서 기분 나쁘군, 이거……」
+			CFLAG:9060 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;미약	CFLAG:9061
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;처음
+	IF CFLAG:9061 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……이런 물건을 쓰지 않아도, 네가 만져주면 나는……」
+		;그 외
+		ELSE
+			PRINTFORMW 「약에 의지하지 않으면 아무것도 할 수 없는 거야?」
+		ENDIF
+		CFLAG:9061= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9061 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……네가 정중하게 발라주고 있는 걸 보면, 이것도 그리 나쁘지 않을지도」
+			CFLAG:9061 = 3
+		;그 외
+		ELSEIF CFLAG:9061 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……이봐이봐, 그건 관두셔……. 내게는, 안 듣거든?」
+			PRINTFORMW  마리사는 불안하게 시선을 내리깔고, %조사처리(CALLNAME:MASTER,"와")% 눈이 맞지 않도록 하고 있다. 
+			CFLAG:9061 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;알몸 에이프런	CFLAG:9090	해제	CFLAG:5329
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 90 && TEQUIP:59
+	;처음
+	IF CFLAG:9090 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭐야, 이런 걸 좋아해?」
+			PRINTFORMW 「만약 좋아한다면 말야, 그…… 식사 정도는 만들어 줄까?」
+			PRINTFORMW 「나도 자취한지 오래 됐고, 실력에는 제법 자신이 있거든?」
+			PRINTFORMW  마리사는 부끄러운 듯 얼굴을 숙이며, %CALLNAME:MASTER%의 반응을 기다리고 있다. 
+		;그 외
+		ELSE
+			PRINTFORMW 「……이런 것, 인형에게라도 입히면 되잖아?」
+			PRINTFORMW 「그러면 나 따위보다 훨씬 헌신적으로 봉사해줄걸」
+			PRINTFORMW  마리사는 욕설을 뱉으면서도 마지못해 앞치마를 걸치기 시작했다.
+		ENDIF
+		CFLAG:9090 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9090 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「밥으로 할지, 목욕으로 할지, 아니면 나로 할지」
+			PRINTFORMW 「딱히 고민할 필요도 없이 하나뿐이겠지, 너라면」
+			PRINTFORMW  마리사는 앞치마를 걸치더니 창피한 듯이 수줍게 웃었다.
+			CFLAG:9090 = 3
+		;그 외
+		ELSEIF CFLAG:9090 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「소꿉놀이는 이제 슬슬 졸업하라고」
+			PRINTFORMW 「그 김에, 내게서도 졸업해주면 고마운 노릇이겠다만」
+			CFLAG:9090 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 90 && TEQUIP:59 == 0
+	;처음
+	IF CFLAG:5329 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「……가끔씩이라면, 이런 것도 좋다고 생각한다구?」
+		;그 외
+		ELSE
+			PRINTFORMW 「겨우 끝났나. 이제야 질린 모양이군」
+		ENDIF
+		CFLAG:5329 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5329 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「오늘 밥은 뭐가 좋아?」
+			PRINTFORMW 「메뉴는 적지만 되도록 노력해볼 작정이야」
+			PRINTFORMW  마리사는 강아지 같은 눈으로 %CALLNAME:MASTER%에게 먹고 싶은 것을 물었다.
+			CFLAG:5329 = 3
+		;그 외
+		ELSEIF CFLAG:5329 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이제 다시는 하지 않아주면 고맙겠는데」
+			CFLAG:5329 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;비디오 촬영	CFLAG:9100
+;-------------------------------------------------
+IF SELECTCOM == 100 && TEQUIP:50
+	;처음
+	IF CFLAG:9100 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……부끄럽잖아, 바보」
+			PRINTFORMW 「아무한테도 보이지 않는다면 좋지만, 안 그럴 거지?」
+		;그 외
+		ELSE
+			PRINTFORMW 「……그만둬, 용서해줘……」
+			PRINTFORMW 「그런 물건이 뿌려졌다간, 밖에 나갈 수 없게 되잖아!?」
+		ENDIF
+		CFLAG:9100= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9100 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이렇게 찍힌 것이 누군가에게 팔리는 거지?」
+			PRINTFORMW 「그렇게 생각하면 썩 기분 좋진 않네」
+			CFLAG:9100 = 3
+		;그 외
+		ELSEIF CFLAG:9100 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……이젠, 마음대로 해」
+			CFLAG:9100 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;수치 플레이	CFLAG:9103	해제	CFLAG:5364
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 103 && TEQUIP:56
+	;처음
+	IF CFLAG:9103 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「거, 거울을 쓰는 거냐……」
+			PRINTFORMW 「새롭게 자기 몰골을 보려면 용기가 필요할 것 같다구」
+		;노출벽 Lv3 이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「……변함없이 괴상한 취미로군」
+			PRINTFORMW  마리사는 거울로부터 고개를 돌렸지만, 흘끔흘끔 엿보고 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「――으?! 용케도 참 연달아서 별 생각 다 해……」
+		ENDIF
+		CFLAG:9103= 1
+		RETURN 0
+	;2번째 이후
+	ELSE
+		;연모+노출벽 Lv3 이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:9103 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「쪼아, 오늘도 난 제대로 귀엽군」
+			PRINTFORMW 「이건 네가 나한테 푹 빠지는 것도 수긍 갈 지경이야」
+			PRINTFORMW  마리사는 거울에 비친 자신을 보고 만족스럽게 끄덕인다.
+			PRINTFORMW 「……뭐라고 좀 말해줘……. 민망하잖아」
+			PRINTFORMW  %조사처리(CALLNAME:MASTER,"가")% 반응을 보이지 않자, 마리사는 난감한 듯이 얼굴을 붉혔다.
+			CFLAG:9103 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9103 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「윽…… 몇 번 해도 이 짓에는 익숙해지질 않는군」
+			CFLAG:9103 = 4
+		;노출벽 Lv3 이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9103 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이 생각을 한 놈은 도대체 무슨 생각을 했던 거라지」
+			PRINTFORMW  마리사는 한숨을 뱉긴 하지만, 그 뺨은 홍조되어 있다.
+			CFLAG:9103 = 3
+		;그 외
+		ELSEIF CFLAG:9103 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「나와 추악한 괴물이 비치고 있군. 거울은 정직한 법이지」
+			CFLAG:9103 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;처음
+	IF CFLAG:5364 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……너무 창피한 짓은 시키지 말아주라」
+		;그 외
+		ELSE
+			PRINTFORMW 「에휴. 얼른 그 거울을 치워줘」
+		ENDIF
+			CFLAG:5364 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5364 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「넌 거울 보고 창피하지 않아?」
+			CFLAG:5364 = 3
+		;그 외
+		ELSEIF CFLAG:5364 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「참 내, 댁 머리는 어디 망가졌다구」
+			CFLAG:5364 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;야외 플레이	CFLAG:9104	CFLAG:5349
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 104 && TEQUIP:52
+	;처음
+	IF CFLAG:9104 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「너와 함께라면, 이쯤은……」
+		;그 외
+		ELSE
+			PRINTFORMW 「저기, 돌아가자구……. 누가 보면……」
+		ENDIF
+		CFLAG:9104= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모＋노출벽Lv3
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:9104 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하아――으응, 누군가 봐버리면――그래도――」
+			CFLAG:9104 = 4
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9104 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……너무 부끄러운 일은 시키지 말아주라」
+			CFLAG:9104 = 4
+		;노출벽Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9104 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하아…… 하하, 오싹오싹해지기 시작했어」
+			CFLAG:9104 = 3
+		;그 외
+		ELSEIF CFLAG:9104 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「빨리 돌아가자구……. 만약 누군가에게 발견된다면, 너도 끝이거든?」
+			CFLAG:9104 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;연모＋노출벽Lv3
+	IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:5349 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「벌써 끝나는 건가……. 아니 아무것도 아냐」
+		CFLAG:5349 = 4
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:5349 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「후우, 어떻게든 누구에게도 보이지 않고 끝났군」
+		CFLAG:5349 = 2
+	;그 외
+	ELSEIF CFLAG:5349 < 1 || FLAG:11 == 2
+		PRINTFORMW 「역시 너는 돌았다구」
+		CFLAG:5349 = 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;목욕탕 플레이 CFLAG:9350 해제 CFLAG:8824
+;-------------------------------------------------
+IF SELECTCOM == 350 && TEQUIP:53
+	;처음
+	IF CFLAG:9350 == 0
+		IF TALENT:150 == 1
+			PRINTFORMW 「목욕탕은 그런 걸 하는 장소가 아니잖아?」
+			PRINTFORMW 「뭐, 곧바로 씻고 나오기만 했으면 좋겠지만……」
+			PRINTFORMW  마리사는 초조한 모습으로, 불편해 하고 있다. 
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 곳에서 뭘 하자는 거야?」
+		ENDIF
+		CFLAG:9350 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		IF TALENT:150 == 1 && (CFLAG:9350 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이따금은 너와 목욕탕에 잠기고 싶다고」
+			PRINTFORMW 「이게 끝나면 함께 들어가자고. 등 정도는 밀어줄테니」
+			CFLAG:9350 = 3
+		;그 외
+		ELSEIF CFLAG:9350 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또냐……. 뭘 하고 싶은 건데」
+			CFLAG:9350 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;처음
+	IF CFLAG:8824 == 0
+		;연모
+		IF TALENT:150
+			PRINTFORMW 「벌써 나가냐? 조금만 더 느긋하게 있다 가자고」
+		;그 외
+		ELSE
+			PRINTFORMW 「에휴. 바보가 하는 생각은 모르겠구만」
+		ENDIF
+		CFLAG:8824 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:8824 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「음―, 목욕탕도 의외로 포기할 게 못 되는군」
+			CFLAG:8824 = 3
+		;그 외
+		ELSEIF CFLAG:8824 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……에휴」
+			CFLAG:8824 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;샤워 CFLAG:9351
+;-------------------------------------------------
+IF SELECTCOM == 351 && TEQUIP:54
+	;처음
+	IF CFLAG:9351 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「그럼 어디 깨끗하게 해보실까요」
+			PRINTFORMW 「……혹시, 냄새가 그렇게 지독했어?」
+			PRINTFORMW  마리사는 쇼크를 받은 모양이라 열심히 몸을 씻고 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「눈치가 빠르잖아」
+			PRINTFORMW 「이걸로 오물을 씻어낼 수 있군」
+		ENDIF
+		CFLAG:9351 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9351 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「네가 씻겨주지 않겠어? 가끔씩은 괜찮잖아?」
+			CFLAG:9351 = 3
+		;그 외
+		ELSEIF CFLAG:9351 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「누구씨가 만졌으니 정화를 해야지」
+			CFLAG:9351 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;거품 비비기	CFLAG:9352
+;-------------------------------------------------
+IF SELECTCOM == 352
+	;처음
+	IF CFLAG:9352 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……세상엔 내가 몰랐던 게 많이 있구나」
+			PRINTFORMW 「뭐, 조금씩 알아가는 거지」
+			PRINTFORMW 「더 변태적인 게 아니면 괜찮아」
+			PRINTFORMW 「……아마, 도」
+		;그 외
+		ELSE
+			PRINTFORMW 「잘도 뭐 이런 쓸데없는 짓을 생각하는구만」
+			PRINTFORMW  마리사는 한숨을 토하며, 기가 막힌다는 듯한 눈빛을 %CALLNAME:MASTER%에게 돌렸다.
+		ENDIF
+		CFLAG:9352= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9352 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「그럼, 네 몸을 깨끗이 해줄까」
+			PRINTFORMW 「이거 끝나면 그……알지?」
+			PRINTFORMW  마리사는 얼굴을 붉히면서도, 열심히 몸을 부비어댔다.
+			CFLAG:9352 = 4
+		;봉사정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9352 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이런, 이런, 어쩔 수 없군」
+			PRINTFORMW 「네가 더러워지면 내가 싫다고」
+			CFLAG:9352 = 3
+		;그 외
+		ELSEIF CFLAG:9352 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……뭐, 너의 더러운 몸을 처리해주는 거라고 생각할까」
+			PRINTFORMW  마리사는 작게 중얼거리며, 기계적으로 몸을 둘러왔다.
+			CFLAG:9352 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수소환 CFLAG:9500　CFLAG:8901
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 500 && TEQUIP:90
+	;처음
+	IF CFLAG:9500 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「잠, 깐, 장난하는 거 아니지…이거…」
+			PRINTFORMW 「농담이잖아? 아, 부탁인데, 그만 둬! 제발, 그만해…」
+		;그 외
+		ELSE
+			PRINTFORMW 「우, 우와아아아아! 너, 무슨 물건 불러낸 거야」
+			PRINTFORMW 「그, 그 녀석으로 뭘 하려고…！그만둬…싫어, 싫어어어어엇!!」
+		ENDIF
+		CFLAG:9500 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+촉수 경험 20이상(소비 기본치가 3 분의 1이 된다)
+		IF TALENT:150 == 1 && EXP:53 >= 20 && (CFLAG:9500 <= 3 || FLAG:11 == 2)
+			PRINTFORML 「…나, 너보다 촉수를 더 좋아해도 될까…？」
+			PRINTFORMW 「최근에, 진짜 그렇게 생각한다구…？」
+			CFLAG:9500 = 4
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9500 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「…그러니까 장난하지 말자고 말하고 있잖아…」
+			PRINTFORMW 마리사는 울상으로 떨면서, %CALLNAME:MASTER%에게 풀어주길 애원하고 있다
+			CFLAG:9500 = 3
+		;그 외
+		ELSEIF CFLAG:9500 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「!!…또…그만둬, 진, 진짜 그만두라고!!」
+			CFLAG:9500 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+	;연모+촉수 경험 20이상(소비 기본치가 3 분의 1이 된다)
+	IF TALENT:150 == 1 && EXP:53 >= 20 && (CFLAG:8901 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「읏…벌써, 끝인가…? 으…응…♪」
+		PRINTFORML 마리사는 만족하지 않은 듯, 피부에 묻은 분비액을 가져다가
+		PRINTFORMW 손으로 끈적끈적거리게 하며 갖고 놀았다
+		CFLAG:8901 = 3
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:8901 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…하아, 하아…부, 부탁이니까…더 이상 촉수는 용서해줘」
+		CFLAG:8901 = 2
+	;그 외
+	ELSEIF CFLAG:8901 < 1 || FLAG:11 == 2
+		PRINTFORMW 「이게 가녀린 소녀한테 할 짓이야?…으, 히끅…너무해, 정말 너무해…」
+		CFLAG:8901 = 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 삽입	CFLAG:9501	CFLAG:9801
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 501 && TEQUIP:20 == 1
+	;처음
+	IF CFLAG:9501 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「잠, 잠깐만! 확인하자!」
+				PRINTFORMW 「너, 나의 순결을 뭐라고 생각…익…싫어어어!」
+				PRINTFORML 마리사는 %CALLNAME:MASTER%에게 도움을 청하며 손을 뻗지만
+				PRINTFORMW 촉수는 마리사를 힘으로 억누르며 단번에 찔러넣었다
+				PRINTFORML 「…보지 마…… 이제, 너 따윈 몰라…… 저리 꺼져… 꺼져버려…」
+				PRINTFORMW 촉수에게 당하면서 마리사는 고개를 돌리고, 하염없이 울고 있다.
+			;그 외
+			ELSE
+				PRINTFORMW 「하…하하하… 농담이래도 너무하는데…? 아무리 그래도 이런 괴물에게 나의 처녀를…」
+				PRINTFORML 마리사는 식은땀을 흘리며 %CALLNAME:MASTER%의 얼굴을 살피지만
+				PRINTFORMW %CALLNAME:MASTER%의 표정에는 조금의 미혹도 없다.
+				PRINTFORMW 「…싫어… 싫어, 그만둬어엇! 싫어 놓아줫…싫어, 싫어싫어어어―아아!」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「……뭐어, 나는 너에게라면…그……」
+				PRINTFORMW 「…그러니까! 이런 촉수 따위에겐 싫, 다니까, 히, 우햐아아앗!?」
+			;그 외
+			ELSE
+				PRINTFORMW 「우와아…진심이냐 이거……? 잠깐, 진짜, 기분 더럽다니까…?」
+				PRINTFORMW 「힛……차가웟……으, 우웃…」
+			ENDIF
+		ENDIF
+			CFLAG:9501 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;V감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:1 >= 5 && ABL:35 >= 5 && (CFLAG:9501 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 으후웃…아하아…♪와…와줘…아…♪」
+			PRINTFORML 무언가를 채워넣듯이, 천천히 꿈틀거리며
+			PRINTFORMW 천천히, 조금씩 마리사의 질에, 촉수가 들어간다.
+			PRINTFORML 마리사는 숨을 헐떡이며 허공을 바라보며 환희에 찬 신음을 내뱉는다.
+			PRINTFORMW 입에서는 침이 흘러, 하얀 피부에 늘어져 떨어져 간다.
+			CFLAG:9501 = 4
+		;V감각Lv4이상＋촉수중독Lv2이상
+		ELSEIF ABL:1 >= 4 && ABL:35 >= 2 && (CFLAG:9501 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응…으, 이, 이런 짓 해도…아무것도 안 된, 다구…♪」
+			PRINTFORMW 분명히 얼굴을 붉게 물들인 채, 촉수가 질내에서 꾸물댈 때마다 엉덩이를 흔들면서도
+			PRINTFORMW 마리사는 허세를 거두지 않는다.
+			CFLAG:9501 = 3
+		;그 외
+		ELSEIF CFLAG:9501 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「생각하기에 따라서는 임신할 위험이 없는 이쪽이…」
+			PRINTFORMW 「……아니, 역시 아냐, 생리적으로…」
+			CFLAG:9501 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 501 && TEQUIP:20 == 0
+	;V감각Lv5이상＋촉수중독Lv5이상
+	IF ABL:1 >= 5 && ABL:35 >= 5 && (CFLAG:9801 < 3 || FLAG:11 == 2)
+		PRINTFORMW 그러나 떼어놓으려는 찰나, 마리사의 손이 재빨리 촉수를 잡았다.
+		PRINTFORMW 「하응, 하아…♪ 놔주지 않는다구? 좀 더, 좀 더 할 수 있겠지…♪」
+		PRINTFORMW 잡은 촉수를 무리하게 스스로의 질에 찔러넣는다.
+		PRINTFORMW 마리사를 촉수에게서 떼어놓는 데는 상당한 수고가 필요했다….
+		CFLAG:9801 = 3
+	;V감각Lv4이상＋촉수중독Lv2이상
+	ELSEIF ABL:1 >= 4 && ABL:35 >= 2 && (CFLAG:9801 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…으응♪ 하―…… 하―………」
+		PRINTFORMW 마리사는 힘없이, 뽁 하고 뽑혀나온 촉수를 보고 있다.
+		CFLAG:9801 = 2
+	;그 외
+	ELSEIF CFLAG:9801 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…겨우, 끝인가…… 빨리 놔달라구…」
+		CFLAG:9801 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 애널 삽입	CFLAG:9502	CFLAG:9802
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 502 && TEQUIP:25 == 1
+	;처음
+	IF CFLAG:9502 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아무리 친해져도 서로 어쩔 수 없는 것은 있다고 생각해」
+			PRINTFORMW 「그건 입맛이라거나 음악의 취향이라거나 애널 촉수일 수도 있지」
+			PRINTFORMW 「……………」
+			PRINTFORMW 「……싫다, 고, 말하는 거라구?」
+			PRINTFORMW 촉수는 마리사의 애널을 격렬하게 찔렀다.
+		;그 외
+		ELSE
+			PRINTFORMW 「우읏…얼마나 무서운 짓을 생각하는 거냐, 너는…」
+		ENDIF
+			CFLAG:9502 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;A감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:2 >= 5 && ABL:35 >= 5 && (CFLAG:9502 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아오오오오옷…우우우우……으응♪」
+			PRINTFORML 미끌미끌한 촉수가 장벽과 마찰하는 감각에
+			PRINTFORMW 마리사는 얼굴을 떨고 사지를 긴장시킨다.
+			CFLAG:9502 = 4
+		;A감각Lv4이상＋촉수중독Lv3이상
+		ELSEIF ABL:2 >= 4 && ABL:35 >= 3 && (CFLAG:9502 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아…후……으음, 범해져서…안이……큿」
+			PRINTFORMW 이를 딱딱 부딪히며 울 듯한 눈으로, 그러나 숨을 가쁘게 들이쉬며 뺨을 붉히면서
+			PRINTFORMW 마리사는 애널에서 느껴지는 감미로운 감각에 빠지지 않으려고 입술을 깨문다.
+			CFLAG:9502 = 3
+		;그 외
+		ELSEIF CFLAG:9502 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어, 이제 싫어! 젠장, 내 엉덩이에서 떨어져엇! 아, 우웃!」
+			CFLAG:9502 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 502 && TEQUIP:25 == 0
+	;A감각Lv5이상＋촉수중독Lv5이상
+	IF ABL:2 >= 5 && ABL:35 >= 5 && (CFLAG:9802 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응으읏…부탁이다, 좀 더 엉망진창으로 해 줘, 그만두지 말아줘…」
+		PRINTFORMW 「나, 나… 이젠…… 이거 없이는…… 우웃…!」
+		PRINTFORMW 마리사는 울 듯한 눈으로 필사적으로 촉수에 매달렸다.
+		CFLAG:9802 = 3
+	;A감각Lv4이상＋촉수중독Lv3이상
+	ELSEIF ABL:2 >= 4 && ABL:35 >= 3 && (CFLAG:9802 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…하아, 하아… 조금만 더 계속해보라고…. 나 틀림없이 망가질걸…?」
+		PRINTFORMW 협박인 건가 도발인 건가 잘 알 수 없는 말을 내뱉으며 마리사는 정신을 잃었다.
+		CFLAG:9802 = 2
+	;그 외
+	ELSEIF CFLAG:9802 < 1 || FLAG:11 == 2
+		PRINTFORMW 「우으… 아프다구……어째서 내가 이런 꼴을…」
+		CFLAG:9802 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 클리 고문	CFLAG:9503	CFLAG:9803
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 503 && TEQUIP:30 == 1
+	;처음
+	IF CFLAG:9503 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「어, 어이어이, 취미가 나쁘구만!? 이런 걸로 괴롭, 히, 다…니…♪」
+		;그 외
+		ELSE
+			PRINTFORMW 「아, 히얏!? 그, 그쪽은 안 하면 안될까?」
+		ENDIF
+			CFLAG:9503 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;C감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:0 >= 5 && ABL:35 >= 5 && (CFLAG:9503 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「――――――윽♪ 윽♪ ――――윽♪」
+			PRINTFORMW 촉수는 마리사의 클리토리스에 감기고, 빨아당기고, 강력하게 자극한다.
+			PRINTFORML 지나친 쾌락에  마리사는 입에 거품을 물고 기절한다.
+			PRINTFORMW 계속되는 클리토리스에의 자극에 강제적으로 깨어나, 절정에 달해 기절하기를 반복한다.
+			PRINTFORMW 「부, 부서져버려…엇♪ …앙데엣♪ 부셔져버혀어…엇♪ 후혀져셔…하아앙♪」
+			CFLAG:9503 = 4
+		;C감각Lv4이상＋촉수중독Lv2이상
+		ELSEIF ABL:0 >= 4 && ABL:35 >= 2 && (CFLAG:9503 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「히, 히이이이…♪ 앙데에에에…♪ 안 덴다니까아 거기이잉♪」
+			PRINTFORMW 꾹꾹하고 촉수가 클리토리스를 자극하자
+			PRINTFORMW 마리사는 평소에는 상상도 못할 귀여운 목소리로 신음하며 몸을 뒤틀었다.
+			CFLAG:9503 = 3
+		;그 외
+		ELSEIF CFLAG:9503 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「거, 거기는 반칙이라구… 빗자루 올라타고 있으니까…라니 바보 말을 하는 거야 나는」
+			PRINTFORMW 촉수가 꽉 하고 클리토리스를 조이자 마리사는 작게 신음을 질렀다.
+			CFLAG:9503 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 503 && TEQUIP:30 == 0
+	;C감각Lv5이상＋촉수중독Lv5이상
+	IF ABL:0 >= 5 && ABL:35 >= 5 && (CFLAG:9803 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「…음탕한 냄새로군……. 나한테서 나는 건가? 후후……♪」
+		PRINTFORMW 마리사는 촉수에 몸을 맡긴 채 축 늘어져, 가느다란 촉수를 손가락에 감으며 놀고 있다.
+		CFLAG:9803 = 3
+	;C감각Lv4이상＋촉수중독Lv2이상
+	ELSEIF ABL:0 >= 4 && ABL:35 >= 2 && (CFLAG:9803 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「우, 크… 기, 기분, 너무 좋잖아…. 위험해……. 이건 위험하다구 나…」
+		PRINTFORMW 마리사는 쾌감의 여운에 부들부들 떨며 허공을 바라보며 혼잣말을 중얼거리고 있다.
+		CFLAG:9803 = 2
+	;그 외
+	ELSEIF CFLAG:9803 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…내 참… 네 변태성에는 저절로 고개가 숙여지는군…」
+		CFLAG:9803 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 유두 고문	CFLAG:9504	CFLAG:9804
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 504 && TEQUIP:35 == 1
+	;처음
+	IF CFLAG:9504 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「…솔직히, 별로 다른 사람에게 만지게 하고 싶지 않다구?」
+			PRINTFORMW 「……말해두지만 인외도 타인에 포함되거든?」
+		;그 외
+		ELSE
+			PRINTFORMW 「우―와, 굉장한 한기구만…. 봐봐 이 지독한 소름」
+		ENDIF
+			CFLAG:9504 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;B감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:3 >= 5 && ABL:35 >= 5 && (CFLAG:9504 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아아… 더, 더 해줘엇♪ 아아, 내 가슴, 가슴이이♪」
+			PRINTFORMW 미세한 촉수의 무리는 유두를 정말로 삼키고 있어 안이 어떻게 되었는지 보이지 않는다.
+			PRINTFORMW 마리사는 촉수의 테크닉에 뼈까지 녹는 듯한 황홀한 표정을 띠고 있다.
+			CFLAG:9504 = 4
+		;B감각Lv4이상＋촉수중독Lv3이상
+		ELSEIF ABL:3 >= 4 && ABL:35 >= 2 && (CFLAG:9504 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫… 하아… 하아…… 이, 이제 그만두자구? 이런 짓… 흐읏♪」
+			PRINTFORMW 머뭇머뭇 상반신을 움직여, 얼굴을 숙이고 저항하면서도
+			PRINTFORMW 유두에 가해지는 쾌감에 마리사는 항의의 소리를 지른다.
+			CFLAG:9504 = 3
+		;그 외
+		ELSEIF CFLAG:9504 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 거긴가, 질리지도 않는 녀석이구만…. 이거 봐, 촉수도 질린 것 같지 않냐?」
+			PRINTFORMW 촉수는 기쁜 듯이 마리사의 유두를 덥석 물고 있다.
+			CFLAG:9504 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 504 && TEQUIP:35 == 0
+	;B감각Lv5이상＋촉수중독Lv5이상
+	IF ABL:3 >= 5 && ABL:35 >= 5 && (CFLAG:9804 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「우…, 뭐랄까 이건… 마성의 섹스 테크닉?」
+		PRINTFORMW 마리사는 넋을 잃은 얼굴로 자신의 유두를 만지작거리고 있다.
+		PRINTFORMW 「…손가락 10개 가지곤 재현하는데 한계가 있군」
+		CFLAG:9804 = 3
+	;B감각Lv4이상+촉수중독Lv3이상
+	ELSEIF ABL:3 >= 4 && ABL:35 >= 3 && (CFLAG:9804 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「하아… 하아…… 하아…」
+		PRINTFORMW 마리사는 어딘가 조금 부족하다는 듯 유두에서 떨어져 가는 촉수를 바라보았다.
+		CFLAG:9804 = 2
+	;그 외
+	ELSEIF CFLAG:9804 < 1 || FLAG:11 == 2
+		PRINTFORMW 「겨우 끝인가… 이왕이면 두 번 다시 손대지 말아 주었으면 좋겠는데」
+		CFLAG:9804 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 페니스 고문	CFLAG:9505	CFLAG:9805
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 505 && TEQUIP:30 == 2
+	;처음
+	IF CFLAG:9505 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우… 우와… 감겨와서… 힉! 하지 마, 자극이 너무 강하다니깐…!」
+		;그 외
+		ELSE
+			PRINTFORMW 「…풋풋한 아가씨에게… 이런 물건이 돋게 하고… 이런 괴물에게 고문시켜고…」
+			PRINTFORMW 「나에게 뭘 시키고 싶은 거야…. 뭐든지 할 테니까… 이제, 그만둬줘…」
+			PRINTFORMW 훌쩍거리며 눈물섞인 목소리로 마리사는 해방을 호소하고 있다.
+		ENDIF
+			CFLAG:9505 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;C감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:0 >= 5 && ABL:35 >= 5 && (CFLAG:9505 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「앗앗앗앗아아앗♪ 자, 자지 조아아아아♪ 더, 더어어어어♪」
+			PRINTFORML 마리사의 귀두에 극세의 촉수가 차례차례 감겨들어, 꿈틀거리며 자극을 준다.
+			PRINTFORML 마리사는 입에서 군침을 흘리며 그 쾌락을 조금도 놓치지 않으려고
+			PRINTFORMW 페니스에 의식을 집중하고 있다.
+			CFLAG:9505 = 4
+		;C감각Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:0 >= 3 && ABL:35 >= 2 && (CFLAG:9505 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우…우으…… 안 돼…♪ 앙데에에♪ 굉장해… 굉장하다구 이거엇♪ 아앗♪」
+			PRINTFORML 마리사의 페니스는 미끈미끈한 쿠퍼액과 촉수의 분비액이 섞여
+			PRINTFORMW 점점 늘어가는 쾌감에 떨고 있다.
+			CFLAG:9505 = 3
+		;그 외
+		ELSEIF CFLAG:9505 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그마안…으윽, 아, 아파…싫어…싫다니까…」
+			CFLAG:9505 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 505 && TEQUIP:30 == 0
+	;C감각Lv5이상＋촉수중독Lv5이상
+	IF ABL:0 >= 5 && ABL:35 >= 5 && (CFLAG:9805 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「하… 학―♪ 학―♪ 학―♪ 아, 안 돼… 전혀… 모자란다구…」
+		PRINTFORML 「넣고 싶어… 더… 이걸, 이걸…… 어디에든…」
+		PRINTFORML 마리사의 굶주린 짐승과 같은 눈이 왜인가 이쪽을 바라보고 있다.
+		PRINTFORMW 그 시선을 받자 %CALLNAME:MASTER%의 등줄기는 얼어붙었다.
+		CFLAG:9805 = 3
+	;C감각Lv3이상＋촉수중독Lv2이상
+	ELSEIF ABL:0 >= 3 && ABL:35 >= 2 && (CFLAG:9805 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…응우으으으♪ …크……아…」
+		PRINTFORMW 「……시, 심하다구……. 버, 버릇이 되어버리면… 어쩔거야…」
+		CFLAG:9805 = 2
+	;그 외
+	ELSEIF CFLAG:9805 < 1 || FLAG:11 == 2
+		PRINTFORMW 「으으… 흐윽…… 나, 이제 여자애가 아닌건가……?」
+		CFLAG:9805 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 구욕	CFLAG:9506	CFLAG:9806
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 506 && TEQUIP:42 == 2
+	;처음
+	IF CFLAG:9506 == 0
+		;연모+봉사정신Lv5이상
+		IF TALENT:150 == 1 && ABL:13 >=5
+			PRINTFORMW 「푸웁, 이어을 아으어아? 아응… 응응♪」
+		;봉사정신Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「응…음?……비린내는 좋아하지 않는다구…? 응, 츄」
+		;그 외
+		ELSE
+			PRINTFORMW 「우웩, 우, 콜록…살았다…위험해…죽을…무욱」
+		ENDIF
+			CFLAG:9506 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;봉사정신Lv5이상＋촉수중독Lv5이상
+		IF ABL:13 >= 5 && ABL:35 >= 5 && (CFLAG:9506 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 낼름…응, 츄…응…♪후후……할짝…」
+			PRINTFORMW 아무래도 촉수의 약한 곳을 알게 된 것인지
+			PRINTFORMW 마리사가 혀를 놀릴 때마다 촉수가 움찔거리고 있다.
+			CFLAG:9506 = 4
+		;봉사정신Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:13 >= 3 && ABL:35 >= 2 && (CFLAG:9506 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 응……얌전하게 있을 테니까…너무 심한 것은 하지 말라구…?」
+			PRINTFORMW 마리사는 입에 들어 온 촉수를, 혀 전체를 사용해 핥기 시작했다.
+			PRINTFORMW 「응……조금 귀엽다는 생각이 드는데, 위험한…건가…?」
+			CFLAG:9506 = 3
+		;그 외
+		ELSEIF CFLAG:9506 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「젠장… 이 녀석, 차라리 물어 뜯어버릴까……」
+			PRINTFORMW 「………이, 이상한 즙이 나와…우와, 죄송아이아, 으오, 으으읍!!」
+			PRINTFORMW 마리사는 물어뜯겨 화난 촉수에게 난폭하게 입안을 범해졌다.
+			CFLAG:9506 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 506 && TEQUIP:42 == 0
+	;봉사정신Lv5이상＋촉수중독Lv5이상
+	IF ABL:13 >= 5 && ABL:35 >= 5 && (CFLAG:9806 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응츄우♪ 후후…너와 나의 사이좋은 모습을 좀 더 저녀석에게 보여주자구♪」
+		PRINTFORMW 마리사는 이쪽을 곁눈질하면서, 낼름낼름하고 혀끝으로 촉수를 농락하고 있다
+		CFLAG:9806 = 3
+	;봉사정신Lv3이상＋촉수중독Lv2이상
+	ELSEIF ABL:13 >= 3 && ABL:35 >= 2 && (CFLAG:9806 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「푸우……후, 후우……이제 끝인가?」
+		PRINTFORMW 「……아니, 별로 모자란다거나 하는 건 아니니까」
+		CFLAG:9806 = 2
+	;그 외
+	ELSEIF CFLAG:9806 < 1 || FLAG:11 == 2
+		PRINTFORMW 「콜록, 켈록…조, 조금만 더 했으면 질식사했을 거라구…」
+		CFLAG:9806 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수긴박	CFLAG:9507	CFLAG:9807
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 507 && TEQUIP:40
+	;처음
+	IF CFLAG:9507 == 0
+		;연모+마조끼Lv5
+		IF TALENT:150 == 1 && ABL:21 >= 5
+			PRINTFORMW 「응…아……하아…♪ 거기 그렇게 잡아 늘이며언…♪」
+			PRINTFORMW 「모르겠어…? 너보다 촉수가 괴롭혀주는 쪽이 좋아졌다구…으응♪」
+		;마조끼Lv3이상
+		ELSEIF ABL:21 >=3
+			PRINTFORMW 「으, 아아… 빡빡해…… 아♪ 그만…」
+			PRINTFORMW 촉수의 지나친 긴박에도 불구하고 마리사의 허벅지에는 애액이 줄줄 흐르고 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「…아―…그렇구나, 생긴 걸 보니 이 녀석, 이걸 목적으로 태어난 것 같아…」
+			PRINTFORMW 「그렇지만 조금 괴롭다구? 조금 불성실하게 살라고 말해줘」
+		ENDIF
+			CFLAG:9507 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;마조끼Lv5이상＋촉수중독Lv5이상
+		IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9507 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하앗…♪ 하앙…♪ 더, 더어…아…♪」
+			PRINTFORMW 촉수가 달라붙어오며 더욱 강하게 조른다.
+			PRINTFORMW 촉수의 독특한 감촉에 싸여 마리사의 이성은 정말로 무너진 듯 하다.
+			PRINTFORMW 「거기, 조아♪ 묶어서, 더 졸라줘, 잡아서, 부서줘어엇♪」
+			CFLAG:9507 = 4
+		;마조끼Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:21 >=3 && ABL:35 >= 2 && (CFLAG:9507 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우… 뭐야… 머리가 멍―해져…」
+			PRINTFORML 극도의 억압에 피가 잘 돌지 않는 것인가.
+			PRINTFORMW 그러나 그와 동시에 명백한 욕정의 빛이 마리사의 얼굴에 떠올랐다.
+			PRINTFORMW 「하앗…하아……으응♪」
+			CFLAG:9507 = 3
+		;그 외
+		ELSEIF CFLAG:9507 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…크, 그―러―니―까, 아프다니깐…」
+			CFLAG:9507 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 507 && TEQUIP:40 == 0
+	;마조끼Lv5이상＋촉수중독Lv5이상
+	IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9807 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「하아…♪ 하아…♪ 미끌미끌해서…♪ 기분 좋다구…♪」
+		PRINTFORML 땀과 분비액으로 질퍽하게 젖은 마리사의 몸이
+		PRINTFORMW 음란한 빛을 발하고 있다.
+		CFLAG:9807 = 3
+	;마조끼Lv3이상＋촉수중독Lv2이상
+	ELSEIF ABL:21 >= 3 && ABL:35 >= 2 && (CFLAG:9807 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…우……후우…뭔가, 뜨거운데, 하하…하아…♪」
+		PRINTFORML 마리사는 미끌거리는 고기의 줄에 단단히 묶여 있다는 독특한 감촉에
+		PRINTFORMW 쾌감을 느끼기 시작한 것 같다.
+		CFLAG:9807 = 2
+	;그 외
+	ELSEIF CFLAG:9807 < 1 || FLAG:11 == 2
+		PRINTFORMW 「하아, 하아… 아가씨의 몸은 좀 더 소중하게 다루는 거라구?」
+		CFLAG:9807 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 기생	CFLAG:9510
+;-------------------------------------------------
+IF SELECTCOM == 510
+	;처음
+	IF CFLAG:9510 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「…이, 이봐… 너 말야……. 나를, 사랑하고… 있어?」
+			PRINTFORMW 「사랑한다고 말해줘! 그러지 않으면 나는 더 이상, 견딜 수가 없어…」
+			PRINTFORMW 마리사는 입을 가리고, 스스로의 배를 안은 채 격하게 울기 시작했다.
+		;그 외
+		ELSE
+			PRINTFORMW 「――――――――――――으!!?」
+			PRINTFORMW 마리사는 심각한 쇼크를 받고 말이 되지 않는 비명을 지르며 졸도했다.
+		ENDIF
+			CFLAG:9510 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;촉수중독Lv5이상
+		IF ABL:35 >= 5 && (CFLAG:9510 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아… 젠장, 귀여울지도, 라고 생각한 시점에서 이쪽의 패배가 아닌가」
+			PRINTFORMW 마리사는 사랑스러운 듯이 기생당한 배를 쓰다듬고 있다.
+			CFLAG:9510 = 4
+		;촉수중독Lv3이상
+		ELSEIF ABL:35 >= 3 && (CFLAG:9510 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「크… 또냐…, 두고 보라고… 절대로 너에게도 기생시켜 줄테니까…」
+			PRINTFORMW 마리사는 눈물이 맺힌 눈으로 %조사처리(CALLNAME:MASTER,"를")% 노려보았다
+			CFLAG:9510 = 3
+		;그 외
+		ELSEIF CFLAG:9510 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이렇게, 능욕당해서… 괴물에게 기생당해서……」
+			PRINTFORMW 「……옛날로 돌아가고 싶어, 레이무……레이, 무우……」
+			PRINTFORMW 눈물이 마리사의 뺨에서 흘러넘쳐 떨어졌다.
+			CFLAG:9510 = 2
+		ENDIF
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 간지럽히기	CFLAG:9511
+;-------------------------------------------------
+IF SELECTCOM == 511
+	;처음
+	IF CFLAG:9511 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「히익!? 자, 잠깐 너, 푸, 간지르기라니!」
+			PRINTFORMW 「최, 최악의 고문이잖냐아하하하하하하하하하하하하!」
+		;그 외
+		ELSE
+			PRINTFORMW 「우, 우왓하핫하하하핫하핫핫!」
+			PRINTFORMW 「잠, 하지마, 힉앗하하하핫하핫핫핫핫핫!!」
+		ENDIF
+			CFLAG:9511 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;B감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:3 >= 5 && ABL:35 >= 5 && (CFLAG:9511 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 헤에…♪ 아히히…히…♪ 아앙♪」
+			PRINTFORMW 촉수가 피부를 뒤덮자, 마리사는 분명한 신음을 흘리고
+			PRINTFORMW 그 허벅지는 애액으로 질퍽거리며, 마리사의 맨다리에 실처럼 늘어진다.
+			CFLAG:9511 = 4
+		;B감각Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:3 >= 3 && ABL:35 >= 3 && (CFLAG:9511 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「…으, …크…후후……우후후후…으응♪ 히♪ 에엣…」
+			PRINTFORMW 「그, 그런…기다려, 아앗♪ 잠깐, 싫어…이런 걸로 느끼다니…」
+			PRINTFORMW 마리사는 집요한 간지럼 공격에 성의 쾌락을 느끼기 시작한 것 같다.
+			CFLAG:9511 = 3
+		;그 외
+		ELSEIF CFLAG:9511 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우, 우, 웃…웃다 지쳐서…후, 앗하하하하하하!!」
+			PRINTFORMW 「이, 이제 그만… 배가, 주, 죽어버린다구, 하, 아하하하하하하!!」
+			CFLAG:9511 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 비패개장	CFLAG:9512
+;-------------------------------------------------
+IF SELECTCOM == 512
+	;처음
+	IF CFLAG:9512 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「그, 그만둬! 부, 부끄럽잖아!!」
+			PRINTFORMW 「…그, 그야… 새삼스럽긴 하지만…… 누, 눈치채라 바보!」
+		;그 외
+		ELSE
+			PRINTFORMW 「히야아아앗! 하지마 변태!! 으으! 당장 오므리게 해! 빨리!」
+		ENDIF
+			CFLAG:9512 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;노출벽Lv5이상＋촉수중독Lv5이상
+		IF ABL:14 >= 5 && ABL:35 >= 5 && (CFLAG:9512 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으응♪ …자아, 보라구 이거…너 때문이니까…♪」
+			PRINTFORMW 마리사의 열띤 봊이에서 뚝뚝, 애액이 흘러넘친다.
+			PRINTFORMW 「이렇게 Ｈ해졌다구 나…. 책임, 져주는거겠지?」
+			CFLAG:9512 = 4
+		;노출벽Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:14 >= 3 && ABL:35 >= 2 && (CFLAG:9512 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「………………」
+			PRINTFORML 저항해봐야 의미없다는 걸 깨달았는지, 마리사는 얼굴을 붉게 물들이고
+			PRINTFORMW 사랑스러운 보지의 안을 내보이고 있다.
+			PRINTFORMW 「…여, 역시 무리…… 그만두자구 진짜…. 울고 싶어졌다」
+			CFLAG:9512 = 3
+		;그 외
+		ELSEIF CFLAG:9512 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으, 으읏…그, 그만둬! 보지 마! 이쪽 보지 마앗!!」
+			PRINTFORMW 마리사는 울상이 되어 새빨갛게 된 얼굴을 필사적으로 외면하고 있다.
+			CFLAG:9512 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 파이즈리	CFLAG:9513
+;-------------------------------------------------
+IF SELECTCOM == 513
+	;처음
+	IF CFLAG:9513 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응…, 파이즈리냐……. 너야? 촉수에게 이상한 걸 가르친 건…?」
+		;그 외
+		ELSE
+			PRINTFORMW 「어째서 촉수가 파이즈리 같은 걸 알고 있냐!?」
+			PRINTFORMW 「너냐!? 네가 가르친 거냐!? 네 몸으로 실천이라도 시켜줬냐!?」
+		ENDIF
+			CFLAG:9513 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;B감각Lv5이상＋봉사정신Lv5이상＋촉수중독Lv5이상
+		IF ABL:3 >= 5 && ABL:13 >= 5 && ABL:35 >= 5 && (CFLAG:9513 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으응♪ 후우우…아아♪ 가슴, 좋아♪ 가슴 조아아아아♪」
+			PRINTFORMW 「이건가? 이게 좋아? 너도♪ 아앗♪ 같이♪ 기분 좋아져♪」
+			PRINTFORMW 마리사는 미끌미끌해진 유두를 촉수의 뒷부분에 문지르고 있다.
+			CFLAG:9513 = 4
+		;B감각Lv3이상＋봉사정신Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:3 >= 3 && ABL:13 >= 3 && ABL:35 >= 2 && (CFLAG:9513 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우으…… 달콤해…. 아아♪ 응, 아냐… 이런…」
+			PRINTFORMW 「이, 이런 촉수에게 유린되고, 나는…」
+			PRINTFORMW 마리사는 스스로의 몸에 느껴지는 감각을, 머리를 흔들며 필사적으로 부정하고 있다.
+			CFLAG:9513 = 3
+		;그 외
+		ELSEIF CFLAG:9513 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「어, 어이가…. 너무 변태로워…. 못 맞춰주겠다구…」
+			CFLAG:9513 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 스마타	CFLAG:9514
+;-------------------------------------------------
+IF SELECTCOM == 514
+	;처음
+	IF CFLAG:9514 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「훅, 후앗♪ 뭐, 잠깐… 문지르지 마! 아앗♪」
+		;그 외
+		ELSE
+			PRINTFORMW 「…이건 스마타인가? 우―, 촉수 생각 따윈 전혀 모르겠어…」
+		ENDIF
+			CFLAG:9514 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;C감각Lv5＋봉사정신Lv5이상＋촉수중독Lv5이상
+		IF ABL:0 >= 5 && ABL:13 >= 5 && ABL:35 >= 5 && (CFLAG:9514 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아아아아앙♪ 문질러져서어♪ 이, 이거 굉장해에…♪」
+			PRINTFORML 촉수가 마리사의 사타구니를 스칠 때마다 서로의 섞인 액체가 흩날린다.
+			PRINTFORMW 김을 뿜으며 마리사의 흰 피부를 더듬어 간다.
+			PRINTFORMW 「저기, 말야… 이 촉수, 빌려 가도 괜찮을까…? 안 돼? 역시?」
+			CFLAG:9514 = 4
+		;C감각Lv3이상＋봉사정신Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:0 >= 3 && ABL:13 >= 3 && ABL:35 >= 2 && (CFLAG:9514 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「흐읏♪ 크, 클리가…♪ …앗… 아냐…. 가, 가을의 밤(쿠리) 말이라구…」
+			PRINTFORMW 「……………」
+			PRINTFORMW 「……우―, 그래! 클리토리스 기분 좋다! …누구 탓이냐고…. 으으」
+			CFLAG:9514 = 3
+		;그 외
+		ELSEIF CFLAG:9514 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아―, 슬슬 지친다구…. 아직도 할 생각인가?」
+			CFLAG:9514 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 G스팟 고문	CFLAG:9520
+;-------------------------------------------------
+IF SELECTCOM == 520
+	;처음
+	IF CFLAG:9520 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「으, 아♪ 야, 안 돼, 거기, 안 된다니까♪ 아, 조아♪」
+		;그 외
+		ELSE
+			PRINTFORMW 「히익!? 아으♪ 거긴! 하지 마, 하지 말아줘 하지… 앗―♪」
+		ENDIF
+			CFLAG:9520 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;V감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:1 >= 5 && ABL:35 >= 5 && (CFLAG:9520 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하악♪ …하악♪ 하으악♪ 하악♪ 하악♪」
+			PRINTFORMW 「모, 모자라, 더♪ 좀 더♪ 더 비벼줘, 아아♪ 하앙♪」
+			PRINTFORML 마리사의 눈은 욕망에 찌들어, 너무 격렬한 동작에 도망치려는촉수를
+			PRINTFORMW 재빨리 손으로 잡아 스스로의 보지에 찔러넣는다.
+			PRINTFORMW 「도망치지 마♪ 아아아아앙♪ 더, 더 해줘어어♪」
+			CFLAG:9520 = 4
+		;V감각Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:1 >= 3 && ABL:35 >= 3 && (CFLAG:9520 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「……――읏♪ 아―……읏♪ 으응… 아―……읏♪」
+			PRINTFORML 마리사는 촉수의 움직임에 완전히 매료되어, 군침을 흘리며
+			PRINTFORMW 촉수의 움직임에 맞춰 허리를 흔들고 있다.
+			CFLAG:9520 = 3
+		;그 외
+		ELSEIF CFLAG:9520 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아…흐…… 안데… 앙데에…♪ 이런 거… 아… 살려…♪」
+			PRINTFORMW 「부, 부탁이, 니… 그만두게… 아♪」
+			CFLAG:9520 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 자궁 고문	CFLAG:9521
+;-------------------------------------------------
+IF SELECTCOM == 521
+	;처음
+	IF CFLAG:9521 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아… 아, 아흐! 그, 만, 부서, 져버려! 크, 으… 부서져버려…어!!」
+			PRINTFORMW 「싫어…! 나…는, 원하는……, %CALLNAME:MASTER%하고, 아…기…! 으!」
+		;그 외
+		ELSE
+			PRINTFORMW 「으으아! 으, 으끄윽! 그…만…둬……어! 아아악!」
+		ENDIF
+			CFLAG:9521 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;V감각Lv5이상＋마조끼Lv5이상＋촉수중독Lv5이상
+		IF ABL:1 >= 5 && ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9521 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「…으응♪ 아앗♪ 으으으으응…아아, 이젠……♪」
+			PRINTFORMW 「괴롭혀줘♪ 더엇! 이제 어떻게 되든 좋아앗♪」
+			PRINTFORMW 「그 크고 아름다운 것으로 나의 자궁 작살내줘어어어… 아아앙♪」
+			PRINTFORML 마리사의 작은 배가 안에서 격하게 꿈틀거리는촉수에 의해 모양을 바꾼다.
+			PRINTFORML 사람의 목숨 따위 조금도 신경쓰지 않는 그 능욕에도 마리사는
+			PRINTFORMW 환희의 눈물을 흘리며 오로지 허리를 흔들 뿐이다.
+			CFLAG:9521 = 4
+		;V감각Lv2이상＋마조끼Lv2이상＋촉수중독Lv2이상
+		ELSEIF ABL:1 >= 2 && ABL:21 >= 2 && ABL:35 >= 2 && (CFLAG:9521 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「…응아아아아아앗♪ 안데에에에! 아앙♪ 하지마아아앗!!」
+			PRINTFORMW 「부서져버려! 아앗♪ 나, 아앙♪ 부서져버린다구우우」
+			PRINTFORMW 마리사는 촉수가 주는 고통과 쾌락 사이에서 헐떡이며 괴로워하고 있다.
+			CFLAG:9521 = 3
+		;그 외
+		ELSEIF CFLAG:9521 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「으… 으… 끄으…… 흐윽…… 질까…보냐… 질까, 보냐…」
+			CFLAG:9521 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수관장	CFLAG:9522	CFLAG:9822
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 522 && TEQUIP:25 == 7
+	;처음
+	IF CFLAG:9522 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우, 우와앗!?  요, 용서해줘… 그런, 싫어, 싫어어어」
+			PRINTFORMW 마리사는 울상이 되어 %CALLNAME:MASTER%에게 호소하지만 들어주지 않는다.
+		;그 외
+		ELSE
+			PRINTFORMW 「히익!?  그, 그만둬! 아, 아무리 그래도 너무 변태 같잖아!?」
+		ENDIF
+		CFLAG:9522= 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;노출벽Lv5이상＋촉수중독Lv5이상
+		IF ABL:14 >= 5 && ABL:35 >= 5 && (CFLAG:9522 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「또 이건가…… 정말이지, 어쩔 수 없는 변태구나…♪」
+			PRINTFORML 마리사는 촉수의 의도를 짐작한 듯 스스로 넙죽 엎드려 엉덩이를 들어올렸다.
+			PRINTFORMW 관장액이 촉수로부터 분비되어 장을 채우자, 마리사의 숨이 거칠어져 간다.
+			PRINTFORMW 「으…아아아♪ 아아… 배가, 가득해져… 크으♪」
+			CFLAG:9522 = 4
+		;노출벽Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:14 >= 3 && ABL:35 >= 3 && (CFLAG:9522 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫어어! 그것만은, 죄송합니다! 용서해주세요! 히익!!」
+			PRINTFORMW 촉수는 날뛰는 마리사를 넘어뜨리고 억눌러, 엉덩이를 들어올려 관장을 계속한다.
+			PRINTFORMW 「오오오오오오오…으응…♪ …아, 히이… 차가워…」			
+			CFLAG:9522 = 3
+		;그 외
+		ELSEIF CFLAG:9522 < 1 || FLAG:11 == 2
+			PRINTFORMW 「으…크……히잇! 부, 부탁이야…부탁이니까 화장실에 가게 해줘…」		
+			CFLAG:9522 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 522 && TEQUIP:25 == 0
+	;노출벽Lv5이상＋촉수중독Lv5이상
+	IF ABL:14 >= 5 && ABL:35 >= 5 && (CFLAG:9822 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「하아… 하아…… 아하아햐아아아아아아…♪」
+		PRINTFORMW 마리사는 허공에 키스하듯 혀를 내밀고 몸을 떨며
+		PRINTFORMW 배설하는 해방감을 마음껏 맛보고 있다.
+		CFLAG:9822 = 4
+	;노출벽Lv3이상＋촉수중독Lv3이상
+	ELSEIF ABL:14 >= 3 && ABL:35 >= 3 && (CFLAG:9822 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「……으…하아……버릇이, 될지도, 모르겠다구, 정말…」
+		PRINTFORMW 누구에게 하는 말인지 모를 악담을 중얼거렸다
+		CFLAG:9822 = 3
+	;그 외
+	ELSEIF CFLAG:9822 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「싫어…싫어어어…… 이제, 이런 거 싫어…」
+		PRINTFORML 지금까지 기가 세던 마리사의 안에서 무언가가 부서진 것인지, 
+		PRINTFORMW 마리사는 양손으로 얼굴을 가리고 큰 소리로 울기 시작했다.
+		CFLAG:9822 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 관통	CFLAG:9524	CFLAG:9824
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 524 && TEQUIP:25 == 3
+	;처음
+	IF CFLAG:9524 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「………!!? 꺽………! ……!」
+			PRINTFORML 죽음을 각오한 마리사는 떨리는 손을 필사적으로 뻗어
+			PRINTFORMW %CALLNAME:MASTER%의 손을 잡고는 안도한 듯 의식을 잃었다.
+		;그 외
+		ELSE
+			PRINTFORMW 「!!? !! !!?? ? ……!!? …!!?」
+			PRINTFORML 무엇이 일어난 것인가, 어째서 이렇게 괴로운 것인가.
+			PRINTFORMW 너무나 과격한 사건에 마리사는 아무것도 이해하지 못하고 의식을 잃었다.
+		ENDIF
+			CFLAG:9524 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;마조끼Lv5이상＋촉수중독Lv5이상
+		IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9524 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응…♪ …그렇게… 내, 안이, 좋은 거냐♪ 앗♪」
+			PRINTFORML 마리사는 몸을 관통하는 촉수에 봉사하는 것처럼
+			PRINTFORMW 스스로 몸을 야릇하게 비틀며, 안의 촉수를 자극한다.
+			PRINTFORMW 마리사는 입 안에 촉수의 체액이 흐르자, 황홀한 표정으로 혀를 놀려 다 마신다.
+			CFLAG:9524 = 4
+		;마조끼Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:21 >= 3 && ABL:35 >= 3 && (CFLAG:9524 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아…으………하아, 하아, 흐…끄으……응……히이…」
+			PRINTFORML 방어본능인가, 온갖 종류의 체액이 마리사의 몸에서 대량으로 흘러넘친다.
+			PRINTFORMW 촉수의 횡포로부터 체내의 조직을 지키기 위해서이겠지만
+			PRINTFORMW 더 미끄러워진 촉수는 기분이 좋은 것인지, 격렬한 왕복운동을 시작했다.
+			PRINTFORMW 「……!! !! ……!! ……!! !」
+			CFLAG:9524 = 3
+		;그 외
+		ELSEIF CFLAG:9524 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그… 마…… 뽑하………줘…… 제…발… 뽑하…줘…」
+			CFLAG:9524 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 524 && TEQUIP:25 == 0
+	;마조끼Lv5이상＋촉수중독Lv5이상
+	IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9824 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「하아… 후후… 음란해……. 음란하다구 너…♪」
+		PRINTFORMW 몸에서 빠져나온 촉수를 향해, 마리사는 사랑스럽다는 듯 손가락을 걸고 있다.
+		CFLAG:9824 = 3
+	;마조끼Lv3이상＋촉수중독Lv3이상
+	ELSEIF ABL:21 >= 3 && ABL:35 >= 3 && (CFLAG:9824 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「……아아…… 별이, 잔뜩 보인다구…… 하, 히…」
+		CFLAG:9824 = 2
+	;그 외
+	ELSEIF CFLAG:9824 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……! 하아…… 하…아…」
+		PRINTFORMW 「……나… 의외로… 튼튼한, 데…… 하아…」
+		CFLAG:9824 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 착유	CFLAG:9525	CFLAG:9825
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 525 && TEQUIP:35 == 2
+	;처음
+	IF CFLAG:9525 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「자, 잠깐… 뭘 할 생각이야!? 힛, 시, 싫어어어!」
+		;그 외
+		ELSE
+			PRINTFORMW 마리사는 눈물을 글썽이고 치욕에 떨며 %조사처리(CALLNAME:MASTER,"를")% 째려보았다.
+		ENDIF
+			CFLAG:9525 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;분유중독Lv5이상＋촉수중독Lv5이상
+		IF ABL:34 >= 5 && ABL:35 >= 5 && (CFLAG:9525 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……… 하앗, 더 빨아줘… 아…♪ 더 내고 싶다…」
+			PRINTFORMW 마리사는 촉수에게 착유당하는 배덕감에 얼굴을 붉게 물들이고, 부들부들 떨면서도
+			PRINTFORMW 분유의 쾌감에 몸을 비틀며 기뻐한다.
+			CFLAG:9525 = 4
+		;분유중독Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:34 >= 3 && ABL:35 >= 2 && (CFLAG:9525 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으…… 싫어… 어… 으응♪ …부끄러…운데…… 누군가, 도와…」
+			PRINTFORMW 인외의 괴물에게 젖을 착취당하는 치욕, 그리고 거기에 저항하지 못하고 느껴버리는 치욕.
+			PRINTFORMW 두 치욕에 억눌린 마리사는 눈물을 흘리며 얼굴을 떨구고 있다.
+			CFLAG:9525 = 3
+		;그 외
+		ELSEIF CFLAG:9525 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아―, 이건 네가 먹는 건가? 슬슬 젖은 뗄 때도 되지 않았어?」
+			PRINTFORMW 「………스스로 말하고서 지금 상황이 정말 한심해졌다구…」
+			CFLAG:9525 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 525 && TEQUIP:35 == 0
+	;분유중독Lv5이상＋촉수중독Lv5이상
+	IF ABL:34 >= 5 && ABL:35 >= 5 && (CFLAG:9825 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「하아…♪ 아… 가지 말라구…. 아직, 모자란데…」
+		PRINTFORMW 마리사는 촉수에게서 늘어지는 스스로의 모유를 핥으며
+		PRINTFORMW 그 촉수에 혀를 걸고 딥키스를 했다.
+		CFLAG:9825 = 3
+	;분유중독Lv3이상＋촉수중독Lv2이상
+	ELSEIF ABL:34 >= 3 && ABL:35 >= 2 && (CFLAG:9825 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「……응……으……아직, 나오고 있어…」
+		PRINTFORMW 마리사는 정말로 힘이 빠져, 모유가 나오고 있는 자신의 유두를 멍하니 바라보고 있다.
+		CFLAG:9825 = 2
+	;그 외
+	ELSEIF CFLAG:9825 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…하아, 하아… 젖은 이제 그만… 떼라구? 여러 가지 의미로…… 부탁이니까」
+		CFLAG:9825 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 유선 삽입	CFLAG:9526	CFLAG:9826
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 526 && TEQUIP:35 == 3
+	;처음
+	IF CFLAG:9526 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「히, 히이익! 드, 들어와앗!? 가슴에, 들어오고 있어?」
+		;그 외
+		ELSE
+			PRINTFORMW 「거, 거기는 넣는 장소가 아니라구 촉수야! 넣지 마…앗! 히야…아아!!」
+		ENDIF
+			CFLAG:9526 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;B감각Lv5이상＋분유중독Lv5＋촉수중독Lv5이상
+		IF ABL:3 >= 5 && ABL:34 >= 5 && ABL:35 >= 5 && (CFLAG:9526 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아아앙♪ …달아아아아…. 녹을 것 같아…. 녹아…♪ ……가슴 녹아버려…♪」
+			PRINTFORML 마리사는 평소에는 상상도 할 수 없을 정도의 달콤한 목소리와
+			PRINTFORMW 멍한 표정으로 가슴을 농락하는 촉수를 껴안는다.
+			PRINTFORMW 「후후… 웬일이래…. 아주, 중독됐어… 촉수… 더, 원한다…구♪」
+			CFLAG:9526 = 4
+		;B감각Lv3이상＋분유중독Lv3＋촉수중독Lv3이상
+		ELSEIF ABL:31 >= 3 && ABL:34 >= 3 && ABL:35 >= 3 && (CFLAG:9526 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아… 그만둬, 움직이지마! 으응♪ 안…에서, 흐아앗♪아아앗♪」
+			PRINTFORML 유두에 매달린 촉수가 안에서 어지럽게 꿈틀거린다.
+			PRINTFORMW 「으응♪…크, 이런…이런 게 좋다니…아…안데에…♪」
+			CFLAG:9526 = 3
+		;그 외
+		ELSEIF CFLAG:9526 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아… 아… 그만둬… 아아, 무서워…… 그만해… 으으…」
+			CFLAG:9526 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 526 && TEQUIP:35 == 0
+	;B감각Lv5이상＋분유중독Lv5＋촉수중독Lv5이상
+	IF ABL:3 >= 5 && ABL:34 >= 5 && ABL:35 >= 5 && (CFLAG:9826 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「후뉴우우우우우우우웅…♪」
+		PRINTFORMW 촉수가 떠난 뒤에도, 마리사는 아직 꿈꾸는 듯 고개를 휘청거리고 있다.
+		CFLAG:9826 = 3
+	;B감각Lv3이상＋분유중독Lv3＋촉수중독Lv3이상
+	ELSEIF ABL:3 >= 3 && ABL:34 >= 3 && ABL:35 >= 3 && (CFLAG:9826 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「앙데에에…머, 멈추지 않아…유두 부서져버려어…도와줘어어…♪」
+		PRINTFORMW 촉수가 떨어진 뒤에도 마리사는 스스로 유두를 쥐어틀고, 비비고, 돌리고 있다.
+		CFLAG:9826 = 2
+	;그 외
+	ELSEIF CFLAG:9826 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…으으……정말로 이런 거 해도, 괜찮은 건가…?」
+		PRINTFORMW 마리사는 유두를 쿡쿡 찌르거나 비틀거나 하며 무사한지 확인하고 있다.
+		CFLAG:9826 = 1
+	ENDIF
+		RETURN 0
+
+ENDIF
+
+;-------------------------------------------------
+;촉수 카테터	CFLAG:9527	CFLAG:9827
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 527 && TEQUIP:32
+	;처음
+	IF CFLAG:9527 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「흐갸악!? 아, 아니 거긴 아니라구!? 아냐, 아닛, 히, 」
+		;그 외
+		ELSE
+			PRINTFORMW 「끄으으으윽!? 제, 젠장… 나는 지지 않는다구… 이 변태…」
+		ENDIF
+			CFLAG:9527 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;노출벽Lv5이상＋촉수중독Lv5이상
+		IF ABL:14 >= 5 && ABL:35 >= 5 && (CFLAG:9527 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하아앗♪ 하앗♪ 아으으…응♪ 저기, 제대로 보고 있어?」
+			PRINTFORMW 「또… 오줌…… 나와버려, 나온다구, 아아…아으읏♪」
+			PRINTFORML 마리사는 달뜬 표정으로 허리를 들어올려
+			PRINTFORMW 촉수가 좀 더 요도를 자극하기 쉽도록 천천히 움직였다.
+			CFLAG:9527 = 4
+		;노출벽Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:14 >= 3 && ABL:35 >= 3 && (CFLAG:9527 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아아아아…보지마, 보지마보지마보지마앗! …아앗」
+			PRINTFORMW 마리사는 얼굴을 붉게 물들이고 고개를 좌우로 흔들며 저항하지만
+			PRINTFORMW 요도에 자극을 받을 때마다 뜨거운 한숨을 토하며, 요구하듯이 몸을 움직인다.
+			CFLAG:9527 = 3
+		;그 외
+		ELSEIF CFLAG:9527 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…으, 으으…… 화, 화장실……화장실에 가게 해줘……」
+			PRINTFORMW 마리사는 얼굴이 빨개져서는 허벅지를 비비며 다리를 꼬고 있다.
+			CFLAG:9527 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 527 && TEQUIP:32 == 0
+	;노출벽Lv5이상＋촉수중독Lv5이상
+	IF ABL:14 >= 5 && ABL:35 >= 5 && (CFLAG:9827 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「으읏아앙♪ 안데에에에에에에에에에♪」
+		PRINTFORML 활처럼 휘어진 마리사의 몸에서, 뜨거워진 몸에서 김이 난다.
+		PRINTFORMW 그러고도 모자란 것인지, 마리사는 질척거리는 그곳에 손가락을 놀린다.
+		CFLAG:9827 = 3
+	;노출벽Lv3이상＋촉수중독Lv3이상
+	ELSEIF ABL:14 >= 3 && ABL:35 >= 3 && (CFLAG:9827 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…아아아아아…♪ …싫어어… 이쪽, 보지마아앗…아앙…♪」
+		PRINTFORMW 마리사의 흥분한 냄새가 주위의 공기를 채웠다.
+		CFLAG:9827 = 2
+	;그 외
+	ELSEIF CFLAG:9827 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아… 으으… 변태놈, 변태놈, 변태놈, 변태놈……!」
+		PRINTFORMW 마리사는 울상이 되어 얼굴을 일그러뜨리면서도 %조사처리(CALLNAME:MASTER,"를")% 매도하고 있다.
+		CFLAG:9827 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;촉수 바기나 확장	CFLAG:9530
+;-------------------------------------------------
+IF SELECTCOM == 530
+	;처음
+	IF CFLAG:9530 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우아아아아아아아악! 제, 제발, 그만…」
+		;그 외
+		ELSE
+			PRINTFORMW 「히기이이이익, 이이, 끼이, 아, 끄아아아」
+		ENDIF
+			CFLAG:9530 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;V감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:1 >= 5 && ABL:35 >= 5 && (CFLAG:9530 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「흐읏♪ 아♪ 아직, 아직 더 벌려져…♪ 질내가, 잔뜩…♪」
+			PRINTFORML 대량의 땀과 헐떡이는 호흡, 무리를 하고 있는 것은 명백하지만
+			PRINTFORMW 그런데도 스스로 허리를 흔드는 것은 선천적인 노력가의 성품 탓일까.
+			PRINTFORMW 「하아, 하아…들어갔, 다구…♪ 다음은 더, 굵은 걸로 하지 않으면…♪」
+			CFLAG:9530 = 4
+		;V감각Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:1 >= 3 && ABL:35 >= 2 && (CFLAG:9530 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응아앗, 무리… 무리시키지… 말, 라고…으응♪」
+			PRINTFORML 굵은 촉수가 마리사의 질구를 찢어질 듯 확장시킨다.
+			PRINTFORMW 마리사는 그 피학적인 광경에 스스로의 성감을 높여간다.
+			CFLAG:9530 = 3
+		;그 외
+		ELSEIF CFLAG:9530 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「누, 눈에서, 벼, 별이, 깜빡깜빡하고…」
+			CFLAG:9530 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 애널 확장	CFLAG:9531
+;-------------------------------------------------
+IF SELECTCOM == 531
+	;처음
+	IF CFLAG:9531 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「나, 나는, 좋아하는 너를 위해서라면, 뭐든지 한다구…?」
+			PRINTFORMW 「그, 그런데, 그런 귀여운 나를 너는 으갸아아아아아아아악!」
+		;그 외
+		ELSE
+			PRINTFORMW 「～～～으, 갸아아아아아악!?」
+		ENDIF
+			CFLAG:9531 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;A감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:2 >= 5 && ABL:35 >= 5 && (CFLAG:9531 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아앙♪ 하아앗♪ 젠자앙, 아나루 조아아아앙♪ 조아아아아♪」
+			PRINTFORML 극태의 촉수가 몇 개나 몇 개나 마리사의 항문에 빨려들어간다.
+			PRINTFORMW 마리사는 고통과 환희로 눈믈을 흘리며, 더욱 격렬하게 허리를 흔들었다.
+			CFLAG:9531 = 4
+		;A감각Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:2 >= 3 && ABL:35 >= 2 && (CFLAG:9531 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그, 그만둬줘…한계, 흐아, 제바…알……부」
+			PRINTFORMW 극태의 촉수가 오갈 때마다, 구멍이 부들부들 떨며 한계를 호소한다.
+			CFLAG:9531 = 3
+		;그 외
+		ELSEIF CFLAG:9531 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「히극…아, 아파……그만…둬…」
+			CFLAG:9531 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 양구멍 확장	CFLAG:9532
+;-------------------------------------------------
+IF SELECTCOM == 532
+	;처음
+	IF CFLAG:9532 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「도, 도전정신은, 인정하겠어…. 하지만 문제는」
+			PRINTFORMW 「무리 무리! 당사자인 내가 말하는데 절대 무리! 절…대, 끼, 아아아」
+		;그 외
+		ELSE
+			PRINTFORMW 「－－－－－～～～～히, 끼, 익!!?」
+		ENDIF
+			CFLAG:9532 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;V감각Lv5이상＋A감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:1 >= 5  && ABL:2 >= 5 && ABL:35 >= 5 && (CFLAG:9532 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아아아앙, 스쳐서, 잔뜩 스쳐서…부서져버려…부셔, 나를 부셔줘…♪」
+			PRINTFORMW 「그 굉장한 것으로 나의 부끄러운 구멍, 양쪽 다 망가뜨려줘어어어어♪」
+			PRINTFORML 울끈불끈, 울끈불끈 극태의 촉수가 양구멍을 오가면
+			PRINTFORML 히야아아, 하아앙, 하고 마리사는 외치면서 대량의 액체를 흘린다.
+			PRINTFORMW 근처는 이미 마리사 자신의 달콤한 향기로 가득했다.
+			CFLAG:9532 = 4
+		;V감각Lv3이상＋A감각Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:1 >= 3 && ABL:2 >= 3 && ABL:35 >= 3 && (CFLAG:9532 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으, 으으으…끄악…아파…아프다구……흐윽…이익…」
+			PRINTFORML 질구, 그리고 항문이 천천히, 천천히 넓혀져 간다.
+			PRINTFORMW 마리사는 울면서 조금이라도 아픔을 줄여보려고 허리의 위치를 조절하고 있다.
+			CFLAG:9532 = 3
+		;그 외
+		ELSEIF CFLAG:9532 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「--------～～～～읏!! 으읏!! !」
+			PRINTFORML 마리사는 이미 단말마에 가까운 비명을 지르며
+			PRINTFORMW 움찔움찔하고 2, 3회 경련하다, 실신했다.
+			CFLAG:9532 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 산란	CFLAG:9533
+;-------------------------------------------------
+IF SELECTCOM == 533
+	;처음
+	IF CFLAG:9533 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「!!? 뭐, 뭘 한다고? 이, 이상한 짓은 그만둬…헤? 알」
+			PRINTFORMW 「……!!? 싫어어어어어어어어어어어!」
+			PRINTFORMW 마리사는 산란이라는 말을 듣자 지나친 쇼크로 기절해버렸다.
+		;그 외
+		ELSE
+			PRINTFORMW 「…!! !? 아니, 잠, …!! !? 에!? 뭐? 우, 뭐뭐…!?」
+			PRINTFORMW 마리사는 자신의 자궁내에서 무엇이 일어나고 있는지 이해하지 못하는 것 같다.
+		ENDIF
+			CFLAG:9533 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;V감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:1 >= 5 && ABL:35 >= 5 && (CFLAG:9533 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아…♪ 아, 아♪ 좋아아아, 나, 산란당해서 느끼고 있다구…♪」
+			PRINTFORML 미끌거리는 촉수가 알을 토해낼 때마다 마리사의 엉덩이가 움찔거린다.
+			PRINTFORMW 홍조한 얼굴을 흔들며 온몸을 떨고 있다.
+			CFLAG:9533 = 4
+		;V감각Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:1 >= 3 && ABL:35 >= 2 && (CFLAG:9533 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으, 으끄윽……응…으응……끄…으으……」
+			PRINTFORML 구토할 것 같은 불쾌감에 마리사는 식은땀을 흘리며
+			PRINTFORMW 주먹을 꽉 쥐고 필사적으로 참고 있다.
+			CFLAG:9533 = 3
+		;그 외
+		ELSEIF CFLAG:9533 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그, 그만둬줘어어… 흑… 싫어어… 싫어어……」
+			PRINTFORMW 질내에 산란당한다는 큰 충격에 마리사의 마음은 무너지고 있다.
+			CFLAG:9533 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 애널 산란	CFLAG:9534
+;-------------------------------------------------
+IF SELECTCOM == 534
+	;처음
+	IF CFLAG:9534 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「배, 배가 찢어지거나 할지도 모른다구? 부, 부탁이야? 믿고 있다구??」
+		;그 외
+		ELSE
+			PRINTFORMW 「히익!? 뭐, 뭘 하려는거야!? 지, 금, 설마…?」
+			PRINTFORMW 마리사의 얼굴이 새파래졌지만, %조사처리(CALLNAME:MASTER,"는")% 아무 대답도 하지 않는다.
+		ENDIF
+			CFLAG:9534 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;A감각Lv5이상＋촉수중독Lv5이상
+		IF ABL:2 >= 5 && ABL:35 >= 5 && (CFLAG:9534 <= 3 || FLAG:11 == 2)
+			PRINTFORML 「…흐윽! 흐읏♪ 흣♪ 앗♪ 아흐읏♪」
+			PRINTFORMW 「알…으읏! 낳는다, 나, 또…아♪ 아, 알」
+			PRINTFORML 애널을 촉수에게 정말로 정복당한 즐거움에
+			PRINTFORML 그리고 그 뒤에 찾아올 열락이 넘치는 산란에의 기대감에
+			PRINTFORMW 마리사는 격렬하게 엉덩이를 내밀며, 온몸을 떤다.
+			CFLAG:9534 = 4
+		;A감각Lv3이상＋촉수중독Lv2이상
+		ELSEIF ABL:2 >= 3 && ABL:35 >= 2 && (CFLAG:9534 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우으……아앗♪ 하아…끄으, 시… 싫어… 으읏♪」
+			PRINTFORMW 마리사는 장벽에 알이 낳아지는 감각에 서서히 빠져들기 시작했다.
+			CFLAG:9534 = 3
+		;그 외
+		ELSEIF CFLAG:9534 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…아……히익…낳지마, 라구…그만…주…세…요…」
+			PRINTFORML 공포에 머리가 패닉에 빠져, 부서져가는 마음으로 필사적으로 애원하는 마리사.
+			PRINTFORMW 그러나 비정하게도 촉수는 전혀 이해해주지 않고, 애널에의 산란은 계속된다.
+			CFLAG:9534 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 채찍질	CFLAG:9551
+;-------------------------------------------------
+IF SELECTCOM == 551
+	;처음
+	IF CFLAG:9551 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우읏! 아, 아픈 것은 싫다구…? 상냥하게 해…줘? …윽!」
+		;그 외
+		ELSE
+			PRINTFORMW 「아팟! 잠깐, 나는 마조가 아니라구… 히익! 크」
+		ENDIF
+			CFLAG:9551 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;마조끼Lv5이상＋촉수중독Lv5이상
+		IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9551 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아앗♪ 죄송합니다아♪ 으응♪ 안 돼♪ 안 되는데에♪ 하으♪」
+			PRINTFORML 마리사는 황홀한 표정으로 피부를 때리는 촉수를 받아들이고 있다.
+			PRINTFORMW 「우, 으와아아앗♪ 안 돼엣, 나, 이런 걸로, 가버려엇♪촉수에 맞아서, 아앗♪」
+			CFLAG:9551 = 4
+		;마조끼Lv2이상＋촉수중독Lv2이상
+		ELSEIF ABL:21 >= 2 && ABL:35 >= 2 && (CFLAG:9551 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으… 으으…… 그만둬… 아파… 아프다고… 하지마… 아앗」
+			PRINTFORML 마리사는 눈물이 가득한 눈으로 힘껏 몸을 굴려 방어자세를 취한다.
+			PRINTFORMW 그 발 아래에는 흩날린 땀과 액체가 웅덩이를 만들고 있다.
+			CFLAG:9551 = 3
+		;그 외
+		ELSEIF CFLAG:9551 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「기, 기다려…. 대화로 하자! 대화를 하면 반드시 이해할 수아파앗! 아야!」
+			CFLAG:9551 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 바늘 고문	CFLAG:9552
+;-------------------------------------------------
+IF SELECTCOM == 552
+	;처음
+	IF CFLAG:9552 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아팟! 뭐, 뭐야 그 촉수… 아윽! 취, 취미 나쁘다구…?」
+		;그 외
+		ELSE
+			PRINTFORMW 「뭐, …그, 그런 걸로 찔러도 나는 굴하지 않거든? ……윽!!」
+		ENDIF
+			CFLAG:9552 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;마조끼Lv5이상＋촉수중독Lv5이상
+		IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9552 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「으, 아, 아…♪ 찔려서… 그럴 수가… 나, 찔려서 느끼고 있어…♪」
+			PRINTFORMW 침이 마리사의 민감한 곳을 남김없이 찔러, 하얀 피부에 붉은 물방울이 맺혀 흘러내린다.
+			PRINTFORMW 촉수는 대충 찌르기를 끝내고는 마리사의 몸을 한번에 들어올려, 피츙 하고 던져버렸다.
+			PRINTFORMW 「히, 히아아아아아앙♪ 가, 가버려어엇!! ♪」
+			CFLAG:9552 = 4
+		;마조끼Lv3이상＋촉수중독Lv3이상
+		ELSEIF ABL:21 >= 3 && ABL:35 >= 3 && (CFLAG:9552 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「흐아아, 아파…아으…그만둬…하지말라구…아흐읏…흐으읏」
+			PRINTFORMW 침은 정확히 마리사의 민감한 곳을 찔러간다.
+			PRINTFORMW 피와 애액과 촉수의 분비액이 섞여, 음란한 냄새를 발하고 있다.
+			CFLAG:9552 = 3
+		;그 외
+		ELSEIF CFLAG:9552 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이제 그만두자구…. 침은 내 취미가 아니라니까… 아팟」
+			CFLAG:9552 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 방전	CFLAG:9553
+;-------------------------------------------------
+IF SELECTCOM == 553
+	;처음
+	IF CFLAG:9553 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아, 우와아아아아아아아아아아아아아아아아아악!!」
+			PRINTFORMW 방전이 끝나자 마리사는 힘없이 무너져, %CALLNAME:MASTER%에게 기대었다.
+			PRINTFORMW 「하―… 하아…… 시, 심해라…. 암만 그래도… 죽는 줄 알았…다구…」
+			PRINTFORMW %CALLNAME:MASTER%의 팔에 안겨 조금 기쁜 듯, 마리사는 꿈틀 하고 의식을 잃었다.
+		;그 외
+		ELSE
+			PRINTFORMW 「!? 우와아아아아아아아아아아아아아아아아악!!」
+			CFLAG:9553 = 1
+			RETURN 0
+		ENDIF
+	;2회째 이후
+	ELSE
+		;마조끼Lv5이상＋촉수중독Lv5이상
+		IF ABL:21 >= 5 && ABL:35 >= 5 && (CFLAG:9553 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아읏! 히잇! 으응♪ 끄앗! 흐읏으응♪아…♪」
+			PRINTFORML 방전에 의한 격렬한 경련은 지금까지 변함이 없지만
+			PRINTFORMW 흩날리는 애액의 양은 지금까지와는 비교도 할 수 없이 많아졌다.
+			PRINTFORMW 「히이이이이아아아아아아앙♪ 가버렷♪ 가버려가버려가버렷♪」
+			PRINTFORMW 한층 더 강한 경련과 함께 마리사는 대량의 액체를 뿜어, %CALLNAME:MASTER%의 얼굴을 적셨다.
+			CFLAG:9553 = 4
+		;마조끼Lv4이상＋촉수중독Lv4이상
+		ELSEIF ABL:21 >= 4 && ABL:35 >= 4 && (CFLAG:9553 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「으그그그그그그그극… 우으아아아아아아아아아아악!」
+			PRINTFORMW 격하게 경련하는 동안, 온몸의 모든 구멍에서 각종 체액을 뿌리는
+			PRINTFORMW 마리사는 실신과 각성을 강제로 반복당하고 있다.
+			CFLAG:9553 = 3
+		;그 외
+		ELSEIF CFLAG:9553 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「히끼이이이익… 히, 히이이이아아아아아아아아아!!」
+			PRINTFORMW 무자비한 방전이 마리사의 육체와 정신을 몰아붙인다.
+			CFLAG:9553 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 흡혈	CFLAG:9554
+;-------------------------------------------------
+IF SELECTCOM == 554
+	;처음
+	IF CFLAG:9554 == 0
+		;촉수 최면 중
+		IF TEQUIP:92
+			PRINTFORMW 「아― ……빨리고 있어― ……………무언가에게」
+		;그 외
+		ELSE
+			PRINTFORMW 「힉!? 뭐, 피를 빤, 다고!? …그, 그만둬!」
+		ENDIF
+			CFLAG:9554 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;촉수 최면 중
+		IF TEQUIP:92
+			PRINTFORMW 「……역시 탄막은 파워라구…어라-…파워가 나오지 않아…?」
+		;촉수중독Lv5이상
+		ELSEIF ABL:35 >= 5 && (CFLAG:9554 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후후…♪ 내 피… 맛있…어…? 아아…♪」
+			PRINTFORMW 「응…빨려나가… 아아♪ 빨려나가…♪ 기분 조아아…아앗♪」
+			PRINTFORMW 생과 사의 경계에 있는 위험한 쾌락에 마리사는 미쳐가고 있다.
+			CFLAG:9554 = 4
+		;촉수중독Lv2이상
+		ELSEIF ABL:35 >= 2 && (CFLAG:9554 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아…으…… 이제… 용서해줘… 어지러워졌다…」
+			PRINTFORMW 「…그, 그만해… 싫어… 무서워… 도와줘…」
+			PRINTFORML 마리사는 죽음에의 공포에, 피를 너무 뽑혀 움직이지 않는 몸을 억지로 움직여
+			PRINTFORMW 어떻게든 촉수를 몸에서 떼어네려고 필사적으로 발버둥친다.
+			CFLAG:9554 = 3
+		;그 외
+		ELSEIF CFLAG:9554 <= 1 || FLAG:11 == 2
+			PRINTFORML 「으끄윽! 이, 이런 걸로 죽을, 것 같…냐! 으읏…!」
+			CFLAG:9554 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG 관계
+;파라미터 변동을 트리거로 한 말
+;파라미터 변동 후에 말을 발동합니다
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_2
+;YM 타입시에는 전용 대사로 넘어감
+IF CFLAG:7900 == 1
+	CALL KOJO_MESSAGE_PALAMCNG_2_YM
+	RETURN 0
+ENDIF
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;볼 개그 착용시에는 말을 스킵 한다(OFF라고 구를 차지해 마구 말한다)
+SIF TEQUIP:42
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_PALAMCNG_K2_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_PALAMCNG_K2_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;파라미터 변동시의 대사
+;-------------------------------------------------
+;처음PALAMがLV2超えた時の口上 CFLAG 5330～5355を使用
+;@KOJO_2_MESSAGE_PALAMCNGから呼び出すのでセットで使うこと
+;-------------------------------------------------
+;처음으로 윤활이 LV2 넘은 CFLAG:5330
+;-------------------------------------------------
+LOCAL = PALAM:10 + UP:10
+IF LOCAL > PALAMLV:2 && CFLAG:5330 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		;로션을 사용했을 경우
+;		IF SELECTCOM == 60
+;			PRINTFORMW 
+;		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;	;그 외
+;	ELSE
+		;로션을 사용했을 경우
+		IF SELECTCOM == 60
+			PRINTFORMW 「……제길, 기분 나쁘군」
+		;그 외
+		ELSE
+			PRINTFORMW 「……이건 말이다……. 땀이야」
+			PRINTFORMW 마리사는 창피한 듯 고개 숙이고, 꼼지락꼼지락 허벅지를 비비고 있다.
+		ENDIF
+;	ENDIF
+	CFLAG:5330 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음으로 욕정이 LV2 넘은 CFLAG:5333
+;-------------------------------------------------
+LOCAL = PALAM:13 + UP:13
+IF LOCAL > PALAMLV:2 && CFLAG:5333 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		;미약을 사용했을 경우
+;		IF SELECTCOM == 61
+;			PRINTFORMW 
+;		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;	;그 외
+;	ELSE
+		;미약을 사용했을 경우
+		IF SELECTCOM == 61
+			PRINTFORMW 「제길, 이상한, 약, 써, 재끼고――」
+		;그 외
+		ELSE
+			PRINTFORMW 「하아, 하아――뜨거워, 몸이 달아올랐어……」
+		ENDIF
+;	ENDIF
+	CFLAG:5333 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음으로 치정이 LV2 넘은 CFLAG:5335
+;-------------------------------------------------
+LOCAL = PALAM:15 + UP:15
+IF LOCAL > PALAMLV:2 && CFLAG:5335 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		PRINTFORMW 
+;	;그 외
+;	ELSE
+		PRINTFORMW 「……더, 더 이상은 못 해……. 창피하잖아」
+;	ENDIF
+	CFLAG:5335 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음으로 공포가 LV2 넘은 CFLAG:5337
+;-------------------------------------------------
+LOCAL = PALAM:17 + UP:17
+IF LOCAL > PALAMLV:2 && CFLAG:5337 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		PRINTFORMW 
+;	;그 외
+;	ELSE
+		PRINTFORMW 「……그만둬……. 이젠 그만해주세요」
+		PRINTFORMW  마리사는 눈물을 닦으면서 겁먹은 눈으로 %조사처리(CALLNAME:MASTER,"를")% 보고 있다.
+;	ENDIF
+	CFLAG:5337 = 1
+ENDIF
+
+;----------------------------------------------------------
+;絶頂時の口上 CFLAG 5300～を使用
+;@KOJO_2_MESSAGE_PALAMCNGから呼び出すのでセットで使うこと
+;----------------------------------------------------------
+;-------------------------------------------------
+;처음으로 C절정 CFLAG:5300
+;-------------------------------------------------
+;IF NOWEX:0 > 0 && CFLAG:5300 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		PRINTFORMW 
+;	;그 외
+;	ELSE
+;		PRINTFORMW 
+;	ENDIF
+;	CFLAG:5300 = 1
+;ENDIF
+
+;-------------------------------------------------
+;처음으로 V절정 CFLAG:5301
+;-------------------------------------------------
+IF NOWEX:1 > 0 && CFLAG:5301 == 0
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「……윽! 하악…… 하악……」
+		PRINTFORMW 「이봐, 껴안아주라……. 세게……」
+		PRINTFORMW 그렇게 말하더니 마리사는 %CALLNAME:MASTER%의 목에 팔을 둘러왔다.
+	;그 외
+;	ELSE
+;		PRINTFORMW 
+	ENDIF
+		CFLAG:5301 = 1
+ENDIF
+
+;-------------------------------------------------
+;처음으로 A절정 CFLAG:5302
+;-------------------------------------------------
+;IF NOWEX:2 > 0 && CFLAG:5302 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		PRINTFORMW 
+;	;그 외
+;	ELSE
+;		PRINTFORMW 
+;	ENDIF
+;	CFLAG:5302 = 1
+;ENDIF
+
+;-------------------------------------------------
+;처음으로 B절정 CFLAG:5303
+;-------------------------------------------------
+;IF NOWEX:3 > 0 && CFLAG:5303 == 0
+;	;연모
+;	IF TALENT:150 == 1
+;		PRINTFORMW 
+;	;그 외
+;	ELSE
+;		PRINTFORMW 
+;	ENDIF
+;	CFLAG:5303 = 1
+;ENDIF
+
+;-------------------------------------------------
+;처녀 상실(처녀만) CFLAG:8009
+;-------------------------------------------------
+LOCAL = UP:20 + UP:21
+IF TFLAG:0 > 0 && CFLAG:8009 == 0
+	;연모 또한 주인의 섹스에 의한 여자 상실
+	IF TFLAG:2
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「――기뻐. 저기, 그거 알아? 내가 이 때를 기다리고 있었다는 거」
+			PRINTFORMW  마리사는 필사적으로 아픔을 참으며, %CALLNAME:MASTER%에게 물었다. 
+		ENDIF
+	;손가락 넣고로 여자 상실(반감이 꽤 적다)
+	ELSEIF SELECTCOM == 4
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……그럴 수가…… 처음은, 처음은……」
+			PRINTFORMW  마리사는 자신을 꿰뚫은 것을 보면서 눈물을 뚝뚝 흘렸다. 
+		;그 외
+		ELSE
+			PRINTFORMW 「나의…… 나의 순결이…… 이런 자식에게……」
+			PRINTFORMW  마리사는 눈물을 뚝뚝 흘리며, 현실을 부정하는 것처럼 고개를 크게 좌우로 저었다.
+		ENDIF
+	;그 외 때에 여자 상실
+	ELSE
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……그럴 수가…… 처음은, 처음은……」
+			PRINTFORMW  마리사는 자신을 꿰뚫은 것을 보면서 눈물을 뚝뚝 흘렸다. 
+		;그 외
+		ELSE
+			PRINTFORMW 「나의…… 나의 순결이…… 이런 자식에게……」
+			PRINTFORMW  마리사는 눈물을 뚝뚝 흘리며, 현실을 부정하는 것처럼 고개를 크게 좌우로 저었다.
+		ENDIF
+	ENDIF
+	CFLAG:8009 = 1
+ENDIF
+
+;-------------------------------------------------
+;섹스로 사정시킨 CFLAG:5230 CFLAG:5231
+;-------------------------------------------------
+;애널 섹스인가?
+IF TFLAG:9 > 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5230 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「엉덩이 안에다…… 기왕이면 그, 앞쪽에서 싸 주면 고맙겠는데」
+		CFLAG:5230 = 4
+	;굴복 각인 Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:5230 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「그쪽에 싸지 마. 씻기가 어렵다고?」
+		CFLAG:5230 = 3
+	;그 외
+	ELSEIF CFLAG:5230 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「으읏!? ……기분 나빠」
+		CFLAG:5230 = 2
+	ENDIF
+ENDIF
+
+;그 외
+IF TFLAG:10 > 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5231 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「으응―― 헤헷, 아기 생길까나. 생긴다면, 기쁘겠는데」
+		CFLAG:5231 = 4
+	;굴복 각인 Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:5231 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「앗――! 잔뜩, 쌌구나……」
+		CFLAG:5231 = 3
+	;그 외
+	ELSEIF CFLAG:5231 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「!? 멈춰, 질 안에는, 질 안에는 하지 말아줘―!!」
+		CFLAG:5231 = 2
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;손으로 사정시킨 CFLAG:5232
+;-------------------------------------------------
+IF TFLAG:12 > 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5232 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「응, 잔뜩 쌌군. 그렇게 좋았어? 내 손」
+		CFLAG:5232 = 3
+	;봉사정신 Lv3
+	ELSEIF ABL:13 >= 3 && (CFLAG:5232 <= 1 || FLAG:11 == 2)
+		PRINTFORMW 「……손이 끈적끈적해졌다구」
+		CFLAG:5232 = 2
+	;그 외
+	ELSEIF CFLAG:5232 <= 0 || FLAG:11 == 2
+		PRINTFORMW 「우왓!? 갑자기 싸지 마라, 기분 나빠!」
+		CFLAG:5232 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;입으로 사정시킨 CFLAG:5233 CFLAG:5234
+;-------------------------------------------------
+IF TFLAG:11 > 0 || TFLAG:29 > 0
+	;펠라, 이라마치오의 경우
+	IF SELECTCOM == 41 || SELECTCOM == 230
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5233 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「어때, 상당히 잘하게 되었지?」
+			CFLAG:5233 = 5
+		;정액 중독 Lv3
+		ELSEIF ABL:31 >= 3 && (CFLAG:5233 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「으응, 맛있어……아니, 아무것도 아니라구」
+			CFLAG:5233 = 3
+		;봉사정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5233 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「응읏, 변함없이 갑작스럽군」
+			CFLAG:5233 = 2
+		;그 외
+		ELSEIF CFLAG:5233 < 1 || FLAG:11 == 2
+			PRINTFORMW 「――퉷, 갑자기 더러운 걸 내지 마!」
+			CFLAG:5233 = 1
+		ENDIF
+	;파이즈리의 경우(CFLAG:5234)
+	ELSEIF SELECTCOM == 42
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5234 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「이크…… 내 가슴도 쓸만하지 않아?」
+			CFLAG:5234 = 3
+		;봉사정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5234 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「헤헷, 그렇게 기분 좋았어?」
+			CFLAG:5234 = 2
+		;그 외
+		ELSEIF CFLAG:5234 < 1 || FLAG:11 == 2
+			PRINTFORMW 「……가슴에도 얼굴에도, 최악이다」
+			CFLAG:5234 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;사정했다(후타나리/남자만) CFLAG:5305
+;-------------------------------------------------
+;IF TFLAG:30 > 0
+;	;처음
+;	IF CFLAG:5305 == 0
+;		PRINTFORMW 
+;		CFLAG:5305 = 1
+;		RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5305 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5305 = 3
+;		;그 외
+;		ELSEIF CFLAG:5305 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5305 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;분유했다(모유 체질만) CFLAG:5304
+;-------------------------------------------------
+IF TFLAG:31 > 0
+	;처음
+	IF CFLAG:5304 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「앗…… 혹시 또, 혹시인가?」
+			PRINTFORMW  마리사는 기쁜 얼굴로 배를 어루만졌다.
+		;그 외
+		ELSE
+			PRINTFORMW 「그럴 수가!? 가짜…… 가짜겠지, 그럴 거야……」
+			PRINTFORMW  마리사는 허망한 눈빛으로 계속 중얼거리고 있다.
+		ENDIF
+		CFLAG:5304 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE	
+		;순종 Lv4 이상
+		IF TALENT:150 == 1 && (CFLAG:5304 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「결국 임신한 건 아니었나. 괜히 좋아했구만」
+			CFLAG:5304 = 3
+		;그 외
+		ELSEIF CFLAG:5304 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이봐, 정말로 임신만은 시키지 말아줘……」
+			CFLAG:5304 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG 관계(X1를 캐릭터 번호에 치환)
+;각인 변동을 트리거로 한 말
+;각인 변동 후에 말을 발동합니다
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_2
+;YM 타입시에는 전용 대사로 넘어감
+IF CFLAG:7900 == 1
+	CALL KOJO_MESSAGE_MARKCNG_2_YM
+	RETURN 0
+ENDIF
+;조수가 조교했을 때에 말을 스킵 한다(기호에 응해 사용하는, 줄머리의 것;을 지우면 스킵 하게 된다)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;볼 개그 착용시에는 말을 스킵 한다(OFF라고 구를 차지해 마구 말한다)
+SIF TEQUIP:42
+	RETURN 0
+;--------------------------------------------------
+;특정 조수, 주인시에 특수 조수 말을 호출한다(Y1를 특정 조수, X1를 주인의 캐릭터 번호에 치환)
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_MARKCNG_K2_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_MARKCNG_K2_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;각인 변동시의 대사 CFLAG 5310~를 사용
+;-------------------------------------------------
+;-------------------------------------------------
+;고통 각인 Lv3 취득	CFLAG:5310
+;-------------------------------------------------
+IF TFLAG:40 == 3
+	PRINTFORMW 「웃…… 아무리 나라도, 아픈 건 싫다고?」
+	PRINTFORMW  마리사는 신체를 떨며, %CALLNAME:MASTER%의 얼굴을 쳐다보았다.
+	PRINTFORMW  불안한 듯한 얼굴로 아픈 곳을 감싸며, 마리사는 눈가에 고인 눈물을 닦았다.
+	CFLAG:5310 = 3
+ENDIF
+
+;-------------------------------------------------
+;쾌락 각인 Lv3 취득	CFLAG:5311
+;-------------------------------------------------
+IF TFLAG:41 == 3
+	PRINTFORMW 「으응――」
+	PRINTFORMW 「곤란하게 됐군, 이렇게 기분 좋아지다니」
+	PRINTFORMW  마리사는 열정적인 눈으로 %조사처리(CALLNAME:MASTER,"를")% 보며, 거북한 듯 뺨을 긁는다. 
+	PRINTFORMW  그리고 %CALLNAME:MASTER%의 손을 잡으면서, 아직 털도 제대로 나지 않은 자신의 그곳으로 이끈다. 
+	PRINTFORMW 「물론, 이걸로 끝은 아니겠지?」
+	PRINTFORMW  귓전에서 그렇게 속삭이는 사랑스러운 마리사를 %조사처리(CALLNAME:MASTER,"는")% 꼭 껴안았다. 
+	CFLAG:5311 = 3
+ENDIF
+
+;-------------------------------------------------
+;굴복 각인 Lv3 취득	CFLAG:5312
+;-------------------------------------------------
+IF TFLAG:42 == 3
+	PRINTFORMW 「아아, 이제――항복, 항복이다」
+	PRINTFORMW 「잡아먹든 말든 맘대로 해」
+	PRINTFORMW  마리사는 한숨을 토하며, 자신의 몸을 %CALLNAME:MASTER%에게 서슴없이 드러냈다. 
+	PRINTFORMW  이전처럼 손으로 몸을 가리는 일도 없고, 어딘가 기대하는 듯이 %CALLNAME:MASTER%의 반응을 기다리고 있다. 
+	CFLAG:5312 = 3
+ENDIF
+
+;-------------------------------------------------
+;반발 각인 Lv3 취득	CFLAG:5314
+;-------------------------------------------------
+IF TFLAG:44 == 3 
+	PRINTFORMW 「……기억해라, 절대, 절대로 언젠가는 죽여줄 테니――!」
+	PRINTFORMW 「내가 여기서 빠져나갔을 때가, 너의 최후다」
+	PRINTFORMW  마리사는 눈물을 뚝뚝 흘리며, 증오가 맺힌 눈동자로 %조사처리(CALLNAME:MASTER,"를")% 노려보고 있다. 
+	CFLAG:5314 = 3
+ENDIF
+
+;-------------------------------------------------
+;이벤트 대사집(TFLAG200의 내용물＋8100)
+;-------------------------------------------------
+@SELF_KOJO_K2
+;YM 타입 호출
+IF CFLAG:7900 == 1
+	CALL SELF_KOJO_K2_YM
+	RETURN 0
+ENDIF
+;----------------------------------------------------------------
+;촉수 최면 중
+;----------------------------------------------------------------
+IF TFLAG:200 == 8
+	;평온함 환상
+	IF RESULT == 0
+		;연모
+		IF TALENT:150
+			PRINTFORMW 「…응？후후… 뭐야 너… 응석부리고 싶으면 말을 해…. 바보…♪」
+		;그 외
+		ELSE	
+			PRINTFORMW 「…어이― 레이무―… 놀러왔다구…」
+		ENDIF
+	;레즈비언 플레이 환상
+	ELSEIF RESULT == 1
+		;연모
+		IF TALENT:150
+			PRINTFORMW 「야, 앨리스 그만… 빨지…마……. 유두 빨려서… 응아아아…♪」
+		;그 외
+		ELSE
+			PRINTFORMW 「응… 앗 레이무…… 안 돼, 그런… 앗… 시럿…♪」
+		ENDIF
+	;이상 플레이 환상
+	ELSEIF RESULT == 4
+		;연모
+		IF TALENT:150
+			PRINTFORMW 「우우… 이제 정액 냄새가 지워지질 않아…」
+		;그 외
+		ELSE	
+			PRINTFORMW 「…버섯으로 작아진 파츄리가… 내 안에 잔뜩 들어와…」
+		ENDIF
+	;치녀 플레이 환상
+	ELSEIF RESULT == 5
+		;연모
+		IF TALENT:150
+			PRINTFORML 「아앙…♪ 더… 더 세게… 엉덩이에, 엉덩이에 그렇게, 넣어줘어♪」
+		;그 외	
+		ELSE
+			PRINTFORMW 「아아… 누구라도 좋아…. 내 여기에, 넣어줘♪ 쑤셔, 쑤셔줘어♪」
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;매각	CFLAG:8230
+;-------------------------------------------------
+IF TFLAG:200 == 130
+	;연모
+	IF TALENT:150 == 1
+		PRINTFORMW 「……거짓말, 이지?」
+		PRINTFORMW 「역시 내 착각이었어? 일방통행이었던 거야?」
+		PRINTFORMW 「……이런 게…… 어딨어……」
+		PRINTFORMW  마리사는 얼굴이 파랗게 질려서 공허한 눈으로 계속 중얼거리고 있다…….
+	;반발각인Lv3
+	ELSEIF MARK:9 == 3
+		PRINTFORMW 「달이 뜬 밤이든 안 뜬 밤이든 조심해서 돌아다니시지」
+		PRINTFORMW 「반드시, 반드시 찾아내서 널 죽여주겠어」
+	;그 외
+	ELSE
+		PRINTFORMW 「겨우 너하고 멀어질 수 있게 됐군」
+		PRINTFORMW 「앞으로 어떤 놈에게 팔리든지 너보다야 뭐 낫겠지」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;아침 펠라	CFLAG:8240
+;-------------------------------------------------
+IF TFLAG:200 == 140
+	;연모
+	IF TALENT:150 ==1 && (CFLAG:8240 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「여어, 안녕」
+		PRINTFORMW 「아침부터 이렇게 건강하다니, 오늘은 기대해도 될까?」
+		PRINTFORMW  마리사는 그렇게 말하며, 소악마처럼 웃었다. 
+		CFLAG:8240 = 3
+	;봉사정신Lv5이상
+	ELSEIF ABL:13 >= 5 && (CFLAG:8240 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「에휴, 간신히 눈을 뜬 건가?」
+		PRINTFORMW 「아침부터 봉사해 봤는데, 기분 좋았어?」
+		CFLAG:8240 = 2
+	;그 외
+	ELSEIF CFLAG:8240 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……여어」
+		PRINTFORMW 「조금은 기분 좋았냐?」
+		CFLAG:8240 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;아침 파이즈리	CFLAG:8241
+;-------------------------------------------------
+IF TFLAG:200 == 141
+	;파이즈리로 사정한 적 있다
+	IF TALENT:150 ==1 && CFLAG:5234 >= 1 && (CFLAG:8241 < 4 || FLAG:11 == 2)
+		PRINTFORMW 「응, 좋은 아침」
+		PRINTFORMW 「아, 이거 말야?」
+		PRINTFORMW 「이전에 이렇게 하니까 기분이 좋아보여서 말야」
+		PRINTFORMW 「어때? 좋아?」
+		CFLAG:8241 = 4
+	;연모, 빈유
+	ELSEIF TALENT:150 ==1 && TALENT:111 ==1 && (CFLAG:8241 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응, 좋은 아침」
+		PRINTFORMW 「아니, 이렇게 하면 조금은 커지지 않을까 싶어서」
+		CFLAG:8241 = 3
+	;연모이고 빈유가 아님
+	ELSEIF TALENT:150 ==1 && TALENT:111 ==0 && (CFLAG:8241 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응, 좋은 아침」
+		PRINTFORMW 「어때? 기분 좋아?」
+		PRINTFORMW 「이쪽도 성장했으니까, 어차피 한다면 기분 좋은 쪽이 좋겠지?」
+		CFLAG:8241 = 2
+	;그 외
+	ELSEIF CFLAG:8241 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……요오」
+		PRINTFORMW 「그냥 변덕이다, 신경쓰지 말라구?」
+		CFLAG:8241 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;아침 기승위	CFLAG:8242
+;-------------------------------------------------
+IF TFLAG:200 == 142
+	;연모로 V감각 Lv5 이상
+	IF TALENT:150 ==1 && ABL:1 >= 5 && (CFLAG:8242 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응으읏…… 후앗…… 아앗…… 좋은 아침…… 으응……」
+		PRINTFORMW 「최고로…… 하앗…… 좋은 아침이지?」
+		PRINTFORMW 「사양은…… 으응…… 필요없다구……」
+		CFLAG:8242 = 3
+	;연모
+	ELSEIF TALENT:150 ==1 && (CFLAG:8242 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「흐읏…… 으응…… 아앗…… 좋은 아침」
+		PRINTFORMW 「기분은 어때?」
+		PRINTFORMW 「나는…… 하앗…… 좋다구」
+		CFLAG:8242 = 2
+	;그 외
+	ELSEIF CFLAG:8242 < 1 || FLAG:11 == 2
+		PRINTFORMW 「으응…… 일어났나……」
+		PRINTFORMW 「이거 잠깐 빌릴게, 조금만 더 쓰고 돌려줄테니까」
+		CFLAG:8242 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;조교 후 섹스	CFLAG:8250
+;-------------------------------------------------
+IF TFLAG:200 == 150
+	;V감각 Lv4 이상
+	IF ABL:1 >= 4 && (CFLAG:8250 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「있지, 어딘지 부족해……. 그러니까, 응?」
+		PRINTFORMW  마리사는 %CALLNAME:MASTER%의 옷자락을 잡으며, 침대로 시선을 던졌다.
+		PRINTFORMW 「좀 더, 귀여워 해주지 않겠어?」
+		CFLAG:8250 = 2
+	;그 외
+	ELSEIF CFLAG:8250 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……이런 걸로는, 완전 부족해」
+		PRINTFORMW 「조금만 더, 상대해 주지 않겠어?」
+		CFLAG:8250 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;조교 후 자위	CFLAG:8251
+;-------------------------------------------------
+IF TFLAG:200 == 151
+	;연모
+	IF TALENT:150 ==1 && (CFLAG:8251 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응…… 이런 짓은 나 같은 사랑스런 아가씨적으론 어떨까」
+		PRINTFORMW 「건강적으로 좋은 걸까?」
+		CFLAG:8251 = 3
+	;자위중독Lv3이상
+	ELSEIF ABL:30 >= 3 && (CFLAG:8251 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「……나도 이제 위험하군, 이건」
+		CFLAG:8251 = 2
+	;그 외
+	ELSEIF CFLAG:8251 < 1 || FLAG:11 == 2
+		PRINTFORMW 「응――! 어째서, 이런 걸――」
+		CFLAG:8251 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;조교 후 요바이	CFLAG:8258
+;-------------------------------------------------
+IF TFLAG:200 == 158
+	;V감각 Lv5 이상
+	IF ABL:1 >= 5 && (CFLAG:8258 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「여어, 잠자리 습격하러 왔다구」
+		PRINTFORMW 「……뭐라고 좀 말해주라, 부끄러워」
+		PRINTFORMW  얼굴이 붉어진 마리사는, 모자를 내려 얼굴을 숨겼다. 
+		PRINTFORMW 「하지만 물론, 거부는 아니겠지?」
+		CFLAG:8258 = 2
+	;그 외
+	ELSEIF CFLAG:8258 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……어딘지 부족해. 상대해주지 않겠어?」
+		CFLAG:8258 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;촉수 산제물
+; 순종 LV3미 , 반발각인 Lv3의 노예는 동반 째 없다.
+;임신, 육아, 현재의 힘이 1000 이하의 경우도 불가.
+;산제물의 리로 문자A, T, Y, Z를 사용하고 있으므로 사용하지 않게.
+;지문적으로는 들어가는 전부터 손배양 방이라고 알고 있는 것 같습니다.
+;-------------------------------------------------
+IF TFLAG:200 == 257
+	;연모없음, 광기있음, 촉수중독 5레벨
+	IF TALENT:150 == 0 && TALENT:158 == 1 && ABL:35 >= 5
+		PRINTFORMW 「이제 나올 수 없다……라니, 무슨 소리야!?」
+		PRINTFORMW 「……자, 잠깐만, 발 잡지마, 너희들도 좋아하지, 응? 여자의 부탁은 들어달라구, 내 부탁이니까!」
+		PRINTFORMW 직후, 마리사의 짐승 같은 소리가 들려왔다――그리고, 직후 그것이 사라졌다. 
+		PRINTFORMW ……문 너머에는 무엇인가가 꿈틀거리고 있다. 
+		PRINTFORMW 용서없는 능욕의 모습을 떠올리자, %조사처리(CALLNAME:MASTER,"는")% 사악한 웃음을 띄우며 그 자리를 떠났다…….
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW ……
+		PRINTFORMW ―――90일 경과―――
+		PRINTW ………………
+		PRINTW …………
+		PRINTW ……
+		PRINTFORMW %CALLNAME:MASTER%에 사역되고 있던 촉수는 %CALLNAME:MASTER%의 제어를 벗어나 폭주했다
+		PRINTFORMW 자유를 얻은 것에 기뻐하는 것인지, 촉수들은 한 때의 주인인 %CALLNAME:MASTER%에게 덮쳐들었다….
+		PRINTFORMW 정신을 차려보니 %조사처리(CALLNAME:MASTER,"는")% 촉수의 벽에 둘러싸여, 양팔은 높이 들어 올려져, 
+		PRINTFORMW 양 다리는 크게 벌려진 상태로 고정되고 있었다.
+		PRINTFORMW 이 상황을 이해하지 못하고 당황해하는 %CALLNAME:MASTER%의 앞에, 촉수의 벽을 가르고 마리사가 나타났다.
+		PRINTFORMW 촉수의 체액으로 번들거리는 검은 모자 밑에서
+		PRINTFORMW 윤기를 잃고 엉망이 된 금발 너머로 마리사의 눈이 소름끼치는 빛을 뿜었다.
+		PRINTFORMW 「오랜만이야, 주인님…… 응? 무슨 짓을 하고 있는 거냐고?」
+		PRINTW 
+		PRINTW  
+		PRINTW  
+		SETCOLOR 255,0,0
+		PRINTFORMW ―――조교사를 계승하고 있습니다, 주인님―――
+		PRINTFORMW 「ＳＵＣＣＥＥＤＩＮＧ　ＹＯＵ, ＭＡＳＴＥＲ」　
+		SETCOLOR 193,193,193
+		PRINTW ………………
+		PRINTW …………
+		PRINTW ……
+		PRINTFORMW ★★★%조사처리(CALLNAME:MASTER,"는")% 촉수킹이 된 마리사의 양식이 되었습니다★★★
+		PRINTW  
+		PRINTW 　　　　　　　　―― Ending No. 1002Ｔ (촉수킹 마서스 엔딩)
+		CALL BADEND_COMMON
+	;연모에다 촉수중독Lv3이상
+	ELSEIF TALENT:150 == 1 && ABL:35 >= 3
+		PRINTFORMW 「이제 나올 수 없다……라니, 무슨 소리야!?」
+		PRINTFORMW 「……기, 기다려, 발 잡지마, 너희들은 좋아한다구, 앙?  여자아이의 부탁은 들어달라구, 부탁이니까!」
+		PRINTFORMW 「잠깐, 너, 그렇게 굵은 거 위험해, 문지르지마, 바보옷, 넣지마아, 넣지맛, 부서져, 부서――혀」
+		PRINTFORMW 직후, 마리사의 짐승 같은 소리가 들려왔다――그리고, 직후 그것이 사라졌다. 
+		PRINTFORMW ……문 너머에는 무엇인가가 꿈틀거리고 있다. 
+		PRINTFORMW 용서없는 능욕의 모습을 떠올리자, %조사처리(CALLNAME:MASTER,"는")% 웃음을 숨길 수 없었다……
+	;연모에다 촉수 경험 있음
+	ELSEIF TALENT:150 == 1 && EXP:53 >= 1
+		PRINTFORMW 「이제 나올 수 없다……라니, 무슨 소리야!?」
+		PRINTFORMW 「……기, 기다려, 발 잡지마, 너희들은 싫지 않아, 그, 그러니까, 히익!?」
+		PRINTFORMW 「잠깐, 기다려, ――기, 기다려주세요 주인님, 주인니임! 내보내줘, 여기서 꺼내주세요!」
+		PRINTFORMW 「뭐든지 할게요! 그러니까 부탁드립니다!  그러니까, 그러니까 이것만으으은!!」
+		PRINTFORMW ……이제 다시는 나올 수 없다는 것을 느꼈을 것이다. 마리사는 앞뒤없이 간절히 애원하고 있다. 
+		PRINTFORMW 지금까지 들은 것 중 최고의 비명을 들으며, %조사처리(CALLNAME:MASTER,"는")% 그 장소를 뒤로 했다……
+	;연모에다 촉수 경험 없음
+	ELSEIF TALENT:150 == 1 && EXP:53 >= 0
+		PRINTFORMW 「이제 나올 수 없다……라니, 무슨 소리야!?」
+		PRINTFORMW 「……기, 기다려, 뭐야 이거! 기분 나빠, 만지지마, 오지마아앗!」
+		PRINTFORMW 「잠깐, 기다려, ――기, 기다려주세요 주인님, 주인니임! 내보내줘, 여기서 꺼내주세요!」
+		PRINTFORMW 「뭐든지 할게요! 그러니까 부탁드립니다!  러니까, 그러니까 이것만으으은!!」
+		PRINTFORMW ……이제 다시는 나올 수 없다는 것을 느꼈을 것이다. 마리사는 정신없이 간절히 빌고 있다. 
+		PRINTFORMW 지금까지 들은 것 중 최고의 비명을 들으며, %조사처리(CALLNAME:MASTER,"는")% 그 장소를 뒤로 했다……
+	;그 외
+	ELSE
+		PRINTFORMW 「어, 어이, 그만둬 농담은! 어이, 꺼내줘엇! 내보내줘! 내보내줘!」
+		PRINTFORMW 「읏, 우와앗, 으힛, 뭐야 이거! 그만, 그만둬, 하지마, 싫어엇!」
+		PRINTFORMW 「싫어, 싫어, 무서워, 하지마, 싫어싫어싫어――」
+		PRINTFORMW ――그츙. ……그봇. 그붓. 그붓. 드뷰르르르르. 그보오. ……그봇. 그봇. 그봇. 
+	ENDIF
+ENDIF
+
+;TFLAG:200을 끄고 RETURN으로 탈출하지 않으면 매각 대사가 2회 출력되는 등 버그가 발생함
+TFLAG:200 = 0
+RETURN 0
+
+;-------------------------------------------------
+;@단독 엔딩 관계
+;-------------------------------------------------
+@SINGLE_ENDING_K2
+;YM 타입 호출
+IF CFLAG:7900 == 1
+	CALL SINGLE_ENDING_K2_YM
+	RETURN 0
+ENDIF
+
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 비록 한낮이라도 울적하고 위험한 마법의 숲.
+PRINTFORMW 조교사로서의 생활을 그만둔 %조사처리(CALLNAME:MASTER,"는")%, 마리사의 집에 빌붙어 살고 있었다.
+PRINTFORMW 「저기, 어제 뽑아 온 버섯 어디에 뒀지?」
+PRINTFORMW 무엇인가 물건을 찾고 있는지, 요란하게 집안을 돌아다니는 소리에,
+PRINTFORMW 지붕 밑에 창을 열어두고 말리고 있었어, 하고 큰 소리로 돌려주면서,%조사처리(CALLNAME:MASTER,"는")% 장서의 정리를 계속한다.
+PRINTFORMW 가정부 비슷한 생활이지만 이것도 나쁘지 않다는, 조용한 만족감이 가슴에 있다.
+PRINTFORMW 「오오, 있다 있다! 이것으로 실험을 재개할 수 있겠는데…… 응?」
+PRINTFORMW 소리가 지붕 밑에서 내려와 그녀의 실험실까지 닿고, ……문득, 싫은 예감이 했다.
+PRINTFORMW 그것은 이 집에 살기 시작한 다음 3일에 한 번은 체험하고 있는 사건이며, 매일의 정리를 헛수고로 만드는 원인이기도 하다.
+PRINTFORMW 그 현상은, 이름을, 폭발이라고 한다.
+PRINTFORMW 　•
+PRINTFORMW 　•
+PRINTFORMW 　•
+PRINTFORMW 어지럽게 천장에서 먼지가 떨어져 내린다.
+PRINTFORMW 정리를 위해 옆으로 치워두었던 수집품이나 장서가 무너져 참담한 모습이 되어 버렸다…….
+PRINTFORMW 「……여, 여어!」
+PRINTFORMW 그 중에도 제일 특이한 것이 있다면, 벽에서 튀어나온 엉덩이다.
+PRINTFORMW 엉덩이는 드로워즈를 입고, 그리고 상하 좌우로 움직이고 있었다.
+PRINTFORMW 「빠, 빠지지 않아, 도와――」
+	DRAWLINE
+	PRINTL [0] 이것이 차려놓은 밥상이라는 놈이군!
+	PRINTL [1] 도와준다
+	;마리사가 촉수 중독 Lv5 이상이면 분기
+	IF ABL:35 >= 5
+	PRINTL [2] 좋은 생각이 났다
+	ENDIF
+	$INPUT_LOOP
+	INPUT
+
+	SIF RESULT != 0 && RESULT != 1 && RESULT != 2
+		GOTO INPUT_LOOP
+
+	IF RESULT == 0
+		GOTO MARISA_END_A
+	ELSEIF RESULT == 1
+		GOTO MARISA_END_B
+	ELSEIF RESULT == 2 && ABL:35 >= 5
+		GOTO MARISA_END_C
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+	
+$MARISA_END_A
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 소리없이 웃으며, 깊은 한숨을 내쉬고, ――드로워즈를 벗겼다.
+PRINTFORMW 「――주는 게 아니었냐! 우와, 그만둬, 거기는, 아으읏!?」
+PRINTFORMW  
+PRINTFORMW ……비록 한낮이어도 울적하고 위험한 마법의 숲.
+PRINTFORMW 그러나 그러나, 이 집만은, 언제나 떠들썩하고, 양지와 같은 따뜻함이 가득했다――.
+;너무 코미디틱하게 됐으려나 싶었으므로 코멘트아웃
+;PRINTFORMW 
+;PRINTFORMW 「그, 그러니까, 엉덩이를 빼라고오~!」
+PRINTFORMW  
+PRINTFORMW 　　　　　　　　―― Ending No. 1002A (마리사 엔딩 A)
+;다른 분이 쓴 엔딩에 마음대로 이러는 법은 없다고 생각했으므로 불채용
+;PRINTFORMW 　　　　　　　　―― Ending No. 1002A (마리사엔드~드로워즈 모에편~)
+RETURN 0
+
+$MARISA_END_B
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")%, 소리없이 웃으며, 깊은 한숨을 내쉬고, ――도와주기로 했다.
+PRINTFORMW 「――주는, 거야? 아니, 별로 이상한 기대하고 있었던 건 아니라구?」
+PRINTFORMW 도와준 후에, 묘하게 안절부절 하고 있는 마리사를 보며%조사처리(CALLNAME:MASTER,"는")% 눈을 반짝였다.
+PRINTFORMW 능글능글 웃으며 얼굴을 들여다 본다.
+PRINTFORMW 마리사의 얼굴이 점점 붉어졌다.
+PRINTFORMW 「뭐, 뭐야……아― 정말이지―! 알았어! 고마워! 이걸로 됐지―응흐읏!?」
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그런 모습이 너무나 사랑스러워서, 무심코 입술을 빼앗았다.
+PRINTFORMW 그대로 딥키스를 한다.
+PRINTFORMW 「응……흐읏……응응……!?」
+PRINTFORMW 거기에 더해 키스를 계속하며 그녀의 속옷에 손가락을 밀어넣는다.
+PRINTFORMW 「……잠깐만! 어두워도 아직 대낮이라구!?」
+PRINTFORMW 놀란 마리사는 %조사처리(CALLNAME:MASTER,"를")% 냅다 밀치고 가랑이를 누른다.
+PRINTFORMW 「그…… 밤이 되면, 얼마든지 해도 좋고……랄까 무슨 말을 하게 하는거야!」
+PRINTFORMW 그렇게 말하며 “맞아도 조금 아픈 정도의 마법”을 날려 오는 마리사.
+PRINTFORMW %CALLNAME:MASTER%도 이런 상황에 익숙해, 여유롭게 마법을 피한다.
+PRINTFORMW 　
+PRINTFORMW ……비록 한낮이어도 울적하고 위험한 마법의 숲.
+PRINTFORMW 그러나 그러나, 이 집만은, 언제나 떠들썩하고, 양지와 같은 따뜻함으로 가득했다――.
+PRINTFORMW  
+PRINTFORMW 　　　　　　　　―― Ending No. 1002B (마리사 엔딩 B)
+;아무리 그래도 중2병 수준이 아니라고ㅡ! 라고 생각해서 불채용
+;PRINTFORMW 　　　　　　　　―― Ending No. 1002B (마리사 엔딩~사랑의 마법편~)
+RETURN 0
+	
+$MARISA_END_C
+PRINTFORMW ……………
+PRINTFORMW …………………
+PRINTFORMW ………………………
+PRINTFORMW 　
+PRINTFORML 「아……… 아, 아아…♪」
+PRINTFORMW 마법의 숲에 밤의 장막이 드리워지고, 기분 좋은 벌레의 소리와 올빼미의 소리가 근처에 울려퍼진다.
+PRINTFORML 「히, 히으으으…♪ 히얏, 가버려……♪」
+PRINTFORMW 달과 반디의, 희미하지만 환상적인 빛의 하모니가 오늘 밤도 숲을 요염하게 비춘다.
+PRINTFORML 「아우우우우우웃…… 으응♪ ……하, 하힛♪」
+PRINTFORMW 그 중에서도 한층 더 큰 불을 밝힌 한 채의 집.
+PRINTFORML 「햐으으으으으읏♪ 가버려어어어♪」
+PRINTFORML 그 지붕으로부터 마치 선수상과 같이 상반신만을 빼꼼히 내놓은 채
+PRINTFORMW 마리사는 쾌락에 떨고 있었다.
+PRINTFORML 제대로 움직일 수 없는 마리사의 엉덩이를 보고 %조사처리(CALLNAME:MASTER,"가")% 불러낸 것은
+PRINTFORMW 평상시라면 간단히 부서져 버릴 정도의 털구슬과 같은, 둥실둥실하는 가볍고 작고 연약한 촉수의 무리.
+PRINTFORML 너무나 사이즈가 작아 힘이 약하기 때문에, 그 성 기술은 작은 요정 정도밖에는 효과가 없고
+PRINTFORMW 인간에게는 희미하게 간지럽거나, 느끼지 않거나, 그 정도의 촉수.
+PRINTFORML 물론 그런 촉수에 인간을 구속할 만한 힘도 없고, 촉수 소환술 중에도 쓸모없는 것의 대표와 같은
+PRINTFORMW 불우한 취급을 받고 있던 촉수였다.
+PRINTFORMW 　
+PRINTFORMW 「하아…… 하아… 저, 적당히 해…… 벌써… 몇 시간째 하고 있는 줄 알아…. 응♪」
+PRINTFORMW 「히…아…… 또, 또… 가, 가버려………♪」
+PRINTFORMW 서늘한 바깥 공기에 노출되어 김이 나는 마리사의 상반신이, 크게 위로 휜다.
+PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 그 쓸모없는 촉수를 대량으로 소환해
+PRINTFORMW 움직일 수 없는 마리사의 엉덩이에서부터 질벽, 장벽, 등을 정말로 다 가릴 때까지 침입시켰다.
+PRINTFORML 그리고, 충분히… 정말로 충분히 시간을 들여
+PRINTFORMW 처음에는 아무것도 느끼고 있지 않았던 마리사의 감각을, 간지럼을 타고, 그러다 신음하기 시작하고
+PRINTFORMW 정확히 조금 전, 6시간을 넘길 때쯤 처음으로 절정을 느낄 정도까지 도달했던 것이다.
+PRINTFORMW 「히, 히이이익, 이제 앙데에에엥♪, 봐줘, 아히아아아앙♪」
+PRINTFORMW 과거 몇 번이나 촉수에 능욕되고 개발당한 마리사의 몸.
+PRINTFORMW 그리고 궁극의 경지에 도달한 %CALLNAME:MASTER%의 촉수사역술.
+PRINTFORMW 더욱이 보통 수준을 벗어난 애태우기 고문으로 극한까지 연마된 마리사의 성감.
+PRINTFORML 이런 절묘한 조건이 합쳐진 성 기술은 기적이라 할 만한 열락을 소녀에게 주고
+PRINTFORMW 촉수가 술렁술렁… 술렁술렁 하고 질벽과 장벽에 잔물결을 일으키자 마리사는 절정에 오른다.
+PRINTFORML 그것이 조용한 해안에 밀어닥치는 물결과 같은 간격으로 덮쳐 오는 것이니까
+PRINTFORMW 마리사도 가만히 있을 수가 없다.
+PRINTFORMW 「조아히야아아아아♪ 바, 바보가 돼버려……나아앙…♪」
+PRINTFORMW 「너무 가버려서 바보가 돼버려어어어어♪」
+PRINTFORMW 거기는 확실히 절정의 지옥.
+PRINTFORML 끊임없는 절정의 항해의 파도에 마리사의 상반신은 옥외에서 휘어졌다 늘어졌다를 반복하고
+PRINTFORMW 차가운 바깥공기에 하얗게 피어나는 음란한 김이 외벽에 달라붙는다.
+PRINTFORMW 　
+PRINTFORMW 그 모습을 %조사처리(CALLNAME:MASTER,"는")% 의자에 앉아 가만히 관찰하고 있었다.
+PRINTFORML 갈 때마다 떨리는 엉덩이를 보며 아주 예술적인 성 기술을 짜낸 것이라면 자화자찬하고 있었지만
+PRINTFORMW 이제 자신도 끼어들어 볼까, 하고 의자에서 허리를 올린 그때.
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 무엇인가, 기묘한 위화감을 느낀다.
+PRINTFORML 　
+PRINTFORMW ――그림자?
+PRINTFORMW 달빛에 의한 것도 아니고, 조금 전에 켠 램프도 아니다.
+PRINTFORMW 개똥벌레의 빛도 아니다. %CALLNAME:MASTER%의 그림자는 마리사의 반대 방향으로 늘어져 있다.
+PRINTFORMW 마리사가 빛나고 있다? ――그런 황당한.
+PRINTFORMW 그렇다, 이것은 마리사의 드로워즈에서 나는 빛이다.
+PRINTFORML 마리사의 무릎까지 어중간하게 내려간 드로워즈의 아래에서
+PRINTFORMW 칠색의 빛이 흘러넘쳐, 점점 강해져 간다.
+PRINTFORMW 너무나 눈부셔 실눈으로, 드로워즈를 벗기고, %조사처리(CALLNAME:MASTER,"는")% 확신했다.
+PRINTFORMW ―――――아아, 이것은 마법이다.
+PRINTFORML 촉수의 분비액, 소녀의 애액, 마루에 남은 미량의 조합용의 가루.
+PRINTFORMW 질로부터 넘쳐 나온 촉수, 옷에서 굴러떨어진 팔괘로, 어제 뽑아 온 버섯.
+PRINTFORMW 「앗♪ 아앙♪ 아앗♪ 앙데, 안데에에엣, 아♪ 또…나하, 나 또 가버려엇♪」
+PRINTFORMW 그것들 모두가 절묘한 비율으로 조합되어 , 기적적이게도―――――…
+PRINTFORMW 「가버려어어어어어어어어―――――엇! ♪」
+PRINTFORMW 　
+PRINTFORMW 폭발했다.
+PRINTFORMW 
+PRINTFORMW ……밤이 되면 한층 더 울적하고 음침하고 위험한 마법의 숲.
+PRINTFORMW 그러나 그러나, 이 집만은, 언제나 떠들썩하고, 양지와 같은 따뜻함으로 가득했다――?
+PRINTFORMW  
+PRINTFORMW 　　　　　　　　―― Ending No. 1002C (마리사 엔딩 C)
+;느긋하게 떡친 결과가 이 지경이라고 엔딩
+RETURN 0
+

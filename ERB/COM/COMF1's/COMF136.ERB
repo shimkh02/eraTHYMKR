@@ -1,0 +1,386 @@
+﻿;=============================================================================
+;거죽절개
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE136
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:136 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;할례 상태면 불가
+SIF CFLAG:37 & 16
+	RETURN 0
+;남자 또는 후타나리면 불가
+SIF EXIST_PENIS(TARGET)
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM136
+PRINTL 거죽절개 (할례)
+
+;-------------------------------------------------
+;실행할 수 있는가 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 할례
+CALL TRAIN_MESSAGE_COM136
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;一度実行したことがあるか
+IF (CFLAG:20 & 128) == 0
+	DOWNBASE:0 += 90
+	DOWNBASE:1 += 70
+ELSE
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 40
+ENDIF
+
+SOURCE:24 = 800
+SOURCE:31 = 2000
+
+;PALAM:苦痛をみる
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 2200
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 3000
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 4000
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 5000
+ELSE
+	SOURCE:20 = 7000
+ENDIF
+
+;PALAM:恐怖をみる
+IF PALAM:17 < PALAMLV:1
+	SOURCE:25 = 900
+	SOURCE:31 += 600
+ELSEIF PALAM:17 < PALAMLV:2
+	SOURCE:25 = 1600
+	SOURCE:31 += 1200
+ELSEIF PALAM:17 < PALAMLV:3
+	SOURCE:25 = 2300
+	SOURCE:31 += 1800
+ELSEIF PALAM:17 < PALAMLV:4
+	SOURCE:25 = 3000
+	SOURCE:31 += 2400
+ELSE
+	SOURCE:25 = 3700
+	SOURCE:31 += 3000
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:16 = 130
+	TIMES SOURCE:24 , 0.80
+	TIMES DOWNBASE:0 , 1.20
+ELSEIF ABL:21 == 1
+	SOURCE:16 = 250
+	TIMES SOURCE:24 , 1.10
+	TIMES DOWNBASE:0 , 1.10
+ELSEIF ABL:21 == 2
+	SOURCE:16 = 500
+	TIMES SOURCE:24 , 1.30
+	TIMES DOWNBASE:0 , 1.00
+ELSEIF ABL:21 == 3
+	SOURCE:16 = 800
+	TIMES SOURCE:24 , 1.50
+	TIMES DOWNBASE:0 , 0.90
+ELSEIF ABL:21 == 4
+	SOURCE:16 = 1400
+	TIMES SOURCE:24 , 1.70
+	TIMES DOWNBASE:0 , 0.80
+ELSE
+	SOURCE:16 = 2000
+	TIMES SOURCE:24 , 2.10
+	TIMES DOWNBASE:0 , 0.70
+ENDIF
+
+;プレイヤーのABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:20 , 2.00
+	TIMES SOURCE:22 , 0.50
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 0.80
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:20 , 1.20
+	TIMES SOURCE:22 , 1.00
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:20 , 1.00
+	TIMES SOURCE:22 , 1.50
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:20 , 0.80
+	TIMES SOURCE:22 , 2.00
+ELSE
+	TIMES SOURCE:20 , 0.50
+	TIMES SOURCE:22 , 2.50
+ENDIF
+
+;조교자의 指⇔노예의 P의 불결이 이동
+IF TALENT:1 || TALENT:120 || TALENT:121
+	STAIN:PLAYER:2 |= STAIN:1
+	STAIN:2 |= STAIN:PLAYER:1
+;노예의 손가락⇔조교자의 Ｖ의 불결이 이동
+ELSE
+	STAIN:PLAYER:3 |= STAIN:2
+	STAIN:3 |= STAIN:PLAYER:2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+;割礼状態
+CFLAG:37 |= 16
+
+;初体験
+IF (CFLAG:20 & 128) == 0
+	TCVAR:50 += 1
+	;初体験判定フラグを使用してみる
+	CFLAG:20 |= 128
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_136
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:120 || TALENT:121
+	PRINT 페니스의 
+ELSE
+	SIF TALENT:1
+		PRINT 거대한 
+	PRINT 클리토리스의 
+ENDIF
+PRINT 거죽을 
+IF ASSIPLAY
+	PRINTFORML %CALLNAME:PLAYER%에게 자르라고 했지만,
+ELSE
+	PRINTFORML %CALLNAME:MASTER% 스스로 자르라고 했지만,
+ENDIF
+PRINTFORM %CALLNAME:TARGET%에게 
+IF TFLAG:241 - TFLAG:240 > 20
+	PRINTL 격렬하게 거부되어 버렸다.
+ELSE
+	PRINTL 거부되어 버렸다.
+ENDIF
+PRINTW 조금 더 조교가 필요할 것 같다….
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM136
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+SIF PALAM:0 >= PALAMLV:3
+	PRINT 팽창해 있는 것도 아랑곳하지 않고 
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:120 || TALENT:121
+	PRINT 페니스의 
+ELSE
+	SIF TALENT:1
+		PRINT 거대한 
+	PRINT 클리토리스의 
+ENDIF
+PRINTW 거죽을 잘라버렸다….
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 극심한 통증에 목소리도 내지 못하는 것 같다….
+
+;-------------------------------------------------
+;고유 실행 판정
+;-------------------------------------------------
+@COM_ORDER_136, ARG
+LOCAL:99 = ARG
+;ABL:Ｃ感覚
+IF ABL:0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:0
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:0%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+;ABL:노출벽
+IF ABL:14
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:14
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %ABLNAME:14%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;苦痛刻印
+IF MARK:0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:0
+	TFLAG:240 += LOCAL:99 * 3
+	RESULTS = %RESULTS% %MARKNAME:0%LV{LOCAL:99}({LOCAL:99 * 3})
+ENDIF
+
+;PALAM:潤滑（の不足）
+IF PALAM:10 < PALAMLV:3
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 潤滑不足({LOCAL:99})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 2
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;男嫌い
+IF TALENT:37 && TALENT:PLAYER:120
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:37%({LOCAL:99})
+;女嫌い
+ELSEIF TALENT:38 && TALENT:PLAYER:120 == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:38%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+;処女
+IF TALENT:0 == 1
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 20
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:0%({LOCAL:99})
+ELSEIF EXP:0 < EXPLV:2
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %EXPNAME:0%不足({LOCAL:99})
+ENDIF
+
+;一度実行したことがあるか
+IF (CFLAG:20 & 128) == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 20
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 割礼初体験({LOCAL:99})
+ENDIF
+
+;조교자가 후타나리
+IF TALENT:PLAYER:121
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 4
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:121%({LOCAL:99})
+ENDIF
+
+;媚薬
+IF TEQUIP:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ITEMNAME:61%({LOCAL:99})
+ENDIF
+
+TFLAG:241 = 28

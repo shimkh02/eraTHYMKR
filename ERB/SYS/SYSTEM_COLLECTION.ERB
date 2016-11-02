@@ -1,0 +1,1035 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;수집품 관련 처리
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;수집품의 입수, 전시, 관람 처리는 전부 여기서 실행한다
+;=============================================================================
+;수집품 입수 처리
+;=============================================================================
+;전시실 기능 유효시, 조교 중에 특정 동작을 실행하면 수집을 손에 들어오게 된다
+;여기서는 수집품의 입수 플래그를 세우는 처리가 들어있을 뿐이고 실제로 전시실에 전시하는 이벤트는
+;SWEET_POTATO_2.ERB(위의 @SWEET_POTATO_AT에서 호출된다)에서 처리된다
+;--------------------------------------------------
+;시리코다마(엉덩이 구슬) 입수 처리
+;--------------------------------------------------
+;CFLAG:10 & 1でそのキャラが尻子玉を1度抜き取られたかを判定
+;値が0のときは展示イベントが発生.そこで値が1に変更され, 以後尻子玉を抜き取ってもその場でいただく描写に変化する
+;입수→전시 이벤트 처리는 TFLAG:996 & 1로 판단
+@SWEET_POTATO_SHIRIKODAMA
+LOCAL = 0
+IF CFLAG:10 & 1
+	IF ASSIPLAY == 0
+	PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%에게서 시리코다마를 뽑아내어 
+		PRINTFORML 그것을 %CALLNAME:TARGET% 눈 앞에서 입 안에 넣고는, 혀 위에서 데굴데굴 굴렸다.
+		;노예의 Ａ⇒조교자의 입으로 불결이 이동
+		STAIN:4 |= STAIN:PLAYER:0
+		BASE:PLAYER:0 = MIN(BASE:PLAYER:0 + 1000, MAXBASE:PLAYER:0)
+		LOCAL = 1
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%에게서 시리코다마를 뽑아내어
+		IF ABL:10 >= 4 && RAND:2 == 0
+			PRINTFORML 그것을 %CALLNAME:MASTER%에게 건넸다.
+			PRINTFORML 건네받은 %조사처리(CALLNAME:MASTER,"는")% 시킨 대로 %CALLNAME:TARGET%의 눈 앞에서 입 안에 시리코다마를 넣고 
+			PRINTFORML 혀 위에서 데굴데굴 굴리며 맛을 즐겼다.
+			;노예의 Ａ⇒주인의 입으로 불결이 이동
+			STAIN:4 |= STAIN:MASTER:0
+			BASE:MASTER:0 = MIN(BASE:MASTER:0 + 1000, MAXBASE:MASTER:0)
+			LOCAL = 1
+		ELSE
+			PRINTFORML 그것을 %CALLNAME:TARGET% 눈 앞에서 입 안에 넣고는, 혀 위에서 데굴데굴 굴렸다.
+			;노예의 Ａ⇒조교자의 입으로 불결이 이동
+			STAIN:4 |= STAIN:PLAYER:0
+			BASE:PLAYER:0 = MIN(BASE:PLAYER:0 + 1000, MAXBASE:PLAYER:0)
+		ENDIF
+	ENDIF
+	CALL SELF_KOJO, TARGET, 210
+	PRINTW  
+ELSE
+	IF ASSIPLAY == 0
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%에게서 시리코다마를 뽑아내어 
+		PRINTFORML 그것을 상자에 넣고 품 속에 보관했다.
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%에게서 시리코다마를 뽑아내어 
+		PRINTFORML 그것을 케이스에 넣어 %CALLNAME:MASTER%에게 건넸다.
+	ENDIF
+	TFLAG:996 |= 1
+	CALL SELF_KOJO, TARGET, 210
+	PRINTW  
+ENDIF
+
+;시리코다마 먹은 횟수 카운트
+IF LOCAL == 1
+	FLAG:406 += 1
+	IF FLAG:406 >= 50 && FLAG:4 <= 1 && (FLAG:70 & 64) == 0
+		PRINTFORML %조사처리(NAME:MASTER,"는")% 캇파의 생태계에 관한 이해가 깊어졌다….
+		PRINTFORMW ※강하게 뉴 게임 개시시에 %NAME:MASTER%의 종족을 [캇파]로 선택할 수 있습니다.
+		FLAG:70 |= 64
+	ENDIF
+ENDIF
+
+;토리코모드 추가부분. 의뢰소가 켜져있고 수집병이 있다면 수집병을 1개 줄이고 전시실에 시리코다마를 늘린다.
+;캐릭터 아이템코드 생성
+IF FLAG:5010  == 4 && (ITEM:81 > 0 || NOITEM)
+	;자동보충 켜져있을때 처리
+	IF NOITEM == 0
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	LOCAL:1 = (NO:TARGET)+100
+	;보유 아이템 개수를 늘린다.
+	PRINTFORMW %조사처리(NAME:MASTER,"는")% %NAME:TARGET%의 시리코다마를 잠시 이리저리 돌려 본 뒤, 전시실에 보관했다. (개수 증가)
+	DITEMTYPE:(LOCAL:1):101 += 1
+ENDIF
+
+;--------------------------------------------------
+;황금수 처리
+;--------------------------------------------------
+;CFLAG:11 & 2でそのキャラから黄金水を採取されたかを判定
+;値が0のときは展示イベントが発生.そこで値が1に変更され, 以後採取は行われなくなる
+;입수→전시 이벤트 처리는 TFLAG:996 & 2로 판단
+@SWEET_POTATO_GW
+IF (CFLAG:10 & 2) == 0 && (ITEM:81 > 0 || NOITEM)
+	IF NOITEM == 0
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	IF ASSIPLAY == 0
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 오줌을 병에 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 황금수」라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 흘러나오지 않도록 뚜껑을 단단히 덮은 뒤 그것을 품 속에 넣었다.
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 오줌을 병에 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 황금수」라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 흘러나오지 않도록 뚜껑을 단단히 덮은 뒤 그것을 %CALLNAME:MASTER%에게 건넸다.
+	ENDIF
+	TFLAG:996 |= 2
+	CALL SELF_KOJO, TARGET, 211
+	PRINTW  
+ENDIF
+
+;--------------------------------------------------
+;애액 처리
+;--------------------------------------------------
+;特定条件を満たすとCFLAG:10 & 4でそのキャラから애액を採取されたかを判定
+;値が0のときは展示イベントが発生.そこで値が1に変更され, 以後採取は行われなくなる
+;입수→전시 이벤트 처리는 TFLAG:996 & 4로 판단
+@SWEET_POTATO_LW
+PRINTFORML 조교가 끝났는데도 아직 %CALLNAME:TARGET%의 보지에선 대량의 애액이 지금도 흘러넘치고 있다…….
+PRINTFORML %CALLNAME:TARGET%의 애액을 병에 채취하겠습니까?
+LOCAL = NO:TARGET + 5000
+SIF FLAG:LOCAL & 4
+	PRINTFORML (%ITEMNAME:(NO:TARGET+100)%의 애액은 이미 채취가 끝났습니다)
+DRAWLINE
+PRINTL [0] - 그만둔다
+PRINTL [1] - 채집한다
+DRAWLINE
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	IF NOITEM == 0
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	CALL NAME_LOVEWATER, NO:TARGET
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%의 보지에서 흘러넘치는 애액을 병에 담고는, 
+	PRINTFORML %TSTR:2%라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+	PRINTFORML 그리고 내용물이 흘러나오지 않도록 단단히 뚜껑을 닫은 뒤 그것을 품 속에 넣었다.
+	TFLAG:996 |= 4
+	CALL SELF_KOJO, TARGET, 212
+	PRINTW  
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;혈액 입수 처리
+;--------------------------------------------------
+;CFLAG:10 & 8でそのキャラから血を採取されたかを判定
+;値が0のときは展示イベントが発生.そこで値が1に変更され, 以後採取は行われなくなる
+;입수→전시 이벤트 처리는 TFLAG:996 & 8로 판단
+@SWEET_POTATO_RED_BLOOD
+IF (CFLAG:10 & 8) == 0 && (ITEM:81 > 0 || NOITEM)
+	IF NOITEM == 0
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	IF ASSIPLAY == 0
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 피를 병에 정성스레 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 피」라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 흘러나오지 않도록 단단히 뚜껑을 덮은 뒤 그걸 품 속에 넣었다.
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 피를 병에 정성스레 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 피」라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 흘러나오지 않도록 단단히 뚜껑을 덮은 뒤 그걸 %CALLNAME:MASTER%에게 건넸다.
+	ENDIF
+	TFLAG:996 |= 8
+	CALL SELF_KOJO, TARGET, 213
+	PRINTL 
+ENDIF
+
+;--------------------------------------------------
+;파과혈 입수 처리
+;--------------------------------------------------
+;CFLAG:10 & 16でそのキャラから破瓜血を採取されたかを判定
+;値が0のときは展示イベントが発生.そこで値が1に変更され, 以後採取は行われなくなる
+;입수→전시 이벤트 처리는 TFLAG:996 & 16으로 판단
+@SWEET_POTATO_VIRGIN_BLOOD
+IF (CFLAG:10 & 16) == 0 && (ITEM:81 > 0 || NOITEM)
+	IF NOITEM == 0
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	IF ASSIPLAY == 0
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 피를 병에 정성스레 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 처녀혈」이라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 흘러나오지 않도록 단단히 뚜껑을 덮은 뒤 그걸 품 속에 넣었다
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 피를 병에 정성스레 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 처녀혈」이라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 흘러나오지 않도록 단단히 뚜껑을 덮은 뒤 그걸 %CALLNAME:MASTER%에게 건넸다.
+	ENDIF
+	TFLAG:996 |= 16
+	CALL SELF_KOJO, TARGET, 214
+	PRINTL 
+ENDIF
+
+;--------------------------------------------------
+;팬티 처리
+;--------------------------------------------------
+;CFLAG:10 & 32でそのキャラからパンティーを採取されたかを判定
+;値が0のときは展示イベントが発生.そこで値が1に変更され, 以後採取は行われなくなる
+@SWEET_POTATO_PANTY
+PRINTL 
+PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% 조교로 몸도 마음도 음란함에 찌들어버린 %CALLNAME:TARGET%의 
+IF TFLAG:101 == 1
+	PRINT 파괴의 피가 오롯이 묻어 있는 
+ELSEIF (EXP:6 || TALENT:45) && (PALAM:10 > 10000 || PALAM:13 > 10000)
+	PRINT 애액과 오줌을 잔뜩 빨아들인 
+ELSEIF EXP:6 || TALENT:45
+	PRINT 작게 황색 얼룩이 져 있는 
+ELSEIF PALAM:10 > 10000 || PALAM:13 > 10000
+	PRINT 애액으로 흠뻑 젖어 있는 
+ENDIF
+PRINTL 속옷을 집어들었다.
+PRINTFORMW 그리고 %CALLNAME:TARGET%의 체온과 암컷의 향기를 한 번 감상한 뒤에 품 속에 집어넣었다.
+PRINTL 
+PRINTFORML 속옷을 빼앗겨 버린 %조사처리(CALLNAME:TARGET,"는")% 순간 얼떨떨한 표정을 지었지만, 
+PRINTL 이윽고 바깥 공기에 노출된 음부를 쓰다듬는 감각에 참을 수 없게 된 것인지 
+PRINTL 요염한 숨결을 토하면서 허벅지를 부비기 시작했다…….
+PRINTL 
+CALL SELF_KOJO, TARGET, 215
+WAIT
+;입수한 팬티를 전시실로
+CALL GET_PANTY
+
+;--------------------------------------------------
+;모유 처리
+;--------------------------------------------------
+;CFLAG:10 & 256でそのキャラから모유を採取されたかを判定
+;値が1のときは展示イベントが発生.そこで値が2に変更され, 以後搾乳でしか採取は行われなくなる
+;입수→전시 이벤트 처리는 TFLAG:125로 판단
+;搾乳機・搾乳コマンドを使用したときの모유採取イベント
+@SWEET_POTATO_MILK
+IF TEQUIP:35 != 2 && (ITEM:81 > 0 || NOITEM) && SELECTCOM == 626
+	IF NOITEM == 0
+		;搾乳を使った場合, 모유入りの瓶を追加で入手可能
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	TFLAG:125 += 1
+	CALL NAME_MILK, NO:TARGET
+	IF ASSIPLAY < 1
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% 막 짜낸 %CALLNAME:TARGET%의 모유를 정성스레 병에 채집한 뒤, 
+		PRINTFORML 「%TSTR:2%」라고 적힌 라벨을 보여주듯이 병에 부착시켰다.
+		PRINTFORML 그리고 모유가 흘러나오지 않도록 병뚜껑을 단단히 덮은 뒤, 그걸 품 속에 넣었다.
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% 막 짜낸 %CALLNAME:TARGET%의 모유를 정성스레 병에 채집한 뒤, 
+		PRINTFORML 「%TSTR:2%」라고 적힌 라벨을 보여주듯이 병에 부착시켰다.
+		PRINTFORML 그리고 모유가 흘러나오지 않도록 병뚜껑을 단단히 덮은 뒤, 그걸 %CALLNAME:MASTER%에게 건넸다.
+	ENDIF
+	CALL SELF_KOJO, TARGET, 216
+	PRINTW  
+ENDIF
+
+;조교 후 착유로 모유 입수
+@SWEET_POTATO_MILK_2, ARG
+IF NOITEM == 0
+	ITEM:81 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+		CALL FILL_PLURAL_ITEM, 81
+ENDIF
+TFLAG:125 += 1
+CALL NAME_MILK, NO:TARGET
+PRINTFORMW %조사처리(NAME:MASTER,"는")% %조사처리(NAME:TARGET,"가")% 가져온 모유를 병에 넣어 보관하기로 했다.
+PRINTL 
+PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 「%TSTR:2%」의 라벨이 붙어있는 병에
+PRINTFORML 지금 막 짜낸 %CALLNAME:TARGET%의 모유를 주입시켰다.
+IF ARG > 6
+	WAIT
+	PRINTFORML 하지만 짜내온 젖이 예상 이상으로 많았던 건지, 병에 다 들어가고도 남았다.
+	PRINTFORML 그래서 %조사처리(CALLNAME:MASTER,"는")% 다 들어가지 못하고 남은 모유를 모두 마시기로 했다.
+ENDIF
+CALL SELF_KOJO, TARGET, 217
+PRINTW  
+
+;--------------------------------------------------
+;음모 처리
+;--------------------------------------------------
+;음모는 몇 번 채집해도 된다. 판매 가능하므로.
+@SWEET_POTATO_PUBLIC_HAIR
+IF ITEM:81 > 0 || NOITEM
+	IF NOITEM == 0
+		ITEM:81 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:81
+			CALL FILL_PLURAL_ITEM, 81
+	ENDIF
+	IF ASSIPLAY == 0
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 음모를 병에 정성스레 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 음모」라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 삐져나오지 않도록 단단히 뚜껑을 덮은 뒤 그걸 품 속에 넣었다.
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 음모를 병에 정성스레 채취한 뒤, 
+		PRINTFORML 「%CALLNAME:TARGET%의 음모」라고 적힌 라벨을 %CALLNAME:TARGET%의 눈 앞에서 병에 붙였다.
+		PRINTFORML 그리고 내용물이 삐져나오지 않도록 단단히 뚜껑을 덮은 뒤 그걸 %CALLNAME:MASTER%에게 건넸다.
+	ENDIF
+	TFLAG:996 |= 64
+	CALL SELF_KOJO, TARGET, 218
+	PRINTW  
+ENDIF
+
+;=============================================================================
+;수집품의 전시 이벤트
+;=============================================================================
+;ここで蒐集品を展示室に飾り付けるイベント処理を行う.
+;使っているフラグは大きく分けて, 손에 넣은蒐集品の合計(というより何種손에 넣은かの管理), 
+;そのキャラから蒐集品を손에 넣은かどうかを判定にCFLAGとFLAGを使用.
+;CFLAGのほうは蒐集品を入手したかを記憶, 
+;FLAGのほうは誰の○○をいくつ持っているかを判断するために使用している.
+;また, TFLAG:202のON/OFFで主人が展示室にいるかを判定(地の文用), 
+;FLAG:500で展示室に移動可能かの判定に使用.また蒐集品の累計にも使用され, 500이상になると展示室の名称が変化.
+;--------------------------------------------------
+;시리코다마의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):101이 되어있음.
+;소지하고 있는 시리코다마의 숫자는 FLAG:501에서 관리.
+@GET_SHIRIKODAMA
+LOCAL = NO:TARGET + 100
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 돌려, 품 속에서 %CALLNAME:TARGET%의 구슬을 꺼내어 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORM 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 구슬을 
+ENDIF
+SIF FLAG:501 == 0
+	PRINT 특별히 조달해온 전용 
+PRINTW 장식장에 전시했다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:101 == 0
+	FLAG:500 += 1
+	FLAG:501 += 1
+ENDIF
+DITEMTYPE:LOCAL:101 += 1
+CFLAG:10 |= 1
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;황금수의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):102가 되어있음.
+;소지하고 있는 황금수의 숫자는 FLAG:502에서 관리.
+@GET_GOLD_WATER
+LOCAL = NO:TARGET + 100
+CALL NAME_GOLDWATER, NO:TARGET
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 바꾸어, 품 속에서 %CALLNAME:TARGET%의 황금수가 들어 있는 병을 꺼냈다.
+	PRINTFORM 그리고 「%CALLNAME:TARGET%의 황금수」라고 적힌 라벨이 잘 보이도록 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORM 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 황금수가 든 병을 라벨이 잘 보이도록 
+ENDIF
+PRINTFORM %TSTR:2%라고 적힌 라벨이 잘 보이도록 
+SIF FLAG:502 == 0
+	PRINT 특별히 조달해온 전용 
+PRINTW 장식장에 전시했다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:102 == 0
+	FLAG:500 += 1
+	FLAG:502 += 1
+ENDIF
+DITEMTYPE:LOCAL:102 += 1
+CFLAG:10 |= 2
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;애액의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):103이 되어있음.
+;소지하고 있는 애액의 숫자는 FLAG:503에서 관리.
+@GET_LOVE_WATER
+LOCAL = NO:TARGET + 100
+CALL NAME_LOVEWATER, NO:TARGET
+IF CFLAG:10 & 4
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실 더 깊은 곳에 있는 비밀 창고로 향했다.
+	PRINTFORML 그리고 품 속에서 %CALLNAME:TARGET%의 애액으로 가득 차 있는 병을 조심스레 꺼낸 뒤, 
+	PRINTFORMW 창고에 특별히 만들어 놓은 특제 장식장에 보관했다…….
+ELSE
+	IF TFLAG:202 == 1
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 바꿔, 품 속에서 %CALLNAME:TARGET%의 애액으로 가득 찬 병을 꺼냈다.
+		PRINT 그리고 
+	ELSE
+		PRINTL 
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+		PRINTFORML 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 애액으로 가득찬 병을 
+	ENDIF
+	PRINTFORML %TSTR:2%라고 적힌 라벨이 잘 보이도록 
+	SIF FLAG:503 == 0
+		PRINT 특별히 조달해온 전용 
+	PRINTW 장식장에 전시했다…….
+ENDIF
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:103 == 0
+	FLAG:500 += 1
+	FLAG:503 += 1
+ENDIF
+DITEMTYPE:LOCAL:103 += 1
+CFLAG:10 |= 4
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;피의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):104가 되어있음.
+;소지하고 있는 혈액의 숫자는 FLAG:504에서 관리.
+@GET_RED_BLOOD
+LOCAL = NO:TARGET + 100
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 틀어, 품 속에서 %CALLNAME:TARGET%의 피가 들어 있는 뱡을 꺼냈다.
+	PRINTFORM 그리고 「%CALLNAME:TARGET%의 피」라 적힌 라벨이 잘 보이도록 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORM 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 피가 들어 있는 병을 라벨이 잘 보이도록 
+ENDIF
+SIF FLAG:504 == 0
+	PRINT 특별히 조달해온 전용 
+PRINTW 장식장에 전시했다…….
+;전시실 해금
+SIF FLAG:10 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:104 == 0
+	FLAG:500 += 1
+	FLAG:504 += 1
+ENDIF
+DITEMTYPE:LOCAL:104 += 1
+CFLAG:10 |= 8
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;파과혈의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):105가 되어있음.
+;소지하고 있는 파과혈의 숫자는 FLAG:505에서 관리.
+@GET_VIRGIN_BLOOD
+LOCAL = NO:TARGET + 100
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 바꿔, 품 속에서 %CALLNAME:TARGET%의 파과의 피가 들어 있는 병을 꺼냈다.
+	PRINTFORM 그리고 「%CALLNAME:TARGET%의 파과혈」이란 라벨이 잘 보이도록 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORM 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 파과의 피가 들어 있는 병을 라벨이 잘 보이도록 
+ENDIF
+SIF FLAG:505 == 0
+	PRINT 특별히 조달해 온 전용 
+PRINTW 장식장 안에 전시했다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:105 == 0
+	FLAG:500 += 1
+	FLAG:505 += 1
+ENDIF
+DITEMTYPE:LOCAL:105 += 1
+CFLAG:10 |= 16
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;여자 팬티의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):106이 되어있음.
+;소지하고 있는 여자 팬티의 숫자는 FLAG:506에서 관리.
+@GET_PANTY
+LOCAL = NO:TARGET + 100
+TSTR:1 = %CALLNAME:TARGET%
+CALL NAME_PANTY, NO:TARGET
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 틀어, 품 속에서 %CALLNAME:TARGET%의 온기가 남아 있는 속옷을 꺼내들어, 
+	PRINTFORM 「%TSTR:2%」라고 적힌 이름표가 붙은 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORML 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 팬티를 「%TSTR:2%」라고 적힌 
+	PRINTFORM 이름표가 붙은 
+ENDIF
+SIF FLAG:506 == 0
+	PRINT 전용 
+PRINTW 쇼 케이스에 넣어 전시했다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:106 == 0
+	FLAG:500 += 1
+	FLAG:506 += 1
+ENDIF
+DITEMTYPE:LOCAL:106 += 1
+CFLAG:10 |= 32
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;사진의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):107이 되어있음.
+;소지하고 있는 사진의 장수는 FLAG:507에서 관리.
+@KEEP_PICTURE
+LOCAL = NO:TARGET + 100
+PRINTL 
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+PRINT 그리고 
+IF CFLAG:10 & 64
+	PRINTFORML %CALLNAME:TARGET%의 이름이 적혀 있는 앨범에 
+ELSE
+	PRINTFORML 미리 구입해 놓은 앨범에 %CALLNAME:TARGET%의 이름을 적어놓고는, 
+	PRINT 그리고 
+	CFLAG:10 |= 64
+ENDIF
+PRINTFORMW 품 속에서 꺼낸 %CALLNAME:TARGET%의 사진을 끼우고, 책장에 꽃았다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:107 == 0
+	FLAG:500 += 1
+	FLAG:507 += 1
+ENDIF
+DITEMTYPE:LOCAL:107 += 1
+TFLAG:124 = 0
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;비디오의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):108이 되어있음.
+;소지하고 있는 비디오의 편수는 FLAG:508에서 관리.
+@KEEP_VIDEO
+LOCAL = NO:TARGET + 100
+PRINTL 
+IF CFLAG:10 & 128
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실 더 깊숙한 곳에 있는 비밀 창고로 향했다.
+	PRINTFORML 그리고 품 속에서 %CALLNAME:TARGET%의 치태가 담겨 있는 비디오 테이프를 꺼내서 
+	PRINTFORML 창고에 특별히 만들어 놓은 특제 전시장 안에 보관했다…….
+ELSE
+	IF TFLAG:202 == 1
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 틀어, 품 속에서 %CALLNAME:TARGET%의 치태가 찍힌 비디오 테이프를 꺼내고는, 
+		PRINTFORML %CALLNAME:TARGET%의 이름이 각인된 이름표가 붙은 
+	ELSE
+		PRINTL 
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+		PRINTFORML 그리고 %CALLNAME:TARGET%의 치태가 찍혀 있는 비디오테이프를 품 속에서 꺼내들어 
+		PRINTFORM %CALLNAME:TARGET%의 이름이 각인된 플레이트가 붙어 있는 
+	ENDIF
+	SIF FLAG:508 == 0
+		PRINT 전용 
+	PRINTL 책장에 넣어 보관했다…….
+	CFLAG:10 |= 128
+ENDIF
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:108 == 0
+	FLAG:500 += 1
+	FLAG:508 += 1
+ENDIF
+DITEMTYPE:LOCAL:108 += 1
+TFLAG:202 = 1
+
+;--------------------------------------------------
+;모유의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):109이 되어있음.
+;소지하고 있는 모유의 숫자는 FLAG:509에서 관리.
+@GET_MILK
+LOCAL = NO:TARGET + 100
+CALL NAME_MILK, NO:TARGET
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 바꿔, 품 속에서 %CALLNAME:TARGET%의 모유가 들어 있는 병을 꺼냈다.
+	PRINTFORM 그리고 「%TSTR:2%」란 라벨이 잘 보이도록 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORM 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 모유가 들어 있는 병을 「%TSTR:2%」란 라벨이 잘 보이도록 
+ENDIF
+SIF FLAG:509 == 0
+	PRINT 특별히 조달해온 전용 
+PRINTW 장식장에 전시했다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:109 == 0
+	FLAG:500 += 1
+	FLAG:509 += 1
+ENDIF
+;일반모드
+;DITEMTYPE:LOCAL:109 += TFLAG:125
+;토리코모드
+DITEMTYPE:LOCAL:109 += 1
+CFLAG:10 |= 256
+TFLAG:125 = 0
+SIF TFLAG:202 == 0
+	TFLAG:202 = 1
+
+
+;--------------------------------------------------
+;알의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):110가 되어 있음.
+;보유하고 있는 알의 개수는 FLAG:510에서 관리.
+@GET_EGG, ARG
+LOCAL = NO:ARG + 100
+IF CFLAG:ARG:10 & 512
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실 더 깊숙한 곳에 있는 비밀 창고로 향했다.
+	PRINTFORML 그리고 품 속에서 %CALLNAME:ARG%의 알을 조심스레 꺼내고는
+	PRINTFORMW 창고에 설치해 놓은 특제 전시장에 보관했다…….
+ELSE
+	IF TFLAG:202 == 1
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 틀어, 품 속에서 %CALLNAME:ARG%의 알을 꺼내고는 
+		PRINTFORML 「%CALLNAME:ARG%의 알」이라고 적힌 이름표가 붙은 대좌에 그걸 올리고, 
+	ELSE
+		PRINTL 
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+		PRINTFORML 그리고 품 속에서 꺼낸 %CALLNAME:ARG%의 알을 「%CALLNAME:ARG%의 알」이라 적힌 
+		PRINTFORM 이름표가 붙은 대좌에 올리고, 
+	ENDIF
+	SIF FLAG:510 == 0
+		PRINT 특별히 조달해온 전용 
+	PRINTW 보관장에 장식했다…….
+	CFLAG:ARG:10 |= 512
+ENDIF
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:110 == 0
+	FLAG:500 += 1
+	FLAG:510 += 1
+ENDIF
+
+;もし産卵フラグが0なら1にしておく（誘発剤なくして産卵した対策)
+DITEMTYPE:LOCAL:110 += MAX(TFLAG:128, 1)
+TFLAG:128 = 0
+
+;--------------------------------------------------
+;촉수의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):111이 되어있음.
+;소지하고 있는 촉수의 종류는 FLAG:511에서 관리. 입수 플래그는 촉수 출산 플래그의 CFLAG:34와 공용.
+@GET_LARVA
+LOCAL = NO:TARGET + 100
+PRINTL 
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+PRINTFORM 그리고 %조사처리(CALLNAME:TARGET,"가")% 낳았던 촉수의 유생을 
+SIF FLAG:511 == 0
+	PRINT 특별히 조달해온 
+PRINTW 전용 보육기에 넣었다…….
+
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:111 == 0
+	FLAG:500 += 1
+	FLAG:511 += 1
+ENDIF
+DITEMTYPE:LOCAL:111 += 1
+
+;--------------------------------------------------
+;陰毛의 전시 이벤트
+;--------------------------------------------------
+;관리 플래그는 통상 캐릭터는 DITEMTYPE:(100+캐릭터 번호):112이 되어있음.
+;소지하고 있는 陰毛の瓶数はFLAG:512에서 관리.
+@KEEP_PUBLIC_HAIR
+LOCAL = NO:TARGET + 100
+IF TFLAG:202 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 방향을 바꿔, 품 속에서 %CALLNAME:TARGET%의 음모가 들어 있는 병을 꺼냈다.
+	PRINTFORM 그리고 「%CALLNAME:TARGET%의 음모」란 라벨이 잘 보이도록 
+ELSE
+	PRINTL 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 전시실로 향했다.
+	PRINTFORM 그리고 품 속에서 꺼낸 %CALLNAME:TARGET%의 음모가 들어 있는 병을 「%CALLNAME:TARGET%의 음모」란 라벨이 잘 보이도록 
+ENDIF
+SIF FLAG:512 == 0
+	PRINT 특별히 조달해온 전용 
+PRINTW 장식장에 전시했다…….
+;전시실 해금
+SIF FLAG:500 == 0
+	PRINTW 전시실로 이동할 수 있게 되었습니다.
+
+IF DITEMTYPE:LOCAL:112 == 0
+	FLAG:500 += 1
+	FLAG:512 += 1
+ENDIF
+DITEMTYPE:LOCAL:112 += 1
+CFLAG:10 |= 1024
+TFLAG:202 = 1
+
+;=============================================================================
+;각 수집품의 보조 처리
+;=============================================================================
+;--------------------------------------------------
+;성수 표시 보조 처리
+;--------------------------------------------------
+@NAME_GOLDWATER, ARG
+CALL NAME_SELL_GOLDWATER, ARG
+IF ARG == 1 || ARG == 5 || ARG == 11 || ARG == 41 || ARG == 46
+	LOCALS = 【%TSTR:2%】
+ELSE
+	LOCALS = 【%ITEMNAME:(ARG+100)%의 %TSTR:2%】
+ENDIF
+TSTR:2 = %LOCALS%
+
+;--------------------------------------------------
+;성수 표시 보조 처리
+;--------------------------------------------------
+@NAME_SELL_GOLDWATER, ARG
+IF ARG == 1
+	LOCALS = 레이무의 멋진 황금수
+ELSEIF ARG == 5
+	LOCALS = 치르노의 천연수
+ELSEIF ARG == 11
+	LOCALS = 플랑쨩의 황금수
+ELSEIF ARG == 41
+	LOCALS = 모미지의 부끄러운 황금수
+ELSEIF ARG == 46
+	LOCALS = 루나차
+ELSE
+	LOCALS = 황금수
+ENDIF
+TSTR:2 = %LOCALS%
+
+;--------------------------------------------------
+;애액 표시 보조 처리
+;--------------------------------------------------
+@NAME_LOVEWATER, ARG
+IF ARG == 8
+	LOCALS = 【파체즙】
+ELSEIF ARG == 10
+	LOCALS = 【아가씨주】
+ELSEIF ARG == 11
+	LOCALS = 【플랑쨩의 오줌】
+ELSEIF ARG == 14
+	LOCALS = 【앨리스액】
+ELSEIF ARG == 15
+	LOCALS = 【릴리샴푸】
+ELSEIF ARG == 37
+	LOCALS = 【메이플시럽】
+ELSEIF ARG == 38
+	LOCALS = 【고구마소주】
+ELSEIF ARG == 39
+	LOCALS = 【액즙】
+ELSEIF ARG == 40
+	LOCALS = 【캇파의 환상대폭포】
+ELSEIF ARG == 44
+	LOCALS = 【융케로 황제액】
+ELSEIF ARG == 52
+	LOCALS = 【텐코즙】
+ELSEIF ARG == 56
+	LOCALS = 【릴리 흑주】
+ELSEIF ARG == 59
+	LOCALS = 【파루즙】
+ELSEIF ARG == 109
+	LOCALS = 【오렌지 쥬스】
+ELSEIF ARG == 110
+	LOCALS = 【호두 수프】
+ELSE
+	LOCALS = 【%ITEMNAME:(ARG+100)%즙】
+ENDIF
+TSTR:2 = %LOCALS%
+
+;--------------------------------------------------
+;모유 표시 보조 처리
+;--------------------------------------------------
+@NAME_MILK, ARG
+CALL NAME_SELL_MILK, ARG
+IF ARG == 5 || ARG == 39 || ARG == 45 || ARG == 108
+	LOCALS = 【%TSTR:2%】
+ELSE
+	LOCALS = 【%ITEMNAME:(ARG+100)%의 %TSTR:2%】
+ENDIF
+TSTR:2 = %LOCALS%
+
+;--------------------------------------------------
+;모유 매각시 표시 보조 처리
+;--------------------------------------------------
+@NAME_SELL_MILK, ARG
+IF ARG == 5
+	LOCALS = ⑨아이스밀크
+ELSEIF ARG == 39
+	LOCALS = 액쿠르트
+ELSEIF ARG == 45
+	LOCALS = 서니밀크
+ELSEIF ARG == 108
+	LOCALS = 딸기우유
+ELSE
+	LOCALS = 모유
+ENDIF
+TSTR:2 = %LOCALS%
+
+;--------------------------------------------------
+;팬티 표시 보조 처리
+;--------------------------------------------------
+;下にあるようにARGに캐릭터 번호を代入すれば任意のキャラの任意の下着を展示することができます
+;誰に何を穿かせたいかは各人の自由ってことで
+@NAME_PANTY, ARG
+IF ARG == 0 || (ARG >= 150 && ARG < 200)
+	LOCALS = 속옷
+ELSEIF ARG == 1 || ARG == 2 || ARG == 19 || ARG == 23
+	LOCALS = 드로워즈
+ELSEIF ARG == 5
+	LOCALS = 차가운 줄무늬팬티
+ELSEIF ARG == 22 || ARG == 29
+	LOCALS = T백
+ELSEIF ARG == 61
+	LOCALS = 호박팬티
+ELSEIF ARG == 69 || ARG == 70 || ARG == 74 || ARG == 135
+	LOCALS = 훈도시
+ELSEIF ARG == 133 || ARG == 142
+	LOCALS = 삼각팬티
+ELSEIF ARG == 140
+	LOCALS = 사각팬티
+ELSE
+	LOCALS = 팬티
+ENDIF
+TSTR:2 = %TSTR:1%의 %LOCALS%
+
+;=============================================================================
+;전시실의 처리
+;=============================================================================
+;여기서부터 전시실 이벤트
+;무명 캐릭터를 빼고, 수집품 전시의 처리는 수집품 전시 플래그가 있을 경우, 그 캐릭터를 일시적으로 더한다는 처리가 실행된다.
+;이걸로 REPEAT를 사용한 구문의 압축이 가능하게 됨.
+;무명 캐릭터만 csv 관계상 이 방법을 쓸 수 없기 때문에 개별적으로 처리해야 함.
+@COLLECTION_ROOM_MENU
+VARSET LOCALS,""
+SPLIT "엉덩이구슬,황금수,애액,혈액,파과혈,팬티,사진,비디오,모유,알,촉수,음모",",",LOCALS
+
+PRINTL 무엇을 보겠습니까?
+DRAWLINE
+FOR COUNT, 501, 513, 1
+	SIF FLAG:COUNT
+		PRINTFORML [{COUNT - 500, 3}] - 손에 넣은 %조사처리(LOCALS:(COUNT - 501),"를")% 본다
+NEXT
+PRINTL [100] - 돌아간다
+DRAWLINE
+$INPUT_LOOP_1
+INPUT
+LOCAL = RESULT
+IF LOCAL == 100
+	RETURN 0
+ELSEIF FLAG:(LOCAL + 500) == 0
+	GOTO INPUT_LOOP_1
+ELSEIF LOCAL >= 1 && LOCAL <= 12
+	TSTR:0 = %LOCALS:(LOCAL - 1)%의 전시장
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(TSTR:0,"로")% 향했다.
+CALL COLLECTION_LIST, LOCAL
+RESTART
+
+;--------------------------------------------------
+;전시장 표시 범용 처리
+;--------------------------------------------------
+@COLLECTION_LIST, ARG
+;변수의 리셋
+VARSET LOCAL, 0
+
+;ページをめくったときなどはここから
+$PRINT_LIST_PAGE
+LOCAL:1 = 0
+CALL PAGE_COLLECTION_LIST, ARG
+LOCAL:5 = RESULT
+
+DRAWLINE
+PRINTFORML %TSTR:0% ＜page.{LOCAL:4 + 1}＞
+CALL COLLECTION_ROOM, ARG, LOCAL:4
+DRAWLINE
+PRINTFORMLC \@(LOCAL:4 <= 0) ? %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 뒤로
+PRINTFORMLC \@(LOCAL:4 >= LOCAL:5) ? %" " * 16% # [1009] 다음페이지\@
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL:4 > 0
+	LOCAL:4 -= 1
+	GOTO PRINT_LIST_PAGE
+ELSEIF RESULT == 1009 && LOCAL:4 < LOCAL:5
+	LOCAL:4 += 1
+	GOTO PRINT_LIST_PAGE
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+
+;--------------------------------------------------
+;수집품 일람의 페이지 수 결정용
+;--------------------------------------------------
+@PAGE_COLLECTION_LIST, ARG
+LOCAL = 0
+LOCAL:1 = -1
+CALLF CLEAR_LIST
+
+;蒐集品が存在していたら表示可能フラグを立てる
+;(ここでは条件を満たしていないと弾く処理を行っている)
+REPEAT 500
+	;各蒐集品存在フラグ
+	SIF DITEMTYPE:(100+COUNT):(100+ARG) == 0
+		CONTINUE
+	CALLF SET_LIST, COUNT, 1
+	LOCAL += 1
+	SIF (LOCAL%20) == 1
+		LOCAL:1 += 1
+REND
+LOCAL:1 = MAX(LOCAL:1 , 0)
+
+RETURN LOCAL:1
+
+;--------------------------------------------------
+;개별 전시장 표시 처리
+;--------------------------------------------------
+@COLLECTION_ROOM, ARG, ARG:1
+VARSET LOCALS, ""
+VARSET LOCAL, 0
+
+SELECTCASE ARG
+	CASE 1
+		SPLIT "손에 넣은,엉덩이구슬,명분,의 엉덩이구슬,",",",LOCALS
+		LOCAL:1 = 28
+	CASE 2
+		SPLIT "손에 넣은,황금수,명분,의 황금수,",",",LOCALS
+		LOCAL:1 = 28
+	CASE 3
+		SPLIT ",애액 로션,종,의 애액,",",",LOCALS
+		LOCAL:1 = 32
+	CASE 4
+		SPLIT "손에 넣은,혈액,명분,의 피,",",",LOCALS
+		LOCAL:1 = 24
+	CASE 5
+		SPLIT "손에 넣은,순결,명분,의 파과혈,",",",LOCALS
+		LOCAL:1 = 28
+	CASE 6
+		SPLIT "모은,팬티,장,의 팬티,",",",LOCALS
+		LOCAL:1 = 32
+	CASE 7
+		SPLIT ",사진의 앨범,권,의 사진집,장",",",LOCALS
+		LOCAL:1 = 28
+	CASE 8
+		SPLIT ",비디오,시리즈,의 비디오,권",",",LOCALS
+		LOCAL:1 = 28
+	CASE 9
+		SPLIT "손에 넣은,모유,개,의 모유,",",",LOCALS
+		LOCAL:1 = 26
+	CASE 10
+		SPLIT "손에 넣은,알,명분,의 알,개",",",LOCALS
+		LOCAL:1 = 24
+	CASE 11
+		SPLIT "손에 넣은,촉수,종,의 자식,마리",",",LOCALS
+		LOCAL:1 = 26
+	CASE 12
+		SPLIT ",음모,종,의 음모,",",",LOCALS
+		LOCAL:1 = 24
+ENDSELECT
+
+PRINTFORML %LOCALS:0% %LOCALS:1%의 숫자:{FLAG:(500+ARG)}%LOCALS:2%
+DRAWLINE
+LOCAL = 0
+REPEAT 500
+	;표시부일 경우에는 제외
+	SIF GET_LIST(COUNT) == 0
+		CONTINUE
+	;어디서 어디까지 진열하는가
+	LOCAL:3 += 1
+	SIF LOCAL:3 <= (ARG:1 * 20) || LOCAL:3 > ((ARG:1 + 1) * 20)
+		CONTINUE
+	SIF DITEMTYPE:(100+COUNT):(100+ARG) == 0 || ITEMPRICE:(COUNT+100) == 0
+		CONTINUE
+	IF ARG == 2
+		;황금수
+		CALL NAME_GOLDWATER, COUNT
+		LOCALS:5 = %TSTR:2%
+	ELSEIF ARG == 3
+		;애액
+		CALL NAME_LOVEWATER, COUNT
+		LOCALS:5 = %TSTR:2%
+	ELSEIF ARG == 6
+		;팬티
+		TSTR:1 = %ITEMNAME:(100+COUNT)%
+		CALL NAME_PANTY, COUNT
+		LOCALS:5 = [%TSTR:2%]
+	ELSEIF ARG == 9
+		;모유
+		CALL NAME_MILK, COUNT
+		LOCALS:5 = %TSTR:2%
+	ELSE
+		LOCALS:5 = [%ITEMNAME:(COUNT+100)%%LOCALS:3%]
+	ENDIF
+
+	IF LOCALS:4 != ""
+		LOCAL:2 = MIN(DITEMTYPE:(100+COUNT):(100+ARG), 999)
+		PRINTFORM %LOCALS:5, LOCAL:1, LEFT%:{LOCAL:2, 3}%LOCALS:4%
+	ELSE
+
+		;토리코모드 - 의뢰소에 납품가능 상태일때만
+		IF FLAG:5010 == 4
+			PRINTFORM %LOCALS:5, LOCAL:1, LEFT%x{DITEMTYPE:(100+COUNT):(100+ARG)}개
+		;일반모드
+		ELSE
+			PRINTFORM %LOCALS:5, LOCAL:1, LEFT%
+		ENDIF
+
+	ENDIF
+
+	;개행 or 표시 위치 띄우기
+	LOCAL += 1
+	IF (LOCAL % 2) == 0
+		PRINTL 
+	ELSE
+		PRINT	　
+	ENDIF
+
+REND
+SIF (LOCAL % 2) != 0
+	PRINTL 

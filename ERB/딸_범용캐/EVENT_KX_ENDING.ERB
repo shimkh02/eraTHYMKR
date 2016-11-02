@@ -1,0 +1,1600 @@
+﻿;=============================================================================
+;범용 대사 제너레이터 추가 부분, 조수 전환 부분 증보 처리
+;=============================================================================
+;--------------------------------------------------
+;@KOJO_MESSAGE_CHANGEASSI関係
+;助手切り替え時に出力されます. 
+;--------------------------------------------------
+@KOJO_MESSAGE_CHANGEASSI_X
+;眠ってる・気絶中・口枷つきは戻る
+SIF EQUIP:14 || TEQUIP:42 == 1 || TEQUIP:42 == 2 || TFLAG:899 >= 1
+	RETURN 0
+;汎用口上不使用なら戻る
+SIF FLAG:22 == 0
+	RETURN 0
+
+IF ASSIPLAY
+	;とりあえずうるさくなりすぎるのでやめておく
+	TRYCALL KOJO_MESSAGE_LEAVE_ASSI
+	RETURN 0
+ELSE
+	TRYCALL KOJO_MESSAGE_IN_ASSI
+	RETURN 0
+ENDIF
+
+;--------------------------------------------------
+;조수가 들어갈 때
+;--------------------------------------------------
+@KOJO_MESSAGE_IN_ASSI
+
+TRYCALL JINKAKU
+
+;口上表示をOFFの場合は戻る
+SIF FLAG:11 <= 0
+	RETURN 0
+;眠ってる・気絶中・口枷つきも戻る
+SIF EQUIP:14 || TEQUIP:42 == 1 || TEQUIP:42 == 2 || TFLAG:899 >= 1
+	RETURN 0
+;口上が存在するかメディとメディの娘以外の人形かオトコの場合も戻る
+RESULT = 0
+TRYCALLFORM TRY_{NO:TARGET}
+SIF RESULT == 1
+	RETURN 0
+SIF (TALENT:120 && CFLAG:4995 != 2) || (TALENT:208 && NO:TARGET != 33 && CFLAG:3100 != 33)
+	RETURN 0
+
+;반발각인 Lv3에 조수가 오빠
+IF MARK:9 == 3 && CHARA_RELATION(TARGET, ASSI) == 1 && TALENT:ASSI:120
+	IF CFLAG:3005 == 3
+		PRINTFORML 「오라버니도 좀 적당히 하시죠…」
+		PRINTFORMW 「%조사처리(STR:401,"와")% 함께 처리해버리고 싶네요」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「오빠도 슬슬 제대로 생각을 하는 편이 좋을 거야」
+		PRINTFORMW 「%STR:401%에게 어느샌가 버려지게 될지도 몰라」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「오빠도 용서할 수 없어…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭 하고 한 마디, 그렇게 중얼거렸다…
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「슬픈 일이네요」
+		PRINTFORMW 「%STR:400%도 오빠도…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「오빠도, 그런 거였군요…」
+		PRINTFORMW 「%STR:401%도 좀 더, 즐겁게 섹스하는 방법을 강구해봐요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORML 「돌아가」
+		PRINTFORMW 「오빠 따위 완전 싫어!」
+	ENDIF
+	RETURN 1
+
+;반발각인 Lv3에 조수가 언니
+ELSEIF MARK:9 == 3 && CHARA_RELATION(TARGET, ASSI) == 1
+	IF CFLAG:3005 == 3
+		PRINTFORML 「언니도 좀 적당히 하시죠…」
+		PRINTFORMW 「%조사처리(STR:401,"와")% 함께 처리해버리고 싶네요」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「언니도 슬슬 제대로 생각을 하는 편이 좋을 거야」
+		PRINTFORMW 「%STR:401%에게 어느샌가 버려지게 될지도 몰라」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「언니도 용서할 수 없어…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭 하고 한 마디, 그렇게 중얼거렸다…
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「슬픈 일이네요」
+		PRINTFORMW 「%STR:400%도 언니도…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「언니도, 그런 거였군요…」
+		PRINTFORMW 「%STR:401%도 좀 더, 즐겁게 섹스하는 방법을 강구해봐요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORML 「돌아가」
+		PRINTFORMW 「언니 따위 완전 싫어!」
+	ENDIF
+	RETURN 1
+
+;반발각인 Lv3에 조수가 손윗사람
+ELSEIF MARK:9 == 3 && CHARA_RELATION(TARGET, ASSI) == 2
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI% 씨도 좀 적당히 하시죠…」
+		PRINTFORMW 「%조사처리(STR:401,"와")% 함께 처리해버리고 싶네요」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI%도 슬슬 제대로 생각을 하는 편이 좋을 거야」
+		PRINTFORMW 「%STR:401%에게 어느샌가 버려지게 될지도 몰라」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%CALLNAME:ASSI% 씨도 용서할 수 없어…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭 하고 한 마디, 그렇게 중얼거렸다…
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「슬픈 일이네요」
+		PRINTFORMW 「%STR:400%도 %CALLNAME:ASSI%도…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI% 씨도, 그런 거였군요…」
+		PRINTFORMW 「%STR:401%도 좀 더, 즐겁게 섹스하는 방법을 강구해봐요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORML 「돌아가」
+		PRINTFORMW 「%CALLNAME:ASSI% 따위 완전 싫어!」
+	ENDIF
+	RETURN 1
+
+;반발각인 Lv3에 조수가 엄마
+ELSEIF MARK:9 == 3 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%조사처리(STR:404,"는")% 잘도 이런 곳에서 참고 살았네요…」
+		PRINTFORMW 「그게 아니면 이미 포기해버리신 걸까?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「하아, 이제 당신을 %조사처리(STR:404,"라")%고 생각할 수는 없겠네…」
+		PRINTFORMW 「어쨌건, 시시한 짓거리는 작작 좀 해줬으면 좋겠어」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%STR:404%도 그냥 도망쳐버리는 쪽이 좋지 않겠어요?」
+		PRINTFORMW 「%STR:401%에게 양심 따위는 찾아볼 수도 없으니까…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「…%조사처리(STR:404,"는")% 도망치지 않는 건가요? 이런 지옥에서?」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%STR:404%도, 그런 거였군요…」
+		PRINTFORMW 「%STR:401%도 좀 더, 즐겁게 섹스하는 방법을 강구해봐요…」
+	ELSEIF CFLAG:3005 == 4 && NO == 149
+		PRINTFORMW 「으앙~! %CALLNAME:ASSI%, 같이 도망치자!」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「…이 틈에, %조사처리(CALLNAME:ASSI,"라")%도 여기서 도망칠 수 있게 해줄게!」
+	ENDIF
+	RETURN 1
+
+;반발각인 Lv3에 조수가 딸
+ELSEIF MARK:9 == 3 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:ASSI:3106 == CFLAG:3109)
+	IF CFLAG:3005 == 3
+		PRINTFORML 「하아, 이딴 곳…, %CALLNAME:ASSI%도 같이 나갈 생각은 없니?」
+		PRINTFORMW 「엄마는 완전히 지쳐버렸단다…」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI%도 슬슬 이딴 바보랑은 연을 끊어버려」
+		PRINTFORMW 「정말이지, 터무니가 없다니까…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「후우, %CALLNAME:ASSI%도 심한 일을 당한 거겠지…」
+		PRINTFORMW 「정말로 %조사처리(STR:401,"는")% 분별이라는 게 없으니까」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「…어머니는 이제 한계네요, %CALLNAME:ASSI%도 어머니와 함께 도망치고 싶지 않나요?」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%도, 그런 거였군요…」
+		PRINTFORMW 「%STR:401%도 좀 더, 즐겁게 섹스하는 방법을 강구해봐요…」
+	ELSEIF CFLAG:3005 == 4 && NO == 149
+		PRINTFORMW 「우에~엥! %CALLNAME:ASSI%, 같이 도망치자!」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「…이 틈에, %CALLNAME:ASSI%만이라도 도망칠 수 있게 해줄게!」
+	ENDIF
+	RETURN 1
+
+;반발각인Lv3
+ELSEIF MARK:9 == 3
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI%도 각오해두는 게 좋을 거예요…」
+		PRINTFORMW 「%STR:401%의 다음 놀잇감 정도에 불과할 테니까」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI%도 잘 생각해 두는게 좋을 거야」
+		PRINTFORMW 「%STR:401%에게 언제 버려질지 몰라」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%CALLNAME:ASSI%도 공범이야…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭하고 한 마디, 그렇게 중얼거렸다…
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「슬픈 일이네요」
+		PRINTFORMW 「%STR:400%도 %CALLNAME:ASSI%도…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%조사처리(STR:401,"는")% 아무래도 요즘 쓸데없는 일만 하는 것 같군요…」
+		PRINTFORMW 「좀 더 즐겁게 섹스하는 방법을 강구해봐요…」
+	ELSEIF CFLAG:3005 == 4 && NO == 149 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+		PRINTFORML 「엄마 같은 거 이제 몰라!」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORML 「돌아가」
+		PRINTFORMW 「%CALLNAME:ASSI% 따위 제일 싫어!」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv1이하고 조수가 오빠
+ELSEIF MARK:2 < 2 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 1 && TALENT:ASSI:120
+	IF CFLAG:3005 == 3
+		PRINTFORML 「오라버님도 참 처량하군요…」
+		PRINTFORMW 「%조사처리(STR:401,"가")% 없어지면 어쩌실 생각이신 걸까」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「그래. 이번엔 오빠인 거네…」
+		PRINTFORMW 「하아…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「오빠도 잘 생각해보는 게 좋을 거예요」
+		PRINTFORMW 「정말이지…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「오빠도, 적당히 좀 해주세요…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「어머나, 이번엔 오빠 차례인가요?」
+		PRINTFORMW 「잘 부탁해요」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「오빠아, %조사처리(STR:401,"는")% 지친 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv1이하고 조수가 언니
+ELSEIF MARK:2 < 2 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 1
+	IF CFLAG:3005 == 3
+		PRINTFORML 「언니도 참 처량하군요…」
+		PRINTFORMW 「%조사처리(STR:401,"가")% 없어지면 어쩌실 생각이신 걸까」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「그래. 이번엔 언니인 거네…」
+		PRINTFORMW 「하아…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「언니도 잘 생각해보는 게 좋을 거예요」
+		PRINTFORMW 「정말이지…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「언니도, 적당히 좀 해주세요…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「어머나, 이번엔 언니 차례인가요?」
+		PRINTFORMW 「잘 부탁해요」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「언니이, %조사처리(STR:401,"는")% 지친 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv1이하고 조수가 손윗사람
+ELSEIF MARK:2 < 2 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 2
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI% 님도 참 처량하군요…」
+		PRINTFORMW 「%조사처리(STR:401,"가")% 없어지면 어쩌실 생각이신 걸까」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「그래. 이번엔 %CALLNAME:ASSI% 씨인거네…」
+		PRINTFORMW 「하아…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%CALLNAME:ASSI% 님도 잘 생각해보는 게 좋을 거예요」
+		PRINTFORMW 「정말이지…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「하아, 적당히 좀 해주세요…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「어머나, 이번엔 %CALLNAME:ASSI%씨 차례인가요?」
+		PRINTFORMW 「잘 부탁드려요」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%CALLNAME:ASSI%, %조사처리(STR:401,"는")% 지친 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv1이하
+ELSEIF MARK:2 < 2 && TALENT:150 == 0
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI%도 참 처량하군요…」
+		PRINTFORMW 「%조사처리(STR:401,"가")% 없어지면 어쩌실 생각이신 걸까」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「그래. 이번엔 %CALLNAME:ASSI%인 거네…」
+		PRINTFORMW 「하아…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%CALLNAME:ASSI%도 잘 생각해보는 게 좋을 거라고」
+		PRINTFORMW 「정말이지…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「아직도 끝난 게 아닌 모양이네요…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「어머나, 조금 수고하네요?」
+		PRINTFORMW 「아무튼, 잘 부탁해요」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%조사처리(STR:401,"는")% 이제 피곤해?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv2고 조수가 오빠
+ELSEIF MARK:2 == 2 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 1 && TALENT:ASSI:120
+	IF CFLAG:3005 == 3
+		PRINTFORML 「오라버님도 이렇게 타락해버리신 거군요…」
+		PRINTFORMW 「어느샌가 %STR:400%도 그렇게 되어버리는 걸까요?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「오빠도 무슨 생각을 하는 거야」
+		PRINTFORMW 「정말이지 어처구니가 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가…오빠도 이렇게…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭하고, 그렇게 중얼거렸다… 
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「어쩐지 이런 것도 나쁘지는 않겠다는 생각이 들기 시작했어요…」
+		PRINTFORMW 「오빠도 그렇게 생각하시나요?」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「오빠는 지금 정도로 만족하나요?」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 좀 더 기분 좋아질 수 있을 거라 생각해요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「이번엔 오빠가 기분 좋게 해주는 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv2고 조수가 언니
+ELSEIF MARK:2 == 2 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 1
+	IF CFLAG:3005 == 3
+		PRINTFORML 「언니도 이렇게 타락해버리신 거군요…」
+		PRINTFORMW 「어느샌가 %STR:400%도 그렇게 되어버리는 걸까요?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「언니도 무슨 생각을 하는 거야」
+		PRINTFORMW 「정말이지 어처구니가 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가…언니도 이렇게…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭하고, 그렇게 중얼거렸다… 
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「어쩐지 이런 것도 나쁘지는 않겠다는 생각이 들기 시작했어요…」
+		PRINTFORMW 「언니도 그렇게 생각하시나요?」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「언니는 지금 정도로 만족하나요?」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 좀 더 기분 좋아질 수 있을 거라 생각해요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「이번엔 언니가 기분 좋게 해주는 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv2고 조수가 손윗사람
+ELSEIF MARK:2 == 2 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 2
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI% 님도 이렇게 타락해버리신 거군요…」
+		PRINTFORMW 「어느샌가 %STR:400%도 그렇게 되어버리는 걸까요?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI% 씨도 무슨 생각을 하는 거야」
+		PRINTFORMW 「정말이지 어처구니가 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가…. %CALLNAME:ASSI% 님도 이렇게…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭하고, 그렇게 중얼거렸다… 
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「어쩐지 이런 것도 나쁘지는 않겠다는 생각이 들기 시작했어요…」
+		PRINTFORMW 「%CALLNAME:ASSI% 님도 그렇게 생각하시나요?」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%씨는 지금 정도로 만족하나요?」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 좀 더 기분 좋아질 수 있을 거라 생각해요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「이번엔 %CALLNAME:ASSI% 님이 기분 좋게 해주는 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF MARK:2 == 2 && TALENT:150 == 0
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI%도 이렇게 타락해버리신 거군요…」
+		PRINTFORMW 「어느샌가 %STR:400%도 그렇게 되어버리는 걸까요?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI%도 무슨 생각을 하는 거야」
+		PRINTFORMW 「정말이지 어처구니가 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가…. %CALLNAME:ASSI%도 이렇게…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 툭하고, 그렇게 중얼거렸다… 
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「어쩐지 이런 것도 나쁘지는 않겠다는 생각이 들기 시작했어요…」
+		PRINTFORMW 「%CALLNAME:ASSI%도 그렇게 생각하시나요?」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%조사처리(CALLNAME:ASSI,"는")% 지금 정도로 만족하나요?」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 좀 더 기분 좋아질 수 있을 거라 생각해요…」
+	ELSEIF CFLAG:3005 == 4 && NO == 149 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+		PRINTFORMW 「엄마― 기분 좋게 해 줄거야?」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%CALLNAME:ASSI%, 기분 좋게 해주는 거야?」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv3이고 조수가 오빠
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 1 && TALENT:ASSI:120
+	IF CFLAG:3005 == 3
+		PRINTFORML 「뭐, 이런 것도 나쁘지는 않은 것 같네요…」
+		PRINTFORMW 「오라버님도 그렇게 생각하지 않으시는지?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%STR:400%의 몸은 아직 만족하고 있지 않아」
+		PRINTFORMW 「오빠의 솜씨라는 걸 한번 기대해보겠어」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가, 오빠에게는 수고를 끼치네…」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 아직 기분 좋아지고 싶거든요」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%STR:401%, 수고하셨습니다」
+		PRINTFORMW 「오빠, 계속해서 해주세요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「이번엔 오빠군요. %조사처리(STR:400,"는")% 아직 만족스럽지 않으니」
+		PRINTFORMW 「함께 더욱 기분 좋아져 볼까요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「아직, 부족한데 말이야…. 오빠아…」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv3이고 조수가 언니
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 1
+	IF CFLAG:3005 == 3
+		PRINTFORML 「뭐, 이런 것도 나쁘지는 않은 것 같네요…」
+		PRINTFORMW 「언니도 그렇게 생각하지 않으시는지?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%STR:400%의 몸은 아직 만족하고 있지 않아」
+		PRINTFORMW 「언니의 솜씨라는 걸 한번 기대해보겠어」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가, 언니에게는 수고를 끼치네…」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 아직 기분 좋아지고 싶거든요」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%STR:401%, 수고하셨습니다」
+		PRINTFORMW 「언니, 계속해서 해주세요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「이번엔 언니군요. %조사처리(STR:400,"는")% 아직 만족스럽지 않으니」
+		PRINTFORMW 「함께 더욱 기분 좋아져 볼까요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「아직, 부족한데 말이야…. 언니이…」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv3이고 조수가 손윗사람
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && CHARA_RELATION(TARGET, ASSI) == 2
+	IF CFLAG:3005 == 3
+		PRINTFORML 「뭐, 이런 것도 나쁘지는 않은 것 같네요…」
+		PRINTFORMW 「%CALLNAME:ASSI% 님도 그렇게 생각하지 않으시는지?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%STR:400%의 몸은 아직 만족하고 있지 않아」
+		PRINTFORMW 「%CALLNAME:ASSI% 씨의 솜씨라는 걸 한번 기대해보겠어」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가, %CALLNAME:ASSI% 씨에게는 수고를 끼치네…」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 아직 더 기분 좋아지고 싶거든요」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%STR:401%, 수고하셨습니다」
+		PRINTFORMW 「%CALLNAME:ASSI% 님, 계속해서 해주세요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「이번엔 %CALLNAME:ASSI%씨군요. %조사처리(STR:400,"는")% 아직 만족스럽지 않으니」
+		PRINTFORMW 「함께 더욱 기분 좋아져 볼까요…」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「아직, 부족한데 말이야…. %CALLNAME:ASSI% 님…」
+	ENDIF
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	IF CFLAG:3005 == 3
+		PRINTFORML 「뭐, 이런 것도 나쁘지 않을지도…」
+		PRINTFORMW 「%CALLNAME:ASSI%도 그렇게 생각하지 않나요?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%STR:400%의 몸은 아직 만족하고 있지 않아」
+		PRINTFORMW 「%CALLNAME:ASSI%의 솜씨라는 걸 한번 기대해보겠어」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「그런가, %CALLNAME:ASSI%에게는 수고를 끼치네」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 아직 기분 좋아지지 않았다고」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%STR:401%, 수고하셨습니다」
+		PRINTFORMW 「%CALLNAME:ASSI%, 다음을 부탁합니다」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「이번엔 %조사처리(CALLNAME:ASSI,"랑")% 하는군요. %조사처리(STR:400,"는")% 아직 만족스럽지 않으니」
+		PRINTFORMW 「함께 더욱 기분 좋아져 볼까요…」
+	ELSEIF CFLAG:3005 == 4 && NO == 149 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+		PRINTFORML 「엄마― 나 아직 무지무지 부족해!」
+		PRINTFORMW 「좀 더 좀 더어!」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「아직, 부족한 것 같아…」
+	ENDIF
+	RETURN 1
+
+;친애 또는 연모고 조수가 엄마
+ELSEIF (TALENT:152 || TALENT:150) && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+	IF CFLAG:3005 == 3
+		PRINTFORML 「언제까지 %조사처리(STR:400,"를")% 어린애 취급하실 생각이신 걸까요?」
+		PRINTFORMW 「%조사처리(STR:404,"가")% 도와주시지 않으셔도 %조사처리(STR:401,"를")% 기쁘게 하는 방법 정도는 알고 있습니다」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「으와, %CALLNAME:ASSI%도 과보호가 지나쳐…」
+		PRINTFORMW 「그렇게 걱정하지 않아도 되니까 %STR:401%의 건은 맡겨두라고…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「이제 %STR:404%의 도움은 필요 없다고…」
+		PRINTFORMW 「제대로, %조사처리(STR:401,"와")% 서로 사랑을 나누고 있으니까」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「…방해라구요, %STR:404%」
+		PRINTFORMW 「%조사처리(STR:400,"는")% 지금 엄청 바쁘니까…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%STR:404%도 같이 기분 좋아질까요…」
+		PRINTFORMW 「온가족이 기분 좋아지면 좋죠♪」
+	ELSEIF CFLAG:3005 == 4 && NO == 149
+		PRINTFORMW 「같이 %STR:401%한테 잔뜩 귀여움 받자♪ 엄마―♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「우우, %조사처리(STR:404,"가")% 여기까지 해줄 필요는 없어!」
+	ENDIF
+	RETURN 1
+
+;친애 또는 연모고 조수가 딸
+ELSEIF (TALENT:152 || TALENT:150) && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:ASSI:3106 == CFLAG:3109)
+	IF CFLAG:3005 == 3
+		PRINTFORML 「이봐요? %조사처리(CALLNAME:ASSI,"는")% 이런 데에서 노는 거 아니에요」
+		PRINTFORMW 「어머님은 중요한 일을 하고 있는 거니까」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI%도 어리광이 부리고 싶은 걸까?」
+		PRINTFORMW 「정말이지 어쩔 수 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「이봐이봐, %조사처리(CALLNAME:ASSI,"는")% 이런 일 하지 않아도 돼…」
+		PRINTFORMW 「정말이지, 이런 것만 계속 보여주니까 위신이 안 서잖아」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「…이봐요? %조사처리(CALLNAME:ASSI,"는")% 저쪽에 가서 노세요!」
+		PRINTFORMW 「엄마는 아주 바쁘니까」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%도 같이 기분 좋아질까요…」
+		PRINTFORMW 「온가족이 기분 좋아지면 좋죠♪」
+	ELSEIF CFLAG:3005 == 4 && NO == 149
+		PRINTFORMW 「같이 %STR:401%한테 잔뜩 귀여움 받자♪ %CALLNAME:ASSI%쨩♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%조사처리(CALLNAME:ASSI,"는")% 절로 가 있어! 엄마 지금 바쁘니깐!」
+	ENDIF
+	RETURN 1
+
+;친애고 조수가 오빠
+ELSEIF TALENT:152 && CHARA_RELATION(TARGET, ASSI) == 1 && TALENT:ASSI:120
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%조사처리(STR:400,"와")% %STR:401%의 사이에 다른 사람은 필요 없는데…」
+		PRINTFORMW 「오빠도 좀 사양해주시지 않겠습니까?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「분위기 좀 읽어주지 않을래? 오빠?」
+		PRINTFORMW 「어쨌든 %조사처리(STR:400,"는")% %조사처리(STR:401,"와")% 서로 사랑하고 싶다고!」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「뭐, 복잡하네…」
+		PRINTFORMW 「될 수 있으면 오빠는 좀 사양하고 싶은데」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「…될 수 있으면 %조사처리(STR:401,"가")% 해주셨으면 좋겠습니다」
+		PRINTFORMW 「오빠가 싫다는 말은 아니지만요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「오빠도 같이 기분 좋아질까요…」
+		PRINTFORMW 「온가족이 기분 좋아지면 좋죠♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「오빠 방해야! 역시 난 %STR:401% 쪽이 좋아!」
+	ENDIF
+	RETURN 1
+
+;친애고 조수가 언니
+ELSEIF TALENT:152 && CHARA_RELATION(TARGET, ASSI) == 1
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%조사처리(STR:400,"와")% %STR:401%의 사이에 다른 사람은 필요 없는데…」
+		PRINTFORMW 「언니도 좀 사양해주시지 않겠습니까?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「분위기 좀 읽어주지 않을래? 언니?」
+		PRINTFORMW 「어쨌든 %조사처리(STR:400,"는")% %조사처리(STR:401,"와")% 서로 사랑하고 싶다고!」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「뭐, 복잡하네…」
+		PRINTFORMW 「될 수 있으면 언니는 좀 사양하고 싶은데」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「…될 수 있으면 %조사처리(STR:401,"가")% 해주셨으면 좋겠습니다」
+		PRINTFORMW 「언니가 싫다는 말은 아니지만요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「언니도 같이 기분 좋아질까요…」
+		PRINTFORMW 「온가족이 기분 좋아지면 좋죠♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「언니 방해야! 역시 난 %STR:401% 쪽이 좋아!」
+	ENDIF
+	RETURN 1
+
+;친애고 조수가 손윗사람
+ELSEIF TALENT:152 && CHARA_RELATION(TARGET, ASSI) == 2
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%조사처리(STR:400,"와")% %STR:401%의 사이에 다른 사람은 필요 없는데…」
+		PRINTFORMW 「%CALLNAME:ASSI% 님도 좀 사양해주시지 않겠습니까?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「분위기 좀 읽어주지 않을래? %CALLNAME:ASSI%?」
+		PRINTFORMW 「어쨌든 %조사처리(STR:400,"는")% %조사처리(STR:401,"와")% 서로 사랑하고 싶다고!」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「뭐, 복잡하네…」
+		PRINTFORMW 「될 수 있으면 %조사처리(CALLNAME:ASSI,"는")% 좀 사양하고 싶은데」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「…될 수 있으면 %조사처리(STR:401,"가")% 해주셨으면 좋겠습니다」
+		PRINTFORMW 「%조사처리(CALLNAME:ASSI,"가")% 싫다는 말은 아니지만요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%씨도 같이 기분 좋아질까요…」
+		PRINTFORMW 「다같이 기분 좋아지면 좋죠♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%CALLNAME:ASSI% 방해돼! 역시 난 %STR:401% 쪽이 좋아!」
+	ENDIF
+	RETURN 1
+	
+;친애고 대상과 조수의 궁합이 좋은 경우
+ELSEIF TALENT:152 && RELATION:(NO:ASSI) >= 150
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI%도 참을 수 없었나 보네요…」
+		PRINTFORMW 「뭐, 그야 %STR:400%의 아름다움을 보고서는 어쩔 수 없는 거겠죠♪」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI%인가…」
+		PRINTFORMW 「뭐, %STR:401%가 대신 했으면 좋긴 하지만…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「음, 이번엔 %조사처리(CALLNAME:ASSI,"가")% 대신 해주는 건가…」
+		PRINTFORMW 「그렇다면, 잘 부탁한다…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%조사처리(CALLNAME:ASSI,"와")% 하는 것도, 좋을 것 같네요」
+		PRINTFORMW 「%조사처리(STR:400,"와")% %STR:401%까지, 3명이서 즐겼으면 좋겠어요…」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%도 같이 기분 좋아져요♪」
+		PRINTFORMW 「모두가 이렇게 즐거우니 행복하군요♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORML 「응? 이번에는 %조사처리(CALLNAME:ASSI,"가")% 놀아주는 거야?」
+		PRINTFORMW 「그럼 셋이서 하자! 엄청 즐거울 거야!」
+	ENDIF
+	RETURN 1
+
+;친애
+ELSEIF TALENT:152 
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%조사처리(STR:400,"와")% %STR:401%의 사이에 다른 사람은 필요 없는데…」
+		PRINTFORMW 「어째서 %CALLNAME:ASSI% 따위가 간섭하려 드는 걸까요」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「분위기 좀 읽어주지 않을래? %CALLNAME:ASSI%?」
+		PRINTFORMW 「어쨌든 %조사처리(STR:400,"는")% %조사처리(STR:401,"와")% 서로 사랑하고 싶다고!」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「뭐, 복잡하네…」
+		PRINTFORMW 「될 수 있으면 %조사처리(STR:401,"와")% 단 둘이었으면 좋았을텐데」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「…될 수 있으면 %조사처리(STR:401,"가")% 해주셨으면 좋겠습니다」
+		PRINTFORMW 「%조사처리(CALLNAME:ASSI,"가")% 싫다는 말은 아니지만요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%도 같이 기분 좋아질까요…」
+		PRINTFORMW 「다같이 기분 좋아지면 좋겠죠…」
+	ELSEIF CFLAG:3005 == 4 && NO == 149 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+		PRINTFORMW 「엄마보다두 %조사처리(STR:401,"를")% 훨씬 더 좋아한다 뭐!」
+	ELSEIF CFLAG:3005 == 4
+		IF NO:ASSI == 22 && (CFLAG:7020 == 1 || CFLAG:7020 == 2)
+			PRINTFORMW 「앗, 유카리 언니다! 에헤헷!」
+		ELSE
+			PRINTFORMW 「%CALLNAME:ASSI% 방해돼! 역시 %조사처리(STR:400,"는")% %STR:401% 쪽이 좋아!」
+		ENDIF
+	ENDIF
+	RETURN 1
+
+;연모고 조수가 오빠
+ELSEIF TALENT:150 && CHARA_RELATION(TARGET, ASSI) == 1 && TALENT:ASSI:120
+	IF CFLAG:3005 == 3
+		PRINTFORML 「오라버니입니까…」
+		PRINTFORMW 「뭐, 그…잘 부탁드리겠어요…」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「오빠, 인 건가…」
+		PRINTFORMW 「수고하셔라고 밖에는 할 말이 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「오빠인가요…」
+		PRINTFORMW 「뭐, %STR:401%의 명령이라면 어쩔 수 없지만 말이죠…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「오빠도 함께인 거네요…」
+		PRINTFORMW 「%STR:400%도 힘낼게요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「오빠도 같이 기분 좋아질까요…」
+		PRINTFORMW 「괜찮아요. %STR:400%도 열심히 하겠어요♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「오빠도 기분 좋아지고 싶어?」
+	ENDIF
+	RETURN 1
+
+;연모고 조수가 언니
+ELSEIF TALENT:150 && CHARA_RELATION(TARGET, ASSI) == 1
+	IF CFLAG:3005 == 3
+		PRINTFORML 「언니입니까…」
+		PRINTFORMW 「뭐, 그… 잘 부탁드리겠어요…」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「언니, 인 건가…」
+		PRINTFORMW 「수고하셔라고 밖에는 할 말이 없네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「언니인가요…」
+		PRINTFORMW 「뭐, %STR:401%의 명령이라면 어쩔 수 없지만 말이죠…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「언니도 함께인 거네요…」
+		PRINTFORMW 「%STR:400%도 힘낼게요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「언니도 같이 기분 좋아질까요…」
+		PRINTFORMW 「괜찮아요. %STR:400%도 열심히 하겠어요♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「언니도 기분 좋아지고 싶어?」
+	ENDIF
+	RETURN 1
+
+;연모고 조수가 손윗사람
+ELSEIF TALENT:150 && CHARA_RELATION(TARGET, ASSI) == 2
+	IF CFLAG:3005 == 3
+		PRINTFORML 「%CALLNAME:ASSI% 님 인가요…」
+		PRINTFORMW 「뭐, 그…잘 부탁드리겠어요…」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%CALLNAME:ASSI% 씨, 였던가…」
+		PRINTFORMW 「수고하세요 라는 말 밖에는 못하겠네…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%CALLNAME:ASSI%인가요…」
+		PRINTFORMW 「뭐, %STR:401%의 명령이라면 어쩔 수 없습니다만…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%CALLNAME:ASSI% 씨도 같이인 거네요…」
+		PRINTFORMW 「%STR:400%도 힘낼게요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI% 씨도 같이 기분 좋아질까요…」
+		PRINTFORMW 「괜찮아요. %STR:400%도 열심히 하겠어요♪」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%CALLNAME:ASSI% 님도 기분 좋게 되고 싶은 거야?」
+	ENDIF
+	RETURN 1
+
+;연모
+ELSE
+	IF CFLAG:3005 == 3
+		PRINTFORML 「헤에…」
+		PRINTFORMW 「%CALLNAME:ASSI% 말이죠, 흐응?」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORML 「%STR:401%도 뭘 생각하고 있는 걸까?」
+		PRINTFORMW 「%CALLNAME:ASSI% 따위 아무래도 좋은데…」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORML 「%CALLNAME:ASSI% 인가요…」
+		PRINTFORMW 「뭐, %STR:401%의 명령이라면 어쩔 수 없습니다만…」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORML 「%CALLNAME:ASSI% 씨도 함께 하는 거네요…」
+		PRINTFORMW 「%STR:400%도 힘낼게요」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORML 「%CALLNAME:ASSI%도 같이 기분 좋아질까요…」
+		PRINTFORMW 「괜찮아요. %STR:400%도 열심히 하겠어요♪」
+	ELSEIF CFLAG:3005 == 4 && NO == 149 && (CFLAG:ASSI:3105 == CFLAG:3109 || CFLAG:3106 == CFLAG:ASSI:3109)
+		PRINTFORMW 「엄마도 기분 좋아지고 싶어?」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「%CALLNAME:ASSI% 님도 기분 좋아지고 싶은 거야?」
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+
+;=============================================================================
+;범용 대사 제너레이터 엔딩 대사의 처리
+;=============================================================================
+;-------------------------------------------------
+;단독 엔딩
+;-------------------------------------------------
+@SINGLE_ENDING_X
+;범용 대사 미사용이라면 돌아간다
+SIF FLAG:22 == 1
+	RETURN 0
+
+TRYCALL JINKAKU
+
+DRAWLINE
+PRINTW ―――단독 엔딩 조건 달성―――
+PRINTW …………
+PRINTW ………
+PRINTW ……
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"와")% 맺어져, 가정을 만들었다.
+PRINTFORMW 조교사로서의 일은 계속하고 있으며, 그 옆에서 %조사처리(CALLNAME:TARGET,"는")% 이해심 있는 아내로서,
+PRINTFORMW 때론 우수한 조수로서, %CALLNAME:MASTER%의 일을 돕고 있었다.
+WAIT
+	IF CFLAG:3005 == 3
+		PRINTFORMW 「%STR:400%들, 이상한 가정처럼 보이는 것 같네요」
+		PRINTFORMW 「쾌락에서 시작된 의존과 사랑에는, 이것이 상응하는 대가라는거겠죠…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%, 키득 웃고는 %CALLNAME:MASTER%에게 아양을 떨며 기대었다.
+		PRINTFORMW 「자, %조사처리(STR:400,"를")% 제대로 붙잡아주세요, 저의 친애하는 주인님」
+		PRINTFORMW 「잠깐도 떨어질 수 없을 만큼, 당신의 몸에 빠지게 해주시련지──」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORMW 「…오늘의 아이는 허세가 심하네. 옛날의 %STR:400% 같아」
+		PRINTFORMW 「%STR:401%, 당신은 %STR:400% 같은 아이에게 다시 반해버리면 어떻게 할거야?」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 쓴웃음을 지으며, %조사처리(CALLNAME:TARGET,"가")% 제일이라고 대답했다.
+		PRINTFORMW 「자아, 그럼 증명을 해봐. 누구보다도 기분 좋게 해주는거야……?」
+		PRINTFORMW 「언제까지고, 계속해서 %STR:400%의 몸에 사랑을 새겨줘――」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORMW 「아직도 믿기지가 않는다니까?」
+		PRINTFORMW 「아아… 솔직히, 너무 행복해서 괜히 믿겨지지가 않아 %STR:403%」
+		PRINTFORMW 「그러니까, 오늘도 내일도 모래도 그 다음도, 계속」
+		PRINTFORMW 「%조사처리(STR:400,"가")% 불안해 지지 않도록, 쓸데없는 걸 생각하지 않도록」
+		PRINTFORMW 「계속, %STR:401%의 노예로 있을 수 있도록, 범해주었으면 좋겠어――」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「오늘의 저녁은 굴 튀김과 로스트 비프, 그리고 뱀술이에요」
+		PRINTFORMW 「안 돼요, 제대로 먹어주세요. 당신 노예 아이에게 쭉쭉 싸버렸잖아요」
+		PRINTFORMW 「%조사처리(STR:400,"가")% 내어주는 양이 적어져버리지 않습니까…♪」
+		PRINTFORMW 「낭군님…자, 서로 사랑을 나눠요, 단 둘이서 계속――♪」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORMW 「자, 오늘도 힘내볼까요♪」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그 말에 소름이 돋았다…
+		PRINTFORMW 원체 \@(TALENT:120) ? 그 # 그녀\@의 욕망에는 끝이 없었기 때문이다
+		PRINTFORMW 「아아… 정말 행복해요♪ 마음껏 섹스를 즐길 수 있다니 참으로 꿈만 같아요♪」
+		PRINTFORMW 「%STR:400%도 앞으로 계속 %조사처리(STR:401,"를")% 범해주세요♪」
+		IF TALENT:157
+			PRINTFORMW 「%STR:401%도 더욱 더 %STR:400%에게 쾌락의 진수를 전해줄테니까요♪」
+			PRINTFORMW 「이런 %STR:400%의 봉사를 아낌없이 받을 수 있는 건 오직 %STR:401%뿐이죠♪」
+		ELSE
+			PRINTFORMW 「물론, 어떤 노예와 같이 해도 상관 없어요?」
+			PRINTFORMW 「쓸데없이 질투할 시간에 즐겁게 난교 파티를 벌이죠♪」
+		ENDIF
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 어느새 주도권을 빼앗기고 말았지만
+		PRINTFORMW 그런데도, 이런 생활이 싫증날 줄을 몰랐다…
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「…잘 먹었습니다― …그럼 식후의 야한 거 하는 시간!」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"를")% 안고 열락에 빠트리면서, 문득 생각했다.
+		PRINTFORMW 「앗 아아앙 앙…응으응, 이제 곧 간식 먹을 시간―…♪」
+		PRINTFORMW 최근엔, %조사처리(CALLNAME:TARGET,"를")% 범하고 %CALLNAME:TARGET%에게 밥지어주고, 또 범하고, 끝나면 또 밥먹고.
+		PRINTFORMW 그걸 반복하는 것만으로도 하루가 다 끝나버린 듯한 느낌이 들고 있다.
+		PRINTFORMW 「저녁밥 먹은 다음엔―, 목욕탕에서 야한 짓 하고, 잠자리에서도 야한짓―♪」
+		PRINTFORMW …신부를 잘못 고른 느낌은 들긴 하지만… 뭐 이건 이거대로, 좋은 거겠지.
+	ENDIF
+WAIT
+PRINTFORMW 둘이서 한가로이 쓴웃음을 나누어가며.
+PRINTFORMW 환상향의 평온한 생활을, 조용하고 행복하게 보내고 있다.
+WAIT
+PRINTW
+PRINTFORMW 　　　　　　　　―― Ending No.{1000+NO:TARGET} (%CALLNAME:TARGET% 엔딩)
+RETURN 0
+
+;-------------------------------------------------
+;노예 엔딩
+;-------------------------------------------------
+@SLAVE_ENDING_X
+;범용 대사 미사용이라면 돌아간다
+SIF FLAG:22 == 1
+	RETURN 0
+
+TRYCALL JINKAKU
+
+DRAWLINE
+PRINTW ―――노예 엔딩 조건 달성―――
+PRINTW …………
+PRINTW ………
+PRINTW ……
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"를")% 자신의 한 팔로서 중요시하고 있다.
+PRINTFORMW 자신의 최고걸작이라고도 할 수 있을 %조사처리(CALLNAME:TARGET,"는")% 주인의 의도를 완벽히 이해하고,
+PRINTFORMW 조교의 조수만이 아닌 여러가지 많은 국면에 있어서 %조사처리(CALLNAME:MASTER,"를")% 돕고 있었다.
+WAIT
+	IF CFLAG:3005 == 3
+		PRINTFORMW 「%STR:401%, 오늘은 어떤 노예를 육성할 생각이십니까?」
+		PRINTFORMW 「지금의 노예들은 모두 얌전한 것들 뿐이라 조금 시시합니다만…」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%, 그렇게 말하면서, %CALLNAME:MASTER%의 지시를 기다린다.
+		PRINTFORMW 「%조사처리(STR:400,"는")% %STR:401%의 측근으로서 신뢰받게 된것에 대해 명예로운 일이라고 생각하고 있어요」
+		PRINTFORMW 「언제까지라도 %조사처리(STR:401,"를")% 위해 최선을 다하겠어요――」
+	ELSEIF CFLAG:3005 == 1
+		PRINTFORMW 「수고했어, %STR:401%. 우선 일단락은 지었네」
+		PRINTFORMW 「그래도 뭐, 아직도 예의범절을 가르치지 않으면 안되는 노예가 있는데?」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 오늘은 여기까지라고 하자, %조사처리(CALLNAME:TARGET,"는")%
+		PRINTFORMW 「알겠어요, 자아, 이틈에 가사를 처리해둬야겠네」
+		PRINTFORMW 「후후, %STR:401%에게 신뢰받고 있다는 생각은 %STR:400%에게 있어 최고의 행복이라고?」
+		PRINTFORMW 「그러니까, 앞으로도 계속 %STR:401%의 옆에서 노력하겠어――」
+	ELSEIF CFLAG:3005 == 2
+		PRINTFORMW 「흠, 꽤나 기가 드센 노예였네…」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 마치 예전의 %CALLNAME:TARGET% 같다고 말하자,
+		PRINTFORMW 「뭐어 그렇게 말하지마…. 솔직히, 스스로도 변했다고 생각하고 있으니까」
+		PRINTFORMW 「그래도, 지금은 충실하게 임하고 있다고. %STR:401%에게서의 신뢰를 느끼고 있으니까 말이야」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:TARGET,"를")% 상냥하게 껴안자, %조사처리(CALLNAME:TARGET,"는")% 이렇게 말했다
+		PRINTFORMW 「계속, %STR:401%의 뒤에서 이렇게 있을게――」
+	ELSEIF CFLAG:3005 == 5
+		PRINTFORMW 「오늘의 교육은 여기까지네요, 수고하셨습니다」
+		PRINTFORMW 「식사와 휴식 후에는 %조사처리(STR:400,"를")% 가르쳐주세요♪」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 이제 와서 또 하냐고 말하자, %조사처리(CALLNAME:TARGET,"는")% 머리를 횡으로 흔들며,
+		PRINTFORMW 「안 돼요! 오늘도 %조사처리(STR:400,"는")% 그만큼이나 실수를 해버렸는걸요」
+		PRINTFORMW 「이건 벌을 받지 않으면 안된다구요? %STR:401%♪」
+		PRINTFORMW 「엣? 주종역전? 무슨 말을 하시는건가요? %STR:400%의 전부는…」
+		PRINTFORMW 「영원히 %STR:401%의 것이라구요? 이제 절대로 떨어지지 않을테니까――」
+	ELSEIF CFLAG:3005 == 6
+		PRINTFORMW 「%STR:401%, 수고하셨습니다」
+		PRINTFORMW 「식사와 휴식 후에는 저기… %STR:400%에게도 잠시 정을 주셨으면 좋겠군요♪」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 쾌락에 탐욕스러운 %조사처리(CALLNAME:TARGET,"를")% 보며 쓴웃음을 지으면서도, 소원대로 해줬다
+		PRINTFORMW 「%조사처리(STR:401,"가")% 친절해서… %STR:400%도 열심히 하는 거예요…」
+		PRINTFORMW 실제로 %조사처리(CALLNAME:TARGET,"는")%, 가사뿐만 아니라 조교에서도 매우 우수한 조수이기에
+		PRINTFORMW \@(TALENT:120) ? 그 # 그녀\@의 손길에 함락하지 않는 노예는 거의 없을 것이다…
+		PRINTFORMW 「이렇게, 매일 매일, 마음껏 쾌락을 누릴 수 있다니♪」
+		PRINTFORMW 「앞으로도, 여러가지로 즐거운 일을 해요♪ %STR:401%――」
+	ELSEIF CFLAG:3005 == 4
+		PRINTFORMW 「…우아아아! 또 그녀석이 괴롭혔어―!」
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"가")% 아직 조교가 덜 된 노예의 반격을 먹었다.
+		PRINTFORMW 「너무했어! 이래봬도 내가 %STR:401%의 제일가는 부하란 말야～～!」
+		PRINTFORMW 머리를 감싸안은 %조사처리(CALLNAME:MASTER,"였")%으나, 이래뵈도 그 말대로 %조사처리(CALLNAME:TARGET,"는")% 잘 해주고 있다
+		PRINTFORMW 평소엔 이래놔도, 정말로 중요한 시점에선 절대 잘못하지 않는다.
+		PRINTFORMW 그리고 무엇보다도, 역시 이런 게 귀엽지 않나 싶다. 뭐 보고 있으면 질리지도 않고.
+		PRINTFORMW 「우우우…, 그치만! 이번엔 안 질 거야!」
+		PRINTFORMW 「그니깐, %CALLNAME:TARGET%, 버리지 말아줘…, 반드시 더 힘낼테니까――」
+	ENDIF	
+WAIT
+PRINTFORM %CALLNAME:TARGET%의 맹세를 
+IF CFLAG:3005 == 5
+	PRINT 믿음직하면서도 조금 무섭다고 생각했지만, 그래도 
+ELSE
+	PRINT 믿음직하다고 생각한 
+ENDIF
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 
+IF TALENT:120 == 1
+	PRINT 그를 
+ELSE
+	PRINT 그녀를 
+ENDIF
+PRINTFORMW 억지로지만 그래도 신뢰와 애정을 담아 끌어당긴 다음 그 음란한 입에 키스를 해 주었다.
+WAIT
+PRINTW
+PRINTFORMW 　　　　　　　　―― Ending No.{1000+NO:TARGET} (%CALLNAME:TARGET% 노예 엔딩)
+RETURN 0
+
+
+
+;=============================================================================
+;범용 대사 제너레이터 추가 부분, 범용 대사 전용 일상생활 이벤트
+;=============================================================================
+;--------------------------------------------------
+;@DAILY_LIFE_MESSAGE 관계
+;휴게 실행시에 출력됩니다
+;선택되는 것은 반드시 TARGET라고는 할 수 없기 때문에, 말존재 판정을 CFLAG:ARG:406을 사용해 특수하게 하고 있습니다
+;--------------------------------------------------
+@DAILY_MESSAGE_X, ARG
+VARSET LOCAL
+;플래그 리셋트
+CFLAG:ARG:406 = 0
+;말표시를 OFF의 경우는
+SIF FLAG:11 <= 0
+	RETURN 0
+;범용 대사미사용이라면
+SIF FLAG:22 == 1
+	RETURN 0
+;범용 대사 전용 일상 이벤트를 허가하고 있지 않으면????(캐릭터별)
+SIF CFLAG:ARG:5303 == 1
+	RETURN 0
+
+;각개 이벤트의 체크
+;겁장이이고 비관적이어서, 약점을 가질까 공포 각인 소유로, 해방과 미약중독을 가지지 않고, 함락 하고 있지 않는 대상에 대해(발생율10%)
+IF (TALENT:ARG:10 || TALENT:ARG:26) && (TALENT:ARG:39 || MARK:ARG:8) && TALENT:ARG:33 == 0 && TALENT:ARG:46 == 0 && TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0 && RAND:10 == 0
+	LOCAL = 1
+;귀신인가 텐구나 황혼의 괴물로, 서로 사랑함이나 예속으로, 반발 각인 없고, 소지금이 1000??그리고, 귀신 죽여 이외의 술아이템이 존재하지 않는 경우, 다만 흡혈귀 소유는 낮은 특주 양산 필수(발생율10%)
+ELSEIF (TALENT:ARG:214 || TALENT:ARG:215 || TALENT:ARG:221) && (TALENT:ARG:153 || TALENT:ARG:162) && (TIME == 1 || ((! TALENT:ARG:205 && ! TALENT:MASTER:205) || ITEM:48 || NOITEM)) && MARK:ARG:9 == 0 && MONEY >= 1000 && ITEM:600+ITEM:601+ITEM:602+ITEM:603+ITEM:604 <= 0 && RAND:10 == 0
+	LOCAL = 2
+;반발 각인 없고, 소품을 선물 되었던 적이 있었을 경우(발생율10%)
+ELSEIF CFLAG:ARG:171 > 0 && MARK:ARG:9 <= 0 && RAND:10 == 0
+	LOCAL = 3
+ENDIF
+
+;이벤트 없으면 종료
+SIF LOCAL <= 0
+	RETURN 0
+
+;범용 대사 전용 일상이 처음이라면 이벤트 발생 가부를 묻는다
+IF CFLAG:ARG:5303 == 0
+	CALL DAILY_KX_PERMISSION_CHECK, ARG
+	;이벤트 발생을 허가하지 않으면????
+	SIF CFLAG:ARG:5303 == 1
+		RETURN 0
+ENDIF
+
+;개별 이벤트 본체 호출
+SELECTCASE LOCAL
+	CASE 1
+		CALL TREMBLES_WITH_FEAR, ARG
+	CASE 2
+		CALL SHOPPING_THE_SAKE, ARG
+	CASE 3
+		CALL WATCH_PRESENT_ITEM, ARG
+ENDSELECT
+CFLAG:ARG:406 = 1
+RETURN 0
+
+;-------------------------------------------------
+;처음의 범용 대사 전용 일상 이벤트시 CFLAG5303
+;-------------------------------------------------
+@DAILY_KX_PERMISSION_CHECK, ARG
+PRINTFORML 범용 대사에 의한 %CALLNAME:ARG%의 범용 대사 전용 일상 이벤트의 발생을 허가하겠습니까?
+PRINTL ※해당 캐릭터 이외에 관계해 별도 묻습니다.
+PRINTL [0] 예
+PRINTL [1] 아니오
+$INPUT_LOOP_KYOKA
+INPUT
+IF RESULT == 0
+	PRINTFORMW 범용 대사에 의한 %CALLNAME:ARG%의 범용 대사 전용 일상 이벤트가 발생합니다
+	CFLAG:ARG:5303 = 2
+ELSEIF RESULT == 1
+	PRINTFORMW 범용 대사에 의한 %CALLNAME:ARG%의 범용 대사 전용 일상 이벤트를 발생시키지 않습니다
+	CFLAG:ARG:5303 = 1
+ELSE
+	GOTO INPUT_LOOP_KYOKA
+ENDIF
+PRINTL 
+
+;-------------------------------------------------
+;공포에 떨리는 노예 이벤트
+;-------------------------------------------------
+@TREMBLES_WITH_FEAR, ARG
+PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% %CALLNAME:ARG%의 방의 앞을 통과하려고 하면(자),
+PRINTW 방중에서, 신음목소리가 들린 것 같은 생각이 들었다.
+PRINTFORMW 방을 보면(자), %조사처리(CALLNAME:ARG,"가")% 이불을 입으면서 떨고 있는 것 같다…
+PRINTL
+PRINTFORMW 그렇게 말하면, %조사처리(CALLNAME:ARG,"는")% \@(TALENT:ARG:10) ?  겁장이 # 겁쟁이\@라고 하는 것은 나누고 있었지만, 그렇다 치더라도 심하다.
+PRINTFORMW 라고 해도…, %CALLNAME:MASTER%\@(TALENT:ARG:39) ?  에 약점을 잡아져 # 의 존재에 무서워해\@떨리고만 있었더니,
+PRINTW 어떻게든 되는 것도 아니지…
+PRINTL
+PRINTFORMW 당분간, 떨리는 %조사처리(CALLNAME:ARG,"를")% 바라보고 있었지만, 전혀 이불로부터 나올 것 같지 않기 때문에,
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 깊게 한숨을 쉬면서 떠났다…
+PRINTL
+PRINTFORMW 그 후도, %CALLNAME:ARG%젓가락 장미구이불 중(안)에서 떨고 있던 것 같다. 곤란한 것이다…
+;"공포?  ??"(JUEL:17) 취득
+IF FLAG:12 & 128 || ! FLAG:997
+	CALL COMMON_DAILYJUEL, ARG, 17, 500 + ((RAND:11) * 50), 1
+	FLAG:997 = 1
+ENDIF
+
+;-------------------------------------------------
+;술쇼핑 이벤트
+;-------------------------------------------------
+@SHOPPING_THE_SAKE, ARG
+PRINTFORMW 술을 좋아하는 %CALLNAME:ARG%에 있어, 임박하고 있던 것은 술이 결핍하고 있다고 하는 것이었다
+PRINTW 그런데도, 당분간은 참고 있었지만, 끝내 인내를 할 수 없게 되어 버렸던 것이다
+PRINTFORMW 그것을 %CALLNAME:MASTER%에 호소했는데, 술을 사러 간다고 하는 흐름이 되어 버렸다…
+PRINTL
+PRINTFORMW 대망의 술이 손에 들어 온다고 되어, %조사처리(CALLNAME:ARG,"는")% 이제(벌써) 기분이 들떠, 당장 뛰쳐나와 갈 것 같다.
+PRINTW 그 태도에 쓴웃음하면서도, 마을까지 쇼핑하러 가기로 했다
+PRINTFORMW \@(TIME == 0 && (TALENT:ARG:205 || TALENT:MASTER:205)) ?  해님 대책도 짭짤하게 해, # 술의 냄새에 이끌리도록(듯이),\@두 명은 구보로 가게까지 향했던 것이다…
+PRINTL
+LOCAL = MAX(MONEY / 500, 10)
+LOCAL:1 = RAND(600, 605)
+PRINTFORMW 결국, %조사처리(ITEMNAME:(LOCAL:1),"를")% {LOCAL}책 구입해, 돌아가기로 했다.
+PRINTFORMW 상당히 비싼 쇼핑이었지만, 다이마다리인%조사처리(CALLNAME:ARG,"를")% 보고 있으면(자), 이것으로 좋았다고 생각한 %CALLNAME:MASTER%에서 만났다…
+MONEY -= LOCAL * 500
+ITEM:(LOCAL:1) += LOCAL
+;호감도(CFLAG:2) 상승,"쿄우준?  ??"(JUEL:12) 취득
+IF FLAG:12 & 128 || ! FLAG:997
+	CALL DAILY_LIFE_MOVE_CFLAG, ARG, 2, 150, 0
+	CALL COMMON_DAILYJUEL, ARG, 12, 400 + ((ABL:ARG:10 + RAND:6) * 40), 1
+	FLAG:997 = 1
+ENDIF
+
+;-------------------------------------------------
+;선물 된 장식물을 바라봐 만족하여 기뻐함 이벤트
+;-------------------------------------------------
+@WATCH_PRESENT_ITEM, ARG
+PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% %CALLNAME:ARG%의 방을 보면(자),
+PRINTFORMW %조사처리(CALLNAME:ARG,"가")% 테이블 위의 장식물을 기쁜듯이 바라보고 있는 모습이 보였다…
+PRINTL
+PRINTFORMW 그 장식물은 이전, %조사처리(CALLNAME:ARG,"가")% 갖고 싶어할 것 같은 태도를 하고 있었으므로, 준 것이었다
+PRINTFORMW 그리운 듯이 보고 있으면(자), %CALLNAME:MASTER%의 존재를 눈치챈%조사처리(CALLNAME:ARG,"는")%,
+IF TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0 && (MARK:ARG:2 < 2 || MARK:ARG:8) && CFLAG:ARG:2 < 500
+	PRINTFORMW 표정을 흐리게 해 장식물을 정리한 뒤에 %CALLNAME:MASTER%에 등을 돌려 버렸다…
+ELSEIF TALENT:ARG:150 || TALENT:ARG:160
+	PRINTFORMW 쑥스러운 듯하게, 그래서 있어 송곳과 답례의 말을 말해 주었다…
+ELSE
+	PRINTFORMW %CALLNAME:MASTER%의 존재에 조금 놀라면서도, 장식물을 받은 것에의 답례는 작은 소리로 말해 주었다…
+ENDIF
+PRINTL
+IF TALENT:ARG:153 || TALENT:ARG:152
+	PRINTFORMW 당분간, %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ARG,"과")% 장식물을 바라보면서 있으면 사귀고 있었던 것이었다…
+ELSEIF TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0 && (MARK:ARG:2 < 2 || MARK:ARG:8) && CFLAG:ARG:2 < 500
+	PRINTFORMW 아직도 기분을 허락해 주지 않는 %CALLNAME:ARG%의 태도를 한탄하면서, %조사처리(CALLNAME:MASTER,"는")% 그 자리를 떠나는 것에서 만났다…
+ELSE
+	PRINTFORMW 당분간, %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:ARG,"과")% 장식물을 바라보면서 수다를 즐긴 것에서 만났다…
+ENDIF
+;호감도(CFLAG:2), 스트레스(CFLAG:65), 애정 경험(EXP:21) 상승,"쿄우준?  ??"(JUEL:12) 취득
+IF FLAG:12 & 128 || ! FLAG:997
+	IF TALENT:ARG:153 || TALENT:ARG:152
+		CALL DAILY_LIFE_MOVE_CFLAG, ARG, 2, 150, 0
+		CALL COMMON_UP_EXP, ARG, 21, 1, 0
+		CALL COMMON_DAILYJUEL, ARG, 12, 400 + ((ABL:ARG:10 + RAND:6) * 40), 1
+	ELSEIF TALENT:ARG:150 || TALENT:ARG:160
+		CALL DAILY_LIFE_MOVE_CFLAG, ARG, 2, 100, 0
+		CALL COMMON_DAILYJUEL, ARG, 12, 300 + ((ABL:ARG:10 + RAND:6) * 30), 1
+	ELSEIF TALENT:ARG:150 == 0 && TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0 && (MARK:ARG:2 < 2 || MARK:ARG:8) && CFLAG:ARG:2 < 500
+		CALL DAILY_LIFE_MOVE_CFLAG, ARG, 65, 50, 0
+	ELSE
+		CALL DAILY_LIFE_MOVE_CFLAG, ARG, 2, 50, 0
+		CALL COMMON_DAILYJUEL, ARG, 12, 200 + ((ABL:ARG:10 + RAND:6) * 20), 1
+	ENDIF
+	FLAG:997 = 1
+ENDIF
+
+;=============================================================================
+;범용 대사 제너레이터 매각 후 에피소드의 처리
+;=============================================================================
+;-------------------------------------------------
+;매각 후 에피소드 세트
+;-------------------------------------------------
+@SET_SLAVE_AFTERWARDS_KX, ARG
+;범용 대사미사용이라면????
+SIF FLAG:22 == 1
+	RETURN 0
+;대상을 퇴피해 TFLAG:710을 대상으로 한다.
+LOCAL = TARGET
+TARGET = TFLAG:710
+
+;에피소드 플래그 초기화
+LOCAL:1 = 0
+;REVERSAL 모드로 조교 대상이 당신 때도????
+;SIF FLAG:4 == 3 && NO:TARGET == 0
+;	RETURN 0
+;남자인가 말할 수가 없는 인형 때도????
+SIF (TALENT:120 && CFLAG:4995 != 2) || TALENT:208 == 1
+	RETURN 0
+
+;가창 기능 5＋인기로 난수
+IF ABL:72 >= 5 && TALENT:94 && RAND:3 == 0
+	LOCAL:1 = 1 + RAND:2
+;요리 기능 5로 난수
+ELSEIF ABL:70 >= 5 && RAND:3 == 0
+	LOCAL:1 = 3 + RAND:2
+;자위 중독 5로 난수
+ELSEIF ABL:30 >= 5 && RAND:3 == 0
+	LOCAL:1 = 5 + RAND:2
+;노출버릇 5로 부끄러워해 없음으로 난수
+ELSEIF ABL:14 >= 5 && TALENT:35 == 0 && RAND:3 == 0
+	LOCAL:1 = 7 + RAND:2
+;새디즘기분 5＋새디즘이 드 S로 난수
+ELSEIF ABL:20 >= 5 && (TALENT:81 || TALENT:177) && RAND:3 == 0
+	LOCAL:1 = 9 + RAND:2
+;순종 5＋봉사 5＋헌신적 or고무로 난수
+ELSEIF ABL:10 >= 5 && ABL:13 && (TALENT:63 || TALENT:95) && RAND:3 == 0
+	LOCAL:1 = 11 +RAND:2
+ENDIF
+;정신 붕괴 혹은 질투의 경우는 에피소드 없음
+SIF TALENT:167 || TALENT:157
+	LOCAL:1 = 0
+
+;퇴피한 대상을 바탕으로 되돌린다
+TARGET = LOCAL
+
+RETURN LOCAL:1
+
+;-------------------------------------------------
+;매각 후 에피소드 표시
+;-------------------------------------------------
+@SHOW_SLAVE_AFTERWARDS_KX, ARG, ARG:1, ARG:2
+;ARG:2는 원의 Y에 대응(여기에서는 현재미사용)
+;범용 대사미사용이라면????
+SIF FLAG:22 == 1
+	RETURN 0
+
+;에피소드 없으면????
+SIF ARG:1 == 0
+	RETURN 0
+
+ADDCHARA ARG
+TARGET = CHARANUM - 1
+CALL JINKAKU
+
+DRAWLINE
+PRINTFORMW 　%CALLNAME:TARGET%의 그 후
+DRAWLINE
+;가희 그 1
+IF ARG:1 == 1
+		IF CFLAG:3005 == 3
+			PRINTFORML 「…후후. 오늘도 라이브는 대성공이에요♪」
+			PRINTFORMW 「과연 슈퍼 아이돌 %STR:400%예요」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「환상향 제일의 아이돌이라고 하면 역시 %조사처리(STR:400,"야")%」
+			PRINTFORMW 「그만큼 괴로운 밑바닥을 경험해 왔어!」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「음, 오늘도 라이브는 대성공이다. 이것도 모두 평소의 노력의 성과일 것이다」
+			PRINTFORMW 「그렇다 치더라도, 최근에는 바쁘지만 충실감 있는 나날이로군」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「모~두들! 고마워~요!」
+			PRINTFORMW 「%조사처리(STR:400,"는")% 여러분이 기쁘면 매우 기뻐~요♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「%STR:400%도 어쩐지, 인기인이 된 것 같네요」
+			PRINTFORMW 「뭐, 앞으로도 제대로, 노래를 부르며 살겠어요♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「우와아! 라이브는 오늘도 대성공이야!」
+			PRINTFORMW 「역시 노래를 부르면 즐겁지♪」
+		ENDIF
+;가희 그 2
+ELSEIF ARG:1 == 2
+		IF CFLAG:3005 == 3
+			PRINTFORML 「뭐, 이런 %조사처리(STR:400,"가")% 노래하면 누구라도 넋을 잃고 반해요♪」
+			PRINTFORMW 「언젠가 또 %STR:401%에게도 들려주고 싶네요♪」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「후우, 그나저나 %조사처리(STR:401,"와")% 이상한 짓을 하다보니 왠지 노래가 능숙해졌다는 것도…」
+			PRINTFORMW 「이상한 날들이었어…. 이제 지긋지긋하지만…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「이런 %조사처리(STR:400,"가")% 노래하면 춤추는 탑 아이돌이 될 줄은,」
+			PRINTFORMW 「분명 예전의 %조사처리(STR:400,"는")% 상상도 못했을 거다…」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「최근에는 라이브와 이동만으로 굉장히 바쁘네요…」
+			PRINTFORMW 「언젠가 휴가를 받아 %STR:401%에게라도 놀러 갈까요…」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「%조사처리(STR:401,"는")%, 아직 건강한 것일까요?」
+			PRINTFORMW 「이번, 개선 라이브 때 가고 싶군요…」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「%STR:401%, 건강하게 지내고 있을까?」
+			PRINTFORMW 「이번에 놀러 가서, 활기 차게 노래해야지!」
+		ENDIF
+;요리 그 1
+ELSEIF ARG:1 == 3
+		IF CFLAG:3005 == 3
+			PRINTFORML 「요리의 길도 아직 갈 길이 멀어요…」
+			PRINTFORMW 「다했다라고는 도저히 말할 수 없어요」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「요리 하나로 어떤 소재라도 바뀌는구나…」
+			PRINTFORMW 「왠지 언젠가 %STR:401% 근처에서 노예 조교될 때 통하는 것이 있었는지도…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「이제 독립해보고 싶지만… 역시, 자금이 부족한가…」
+			PRINTFORMW 「자화자찬일지도 모르겠지만, 실력과 명성은 있다고 생각하고 있는데…」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「왠지, 이런 %STR:400%의 요리로 모두가 기뻐해줘서 기쁩니다」
+			PRINTFORMW 「언젠가는 %STR:401%에게도 능숙해진 실력을 피로하고 싶네요…」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「상당히 요리에 자신이 붙었습니다♪」
+			PRINTFORMW 「이제, 자신의 가게를 가지고 싶군요…」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「이렇게 요리 만들고 있으면, %조사처리(STR:401,"가")% 생각나…」
+			PRINTFORMW 「제대로 맛있는 밥 먹고 있을까? 조금 걱정일지도…」
+		ENDIF
+;요리 그 2
+ELSEIF ARG:1 == 4
+		IF CFLAG:3005 == 3
+			PRINTFORML 「오늘도 이 %STR:400%의 요리를 원하는 많은 분들이 왔어요…」
+			PRINTFORMW 「사랑스러운 여자 아이의 맛있는 요리라면 당연하죠♪」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「어쩐지 만들어도 만들어도 끝나지 않네…」
+			PRINTFORMW 「손님이 많은 것은 좋은 일이지만, 너무 조금 바쁠지도 모르겠어…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「음, 이제 요리의 제자를 갖는 것도 좋을지도 모르겠군…」
+			PRINTFORMW 「누군가를 가르치면서, 스스로도 배울 수 있는 게 있을테고…」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「음, 굉장한 행렬입니다…. 대인기군요…」
+			PRINTFORMW 「이것이 난교 행렬이 아니라서 다행일지도…」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「대번성이군요…, 더욱 더 솜씨를 연마해서…」
+			PRINTFORMW 「환상향에서 제일가는 요리사가 될 수 있으면 좋겠네요…」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「더욱 더 맛있는 것을 만들어야지!」
+			PRINTFORMW 「언젠가는 환상향 최고의 요리사가 될 거야!」
+		ENDIF
+;자위 그 1
+ELSEIF ARG:1 == 5
+		IF CFLAG:3005 == 3
+			PRINTFORML 「역시 이렇게 혼자하는 게 기분이 좋아요♪」
+			PRINTFORMW 「자위만 있으면 다른 건 전혀 필요 없어요」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「역시, 스스로 하면 굉장히 기분이 좋아♪」
+			PRINTFORMW 「이런 일로 타인에게 의지하는 것이 바보 같아…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「자위라고 하는 것도 깊은 것이다. 언젠가 깨달음을 얻으면 도장이라도 열어볼까…」
+			PRINTFORMW 「자위로 검은 띠라고 하는 것도 나쁘지 않을지도 모르겠군…. 띠로 자위…. 조금 해봐야지…」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「하아, 이제 손가락이 멈추지 않아요♪ 몹시 기분이 좋아요♪」
+			PRINTFORMW 「이제 이 쾌감을 맛보면, 섹스같은 기분 찝찝한 거 할 수 없어요♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「섹스도 나쁘지는 않습니다만…」
+			PRINTFORMW 「자위는 언제 어디서나 할 수 있죠♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「우와, 역시 자위는 기분이 좋아!」
+			PRINTFORMW 「섹스도 나쁘지 않지만, 좀처럼 상대가 없어서…」
+		ENDIF
+;자위 그 2
+ELSEIF ARG:1 == 6
+		IF CFLAG:3005 == 3
+			PRINTFORML 「으응, 최근 조금 자위에 대해 매너리즘에 빠졌어요…」
+			PRINTFORMW 「무엇인가 좋은 소재가 없을까요?」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「이번은 옥외 노출 자위에 도전해볼까?」
+			PRINTFORMW 「그렇지만 습격당하는 것은 싫어, 역시 뚫리는 것보다 자위가 좋아…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「하루 16번은 자위해야 기분이 풀리지만,」
+			PRINTFORMW 「%조사처리(STR:400,"는")% 극히 평범하고 건전한 존재겠지, 문제는 없다」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「%조사처리(STR:400,"는")% 오늘도 또 자위하고 있습니다…」
+			PRINTFORMW 「이 기세로 죽기 전까지 몇 번이나 할 수 있을까…. 조금 기대될지도…」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「환상향 제일의 자위 명인이 될 수 있으면 좋겠습니다만…」
+			PRINTFORMW 「그걸 위해서라도, 하루에 최소한 6번은 자위해야 합니다!」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「자위를 계속하면, 언젠가 자위의 신이 될 수 있을까?」
+			PRINTFORMW 「그렇지 않으면 자위 장군이라든지 자위 황제라든지…. 무엇인가 가지고 싶다…」
+		ENDIF
+;노출 그 1
+ELSEIF ARG:1 == 7
+		IF CFLAG:3005 == 3
+			PRINTFORML 「역시, 여기서 잔뜩 방뇨해야겠어요…」
+			PRINTFORMW 「이 미녀의 방뇨는 그렇게 간단하게는 뵐 수 없어요?」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「어쩐지 화가 나네…」
+			PRINTFORMW 「역시, 전라로 쇼핑이라도 하러 가자. 별로 굳이 나쁜 것도 아니잖아?」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「남의 앞이 아니면 방뇨도 탈분도 할 수 없다%STR:403%…. 외로워서…」
+			PRINTFORMW 「그렇지만, 결코 변태는 아니야! 알았지! 모두!」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「아하하, 누드로 마라톤♪ 즐거워요∼~」
+			PRINTFORMW 「아직 %STR:400%의 신체도 버릴 것은 아니네요♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「오줌을 거리에서 하려고 하면, 다들 모이는군요…」
+			PRINTFORMW 「보여주면서 흥분이 되는 건 나쁘지는 않습니다만…」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「음, 역시 쌀 걸 안 싸면 건강이 좋아지지 않지!」
+			PRINTFORMW 「아∼, 거기 지나가는 분! 제대로 %조사처리(STR:400,"가")% 싸는 거, 확실히 봐요!」
+		ENDIF
+;노출 그 2
+ELSEIF ARG:1 == 8
+		IF CFLAG:3005 == 3
+			PRINTFORML 「평소부터 알몸으로 보내고 있지만, 아무것도 부끄럽지 않네요…」
+			PRINTFORMW 「이 정도 미모가 있으면, 과시해도 아무것도 문제 없어요」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「큰길 한복판에서 벌려주면, 누군가 돌진할까?」
+			PRINTFORMW 「아, 왠지 흥분되니까, 시험해봐야지♪」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「역시, 우리는 태어난 채로의 모습으로 보내야 한다!」
+			PRINTFORMW 「원래, 의상같은 게 있는 것이 이상하다%STR:403%!」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「우우, 역시, 이대로는 인기가 떨어져 버립니다!」
+			PRINTFORMW 「이렇게 되면 매주 2개는 비디오 촬영해야겠어요! 이 정도면 성공하겠죠?」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「태어난 채로의 모습으로 보내는 것은, 건강에도 좋은 일이죠♪」
+			PRINTFORMW 「어머나? 저 사람은 커져서…. 후후후…, 좀 더 보여줄까요♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「비디오 여왕? 뭐, 기분은 나쁘지 않은데…」
+			PRINTFORMW 「이렇게, 직접 벗는 것도 즐거워!」
+		ENDIF
+;새디즘 그 1
+ELSEIF ARG:1 == 9
+		IF CFLAG:3005 == 3
+			PRINTFORML 「후후후, 여왕님의 다리를 빨아라♪」
+			PRINTFORMW 「정말 환상향에는 천한 돼지들이 많이 있어요♪」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「왠지 그런 부류들은 불쌍하구나…」
+			PRINTFORMW 「%조사처리(STR:400,"가")% 괴롭히지 않으면 사정도 절정도 할 수 없다니♪」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「채찍과 초를 사용하면, 이 %STR:400%에게 꿇지 않는 것은 없어♪」
+			PRINTFORMW 「모두들, 사실은 여왕님을 원하는 거지♪」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「완전히, 이번 돼지도 추접스럽게 우네요♪ 오호호∼」
+			PRINTFORMW 「그 정도로는 포상을 줄 수 없어요♪ 좀 더 우세요♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「이런 %조사처리(STR:400,"가")% 여왕님이라고 하는 것도, 처음에는 당황했습니다만…」
+			PRINTFORMW 「최근에는, 쾌감이 됐어요♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「에헤헤, 좋은 소리로 우네♪ 그런 거 한심해보여서 좋아♪」
+			PRINTFORMW 「제대로 봉사하면, 반드시 상을 줄 거니까 노력해♪」
+		ENDIF
+;새디즘 그 2
+ELSEIF ARG:1 == 10
+		IF CFLAG:3005 == 3
+			PRINTFORML 「자, 이런 %조사처리(STR:400,"를")% 우러러보고 모셔줄 수 있을까?」
+			PRINTFORMW 「분명하게, 그에 상응하는 포상은 주지♪」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「바늘도 나이프도 잘 다룰 수 있게 되었어♪」
+			PRINTFORMW 「이쯤에서 한때 신세를 졌던 %STR:401%에게도 맛을 보여줘야지♪」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「지금 생각하면, %조사처리(STR:400,"가")% 이렇게 가학적인 취미에 눈을 뜬 것은…」
+			PRINTFORMW 「역시 %STR:401% 때문일 것이다…. 응. 결코 자기 자신의 탓은 아니다!」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「아하하, 채찍도 초도 밧줄도 모두 즐겁습니다∼~」
+			PRINTFORMW 「SM은 좋지요♪ 이 상태라면 평생 즐길 수 있을 것 같습니다♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「덕분에, 돼지의 예의 범절도 능숙해졌습니다♪」
+			PRINTFORMW 「이것도, %STR:401%에게 다양하게 예의범절을 길들인 덕분이죠♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「이번 주인님도 왠지 M이야! 마리○…」
+			PRINTFORMW 「혼자 마음대로 가버리면 안 돼! 제대로 여왕님의 허락을 받아!」
+		ENDIF
+;봉사 그 1
+ELSEIF ARG:1 == 11
+		IF CFLAG:3005 == 3
+			PRINTFORML 「지금의 주인님도 제법이에요…」
+			PRINTFORMW 「그렇지만, 왠지 지금에 와서는 %조사처리(STR:401,"가")% 그리워져요…」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「흐응, 뭐, 이 정도로 좋다면 어쩔 수 없는데…」
+			PRINTFORMW 「%조사처리(STR:401,"는")% 더한 걸 요구했겠지…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「요리, 세탁, 섹스는 여자의 기본이니까. 어느 정도 해낼 수 있어…」
+			PRINTFORMW 「좀 더 이런 %조사처리(STR:400,"를")% 잘 다루어줄 수 있는 주인은 어딘가에 없을까?」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「봉사의 길도 험하네요…. 조금이라도 솜씨가 늘도록 노력하고 있습니다만…」
+			PRINTFORMW 「이번 주인님은, 이런 %조사처리(STR:400,"를")% 마음에 들어했으면 좋겠는데…」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「여러 주인님이 있었습니다만, %조사처리(STR:401,"가")% 제일 재미있었는지도 모르겠군요…」
+			PRINTFORMW 「그것은 차치하고, 이번 주인님에게도 모든 걸 다하겠어요♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「윽! 또 뭔가 실패했단 느낌이 들어…」
+			PRINTFORMW 「왜, 어째서 %조사처리(STR:400,"는")% 바보 멍청이일까…」
+		ENDIF
+;봉사 그 2
+ELSEIF ARG:1 == 12
+		IF CFLAG:3005 == 3
+			PRINTFORML 「후후후…, 이제 나오겠네요♪ 물론, 좋은 만큼 내세요♪」
+			PRINTFORMW 「모두를 기분 좋게 하는 것도, 이런 %STR:400%의 숭고한 사명이죠」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML 「환상향의 사람들을 모두 기분 좋게 하는 것이, %STR:400%의 사는 보람이야…」
+			PRINTFORMW 「역시, 기분 좋아지면 모두 행복하게 될 수 있어. 그걸 위해서 수고는 아끼지 않겠어♪」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML 「어떤가? 이런 %STR:400%의 봉사는?」
+			PRINTFORMW 「더욱 더 정진해, 모두를 기분 좋게 해주자!」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML 「%조사처리(STR:400,"를")% 통해 기분 좋아진다면, 굉장히 기쁩니다♪」
+			PRINTFORMW 「손에서도 입에서도 다리에서도 가슴에서도 머리카락에서도 질에서도 엉덩이에서도 국화에서도 귀에서도…. 어디에서라도 좋아요♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML 「온 세상의 여러분을, 이런 %조사처리(STR:400,"가")% 활기차게 하겠어요♪」
+			PRINTFORMW 「봉사 세계의 No. 1을 목표로, 오늘도 노력하겠습니다!」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML 「에헤헤, 모두들 퓻퓻∼! 모두들 앙앙!」
+			PRINTFORMW 「즐겁지! 기쁘지! 이것으로 세계평화 달성이야! %STR:401%도 칭찬해주겠지♪」
+		ENDIF
+ENDIF
+DELCHARA CHARANUM - 1
+TARGET = -1
+DRAWLINE
+RETURN 0
+
+;=============================================================================
+;범용 대사 제너레이터 추가 부분, 조수 말의 처리
+;=============================================================================
+;그렇다고 할까 범용 대사캐릭터가 조수로 조교자가 아닐 때에, 자위할까 하지 않는가를 할 뿐입니다
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM_ASSI 관계
+;조수 조교중의 커멘드 실행시에 출력됩니다.
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_ASSI_X
+;이라고 할까, 조수가 없는데 여기에 올 리는 없겠지만…
+SIF ASSI < 0
+	RETURN 0
+;조수가 자고 있다고(면) 나무는????
+SIF EQUIP:ASSI:14
+	RETURN 0
+;조수가 비디오 촬영중 때는 자위할 경황은 아니다
+SIF FLAG:61 == 2
+	RETURN 0
+;그런데 설마 조수가 조교자는 아니지요?
+SIF ASSIPLAY
+	RETURN 0
+;조수가 실제로 참가하고 있는 조교 커멘드를 여기서 연주한다
+SIF SELECTCOM == 26 || SELECTCOM == 36 || SELECTCOM == 71 || SELECTCOM == 94 || SELECTCOM == 116 || SELECTCOM == 118
+	RETURN 0
+SIF SELECTCOM == 211 || SELECTCOM == 212 || SELECTCOM == 253 || SELECTCOM == 274 || SELECTCOM == 275 || SELECTCOM == 290 || SELECTCOM == 292 || (SELECTCOM >= 303 && SELECTCOM <= 313)
+	RETURN 0
+SIF SELECTCOM == 610 || SELECTCOM == 629 || SELECTCOM == 657
+	RETURN 0
+;말표시를 OFF의 경우는????
+SIF FLAG:11 <= 0
+	RETURN 0
+;범용 대사미사용이라면????
+SIF FLAG:22 == 1
+	RETURN 0
+;자위 중독이 없으면 자위하지 않는다
+SIF ABL:ASSI:30 <= 0
+	RETURN 0
+
+TRYCCALL SELFPLAY_5, NO:ASSI
+CATCH
+	RETURN 0
+ENDCATCH
+
+;참을 수 없었던 경우
+IF RESULT == 1
+	DRAWLINE
+	PRINTFORML %조사처리(CALLNAME:ASSI,"는")% %조사처리(CALLNAME:MASTER,"와")% %CALLNAME:TARGET%의 조교를 바라보고 있는 동안에,
+	PRINTFORML 참을 수 없게 되어, 자위를 시작해 버렸다……
+	LOCAL = TARGET
+	TARGET = ASSI
+	CALL JINKAKU
+	;자위 말을 여기서 사이에 둔다
+	IF (TALENT:120 && CFLAG:4995 != 2) || TALENT:208 == 1 || KX_MOUSE_CHECK(ASSI)
+	;랜덤 분기
+	ELSEIF RAND:2 == 0
+		IF CFLAG:3005 == 3
+			PRINTFORML %CALLNAME:TARGET% 「…이런, 일…응! 아, 응…, 인내를 할 수 없습니다 …!」」
+			PRINTFORMW %CALLNAME:TARGET% 「%STR:400%에 그런 것을 과시하기 때문에…, 불일조가, 들어가지 않는다…!」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML %CALLNAME:TARGET% 「이나, 나다…이런, 싫은 것 같은 일…, 아, 아앙…」
+			PRINTFORMW %CALLNAME:TARGET% 「%조사처리(STR:400,"를")% 방치하지 말고…, 아, 아앙, 아…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML %CALLNAME:TARGET% 「아, 이, 구…응…! (은)는, 은, 아!」
+			PRINTFORMW %CALLNAME:TARGET% 「은 …%STR:400%래…, 안타까운…응…, 은, 아앙…」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML %CALLNAME:TARGET% 「아, 이이…, 아, 안 됨, 인데, 이이…!」
+			PRINTFORMW %CALLNAME:TARGET% 「…자위, 기분, 좋은, 입니다…, 아, 이, 구…♪」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML %CALLNAME:TARGET% 「아, 이이…, 아, 참을 수 없지 않아요! 아, 이이…!」
+			PRINTFORMW %CALLNAME:TARGET% 「응응…! …자위, 기분, 좋은, 입니다♪」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML %CALLNAME:TARGET% 「은 아앙, 이나, 나, 미끈미끈, 잡히지 않는, 키모치 좋은 …♪」
+			PRINTFORMW %CALLNAME:TARGET% 「응응…! 이라고 해도, 들어가지 않는, 도우며…」
+		ENDIF
+	ELSE
+		IF CFLAG:3005 == 3
+			PRINTFORML %CALLNAME:TARGET% 「이다, 안 돼…인가, 신체가…, 아, 아앙!」
+			PRINTFORMW %CALLNAME:TARGET% 「아, 손이 멈추지 않는다…! 누군가…, 도우며…」
+		ELSEIF CFLAG:3005 == 1
+			PRINTFORML %CALLNAME:TARGET% 「아, 아앙…. %STR:400%래…, 참을 수 없게 되어요…」
+			PRINTFORMW %CALLNAME:TARGET% 「구, 아, 아앙…. 아…. 키, 안타까워요…」
+		ELSEIF CFLAG:3005 == 2
+			PRINTFORML %CALLNAME:TARGET% 「, 그것은…, 보류는…, 아, 아앙, 이제 멈추지 않는다 …!」
+			PRINTFORMW %CALLNAME:TARGET% 「아, 아…. 아앙! 좀 더…. 아…, 아앙아앙!」
+		ELSEIF CFLAG:3005 == 5
+			PRINTFORML %CALLNAME:TARGET% 「이다, 안됩니다…. 보고 있는 것만으로…, 신체가 뜨거워집니다…」
+			PRINTFORMW %CALLNAME:TARGET% 「…%STR:400%나 기분 좋아지고 싶은, 아, 이제(벌써)…. 안 돼!」
+		ELSEIF CFLAG:3005 == 6
+			PRINTFORML %CALLNAME:TARGET% 「아, 아…, 이제 어쩐지 참을 수 없습니다! 신체가 멈추지 않습니다!」
+			PRINTFORMW %CALLNAME:TARGET% 「아앙, 아…. 아앙 아앙, 하…아 아…, 아앙!」
+		ELSEIF CFLAG:3005 == 4
+			PRINTFORML %CALLNAME:TARGET% 「아, %조사처리(STR:400,"를")% 무시하지 않고…, 그렇게 보여지면(자)…」
+			PRINTFORMW %CALLNAME:TARGET% 「신체가…. 멈추지 않아…, 아, 아, 는 아앙!」
+		ENDIF
+	ENDIF
+	TARGET = LOCAL
+	CALL SELFPLAY_7, ASSI, 1
+	DRAWLINE
+ENDIF
+
+;--------------------------------------------------------
+;오나금주취득 함수 @SELFPLAY_7
+;인수 ARG에 캐릭터 번호, 인수 ARG:1에 플레이 내용을 넣어 TRYCALL. 내용에 응해 파라미터나 주를 취득한다.
+;인수 ARG:1이  1이외라면 C로, 1이라면 대상을 좋아하는 성감대에서 자위를 실시한다.
+;--------------------------------------------------------
+@SELFPLAY_7, ARG, ARG:1
+LOCAL:4 = TARGET
+TARGET = ASSI
+
+;조수중 자위
+TARGET = ASSI
+TCVAR:10 += 1
+TCVAR:2 += 1
+;성감대 판정
+LOCAL = FAV_FEEL()
+;C의 경우
+IF LOCAL == 1 || ARG:1 != 1
+	PRINTFORML %CALLNAME:TARGET%의 쾌C?  ??＋{ABL:30*300}
+	JUEL:0 += ABL:30*300
+;B의 경우
+ELSEIF LOCAL == 4
+	PRINTFORML %CALLNAME:TARGET%의 쾌B?  ??＋{ABL:30*300}
+	JUEL:3 += ABL:30*300
+;V의 경우
+ELSEIF LOCAL == 2
+	PRINTFORML %CALLNAME:TARGET%의 쾌V?  ??＋{ABL:30*300}
+	JUEL:1 += ABL:30*300
+;A의 경우
+ELSEIF LOCAL == 3
+	PRINTFORML %CALLNAME:TARGET%의 쾌A?  ??＋{ABL:30*300}
+	JUEL:2 += ABL:30*300
+ENDIF
+PRINTFORML %CALLNAME:TARGET%의 욕정?  ??＋{ABL:30*200}
+JUEL:13 += ABL:30*200
+PRINTFORML %CALLNAME:TARGET%의 굴복?  ??＋{ABL:30*500}
+JUEL:14 += ABL:30*500
+PRINTFORMW %CALLNAME:TARGET%의 치정?  ??＋{ABL:30*300}
+JUEL:15 += ABL:30*300
+PRINTL 　
+;페니스가 있는 경우
+IF TALENT:121 || TALENT:120
+	;-------------------------------------------------
+	;사정 게이지 체크
+	;-------------------------------------------------
+	LOCAL:1 = 0
+	;ABL:12를 본다
+	IF ABL:12 == 0
+		LOCAL:1 = 500
+	ELSEIF ABL:12 == 1
+		LOCAL:1 = 600
+	ELSEIF ABL:12 == 2
+		LOCAL:1 = 700
+	ELSEIF ABL:12 == 3
+		LOCAL:1 = 800
+	ELSEIF ABL:12 == 4
+		LOCAL:1 = 1000
+	ELSE
+		LOCAL:1 = 1100
+	ENDIF
+	;ABL:30을 본다
+	IF ABL:30 == 0
+		TIMES LOCAL:1, 0.80
+	ELSEIF ABL:30 == 1
+		TIMES LOCAL:1, 0.90
+	ELSEIF ABL:30 == 2
+		TIMES LOCAL:1, 1.00
+	ELSEIF ABL:30 == 3
+		TIMES LOCAL:1, 1.10
+	ELSEIF ABL:30 == 4
+		TIMES LOCAL:1, 1.20
+	ELSE
+		TIMES LOCAL:1, 1.30
+	ENDIF
+	;ABL:11을 본다
+	IF ABL:11 == 0
+		TIMES LOCAL:1, 1.00
+	ELSEIF ABL:11 == 1
+		TIMES LOCAL:1, 1.10
+	ELSEIF ABL:11 == 2
+		TIMES LOCAL:1, 1.20
+	ELSEIF ABL:11 == 3
+		TIMES LOCAL:1, 1.30
+	ELSEIF ABL:11 == 4
+		TIMES LOCAL:1, 1.40
+	ELSE
+		TIMES LOCAL:1, 1.50
+	ENDIF
+		
+	;C자위의 경우 3배로 한다
+	SIF LOCAL == 1 || ARG:2 != 1
+		LOCAL:1 *= 3
+	
+	BASE:TARGET:2 += LOCAL:1
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(TARGET)
+
+;대량 사정
+IF TFLAG:91 == 2
+	TCVAR:3 += 2
+	TCVAR:4 += 1
+	PRINTFORML %CALLNAME:TARGET% 대량 사정
+	;P에 정액 더러움
+	STAIN:TARGET:2 |= 1p2
+	;조수가 사정 플래그(이것을 넣지 않는 이유는 조교중의 주인이 의도해 사정시킨 것이 아니다=말에 의한 폭발을 막는 의미가 있다)
+	;TFLAG:36 = TFLAG:91
+PRINTL 　
+;통상의 사정
+ELSEIF TFLAG:91 == 1
+	TCVAR:3 += 1
+	PRINTFORML %CALLNAME:TARGET% 사정
+	;P에 정액 더러움
+	STAIN:TARGET:2 |= 1p2
+	;조수가 사정 플래그(이것을 넣지 않는 이유는 조교중의 주인이 의도해 사정시킨 것이 아니다=말에 의한 폭발을 막는 의미가 있다)
+	;TFLAG:36 = TFLAG:91
+ENDIF
+BASE:2 = LIMIT(BASE:2 - EJAC*(TFLAG:91), 0, EJAC-1)
+;LUNATIC??(은)는 사정할 때마다 체력이 감소
+CALL EXHAUST_EJAC, ASSI, TFLAG:91
+;후타나리이든지 첫사정의 처리
+SIF EXP:3 == 0 && TALENT:120 == 0 && TFLAG:91 > 0
+	TCVAR:50 += 1
+
+SIF TFLAG:91 > 0
+	WAIT
+TARGET = LOCAL:4
+
+RETURN 0

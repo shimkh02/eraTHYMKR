@@ -1,0 +1,402 @@
+﻿;=============================================================================
+;조수와 키스한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE309
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:309 > 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;助手の口が汚れているとダメ(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+SIF STAIN:ASSI:0 >= 2 && (STAIN:ASSI:0 != 16 && STAIN:ASSI:0 != 17) && TALENT:PLAYER:64 == 0
+	RETURN 0
+;주인이 猫舌だと猫フェラパッチ有効でないとダメ
+SIF TALENT:MASTER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조수가 猫舌だと猫フェラパッチ有効でないとダメ
+SIF TALENT:ASSI:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;助手か주인이 猫舌だと二人の기교가 足して7필요
+IF TALENT:MASTER:54 || TALENT:ASSI:54
+	SIF ABL:MASTER:12 + ABL:ASSI:12 < 7
+		RETURN 0
+ENDIF
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;眼隠しと耳栓両方つけていた場合は意味がないので実行できない
+SIF TEQUIP:41 && TEQUIP:45
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM309
+PRINTL 조수와 키스한다
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 조수와 키스한다
+CALL TRAIN_MESSAGE_COM309
+
+;-------------------------------------------------
+;사정 게이지 체크(후타나리·남자의 경우)
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:조수의 기교를 본다
+IF ABL:ASSI:12 == 0
+	LOCAL = 50
+ELSEIF ABL:ASSI:12 == 1
+	LOCAL = 200
+ELSEIF ABL:ASSI:12 == 2
+	LOCAL = 300
+ELSEIF ABL:ASSI:12 == 3
+	LOCAL = 400
+ELSEIF ABL:ASSI:12 == 4
+	LOCAL = 500
+ELSE
+	LOCAL = 600
+ENDIF
+
+;조수의 순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(ASSI, LOCAL)
+;조수의 봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(ASSI, LOCAL)
+
+;조수의 혀사용을 본다
+SIF TALENT:ASSI:52
+	TIMES LOCAL , 2.00
+;조수의 고양이혀을 본다
+SIF TALENT:ASSI:54
+	TIMES LOCAL , 0.70
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:1 += 10
+DOWNBASE:ASSI:1 += 20
+
+SOURCE:22 = 60
+SOURCE:31 = 15
+SOURCE:15 = 20
+SOURCE:18 = 10
+SOURCE:11 = 150
+
+;ABL:욕망을 본다
+IF ABL:11 == 0
+	SOURCE:19 = 10
+	SOURCE:22 += 0
+ELSEIF ABL:11 == 1
+	SOURCE:19 = 20
+	SOURCE:22 += 60
+ELSEIF ABL:11 == 2
+	SOURCE:19 = 35
+	SOURCE:22 += 140
+ELSEIF ABL:11 == 3
+	SOURCE:19 = 60
+	SOURCE:22 += 220
+ELSEIF ABL:11 == 4
+	SOURCE:19 = 85
+	SOURCE:22 += 300
+ELSE
+	SOURCE:19 = 120
+	SOURCE:22 += 380
+ENDIF
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	TIMES SOURCE:11 , 0.10
+	TIMES SOURCE:19 , 0.50
+ELSEIF ABL:13 == 1
+	TIMES SOURCE:11 , 0.40
+	TIMES SOURCE:19 , 0.80
+ELSEIF ABL:13 == 2
+	TIMES SOURCE:11 , 0.70
+	TIMES SOURCE:19 , 1.00
+ELSEIF ABL:13 == 3
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:19 , 1.50
+ELSEIF ABL:13 == 4
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:19 , 2.00
+ELSE
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:19 , 2.50
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+IF TFLAG:91
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		TIMES SOURCE:22 , 2.00
+		SOURCE:24 = 0
+	ELSEIF ABL:31 == 1
+		TIMES SOURCE:22 , 1.60
+		SOURCE:24 = 100
+	ELSEIF ABL:31 == 2
+		TIMES SOURCE:22 , 1.00
+		SOURCE:24 = 300
+	ELSEIF ABL:31 == 3
+		TIMES SOURCE:22 , 0.70
+		SOURCE:24 = 700
+	ELSEIF ABL:31 == 4
+		TIMES SOURCE:22 , 0.40
+		SOURCE:24 = 1500
+	ELSE
+		TIMES SOURCE:22 , 0.10
+		SOURCE:24 = 6000
+	ENDIF
+ENDIF
+
+;대량 사정
+IF TFLAG:91 == 2
+	TIMES SOURCE:24 , 2.00
+
+	TCVAR:PLAYER:3 += 2
+	TCVAR:4 += 1
+	PRINTL 대량 사정 
+	;정액 더러움
+	STAIN:PLAYER:2 |= 4
+;통상의 사정
+ELSEIF TFLAG:91 == 1
+	TCVAR:PLAYER:3 += 1
+	PRINTL 사정 
+	;정액 더러움
+	STAIN:PLAYER:2 |= 4
+ENDIF
+BASE:PLAYER:2 = LIMIT(BASE:PLAYER:2 - EJAC*(TFLAG:91), 0, EJAC-1)
+
+;키스로 사정시킨 플래그(주인이 조수에 사정한다)
+TFLAG:35 = TFLAG:91
+
+;조수의 입⇔주인의 입의 불결이 이동
+STAIN:ASSI:0 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:ASSI:0
+
+;LUNATIC 이상은 사정할 때마다 체력이 감소
+CALL EXHAUST_EJAC, PLAYER, TFLAG:91
+
+;[괴뢰]와[정신 붕괴]와[괴조인격]을 가지지 않고,[친애]나[연모][망신]소유라면 조수에 애정 경험이 가산
+SIF ((TALENT:ASSI:150 && TALENT:ASSI:151) || TALENT:ASSI:152) && TALENT:ASSI:167 == 0 && TALENT:ASSI:168 == 0 && TALENT:ASSI:169 == 0
+	TCVAR:ASSI:21 += 1
+
+TCVAR:ASSI:23 += 1
+TCVAR:MASTER:23 += 1
+CFLAG:ASSI:172 += 1
+
+IF TALENT:ASSI:120 == 0 && TALENT:MASTER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:ASSI:120 && TALENT:MASTER:120
+	TCVAR:13 += 3
+ENDIF
+TCVAR:ASSI:98 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_309
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:ASSI%에게 키스 하도록 명령해 보았지만 거절당했다.
+PRINTFORMW %CALLNAME:ASSI%에게는 아직도 예의 범절이 부족한 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM309
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 눈앞에서, %조사선택(CALLNAME:MASTER, "는")% 
+;고양이혀(자신)
+IF TALENT:PLAYER:54
+	PRINTFORM 아픔을 주지 않도록 주의하며, %CALLNAME:ASSI%의 입에 혀를 넣
+	IF ABL:ASSI:10 >= 2 && ((EXP:ASSI:12 >= 1000 && TALENT:PLAYER:120 == 0 && TALENT:ASSI:120 == 0) || (EXP:ASSI:13 >= 1000 && TALENT:PLAYER:120 && TALENT:ASSI:120))
+		PRINTW 고, 혀끝을 서로 쿡쿡 찌르면서 타액을 교환했다….
+	ELSEIF ABL:ASSI:10 >= 2
+		PRINTFORMW 자 %조사선택(CALLNAME:ASSI, "는")% %CALLNAME:TARGET%의 혀 밑을 혀끝으로 찔러댔다….
+	ELSE
+		PRINTW 었다….
+	ENDIF
+;고양이혀(조수)
+ELSEIF TALENT:ASSI:54
+	PRINTFORM %CALLNAME:ASSI%의 입에 혀를 넣어 미끄러운 혀를 혀로 살그머니 압박 
+	IF ABL:ASSI:10 >= 2 && ((EXP:ASSI:12 >= 1000 && TALENT:PLAYER:120 == 0 && TALENT:ASSI:120 == 0) || (EXP:ASSI:13 >= 1000 && TALENT:PLAYER:120 && TALENT:ASSI:120))
+		PRINTW 하고, 상냥하게 빨면서 타액을 교환했다….
+	ELSEIF ABL:ASSI:10 >= 2
+		PRINTFORMW 하자 %조사선택(CALLNAME:ASSI, "는")% 상처를 주지 않기 위해 혀의 힘을 뺐다….
+	ELSE
+		PRINTW 해 주었다…
+	ENDIF
+;노멀
+ELSE
+	PRINTFORM %CALLNAME:ASSI%의 구강을 구석구석까지 빨고 돌렸다. 
+	IF ABL:ASSI:10 >= 2 && ((EXP:ASSI:12 >= 1000 && TALENT:PLAYER:120 == 0 && TALENT:ASSI:120 == 0) || (EXP:ASSI:13 >= 1000 && TALENT:PLAYER:120 && TALENT:ASSI:120))
+		PRINTW 그리고 끈적끈적하게 혀를 엮어가며 타액을 교환했다….
+	ELSEIF ABL:ASSI:10 >= 2
+		PRINTFORMW 그러니 %CALLNAME:ASSI%도 적극적으로 혀를 얽어왔다….
+	ELSE
+		PRINTW
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_309, ARG
+LOCAL:99 = ARG
+;ABL:조수의 욕망
+IF ABL:ASSI:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:ASSI:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수의 %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:조수의 봉사 정신
+IF ABL:ASSI:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:ASSI:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% 조수의 %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+
+;조수의 쾌락 각인
+IF MARK:ASSI:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:ASSI:1
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% 조수의 %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;※조수 파라 관련의 숙제
+;PALAM:조수의 욕정
+;GETPALAMLV PALAM:ASSI:13, 5
+;LOCAL:2 = RESULT
+;IF LOCAL:2
+;	SIF LOCAL:99
+;		RESULTS = %RESULTS% + 
+;	LOCAL:99 = LOCAL:2
+;	TFLAG:240 += LOCAL:99
+;	RESULTS = %RESULTS% 조수의 %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+;ENDIF
+
+;조수가 부끄러워해
+IF TALENT:ASSI:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;조수가 악취 둔감
+IF TALENT:ASSI:61
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:61%({LOCAL:99})
+;조수가 악취 민감
+ELSEIF TALENT:ASSI:62
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:62%({LOCAL:99})
+ENDIF
+;조수가 헌신적
+IF TALENT:ASSI:63
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:63%({LOCAL:99})
+ENDIF
+;조수가 쾌감의 부정
+IF TALENT:ASSI:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;조수가 연모
+IF TALENT:ASSI:150
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:150%({LOCAL:99})
+ENDIF
+;조수가 키스마
+IF TALENT:ASSI:176
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 10
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 %TALENTNAME:176%({LOCAL:99})
+ENDIF
+
+;조교자의 입의 더러움(조수의 수정이므로, 대상을 퇴피해 계산한 뒤에 되돌린다)
+LOCAL:98 = TARGET
+TARGET = ASSI
+TFLAG:242 = COMORDER_STAIN_CALC(0, 0)
+TARGET = LOCAL:98
+;키스에서는 더러움이 그만큼 영향을 주지 않는다
+TFLAG:242 /= 2
+
+;서로 불결
+IF TFLAG:242
+	RESULTS = %RESULTS% - 
+	TFLAG:240 -= TFLAG:242
+	RESULTS = %RESULTS% 서로 불결
+	;악취 둔감
+	IF TALENT:ASSI:61
+		RESULTS = %RESULTS%,%조사처리(CALLNAME:ASSI,"가")% %TALENTNAME:61%
+	ELSEIF TALENT:ASSI:62
+		RESULTS = %RESULTS%,%조사처리(CALLNAME:ASSI,"가")% %TALENTNAME:62%
+	ENDIF
+	RESULTS = %RESULTS%({TFLAG:242})
+	LOCAL:99 = 1
+ENDIF
+
+TFLAG:241 = 15

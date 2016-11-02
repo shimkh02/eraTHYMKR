@@ -1,0 +1,165 @@
+﻿;=============================================================================
+;조종의 실
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE412
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:412 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 ＥＸ化していないアリスでないとダメ
+SIF NO:PLAYER != 14 || CFLAG:PLAYER:0
+	RETURN 0
+;조교자의 기교가 대상의 反発刻印を上回っていないとできない(解除する場合はこの条件を無視できる)
+SIF ABL:PLAYER:12 <= MARK:9 && TEQUIP:77 == 0
+	RETURN 0
+;긴박 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM412
+PRINTL 조종의 실
+TSTR:0 = 조종의 실
+CALL TRAIN_MESSAGE_COM412
+
+DOWNBASE:0 += 15
+DOWNBASE:1 += 75
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:22 = 50
+	SOURCE:25 = 2500
+	SOURCE:32 = 4000
+ELSEIF ABL:10 == 1
+	SOURCE:22 = 180
+	SOURCE:25 = 1800
+	SOURCE:32 = 2500
+ELSEIF ABL:10 == 2
+	SOURCE:22 = 360
+	SOURCE:25 = 1000
+	SOURCE:32 = 1700
+ELSEIF ABL:10 == 3
+	SOURCE:22 = 800
+	SOURCE:25 = 500
+	SOURCE:32 = 800
+ELSEIF ABL:10 == 4
+	SOURCE:22 = 1700
+	SOURCE:25 = 50
+	SOURCE:32 = 100
+ELSE
+	SOURCE:22 = 2500
+	SOURCE:25 = 0
+	SOURCE:32 = 50
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	SOURCE:23 = 200
+ELSEIF ABL:PLAYER:12 == 1
+	SOURCE:23 = 500
+ELSEIF ABL:PLAYER:12 == 2
+	SOURCE:23 = 1000
+ELSEIF ABL:PLAYER:12 == 3
+	SOURCE:23 = 1800
+ELSEIF ABL:PLAYER:12 == 4
+	SOURCE:23 = 2500
+ELSE
+	SOURCE:23 = 3600
+ENDIF
+
+;복종
+IF TALENT:160
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:23 , 1.20
+	TIMES SOURCE:25 , 0.80
+	TIMES SOURCE:32 , 0.20
+ENDIF
+
+;MARK:공포 각인을 본다
+IF MARK:8 == 1
+	TIMES SOURCE:25 , 1.20
+ELSEIF MARK:8 == 2
+	TIMES SOURCE:25 , 1.50
+ELSEIF MARK:8 >= 3
+	TIMES SOURCE:25 , 2.00
+ENDIF
+
+;MARK:반발 각인을 본다
+IF MARK:9 == 1
+	TIMES SOURCE:32 , 2.00
+ELSEIF MARK:9 == 2
+	TIMES SOURCE:32 , 4.50
+ELSEIF MARK:9 >= 3
+	TIMES SOURCE:32 , 7.50
+ENDIF
+
+IF TEQUIP:77
+	TEQUIP:77 = 0
+ELSE
+	TEQUIP:77 = 1
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;조정의 실발동중
+;-------------------------------------------------
+@EQUIP_COM412
+PRINTL <조종의 실 발동 중>
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 10
+
+SOURCE:31 += 1000
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM412
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:77
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 마력을 차단해, %CALLNAME:TARGET%에게 얽혀있던 실을 없앴다.
+	;공포 각인 소유나 복종 없음
+	IF MARK:8 || TALENT:160 == 0
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자신의 신체가 자유롭게 되었던 것에 조금 안도하고 있는 것 같다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자신의 신체가 자유롭게 된 것을 꼭 좋지만은 않게 생각하고 있는 것 같다….
+	ENDIF
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%의 손가락 끝에서 눈에 보이지 않는 마력의 실이 성장해 %CALLNAME:TARGET%의 몸에 휘감겼다.
+	;공포 각인 소유나 복종 없음
+	IF MARK:8 || TALENT:160 == 0
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자신의 신체가 %CALLNAME:PLAYER%에게 의해 조종되고 있는 것을 깨달았는지 어딘지 모르게 얼굴이 창백하다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자신의 신체가 %CALLNAME:PLAYER%에게 의해 조종되고 있는 것을 깨달은 것 같지만 신경쓰지 않는 것 같다….
+	ENDIF
+ENDIF

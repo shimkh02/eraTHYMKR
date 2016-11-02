@@ -1,0 +1,249 @@
+﻿;=============================================================================
+;정액중독
+;=============================================================================
+@ABLUP31
+DRAWLINE
+SIF ABL:31 >= 5
+	JUMP ABLUP_MAX
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要（素質：[汚臭鈍感][中毒しやすい]なら無視できる）
+SIF COST31(6)
+	PRINTFORM %EXPNAME:50% {COST31(6)} 이상, 그리고 
+;奉仕精神が必要
+PRINTFORML %ABLNAME:13% {ABL:31 + 1}LV 이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:13%의 구슬×{COST31(0)}, %PALAMNAME:14%의 구슬×{COST31(1)}, %EXPNAME:4% {COST31(2)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN31(0)
+
+PRINTFORM [1] - %PALAMNAME:13%의 구슬×{COST31(0) * 3}, %PALAMNAME:14%의 구슬×{COST31(1) * 3}, %EXPNAME:4% {COST31(2) / 2} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN31(1)
+
+;精愛味覚でLVをあげる
+IF COST31(5) > 0 && TALENT:66
+	PRINTFORM [2] - %PALAMNAME:13%의 구슬×{COST31(3)}, %PALAMNAME:14%의 구슬×{COST31(4)}, %EXPNAME:4% {COST31(2)}, %EXPNAME:8% {COST31(5)} 이상……
+	CALL SHOW_ISABLUP_COMMON, CAN31(2)
+ENDIF
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF (RESULT >= 0 && RESULT <= 2) && CAN31(RESULT) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:13 -= COST31(0)
+	JUEL:14 -= COST31(1)
+ELSEIF RESULT == 1
+	JUEL:13 -= COST31(0) * 3
+	JUEL:14 -= COST31(1) * 3
+ELSEIF RESULT == 2
+	JUEL:13 -= COST31(3)
+	JUEL:14 -= COST31(4)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:31 += 1
+PRINTFORMW %ABLNAME:31%의 레벨이 %조사처리(ABL:31,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP31
+SIF ABL:31 >= 5
+	RETURN 0
+
+CALLF CALC_COST31, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP31("CHECK")
+
+@COST31(ARG)
+#FUNCTION
+RETURNF CALC_COST31("GET", ARG)
+
+@CALC_COST31(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:31 == 0
+	LOCAL:0 = 3000
+	LOCAL:1 = 10000
+	LOCAL:2 = 10
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+	LOCAL:5 = 0
+ELSEIF ABL:31 == 1
+	LOCAL:0 = 8000
+	LOCAL:1 = 25000
+	LOCAL:2 = 25
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+	LOCAL:5 = 0
+ELSEIF ABL:31 == 2
+	LOCAL:0 = 15000
+	LOCAL:1 = 50000
+	LOCAL:2 = 40
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+	LOCAL:5 = 0
+ELSEIF ABL:31 == 3
+	LOCAL:0 = 30000
+	LOCAL:1 = 100000
+	LOCAL:2 = 80
+	LOCAL:3 = 10000
+	LOCAL:4 = 25000
+	LOCAL:5 = 50
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:2 , 2.00
+		TIMES LOCAL:3 , 2.00
+		TIMES LOCAL:4 , 2.00
+		TIMES LOCAL:5 , 2.00
+	ENDIF
+ELSEIF ABL:31 == 4
+	LOCAL:0 = 55000
+	LOCAL:1 = 300000
+	LOCAL:2 = 200
+	LOCAL:3 = 30000
+	LOCAL:4 = 75000
+	LOCAL:5 = 100
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:2 , 3.00
+		TIMES LOCAL:3 , 3.00
+		TIMES LOCAL:4 , 3.00
+		TIMES LOCAL:5 , 3.00
+	ENDIF
+ENDIF
+
+;汚臭鈍感
+IF TALENT:61
+	TIMES LOCAL:0 , 0.25
+	TIMES LOCAL:1 , 0.25
+	TIMES LOCAL:2 , 0.25
+	TIMES LOCAL:3 , 0.25
+	TIMES LOCAL:4 , 0.25
+	TIMES LOCAL:5 , 0.25
+;汚臭敏感
+ELSEIF TALENT:62
+	TIMES LOCAL:0 , 2.50
+	TIMES LOCAL:1 , 2.50
+	TIMES LOCAL:2 , 2.50
+	TIMES LOCAL:3 , 2.50
+	TIMES LOCAL:4 , 2.50
+	TIMES LOCAL:5 , 2.50
+ENDIF
+;倒錯的
+IF TALENT:80
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 0.75
+	TIMES LOCAL:4 , 0.75
+	TIMES LOCAL:5 , 0.75
+ENDIF
+;中毒しやすい
+IF TALENT:84
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.50
+	TIMES LOCAL:5 , 0.50
+;中毒しにくい
+ELSEIF TALENT:85
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 1.50
+	TIMES LOCAL:5 , 1.50
+ENDIF
+;[中毒扇動]有効
+IF TFLAG:995 == 1
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+	TIMES LOCAL:3 , 0.80
+	TIMES LOCAL:4 , 0.80
+	TIMES LOCAL:5 , 0.80
+ENDIF
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要（素質：[汚臭鈍感][中毒しやすい]なら無視できる）
+SIF ABL:31 >= 2 && TALENT:61 == 0 && TALENT:84 == 0
+	LOCAL:6 = ABL:31 - 1
+
+RETURNF 0
+
+@CAN31(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP31("GET", ARG)
+
+@CAN_ABLUP31(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;異常経験が必要な場合
+IF EXP:50 < COST31(6)
+	LOCAL:0 |= 2
+	LOCAL:1 |= 2
+	LOCAL:2 |= 2
+ENDIF
+
+;奉仕精神が必要
+IF ABL:13 < ABL:31 + 1
+	LOCAL:0 |= 4
+	LOCAL:1 |= 4
+	LOCAL:2 |= 4
+ENDIF
+
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST31(0)
+	LOCAL:0 |= 1
+;屈服의 구슬で上げる
+SIF JUEL:14 < COST31(1)
+	LOCAL:0 |= 1
+;精液経験が必要
+SIF EXP:4 < COST31(2)
+	LOCAL:0 |= 2
+
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST31(0) * 3
+	LOCAL:1 |= 1
+;屈服의 구슬で上げる
+SIF JUEL:14 < COST31(1) * 3
+	LOCAL:1 |= 1
+;精液経験が必要
+SIF EXP:4 < COST31(2) / 2
+	LOCAL:1 |= 2
+
+;精愛味覚でLVを上げる場合
+IF COST31(5) > 0 && TALENT:66
+	;欲情의 구슬で上げる
+	SIF JUEL:13 < COST31(3)
+		LOCAL:2 |= 1
+	;屈服의 구슬で上げる
+	SIF JUEL:14 < COST31(4)
+		LOCAL:2 |= 1
+	;精液経験が必要
+	SIF EXP:4 < COST31(2)
+		LOCAL:2 |= 2
+	;精飲절정経験が必要
+	SIF EXP:8 < COST31(5)
+		LOCAL:2 |= 2
+ELSE
+	LOCAL:2 = 256
+ENDIF
+
+RETURNF (LOCAL:0 == 0 || LOCAL:1 == 0 || LOCAL:2 == 0)

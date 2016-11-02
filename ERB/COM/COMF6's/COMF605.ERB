@@ -1,0 +1,190 @@
+﻿;=============================================================================
+;손가락으로 V를 어루만진다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE605
+RETURN 0
+
+@EXCOM_ABLE605
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;윤활 부족이고, 순종4미만 · 레즈끼3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;조교자의 기교가 3미만はだめ
+SIF ABL:PLAYER:12 < 3
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;기교 Lv3 이상의 주인이 처녀 상대에게 순애 모드 유효 때에 손가락 삽입하면(자) 파생한다.
+@COM605
+PRINTL 손가락으로 V를 어루만진다
+TSTR:0 = 손가락으로 V를 어루만진다
+
+SELECTCOM = 605
+CALL TRAIN_MESSAGE_COM605
+
+DOWNBASE:0 += 25
+DOWNBASE:1 += 70
+
+SOURCE:11 = 150
+SOURCE:12 = 280
+SOURCE:15 = 150
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 8
+	SOURCE:22 = 75
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 40
+	SOURCE:22 = 125
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 200
+	SOURCE:22 = 200
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 480
+	SOURCE:22 = 350
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 960
+	SOURCE:22 = 650
+ELSE
+	SOURCE:1 = 1440
+	SOURCE:22 = 1000
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	TIMES SOURCE:22 , 0.20
+	SOURCE:20 = 100
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:22 , 0.50
+	SOURCE:20 = 60
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:22 , 0.80
+	SOURCE:20 = 20
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:22 , 1.00
+	SOURCE:20 = 5
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:22 , 1.20
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:22 , 1.50
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 100
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 += 50
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:20 , 0.80
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.50
+	SOURCE:19 += 5
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+	SOURCE:19 += 30
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.20
+	SOURCE:19 += 150
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.50
+	SOURCE:19 += 350
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:19 += 600
+ENDIF
+
+;V민감, 둔감을 본다
+;쾌V자체의 체크는 다음에 정리해 준다
+IF TALENT:103
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+ELSEIF TALENT:102
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+ENDIF
+
+;친애·상애
+IF TALENT:152 || TALENT:153
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:19 , 1.50
+ENDIF
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	TIMES SOURCE:22 , 2.00
+
+;노예의 V⇔조교자의 손가락의 불결이 이동
+	STAIN:3 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:3
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM605
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:0 == 1
+	PRINT 아직 남자를 모르는 
+ELSEIF PALAM:10 >= PALAMLV:4
+	PRINT 애액으로 미끌거리는 
+ENDIF
+PRINTFORMW \@(TALENT:128) ? 어린 균열 # 보지\@를, %조사선택(CALLNAME:PLAYER, "는")% 손가락으로 정성스럽고 상냥하게 어루만졌다….

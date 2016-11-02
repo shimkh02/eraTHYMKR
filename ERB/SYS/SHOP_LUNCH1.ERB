@@ -1,0 +1,1297 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;도시락 관련 처리
+;以下焼き芋弁当パッチの弁当機能の内、毒入り弁当の処理及び、嫉妬チョコレート処理、
+;弁当か毒入りかを判定する処理をここで管理
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;도시락 판정 처리
+;=============================================================================
+;ここでは通常の弁当か毒入り弁当、嫉妬チョコ判定処理のどれに飛ぶのかを決定
+;優先順位は毒入り弁当→嫉妬チョコ判定→通常の弁当イベントとなっている
+;なお、主人が[薬毒耐性][機械]持ちのときは毒入り弁当イベントが発生しない
+@LUNCH_JUDGE
+TFLAG:202 = 0
+LOCAL = 1
+
+;前提条件：[연모]と[복종]が無いかつ反発刻印がLv2以上または従順Lv5未満
+IF TALENT:MASTER:44 == 0 && TALENT:MASTER:206 == 0 && TALENT:150 == 0 && TALENT:160 == 0 && (MARK:9 >= 2 || ABL:10 < 5)
+	;対象が[弱味]を持っていないかつメディか[調合知識]か[禁断の知識]持ちの場合、確率は1/2
+	IF (TALENT:55 || TALENT:56 || NO:TARGET == 33) && TALENT:39 == 0
+		LOCAL = RAND:2
+		;反発刻印Lv3だと強制的に毒入り弁当に
+		SIF MARK:9 >= 3
+			LOCAL = 0
+	;対象が[弱味]を持っていないかつ[反抗的]か[抵抗]持ちの場合、確率は1/3
+	ELSEIF (TALENT:11 || TALENT:34) && TALENT:39 == 0
+		LOCAL = RAND:3
+		;反発刻印Lv3だと2/3の確率で毒入り弁当に
+		SIF MARK:9 >= 3 && LOCAL == 2
+			LOCAL = 0
+	;対象が[弱味]か恐怖刻印のどちらかを持っているかつ
+	;[調合知識]、[禁断の知識]、[嫉妬]、[狂気]いずれも持っていない場合、確率は1/6
+	ELSEIF TALENT:55 == 0 && TALENT:56 == 0 && TALENT:157 == 0 && TALENT:158 == 0 && (TALENT:39 || MARK:8)
+		LOCAL = RAND:6
+	;それ以外の場合、確率は1/4
+	ELSE
+		LOCAL = RAND:4
+	ENDIF
+ENDIF
+IF LOCAL == 0
+	CALL POISONED_LUNCH
+ELSEIF FLAG:14 & 4
+	CALL CHOCOLATE_JUDGE
+ELSE
+	CALL LUNCH_SALE
+ENDIF
+
+RETURN 0
+
+;=============================================================================
+;질투 초콜렛 판정 처리
+;=============================================================================
+;ヤンデレパッチ有効のとき、ランダムで嫉妬チョコに変化
+;奴隷が[嫉妬]＋[狂気]持ち、[嫉妬]持ち、嫉妬心が芽生えかけている等の状況によって確率は変動
+@CHOCOLATE_JUDGE
+LOCAL = 0
+IF TALENT:167 || TALENT:168 || TALENT:169
+	LOCAL = 0
+ELSEIF TALENT:157 && TALENT:158
+	LOCAL = RAND:8
+ELSEIF TALENT:157
+	LOCAL = RAND:4
+ELSEIF CFLAG:30 >= 20
+	LOCAL = RAND:3
+ELSE
+	LOCAL = 2
+	LOCAL -= RAND:4
+ENDIF
+
+IF LOCAL > 1
+	CALL LUNCH_CHOCOLATE
+ELSE
+	CALL LUNCH_SALE
+ENDIF
+
+;=============================================================================
+;독이 든 도시락 처리
+;=============================================================================
+;奴隷に弁当を作らせて食べるオプション.
+;-------------------------------------------------
+;LOCAL = 요리의 종류 
+;LOCAL:1 = 독의 종류 
+;LOCAL:2 = 독 간파 어려움 보정 
+;LOCAL:3 = 습득의 구슬 증가량 
+;LOCAL:4 = 고유 요리의 종류, 난수 처리 
+;LOCAL:5～7 = 내부 처리 용
+;-------------------------------------------------
+;TFLAG:243の種別
+;0 = [禁断の知識]がある場合にそれを喪失する
+;1 = [サド]がある場合にそれを喪失する
+;3 = [汚れ無視]がある場合にそれを喪失する
+;4 = [狂気]がない場合にそれが付加される
+;2,5 = [魅力]があれば喪失・なければ[謎の魅力]があれば喪失・なければ[魅惑]があれば喪失する
+;6 = 技巧レベルが1レベル低下する(0未満にはならない)
+;他 = 体力減少
+@POISONED_LUNCH
+VARSET LOCAL, 0
+LOCAL = RAND:16
+LOCAL:1 = RAND:7
+
+;ABL:기교를 본다
+LOCAL:2 = ABL:12 + 1
+
+;ABL:요리기능을 본다
+IF ABL:70 == 0
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:70 == 1
+	TIMES LOCAL:2 , 1.10
+ELSEIF ABL:70 == 2
+	TIMES LOCAL:2 , 1.20
+ELSEIF ABL:70 == 3
+	TIMES LOCAL:2 , 1.30
+ELSEIF ABL:70 == 4
+	TIMES LOCAL:2 , 1.40
+ELSE
+	TIMES LOCAL:2 , 1.50
+ENDIF
+
+;EXP:요리경험을 본다
+IF EXP:70 < EXPLV:1
+	TIMES LOCAL:2 , 1.00
+ELSEIF EXP:70 < EXPLV:2
+	TIMES LOCAL:2 , 1.20
+ELSEIF EXP:70 < EXPLV:3
+	TIMES LOCAL:2 , 1.40
+ELSEIF EXP:70 < EXPLV:4
+	TIMES LOCAL:2 , 1.60
+ELSEIF EXP:70 < EXPLV:5
+	TIMES LOCAL:2 , 1.80
+ELSE
+	TIMES LOCAL:2 , 2.00
+ENDIF
+
+;독이 든 요리 작성
+CALL SELF_KOJO, TARGET, 115
+PRINTW      ・
+PRINTW      ・
+PRINTW      ・
+PRINTW       !
+PRINTL 
+PRINTFORM %조사처리(CALLNAME:TARGET,"는")% 
+IF LOCAL == 0
+	PRINTL 도시락
+	LOCAL:2 += 12
+ELSEIF LOCAL == 1 || LOCAL == 15
+	PRINT 고기감자조림
+	LOCAL:2 += 10
+ELSEIF LOCAL == 2 || LOCAL == 14
+	PRINT 케이크
+	LOCAL:2 += 8
+ELSEIF LOCAL == 3 || LOCAL == 13
+	PRINT 소바
+	LOCAL:2 += 6
+ELSEIF LOCAL == 4 || LOCAL == 12
+	PRINT 소면
+	LOCAL:2 += 6
+ELSEIF LOCAL == 5 || LOCAL == 11
+	IF NO:TARGET == 5
+		PRINT 신선한 야채로 
+		LOCAL:2 += 1
+	ENDIF
+	PRINT 샐러드
+	LOCAL:2 += 4
+ELSEIF LOCAL == 6 || LOCAL == 10
+	PRINT 햄버그
+	LOCAL:2 += 4
+ELSE
+	PRINT 주먹밥
+	LOCAL:2 += 2
+ENDIF
+LOCAL:2 += RAND:4
+
+;主人の調合知識
+SIF TALENT:MASTER:55
+	TIMES LOCAL:2 , 2.00
+
+;굴복각인
+SIF MARK:2
+	LOCAL:2 /= MARK:2
+;恐怖刻印
+SIF MARK:8
+	LOCAL:2 /= MARK:8
+;反発刻印
+SIF MARK:9
+	LOCAL:2 *= MARK:9
+;奉仕精神
+SIF ABL:13
+	LOCAL:2 -= ABL:13
+;従順
+SIF ABL:10
+	LOCAL:2 -= ABL:10
+
+LOCAL:2 = MAX(LOCAL:2, 4)
+
+;毒を盛ったフラグON
+CFLAG:150 |= 2
+
+PRINTFORMW 을(를) 만들었다.
+PRINTL      ・
+PRINTL      ・
+PRINTL      ・
+PRINTL 
+PRINTL 자…… 기왕 만든 요리다.
+PRINTW 고맙게 먹도록 하자…….
+;調合知識持ちまたは一定確率で引っかからない
+IF TALENT:MASTER:55 == 0 && RAND:(LOCAL:2) > 2
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW       !
+	PRINTW 몸 상태가 좀 이상하다….
+	PRINTW 아무래도 독이 들어갔던 모양이다…….
+	PRINTW …
+	PRINTW ……
+	PRINTW ………….
+	;禁断の知識ロスト
+	IF LOCAL:1 == 0 && TALENT:MASTER:56
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [금단의 지식]을 잃었다.
+		TALENT:MASTER:56 = 0
+	;サド消滅
+	ELSEIF LOCAL:1 == 1 && TALENT:MASTER:81
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [새드]를 잃었다.
+		TALENT:MASTER:81 = 0
+	;早漏消滅
+	ELSEIF LOCAL:1 == 2 && (TALENT:MASTER:120 || TALENT:MASTER:120)
+		IF TALENT:MASTER:132
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [조루]를 잃었다.
+			TALENT:MASTER:132 = 0
+		ELSEIF TALENT:MASTER:133
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [지루]를 잃었다.
+			TALENT:MASTER:133 = 0
+		ENDIF
+	;汚れ無視消滅
+	ELSEIF LOCAL:1 == 3 && TALENT:MASTER:64
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [불결무시]를 잃었다.
+		TALENT:MASTER:64 = 0
+	;狂気付加
+	ELSEIF LOCAL:1 == 4 && TALENT:MASTER:158 == 0
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [광기]를 얻었다.
+		TALENT:MASTER:158 = 1
+	;魅力減少
+	ELSEIF LOCAL:1 == 5 && (TALENT:MASTER:90 || TALENT:MASTER:91 || TALENT:MASTER:92 || TALENT:MASTER:94 || TALENT:MASTER:98)
+		IF TALENT:MASTER:98
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [대범함]을 잃었다.
+			TALENT:MASTER:98 = 0
+		ELSEIF TALENT:MASTER:92
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [수수께끼의 매력]을 잃었다.
+			TALENT:MASTER:92 = 0
+		ELSEIF TALENT:MASTER:90
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [매력]을 잃었다.
+			TALENT:MASTER:90 = 0
+		ELSEIF TALENT:MASTER:94
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [인기]를 잃었다.
+			TALENT:MASTER:94 = 0
+		ELSEIF TALENT:MASTER:91
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [매혹]을 잃었다.
+			TALENT:MASTER:91 = 0
+		ENDIF
+	;技能低下
+	ELSEIF LOCAL:1 == 6
+		;つるぺた堕し消滅
+		IF TALENT:MASTER:96
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [절벽가슴격추왕]을 잃었다.
+			TALENT:MASTER:96 = 0
+		;大乳導消滅
+		ELSEIF TALENT:MASTER:97
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% [대유도]을 잃었다.
+			TALENT:MASTER:97 = 0
+		;技巧減少
+		ELSEIF ABL:MASTER:12 > 0
+			PRINTFORMW %CALLNAME:MASTER%의 기교가 내려갔다.
+			ABL:MASTER:12 -= 1 + RAND:2
+			ABL:MASTER:12 = MAX(ABL:MASTER:12, 0)
+		;体力減少(小)
+		ELSE
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 체력을 소모했다.
+			BASE:MASTER:0 -= 75 * (LOCAL:2/5)
+		ENDIF
+	;体力減少
+	ELSE
+		PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 체력이 
+		SIF LOCAL >= 4
+			PRINT 크게 
+		PRINTW 소모되었다.
+		BASE:MASTER:0 -= 200 * (LOCAL:2/3)
+	ENDIF
+	IF NO:TARGET == 33
+		BASE:MASTER:0 /= 2
+		BASE:MASTER:0 -= 75 * (RAND:5 + 1)
+	ELSE
+		BASE:MASTER:0 -= 75 * (RAND:5 + 1)
+	ENDIF
+	;ダメージを与えたフラグON
+	CFLAG:150 |= 4
+	CFLAG:MASTER:150 |= 16
+	IF CFLAG:65
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 해냈다는 듯한 눈으로 %조사처리(CALLNAME:MASTER,"를")% 보고 있다.
+		CFLAG:65 -= 150
+	ENDIF
+
+	;主人の死亡チェック(EASYでないとき主人が調合知識を持たず、毒を盛った奴隷が[弱味]持ちなおかつ恐怖と反発持ちで一定の確率で主人死亡)
+	SIF FLAG:3 != 1 && TALENT:MASTER:55 == 0 && TALENT:39 && MARK:8 && MARK:9 && RAND:20 == 0
+		CALL BADEND_8
+ELSE
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ！
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 나온 음식에 독이 들어있다는 사실을 간파했다.
+	;毒を見破ったフラグON
+	CFLAG:150 |= 8
+	CFLAG:MASTER:150 |= 32
+	;弱味を握るイベント発生判定用
+	LOCAL:6 = 0
+	LOCAL:7 = 0
+	REPEAT CHARANUM
+		;MASTERは除外
+		SIF COUNT == 0
+			CONTINUE
+		;失踪中などこの場にいないなら除外
+		SIF CFLAG:COUNT:4
+			CONTINUE
+		;[薬毒耐性]か[機械]持ちも除外
+		SIF TALENT:COUNT:44 || TALENT:COUNT:206
+			CONTINUE
+		;助手可能、従順Lv4以上、굴복각인Lv3、弱味、연모系、복종系素質のどれかを持っている必要がある
+		SIF ABL:COUNT:10 < 4 && MARK:COUNT:2 < 3 && TALENT:COUNT:39 == 0
+			CONTINUE
+		SIF TALENT:COUNT:150 == 0 && TALENT:COUNT:151 == 0 && TALENT:COUNT:152 == 0 && TALENT:COUNT:153 == 0
+			CONTINUE
+		SIF TALENT:COUNT:160 == 0 && TALENT:COUNT:161 == 0 && TALENT:COUNT:162 == 0 && TALENT:COUNT:164 == 0
+			CONTINUE
+		;上の条件を満たすキャラを奴隷の中からピックアップし、調教対象との相性を見比べる
+		;ここで調教対象と相性のいいキャラがピックアップされ、2/3の確率で
+		;(鬼畜な主人によって)調教対象の毒入り料理を食べさせるように仕向けられる
+		LOCAL:5 = NO:COUNT
+		SIF RELATION:(LOCAL:5) < 100
+			CONTINUE
+		IF RELATION:(LOCAL:5) > RELATION:(LOCAL:6) && (LOCAL:7 == 0 || RAND:3 > 0)
+			LOCAL:6 = NO:COUNT
+			LOCAL:7 = COUNT
+		ENDIF
+	REND
+	IF LOCAL:7 > 0 && RAND:3 > 0
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 갑자기 %조사처리(CALLNAME:(LOCAL:7),"를")% 불러서 같이 식사를 하자고 제안했다.
+		;一定の確率でTARGETは止めずに逃げようとする
+		IF RAND:100 < 5
+			PRINTFORML 아무것도 모르는 %조사처리(CALLNAME:(LOCAL:7),"가")% 천진하게 독이 든 요리에 손을 뻗는 것을 보고
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 슬쩍 빠져나가려고  뒷걸음치기 시작했다…….
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그 행동을 알아챘지만, %조사처리(CALLNAME:TARGET,"를")% 그냥 내버려두었다.
+			PRINTFORML %조사처리(CALLNAME:(LOCAL:7),"는")% %CALLNAME:TARGET%의 요리를 먹은 뒤, 갑자기 쓰러졌다.
+			PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 쓰러진 %조사처리(CALLNAME:(LOCAL:7),"를")% 방으로 옮겨주었다.
+			WAIT
+			PRINTFORML 방 안에서 정신을 차린 %조사처리(CALLNAME:(LOCAL:7),"는")% 사태의 진상을 알고, %조사처리(CALLNAME:MASTER,"과")% %CALLNAME:TARGET% 양쪽 모두에게 
+			PRINTFORMW 분노를 느껴 언젠가 복수해주리라 마음에 맹세했다…….
+
+			;毒の巻き添えを食らったフラグON
+			CFLAG:(LOCAL:7):150 |= 8192
+
+			;ここから毒の影響を見る（主人ほどにはバラエティーはないぞ)
+			;調合知識持ちまたは一定確率で引っかからない
+			IF TALENT:(LOCAL:7):55 == 0 && RAND:(LOCAL:2) > 2
+				;どの影響が起きる可能性があるかフラグを設定.口上分岐に使用してください.
+				TFLAG:243 = LOCAL:1
+				;毒の巻き添えを食った方の口上（振舞った方をTFLAG:99に入れた）
+				CALL SELF_KOJO, LOCAL:7, 181, TARGET
+				;禁断の知識ロスト
+				IF LOCAL:1 == 0 && TALENT:(LOCAL:7):56
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [금단의 지식]을 잃었다.
+					TALENT:(LOCAL:7):56 = 0
+				;サド消滅
+				ELSEIF LOCAL:1 == 1 && TALENT:(LOCAL:7):81
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [새드]를 잃었다.
+					TALENT:(LOCAL:7):81 = 0
+				;汚れ無視消滅
+				ELSEIF LOCAL:1 == 3 && TALENT:(LOCAL:7):64
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [불결무시]을 잃었다.
+					TALENT:(LOCAL:7):64 = 0
+				;狂気付加
+				ELSEIF LOCAL:1 == 4 && TALENT:(LOCAL:7):158 == 0
+					PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [광기]를 얻었다.
+					TALENT:(LOCAL:7):158 = 1
+					CFLAG:(LOCAL:7):12 |= 1
+					CFLAG:(LOCAL:7):17 |= 2
+				;魅力減少
+				ELSEIF (LOCAL:1 == 5 || LOCAL:1 == 2) && (TALENT:(LOCAL:7):90 || TALENT:(LOCAL:7):91 || TALENT:(LOCAL:7):92)
+					IF TALENT:(LOCAL:7):90
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [매력]을 잃었다.
+						TALENT:(LOCAL:7):90 = 0
+					ELSEIF TALENT:(LOCAL:7):92
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [수수께끼의 매력]을 잃었다.
+						TALENT:(LOCAL:7):92 = 0
+					ELSE
+						PRINTFORMW %조사처리(CALLNAME:(LOCAL:7),"는")% [매혹]을 잃었다.
+						TALENT:(LOCAL:7):91 = 0
+					ENDIF
+				;技能低下
+				ELSEIF LOCAL:1 == 6 && ABL:(LOCAL:7):12 > 0
+					PRINTFORMW %CALLNAME:(LOCAL:7)%의 기교가 내려갔다.
+					ABL:(LOCAL:7):12 = MAX(ABL:(LOCAL:7):12 - 1, 0)
+				;体力減少
+				ELSE
+					PRINTFORM %조사처리(CALLNAME:(LOCAL:7),"는")% 체력이 
+					SIF LOCAL >= 4
+						PRINT 크게 
+					PRINTW 소모되었다.
+					BASE:(LOCAL:7):0 -= 200 * (LOCAL:2/3)
+				ENDIF
+				;メディは特殊修整あり
+				IF NO:TARGET == 33
+					BASE:(LOCAL:7):0 /= 2
+					BASE:(LOCAL:7):0 -= 75 * (RAND:5 + 1)
+				ELSE
+					BASE:(LOCAL:7):0 -= 75 * (RAND:5 + 1)
+				ENDIF
+			ENDIF
+
+			;相性低下の前に0%を一時的に100%に
+			SIF RELATION:(LOCAL:7):(NO:MASTER) == 0
+				RELATION:(LOCAL:7):(NO:MASTER) = 100
+			SIF RELATION:(LOCAL:7):(NO:TARGET) == 0
+				RELATION:(LOCAL:7):(NO:TARGET) = 100
+			;LOCAL:7と主人との相性低下
+			RELATION:(LOCAL:7):(NO:MASTER) = MAX(RELATION:(LOCAL:7):(NO:MASTER) - RAND:30, 1)
+			;LOCAL:7と毒の首謀者との相性低下
+			RELATION:(LOCAL:7):(NO:TARGET) = MAX(RELATION:(LOCAL:7):(NO:TARGET) - RAND:30, 1)
+			;相性操作後にもし100%なら表示を考慮して0%に
+			SIF RELATION:(LOCAL:7):(NO:MASTER) == 100
+				RELATION:(LOCAL:7):(NO:MASTER) = 0
+			SIF RELATION:(LOCAL:7):(NO:TARGET) == 100
+				RELATION:(LOCAL:7):(NO:TARGET) = 0
+
+			;부정의 구슬
+			CALL COMMON_UP_JUEL, (LOCAL:7), 100, (LOCAL:2*25), 1
+
+		;相性が普通以上なら従来のとおり
+		ELSE
+			;毒弁当を振舞われそうになった方の口上(毒弁当作成者をTFLAG:99に)
+			CALL SELF_KOJO, LOCAL:7, 605, TARGET
+			PRINTFORML 아무것도 모르는 %조사처리(CALLNAME:(LOCAL:7),"가")% 천진난만하게 독이 든 요리에 손을 뻗는 것을 보고
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 새파랗게 질려선 필사적으로 %조사처리(CALLNAME:(LOCAL:7),"를")% 막으려 했다.
+			PRINTFORML 시종일관 의아한 표정을 짓는 %조사처리(CALLNAME:(LOCAL:7),"를")% 앞에 두고 끝내 밑천이 다했는지, %조사처리(CALLNAME:TARGET,"는")%
+			PRINTFORMW 결국에는 울면서 요리에 독을 넣었음을 자백했다.
+			PRINTFORM 그리고 양손으로 요리 접시를 끌어안고는  %CALLNAME:(LOCAL:7)%의 귓전에 
+
+			;ここで人格分岐
+			CALL JINKAKU
+			;人形の場合
+			IF TALENT:208 == 1
+				PRINTL 미안하다는 듯 고개를 숙이고, 
+			;以下人格ごとに
+			ELSEIF CFLAG:3005 == 3 || CFLAG:3005 == 6
+				PRINTL 작은 목소리로 
+				PRINTL 「미안해요……」
+				PRINT 란 말을 남긴 뒤, 
+			ELSEIF CFLAG:3005 == 2
+				PRINTL 작은 목소리로 
+				PRINTL 「미안……」
+				PRINT 이란 말을 남긴 뒤, 
+			ELSEIF CFLAG:3005 == 11 || CFLAG:3005 == 12
+				PRINTL 작은 목소리로 
+				PRINTL 「미안하다……」
+				PRINT 란 말을 남긴 뒤, 
+			ELSE
+				PRINTL 작은 목소리로 
+				PRINTL 「정말 미안……」
+				PRINT 이란 말을 남긴 뒤, 
+			ENDIF
+			PRINTW 독이 든 요리를 처분하기 위해 부엌으로 자취를 감추었다…….
+			WAIT
+			PRINTFORML 아무도 없는 주방에 홀로 남겨진 %조사처리(CALLNAME:TARGET,"는")% 굴욕과 공포로 가득한 눈물을 흘리며 
+			PRINTW 언제까지고 하염없이 오열을 되풀이하고 있었다…….
+		ENDIF
+			LOCAL:2 += 12
+		IF TALENT:39 == 0
+			IF RAND:3 == 0
+				PRINTFORMW %CALLNAME:TARGET%의 [약점]을 잡는 데 성공했다.
+				TALENT:39 = 1
+				CFLAG:12 |= 1024
+				TIMES LOCAL:2 , 2.00
+			ENDIF
+		ENDIF
+		;굴복의 구슬
+		CALL COMMON_UP_JUEL, TARGET, 14, (LOCAL:2*8), 1
+		SIF TALENT:10
+			LOCAL:2 *= 2
+		SIF TALENT:22
+			LOCAL:2 /= 2
+		IF TALENT:25
+			LOCAL:2 -= 5
+		ELSEIF TALENT:26
+			LOCAL:2 += 10
+		ENDIF
+		LOCAL:2 = MAX(LOCAL:2, 0)
+		;부정의 구슬
+		CALL COMMON_UP_JUEL, TARGET, 100, (LOCAL:2*30), 1
+		CFLAG:65 += LOCAL:2*5
+	ELSE
+		PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 
+		SIF TALENT:MASTER:81
+			PRINT 심술궂은 미소를 띠고는 
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"를")% 엄하게 추궁했다.
+		PRINTW  
+		PRINTFORM %CALLNAME:MASTER%의 
+		IF TALENT:MASTER:81
+			PRINT 추상 같은 
+			LOCAL:2 += 10
+		ENDIF
+		PRINTFORMW 심문에 단념했는지 %조사처리(CALLNAME:TARGET,"는")% 독을 넣었음을 인정했다.
+		PRINTL 
+		PRINTFORMW 방에서 떠나는 %CALLNAME:MASTER%의 뒷모습을 바라보며 
+		IF TALENT:39 == 0 && TALENT:25
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 다음엔 잘 되기를 바라고 있었다…….
+		ELSE
+			PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 이후 어떤 보복이 기다리고 있을지를 상상했는지, 
+			PRINTW 새파랗게 질려선 공포에 떨고 있었다…….
+		ENDIF
+		IF TALENT:39 == 0
+			IF RAND:8 == 0
+				PRINTFORMW %CALLNAME:TARGET%의 [약점]을 잡는 데 성공했다.
+				TALENT:39 = 1
+				CFLAG:12 |= 1024
+				TIMES LOCAL:2 , 2.00
+			ENDIF
+		ENDIF
+		;공포의 구슬
+		SIF TALENT:25 == 0 || TALENT:39
+			CALL COMMON_UP_JUEL, TARGET, 17, (LOCAL:2*2), 0
+		;굴복의 구슬
+		CALL COMMON_UP_JUEL, TARGET, 14, (LOCAL:2*5), 1
+		SIF TALENT:10
+			LOCAL:2 *= 2
+		SIF TALENT:22
+			LOCAL:2 /= 2
+		IF TALENT:25
+			LOCAL:2 -= 5
+		ELSEIF TALENT:26
+			LOCAL:2 += 10
+		ENDIF
+		LOCAL:2 = MAX(LOCAL:2, 0)
+		;부정의 구슬
+		CALL COMMON_UP_JUEL, TARGET, 100, (LOCAL:2*20), 1
+		CFLAG:65 += LOCAL:2*10
+	ENDIF
+ENDIF
+
+LOCAL:4 = ABL:70
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL:1 * (LOCAL:4+1) * 4), 0
+LOCAL:3 = ABL:70 + (1 + RAND:5)
+;요리경험
+CALL COMMON_UP_EXP, TARGET, 70, LOCAL:3, 1
+
+CFLAG:65 = LIMIT(CFLAG:65, 0, 999999)
+
+IF BASE:MASTER:0 <= 0
+	IF TALENT:48 || TALENT:49 || MARK:10 || FLAG:5 & 1 || ((TALENT:81 || TALENT:177 || ABL:20 > 3) && RAND:2 == 0)
+		CALL BADEND_7
+	ELSE
+		CALL BADEND_6
+	ENDIF
+ENDIF
+
+;휴식 플래그를 켠다
+FLAG:0 = 1
+BEGIN TURNEND
+RETURN 1
+
+;=============================================================================
+;질투 초콜렛 처리
+;=============================================================================
+;ヤンデレな奴隷が作ったチョコを食べたり売ったりするオプション.
+;ちゃっかり弁当処理を使い回し
+;これぞOperation ～ Bitter Sweet Chocolate
+;-------------------------------------------------
+;LOCAL = 초콜릿의 종류 
+;LOCAL:1 = 시키님 특수 처리 
+;LOCAL:2 = 초코 가격의 보정을 결정 
+;LOCAL:3 = 초콜릿의 가격 
+;LOCAL:4 = 초코 가격의 기초 
+;LOCAL:5 = 배울 부정의 주 증가량 체력 감소량 
+;LOCAL:6 = 고유 초콜렛의 종류, 난수 처리 
+;LOCAL:7 = 내부 처리 용
+;-------------------------------------------------
+@LUNCH_CHOCOLATE
+VARSET LOCAL, 0
+LOCAL = RAND:16
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL:2 = 10
+ELSEIF ABL:12 == 1
+	LOCAL:2 = 20
+ELSEIF ABL:12 == 2
+	LOCAL:2 = 30
+ELSEIF ABL:12 == 3
+	LOCAL:2 = 40
+ELSEIF ABL:12 == 4
+	LOCAL:2 = 50
+ELSE
+	LOCAL:2 = 60
+ENDIF
+
+;ABL:요리기능을 본다
+IF ABL:70 == 0
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:70 == 1
+	TIMES LOCAL:2 , 1.10
+ELSEIF ABL:70 == 2
+	TIMES LOCAL:2 , 1.30
+ELSEIF ABL:70 == 3
+	TIMES LOCAL:2 , 1.50
+ELSEIF ABL:70 == 4
+	TIMES LOCAL:2 , 1.90
+ELSE
+	TIMES LOCAL:2 , 2.40
+ENDIF
+
+;EXP:요리경험을 본다
+IF EXP:70 < EXPLV:1
+	TIMES LOCAL:2 , 0.80
+ELSEIF EXP:70 < EXPLV:2
+	TIMES LOCAL:2 , 1.00
+ELSEIF EXP:70 < EXPLV:3
+	TIMES LOCAL:2 , 1.20
+ELSEIF EXP:70 < EXPLV:4
+	TIMES LOCAL:2 , 1.40
+ELSEIF EXP:70 < EXPLV:5
+	TIMES LOCAL:2 , 1.70
+ELSE
+	TIMES LOCAL:2 , 2.00
+ENDIF
+
+;헌신적
+SIF TALENT:63
+	TIMES LOCAL:2 , 1.30
+
+;상애
+;IF TALENT:153
+;	TIMES LOCAL:2 , 1.80
+;친애
+;ELSEIF TALENT:152
+;	TIMES LOCAL:2 , 1.50
+;ENDIF
+
+;상애
+SIF TALENT:153
+	TIMES LOCAL:2 , 1.80
+;친애
+SIF TALENT:152
+	TIMES LOCAL:2 , 1.50
+;망신
+SIF TALENT:151
+	TIMES LOCAL:2 , 1.30
+;연모
+SIF TALENT:150
+	TIMES LOCAL:2 , 1.20
+
+;사역마
+SIF TALENT:164
+	TIMES LOCAL:2 , 1.50
+
+;LOCAL = 요리의 종류
+IF LOCAL == 0 && ABL:70 >= 5
+	;キャラ固有チョコ
+	LOCAL:4 = 700
+ELSEIF LOCAL == 1 || LOCAL == 2
+	;ザッハトルテ
+	LOCAL:4 = 630
+ELSEIF LOCAL == 3 || LOCAL == 4
+	;チョコケーキ
+	LOCAL:4 = 540
+ELSEIF LOCAL == 5 || LOCAL == 6 || LOCAL == 7
+	;ジンジャーチョコレート
+	LOCAL:4 = 500
+ELSEIF LOCAL == 8 || LOCAL == 9
+	;チョコバナナ
+	LOCAL:4 = 450
+ELSEIF LOCAL == 11 && TALENT:134
+	;母乳チョコ
+	LOCAL:4 = 550
+ELSE
+	;プラリネ
+	LOCAL:4 = 400
+ENDIF
+
+;요리명인
+IF TALENT:194
+	TIMES LOCAL:4 , 2.50
+;요리잘함
+ELSEIF TALENT:193
+	TIMES LOCAL:4 , 1.75
+;요리못함
+ELSEIF TALENT:192
+	TIMES LOCAL:4 , 0.75
+ENDIF
+
+PRINTL 
+PRINTFORMW %CALLNAME:TARGET%더러 요리를 만들게 했다.
+PRINTL 
+;映姫様のみ60日ごとに実行するとボーナスが入る.
+IF NO:TARGET == 36 && (DAY % 60) == 0
+	PRINTL …………？
+	PRINTFORMW 왜인지 %조사처리(CALLNAME:TARGET,"는")% 평소보다 더 의욕이 넘치는 모양이다…….
+	PRINTL 
+	LOCAL = 0
+	LOCAL:4 = 660 + RAND:60
+	LOCAL:1 = 1
+ENDIF
+;질투 초콜렛
+CALL SELF_KOJO, TARGET, 114
+PRINTW      ・
+PRINTW      ・
+PRINTW      ・
+PRINTW       !
+PRINTL 
+PRINTFORM %조사처리(CALLNAME:TARGET,"는")% 
+SIF TALENT:152 || TALENT:153
+	PRINT 애정이 듬뿍 담긴 
+IF LOCAL == 0 && (ABL:70 >= 5 || LOCAL:1 == 1)
+	;毒を盛ったフラグON
+	CFLAG:150 |= 64
+	;(専用)口上側で定義されている固有チョコが25%の確率で出る
+	IF CSTR:87 != "" && RAND:4 == 0
+		PRINTS CSTR:87
+		LOCAL:4 += 88
+	;キャラ固有チョコ
+	ELSEIF NO:TARGET == 1 && CFLAG:0
+		;레이무님
+		PRINT 찹쌀경단(바늘 첨가)
+		LOCAL:4 = 777
+		LOCAL:5 = 2
+	ELSEIF NO:TARGET == 2
+		;마리사
+		PRINT 조각난 초코쿠키☆
+		LOCAL:4 = 128
+	ELSEIF NO:TARGET == 3
+		;루미아
+		PRINT 다크 초콜릿
+		LOCAL:4 += 83
+	ELSEIF NO:TARGET == 5
+		;치르노
+		PRINT 초코 아이스크림
+		LOCAL:4 += 105
+	ELSEIF NO:TARGET == 6 || NO:TARGET == 204
+		;메이링
+		PRINT 두반장 초콜릿
+		LOCAL:4 += 315
+	ELSEIF NO:TARGET == 7
+		;코아
+		PRINT 코코아 초코
+		LOCAL:4 += 90
+	ELSEIF NO:TARGET == 8
+		;파츄리
+		PRINT 화이트 가나슈
+		LOCAL:4 += 119
+	ELSEIF NO:TARGET == 9
+		;사쿠야씨
+		PRINT 와인 초콜릿
+		LOCAL:4 += 330
+	ELSEIF NO:TARGET == 10
+		;레미
+    ;애초에 초콜릿에 넣으라고 있는 술이 아니지만 사쿠야씨가 와인이니 레미아씨도 분발해서...!
+		PRINT 블러디 메리 초콜릿
+		LOCAL:4 += 280
+	ELSEIF NO:TARGET == 11
+		;플랑
+		;恋の味は苦いって言うよね！…え、言わない？
+		PRINT 비터 초콜릿
+		LOCAL:4 += 80
+		SIF TALENT:150
+			TFLAG:202 = 1
+	ELSEIF NO:TARGET == 14 && CFLAG:0 == 0
+		;앨리스
+		PRINT 마블 초콜릿
+		LOCAL:4 += 165
+	ELSEIF NO:TARGET == 15
+		;릴리W
+    ;나체정식 플레이에 나왔던 그거
+		PRINT 화이트 초코크림 케익
+		LOCAL:4 += 89
+	ELSEIF NO:TARGET == 16
+		;리리카
+		PRINT 다크&화이트 건반 초콜릿
+		LOCAL:4 += 90
+	ELSEIF NO:TARGET == 17
+		;메를랑
+		PRINT 초코롤
+		LOCAL:4 += 110
+	ELSEIF NO:TARGET == 18
+		;루나사
+		PRINT 봉봉 쇼콜라
+		LOCAL:4 += 120
+	ELSEIF NO:TARGET == 19
+		;요-무
+		PRINT 초콜릿 크림이 든 경단
+		LOCAL:4 += 99
+	ELSEIF NO:TARGET == 20
+		;유유님
+		PRINT 사쿠라모치 초콜릿
+		LOCAL:4 += 139
+	ELSEIF NO:TARGET == 23
+		;스이카
+		PRINT 사랑의 비약 「큥큥 칵테일」 (초콜릿 리큐어 블렌드)
+		LOCAL:4 += 191
+	ELSEIF NO:TARGET == 24
+		;리구룽
+		PRINT 벌레(반마리) 씹히는 초콜릿
+		LOCAL:4 += 80
+	ELSEIF NO:TARGET == 25
+		;미스치
+		PRINT 초콜릿 마시멜로 병아리
+		LOCAL:4 += 99
+	ELSEIF NO:TARGET == 28
+		;우돈게
+		PRINT 달토끼의 초코떡
+		LOCAL:4 += 113
+	ELSEIF NO:TARGET == 29
+		;에-링
+		PRINT 호접몽환 나이트메어(초코향)
+		LOCAL:4 += 80 + RAND:128
+	ELSEIF NO:TARGET == 30
+		;카구야
+    ;영원을 당신과 함께
+		PRINT 우담바라 초콜릿
+		LOCAL:4 += 200
+	ELSEIF NO:TARGET == 31
+		;모코우
+    ;깨면 장난감이 들어있는 그거. 모코땅 의외로 손재주 좋을 거 같고 식완 같은 거 좋아할 것처럼 보이니까
+		PRINT 미니어쳐 불사조의 알 (식완 포함)
+		LOCAL:4 += 102
+	ELSEIF NO:TARGET == 33
+		;메디슨
+		PRINT 은방울꽃 초콜릿
+		LOCAL:4 += 80
+		LOCAL:5 = 3
+	ELSEIF NO:TARGET == 34
+		;유우카링
+		PRINT 해바라기씨 초콜릿
+		LOCAL:4 += 120
+		LOCAL:5 = 2
+	ELSEIF NO:TARGET == 37
+		;시즈하
+		PRINT 메이플 시럽 초콜릿
+		LOCAL:4 += 95
+	ELSEIF NO:TARGET == 38
+		;(EX)미노리코
+		PRINT 초코 군고구마
+		LOCAL:4 += 80
+    SIF CFLAG:0
+		  LOCAL:5 = 2
+	ELSEIF NO:TARGET == 39
+		;히나
+    ;야쿠(액)르트라는 말장난은 한국어로는 살릴 수 없을까
+		PRINT 요거트 초콜릿 무스
+		LOCAL:4 += 89 + RAND:89
+		LOCAL:5 = 2
+	ELSEIF NO:TARGET == 42 && CFLAG:0
+		;사나에님
+    ;사나에님은 컵라면을 좋아하시고 위험물을 만든다면 한때 시판된 금단의 끓여먹으면 안되는 그것을
+		PRINT 초코맛 뿌○뿌셔(끓인 것)
+		LOCAL:4 += 777
+		LOCAL:5 = 2
+	ELSEIF NO:TARGET == 43
+		;카나코님
+		PRINT 온바시라 초콜릿
+		LOCAL:4 += 184
+	ELSEIF NO:TARGET == 44
+		;케로쨩
+    ;이따금 살아움직인다는 그거
+		PRINT 개구리 초콜릿
+		LOCAL:4 += 99 + RAND:99
+	ELSEIF NO:TARGET == 45
+		;서니
+		PRINT 서니 밀크 초콜릿
+		LOCAL:4 += 95
+	ELSEIF NO:TARGET == 46
+		;루나
+		PRINT 달 모양 비터 초콜릿
+		LOCAL:4 += 95
+	ELSEIF NO:TARGET == 47
+		;스타
+		PRINT 별 모양 사탕가루 뿌려진 초콜릿
+		LOCAL:4 += 95
+	ELSEIF NO:TARGET == 50
+		;렌코
+		PRINT 초코 프라푸치노
+		LOCAL:4 += 102
+	ELSEIF NO:TARGET == 51
+		;메리
+		PRINT 초콜릿 아포가토
+		LOCAL:4 += 105
+	ELSEIF NO:TARGET == 52
+		;텐코
+		PRINT 복숭아 초코 케익
+		LOCAL:4 += 131
+	ELSEIF NO:TARGET == 53
+		;토요히메
+		PRINT 초코시럽 얹은 안즈아메
+		LOCAL:4 += 121
+	ELSEIF NO:TARGET == 54
+		;요리히메
+    ;칼에 닿는 모든 것을 가래떡으로 바꾸는 정도의 능력
+		PRINT 초코 가래떡
+		LOCAL:4 += 114
+	ELSEIF NO:TARGET == 56
+		;릴리B
+    ;나체정식 플레이에 나왔던 그거
+		PRINT 다크 초코크림 케익
+		LOCAL:4 += 89
+	ELSEIF NO:TARGET == 58
+		;야마메
+		PRINT 펑거스틱 초콜릿
+		LOCAL:4 += 99
+		LOCAL:5 = 3
+	ELSEIF NO:TARGET == 59
+		;파르시
+		PRINT 블러드 레드 초콜릿
+		LOCAL:4 += 88
+		LOCAL:5 = 2
+	ELSEIF NO:TARGET == 61
+		;사토리
+		PRINT 심장모형 초콜릿
+		LOCAL:4 += 310
+	ELSEIF NO:TARGET == 62
+		;오링링
+		PRINT 원령 초콜릿
+		LOCAL:4 += 80
+	ELSEIF NO:TARGET == 63
+		;오쿠우
+		LOCAL:6 = RAND:6
+		IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && LOCAL:6 == 0
+			;미약 1개 소비
+			IF NOITEM == 0
+				ITEM:61 -= 1
+				SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+					CALL FILL_PLURAL_ITEM, 61
+			ENDIF
+			TFLAG:202 = 1
+			PRINT 방사능 초콜릿
+			LOCAL:4 += 50
+			LOCAL:5 = 7
+		ELSE
+			;うにゅ～
+			PRINT 딸기 초콜릿
+			LOCAL:4 += 60
+		ENDIF
+	ELSEIF NO:TARGET == 64
+		;코이시
+		PRINT 바삭바삭 딸기 하트풀 ○키 EX
+		LOCAL:4 += 114 + RAND:64
+	ELSEIF NO:TARGET == 72
+		;코가사
+		PRINT 초코 파라솔
+		LOCAL:4 += 111
+	ELSEIF NO:TARGET == 78
+		;누에
+		PRINT 정체불명의 물체X
+		LOCAL:4 += RAND:512
+	ELSEIF NO:TARGET == 82
+		;요시카
+		PRINT 뇌 초콜릿
+		LOCAL:4 += 80
+	ELSEIF NO:TARGET == 85
+		;후토
+		PRINT 검게 탄 초콜릿 불상
+		LOCAL:4 += 210
+	ELSEIF NO:TARGET == 86
+		;미코
+    ;초기안 - 수은의 원소번호는 80(+그래도 높으신 분이니까 2~300 보정?)
+    ;수은의 녹는점 −38.83 °C 끓는점 356.73 °C
+    ;두개 합치면 356.73-38.83 = 317.9 반올림 318
+		PRINT 수은 초콜릿
+		LOCAL:4 += 318
+	ELSEIF NO:TARGET == 89
+		;코코로
+		PRINT 가면 초콜릿 (66개입)
+		LOCAL:4 += 120 + RAND:66
+	ELSEIF NO:TARGET == 103
+		;엘렌 폭신폭신머리 오레우스
+		PRINT 폭신폭신 가나슈
+		LOCAL:4 += 99
+	ELSEIF NO:TARGET == 108
+		;유메미 교수님
+    ;딸기에 초콜릿을 녹여 찍어서 만든 그것
+		PRINT 딸기 초코퐁듀
+		LOCAL:4 += 115
+	ELSEIF NO:TARGET == 116
+		;유키
+		PRINT 밀크 초콜릿 (농후함 듬뿍)
+		LOCAL:4 += 90
+	ELSEIF NO:TARGET == 117
+		;마이
+		PRINT 비터 화이트 초콜릿 (쓴맛 듬뿍)
+		LOCAL:4 += 90
+	ELSEIF NO:TARGET == 128
+		;VIVIT
+		PRINT 선인장 초콜릿
+		LOCAL:4 += 110
+;	ELSEIF NO:TARGET == 
+		;キャラ
+;		PRINT (料理名)
+;		LOCAL:4 += 
+	ELSE
+		PRINT 초코레이토(貯古齢糖)
+	ENDIF
+	SIF TALENT:152 || TALENT:153
+		TFLAG:202 = 1
+ELSEIF LOCAL == 1 || LOCAL == 2
+	PRINT 자허토르테
+ELSEIF LOCAL == 3 || LOCAL == 4
+	PRINT 초코 케이크
+ELSEIF LOCAL == 5 || LOCAL == 6 || LOCAL == 7
+	PRINT 진저 초콜릿
+ELSEIF LOCAL == 8 || LOCAL == 9
+	PRINT 초코 바나나
+ELSEIF LOCAL == 11 && TALENT:134
+	IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && RAND:4 == 0
+		IF NOITEM == 0
+			ITEM:61 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+				CALL FILL_PLURAL_ITEM, 61
+		ENDIF
+		TFLAG:202 = 1
+		LOCAL:4 += 80
+		PRINT 아련하게 달콤한 향기가 감도는 
+	ENDIF
+	PRINT 모유 초콜릿
+ELSE
+	IF (ITEM:61 > 0 || NOITEM) && TALENT:170 && RAND:4 == 0
+		IF NOITEM == 0
+			ITEM:61 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+				CALL FILL_PLURAL_ITEM, 61
+		ENDIF
+		TFLAG:202 = 1
+		LOCAL:4 += 80
+		PRINT 아련하게 달콤한 향기가 감도는 
+	ENDIF
+	PRINT 플라리네
+ENDIF
+PRINTW 를(을) 만들었다.
+;-------------------------------------------------
+;초콜렛의 가격을 계산
+;-------------------------------------------------
+;일반 도시락보다 보정은 큼
+LOCAL:3 = (LOCAL:2 * LOCAL:4) / 25
+IF FLAG:3 >= 3
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 5000, 2)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 10000, 4)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 50000, 8)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 100000, 16)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 500000, 32)
+ELSE
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 10000, 3)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 50000, 5)
+	LOCAL:3 = TABLE_CALC(LOCAL:3, 100000, 10)
+ENDIF
+;연애감정(?) 보정
+SIF TALENT:150
+	TIMES LOCAL:3 , 1.20
+SIF TALENT:151
+	TIMES LOCAL:3 , 1.30
+SIF TALENT:152
+	TIMES LOCAL:3 , 1.50
+SIF TALENT:153
+	TIMES LOCAL:3 , 1.80
+;얀데레 보정
+SIF TALENT:157
+	TIMES LOCAL:3 , 1.30
+SIF TALENT:158
+	TIMES LOCAL:3 , 1.70
+;-------------------------------------------------
+PRINTL      ・
+PRINTL      ・
+PRINTL      ・
+PRINTL 
+PRINTL 그럼…… 초콜릿을 받은 건 잘 된 일이긴 한데, 용기를 내서 먹어볼까,
+PRINTFORMW 아니면 마을에다 ${LOCAL:3}에 팔까…….
+PRINTL (어떻게 할까?)
+DRAWLINE
+PRINTL [0] - 작심하고 먹어본다.
+PRINTL [1] - 위험물은 처분하자.
+DRAWLINE
+PRINTL 
+$INPUT_LOOP
+IF FLAG:12 & 4096 && FLAG:12 & 8192
+	RESULT = 1
+ELSEIF FLAG:12 & 4096
+	RESULT = 0
+ELSE
+	INPUT
+ENDIF
+IF RESULT == 0
+	;질투 초콜릿을 먹어 주는 플래그ON
+	CFLAG:150 |= 128
+	CFLAG:MASTER:150 |= 512
+	PRINTFORML 몰래 처분할 것까지도 없으니, %조사처리(CALLNAME:MASTER,"는")% 
+	PRINTFORMW %CALLNAME:TARGET%의 초콜릿을 먹기로 했다.
+	PRINTL      ・
+	PRINTL      ・
+	PRINTW      ・
+	PRINTFORM %조사처리(CALLNAME:MASTER,"는")% 
+	SIF TALENT:157 && TALENT:158
+		PRINT 용기를 내서 
+	SIF TALENT:157
+		PRINT 묘하게 어두운 빛깔을 띤 
+	SIF TALENT:158
+		PRINT 엽기적인 맛이 나는 
+	PRINTFORML %CALLNAME:TARGET%의 초콜릿에 손을 대었다.
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW 이, 이 맛은……!!
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	LOCAL:5 *= ((LOCAL:2 * 5) + (LOCAL:3 / 5))
+	LOCAL:5 = MAX(LOCAL:5 - LOCAL:5%100, 100)
+	BASE:MASTER:0 -= LOCAL:5
+	PRINTFORML %CALLNAME:MASTER%의 체력이 {LOCAL:5} 감소했다.
+	IF BASE:MASTER:0 < 0
+		BASE:MASTER:0 = 1
+		PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 사조성이 보인 느낌이 들었다…….
+		;이상경험
+		CALL COMMON_UP_EXP, MASTER, 50, 1, 1
+	ELSEIF BASE:MASTER:0 < 10
+		BASE:MASTER:0 = 10
+	ENDIF
+	IF CFLAG:65
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 초콜릿을 먹어준 사실에 기뻐하는 것 같다.
+		CFLAG:65 -= LOCAL:5
+	ENDIF
+	;チョコレートを食べてもらったあと
+	CALL SELF_KOJO, TARGET, 603, LOCAL:5
+	LOCAL:5 += LOCAL:3 - LOCAL:3%100
+	LOCAL:5 += LOCAL:2 * 10
+	;순종의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 12, LOCAL:5, 1
+ELSEIF RESULT == 1
+	;毒を盛ったフラグON
+	CFLAG:150 |= 256
+	CFLAG:MASTER:150 |= 1024
+	;このおにちく！
+	PRINTFORM %조사처리(CALLNAME:TARGET,"가")% 
+	SIF TALENT:150
+		PRINT 마음을 담아서 
+	PRINTFORML 만든 초콜릿은 {LOCAL:3}원이란 매입가가 붙었다.
+	MONEY:1 = LOCAL:3
+	CALL SHOW_MONEY_INCREACE
+	;--------------------------------------------------
+	;도시락(노예)로 벌어 들인 최고 금액 판정 처리
+	SIF MONEY:1 > MONEY:996
+		CALL NEW_HIGH_INCOME_ALL, 996
+	SIF MONEY:1 > CFLAG:93
+		CALL NEW_HIGH_INCOME_SLAVE, 93
+	CALL TOTAL_INCOME_SLAVE, MONEY:1
+	;--------------------------------------------------
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW      ・
+	PRINTW ……등줄기에 찌르는 듯한 시선이 느껴진다……..
+	;チョコを叩き売られた嫁
+	CALL SELF_KOJO, TARGET, 118
+	CFLAG:30 += 30
+	TFLAG:202 = 0
+	LOCAL:5 = (LOCAL:3 / 2 + CFLAG:30 * 2) * 5
+
+	;망신
+	SIF TALENT:151
+		TIMES LOCAL:5 , 0.50
+	;애정보정
+	IF TALENT:153
+		TIMES LOCAL:5 , 0.60
+	ELSEIF TALENT:152
+		TIMES LOCAL:5 , 0.75
+	ELSEIF TALENT:150
+		TIMES LOCAL:5 , 0.90
+	ENDIF
+	;プライド高い
+	SIF TALENT:16
+		TIMES LOCAL:5 , 1.30
+	;自制心
+	SIF TALENT:20
+		TIMES LOCAL:5 , 0.90
+	;感情乏しい
+	SIF TALENT:22
+		TIMES LOCAL:5 , 0.70
+	;悲観的
+	IF TALENT:26
+		TIMES LOCAL:5 , 1.20
+	;楽観的
+	ELSEIF TALENT:25
+		TIMES LOCAL:5 , 0.80
+	ENDIF
+	;복종
+	SIF TALENT:160
+		TIMES LOCAL:5 , 0.75
+	;얀데레 보정
+	SIF TALENT:157
+		TIMES LOCAL:5 , 1.30
+	SIF TALENT:158
+		TIMES LOCAL:5 , 1.70
+	;下2桁は切り捨て
+	LOCAL:5 = MAX(LOCAL:5 - LOCAL:5%100, 100)
+	IF TALENT:160 == 0 && TALENT:164 == 0
+		IF CFLAG:30 >= 50 && TALENT:157 == 0
+			TALENT:157 = 1
+			CFLAG:12 |= 4096
+			PRINTFORMW ……%CALLNAME:TARGET%의 마음에 질투심이 싹트기 시작했다.
+		ELSEIF CFLAG:30 >= 100 && TALENT:158 == 0
+			TALENT:158 = 1
+			CFLAG:12 |= 1
+			CFLAG:17 |= 2
+			PRINTFORMW ……%CALLNAME:TARGET%의 질투심은 광기의 영역에 들어섰다.
+		ELSEIF CFLAG:30 >= 130
+			PRINTFORMW %CALLNAME:TARGET%의 이쪽을 보는 눈이 기이하다….
+			PRINTFORMW 불길한 예감이 든다….
+			TFLAG:202 = 2
+		ENDIF
+	ENDIF
+	IF LOCAL:5 >= 5000 && LOCAL:5 < 12000 && MARK:97 < 1
+		LOCAL:6 = 1
+	ELSEIF LOCAL:5 >= 12000 && LOCAL:5 < 30000 && MARK:97 < 2
+		LOCAL:6 = 2
+	ELSEIF LOCAL:5 >= 30000 && MARK:97 < 3
+		LOCAL:6 = 3
+	ELSE
+		LOCAL:6 = 0
+	ENDIF
+	IF MARK:97 < LOCAL:6
+		CALL COMMON_MARK_UP, TARGET, 9, LOCAL:6, 0
+		LOCAL:7 = 0
+		;感情乏しい、傀儡、精神崩壊、壊造人格の場合は反発刻印による従順ダウンはなし
+		IF TALENT:22 == 0 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+			IF ABL:10 > 0 && ABL:10 <= 2 && LOCAL:6 == 3
+				LOCAL:7 = 1
+				ABL:10 = 0
+			ELSEIF ABL:10 == 3 && LOCAL:6 == 3
+				LOCAL:7 = 1
+				ABL:10 = 2
+			ELSEIF ABL:10 && ABL:10 <= 2 && LOCAL:6 == 2
+				LOCAL:7 = 1
+				ABL:10 -= 1
+			ENDIF
+		ENDIF
+		IF LOCAL:7 == 1
+			PRINTFORML 그리고 순종이 LV{ABL:10}(이)가 되었다.
+			CALL JUJUN_UP_CHECK
+		ENDIF
+		;질투 초콜렛으로 반발각인 취득
+		CALL SELF_KOJO, TARGET, 604
+	ENDIF
+	CFLAG:65 += LOCAL:5 * 2 / (1 + RAND:4)
+	;부정의 구슬
+	CALL COMMON_UP_JUEL, TARGET, 100, LOCAL:5, 1
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+CFLAG:65 = LIMIT(CFLAG:65, 0, 999999)
+
+LOCAL:6 = ABL:70 + 5 + LOCAL:1
+LOCAL:5 = LOCAL:6 + RAND:5
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL:2*LOCAL:6*2), 0
+;요리경험
+CALL COMMON_UP_EXP, TARGET, 70, LOCAL:5, 1
+
+;조건을 만족하면 식후의 운동 이벤트로
+IF TFLAG:202 == 1 && ABL:1 > 0 && (FLAG:12 & 8192) == 0
+	CALL LUNCH_EXERCISE
+	;[친애], [상애]를 지니고 식후 이벤트 발생 확정시 얀데레 포인트가 감소
+	;또한 초기에 [질투]를 갖고 있지 않은 캐릭터의 경우, [질투]가 있고 광기가 없으면 [질투]가 사라진다
+	IF TALENT:152 || TALENT:153
+		CFLAG:30 = MAX(CFLAG:30 - 20, 0)
+		IF CFLAG:30 == 0 && TALENT:157 && CFLAG:12 & 4096 && TALENT:COUNT:158 == 0
+			PRINTFORML %CALLNAME:TARGET%의 표정이 왠지 모르게 밝다….
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 마음을 담아 만든 초콜릿을 먹어준 것을 진심으로 기뻐하고 있는 모양이다…….
+			PRINTFORMW %CALLNAME:TARGET%의 [질투]가 눈녹듯 풀렸다…….
+			;질투심 빙해
+			CALL SELF_KOJO, TARGET, 119
+			TALENT:157 = 0
+			CFLAG:12 -= 4096
+		ENDIF
+	ENDIF
+ELSEIF TFLAG:202 == 2
+	SIF TIME == 1
+		PRINTW 하루가 끝났다……..
+	CALL BADEND_5
+ELSE
+	TFLAG:202 = 0
+ENDIF
+
+;휴식 플래그를 켠다
+FLAG:0 = 1
+BEGIN TURNEND
+RETURN 1

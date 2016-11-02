@@ -1,0 +1,824 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;변수 교체에 수반한 세이브 데이터 자동 수정 처리
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;수정 처리 본체
+;=============================================================================
+;--------------------------------------------------
+;데이터의 로드시에 호출
+;--------------------------------------------------
+@EVENTLOAD
+;현행 ver. 이전의 데이터를 읽었을 경우에는 수정 처리로
+SIF LASTLOAD_VERSION < GAMEBASE_VERSION
+	CALL SAVE_SUPPORT_OLDVERSION
+
+;--------------------------------------------------
+;수정 처리 범용 부분
+;--------------------------------------------------
+@SAVE_SUPPORT_OLDVERSION
+RESULT = 0
+
+;eratohoYM Mk-2 → eratohoYM Mk-2 rev.2のセーブ変換処理
+SIF LASTLOAD_VERSION < 2020
+	CALL SAVE_SUPPORT_VERSION_2020
+
+;Mk-2 rev.2 → Mk-2 rev.2改セーブのセーブ変換処理
+SIF LASTLOAD_VERSION < 2021
+	CALL SAVE_SUPPORT_VERSION_2021
+
+;Mk-2 rev.2改 → Mk-2 rev.3 proto9のセーブ変換処理
+SIF LASTLOAD_VERSION < 2029
+	CALL SAVE_SUPPORT_VERSION_2029
+
+;Mk-2 rev.3 proto9 → Mk-2 rev.3改のセーブ変換処理
+SIF LASTLOAD_VERSION < 2031
+	CALL SAVE_SUPPORT_VERSION_2031
+
+;Mk-2 rev.4改 → Mk-2 rev.5-proto3セーブ変換処理
+SIF LASTLOAD_VERSION < 2043
+	CALL SAVE_SUPPORT_VERSION_2043
+
+;Mk-2 rev.5-proto6 → Mk-2 rev.5-proto7セーブ変換処理
+SIF LASTLOAD_VERSION < 2047
+	CALL SAVE_SUPPORT_VERSION_2047
+
+;Mk-2 rev.5-proto9 → Mk-2 rev.5セーブ変換処理
+SIF LASTLOAD_VERSION < 2050
+	CALL SAVE_SUPPORT_VERSION_2050
+
+;Mk-2 rev.5 → Mk-2 rev.5改セーブ変換処理
+SIF LASTLOAD_VERSION < 2058
+	CALL SAVE_SUPPORT_VERSION_2058
+
+;Mk-2 rev.5改 → Mk-2 rev.5改2セーブ変換処理
+SIF LASTLOAD_VERSION < 2059
+	CALL SAVE_SUPPORT_VERSION_2059
+
+;Mk-2 rev.5改2 → Mk-2 rev.6セーブ変換処理
+SIF LASTLOAD_VERSION < 2065
+	CALL SAVE_SUPPORT_VERSION_2065
+
+SIF MONEY:100 == 0
+	MONEY:100 = 1000000
+
+;セーブバージョンフラグは廃止
+
+IF RESULT == 1
+	PRINTL 세이브 데이터를 현행 버전 것으로 수정하는 작업을 실행했습니다.
+	PRINTW SHOP 메뉴가 표시되면 「[200] - 세이브」를 선택해주십시오.
+ENDIF
+
+;=============================================================================
+;各バージョンごとの修正処理
+;=============================================================================
+;--------------------------------------------------
+;Mk-2 → Mk-2 rev.2セーブ変換処理
+;--------------------------------------------------
+;現在のプレイで恋慕or淫乱をつけた人数と地の文表示判定が被っていた問題を修正
+;処理内容：主人のCFLAG:99をCFLAG:98に移し、CFLAG:99を初期化
+@SAVE_SUPPORT_VERSION_2020
+CFLAG:MASTER:98 += CFLAG:MASTER:99
+CFLAG:MASTER:99 = 0
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.2 → Mk-2 rev.2改セーブ変換処理
+;--------------------------------------------------
+;コンフィグの強力アイテムの設定を逆転
+;FLAG:13 & 2のビット演算をON⇔OFF
+@SAVE_SUPPORT_VERSION_2021
+FLAG:13 ^= 2
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.2改 → Mk-2 rev.3 proto9セーブ変換処理
+;--------------------------------------------------
+;パルスィ＋αの素質を[嫉妬]→[嫉妬しやすい]に変更
+;[嫉妬]が付加するイベントを起動していない場合は[嫉妬]を削除
+;身体測定パッチのBASE10～14やコンフィグ設定を初期化(現段階では体格変化に対応出来ていないため一旦リセット)
+;パラメーター拡張の数値を適応
+@SAVE_SUPPORT_VERSION_2029
+FLAG:1500 = 0
+REPEAT CHARANUM
+	;パルスィ＋α
+	IF NO:COUNT == 59 || NO:COUNT == 497
+		TALENT:COUNT:19 = 1
+		SIF TALENT:COUNT:157 && (CFLAG:COUNT:12 & 4096) == 0
+			TALENT:COUNT:157 = 0
+	ENDIF
+	FOR LOCAL, 10, 15
+		BASE:COUNT:LOCAL = 0
+		MAXBASE:COUNT:LOCAL = 0
+	NEXT
+REND
+
+PALAMLV:10 = 500000
+PALAMLV:11 = 1000000
+PALAMLV:12 = 5000000
+PALAMLV:13 = 10000000
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.3 proto9 → Mk-2 rev.3改セーブ変換処理
+;--------------------------------------------------
+;SHOPアイテム表示/非表示
+;キスメに[つるぺた堕し]を習得させるか
+@SAVE_SUPPORT_VERSION_2031
+REPEAT CHARANUM
+	IF NO:COUNT == 57 && TALENT:COUNT:97 == 0
+		DRAWLINE
+		PRINTFORML %CALLNAME:COUNT%에게 [절벽가슴 격추]를 습득하게 할 수 있습니다.
+		PRINTL 습득하게 하겠습니까?
+		PRINTLC [0] ＹＥＳ!
+		PRINTLC [1] 필요없어
+		PRINTL 
+		$INPUT_LOOP
+		INPUT
+		IF RESULT == 0
+			PRINTFORMW %조사처리(CALLNAME:COUNT,"는")% [절벽가슴 격추]를 익혔다.
+			TALENT:COUNT:97 = 1
+		ELSEIF RESULT != 1
+			GOTO INPUT_LOOP
+		ENDIF
+	ENDIF
+REND
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.4改 → Mk-2 rev.5-proto3セーブ変換処理
+;--------------------------------------------------
+;娘パッチのキャラフラグ関連の互換性維持処理
+;以前に娘パッチの機能を利用し、かつキャラソートを実行していた場合は互換性を失う危険性あり
+@SAVE_SUPPORT_VERSION_2043
+PRINTL 사양 변경상, 이전에  「딸도 패치」와 「캐릭터 정렬 기능」을 병용했었을 경우에는
+PRINTL 호환성에 문제가 발생할지도 모릅니다. 양해해주십시오.
+PRINTW (※상기 사안에 해당하지 않는 분은 호환성에 문제는 없습니다)
+;キャラ別IDを新規に設定
+REPEAT CHARANUM
+	CFLAG:COUNT:3109 = COUNT + 1
+REND
+;キャラフラグ修正処理
+REPEAT CHARANUM
+	IF TALENT:COUNT:141
+		IF NO:(CFLAG:COUNT:3003) != CFLAG:COUNT:3000
+			LOCAL:1 = CFLAG:COUNT:3000
+			CFLAG:COUNT:3003 = -1
+			FOR LOCAL, 0, CHARANUM
+				SIF NO:LOCAL == LOCAL:1
+					CFLAG:COUNT:3003 = LOCAL + 1
+			NEXT
+		ENDIF
+	ENDIF
+	IF NO:COUNT == 149
+		IF CFLAG:COUNT:3105 != -1
+			IF NO:(CFLAG:COUNT:3105) != CFLAG:COUNT:3100
+				LOCAL:1 = CFLAG:COUNT:3100
+				CFLAG:COUNT:3105 = -1
+				FOR LOCAL, 0, CHARANUM
+					SIF NO:LOCAL == LOCAL:1
+						CFLAG:COUNT:3105 = LOCAL + 1
+				NEXT
+			ENDIF
+		ENDIF
+		IF CFLAG:COUNT:3106 != -1
+			IF NO:(CFLAG:COUNT:3106) != CFLAG:COUNT:3101
+				LOCAL:1 = CFLAG:COUNT:3101
+				CFLAG:COUNT:3106 = -1
+				FOR LOCAL, 0, CHARANUM
+					SIF NO:LOCAL == LOCAL:1
+						CFLAG:COUNT:3106 = LOCAL + 1
+				NEXT
+			ENDIF
+		ENDIF
+		IF CFLAG:COUNT:3107 != -1
+			IF NO:(CFLAG:COUNT:3107) != CFLAG:COUNT:3103
+				LOCAL:1 = CFLAG:COUNT:3103
+				CFLAG:COUNT:3107 = -1
+				FOR LOCAL, 0, CHARANUM
+					SIF NO:LOCAL == LOCAL:1
+						CFLAG:COUNT:3107 = LOCAL + 1
+				NEXT
+			ENDIF
+		ENDIF
+	ENDIF
+REND
+
+;キャラID設定
+FLAG:998 = CHARANUM + 1
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.5-proto6 → Mk-2 rev.5-proto7セーブ変換処理
+;--------------------------------------------------
+;項目『日常パッチ強化』追加によるSHOP・イベント拡張の修正、[求聞持]
+@SAVE_SUPPORT_VERSION_2047
+;名無しキャラ性別ランダム
+IF FLAG:12 & 512
+	FLAG:12 -= 512
+	FLAG:12 |= 1024
+ENDIF
+;夜這い相手ランダム検出
+IF FLAG:12 & 256
+	FLAG:12 -= 256
+	FLAG:12 |= 512
+ENDIF
+;夜イベント拡張
+IF FLAG:12 & 128
+	FLAG:12 -= 128
+	FLAG:12 |= 256
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.5-proto9 → Mk-2 rev.5セーブ変換処理
+;--------------------------------------------------
+@SAVE_SUPPORT_VERSION_2050
+;日付の修正を行う
+CALL CALENDAR_CALC, DAY
+
+;綿月姉妹の素質関連
+;[喘息]、[音痴]、[音感]、[料理苦手]、[料理得意]、[調理名人]、[求聞持]、[工作名人]、[報道者]
+;レイラと星蓮船キャラに関する相性修正
+REPEAT CHARANUM
+	LOCAL = NO:COUNT
+	;パチュリー
+	IF LOCAL == 8
+		;[喘息]
+		TALENT:COUNT:47 = 1
+	;魔理沙、妹紅、霖之助
+	ELSEIF LOCAL == 2 || LOCAL == 31 || LOCAL == 69
+		;[音痴]
+		TALENT:COUNT:190 = 1
+	;リリカ、メルラン、ルナサ
+	ELSEIF LOCAL >= 16 && LOCAL <= 18
+		;[音感]
+		TALENT:COUNT:191 = 1
+		;レイラへの相性
+		RELATION:COUNT:98 = 200
+	;夜雀
+	ELSEIF LOCAL == 177
+		;[音感]
+		TALENT:COUNT:191 = 1
+	;チルノ、天子
+	ELSEIF LOCAL == 5 || LOCAL == 52
+		;[音痴]・[料理苦手]
+		TALENT:COUNT:190 = 1
+		TALENT:COUNT:192 = 1
+	;ミスティア、ヤマメ
+	ELSEIF LOCAL == 25 || LOCAL == 58
+		;[音感]・[料理得意]
+		TALENT:COUNT:191 = 1
+		TALENT:COUNT:193 = 1
+	;ルーミア、橙、レミリア、フラン、メディスン、空
+	ELSEIF LOCAL == 3 || LOCAL == 10 || LOCAL == 11 || LOCAL == 13 || LOCAL == 33 || LOCAL == 63
+		;[料理苦手]
+		TALENT:COUNT:192 = 1
+	;美鈴、アリス、紫、三月精、パルスィ、ＶＩＶＩＴ
+	ELSEIF LOCAL == 6 || LOCAL == 14 || LOCAL == 22 || (LOCAL >= 45 && LOCAL <= 47) || LOCAL == 59 || LOCAL == 128
+		;[料理得意]
+		TALENT:COUNT:193 = 1
+	;咲夜、藍、妖忌、夢子
+	ELSEIF LOCAL == 9 || LOCAL == 21 || LOCAL == 70 || LOCAL == 118
+		;[調理名人]
+		TALENT:COUNT:194 = 1
+	;文
+	ELSEIF LOCAL == 32
+		;[報道者]
+		TALENT:COUNT:196 = 1
+	;にとり
+	ELSEIF LOCAL == 40
+		;[工作名人]
+		TALENT:COUNT:195 = 1
+		;ヤマメ
+		RELATION:COUNT:58 = 50
+	;阿求
+	ELSEIF LOCAL == 48
+		;[求聞持]
+		TALENT:COUNT:216 = 1
+	;豊姫
+	ELSEIF LOCAL == 53
+		;[素直]
+		IF TALENT:COUNT:13
+			TALENT:COUNT:13 = 0
+			SIF CFLAG:COUNT:12 & 2048
+				CFLAG:COUNT:12 -= 2048
+		ENDIF
+		;[生意気]
+		SIF TALENT:COUNT:15 == 0 && (CFLAG:COUNT:13 & 16) == 0
+			TALENT:COUNT:15 = 1
+		;[濡れやすい]
+		TALENT:COUNT:42 = 1
+		;[汚臭敏感]
+		IF TALENT:COUNT:62 == 0 && TALENT:COUNT:61 == 0
+			TALENT:COUNT:62 = 1
+			SIF CFLAG:COUNT:12 & 256
+				CFLAG:COUNT:12 -= 256
+		ENDIF
+		;[快感に素直]
+		TALENT:COUNT:70 = 0
+	;依姫
+	ELSEIF LOCAL == 54
+		;[反抗的]
+		SIF TALENT:COUNT:11 == 0 && (CFLAG:COUNT:13 & 8) == 0
+			TALENT:COUNT:11 = 1
+		;[抵抗]
+		SIF TALENT:COUNT:34 == 0 && (CFLAG:COUNT:13 & 2) == 0
+			TALENT:COUNT:34 = 1
+		;[習得早い]
+		TALENT:COUNT:50 = 1
+		;[汚臭敏感]
+		IF TALENT:COUNT:62 == 0 && TALENT:COUNT:61 == 0
+			TALENT:COUNT:62 = 1
+			SIF CFLAG:COUNT:12 & 256
+				CFLAG:COUNT:12 -= 256
+		ENDIF
+		;[Ｖ敏感]
+		TALENT:COUNT:102 = 1
+		;[Ｂ敏感]
+		TALENT:COUNT:106 = 1
+	;ナズーリン
+	ELSEIF LOCAL == 71
+		;[料理得意]
+		TALENT:COUNT:193 = 1
+		;寅丸
+		RELATION:COUNT:76 = 200
+		;白蓮
+		RELATION:COUNT:77 = 150
+	;一輪
+	ELSEIF LOCAL == 73
+		;[料理苦手]
+		TALENT:COUNT:192 = 1
+		;白蓮
+		RELATION:COUNT:77 = 150
+	;雲山
+	ELSEIF LOCAL == 74
+		;[料理得意]
+		TALENT:COUNT:193 = 1
+		;白蓮
+		RELATION:COUNT:77 = 150
+	ENDIF
+REND
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.5 → Mk-2 rev.5改セーブ変換処理
+;--------------------------------------------------
+;「名無しキャラ性別ランダム」と「育児中」のフラグを変更、
+;[魔術技能]、[淫具知識]、種族遺伝用フラグ追加、ゴリアテ人形の相性
+@SAVE_SUPPORT_VERSION_2058
+REPEAT CHARANUM
+	;「育児中」のフラグ
+	SIF MARK:COUNT:90
+		CFLAG:COUNT:4 = 2
+	;魔理沙、パチュリー、アリス、白蓮
+	SIF NO:COUNT == 2 || NO:COUNT == 8 || NO:COUNT == 14 || NO:COUNT == 77
+		TALENT:COUNT:197 = 1
+	;にとり、霖之助、夢美
+	SIF NO:COUNT == 40 || NO:COUNT == 69 || NO:COUNT == 108
+		TALENT:COUNT:58 = 1
+	;アリス
+	IF NO:COUNT == 14
+		RELATION:COUNT:97 = 200
+	;メディスン
+	ELSEIF NO:COUNT == 33
+		RELATION:COUNT:97 = 110
+	;上海人形、蓬莱人形
+	ELSEIF NO:COUNT == 66 || NO:COUNT == 67
+		RELATION:COUNT:97 = 180
+	ENDIF
+	
+	;種族フラグ補正処理（関数を呼び出す）
+	CALL FIX_RACE, COUNT
+
+REND
+;名無しキャラ性別ランダムのフラグを変更
+IF FLAG:12 & 1024
+	FLAG:12 -= 1024
+	FLAG:12 |= 2048
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.5改 → Mk-2 rev.5改2セーブ変換処理
+;--------------------------------------------------
+;半霊コンビと魅魔、カナに[霊体]追加、ミスティアに[動物耳]追加
+;小町に[超常目算]追加、霊夢に[博麗の巫女]追加、早苗に[風祝]追加
+;パチュリーに[淫具知識]追加
+@SAVE_SUPPORT_VERSION_2059
+REPEAT CHARANUM
+	IF NO:COUNT == 1
+		TALENT:COUNT:218 = 1
+	ELSEIF NO:COUNT == 8
+		TALENT:COUNT:58 = 1
+	ELSEIF NO:COUNT == 25
+		TALENT:COUNT:116 = 1
+	ELSEIF NO:COUNT == 35
+		TALENT:COUNT:198 = 1
+	ELSEIF NO:COUNT == 42
+		TALENT:COUNT:219 = 1
+	ELSEIF NO:COUNT == 65 || NO:COUNT == 99 || NO:COUNT == 100 || NO:COUNT == 105
+		TALENT:COUNT:207 = 1
+	ENDIF
+REND
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.5改2 → Mk-2 rev.6セーブ変換処理
+;--------------------------------------------------
+;幽々子、映姫、ゴリアテ人形、ＶＩＶＩＴに[中毒しにくい]追加、
+;メルラン、鈴仙、メディスン、雛、パルスィとさとりに[中毒扇動]追加
+;小町、死神(名無しキャラ)に[死神]追加
+;魅魔、エレン、ユキ、マイに[魔術技能]追加.エレンはさらに[針さばき]追加
+;伊佐美に[黄昏の怪物]追加.メイベルに[触手使役術]追加
+;映姫、静葉、穣子、雛、神奈子、諏訪子、魅魔、神綺、キクリ、コンガラに[神霊]追加
+;早苗、メリー、蓮子、伊佐美、辰巳、ルミ、天治に[家電使役知識]追加
+;爆発物持ちのアリスの人形は『アリス製』であるように変更
+;こいしの[覚]の仕様変更、早苗様のSPフラグを変更
+;レイラの相性を変更、[嫉妬しやすい]と[抑圧]削除
+;[人形]持ちのメディスン、メイベル、アリオーシュ、へる子及びその娘はしゃべることが可能に
+;IRC系キャラの素質・フラグの是正
+;パラメータレベル追加、妊娠系のフラグを標準値で設定
+;家の収容人数の再設定
+;各種蒐集品をFLAGからDITEMTYPEに移動
+;CFLAG:94とCFLAG:96を入れ替える→94が陰毛で稼いだ最高金額,96が全部の収入の中の最高金額
+;CFLAG:95とCFLAG:97を入れ替える→95が愛液で稼いだ最高金額,97が今まで稼いだ総金額
+;道具購入を別枠に移動させたことによるコンフィグの設定の修正(FLAG:21周り)
+@SAVE_SUPPORT_VERSION_2064
+REPEAT CHARANUM
+	;メルラン、鈴仙、メディスン、雛、パルスィ、さとり
+	IF NO:COUNT == 17 || NO:COUNT == 28 || NO:COUNT == 33 || NO:COUNT == 39 || NO:COUNT == 59 || NO:COUNT == 61
+		TALENT:COUNT:86 = 1
+	;幽々子、映姫、ゴリアテ人形、ＶＩＶＩＴ
+	ELSEIF NO:COUNT == 20 || NO:COUNT == 36 || NO:COUNT == 97 || NO:COUNT == 128
+		TALENT:COUNT:85 = 1
+	;小町、死神
+	ELSEIF NO:COUNT == 35 || NO:COUNT == 183
+		TALENT:COUNT:224 = 1
+	;早苗様
+	ELSEIF NO:COUNT == 42 && CFLAG:COUNT:0 == 1
+		CFLAG:COUNT:0 = 2
+	;こいし
+	ELSEIF NO:COUNT == 64
+		TALENT:COUNT:213 = 2
+	;大江戸、アリスの人形
+	ELSEIF (NO:COUNT == 96 || NO:COUNT == 172) && TALENT:COUNT:220
+		TALENT:COUNT:220 = 14
+	;レイラ
+	ELSEIF NO:COUNT == 98
+		TALENT:COUNT:19 = 0
+		TALENT:COUNT:32 = 0
+		RELATION:COUNT:16 = 250
+		RELATION:COUNT:17 = 250
+		RELATION:COUNT:18 = 250
+	;魅魔、エレン、ユキ、マイ
+	ELSEIF NO:COUNT == 100 || NO:COUNT == 103 || NO:COUNT == 116 || NO:COUNT == 117
+		TALENT:COUNT:197 = 1
+		SIF NO:COUNT == 103
+			TALENT:COUNT:53 = 1
+	;伊佐美
+	ELSEIF NO:COUNT == 139
+		TALENT:COUNT:221 = 1
+	;メイベル
+	ELSEIF NO:COUNT == 200
+		TALENT:COUNT:149 = 1
+	;ドリアード
+	ELSEIF NO:COUNT == 402
+		CFLAG:COUNT:3258 = 100
+		CFLAG:COUNT:3399 = 0
+	;リリーグレイ
+	ELSEIF NO:COUNT == 402
+		TALENT:COUNT:835 = 1
+	;スペルカード達
+	ELSEIF NO:COUNT == 423 || NO:COUNT == 424
+		TALENT:COUNT:833 = 8
+	ENDIF
+	;映姫、静葉、穣子、雛、神奈子、諏訪子、魅魔、神綺、キクリ、コンガラに[神霊]追加
+	SIF NO:COUNT == 36 || NO:COUNT == 37 || NO:COUNT == 38 || NO:COUNT == 39 || NO:COUNT == 43 || NO:COUNT == 44 || NO:COUNT == 100 || NO:COUNT == 119 || NO:COUNT == 124 || NO:COUNT == 125
+		TALENT:COUNT:222 = 1
+	;早苗、メリー、蓮子、伊佐美、辰巳、ルミ、天治に[家電使役知識]追加
+	SIF NO:COUNT == 42 || NO:COUNT == 49 || NO:COUNT == 50 || NO:COUNT == 139 || NO:COUNT == 140 || NO:COUNT == 141 || NO:COUNT == 142
+		TALENT:COUNT:189 = 1
+
+	;メディスン、メイベル、アリオーシュ、へる子
+	IF NO:COUNT == 33 || NO:COUNT == 200 || NO:COUNT == 201 || NO:COUNT == 497
+		TALENT:COUNT:208 = 2
+	;メディスン、メイベル、アリオーシュ、へる子の娘
+	ELSEIF CFLAG:COUNT:3100 == 33 || CFLAG:COUNT:3100 == 200 || CFLAG:COUNT:3100 == 201 || CFLAG:COUNT:3100 == 497
+		TALENT:COUNT:208 = 2
+	ENDIF
+
+	;野外フラグ
+	IF NO:COUNT == 6 || NO:COUNT == 7 || NO:COUNT == 11 || NO:COUNT == 176 || NO:COUNT == 423 || NO:COUNT == 424
+		CFLAG:COUNT:300 = 2
+	ELSEIF NO:COUNT == 13 || NO:COUNT == 21 || NO:COUNT == 65 || NO:COUNT == 70 || NO:COUNT == 99
+		CFLAG:COUNT:300 = 4
+	ELSEIF NO:COUNT == 30 || NO:COUNT == 170
+		CFLAG:COUNT:300 = 8
+	ELSEIF NO:COUNT == 36 || NO:COUNT == 183
+		CFLAG:COUNT:300 = 16
+	ELSEIF NO:COUNT == 27
+		CFLAG:COUNT:300 = 24
+	ELSEIF NO:COUNT == 37 || NO:COUNT == 39 || NO:COUNT == 41 || NO:COUNT == 43 || NO:COUNT == 174 || NO:COUNT == 175
+		CFLAG:COUNT:300 = 32
+	ELSEIF NO:COUNT == 57 || NO:COUNT == 58 || NO:COUNT == 59 || NO:COUNT == 61 || NO:COUNT == 62 || NO:COUNT == 63 || NO:COUNT == 64 || NO:COUNT == 178
+		CFLAG:COUNT:300 = 64
+	ELSEIF NO:COUNT == 179
+		CFLAG:COUNT:300 = 84
+	ELSEIF NO:COUNT == 44 || NO:COUNT == 60 || NO:COUNT == 181 || NO:COUNT == 207
+		CFLAG:COUNT:300 = 96
+	ELSEIF NO:COUNT == 210
+		CFLAG:COUNT:300 = 128
+	ELSEIF NO:COUNT == 51 || NO:COUNT == 52 || NO:COUNT == 185 || NO:COUNT == 209
+		CFLAG:COUNT:300 = 256
+	ELSEIF NO:COUNT == 8
+		CFLAG:COUNT:300 = 258
+	ELSEIF NO:COUNT == 10
+		CFLAG:COUNT:300 = 266
+	ELSEIF NO:COUNT == 35
+		CFLAG:COUNT:300 = 272
+	ELSEIF NO:COUNT == 28
+		CFLAG:COUNT:300 = 280
+	ELSEIF NO:COUNT == 23
+		CFLAG:COUNT:300 = 289
+	ELSEIF NO:COUNT == 32
+		CFLAG:COUNT:300 = 304
+	ELSEIF NO:COUNT == 151
+		CFLAG:COUNT:300 = 514
+	ELSEIF NO:COUNT == 156 || NO:COUNT == 166 || NO:COUNT == 421
+		CFLAG:COUNT:300 = 576
+	ELSEIF NO:COUNT == 4 || NO:COUNT == 15 || NO:COUNT == 56 || NO:COUNT == 152 || NO:COUNT == 153 || NO:COUNT == 154 || NO:COUNT == 155 || NO:COUNT == 162 || NO:COUNT == 163 || NO:COUNT == 164 || NO:COUNT == 165
+		CFLAG:COUNT:300 = 640
+	ELSEIF NO:COUNT == 45 || NO:COUNT == 47
+		CFLAG:COUNT:300 = 641
+	ELSEIF NO:COUNT == 5
+		CFLAG:COUNT:300 = 656
+	ELSEIF NO:COUNT == 177
+		CFLAG:COUNT:300 = 1024
+	ELSEIF NO:COUNT == 25 || NO:COUNT == 33 || NO:COUNT == 34
+		CFLAG:COUNT:300 = 1040
+	ELSEIF NO:COUNT == 16 || NO:COUNT == 17 || NO:COUNT == 18
+		CFLAG:COUNT:300 = 1044
+	ELSEIF NO:COUNT == 150 || NO:COUNT == 420
+		CFLAG:COUNT:300 = 1536
+	ELSEIF NO:COUNT == 53 || NO:COUNT == 54 || NO:COUNT == 55 || NO:COUNT == 184 || NO:COUNT == 202 || NO:COUNT == 203
+		CFLAG:COUNT:300 = 2048
+	ELSEIF NO:COUNT == 20
+		CFLAG:COUNT:300 = 2316
+	ELSEIF NO:COUNT == 22
+		CFLAG:COUNT:300 = 2317
+	ELSEIF NO:COUNT == 19
+		CFLAG:COUNT:300 = 2332
+	ELSEIF NO:COUNT == 46
+		CFLAG:COUNT:300 = 2689
+	ELSEIF NO:COUNT == 114 || NO:COUNT == 115 || NO:COUNT == 116 || NO:COUNT == 117 || NO:COUNT == 118 || NO:COUNT == 119 || NO:COUNT == 121 || NO:COUNT == 122 || NO:COUNT == 123 || NO:COUNT == 173
+		CFLAG:COUNT:300 = 4096
+	ELSEIF NO:COUNT == 14
+		CFLAG:COUNT:300 = 4361
+	ELSEIF NO:COUNT == 124 || NO:COUNT == 125
+		CFLAG:COUNT:300 = 8192
+	ELSEIF NO:COUNT == 100
+		CFLAG:COUNT:300 = 8193
+	ELSEIF NO:COUNT == 182
+		CFLAG:COUNT:300 = 8208
+	ELSEIF NO:COUNT == 120
+		CFLAG:COUNT:300 = 12288
+	ELSEIF NO:COUNT == 0 || NO:COUNT == 49 || NO:COUNT == 69 || NO:COUNT == 98 || NO:COUNT == 101 || NO:COUNT == 102 || NO:COUNT == 104 || NO:COUNT == 106 || NO:COUNT == 107 || NO:COUNT == 108 || NO:COUNT == 147 || NO:COUNT == 172
+		CFLAG:COUNT:300 = 16384
+	ELSEIF NO:COUNT == 48
+		CFLAG:COUNT:300 = 16385
+	ELSEIF NO:COUNT == 171
+		CFLAG:COUNT:300 = 49153
+	ELSEIF NO:COUNT == 26 || NO:COUNT == 31
+		CFLAG:COUNT:300 = 16392
+	ELSEIF NO:COUNT == 38 || NO:COUNT == 40 || NO:COUNT == 42 || NO:COUNT == 180
+		CFLAG:COUNT:300 = 16416
+	ELSEIF NO:COUNT == 9
+		CFLAG:COUNT:300 = 16670
+	ELSEIF NO:COUNT == 50
+		CFLAG:COUNT:300 = 18432
+	ELSEIF NO:COUNT == 29
+		CFLAG:COUNT:300 = 18440
+	ELSEIF NO:COUNT == 71 || NO:COUNT == 72 || NO:COUNT == 73 || NO:COUNT == 74 || NO:COUNT == 75 || NO:COUNT == 76 || NO:COUNT == 77 || NO:COUNT == 78
+		CFLAG:COUNT:300 = 53248
+	ELSEIF NO:COUNT == 2
+		CFLAG:COUNT:300 = 54655
+	ELSEIF NO:COUNT == 1
+		CFLAG:COUNT:300 = 62847
+		SIF CFLAG:COUNT:0 == 2
+			CFLAG:COUNT:300 |= 524288
+	ELSEIF NO:COUNT == 400 || NO:COUNT == 401 || NO:COUNT == 402
+		CFLAG:COUNT:300 = 524288
+	ELSEIF NO:COUNT == 403
+		CFLAG:COUNT:300 = 524928
+	ENDIF
+	;CFLAG:94とCFLAG:96の入れ替え
+	SWAP CFLAG:COUNT:94, CFLAG:COUNT:96
+	;CFLAG:95とCFLAG:97の入れ替え
+	SWAP CFLAG:COUNT:95, CFLAG:COUNT:97
+	;キャラ種族の表示
+	STRLENS CSTR:COUNT:33
+	SIF RESULT <= 0
+		CSTR:COUNT:33 = %CSVCSTR(NO:COUNT,33,0)%
+REND
+;パラメータレベル14を追加
+PALAMLV:14 = 50000000
+;妊娠系のフラグを標準値で設定
+FLAG:600 = 20
+FLAG:601 = 20
+;家の収容人数の再設定
+SIF FLAG:90 == 0 && FLAG:92 < 10
+	FLAG:92 = 10
+IF FLAG:90 == 0 && FLAG:91 > 0
+	FLAG:91 = 1
+ELSEIF FLAG:90 == 1 && FLAG:91 > 11
+	FLAG:91 = 11
+ELSEIF FLAG:90 == 2 && FLAG:91 > 31
+	FLAG:91 = 31
+ENDIF
+
+;フリスクのアイテム番号の入れ替え
+SIF FLAG:15 & 32
+	ITEM:70 += FLAG:370
+SWAP ITEM:70, ITEM:83
+
+;集めた蒐集品の種類を初期化
+REPEAT 13
+	FLAG:(COUNT+500) = 0
+REND
+REPEAT 500
+	LOCAL = 100+COUNT
+	;蒐集品『尻子玉』の移動
+	IF FLAG:(5000+COUNT) & 1
+		DITEMTYPE:LOCAL:101 += 1
+		FLAG:501 += 1
+	ENDIF
+	;蒐集品『黄金水』の移動
+	IF FLAG:(5000+COUNT) & 2
+		DITEMTYPE:LOCAL:102 += 1
+		FLAG:502 += 1
+	ENDIF
+	;蒐集品『愛液』の移動
+	IF FLAG:(5000+COUNT) & 4
+		DITEMTYPE:LOCAL:103 += 1
+		FLAG:503 += 1
+	ENDIF
+	;蒐集品『血液』の移動
+	IF FLAG:(5000+COUNT) & 8
+		DITEMTYPE:LOCAL:104 += 1
+		FLAG:504 += 1
+	ENDIF
+	;蒐集品『破瓜血』の移動
+	IF FLAG:(5000+COUNT) & 16
+		DITEMTYPE:LOCAL:105 += 1
+		FLAG:505 += 1
+	ENDIF
+	;蒐集品『パンティー』の移動
+	IF FLAG:(5000+COUNT) & 32
+		DITEMTYPE:LOCAL:106 += 1
+		FLAG:506 += 1
+	ENDIF
+	;蒐集品『写真集』の移動
+	IF FLAG:(5500+COUNT)
+		DITEMTYPE:LOCAL:107 += FLAG:(5500+COUNT)
+		FLAG:507 += 1
+	ENDIF
+	;蒐集品『ビデオ』の移動
+	IF FLAG:(6000+COUNT)
+		DITEMTYPE:LOCAL:108 += FLAG:(6000+COUNT)
+		FLAG:508 += 1
+	ENDIF
+	;蒐集品『母乳』の移動
+	IF FLAG:(6500+COUNT)
+		DITEMTYPE:LOCAL:109 += FLAG:(6500+COUNT)
+		FLAG:509 += 1
+	ENDIF
+	;蒐集品『卵』の移動
+	IF FLAG:(7000+COUNT)
+		DITEMTYPE:LOCAL:110 += FLAG:(7000+COUNT)
+		FLAG:510 += 1
+	ENDIF
+	;蒐集品『触手』の移動
+	IF FLAG:(7500+COUNT)
+		DITEMTYPE:LOCAL:111 += FLAG:(7500+COUNT)
+		FLAG:511 += 1
+	ENDIF
+	;蒐集品『陰毛』の移動
+	IF FLAG:(5000+COUNT) & 64
+		DITEMTYPE:LOCAL:112 += 1
+		FLAG:512 += 1
+	ENDIF
+
+	;蒐集品のフラグリセット
+	FLAG:(5000+COUNT) = 0
+	FLAG:(5500+COUNT) = 0
+	FLAG:(6000+COUNT) = 0
+	FLAG:(6500+COUNT) = 0
+	FLAG:(7500+COUNT) = 0
+	FLAG:(7000+COUNT) = 0
+REND
+;集めた蒐集品の種類を再設定
+REPEAT 12
+	FLAG:500 += FLAG:(COUNT+501)
+REND
+
+;コンフィグ設定修正
+LOCAL = 0
+SIF FLAG:21 & 2
+	LOCAL |= 1
+SIF FLAG:21 & 4
+	LOCAL |= 2
+FLAG:21 = LOCAL
+RETURN 1
+
+;--------------------------------------------------
+;Mk-2 rev.5改2 → Mk-2 rev.6セーブ変換処理
+;--------------------------------------------------
+;コンフィグの道具フラグの整理
+;里香に[工作名人]、ちゆりと夢美に[家電使役知識]を追加
+;セーブデータのゲームバージョンフラグを廃止
+;キャラの中に酔いゲージの設定がなければ追加する.
+@SAVE_SUPPORT_VERSION_2065
+SIF LASTLOAD_VERSION < 2064
+	CALL SAVE_SUPPORT_VERSION_2064
+
+REPEAT CHARANUM
+	;里香
+	SIF NO:COUNT == 101
+		TALENT:COUNT:195 = 1
+	;ちゆり、夢美
+	SIF NO:COUNT == 107 || NO:COUNT == 108
+		TALENT:COUNT:189 = 1
+
+	;酔いゲージ設定
+	SIF MAXBASE:COUNT:8 <= 0
+		CALL CALC_GAUGE8, COUNT, 0
+REND
+
+;展示品
+SIF (FLAG:12 & 8) == 0
+	SWAP ITEM:81, FLAG:381
+;Ｃ系拡張コマンド
+IF (FLAG:15 & 1) == 0
+	REPEAT 3
+		SWAP ITEM:(17 + COUNT), FLAG:(317 + COUNT)
+	REND
+	REPEAT 4
+		SWAP ITEM:(25 + COUNT), FLAG:(325 + COUNT)
+	REND
+ENDIF
+;Ｖ系拡張コマンド
+IF (FLAG:15 & 2) == 0
+	REPEAT 5
+		SWAP ITEM:(4 + COUNT), FLAG:(304 + COUNT)
+	REND
+ENDIF
+;Ａ系拡張コマンド
+IF (FLAG:15 & 4) == 0
+	REPEAT 5
+		SWAP ITEM:(10 + COUNT), FLAG:(310 + COUNT)
+	REND
+ENDIF
+;Ｂ系拡張コマンド
+IF (FLAG:15 & 8) == 0
+	REPEAT 4
+		SWAP ITEM:(21 + COUNT), FLAG:(321 + COUNT)
+	REND
+ENDIF
+;薬品系拡張コマンド
+IF (FLAG:15 & 32) == 0
+	REPEAT 12
+		SWAP ITEM:(63 + COUNT), FLAG:(363 + COUNT)
+	REND
+ENDIF
+;注射系コマンド
+SIF (FLAG:15 & 64) == 0
+	SWAP ITEM:53, FLAG:353
+;撮影コマンド拡張
+IF (FLAG:15 & 128) == 0
+	SWAP ITEM:51, FLAG:351
+	SWAP ITEM:58, FLAG:358
+	SWAP ITEM:76, FLAG:376
+ENDIF
+;羞恥プレイ系拡張コマンド
+IF (FLAG:15 & 512) == 0
+	REPEAT 8
+		SWAP ITEM:(40 + COUNT), FLAG:(340 + COUNT)
+	REND
+	SWAP ITEM:52, FLAG:352
+	SWAP ITEM:77, FLAG:377
+ENDIF
+;紳士的な触手系コマンド
+SIF (FLAG:15 & 4096) == 0
+	SWAP ITEM:59, FLAG:359
+
+;フラグ掃除
+REPEAT 100
+	FLAG:(COUNT + 300) = 0
+REND
+
+;目標金額
+MONEY:100 = 1000000
+
+;セーブバージョンフラグを廃止
+FLAG:999 = 0
+RETURN 1

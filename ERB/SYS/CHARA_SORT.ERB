@@ -1,0 +1,376 @@
+﻿;---------------------------------------------------------------------
+;캐릭터 교체 · 정렬
+;여기서 사용하는 변수---------------------------------------------------
+; LOCAL:0  : 20 한정 표기에 사용 현재 페이지
+; LOCAL:1  : 교체에 사용   1인째의 노예 번호
+; LOCAL:2  : 교체에 사용   2인째의 노예 번호
+; LOCAL:4  : 20 한정 표기에 사용 표기할 수 있는 노예의 인원수
+; LOCAL:5  : 20 한정 표기에 사용 ↑를 20으로 나눈 것 · 최대 페이지의 산출에 사용한다
+; LOCAL:99 : 20 한정 표기에 사용 현재 페이지의 보존 · 재현
+; MARK:98  : 1 = 존재 2 = 조교 대상 3 = 조수
+; TFLAG:0  : 자동 정렬 시에 사용
+; TFLAG:1  : 자동 정렬 시에 사용
+; TFLAG:2  : 자동 정렬 시에 사용
+
+@CHARA_SORT
+;전회 빠져나왔을 때 표시했었던 페이지를 재현
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;주인공은 제외
+	SIF COUNT == 0
+		CONTINUE
+	;실종 중도 제외
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;조교 대상과 조수를 보존한다
+	IF COUNT == TARGET
+		MARK:COUNT:98 = 2
+	ELSEIF COUNT == ASSI
+		MARK:COUNT:98 = 3
+	ELSE
+		MARK:COUNT:98 = 1
+	ENDIF
+	;20 한정 표기의 기초 처리
+	CALLF SET_LIST, LOCAL:4, COUNT
+	LOCAL:4 += 1
+REND
+IF LOCAL:4 < 1
+	PRINTW 정렬할 수 있는 노예가 없습니다.
+	RETURN 0
+ELSE
+	PRINTFORML 순번을 재정렬합니다.
+ENDIF
+LOCAL:5 = (LOCAL:4 - 1) / 20
+
+;1인째 선택
+$CHARA_SORT_FIRST
+TFLAG:0 = 0
+PRINTFORML 누구를 어떻게 정렬하겠습니까? ＜page.{LOCAL + 1}＞
+DRAWLINE
+CALL SORT_LIST, LOCAL, -1
+DRAWLINE
+PRINTL 아래 항목대로 자동 정렬한다.
+PRINTL [1102] 캐릭터 번호　 [1103] 능력　　　[1104] 경험
+PRINTL [1105] 각인　　    　[1106] 구슬　　　[1107] 기념일
+PRINTFORML [1108] 체력 기력 \@(FLAG:1500 & 1) ? 및 체격 #\@
+PRINTL [1109] 호감도 수입 스트레스 등
+DRAWLINE
+PRINTFORMLC \@(LOCAL == 0) ? %" " * 13% # [1001] 앞 페이지로\@
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:5) ? %" " * 13% # [1009] 다음 페이지로\@
+INPUT
+
+IF RESULT == 1000
+	CVARSET MARK, 98, 0
+	RETURN 0
+ELSEIF RESULT == 1102
+	TSTR:99 = 캐릭터 번호
+ELSEIF RESULT == 1103
+	TSTR:99 = 능력
+ELSEIF RESULT == 1104
+	TSTR:99 = 경험
+ELSEIF RESULT == 1105
+	TSTR:99 = 각인
+ELSEIF RESULT == 1106
+	TSTR:99 = 구슬
+ELSEIF RESULT == 1107
+	TSTR:99 = 기념일
+ELSEIF RESULT == 1108
+	TSTR:99 = 체력 기력
+ELSEIF RESULT == 1109
+	TSTR:99 = 호감도 수입 스트레스 등
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO CHARA_SORT_FIRST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:5
+	LOCAL += 1
+	GOTO CHARA_SORT_FIRST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	PRINTL 무효인 숫자입니다.
+	GOTO CHARA_SORT_FIRST
+ENDIF
+IF RESULT >= 1102 && RESULT <= 1109
+	TFLAG:0 = RESULT - 1102
+	CALL CHARA_SORT_INPUT
+	RESTART
+ENDIF
+LOCAL:1 = RESULT
+DRAWLINE
+DRAWLINE
+;2인째 선택
+$CHARA_SORT_SECOND
+PRINTFORML 누구의 순서를 바꾸겠습니까? (현재 {LOCAL:1}. %조사처리(CALLNAME:(LOCAL:1),"를")% 선택 중) ＜page.{LOCAL + 1}＞
+DRAWLINE
+CALL SORT_LIST, LOCAL, LOCAL:1
+DRAWLINE
+PRINTL 　　　☆:조교중 ★:조수 ○:조수가능 ●:원조수를 가리킵니다
+DRAWLINE
+PRINTFORMLC \@(LOCAL == 0) ? %" " * 13% # [1001] 앞 페이지로\@
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:5) ? %" " * 13% # [1009] 다음 페이지로\@
+INPUT
+
+IF RESULT == 1000
+	GOTO CHARA_SORT_FIRST
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO CHARA_SORT_SECOND
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:5
+	LOCAL += 1
+	GOTO CHARA_SORT_SECOND
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || RESULT == LOCAL:1 || MARK:RESULT:98 == 0
+	PRINTL 무효인 숫자입니다.
+	GOTO CHARA_SORT_SECOND
+ENDIF
+LOCAL:2 = RESULT
+
+PRINTFORMW %조사처리(CALLNAME:(LOCAL:1),"와")% %조사처리(CALLNAME:(LOCAL:2),"를")% 교체했습니다.
+SWAPCHARA LOCAL:1, LOCAL:2
+;조교 대상과 조수를 보존했었던 걸로 돌린다
+REPEAT CHARANUM
+	SIF MARK:COUNT:98 == 2
+		TARGET = COUNT
+	SIF MARK:COUNT:98 == 3
+		ASSI = COUNT
+REND
+RESTART
+
+;---------------------------------------------------------------------
+;캐릭터 자동 정렬 대상 선택
+;---------------------------------------------------------------------
+@CHARA_SORT_INPUT
+SIF TFLAG:0 == 0
+	GOTO UP_DOWN
+VARSET LOCALS,""
+SPLIT "생일,구입된 날,끌려온 날,결혼기념일,계약기념일,함락된 날",",",LOCALS
+TFLAG:2 = 0
+LOCAL:1 = 0
+$PRINT_LIST
+LOCAL:2 = 0
+CALLF CLEAR_LIST
+DRAWLINE
+PRINTFORML 정렬 기준인 %조사처리(TSTR:99,"를")% 선택해주세요. ＜page.{LOCAL:1}＞
+IF TFLAG:0 == 5
+	REPEAT 6
+		TSTR:0 = %LOCALS:COUNT%
+		SIF LOCAL:2 / 30 >= LOCAL:1 && LOCAL:2 / 30 < 1 + LOCAL:1
+			PRINTFORMLC [{COUNT, 3}] %TSTR:0, 12, LEFT%
+		LOCAL:2 += 1
+		CALLF SET_LIST, COUNT, 1
+	REND
+ELSE
+	REPEAT 250
+		IF TFLAG:0 == 1
+			SIF COUNT >= 100
+				CONTINUE
+			SIF STRLENS (ABLNAME:COUNT) < 1
+				CONTINUE
+			TSTR:0 = %ABLNAME:COUNT%
+		ELSEIF TFLAG:0 == 2
+			SIF COUNT >= 100
+				CONTINUE
+			SIF STRLENS(EXPNAME:COUNT) < 1
+				CONTINUE
+			TSTR:0 = %EXPNAME:COUNT%
+		ELSEIF TFLAG:0 == 3
+			SIF COUNT >= 12
+				CONTINUE
+			SIF STRLENS(MARKNAME:COUNT) < 1
+				CONTINUE
+			TSTR:0 = %MARKNAME:COUNT%
+		ELSEIF TFLAG:0 == 4
+			SIF (COUNT >= 20 && COUNT < 30) || COUNT > 198
+				CONTINUE
+			SIF STRLENS(PALAMNAME:COUNT) < 1
+				CONTINUE
+			TSTR:0 = %PALAMNAME:COUNT%의 구슬
+		ELSEIF TFLAG:0 == 6
+			SIF COUNT >= 2 && COUNT <= 9
+				CONTINUE
+			SIF (FLAG:1500 & 1) == 0 && COUNT >= 10
+				CONTINUE
+			SIF STRLENS(BASENAME:COUNT) < 1
+				CONTINUE
+			TSTR:0 = %BASENAME:COUNT%
+		ELSEIF TFLAG:0 == 7
+			SIF STRLENS(CFLAGNAME:COUNT) < 1
+				CONTINUE
+			SIF (COUNT == 31 || (COUNT >= 60 && COUNT <= 64)) && TALENT:MASTER:198 == 0 && TALENT:MASTER:998 == 0
+				CONTINUE
+			SIF (COUNT == 80 || COUNT == 81) && FLAG:13 & 1024 == 0
+				CONTINUE
+			TSTR:0 = %CFLAGNAME:COUNT%
+		ENDIF
+		SIF LOCAL:2 / 30 >= LOCAL:1 && LOCAL:2 / 30 < 1 + LOCAL:1
+			PRINTFORMLC [{COUNT, 3}] %TSTR:0, 12, LEFT%
+		LOCAL:2 += 1
+		CALLF SET_LIST, COUNT, 1
+	REND
+ENDIF
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL:1 <= 0) ? %" " * 16% # [1001] 앞 페이지로\@
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL:1 >= LOCAL:2 / 30) ? %" " * 16% # [1009] 다음 페이지로\@
+$INPUT_LOOP_0
+INPUT
+IF RESULT == 1000
+	RETURN 1
+ELSEIF RESULT == 1001
+	IF LOCAL:1 > 0
+		LOCAL:1 -= 1
+		GOTO PRINT_LIST
+	ELSE
+		GOTO INPUT_LOOP_0
+	ENDIF
+ELSEIF RESULT == 1009
+	IF LOCAL:1 < LOCAL:2 / 30
+		LOCAL:1 += 1
+		GOTO PRINT_LIST
+	ELSE
+		GOTO INPUT_LOOP_0
+	ENDIF
+ELSEIF RESULT < 0 || RESULT > 250
+	GOTO INPUT_LOOP_0
+ELSEIF GET_LIST(RESULT) == 0
+	GOTO INPUT_LOOP_0
+ELSE
+	TFLAG:2 = RESULT
+ENDIF
+
+IF TFLAG:0 == 1
+	TSTR:0 = %ABLNAME:RESULT%
+ELSEIF TFLAG:0 == 2
+	TSTR:0 = %EXPNAME:RESULT%
+ELSEIF TFLAG:0 == 3
+	TSTR:0 = %MARKNAME:RESULT%
+ELSEIF TFLAG:0 == 4
+	TSTR:0 = %PALAMNAME:RESULT%의 구슬
+ELSEIF TFLAG:0 == 5
+	TFLAG:2 += 3110
+	TSTR:0 = %LOCALS:RESULT%
+ELSEIF TFLAG:0 == 6
+	TSTR:0 = %BASENAME:RESULT%
+ELSEIF TFLAG:0 == 7
+	SIF (RESULT == 80 || RESULT == 81) && FLAG:13 & 1024 == 0
+		GOTO INPUT_LOOP_0
+	TSTR:0 = %CFLAGNAME:RESULT%
+ENDIF
+IF TFLAG:0 == 6 && TFLAG:2 > 9 && FLAG:1500 & 1
+	REPEAT CHARANUM
+		CALL MAKE_SIZE, 1, COUNT
+	REND
+ENDIF
+TFLAG:1 = 0
+$UP_DOWN
+PRINTFORML 어떻게 정렬하겠습니까?
+DRAWLINE
+PRINTL [1] 오름차순(작은 것에서 큰 것 순으로)
+PRINTL [2] 내림차순(큰 것에서 작은 것 순으로)
+DRAWLINE
+PRINTL [100] 돌아간다
+INPUT
+IF RESULT == 100
+	RETURN 1
+ELSEIF RESULT < 1 || RESULT > 2
+	PRINTL 무효인 숫자입니다.
+	GOTO UP_DOWN
+ENDIF
+TFLAG:1 = RESULT
+
+;---------------------------------------------------------------------
+;캐릭터 자동 정렬 처리
+;---------------------------------------------------------------------
+SELECTCASE TFLAG:0
+	CASE 0
+		IF TFLAG:1 == 1
+			SORTCHARA
+			PRINTFORMW ＜캐릭터 번호 오름차순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA NO, BACK
+			PRINTFORMW ＜캐릭터 번호 내림차순으로 정렬했습니다＞
+		ENDIF
+	CASE 1
+		IF TFLAG:1 == 1
+			SORTCHARA ABL:(TFLAG:2)
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 낮은 순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA ABL:(TFLAG:2), BACK
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 높은 순으로 정렬했습니다＞
+		ENDIF
+	CASE 2
+		IF TFLAG:1 == 1
+			SORTCHARA EXP:(TFLAG:2)
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 낮은 순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA EXP:(TFLAG:2), BACK
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 높은 순으로 정렬했습니다＞
+		ENDIF
+	CASE 3
+		IF TFLAG:1 == 1
+			SORTCHARA MARK:(TFLAG:2)
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 낮은 순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA MARK:(TFLAG:2), BACK
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 높은 순으로 정렬했습니다＞
+		ENDIF
+	CASE 4
+		IF TFLAG:1 == 1
+			SORTCHARA JUEL:(TFLAG:2)
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 낮은 순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA JUEL:(TFLAG:2), BACK
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 높은 순으로 정렬했습니다＞
+		ENDIF
+	CASE 5 , 7
+		IF TFLAG:1 == 1
+			SORTCHARA CFLAG:(TFLAG:2)
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 낮은 순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA CFLAG:(TFLAG:2), BACK
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 높은 순으로 정렬했습니다＞
+		ENDIF
+	CASE 6
+		IF TFLAG:1 == 1
+			SORTCHARA BASE:(TFLAG:2)
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 낮은 순으로 정렬했습니다＞
+		ELSE
+			SORTCHARA BASE:(TFLAG:2), BACK
+			PRINTFORMW ＜%조사처리(TSTR:0,"가")% 높은 순으로 정렬했습니다＞
+		ENDIF
+ENDSELECT
+RETURN 0
+
+;---------------------------------------------------------------------
+;캐릭터 교체 · 정렬용 리스트
+;---------------------------------------------------------------------
+@SORT_LIST, ARGS, ARG:1
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	;주인공과 실종 캐릭터는 배제
+	SIF LOCAL == 0
+		CONTINUE
+	SIF CFLAG:LOCAL:4
+		CONTINUE
+	;첫 번째에 선택한 캐릭터는 배제
+	SIF LOCAL == ARG:1
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT ●
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	CALL ARRANGE_CHARATALENT, LOCAL
+	PRINTL 
+REND
+

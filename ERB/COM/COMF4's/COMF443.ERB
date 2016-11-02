@@ -1,0 +1,151 @@
+﻿;=============================================================================
+;유명의 고륜
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE443
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:443 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;対象が요우무のときは반령이 調教可能なキャラでなおかつ主人や助手をしていない状態でないと使えない
+IF NO:TARGET == 19
+	;반령이 현재 조교 가능
+	LOCAL:1 = 0
+	FOR LOCAL, 0, CHARANUM
+		;主人や助手は除外
+		SIF LOCAL == MASTER || LOCAL == ASSI
+			CONTINUE
+		;妊娠していたら除外
+		SIF TALENT:LOCAL:140 == 1
+			CONTINUE
+		;失踪中などこの場にいないなら除外
+		SIF CFLAG:LOCAL:4
+			CONTINUE
+		;反発刻印もしくは恐怖刻印３がある場合は除外(拒絶する)
+		SIF MARK:LOCAL:8 > 2 || MARK:LOCAL:9
+			CONTINUE
+		;반령だったらLOCAL:1に+1
+		SIF NO:LOCAL == 65
+			LOCAL:1 += 1
+	NEXT
+	SIF LOCAL:1 == 0
+		RETURN 0
+;対象が요우키のときは반령(요우키)が調教可能なキャラでなおかつ主人や助手をしていない状態でないと使えない
+ELSEIF NO:TARGET == 70
+	;반령(요우키)が현재 조교 가능
+	LOCAL:1 = 0
+	FOR LOCAL, 0, CHARANUM
+		;主人や助手は除外
+		SIF LOCAL == MASTER || LOCAL == ASSI
+			CONTINUE
+		;妊娠していたら除外
+		SIF TALENT:LOCAL:140 == 1
+			CONTINUE
+		;失踪中などこの場にいないなら除外
+		SIF CFLAG:LOCAL:4
+			CONTINUE
+		;反発刻印もしくは恐怖刻印３がある場合は除外(拒絶する)
+		SIF MARK:LOCAL:8 > 2 || MARK:LOCAL:9
+			CONTINUE
+		;반령(요우키)だったらLOCAL:1に+1
+		SIF NO:LOCAL == 99
+			LOCAL:1 += 1
+	NEXT
+	SIF LOCAL:1 == 0
+		RETURN 0
+;対象が요우무か요우키でないとダメ
+ELSE
+	RETURN 0
+ENDIF
+;助手可または恋慕または奉仕精神４이상または순종 · 기교 · 奉仕精神が全て3이상
+SIF CFLAG:1 < 2 && TALENT:150 == 0 && ABL:13 < 4 && (ABL:10 < 3 || ABL:12 < 3 || ABL:13 < 3)
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;5턴 계속, 사용중 봉사 효과 증대, 체력 감소대
+;TEQUIP:72를 사용했습니다
+;봉사 행동 이외는 거의 체력 소비할 뿐(만큼)의 슬픈 효과
+@COM443
+PRINTFORML 유명의 고륜
+TSTR:0 = 유명의 고륜
+CALL TRAIN_MESSAGE_COM443
+
+DOWNBASE:0 += 0
+
+IF TEQUIP:72 > 0
+	DOWNBASE:1 += 30
+	TEQUIP:72 = 0
+ELSE
+	DOWNBASE:1 += 40
+	TEQUIP:72 = 6
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;유명의 고륜 발동중
+;--------------------------------------------------
+@EQUIP_COM443
+PRINTL <유명의 고륜 발동 중> 
+LOCALS:0 = 요우무
+LOCALS:1 = 요우키
+
+DOWNBASE:0 += DOWNBASE:1 * 4 / 5
+DOWNBASE:1 += 20
+
+SOURCE:15 += 300
+IF (SELECTCOM >= 40 && SELECTCOM <= 59) || (SELECTCOM >= 300 && SELECTCOM <= 309) || SELECTCOM == 602 || SELECTCOM == 603 || SELECTCOM == 610
+	PRINTFORMW %LOCALS:((NO:TARGET == 70) > 0)%(은)는 반령과 함께 봉사를 하고 있다….
+	TIMES SOURCE:0 , 1.60
+	TIMES SOURCE:11 , 1.80
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 1.20
+	TIMES SOURCE:17 , 1.60
+	TIMES SOURCE:18 , 1.20
+	TIMES SOURCE:22 , 1.80
+	TIMES SOURCE:24 , 1.60
+ELSE
+	TIMES SOURCE:15 , 1.20
+ENDIF
+
+TEQUIP:72 -= 1
+SIF TEQUIP:72 == 0
+	PRINTW <유명의 고륜이 종료됐습니다>
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM443
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+LOCALS:0 = 요우무
+LOCALS:1 = 요우키
+PRINTL
+IF PREVCOM != 440 && PREVCOM != 441 && PREVCOM != 442 && PREVCOM != 443 && PREVCOM == 444
+	IF NO:TARGET == 70 
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령을 불러냈다.
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 반령을 불러냈다.
+	ENDIF
+ENDIF
+IF TEQUIP:72 > 0
+	PRINTFORMW %LOCALS:((NO:TARGET == 70) > 0)%\@(TALENT:150) ? 에게 유명의 고륜을 그만두게 했다. # (은)는 유명의 고륜을 그만두었다. \@
+ELSE
+	PRINTFORMW %LOCALS:((NO:TARGET == 70) > 0)%\@(TALENT:150) ? (은)는 유명의 고륜을 사용했다. # 에 유명의 고륜을 사용하게 했다.\@
+ENDIF

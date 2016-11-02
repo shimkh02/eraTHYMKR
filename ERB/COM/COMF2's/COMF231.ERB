@@ -1,0 +1,171 @@
+﻿;=============================================================================
+;피스트퍽
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE231
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:231 > 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;조교 대상のＶ확장경험이 ない場合には, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:32 <= 1
+	RETURN 0
+;Ｖ경험LVが1미만で, 조교자가 オトコではない場合
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:0 < EXPLV:1 && TALENT:PLAYER:120 == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;작은 체형なら순종이 4이상かつ마조끼が4이상じゃないと実行できない
+IF TALENT:128
+	SIF ABL:10 < 4 || ABL:21 < 4
+		RETURN 0
+ENDIF
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;ASSI일 경우, 순종4이상이거나 새드じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:81 == 0
+	RETURN 0
+ENDIF
+;일정의 Ｖ경험이 필요([巨躯]の場合は軽減)
+LOCAL = (TALENT:129) ? 75 # 150
+SIF EXP:0 < LOCAL
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM231
+PRINTL 피스트퍽
+TSTR:0 = 피스트퍽
+CALL TRAIN_MESSAGE_COM231
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 600
+DOWNBASE:1 += 300
+
+SOURCE:20 = 1200
+SOURCE:12 = 1200
+SOURCE:22 = 1200
+SOURCE:31 = 1200
+SOURCE:17 = 1200
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 2000
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 2500
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 3000
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 3300
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 3600
+ELSE
+	SOURCE:1 = 3800
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 += 20000
+	SOURCE:18 += 2000
+	SIF TALENT:PLAYER:120 == 0
+		TCVAR:50 += 1
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 += 300
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 += 50
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 += 10
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.40
+	SOURCE:20 += 0
+ELSE
+	TIMES SOURCE:1 , 1.60
+	SOURCE:20 += 0
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+SIF EXP:32 == 0
+	TCVAR:50 += 1
+
+TCVAR:0 += 25
+TCVAR:32 += 1
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM231
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF ASSIPLAY == 0
+	PRINTFORML %CALLNAME:TARGET%의 질은 %CALLNAME:MASTER%의 주먹으로 휘저어졌다.
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 질은 %CALLNAME:ASSI%의 주먹으로 휘저어졌다.
+ENDIF
+PRINTL
+PRINTFORM %CALLNAME:TARGET% 
+IF ABL:1 <= 1
+	PRINTW 의 질은 경련하고 있는 것 같이 벌름거린다.
+ELSEIF ABL:1 == 2
+	PRINTW 의 질은 뻐끔 입을 열고 있다.
+ELSEIF ABL:1 == 3
+	PRINTW 의 질은 벌려진 채로 좀처럼 돌아오지 않는다.
+ELSEIF ABL:1 == 4
+	PRINTL 의 보지에서 질 벽의 살이 밀려나와,
+	PRINTW 뻥 열린 질구의 안으로 자궁구가 보이고 있다.
+ELSE
+	PRINTFORMW %조사만처리(CALLNAME:TARGET, "는")%, 손가락으로 자신의 질구를 벌리며 황홀에 빠져 있다….
+ENDIF

@@ -1,0 +1,94 @@
+﻿;=============================================================================
+;가슴 베개
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE341
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:341 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;主人でないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;순종4이상 필요
+SIF ABL:10 < 4
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;완전 취미 커맨드이므로 실용성 0
+@COM341
+PRINTL 가슴 베개
+TSTR:0 = 가슴 베개
+CALL TRAIN_MESSAGE_COM341
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 10
+
+SOURCE:14 = 150
+SOURCE:17 = 50
+
+;대상의 가슴의 더러운⇔조교자의 머리카락의 더러움이 서로 이동
+STAIN:5 |= STAIN:PLAYER:7
+STAIN:PLAYER:7 |= STAIN:5
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM341
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+IF TALENT:110
+	PRINT 있는지 없는지 알 수 없는 
+ELSEIF TALENT:111
+	PRINT 베개로 하기엔 조금 부족한 
+ELSEIF TALENT:112
+	PRINT 충분히 부드러운 
+ELSEIF TALENT:113
+	PRINT 머리가 파묻혀 버릴 듯한 
+ELSE
+	PRINT 딱 좋은 크기의 
+ENDIF
+PRINTW 가슴에 드러누웠다….

@@ -1,0 +1,322 @@
+﻿;=============================================================================
+;애널 솔도파
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE433
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:433 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조교자가 映姫様じゃないとダメ
+SIF NO:PLAYER != 36
+	RETURN 0
+;ASSI일 경우, 순종3이상じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 4
+	RETURN 0
+ENDIF
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;소인체형または작은 체형なら순종이 4이상かつ마조끼が4이상 필요
+;また, Ａ경험이 20미만かつＡ확장경험이 5미만だと実行できない
+IF TALENT:127 || TALENT:128
+	SIF ABL:10 < 4 || ABL:21 < 4
+		RETURN 0
+	SIF EXP:1 < 20 && EXP:33 < 20
+		RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;「귀부인은 조금 반항너무 적이다」는 말하게 해 보고 싶었던 것 뿐으로 s
+@COM433
+PRINTL 애널 솔도파
+TSTR:0 = 애널 솔도파
+
+DOWNBASE:0 += 400
+DOWNBASE:1 += 600
+
+SOURCE:12 = 1500
+SOURCE:22 = 1500
+SOURCE:31 = 10000
+SOURCE:20 = 100
+
+LOCAL:1 = 700
+LOCAL:2 = (ABL:PLAYER:11 * 2) + (ABL:PLAYER:13 * 3)
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	LOCAL:2 += (ABL:PLAYER:22 * 3) + (ABL:PLAYER:32 * 2)
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	LOCAL:2 += (ABL:PLAYER:23 * 3) + (ABL:PLAYER:33 * 2)
+ENDIF
+LOCAL:3 = 1 + RAND:10
+;말분기용
+TFLAG:99 = LOCAL:2 + LOCAL:3
+CALL TRAIN_MESSAGE_COM433
+
+;MARK:반발 각인을 본다
+IF MARK:9 < 2
+	TIMES LOCAL:1, 1.00
+ELSEIF MARK:9 == 2
+	TIMES LOCAL:1, 0.75
+ELSE
+	TIMES LOCAL:1, 0.50
+ENDIF
+
+;MARK:굴복 각인을 본다
+IF MARK:2 > 2
+	TIMES LOCAL:1, 1.25
+ELSEIF MARK:2 == 2
+	TIMES LOCAL:1, 1.00
+ELSEIF MARK:2 == 1
+	TIMES LOCAL:1, 0.75
+ELSE
+	TIMES LOCAL:1, 0.50
+ENDIF
+
+;MARK:고통 각인을 본다
+IF MARK:0 > 2
+	TIMES LOCAL:1, 1.20
+ELSEIF MARK:0 == 2
+	TIMES LOCAL:1, 1.00
+ELSEIF MARK:0 == 1
+	TIMES LOCAL:1, 0.80
+ELSE
+	TIMES LOCAL:1, 0.60
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1, 0.50
+	SOURCE:24 = 70
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1, 0.70
+	SOURCE:24 = 150
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1, 1.00
+	SOURCE:24 = 330
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1, 1.40
+	SOURCE:24 = 650
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1, 1.90
+	SOURCE:24 = 1400
+ELSE
+	TIMES LOCAL:1, 2.50
+	SOURCE:24 = 2500
+ENDIF
+
+SOURCE:20 += 100 * (LOCAL:2 + LOCAL:3)
+SOURCE:17 = 100 * (LOCAL:2 + LOCAL:3)
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 100
+	SOURCE:11 = 10
+	SOURCE:22 += 100
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 230
+	SOURCE:11 = 30
+	SOURCE:22 += 300
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 500
+	SOURCE:11 = 100
+	SOURCE:22 += 600
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 900
+	SOURCE:11 = 200
+	SOURCE:22 += 1000
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1500
+	SOURCE:11 = 450
+	SOURCE:22 += 1500
+ELSE
+	SOURCE:2 = 2100
+	SOURCE:11 = 750
+	SOURCE:22 += 2100
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.10
+	SOURCE:20 += 25000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 0.30
+	SOURCE:20 += 16000
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 0.50
+	SOURCE:20 += 9000
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 5000
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 2700
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 += 1500
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 12000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 4000
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 1600
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 500
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 120
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:22 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:22 , 1.20
+ELSE
+	TIMES SOURCE:2 , 1.40
+	TIMES SOURCE:22 , 1.40
+ENDIF
+
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL:1, 0.90
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL:1, 1.50
+ENDIF
+;자제심
+SIF TALENT:20
+	TIMES LOCAL:1, 0.30
+;저항
+SIF TALENT:34
+	TIMES LOCAL:1, 0.80
+;약점
+SIF TALENT:39
+	TIMES LOCAL:1, 2.50
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1, 1.50
+;중독 하기 쉽다
+SIF TALENT:84
+	TIMES LOCAL:1, 1.50
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+LOCAL:1 *= LOCAL:2
+LOCAL:1 /= LOCAL:3
+
+;[거만함],[프라이드 높은]은 반발
+SIF TALENT:15 || TALENT:16
+	SOURCE:32 += 30000
+;연고응,[령체],[귀신],[구문지],[죽음의 신]은 반발 저하
+SIF NO:TARGET == 22 || TALENT:207 || TALENT:214 || TALENT:216 || TALENT:224
+	LOCAL:1 *= 3
+
+IF LOCAL:1 > 0
+	FOR COUNT, 20, 23
+		IF PALAM:COUNT
+			PRINTFORML %CALLNAME:TARGET%의 %조사처리(PALAMNAME:COUNT, "가")% 하락했다.
+			PALAM:COUNT = MAX(PALAM:COUNT - LOCAL:1, 0)
+		ENDIF
+	NEXT
+ENDIF
+
+TCVAR:1 += 5
+TCVAR:33 += 2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:2 >= 3) ?  2 # 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM433
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 오른손에 든 솔도파를 %CALLNAME:TARGET%의 애널에 밀어 넣었다.
+PRINTW 그리고 설교하면서, 왼손에 가진 회개의 봉으로 엉덩이를 두드리기 시작했다.
+PRINTL
+PRINTFORMW 설교 중에 {TFLAG:99}회 얻어맞은 %CALLNAME:TARGET%의 엉덩이는 새빨갛게 되어 있다.

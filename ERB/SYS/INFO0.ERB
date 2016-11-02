@@ -1,0 +1,1470 @@
+﻿;=============================================================================
+;정보 표시
+;=============================================================================
+;-------------------------------------------------
+;세이브 데이터에 기재되는 정보
+;-------------------------------------------------
+@SAVEINFO
+PUTFORM {DAY}일째\@(TIME == 0) ? 낮 # 밤\@ 
+SIF FLAG:4 == 2 || FLAG:4 == 3 || TALENT:MASTER:998 || NO:MASTER != 0
+	PUTFORM 주인:%CALLNAME:MASTER% 
+IF TARGET >= 0 && (TALENT:152 || TALENT:153)
+	PUTFORM %CALLNAME:TARGET% 열애중 
+ELSEIF TARGET >= 0
+	PUTFORM %CALLNAME:TARGET% 조교중 
+ENDIF
+IF TALENT:MASTER:998
+	PUTFORM DEBUG     
+ELSEIF TALENT:MASTER:831
+	PUTFORM YASAI     
+ELSEIF FLAG:4 == 1
+	PUTFORM ABNORMAL  
+ELSEIF FLAG:4 == 2
+	PUTFORM EXTRA     
+ELSEIF FLAG:4 == 3
+	PUTFORM REVERSAL  
+ELSEIF FLAG:4 == 4
+	PUTFORM PROSTITUTE
+ELSEIF FLAG:4 >= 50
+	PUTFORM CHALLENGE 
+ELSE
+	PUTFORM eratohoYM 
+ENDIF
+VARSET LOCALS,""
+SPLIT "謎 ,易 ,普 ,難 ,狂 ,厄 ,獄 ,超 ,謎 ",",",LOCALS
+LOCAL = LIMIT(FLAG:3 , 0, 8)
+;ＰＬＨＥＮの表記を変更
+PUTFORM %LOCALS:LOCAL%
+SIF FLAG:4 == 0 || FLAG:4 == 1
+	PUTFORM ({FLAG:6}周目)
+SIF FLAG:5 & 1
+	PUTFORM  ∞
+
+;-------------------------------------------------
+;능력 확인의 처리(1페이지째 · 총합)
+;조교 중 능력 표시 버튼으로 나오는 메뉴
+;-------------------------------------------------
+;옵션에 따라 표시 타입 변경
+;調教中での能力表示はこのページが表示される
+@SHOW_INFO_PAGE_1, ARG
+;弐型表示
+IF FLAG:12 & 2
+	;能力
+	CALL NEW_PRINT_ABL, ARG
+	;素質
+	SIF FLAG:3 < 4 || ARG == MASTER || TALENT:ARG:998
+		CALL NEW_PRINT_TALENT, ARG
+	;刻印
+	SIF ARG != MASTER
+		CALL NEW_PRINT_MARK, ARG
+	;経験
+	CALL NEW_PRINT_EXP, ARG
+;壱型表示
+ELSE
+	;能力
+	CALL SHOW_INFO_ABL, ARG
+	;素質
+	SIF FLAG:3 < 4 || ARG == MASTER || TALENT:ARG:998
+		CALL SHOW_INFO_TALENT, ARG
+	;刻印
+	SIF ARG != MASTER
+		CALL SHOW_INFO_MARK, ARG
+	;経験
+	CALL SHOW_INFO_EXP, ARG
+ENDIF
+
+;-------------------------------------------------
+;능력 확인의 처리(2페이지째)
+;-------------------------------------------------
+;주인인가 그 외인가로 표시 타입 변경
+@SHOW_INFO_PAGE_2, ARG
+IF ARG == MASTER
+	;主人の○○数
+	CALL PRINT_MASTER_NUMBER
+	;主人の触手関連のステータス
+	SIF FLAG:15 & 4096
+		CALL PRINT_MASTER_JUEL, ARG
+ELSE
+  ;매각치 표시
+  IF FLAG:5000 & 2
+  ELSE
+  	CALL PRINT_CALCCHARA, ARG
+  ENDIF
+	;珠
+	IF FLAG:12 & 2
+		CALL NEW_PRINT_JUEL, ARG
+	ELSE
+		CALL SHOW_INFO_JUEL, ARG
+	ENDIF
+ENDIF
+;記念日
+SIF CFLAG:ARG:3110 || CFLAG:ARG:3111 || CFLAG:ARG:3112 || CFLAG:ARG:3113 || CFLAG:ARG:3114 || CFLAG:ARG:3115 || CFLAG:ARG:3116 || CFLAG:ARG:3117
+	CALL PRINT_MEMORIALDAY, ARG
+
+;両親(子の場合)
+SIF NO:ARG == 148 || NO:ARG == 149
+	CALL PRINT_PARENT, ARG
+;相性
+CALL PRINT_RELATION, ARG
+
+;-------------------------------------------------
+;능력 확인의 처리(3페이지째)
+;-------------------------------------------------
+;주인인가 그 외인가로 표시 타입 변경
+@SHOW_INFO_PAGE_3, ARG
+IF ARG == MASTER
+	;酔い具合
+	CALL PRINT_DRUNK_LIQUOR, ARG
+	;難易度
+	CALL SHOW_DIFFICULTY
+	;この周に迎えたエンディング
+	SIF FLAG:598
+		CALL SHOW_ENDING
+	;変化可能な種族
+	SIF FLAG:70
+		CALL PRINT_MASTER_CHANGEABLE_RACE
+	;助手引継ぎ人数関連
+	SIF FLAG:8
+		CALL PRINT_ASSISTANT_SUCCESSION
+	;収入金額の最高額
+	SIF MONEY:998 > 0
+		CALL INCOME_LIST
+ELSE
+	;酔い具合
+	CALL PRINT_DRUNK_LIQUOR, ARG
+	;習得済み陥落系素質
+	SIF CFLAG:ARG:14 || CFLAG:ARG:15 || CFLAG:ARG:16 || CFLAG:ARG:17
+		CALL PRINT_SLAVE_TALENT_FALL, ARG
+	;蒐集品
+	SIF FLAG:500 > 0 && FLAG:12 & 8
+		CALL PRINT_COLLECTION_YN, ARG
+	;陰核成長具合
+	SIF BASE:ARG:7 && TALENT:ARG:120 == 0 && TALENT:ARG:121 == 0
+		CALL PRINT_GROWTH_SLAVE_CLITORIS, ARG
+	;陰毛の状態
+	CALL PRINT_PUBIC_HAIR, ARG
+	;烙印キャラ用特殊装備
+	SIF CFLAG:ARG:42
+		CALL PRINT_BRAND_SLAVE_EQUIPMENT, ARG
+	;触手インプラント
+	SIF CFLAG:ARG:41
+		CALL PRINT_TENTACLE_INPLANT_SLAVE, ARG
+	;各種開発度表示処理
+	SIF TALENT:MASTER:998 && (CFLAG:ARG:31 || CFLAG:ARG:60 || CFLAG:ARG:61 || CFLAG:ARG:62 || CFLAG:ARG:63 || CFLAG:ARG:64)
+		CALL PRINT_DEVELOPMENT_LEVEL_SLAVE, ARG
+	;노예調教の進行状況表示処理
+	CALL PRINT_SLAVE_TRAIN_PROCESS, ARG
+ENDIF
+
+;-------------------------------------------------
+;능력 확인의 처리(4페이지째)
+;-------------------------------------------------
+;주인인가 그 외인가로 표시 타입 변경
+@SHOW_INFO_PAGE_4, ARG
+;サイズ
+SIF FLAG:1500 & 1
+	CALL SHOW_SIZE, ARG
+IF ARG == MASTER
+	;蒐集品の総計
+	SIF FLAG:500 > 0 && FLAG:12 & 8
+		CALL MASTER_COLLECTION_STATUS
+ELSE
+	;노예ごとの収入金額の最高額
+	SIF CFLAG:ARG:96 > 0
+		CALL INCOME_LIST_SLAVE, ARG
+ENDIF
+;역상성
+CALL PRINT_RERELATION, ARG
+
+;暫定で4ページ目に改造道具(技師パッチ)
+IF FLAG:1100 & 1
+	FLAG:1110 = ARG
+	CALL CUSTOMTOOL_INFO
+ENDIF
+
+;-------------------------------------------------
+;능력 확인의 처리(5페이지째)
+;-------------------------------------------------
+;주인인가 그 외인가로 표시 타입 변경
+@SHOW_INFO_PAGE_5, ARG
+IF ARG == MASTER
+	;現有全노예の各収入合計一覧表示
+	SIF CHARANUM > 1 && SUMCARRAY(CFLAG:ARG:97, 1, CHARANUM) > 0
+		CALL PRINT_INCOME_ALLSLAVE, ARG
+	;主人の各種フラグ関連表示
+	CALL PRINT_MASTER_FLAG, ARG
+ELSE
+	;助手経験のある노예のみ他の노예への調教経験を表示
+	SIF ISASSI:ARG == 1 || ARG == ASSI
+		CALL PRINT_ASSI_TRAIN, ARG
+	;노예の各種フラグ関連表示
+	CALL PRINT_SLAVE_FLAG, ARG
+ENDIF
+
+;-------------------------------------------------
+;능력 표시 관계의 범용 처리군
+;-------------------------------------------------
+;………………………………………………
+;ABL 표시의 공통 처리 부분
+;………………………………………………
+;표시순
+; 0,Ｃ감각　　 1,Ｖ감각　　 2,Ａ감각　　 3,Ｂ감각
+;10,순종　　　11,욕망　　　12,기교　　　13,봉사정신
+;14,노출벽　　20,새드끼　21,마조끼　22,레즈끼(23,ＢＬ끼)
+;30,자위중독　31,정액중독　32,레즈중독(33,ＢＬ중독)　34,분유중독
+;35,촉수중독　36,배설중독　37,사정중독　70,요리기능
+;71,촬영기능　72,가창기능　73,공작기능　98,촉수사역
+@PRINT_ABL_COUNT(ARG)
+#FUNCTION
+LOCAL = -1
+SELECTCASE COUNT
+	CASE 0 TO 3
+		LOCAL = COUNT
+	CASE 4 TO 8
+		LOCAL = COUNT + 6
+	CASE 9, 10
+		LOCAL = COUNT + 11
+	CASE 11
+		;男ならレズっ気、女ならＢＬっ気はないよね？
+		LOCAL = 22 + TALENT:ARG:120
+	CASE 12, 13
+		LOCAL = COUNT + 18
+	CASE 14
+		;男ならレズ中毒、女ならＢＬ中毒はないよね？
+		LOCAL = 32 + TALENT:ARG:120
+	CASE 15
+	;男なら噴乳中毒は無いよね？
+		SIF TALENT:ARG:120 == 0
+			LOCAL = 34
+	CASE 16, 17
+		LOCAL = COUNT + 19
+	CASE 18
+	;女でふたなりでないなら射精中毒は無いよね？
+		SIF TALENT:ARG:120 || TALENT:ARG:121
+			LOCAL = 37
+	CASE 19 TO 22
+		LOCAL = COUNT + 51
+	;[プールパッチ]
+	CASE 23
+		SIF FLAG:89 & 1
+			LOCAL = 78
+	CASE 24
+		SIF ARG == MASTER && FLAG:15 & 4096
+			LOCAL = 98
+	CASE 25
+		SIF ARG == MASTER
+			LOCAL = 99
+ENDSELECT
+RETURNF LOCAL
+
+;………………………………………………
+;@SHOW_INFO_TALENT계의 공통 처리
+;………………………………………………
+@SHOW_INFO_EACH_TALENT, ARG
+IF COUNT == 0
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 1
+	IF TALENT:ARG:0 == 1 && JUEL:ARG:1 == 0 && EXP:ARG:0 == 0 && ABL:ARG:1 == 0
+		PRINT [숫처녀] 
+	ELSE
+		PRINTFORM [\@(TALENT:ARG:0 == 1) ? 처녀 # 재생처녀\@] 
+	ENDIF
+	;디폴트 컬러로 복귀
+	RESETCOLOR
+ELSEIF COUNT == 121
+	PRINTFORM [후타나리\@(TALENT:ARG:121 == 2) ? (불알 있음) # \@] 
+;연모계 소질 색 설정
+ELSEIF COUNT >= 150 && COUNT <= 153
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+	IF COUNT == 153
+		PRINTFORM [\@(CFLAG:ARG:156 & 1) ? 상사상애 # 상애\@] 
+	ELSE
+		PRINTFORM [%TALENTNAME:COUNT%] 
+	ENDIF
+	;디폴트 컬러로 복귀
+	RESETCOLOR
+;복종계 소질 색 설정
+ELSEIF (COUNT >= 160 && COUNT <= 162) || COUNT == 164
+	CALL SETCOLOR_TORIKOMODE, "ORENGE", 2
+	IF COUNT == 164
+		PRINTFORM [\@(NO:MASTER == 21 || NO:MASTER == 22) ? 식신 # 사역마\@] 
+	ELSE
+		PRINTFORM [%TALENTNAME:COUNT%] 
+	ENDIF
+	;디폴트 컬러로 복귀
+	RESETCOLOR
+;음란계 소질 색 설정
+ELSEIF COUNT >= 170 && COUNT <= 180
+	CALL SETCOLOR_TORIKOMODE, "PINK", 2
+	IF COUNT == 171
+		PRINTFORM [\@(TALENT:ARG:120 || TALENT:ARG:121) ? 음경 # 음핵\@] 
+	ELSE
+		PRINTFORM [%TALENTNAME:COUNT%] 
+	ENDIF
+	;디폴트 컬러로 복귀
+	RESETCOLOR
+;붕괴계 소질 색 설정
+ELSEIF COUNT == 158 || COUNT == 159 || COUNT == 163 || (COUNT >= 167 && COUNT <= 169)
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORM [%TALENTNAME:COUNT%] 
+	RESETCOLOR
+ELSEIF COUNT == 213
+	PRINTFORM [사토리\@(TALENT:ARG:213 == 2) ? (마음을 닫음) # \@]
+ELSEIF COUNT == 212
+	PRINTFORM [반백택\@(TALENT:ARG:212 == 2) ? (변신 중) # \@] 
+ELSEIF COUNT == 230
+IF TALENT:ARG:230 == 1
+	PRINTFORM [늘어나는 목] 
+ELSEIF TALENT:ARG:230 == 2
+	PRINTFORM [목 분리] 
+ELSEIF TALENT:ARG:230 == 3
+	PRINTFORM [목만 있음] 
+ENDIF 
+ELSEIF COUNT == 260
+	PRINTFORM [\@(TALENT:ARG:120) ? 남창 # 창녀\@] 
+ELSEIF COUNT == 263
+	PRINTFORM [\@(TALENT:ARG:120) ? 봄의 남자 # 봄의 여인\@] 
+ELSEIF COUNT == 264
+	PRINTFORM [\@(TALENT:ARG:120) ? 간판남 # 간판소녀\@] 
+ELSEIF COUNT == 265 && TALENT:ARG:COUNT
+	PRINTFORM [단골손님 {TALENT:ARG:COUNT}명]
+ELSE
+	SIF FLAG:3998 && CFLAG:ARG:11 == 0 && (COUNT == 11 || COUNT == 15 || COUNT == 21 || COUNT == 27 || COUNT == 32 || COUNT == 34 || COUNT == 37 || COUNT == 38 || COUNT == 71)
+		FONTBOLD
+	PRINTFORM [%TALENTNAME:COUNT%] 
+	SIF FLAG:3998 && CFLAG:ARG:11 == 0 && (COUNT == 11 || COUNT == 15 || COUNT == 21 || COUNT == 27 || COUNT == 32 || COUNT == 34 || COUNT == 37 || COUNT == 38 || COUNT == 71)
+		FONTREGULAR
+ENDIF
+
+
+;………………………………………………
+;EXP 표시의 공통 처리 부분
+;………………………………………………
+;표시순(순서는 공통)
+; 0,Ｖ経験　　　　 1,Ａ経験　　　　 2,절정経験　　　 
+; 3,射精経験　　　 4,精液経験　　　 5,噴乳経験　　　 
+; 6,放尿経験　　　 7,調教排泄経験　 8,精飲절정経験　 
+;10,自慰経験　　　11,調教自慰経験　12,レズ経験(13,ＢＬ経験)　
+;14,露出快楽経験　20,奉仕快楽経験　21,愛情経験　　　
+;22,フェラ経験　　23,キス経験　　　30,苦痛快楽経験　
+;31,緊縛経験　　　32,Ｖ拡張経験　　33,Ａ拡張経験　　
+;34,Ｕ拡張経験　　39,ＳＭ教育経験　40,薬物経験　　　
+;41,Ｃ調律経験　　42,Ｖ調律経験　　43,Ａ快楽経験　　
+;44,Ｂ快楽経験　　45,乳腺開発経験　46,尿道開発経験　
+;50,異常経験　　　51,産卵経験　　　52,出産経験　　　
+;53,触手経験　　　54,吸血経験　　　55,調教失神経験　
+;56,動物性愛経験　70,調理経験　　　71,撮影経験　　　
+;72,被写経験　　　73,歌唱経験　　　74,工作経験　　　
+;75,教育経験 78, 수영경험　　　80,強姦経験　　　81,被強姦経験　　←Ｓパッチ、ここに割り込むよー
+;82,被輪姦経験　　83,被姦快楽経験　97,極楽절정経験　
+;98,主人調教経験　99,助手経験　　　
+@PRINT_EXP_COMMON, ARG
+CALL STATUS_VIRGIN, ARG
+LOCAL:1 = 0
+REPEAT 53
+	LOCAL = -1
+	SELECTCASE COUNT
+		CASE 0 TO 8
+			LOCAL = COUNT
+		CASE 9, 10
+			LOCAL = COUNT + 1
+		CASE 11
+			LOCAL = 12 + TALENT:ARG:120
+		CASE 12
+			LOCAL = 14
+		CASE 13 TO 16
+			LOCAL = COUNT +7
+		CASE 17 TO 21
+			LOCAL = COUNT + 13
+		CASE 22 TO 29
+			LOCAL = COUNT + 17
+		CASE 30 TO 35
+			LOCAL = COUNT + 20
+		CASE 36
+			SIF FLAG:15 & 8192
+				LOCAL = 56
+		CASE 37 TO 42
+			LOCAL = COUNT + 33
+		CASE 43, 44
+			LOCAL = COUNT + 33
+		CASE 45
+			LOCAL = COUNT + 33
+		CASE 46 TO 48
+			LOCAL = COUNT + 35
+		CASE 49 TO 51
+			LOCAL = COUNT + 48
+	ENDSELECT
+	IF LOCAL < 0
+		CONTINUE
+	ELSEIF EXP:ARG:LOCAL > 0
+		IF FLAG:3998 & 1 && ((LOCAL == 0 && CFLAG:ARG:11 & 1) || (LOCAL == 1 && CFLAG:ARG:11 & 2) || (LOCAL == 50 && CFLAG:ARG:11 & 4)|| (LOCAL == 12 && EXP:ARG:LOCAL > 999 && TALENT:MASTER:120 && CFLAG:ARG:18 == 0) || (LOCAL == 13 && EXP:ARG:LOCAL > 999 && TALENT:MASTER:120 == 0 && CFLAG:ARG:18 == 0))
+			FONTBOLD
+			PRINTFORM %EXPNAME:LOCAL,12%:\@(EXP:ARG:LOCAL > 99999999) ? 99999999 # {EXP:ARG:LOCAL, 8}\@
+			FONTREGULAR
+		ELSE
+			PRINTFORM %EXPNAME:LOCAL,12%:\@(EXP:ARG:LOCAL > 99999999) ? 99999999 # {EXP:ARG:LOCAL, 8}\@
+		ENDIF
+		LOCAL:1 += 1
+		;改行するのか？ 続けて出力するのか？
+		IF LOCAL:1%3 == 0
+			PRINTL 
+		ELSE
+			PRINT 　
+		ENDIF
+	ENDIF
+REND
+SIF LOCAL:1%3 != 0
+	PRINTL 
+
+;-------------------------------------------------
+;조교 중에 표시되는 정보(메뉴 위)
+;-------------------------------------------------
+;어디서 이 함수를 호출하는지 찾을 수가 없다.
+;그래서 어쩔 수 없이 이 함수안에 토리코모드를 집어넣었다...
+;130822 V.K
+@SHOW_STATUS
+
+;토리코모드 인터럽트 시스템 사용중일 때, 자율실행회수를 결정한다. (매 턴 달라진다)
+SIF FLAG:5000 & 512
+	CALL SET_INTERRUPT_COUNT
+
+;토리코모드용 추가부분. 난이도에 따라 남은 시간이 달라진다.
+LOCAL:99 = 100
+IF FLAG:5000 & 16
+	IF FLAG:3 == 1
+		LOCAL:99 = 50
+	ELSEIF FLAG:3 == 2
+		LOCAL:99 = 50
+	ELSEIF FLAG:3 == 3
+		LOCAL:99 = 50
+	ELSEIF FLAG:3 == 4
+		LOCAL:99 = 50
+	ELSEIF FLAG:3 >= 5
+		LOCAL:99 = 50
+	ELSE
+	ENDIF
+ELSE
+ENDIF
+
+VARSET LOCALS,""
+SPLIT "미 ,역 ,보 ,난 ,광 ,액 ,옥 ,초 ,미 ",",",LOCALS
+LOCALS:0 = %LOCALS:(LIMIT(FLAG:3 , 0, 8))%
+DRAWLINE
+PRINTFORM {DAY}일째
+CALL CALENDAR_PRINT, 1
+PRINTFORM \@(TIME == 0) ? (낮) # (밤)\@
+PRINTFORM 　자금:{MONEY}원　모드:
+IF TALENT:MASTER:998
+	PRINT Debug
+	SIF TALENT:998
+		PRINT  ★
+ELSEIF TALENT:MASTER:831
+	PRINT YASAI
+ELSEIF FLAG:4 == 1
+	PRINT ABNORMAL
+ELSEIF FLAG:4 == 2
+	PRINT EXTRA
+ELSEIF FLAG:4 == 3
+	PRINT REVERSAL
+ELSEIF FLAG:4 >= 50
+	PRINT CHALLENGE
+ELSE
+	PRINT eratohoYM
+ENDIF
+SIF FLAG:4 <= 1
+	CALL SHOW_DEADLINE
+PRINTL 
+;남은시간을 LOCAL:99로 당긴다는 것에 주의. (토리코모드 사양)
+PRINTFORML 조교 대상 :%CALLNAME:TARGET% \@(NO:TARGET >= 150 && NO:TARGET < 200 && CALLNAME:TARGET != NAME:TARGET) ?  (%ITEMNAME:(100+NO:TARGET)%)　 # \@　조교자 :%CALLNAME:PLAYER%\@(ASSIPLAY) ? (조수) # (주인)\@　남은 시간:{TFLAG:107}/{LOCAL:99}　난이도：%LOCALS%
+IF FLAG:12 & 4
+	IF ASSIPLAY
+		;토리코모드 스트레스 시스템 사양
+		IF FLAG:5000 & 64
+			PRINTFORM (스트레스:
+			CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:65
+		ELSE
+			PRINTFORM (스트레스:{CFLAG:65}　
+		ENDIF
+		IF TALENT:120 && TALENT:ASSI:120
+			PRINTFORM BL경험:{EXP:13}　
+		ELSEIF TALENT:120 == 0 && TALENT:ASSI:120 == 0
+			PRINTFORM 레즈경험:{EXP:12}　
+		ENDIF
+		PRINTFORML 이상경험:{EXP:50})
+	ELSE
+		;토리코모드 스트레스 시스템 사양
+		IF FLAG:5000 & 64
+			PRINTFORM (주인조교경험:{EXP:98}　호감도:{CFLAG:2}　스트레스:
+			CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:65
+			PRINTFORML  이상경험:{EXP:50})
+		ELSE
+			 PRINTFORML (주인조교경험:{EXP:98}　호감도:{CFLAG:2}　스트레스:{CFLAG:65}　이상경험:{EXP:50})
+		ENDIF
+	ENDIF
+ENDIF
+
+;토리코모드 플래그 체크.
+IF FLAG:5000 & 1
+;토리코 모드용
+	;주인 사정게이지 연산&표시
+	SIF TALENT:MASTER:120 || TALENT:MASTER:121
+		CALL CALC_GAUGE2_MASTER
+	;조교중인 상태 표시
+	CALL PRINT_PALAM_TORIKOMODE
+	;조르기 대사 호출((PANCTION에서)
+	CALL SELF_KOJO, TARGET, 99
+	;DRAWLINE
+
+	;디버그용 게이지들의 수치들
+	;PRINTFORML BASE:MASTER:0 주인체력 {BASE:MASTER:0}
+	;PRINTFORML BASE:MASTER:1 주인기력 {BASE:MASTER:1}
+	;PRINTFORML BASE:MASTER:2 주인사정 {BASE:MASTER:2}
+	;PRINTFORML BASE:MASTER:3 주인모유 {BASE:MASTER:3}
+	;PRINTFORML BASE:MASTER:4 주인뇨의 {BASE:MASTER:4}
+	;
+	;PRINTFORML BASE:TARGET:0 노예체력 {BASE:TARGET:0}
+	;PRINTFORML BASE:TARGET:1 노예기력 {BASE:TARGET:1}
+	;PRINTFORML BASE:TARGET:2 노예사정 {BASE:TARGET:2}
+	;PRINTFORML BASE:TARGET:3 노예모유 {BASE:TARGET:3}
+	;PRINTFORML BASE:TARGET:4 노예뇨의 {BASE:TARGET:4}
+
+;일반모드
+ELSE
+	CALL SHOW_EQUIP_2
+	CALL LIFE_BAR, TARGET
+
+	PRINT 기력
+	LOCAL = MAX(BASE:1, 0)
+  ;60%까지는 초록
+IF BASE:TARGET:1 > (MAXBASE:TARGET:1 * 60) / 100
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+;30%까지는 노랑
+ELSEIF BASE:TARGET:1 > (MAXBASE:TARGET:1 * 30) / 100
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+;그 밑으론 빨강
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+ENDIF
+	BAR LOCAL,MAXBASE:1,32
+  RESETCOLOR
+	PRINTFORM ({LOCAL, 5}/{MAXBASE:1, 5})　
+	;노예의 취기 게이지를 계산
+		CALL CALC_GAUGE8, TARGET, 1
+
+	;노예의 사정 게이지를 표시
+	SIF TALENT:120 || TALENT:121
+		CALL CALC_GAUGE2_SLAVE
+	;노예의 분유 게이지를 표시
+	SIF TALENT:134
+		CALL CALC_GAUGE3_SLAVE, TARGET, 0
+	;노예의 요의 게이지를 표시
+	SIF TEQUIP:12 || TEQUIP:32 || TALENT:45 || EXP:6
+		CALL CALC_GAUGE4_SLAVE, TARGET, 0
+	;노예의 정음절정 게이지를 표시
+	SIF TALENT:66 && FLAG:1200 & 2
+		CALL CALC_GAUGEX_SLAVE
+
+	;옵션에 따라 표시 타입 변경
+	IF (FLAG:12 & 2) && FLAG:1122
+		;③형 표시
+		CALL NEW_PRINT_PALAM_BAR
+	ELSEIF FLAG:12 & 2
+		;②형 표시
+		CALL NEW_PRINT_PALAM
+	ELSE
+		;①형 표시
+		CALL PRINT_PALAM_2
+	ENDIF
+
+	;好感度表示が有効のときは調教者の体力も表示
+	IF FLAG:12 & 4
+		PRINTFORM 체력\@(ASSIPLAY) ? (조수) # (주인)\@
+		LOCAL = MAX(BASE:PLAYER:0, 0)
+		BAR LOCAL,MAXBASE:PLAYER:0,32
+		PRINTFORM ({LOCAL, 5}/{MAXBASE:PLAYER:0, 5})
+		PRINTL 
+	ENDIF
+
+	;주인의 사정 게이지를 표시
+	SIF TALENT:MASTER:120 || TALENT:MASTER:121
+		CALL CALC_GAUGE2_MASTER
+	;조수의 사정 게이지를 표시
+	SIF ASSI >= 0 && (TALENT:ASSI:120 || TALENT:ASSI:121)
+		CALL CALC_GAUGE2_ASSI
+	;その他キャラの射精ゲージ
+	;イベントや機能によりゲージの最大値が変化することもありうるので表示と定義は各装着具毎に設定
+	SIF TEQUIP:90 || TEQUIP:55 == 1
+		CALL CALC_GAUGE2_OTHERS
+
+	IF FLAG:15 & 4096 && TALENT:146
+		CALL CALC_TENTACLE_GAUGE
+		PRINTFORM 촉수기생LV(%CALLNAME:TARGET%)
+		BAR BASE:6,MAXBASE:6,32
+		PRINTFORML ({BASE:6, 5}/{MAXBASE:6, 5})
+	ENDIF
+	DRAWLINE
+
+	CALL SHOW_EQUIP_1
+	;조르기 대사 호출((PANCTION에서)
+	CALL SELF_KOJO, TARGET, 99
+
+
+ENDIF
+
+;-------------------------------------------------
+;체력 바 표시
+;-------------------------------------------------
+@LIFE_BAR, ARG
+BASE:ARG:0 = LIMIT(BASE:ARG:0, 0, MAXBASE:ARG:0)
+PRINT 체력
+;60%까지는 초록
+IF BASE:ARG:0 > (MAXBASE:ARG:0 * 60) / 100
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+;30%까지는 노랑
+ELSEIF BASE:ARG:0 > (MAXBASE:ARG:0 * 30) / 100
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+;그 밑으론 빨강
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+ENDIF
+BAR BASE:ARG:0, MAXBASE:ARG:0, 32
+RESETCOLOR
+PRINTFORML ({BASE:ARG:0, 5}/{MAXBASE:ARG:0, 5})
+
+;-------------------------------------------------
+;기력 바 표시
+;-------------------------------------------------
+@VITALITY_BAR, ARG
+BASE:ARG:1 = LIMIT(BASE:ARG:1, 0, MAXBASE:ARG:1)
+PRINT 기력
+;60%까지는 초록
+IF BASE:ARG:1 > (MAXBASE:ARG:1 * 60) / 100
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+;30%까지는 노랑
+ELSEIF BASE:ARG:1 > (MAXBASE:ARG:1 * 30) / 100
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+;그 밑으론 빨강
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+ENDIF
+BAR BASE:ARG:1, MAXBASE:ARG:1, 32
+RESETCOLOR
+PRINTFORML ({BASE:ARG:1, 5}/{MAXBASE:ARG:1, 5})
+
+;-------------------------------------------------
+;불결 표시
+;-------------------------------------------------
+@STAIN_INFO
+VARSET LOCALS,""
+SPLIT "의 입:,의 손:,의 P:,의 V:,의 A:,의 B:,의 L:,의 F:",",",LOCALS
+FOR LOCAL:1, 0, 3
+	IF LOCAL:1 == 0
+		LOCAL = MASTER
+	ELSEIF LOCAL:1 == 1
+		LOCAL = TARGET
+	ELSEIF LOCAL:1 == 2 && ASSI > -1
+		LOCAL = ASSI
+	ELSE
+		CONTINUE
+	ENDIF
+	REPEAT 8
+		SIF COUNT == 2 && TALENT:LOCAL:120 == 0 && TALENT:LOCAL:121 == 0
+			CONTINUE
+		SIF COUNT == 3 && TALENT:LOCAL:120
+			CONTINUE
+		SIF COUNT == 5 && TALENT:LOCAL:120
+			CONTINUE
+		SIF COUNT >= 6 && STAIN:LOCAL:COUNT == 0
+			CONTINUE
+		PRINTFORM %CALLNAME:LOCAL%%LOCALS:COUNT%
+		SIF STAIN:LOCAL:COUNT & 1
+			PRINT <Ｖ>
+		SIF STAIN:LOCAL:COUNT & 2
+			PRINT <Ｐ>
+		SIF STAIN:LOCAL:COUNT & 4
+			PRINT <정액>
+		SIF STAIN:LOCAL:COUNT & 8
+			PRINT <Ａ>
+		SIF STAIN:LOCAL:COUNT & 16
+			PRINT <모유>
+		SIF STAIN:LOCAL:COUNT & 32
+			PRINT <피>
+		SIF STAIN:LOCAL:COUNT & 64
+			PRINT <점액>
+		PRINTL 
+	REND
+
+NEXT
+WAIT
+
+;-------------------------------------------------
+;상황의 표시
+;-------------------------------------------------
+;調教対象には使わない、特殊な着脱式の道具を追加した場合はここに追加をしてください
+;（場所変更、マスターや助手が使用する道具等）
+@SHOW_EQUIP_2
+
+;색을 칠하고, 용어 수정. 130821 V.K
+SETCOLOR 52,254,175
+
+IF TALENT:PLAYER:831 && TEQUIP:78
+	IF TEQUIP:78 == 2
+		PRINT [Ph모드]
+	ELSEIF TEQUIP:78 == 1
+		PRINT [Ex모드]
+	ENDIF
+	PRINTFORM (%CALLNAME:PLAYER%)
+ENDIF
+IF TFLAG:199
+	PRINT [백택화](
+	SIF TFLAG:199 & 1
+		PRINT 노예
+	SIF TFLAG:199 & 1 && (TFLAG:199 & 2 || TFLAG:199 & 4)
+		PRINT ·
+	SIF TFLAG:199 & 2
+		PRINT 주인
+	SIF (TFLAG:199 & 1 || TFLAG:199 & 2) && TFLAG:199 & 4
+		PRINT ·
+	SIF TFLAG:199 & 4
+		PRINT 조수
+	PRINT )
+ENDIF
+IF TEQUIP:75
+	PRINT [
+	SIF TEQUIP:75 & 1
+		PRINTFORM %CALLNAME:TARGET%
+	SIF TEQUIP:75 & 2
+		PRINTFORM %CALLNAME:MASTER%
+	SIF TEQUIP:75 & 4
+		PRINTFORM %CALLNAME:ASSI%
+	PRINT 축소중]
+ENDIF
+IF TEQUIP:76
+	PRINT [
+	SIF TEQUIP:76 & 1
+		PRINTFORM %CALLNAME:TARGET%
+	SIF TEQUIP:76 & 2
+		PRINTFORM %CALLNAME:MASTER%
+	SIF TEQUIP:76 & 4
+		PRINTFORM %CALLNAME:ASSI%
+	PRINT 거대화중]
+ENDIF
+SIF CFLAG:0
+	PRINT [ＥＸ화]
+SIF TFLAG:899 >= 1
+	PRINTL [실신중]
+SIF TFLAG:152 > 0
+	PRINTL 피조교 노예측이[광기의 눈]발동중 
+SIF TEQUIP:43
+	PRINT [삼각목마 승마중]
+IF TEQUIP:50
+	LOCAL = 10 - TFLAG:121 + 1
+	IF FLAG:15 & 128
+		PRINTFORM [촬영중({LOCAL}회 촬영자:\@(FLAG:61 == 2) ?  %CALLNAME:ASSI% # %CALLNAME:MASTER%\@)]
+	ELSE
+		PRINTFORM [촬영중({LOCAL}회)]
+	ENDIF
+ELSEIF TEQUIP:51
+	LOCAL = TFLAG:119 - TFLAG:123 + 1
+	PRINTFORM [감상중({LOCAL}회)]
+ENDIF
+IF TEQUIP:89 && TEQUIP:52 == 0 && TEQUIP:53 == 0 && TEQUIP:55 == 0
+	IF TEQUIP:89 == 99
+		PRINT [촉수풍양음향중]
+	ELSE
+		PRINTFORM [%ITEMNAME:(609+TEQUIP:89)%효과중]
+	ENDIF
+ENDIF
+SIF TEQUIP:52
+	PRINT [야외 플레이중]
+IF TEQUIP:55 == 1
+	PRINT [벌레 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 2
+	PRINT [뱀장어 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 3
+	PRINT [로션 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 4
+	PRINT [슬라임 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 5
+	PRINT [미약 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 6
+	PRINT [미약 담금중]
+ELSEIF TEQUIP:55 == 7
+	PRINT [물고문중]
+ELSEIF TEQUIP:55 == 8
+	PRINT [정액 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 9
+	PRINT [술목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 10
+	PRINT [끈적이 목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 11
+	PRINT [푹신푹신 모옥 목욕중]
+ELSEIF TEQUIP:55 == 12
+	PRINT [한증 사우나 입욕중]
+ELSEIF TEQUIP:55 == 13
+	PRINT [야고코로 도핑중]
+ELSEIF TEQUIP:55 == 14
+	PRINT [액독 목욕중]
+ELSEIF TEQUIP:55 == 15
+	PRINT [암반욕 입욕중]
+ELSEIF TEQUIP:55 == 16
+	PRINT [돈목욕탕 입욕중]
+ELSEIF TEQUIP:55 == 17
+	PRINT [술목욕중]
+ELSEIF TEQUIP:53 == 1
+	PRINT [목욕탕 플레이중]
+;[プールパッチ]
+ELSEIF TEQUIP:53 == 2
+	PRINT  [풀장 플레이중]
+ENDIF
+IF TEQUIP:56 == 2
+	PRINT [수치(정파리의 거울) 플레이중]
+ELSEIF TEQUIP:56
+	PRINT [수치(대거울) 플레이중]
+ENDIF
+SIF TEQUIP:57
+	PRINT [의사 플레이중]
+SIF TEQUIP:58
+	PRINT [기저귀 플레이중]
+IF TEQUIP:59 == 1
+	PRINT [알몸 앞치마 중]
+ELSEIF TEQUIP:59 == 2
+	PRINT [학교수영복 플레이중]
+ELSEIF TEQUIP:59 == 3
+	PRINT [여교사]
+ELSEIF TEQUIP:59 == 4
+	PRINT [일본식 옷]
+ELSEIF TEQUIP:59 == 5
+	PRINT [메이드복]
+ELSEIF TEQUIP:59 == 6
+	PRINT [체육복＋블루머]
+ELSEIF TEQUIP:59 == 7
+	PRINT [간호사복]
+ELSEIF TEQUIP:59 == 8
+	PRINT [차이나드레스]
+ELSEIF TEQUIP:59 == 9
+	PRINT [세일러복]
+ELSEIF TEQUIP:59 == 10
+	PRINT [네글리제]
+ELSEIF TEQUIP:59 == 11
+	PRINT [알몸 와이셔츠]
+ELSEIF TEQUIP:59 == 12
+	PRINT [비키니]
+ELSEIF TEQUIP:59 == 13
+	PRINT [위험한 레오타드]
+ELSEIF TEQUIP:59 == 14
+	PRINT [바니 슈트]
+ELSEIF TEQUIP:59 == 15
+	PRINT [노예]
+ELSEIF TEQUIP:59 == 16
+	PRINT [원아복]
+ELSEIF TEQUIP:59 == 17
+	PRINT [훈도시]
+ELSEIF TEQUIP:59 == 18
+	PRINT [군복]
+ELSEIF TEQUIP:59 == 19
+	PRINT [웨딩 드레스]
+ELSEIF TEQUIP:59 == 20
+	PRINT [고스로리]
+ELSEIF TEQUIP:59 == 21
+	PRINT [알몸 서스펜더]
+ELSEIF TEQUIP:59 == 22
+	PRINT [무녀 의상]
+ENDIF
+IF ASSI >= 0
+	IF TEQUIP:ASSI:59 == 2
+		PRINT [조수가 학교수영복]
+	ELSEIF TEQUIP:ASSI:59 == 3
+		PRINT [조수가 여교사 코스]
+	ELSEIF TEQUIP:ASSI:59 == 4
+		PRINT [조수가 일본식 옷]
+	ELSEIF TEQUIP:ASSI:59 == 5
+		PRINT [조수가 메이드복]
+	ELSEIF TEQUIP:ASSI:59 == 6
+		PRINT [조수가 체육복＋블루머]
+	ELSEIF TEQUIP:ASSI:59 == 7
+		PRINT [조수가 간호사복]
+	ELSEIF TEQUIP:ASSI:59 == 8
+		PRINT [조수가 차이나드레스]
+	ELSEIF TEQUIP:ASSI:59 == 9
+		PRINT [조수가 세일러복]
+	ELSEIF TEQUIP:ASSI:59 == 10
+		PRINT [조수가 네글리제]
+	ELSEIF TEQUIP:ASSI:59 == 11
+		PRINT [조수가 알몸 와이셔츠]
+	ELSEIF TEQUIP:ASSI:59 == 12
+		PRINT [조수가 비키니]
+	ELSEIF TEQUIP:ASSI:59 == 13
+		PRINT [조수가 위험한 레오타드]
+	ELSEIF TEQUIP:ASSI:59 == 14
+		PRINT [조수가 바니 슈트]
+	ELSEIF TEQUIP:ASSI:59 == 15
+		PRINT [조수가 노예]
+	ELSEIF TEQUIP:ASSI:59 == 16
+		PRINT [조수가 원아복]
+	ELSEIF TEQUIP:ASSI:59 == 17
+		PRINT [조수가 훈도시]
+	ELSEIF TEQUIP:ASSI:59 == 18
+		PRINT [조수가 군복]
+	ELSEIF TEQUIP:ASSI:59 == 19
+		PRINT [조수가 웨딩 드레스]
+	ELSEIF TEQUIP:ASSI:59 == 20
+		PRINT [조수가 고스로리]
+	ELSEIF TEQUIP:ASSI:59 == 21
+		PRINT [조수가 알몸 서스펜더]
+	ELSEIF TEQUIP:ASSI:59 == 22
+		PRINT [조수가 무녀 의상]
+	ENDIF
+ENDIF
+SIF TEQUIP:60
+	PRINTFORM [\@(TALENT:120) ?  남 # 여\@체정식 플레이중]
+SIF TEQUIP:68
+	PRINT [애태우기 플레이중]
+SIF TEQUIP:69
+	PRINT [사정 억제중]
+SIF TEQUIP:70
+	PRINT [어둠 전개중]
+SIF TEQUIP:71
+	PRINT [시간 정지중]
+SIF TEQUIP:72 > 0
+	PRINTFORM [유명의 고륜 발동중:{TEQUIP:72}턴 남음]
+SIF TEQUIP:73
+	PRINT  조교측이 [광기의 눈 발동중]
+IF TEQUIP:74 == 1
+	PRINT [독심중]
+ELSEIF TEQUIP:74 == 2
+	PRINT [촉수 독심중]
+ENDIF
+IF TEQUIP:77 == 1
+	PRINT [조정의 실 발동중]
+ELSEIF TEQUIP:77 == 2
+	PRINT [촉수 정신 제어중]
+ENDIF
+SIF TEQUIP:79 > 0
+	PRINTFORM [방중술 발동중:{TEQUIP:79}턴 남음]
+SIF TEQUIP:80
+	PRINT  조교측이 [초응시 발동중]
+SIF TEQUIP:95 & 1
+	PRINT [촉수 조개 잡이중]
+SIF TEQUIP:95 & 2
+	PRINT [촉수 액땜중]
+SIF TEQUIP:95 & 4
+	PRINT [촉수 말고문중]
+SIF TEQUIP:95 & 8
+	PRINT [촉수 은방울꽃 미약 주입중]
+SIF TEQUIP:95 & 16
+	PRINT [촉수 유해도서 낭독중]
+SIF TEQUIP:95 & 32
+	PRINT [촉수 음맥탐사중]
+SIF TEQUIP:95 & 64
+	PRINT [촉수 최종 심판 개정중]
+SIF TEQUIP:95 & 128
+	PRINT [촉수백렬단풍 원무중]
+SIF TEQUIP:95 & 256
+	PRINT [촉수풍양음향충만중]
+SIF TEQUIP:90
+	PRINT [촉수 소환중]
+PRINTL 
+RESETCOLOR
+
+;-------------------------------------------------
+;사용 중인 도구를 표시
+;-------------------------------------------------
+;한 번 사용하면 해제할 때까지 멈추지 않는 도구나 조교를
+;추가했을 경우는 여기에 추가를 해 주세요
+@SHOW_EQUIP_1
+IF EQUIP:14 || TEQUIP:7 || TEQUIP:8 || TEQUIP:9 || TEQUIP:10 || TEQUIP:11 || TEQUIP:12 || TEQUIP:13 || TEQUIP:14 || TEQUIP:15 || TEQUIP:16 || TEQUIP:17 || TEQUIP:18 || TEQUIP:19 || TEQUIP:20 || TEQUIP:21 || TEQUIP:25 || TEQUIP:26 || TEQUIP:30 || TEQUIP:31 || TEQUIP:32 || TEQUIP:35 || TEQUIP:36 || TEQUIP:40 || TEQUIP:41 || TEQUIP:42 || TEQUIP:44 || TEQUIP:45 || TEQUIP:54 || TEQUIP:91 || TEQUIP:92 || TEQUIP:93 || TEQUIP:94 || TEQUIP:96
+
+	;색을 칠하고, 용어 수정. 130821 V.K
+	SETCOLOR 38,170,254
+	PRINTFORM 사용중(%CALLNAME:TARGET%) 
+	SIF EQUIP:14
+		PRINT [수면제 효과 발휘 중]
+	SIF TEQUIP:7
+		PRINT [감각증폭약 효과 발휘 중]
+	SIF TEQUIP:10
+		PRINT [로션 사용]
+	SIF TEQUIP:11
+		PRINT [미약 효과 발휘 중]
+	SIF TEQUIP:12
+		PRINT [이뇨제 효과 발휘 중]
+	IF TEQUIP:13 == 1
+		PRINT [현자의 피 반동 중]
+	ELSEIF TEQUIP:13 > 1
+		PRINT [현자의 피 효과 발휘 중]
+	ENDIF
+	IF TEQUIP:14 > 4
+		PRINT [흥분제 효과 발휘 중]
+	ELSEIF TEQUIP:14
+		PRINT [흥분제 반동중]
+	ENDIF
+	SIF TEQUIP:15 & 1
+		PRINT [좌약 효과 발휘 중]
+	SIF TEQUIP:15 & 2
+		PRINT [질좌약 효과 발휘 중]
+	SIF TEQUIP:15 & 4
+		PRINT [프리스크 효과 발휘 중]
+	IF TEQUIP:16 == 2
+		PRINT [촉수 배란유도 효과 발휘 중]
+	ELSEIF TEQUIP:16 == 1
+		PRINT [배란유도제 효과 발휘 중]
+	ENDIF
+	IF TEQUIP:17 == 2
+		PRINT [촉수 피임막도포 완료]
+	ELSEIF TEQUIP:17 == 1
+		PRINT [긴급피임약 준비 완료]
+	ENDIF
+	SIF TEQUIP:8
+		PRINT [음핵성장제 효과 발휘 중]
+	SIF TEQUIP:9
+		PRINT [산란촉진제 효과 발휘 중]
+	SIF TEQUIP:18
+		PRINT [은방울꽃의 독 효과 발휘 중]
+	SIF TEQUIP:19
+		PRINT [곤충채집세트약 효과 발휘 중]
+	IF TEQUIP:20
+		IF TEQUIP:90
+			IF TEQUIP:20 == 7
+				PRINT [촉수 애액 채집]
+			ELSEIF TEQUIP:20 == 3
+				PRINT [촉수 자궁 고문]
+			ELSEIF TEQUIP:20 == 2
+				PRINT [촉수 G스팟 고문]
+			ELSE
+				PRINT [촉수 삽입]
+			ENDIF
+		ELSE
+			IF TEQUIP:20 == 9
+				PRINT [군고구마]
+			ELSEIF TEQUIP:20 == 8
+				PRINT [----]
+			ELSEIF TEQUIP:20 == 7
+				PRINT [애액 채집기]
+			ELSEIF TEQUIP:20 == 6
+				PRINT [보지 벌룬]
+			ELSEIF TEQUIP:20 == 5
+				PRINT [보지 바벨]
+			ELSEIF TEQUIP:20 == 4
+				PRINT [보지 전극]
+			ELSEIF TEQUIP:20 == 3
+				PRINT [보지 로터]
+			ELSEIF TEQUIP:20 == 2
+				PRINT [요석]
+			ELSE
+				PRINT [바이브레이터]
+			ENDIF
+		ENDIF
+	ENDIF
+	IF TEQUIP:21 == 2
+		PRINT [촉수 유령 질경]
+	ELSEIF TEQUIP:21
+		PRINT [쿠스코]
+	ENDIF
+	IF TEQUIP:25
+		IF TEQUIP:90
+			IF TEQUIP:25 == 7
+				PRINT [촉수 관장]
+			ELSEIF TEQUIP:25 == 4
+				PRINT [촉수 장내 촬영]
+			ELSEIF TEQUIP:25 == 3
+				PRINT [촉수 관통]
+			ELSEIF TEQUIP:25 == 2
+				PRINT [촉수 소장 고문]
+			ELSE
+				PRINT [촉수 애널 삽입]
+			ENDIF
+		ELSE
+			IF TEQUIP:25 == 10
+				PRINT [애널 바벨]
+			ELSEIF TEQUIP:25 == 9
+				PRINT [거봉]
+			ELSEIF TEQUIP:25 == 8
+				PRINT [공기 관장]
+			ELSEIF TEQUIP:25 == 7
+				PRINT [관장＋애널 플러그]
+			ELSEIF TEQUIP:25 == 6
+				PRINT [애널 벌룬]
+			ELSEIF TEQUIP:25 == 5
+				PRINT [애널 비즈]
+			ELSEIF TEQUIP:25 == 4
+				PRINT [애널 전극]
+			ELSEIF TEQUIP:25 == 3
+				PRINT [애널 로터]
+			ELSEIF TEQUIP:25 == 2
+				PRINT [애널 요석]
+			ELSE
+				PRINT [애널 바이브]
+			ENDIF
+		ENDIF
+	ENDIF
+	IF TEQUIP:26 > 0 && TEQUIP:26 <= 2
+		PRINT [고드름]
+	ELSEIF TEQUIP:26 == 3
+		PRINT [특대고드름]
+	ELSEIF TEQUIP:26 > 3
+		PRINT [얼음 덩어리]
+	ENDIF
+	IF TEQUIP:30
+		IF TEQUIP:90
+			IF TEQUIP:30 == 8
+				PRINT [촉수 빙정 자위]
+			ELSEIF TEQUIP:30 == 7
+				PRINT [촉수 요정 안마]
+			ELSEIF TEQUIP:30 == 6
+				PRINT [촉수 방전 페니스 고문]
+			ELSEIF TEQUIP:30 == 2
+				PRINT [촉수 페니스 고문]
+			ELSE
+				PRINT [촉수 클리 고문]
+			ENDIF
+		ELSE
+			IF TEQUIP:30 == 9
+				PRINT [우산\@ TALENT:120 || TALENT:121 펠라치오 # 커닐링구스 \@]
+			ELSEIF TEQUIP:30 == 6
+				PRINT [전극 오나홀]
+			ELSEIF TEQUIP:30 == 5
+				PRINT [음핵 클립]
+			ELSEIF TEQUIP:30 == 4
+				PRINT [음핵 전극]
+			ELSEIF TEQUIP:30 == 2
+				PRINT [오나홀]
+			ELSE
+				PRINT [클리캡]
+			ENDIF
+		ENDIF
+	ENDIF
+	SIF TEQUIP:31
+		PRINT 콘돔 장착
+	IF TEQUIP:32
+		IF TEQUIP:90
+			IF TEQUIP:32 == 2
+				PRINT [촉수 채뇨]
+			ELSE
+				PRINT [촉수 요도 삽입]
+			ENDIF
+		ELSE
+			IF TEQUIP:32 == 9
+				PRINT [아스파라거스]
+			ELSEIF TEQUIP:32 == 6
+				PRINT [요도 바이브]
+			ELSEIF TEQUIP:32 == 5
+				PRINT [요도 비즈]
+			ELSEIF TEQUIP:32 == 4
+				PRINT [요도 전극]
+			ELSEIF TEQUIP:32 == 3
+				PRINT [풍선 카테터]
+			ELSEIF TEQUIP:32 == 2
+				PRINT [채뇨기]
+			ELSE
+				PRINT [카테터]
+			ENDIF
+		ENDIF
+	ENDIF
+	IF TEQUIP:35
+		IF TEQUIP:90
+			IF TEQUIP:35 == 3
+				PRINT [촉수 유선 삽입]
+			ELSEIF TEQUIP:35 == 2
+				PRINT [촉수 착유]
+			ELSE
+				PRINT [촉수 유두 고문]
+			ENDIF
+		ELSE
+			IF TEQUIP:35 == 5
+				PRINT [유두 클립]
+			ELSEIF TEQUIP:35 == 4
+				PRINT [유방 전극]
+			ELSEIF TEQUIP:35 == 2
+				PRINT [착유기]
+			ELSE
+				PRINT [유두캡]
+			ENDIF
+		ENDIF
+	ENDIF
+	SIF TEQUIP:36
+		PRINT [압박붕대]
+	IF TEQUIP:40
+		IF TEQUIP:90
+			PRINT [촉수 결박]
+		ELSE
+			IF TEQUIP:40 == 2
+				PRINT [사지 결박중]
+			ELSEIF TEQUIP:40 == 3
+				PRINT [귀갑묶기]
+			ELSEIF TEQUIP:40 == 4
+				PRINT [매달기]
+			ELSEIF TEQUIP:40 == 5
+				PRINT [가시나무로 결박]
+			ELSEIF TEQUIP:40 == 6
+				PRINT [거미줄로 결박]
+			ELSEIF TEQUIP:40 == 7
+				PRINT [거미집 구속]
+			ELSE
+				PRINT [줄로 결박]
+			ENDIF
+		ENDIF
+	ENDIF
+	IF TEQUIP:41 == 2
+		PRINT [거미줄로 눈가림]
+	ELSEIF TEQUIP:41 == 1
+		PRINT [아이마스크]
+	ENDIF
+	IF TEQUIP:42 == 4
+		PRINT [촉수 강제 음주]
+	ELSEIF TEQUIP:42 == 3
+		PRINT [강제 개구기]
+	ELSEIF TEQUIP:42 == 2
+		PRINT [촉수구욕]
+	ELSEIF TEQUIP:42 == 1
+		PRINT [볼 개그]
+	ENDIF
+	IF TEQUIP:44
+		IF TEQUIP:90
+			SIF TEQUIP:44 == 2
+				PRINT [촉수 콧구멍 삽입중]
+		ENDIF
+		IF TEQUIP:44 == 1
+			PRINT [코훅]
+		ELSEIF TEQUIP:44 == 5
+			PRINT [코집게]
+		ENDIF
+	ENDIF
+	IF TEQUIP:45
+		IF TEQUIP:90
+			SIF TEQUIP:45 == 2
+				PRINT [촉수 귓구멍 삽입중]
+		ENDIF
+		SIF TEQUIP:45 == 1
+			PRINT [귀마개]
+	ENDIF
+	IF TEQUIP:54 == 3
+		PRINT [샤워(열탕)]
+	ELSEIF TEQUIP:54 == 2
+		PRINT [샤워(냉수)]
+	ELSEIF TEQUIP:54 == 1
+		PRINT [샤워]
+	ENDIF
+	SIF TEQUIP:91
+		PRINT [촉수 강제 회복]
+	SIF TEQUIP:92
+		PRINT [촉수 최면]
+	IF TEQUIP:93 && TEQUIP:94
+		PRINT [촉수 양구멍 산란]
+	ELSEIF TEQUIP:93
+		PRINT [촉수 질내 산란]
+	ELSEIF TEQUIP:94
+		PRINT [촉수 장내 산란]
+	ELSEIF TEQUIP:96
+		PRINT [촉수 해킹 실행중]
+	ENDIF
+	RESETCOLOR
+
+;여기부터↑에 TEQUIP에 등록한 것을 기입한다
+	PRINTL 
+ENDIF
+
+IF ASSI >= 0 && TEQUIP:ASSI:17
+	PRINTFORM 사용중(%CALLNAME:ASSI%) 
+
+	IF TEQUIP:ASSI:17 == 1
+		PRINT [조수 긴급피임약 준비완료]
+	ENDIF
+	PRINTL 
+ENDIF
+
+;=============================================================================
+;각종 게이지 계산 · 표시 처리
+;=============================================================================
+;-------------------------------------------------
+;주인 · 노예 · 조수의 사정 게이지 계산 처리
+;-------------------------------------------------
+@CALC_GAUGE2_COMMON(ARG)
+#FUNCTION
+LOCAL = (TALENT:ARG:120) ? 10000 # 20000
+IF TALENT:ARG:120 && TALENT:ARG:132
+	LOCAL /= 2
+ELSEIF TALENT:ARG:132
+	TIMES LOCAL , 0.75
+ELSEIF TALENT:ARG:133
+	LOCAL *= 2
+ENDIF
+SIF TALENT:ARG:171
+	LOCAL /= 2
+RETURNF LOCAL
+
+;-------------------------------------------------
+;주인의 사정 게이지 계산 · 표시 처리
+;-------------------------------------------------
+@CALC_GAUGE2_MASTER
+MAXBASE:MASTER:2 = CALC_GAUGE2_COMMON(MASTER)
+PRINT 사정(주인)
+BAR BASE:MASTER:2,MAXBASE:MASTER:2,32
+PRINTFORM ({BASE:MASTER:2, 5}/{MAXBASE:MASTER:2, 5})
+IF FLAG:18 & 1
+	PRINT 　자동사정선택:
+	CALL CHECK_SAMEN_PLACE
+ENDIF
+PRINTL 
+
+;-------------------------------------------------
+;노예의 사정 게이지 계산 · 표시 처리
+;-------------------------------------------------
+;ふたなりは射精しにくいということで[オトコ]よりも高めに設置
+@CALC_GAUGE2_SLAVE
+MAXBASE:2 = CALC_GAUGE2_COMMON(TARGET)
+PRINT 사정
+BAR BASE:2,MAXBASE:2,32
+PRINTFORML ({BASE:2, 5}/{MAXBASE:2, 5})
+
+;-------------------------------------------------
+;조수의 사정 게이지 계산 · 표시 처리
+;-------------------------------------------------
+;ふたなりは射精しにくいということで[オトコ]よりも高めに設置
+@CALC_GAUGE2_ASSI
+MAXBASE:ASSI:2 = CALC_GAUGE2_COMMON(ASSI)
+PRINT 사정(조수)
+BAR BASE:ASSI:2,MAXBASE:ASSI:2,32
+PRINTFORM ({BASE:ASSI:2, 5}/{MAXBASE:ASSI:2, 5})
+IF FLAG:18 & 1 && TALENT:MASTER:120 == 0 && TALENT:MASTER:121 == 0
+	PRINT 사정선택:
+	CALL CHECK_SAMEN_PLACE
+ENDIF
+PRINTL 
+
+;-------------------------------------------------
+;다른 존재의 사정 게이지 계산 · 표시 처리
+;-------------------------------------------------
+@CALC_GAUGE2_OTHERS
+IF TEQUIP:90
+	;촉수용
+	LOCAL = 10000
+	TFLAG:998 = LOCAL
+	PRINT 사정(촉수)
+ELSEIF TEQUIP:55 == 1
+	;충목욕탕용
+	LOCAL = 10000
+	TFLAG:998 = LOCAL
+	PRINT 사정(벌레)
+ENDIF
+BAR TFLAG:997,LOCAL,32
+PRINTFORML ({TFLAG:997, 5}/{TFLAG:998, 5})
+
+;-------------------------------------------------
+;노예의 분유 게이지 계산 · 표시 처리
+;-------------------------------------------------
+;ARG …　誰の噴乳ゲージを計算・表示するのか？
+;ARG:1 …　立っているとゲージそのものは表示しない.
+@CALC_GAUGE3_SLAVE, ARG, ARG:1
+LOCAL = 10000
+SIF TALENT:ARG:174
+	LOCAL /= 2
+MAXBASE:ARG:3 = LOCAL
+IF !ARG:1
+	PRINT 모유
+	BAR BASE:ARG:3, MAXBASE:ARG:3, 32
+	PRINTFORML ({BASE:ARG:3, 5}/{MAXBASE:ARG:3, 5})
+ENDIF
+
+;-------------------------------------------------
+;노예의 방뇨 게이지 계산 · 표시 처리
+;-------------------------------------------------
+;ARG …　誰の放尿ゲージを計算・表示するのか？
+;ARG:1 …　立っているとゲージそのものは表示しない.
+@CALC_GAUGE4_SLAVE, ARG, ARG:1
+LOCAL = 20000
+IF TALENT:ARG:132
+	LOCAL /= 2
+ELSEIF TALENT:ARG:133
+	LOCAL *= 2
+ENDIF
+SIF TALENT:ARG:45
+	LOCAL /= 2
+SIF TALENT:ARG:175
+	LOCAL /= 2
+MAXBASE:ARG:4 = LOCAL
+IF !ARG:1
+	PRINT 요의
+	BAR BASE:ARG:4, MAXBASE:ARG:4, 32
+	PRINTFORML ({BASE:ARG:4, 5}/{MAXBASE:ARG:4, 5})
+ENDIF
+
+;-------------------------------------------------
+;취기 게이지 계산 처리
+;-------------------------------------------------
+;強いとその分だけゲージ増加
+;酔いのレベルが80％以上、120％未満で酩酊とする
+;ARG:1が0のとき酔いの深度を非表示、1の時は表示されるように
+@CALC_GAUGE8, ARG, ARG:1
+LOCAL:1 = 10000
+IF TALENT:ARG:214
+	LOCAL:1 *= 2
+ELSEIF TALENT:ARG:210 || TALENT:ARG:215
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:ARG:221
+	LOCAL:1 *= 2
+ENDIF
+MAXBASE:ARG:8 = LOCAL:1
+IF ARG:1 == 1
+	LOCAL = (BASE:ARG:8 *100) / LOCAL:1
+	IF LOCAL == 0
+		PRINT ＜멀쩡함＞
+	ELSEIF LOCAL < 40
+		PRINT ＜약간 취함＞
+	ELSEIF LOCAL < 80
+		PRINT ＜반쯤 취함＞
+	ELSEIF LOCAL < 120
+		PRINT ＜만취＞
+	ELSEIF LOCAL < 160
+		PRINT ＜미친듯이 취함＞
+	ELSE
+		PRINT ＜극한으로 취함＞
+	ENDIF
+	PRINTFORML (심도 :Lv{LOCAL})
+ENDIF
+
+;-------------------------------------------------
+;노예의 정음절정 게이지 표시 처리
+;-------------------------------------------------
+@CALC_GAUGEX_SLAVE
+LOCAL = 1000
+PRINT 정음
+BAR CFLAG:64,LOCAL,32
+PRINTFORML  ({CFLAG:64, 4}/{LOCAL, 4})
+
+;-------------------------------------------------
+;SHOP画面での노예及び助手の特殊装備表示処理
+;-------------------------------------------------
+@SHOW_SPECIAL_EQUIPMENT
+IF TARGET >= 0 && CFLAG:42
+	PRINTFORM 《%CALLNAME:TARGET%:
+	SIF CFLAG:42 & 1
+		PRINT 클리토리스 링 
+	SIF CFLAG:42 & 2
+		PRINT 노예 관리용 정조대 
+	SIF CFLAG:42 & 4
+		PRINT 벨리 쥬얼 
+	SIF CFLAG:42 & 8
+		PRINT 본디지 
+	SIF CFLAG:42 & 16
+		PRINT 라비아피어스 
+	SIF CFLAG:42 & 32
+		PRINT 니플피어스
+	PRINT 장착중》　
+ENDIF
+IF ASSI >= 0 && CFLAG:ASSI:42
+	PRINTFORM 《%CALLNAME:ASSI%:
+	SIF CFLAG:ASSI:42 & 1
+		PRINT 클리토리스 링 
+	SIF CFLAG:ASSI:42 & 2
+		PRINT 노예 관리용 정조대 
+	SIF CFLAG:ASSI:42 & 4
+		PRINT 벨리 쥬얼 
+	SIF CFLAG:ASSI:42 & 8
+		PRINT 본디지 
+	SIF CFLAG:ASSI:42 & 16
+		PRINT 라비아피어스 
+	SIF CFLAG:ASSI:42 & 32
+		PRINT 니플피어스 
+	PRINTL 장착중》
+ELSE
+	PRINTL 
+ENDIF

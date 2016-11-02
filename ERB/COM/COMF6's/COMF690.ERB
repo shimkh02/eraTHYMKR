@@ -1,0 +1,128 @@
+﻿;=============================================================================
+;물을 먹인다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE690
+;개별 설정 커멘드 필터
+SIF DITEMTYPE:999:690 > 0
+	RETURN 0
+;볼 개그 사용중은 불가
+SIF TEQUIP:42
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;패닉중은 불가
+SIF TFLAG:108 > 0
+	RETURN 0
+;조수가 웨딩 드레스·고스로리 착용중의 경우 조수에 기교 4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && (TEQUIP:ASSI:59 == 19 || TEQUIP:ASSI:59 == 20) && ABL:ASSI:12 < 4
+	RETURN 0
+;웨딩 드레스·고스로리 착용중의 경우 기교 4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:12 < 4
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM690
+PRINTL 물을 먹인다
+TSTR:0 = 물을 먹인다
+CALL TRAIN_MESSAGE_COM690
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+BASE:4 = BASE:4 + 300 +RAND:200
+
+SIF TALENT:45 == 1
+	SOURCE:28 += 200
+IF BASE:4 == MAXBASE:4 - 1
+	SOURCE:12 += 1000
+	SOURCE:20 += 700
+	SOURCE:22 += 3300
+	SOURCE:23 += 1500
+	SOURCE:25 += 500
+	SOURCE:28 += 3600
+	SOURCE:32 += 500
+ELSEIF BASE:4 >= MAXBASE:4 * 9 / 10
+	SOURCE:12 += 300
+	SOURCE:20 += 150
+	SOURCE:22 += 1500
+	SOURCE:23 += 500
+	SOURCE:25 += 300
+	SOURCE:28 += 1400
+	SOURCE:32 += 100
+ELSEIF BASE:4 >= MAXBASE:4 * 3 / 5
+	SOURCE:12 += 100
+	SOURCE:22 += 700
+	SOURCE:23 += 200
+	SOURCE:25 += 100
+	SOURCE:28 += 400
+	SOURCE:32 += 700
+ELSEIF BASE:4 >= MAXBASE:4 * 3 / 10
+	SOURCE:22 += 100
+	SOURCE:28 += 150
+ELSEIF BASE:4 >= 0
+ENDIF
+
+IF EXP:6 >= 400 && TALENT:45 == 1 && ABL:21 >= 5 && ABL:14 >= 4
+	SOURCE:18 += 500
+	SOURCE:29 += 100
+	SOURCE:12 *= 2
+	SOURCE:28 *= 4
+ELSEIF EXP:6 >= 200
+ELSEIF EXP:6 >= 100
+	SOURCE:22 *= 2
+	SOURCE:23 *= 2
+ELSEIF EXP:6 >= 10
+	SOURCE:22 *= 2
+	SOURCE:23 *= 2
+	SOURCE:25 *= 3
+	SOURCE:28 *= 3
+	SOURCE:32 *= 2
+ELSEIF EXP:6 >= 1
+	SOURCE:12 *= 2
+	SOURCE:20 *= 1
+	SOURCE:22 *= 3
+	SOURCE:23 *= 3
+	SOURCE:25 *= 4
+	SOURCE:28 *= 4
+	SOURCE:32 *= 2
+ELSEIF EXP:6 == 0
+	SOURCE:12 *= 3
+	SOURCE:22 *= 4
+	SOURCE:23 *= 4
+	SOURCE:25 *= 5
+	SOURCE:28 *= 5
+	SOURCE:32 *= 3
+ENDIF
+;노예의 입의 더러움이 없어진다
+STAIN:0 = 0
+RETURN 1
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM690
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%에게 물을 먹였다.
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF BASE:4 >= MAXBASE:4 - 1
+	PRINTW 고간을 필사적으로 누르며 요도에 힘을 줘 방광이 터지려는 걸 참고 있다.
+ELSEIF BASE:4 >= MAXBASE:4 * 9 / 10
+	PRINTW 몸을 부르르 떨면서 오줌 마려운걸 참고 있다.
+ELSEIF BASE:4 >= MAXBASE:4 * 3 / 5
+	PRINTW 화장실에 가고 싶은 눈치다.
+ELSEIF BASE:4 >= MAXBASE:4 * 3 / 10
+	PRINTW 요의를 느낀 것 같다.
+ELSEIF BASE:4 >= 0
+	PRINTW 물을 마시고 입가를 닦았다.
+ENDIF

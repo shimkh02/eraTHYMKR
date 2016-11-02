@@ -1,0 +1,152 @@
+﻿;=============================================================================
+;술을 먹인다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE348
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:348 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;お酒が필요
+LOCAL = 0
+FOR LOCAL:1, 0, 8
+	SIF ITEM:(600+LOCAL:1) > 0
+		LOCAL = 1
+NEXT
+SIF LOCAL == 0 && NOITEM == 0
+	RETURN 0
+;主人に対する好感度が100이상 필요
+SIF CFLAG:2 < 100
+	RETURN 0
+;反発刻印が0でないとダメ
+SIF MARK:9
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;猿轡付けていると無理
+SIF TEQUIP:42
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;그 이름과 같이 가지고 있는 술을 먹인다
+;술은 야외 콘서트를 열었을 때, 팬으로부터 입수 가능
+@COM348
+PRINTL 무엇을 마시게 할까?
+FOR LOCAL, 0, 8
+	SIF ITEM:(LOCAL+600) || NOITEM
+		PRINTFORML [{LOCAL}] %ITEMNAME:(LOCAL+600)% 
+NEXT
+$INPUT_LOOP
+INPUT
+SIF RESULT < 0 || RESULT > 7 || (ITEM:(RESULT + 600) < 1 && NOITEM == 0)
+	GOTO INPUT_LOOP
+TFLAG:149 = RESULT + 600
+;선택한 술을 3병이상 가지고 있을까 개CABV 절정이 각 30이상이라면 이 정신차리게 함3배
+SIF (ITEM:(TFLAG:149) >= 3 || NOITEM) && EX:0 >= 30 && EX:1 >= 30 && EX:2 >= 30 && EX:3 >= 30
+	JUMP COM649
+
+PRINTFORML %조사처리(ITEMNAME:(TFLAG:149),"를")% 먹인다
+TSTR:0 = %조사처리(ITEMNAME:(TFLAG:149),"를")% 먹인다
+CALL TRAIN_MESSAGE_COM348
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;카르아
+IF TFLAG:149 == 600
+	DOWNBASE:0 += 10
+	DOWNBASE:1 += 20
+	SOURCE:40 = 250
+;맥주
+ELSEIF TFLAG:149 == 601
+	DOWNBASE:0 += 20
+	DOWNBASE:1 += 25
+	SOURCE:40 = 500
+;와인
+ELSEIF TFLAG:149 == 602
+	DOWNBASE:0 += 25
+	DOWNBASE:1 += 40
+	SOURCE:40 = 750
+;대음양주
+ELSEIF TFLAG:149 == 603
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 50
+	SOURCE:40 = 1000
+;스피리타스
+ELSEIF TFLAG:149 == 604
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 80
+	SOURCE:40 = 1500
+	SOURCE:41 = 400
+;《신편귀독주》
+ELSEIF TFLAG:149 == 605
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 70
+	SOURCE:40 = 500
+	SOURCE:41 = 2000
+ENDIF
+
+;술을 소비
+SIF NOITEM == 0
+	ITEM:(TFLAG:149) -= 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM348
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%에게 가져온 %조사처리(ITEMNAME:(TFLAG:149),"를")% 먹였다.
+;카르아
+IF TFLAG:149 == 600
+	PRINTFORMW 깔루아의 중후한 맛에 %CALLNAME:TARGET%의 마음은 조금 침착해졌다….
+;맥주
+ELSEIF TFLAG:149 == 601
+	PRINTFORMW 맥주의 산뜻한 목 넘김에 %CALLNAME:TARGET%의 기분은 조금 흥분됐다….
+;와인
+ELSEIF TFLAG:149 == 602
+	PRINTFORMW 품위 있는 맛과 향기에 %CALLNAME:TARGET%의 기분이 조금 좋아졌다….
+;대음양주
+ELSEIF TFLAG:149 == 603
+	PRINTFORMW 스르르 넘어가는 목 넘김과 쌀과 물이 만들어 내는 절묘한 묘미에 %조사선택(CALLNAME:TARGET, "는")% 차분하게 누그러졌다….
+;스피리타스
+ELSEIF TFLAG:149 == 604
+	PRINTFORMW 강렬한 자극과 독특한 단맛이 %CALLNAME:TARGET%의 이성을 교란시켰다….
+;《신편귀독주》
+ELSEIF TFLAG:149 == 605
+	PRINTFORMW 이 세상의 것이라고는 생각되지 않는 것 같은 맛이 %CALLNAME:TARGET%\@(TALENT:214) ? 의 마음을 사로잡았다 # %조사만처리(CALLNAME:TARGET,"를")% 새로운 곳으로 이끌었다\@….
+ENDIF

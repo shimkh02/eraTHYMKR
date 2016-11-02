@@ -1,0 +1,775 @@
+﻿;======================================================
+; 개발용 테스트 함수
+;======================================================
+@TEST
+DRAWLINE
+PRINTFORML 이것저것 개발하기 위해 테스트중...
+
+;게임모드에서 쓸 정보를 초기화 한다.
+CALL INIT_RPG_DATA
+
+;테스트
+;AUTO_SEARCH_MOVE_PLAYER(1, 6, 30, 40,50,60)
+
+$LOOP_SELECT_MODE
+PRINTL
+PRINTL 그럼 뭘 해볼까나... (이거 하다 뻗어도 책임못짐. 그러니 세이브 하고 오세요)
+PRINTL [0] 에라돌죽 - 사나이의 RPG께임
+PRINTL [1] 에라요요몽 -사나이의 슈팅께임
+PRINTL [2] 돌아간다 -사나이의 뒤로돌격
+INPUT
+IF RESULT == 0
+	CALL RPG_TEST
+	GOTO LOOP_SELECT_MODE
+ELSEIF RESULT == 1
+	CALL SHOOTING_TEST
+	GOTO LOOP_SELECT_MODE
+ELSEIF RESULT == 2
+	RETURN 0
+ELSE
+	GOTO LOOP_SELECT_MODE
+ENDIF
+
+
+
+;----------------------------------
+;테스트용 던전게임
+@RPG_TEST
+$START
+CALL DRAW_FOCUSED_MAP, 1
+PRINTL 맵 맘에 드니?
+PRINTL [0]아니, 새로 만들래.
+PRINTL [1]플레이!
+PRINTL [2]역시 이런 이상한 게임은 그만두자...
+INPUT
+IF RESULT == 0
+	;맵 초기화
+	CALL RESET_MAP, 1	
+	;맵 생성하기
+	CALL MAKE_RANDOM_MAP, 1
+ELSEIF RESULT == 1
+	PRINTFORMW 플레이를 시작합니다...
+	CALL MAP_TURN_MAIN, 1
+ELSEIF RESULT == 2
+	RETURN 0
+ENDIF
+
+;처음으로 돌아간다...
+GOTO START
+
+;--------------------------------------
+;랜덤맵 생성 함수. 
+;ARG = 맵번호.
+;;만들 방 개수
+;LOCAL:0 
+;;내부루프 카운터
+;LOCAL:1 = 0
+;;방번호
+;LOCAL:2 = 0
+;;외부루프 카운터
+;LOCAL:3 = 0
+;뿌려질 몬스터 수
+;LOCAL:4  = 0
+@MAKE_RANDOM_MAP, ARG
+
+;맵 생성전에 정보를 받는다.
+$LOOP_SELECT_DETAILOFMAP
+PRINTL 맵 생성에 앞서 세부세팅을 합니까?
+PRINTL [0]아니오
+PRINTL [1]예
+INPUT
+IF RESULT == 0
+	NAME_MAP:ARG = 파츄리의 마법던젼
+	DATA_MAP:ARG:1 =  99  ; X크기
+	DATA_MAP:ARG:2 =  99 ; Y크기
+	LOCAL:0 = 20 ; 방개수
+	LOCAL:4 = 20 ;몬스터 수
+	LOCAL:5 = 20 ;아이템 수
+ELSEIF RESULT == 1
+	PRINTFORMW 상세 맵을 생성합니다.
+	PRINTL 이름을 입력 해 주세요.
+	INPUTS
+		NAME_MAP:ARG = %RESULTS%
+	PRINTL 가로크기를 입력 해 주세요. (30~최대 99)
+	INPUT
+		DATA_MAP:ARG:1 = RESULT
+	PRINTL 세로크기를 입력 해 주세요. (30~최대 99)
+	INPUT
+		DATA_MAP:ARG:2 = RESULT
+	PRINTL 방은 몇개나 만들까요? (1~30정도. 꼭 정해진 개수가 나오진 않으며, 약 그정도 만들어집니다)
+	INPUT
+		LOCAL:0 = RESULT
+	PRINTL 몬스터는 몇 마리나 뿌릴까요? (1~100 정도. 너무 많이 뿌리면 느려집니다!)
+	INPUT
+		LOCAL:4 = RESULT
+	PRINTL 아이템은 몇개나 뿌릴까요? (1~ 20정도. 너무 뿌리지 맙시다)
+	INPUT
+		LOCAL:5 = RESULT
+
+ELSE
+	GOTO LOOP_SELECT_DETAILOFMAP
+ENDIF
+;받은 정보확인.
+PRINTFORML 다음 맵을 생성합니다. 이름:%NAME_MAP:ARG%, 가로크기:{DATA_MAP:ARG:2}, 세로크기:{DATA_MAP:ARG:1}, 방개수:약{LOCAL:0}개
+PRINTFORML 정말 이대로 만들까요? 정보가 이상하면 버그가 날 수 있습니다.
+$LOOP_SELECT_CONFIRM
+PRINTL [0]만들어!
+PRINTL [1]다시 입력할래...
+INPUT
+SIF RESULT == 1
+	GOTO LOOP_SELECT_DETAILOFMAP
+;...........방을 파낸다...............
+;방 개수가 주어진개수보다 적을때 까지만 돌린다. 또는, 100회 돌린다.
+;방 번호 초기화.
+LOCAL:2 = 0
+DO
+	;PHASE1:시작위치 잡기................
+	;방의 시작위치는 당연히 랜덤이지.
+	;내부루프 초기화
+	LOCAL:1 = 0
+	$SELECT_ROOM
+	IF LOCAL:1 < 100 
+		;방의 시작위치를 잡는다.
+		ROOM:(LOCAL:2):11 = RAND:(DATA_MAP:ARG:1)
+		ROOM:(LOCAL:2):12 = RAND:(DATA_MAP:ARG:2)
+		;이런 경우는 다시 뽑도록.
+		;이 칸이 맵의 왼쪽,위 테두리거나, 오른쪽,아래 테두리와 4이상 떨어지지 않았다.
+		IF ROOM:(LOCAL:2):11 == 0 || ROOM:(LOCAL:2):11 > (DATA_MAP:1:1-4) || ROOM:(LOCAL:2):12 == 0 || ROOM:(LOCAL:2):12 > (DATA_MAP:1:2-4)
+			LOCAL:1 ++
+			GOTO SELECT_ROOM
+		ENDIF
+		;이 칸과 주위의 칸 중 1개가 이미 뚫려있다.(9칸)
+		CALL CALC_NUMBER_OF_EMPTYPLACE_AROUND, ARG, ROOM:(LOCAL:2):11, ROOM:(LOCAL:2):12
+		IF RESULT >= 1 && LOCAL:1 < 100
+			LOCAL:1 ++
+			GOTO SELECT_ROOM
+		ENDIF
+		;이제시작점이 정해졌다.
+		;루프 리미터 리셋. (다음 단게를 위한)
+		LOCAL:1 = 0
+	ELSE
+		;디버그
+		PRINTFORML 루프를 100번 돌렸지만 시작위치를 잡지 못했습니다. 넘어갑니다.
+	ENDIF
+
+	;PHASE2:방을 파낸다..............
+	$SET_ROOMSIZE
+	IF LOCAL:1 < 100
+		;방 크기를 잡는다.
+		ROOM:(LOCAL:2):1 = RAND:10+4
+		ROOM:(LOCAL:2):2 = RAND:10+4
+		;방 크기가 벽을 넘어가는지 체크한다. 만약 넘어버리면 다시 방 크기를 잡도록 해.
+		IF ROOM:(LOCAL:2):11 + ROOM:(LOCAL:2):1 >= DATA_MAP:(ARG):1 || ROOM:(LOCAL:2):12 + ROOM:(LOCAL:2):2 >= DATA_MAP:(ARG):2
+			LOCAL:1 ++
+			GOTO SET_ROOMSIZE
+		ENDIF
+		;방이 성립하는지 체크한다. (방의 범위+1 내에 이미 빈 칸이 있는지 체크한다)
+		CALL CHECK_EMPTY_ROOM,ARG, ROOM:(LOCAL:2):11, ROOM:(LOCAL:2):12, ROOM:(LOCAL:2):1, ROOM:(LOCAL:2):2
+		IF RESULT >= 1
+			LOCAL:1 ++
+			GOTO SET_ROOMSIZE
+		ENDIF
+		;방을 파낸다.
+		IF LOCAL:1 < 100
+			CALL DIG_ROOM,ARG, ROOM:(LOCAL:2):11, ROOM:(LOCAL:2):12, ROOM:(LOCAL:2):1, ROOM:(LOCAL:2):2
+			;디버그
+			PRINTFORML 방을 파냈습니다. 방의 시작위치={ROOM:(LOCAL:2):11},{ROOM:(LOCAL:2):12}이며, 크기={ROOM:(LOCAL:2):1}*{ROOM:(LOCAL:2):2}
+			PRINTFORML 그리고 방 번호는... {LOCAL:2} 입니다.
+			;방번호 증가
+			LOCAL:2 ++
+		ENDIF
+	ELSE
+		;디버그
+		;PRINTFORML 루프를 100번 돌렸지만 방을 잡지 못했습니다. 넘어갑니다.
+	ENDIF
+
+	;외부루프 카운터
+	LOCAL:3++
+LOOP LOCAL:2  < LOCAL:0 && LOCAL:3 < 100
+
+;...........복도를 파낸다...............................
+CALL DIG_CORRIDOR, ARG, LOCAL:2
+
+;...........주인공을 배치한다...............................
+CALL SET_STARTING_POINT_MAP, ARG
+
+;...........포커스를 주인공에게 잡는다................................
+CALL RESET_FOCUS
+
+;...........몬스터를 배치한다...............................
+CALL SET_MONSTERS_MAP, ARG, LOCAL:4
+
+;........모든 몬스터(유저포함)의 시야를 확보한다.........
+FOR LOCAL:99, 0, 100
+	CALL CHANGE_FOW_MONSTER, LOCAL:99
+NEXT
+
+;...........문을 달아낸다...............................
+CALL SET_DOOR_MAP,ARG
+
+;...........아이템을 뿌린다...............................
+CALL SET_ITEM_MAP,ARG, LOCAL:5
+
+
+;----------------------------------------------------
+;실제 맵에서 일어나는 모든 액션들을 처리한다.
+;LOCAL:99 = 반복자
+@MAP_TURN_MAIN, ARG
+$TEST_MOVE
+
+;묘화방식변경.
+REDRAW 0
+;턴수 증가.
+DATA_MAP:ARG:4 ++
+
+;PHASE0 : 시야확보.........................
+FOR LOCAL:99, 0, 100
+	;몬스터가 이 맵에 존재한다면, 시야확보
+	SIF MONSTER_DATA:(LOCAL:99):0 == MONSTER_DATA:0:0
+		CALL CHANGE_FOW_MONSTER, LOCAL:99
+NEXT
+
+;PHASE1 : 유저의 턴.......................
+;키를 받아 이동한다.
+RESULT:1 = 0
+CALL MOVE_PLAYER_MAP
+;만약 유저가 플레이를 종료하겠다면...
+IF RESULT:1 == 3
+	REDRAW 1
+	RETURN 0
+ENDIF
+
+;PHASE2 : 몬스터의 턴.......................
+;모든몬스터마다, 체크 (단 0은 주인공이니까 빼기)
+FOR LOCAL:99, 1, 100
+	;유저와 같은 맵에 있는 몬스터만, 행동할 것.
+	IF MONSTER_DATA:(LOCAL:99):0 == MONSTER_DATA:0:0
+		;목표체크
+		CALL GET_TARGET_POSITION_MAP, LOCAL:99
+		;이동 OR 행동...
+		CALL MOVE_MONSTER_MAP, LOCAL:99
+	ENDIF
+NEXT
+
+;PHASE5 : 모든 몬스터(유저포함)의 시야를 확보한다. (한번 더)
+FOR LOCAL:99, 0, 100
+	;몬스터가 이 맵에 존재한다면, 시야확보
+	SIF MONSTER_DATA:(LOCAL:99):0 == MONSTER_DATA:0:0
+		CALL CHANGE_FOW_MONSTER, LOCAL:99
+NEXT
+
+
+;PHASE4 : 맵을 그린다..........................
+CALL DRAW_FOCUSED_MAP, ARG
+
+;계속 반복
+GOTO TEST_MOVE
+
+
+
+;---------------------------------------
+;화면을 둘러보기.
+@NAVIGATE_MAP, ARG
+;이동변수
+LOCAL:1 = 0
+LOCAL:2 = 0
+;ARG 생략시
+IF ARG == 0
+	;유저에게 포커스를 맞춘다.
+	FOCUS:0 = MONSTER_DATA:0:0
+	FOCUS:1 = MONSTER_DATA:0:1
+	FOCUS:2 = MONSTER_DATA:0:2
+;ARG입력이 있었을때
+ELSE
+	;특정 맵에 포커스를 맞춘다.
+	FOCUS:0 = ARG
+	;해당 맵의 중앙X
+	FOCUS:1 = DATA_MAP:ARG:1/2
+	;해당 맵의 중앙Y
+	FOCUS:2 = DATA_MAP:ARG:2/2
+ENDIF
+;둘러보기 모드를 켠다.
+FOCUS:3 =1
+
+
+;디버그
+PRINTFORML 세팅된 FOCUS:0 ={FOCUS:0}, FOCUS:1={FOCUS:1}, FOCUS:2 ={FOCUS:2}
+
+$LOOP_NAVIMAP
+PRINTFORML 맵을 둘러봅니다...(0~9:이동, N:둘러보기 종료)
+ONEINPUTS
+SELECTCASE RESULTS
+	CASE "7"
+		FOCUS:1 --
+		FOCUS:2 --
+	CASE "8"
+		FOCUS:1 --
+	CASE "9"
+		FOCUS:1 --
+		FOCUS:2 ++
+	CASE "4"
+		FOCUS:2 --
+	CASE "5"
+		
+	CASE "6"
+		FOCUS:2 ++
+	CASE "1"
+		FOCUS:1 ++
+		FOCUS:2 --
+	CASE "2"
+		FOCUS:1 ++
+	CASE "3"
+		FOCUS:1 ++
+		FOCUS:2 ++
+	CASE "N"
+		;맵 둘러보기 종료
+		PRINTFORML 이동모드로 돌아갑니다...
+		CALL RESET_FOCUS
+		;맵을 그린다.
+		CALL DRAW_FOCUSED_MAP, FOCUS:0
+		RETURN 0
+ENDSELECT
+
+;디버그
+PRINTFORML 현재 FOCUS:0 ={FOCUS:0}, FOCUS:1={FOCUS:1}, FOCUS:2 ={FOCUS:2}
+
+;포커스 최대최소 범위를 잡는다.
+FOCUS:1 = LIMIT(FOCUS:1, 1, (DATA_MAP:(FOCUS:0):1)-1)
+FOCUS:2 = LIMIT(FOCUS:2, 1, (DATA_MAP:(FOCUS:0):2)-1)
+
+;디버그
+PRINTFORML 현재 FOCUS:0 ={FOCUS:0}, FOCUS:1={FOCUS:1}, FOCUS:2 ={FOCUS:2}
+
+;맵을 그린다.
+CALL DRAW_FOCUSED_MAP, FOCUS:0
+
+GOTO LOOP_NAVIMAP
+;-------------------------------------
+;주인공 이동 함수
+;로직 : 8방향으로 움직이며, 벽이 있으면 이동못한다. 또한 다른 몬스터가 있어도 이동못한다.
+@MOVE_PLAYER_MAP
+;LOCAL:0 = 맵번호
+;LOCAL:1 = 목표지점의 X좌표
+;LOCAL:2 = 목표지점의 Y좌표
+
+;맵번호 취득. 플레이어의 정보에서 긁어온다.
+LOCAL:0 = PLAYER_DATA:0
+
+$SELECT_MOVE
+PRINTFORML 어디로 갈까? (1~9로 이동. 5로 턴보내기. N:둘러보기, D:문닫기, I:인벤토리, 0:종료)
+ONEINPUTS
+SELECTCASE RESULTS
+	CASE "7"
+		LOCAL:1 = PLAYER_DATA:1 -1
+		LOCAL:2 = PLAYER_DATA:2 -1
+	CASE "8"
+		LOCAL:1 = PLAYER_DATA:1 -1
+		LOCAL:2 = PLAYER_DATA:2
+	CASE "9"
+		LOCAL:1 = PLAYER_DATA:1 -1
+		LOCAL:2 = PLAYER_DATA:2 +1
+	CASE "4"
+		LOCAL:1 = PLAYER_DATA:1
+		LOCAL:2 = PLAYER_DATA:2 -1
+	CASE "5"
+		LOCAL:1 = PLAYER_DATA:1
+		LOCAL:2 = PLAYER_DATA:2
+	CASE "6"
+		LOCAL:1 = PLAYER_DATA:1
+		LOCAL:2 = PLAYER_DATA:2 +1
+	CASE "1"
+		LOCAL:1 = PLAYER_DATA:1 +1
+		LOCAL:2 = PLAYER_DATA:2 -1
+	CASE "2"
+		LOCAL:1 = PLAYER_DATA:1 +1
+		LOCAL:2 = PLAYER_DATA:2
+	CASE "3"
+		LOCAL:1 = PLAYER_DATA:1 +1
+		LOCAL:2 = PLAYER_DATA:2 +1
+	CASE "0"
+		PRINTFORMW 던전모드를 종료합니다...
+		RESULT:1 = 3
+		RETURN RESULT:1
+		RETURN 0
+	CASE "N"
+		;맵을 둘러본다.
+		CALL NAVIGATE_MAP
+		GOTO SELECT_MOVE
+	CASE "D"
+		;문을 닫는다. 그리고 턴 종료.
+		CALL CLOSE_DOOR_BY_PLAYER
+		RETURN 0
+	CASE "I"
+		;인벤토리를 연다
+		CALL PRINT_INVENTORY
+	CASEELSE
+		PRINTFORMW 정확한 방향을 입력 해 주세요. (1~9)
+ENDSELECT
+;디버그
+PRINTFORML 현재위치 = {PLAYER_DATA:1},{PLAYER_DATA:2} 목표위치={LOCAL:1},{LOCAL:2}
+
+;가야 할 곳에 몬스터가 있쪄용
+IF MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) >0
+	;전투돌입
+	;디버그(임시 전투)
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+	PRINTFORML %CALLNAME:MASTER%는 {MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)}을 강하게 후려쳤다!
+	PRINTFORML {MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)}은 죽었다!
+	CALL DELETE_MONSTER, MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)
+	RESETCOLOR
+	RETURN 0
+;가야 할 곳에 벽이 있쪄용
+ELSEIF FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 0
+	PRINTFORML 벽으로 막혀있습니다.
+	;디버그
+	;PRINTFORMW FILED_MAP:{(LOCAL:0)}:{LOCAL:1}:{LOCAL:2} ={FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)}
+	GOTO SELECT_MOVE
+;가야 할 곳에 닫힌 문이 있쪄용
+ELSEIF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 1
+	;열린 문이 된다.
+	PRINTFORML 문을 열었다.
+	OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 2
+;이동한다.
+ELSE
+	;만약 템이 있으면 먹도록 하라~
+	IF ITEM_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) > 0
+		CALL ITEM_REWARD_RPG, ITEM_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)
+		;바닥템은 사라지고
+		ITEM_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)  = 0
+	ENDIF
+	;디버그
+	PRINTFORML {LOCAL:1}:{LOCAL:2}로 이동했다.
+	;이전의 위치는 지우고
+	MONSTER_MAP:(LOCAL:0):(PLAYER_DATA:1):(PLAYER_DATA:2) = -1
+	;새로운 위치 저장
+	PLAYER_DATA:1 = LOCAL:1
+	MONSTER_DATA:0:1 = LOCAL:1
+	PLAYER_DATA:2 = LOCAL:2 
+	MONSTER_DATA:0:2 = LOCAL:2
+	MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) = 0
+	;포커스를 주인공에게 잡는다.
+	CALL RESET_FOCUS
+ENDIF
+
+
+;---------------------------------------------------------------
+;몬스터의 시야범위 체크 함수.
+;로직 - 몬스터의 위치부터 시작해서, 시야범위씩 증가하면서 좌상부터 우하까지 체크한다 (네모가 점점 커지는 식)
+;주인공의 경우에는 특별히, FOW_MAP을 변경시킨다.
+;이 함수는 불려질때마다 일단 시야정보를 초기화 하고 시작한다.
+;ARG = 몬스터 번호.
+;LOCAL:0 = 맵번호
+;LOCAL:1 = 유저의 X좌표
+;LOCAL:2 = 유저의 Y좌표
+@CHANGE_FOW_MONSTER, ARG
+;맵번호 취득
+LOCAL:0 = MONSTER_DATA:ARG:0
+;몬스터의 위치를 받아온다.
+LOCAL:1 = MONSTER_DATA:ARG:1
+LOCAL:2 = MONSTER_DATA:ARG:2
+;몬스터의 시야범위값을 받아온다.
+LOCAL:3 = MONSTER_DATA:ARG:3
+
+;디버그
+;PRINTFORML {ARG}몬스터의:{MONSTER_DATA:ARG:1},{MONSTER_DATA:ARG:2}, 시야넓이{MONSTER_DATA:ARG:3}칸 이 시야를 체크한다.
+
+;이 몬스터의 시야정보 초기화.
+LOCAL:99 =0
+LOCAL:98 =0
+FOR LOCAL:99, 0, 100
+	FOR LOCAL:98, 0, 100
+		FOW_MONSTER:ARG:(LOCAL:99):(LOCAL:98) = 0
+	NEXT
+NEXT
+
+;거리만큼, 1씩 증가시키면서 돌린다. LOCAL:99 = 중앙에서부터 넓어지는 범위. 1회차에는 당연히 0이다.
+FOR LOCAL:99, 0, LOCAL:3 +1
+	;거리에 따른 면적을 '탐색한' 으로 바꾼다.
+	FOR LOCAL:4, LOCAL:1-LOCAL:99, LOCAL:1+LOCAL:99 +1
+		FOR LOCAL:5, LOCAL:2-LOCAL:99, LOCAL:2 +LOCAL:99 +1
+			;범위를 넘어서 계산하려 할때는 무시한다..
+			IF LOCAL:4 <= 0 || LOCAL:4 >= DATA_MAP:(LOCAL:0 ):1 || LOCAL:5 <= 0 || LOCAL:5 >= DATA_MAP:(LOCAL:0 ):2
+				;처리없음
+				;디버그
+				;PRINTFORML 범위를 넘었다.
+			ELSEIF CHECK_CAN_SEE(ARG, LOCAL:4, LOCAL:5) == 1
+				;처리없음.
+				;디버그
+				;PRINTFORML 시야가 가려져있어 볼 수 없쪄용.
+			;본 걸로 변경한다.
+			ELSE
+				;시야정보 저장.
+				FOW_MONSTER:ARG:(LOCAL:4):(LOCAL:5) = 1
+
+				;주인공의 경우에만, 탐색정보를 추가로 저장한다.
+				SIF ARG == 0
+					FOW_MAP:(LOCAL:0):(LOCAL:4):(LOCAL:5) = 1
+
+				;디버그용. 몬스터의 경우에만, 탐색정보를 색칠한다.
+				;SIF ARG > 0
+				;	FOW_MAP:(LOCAL:0):(LOCAL:4):(LOCAL:5) = 2
+
+				;디버그
+				;PRINTFORML 보였다!! {LOCAL:4},{LOCAL:5}
+			ENDIF
+		NEXT
+	NEXT
+	;디버그. 각 거리마다 1회씩 그린다. 제대로 그리는지 테스트용.
+	;CALL DRAW_FOCUSED_MAP, 1
+NEXT
+
+
+;---------------------------------------------------
+;이 영역이 보이는지를 체크하는 펑션.
+;ARG ; 몬스터 번호
+;POS_X ; 체크할 타일의 X
+;POS_Y ; 체크할 타일의 Y
+;POWER_X ; 어느 방향인지를 정한다 X
+;POWER_Y ; 어느방향인지를 정한다 Y
+@CHECK_CAN_SEE(ARG, POS_X, POS_Y)
+#FUNCTION
+#DIM POS_X
+#DIM POS_Y
+#DIM POWER_X
+#DIM POWER_Y
+;맵번호. 몬스터 정보에서 가져온다.
+LOCAL:0 = MONSTER_DATA:ARG:0
+
+;X축 방향을 결정한다.
+IF POS_X < MONSTER_DATA:ARG:1
+	POWER_X = 1
+ELSEIF POS_X == MONSTER_DATA:ARG:1
+	POWER_X = 0
+ELSEIF POS_X > MONSTER_DATA:ARG:1
+	POWER_X = -1
+ENDIF
+;Y축 방향을 결정한다.
+IF POS_Y < MONSTER_DATA:ARG:2
+	POWER_Y = 1
+ELSEIF POS_Y == MONSTER_DATA:ARG:2
+	POWER_Y = 0
+ELSEIF POS_Y > MONSTER_DATA:ARG:2
+	POWER_Y = -1
+ENDIF
+
+;디버그
+;PRINTFORML PLAYER_DATA:1={PLAYER_DATA:1}, PLAYER_DATA:2={PLAYER_DATA:2}, POS_X={POS_X}, POS_Y={POS_Y}, POWER_X={POWER_X}, POWER_Y={POWER_Y}
+
+;만약 체크할 곳이 몬스터의 위치와 같다면, 보인다가 된다.
+IF POS_X == MONSTER_DATA:ARG:1 && POS_Y == MONSTER_DATA:ARG:2
+	;디버그
+	;PRINTFORML 내가 서 있는 곳은 당연히 보여야제 그래야제!
+	RETURNF 0
+;체크할 곳이 벽이거나 FOW 가 아니라면, 보이지 않는다가 된다. 또한 닫힌 문에 가려져 있어도 보이지 않는다...
+ELSEIF FILED_MAP:(LOCAL:0):(POS_X+POWER_X):(POS_Y+POWER_Y) == 0  || FOW_MONSTER:ARG:(POS_X+POWER_X):(POS_Y+POWER_Y) == 0 || OBJECT_MAP:(LOCAL:0):(POS_X+POWER_X):(POS_Y+POWER_Y) == 1
+	RETURNF 1
+ENDIF
+
+
+;------------------------------------------------------
+;몬스터 이동기능.
+;ARG = 몬스터번호.
+;로직
+;목표로 1칸, 이동한다.
+;이동해야 할 곳에 장애물이 있다면, 장애물 체크함수를 불러서 나오는 값으로 이동한다.
+@MOVE_MONSTER_MAP, ARG
+;맵번호를 받아온다.
+LOCAL:0  = MONSTER_DATA:ARG:0
+;목표좌표를 생성한다.
+;X
+IF MONSTER_DATA:ARG:11 > MONSTER_DATA:ARG:1
+	LOCAL:1 = MONSTER_DATA:ARG:1 + 1
+ELSEIF MONSTER_DATA:ARG:11 < MONSTER_DATA:ARG:1
+	LOCAL:1 = MONSTER_DATA:ARG:1 - 1
+ELSEIF MONSTER_DATA:ARG:11 == MONSTER_DATA:ARG:1
+	LOCAL:1 = MONSTER_DATA:ARG:1
+ENDIF
+;Y
+IF MONSTER_DATA:ARG:12 > MONSTER_DATA:ARG:2
+	LOCAL:2 = MONSTER_DATA:ARG:2 + 1
+ELSEIF MONSTER_DATA:ARG:12 < MONSTER_DATA:ARG:2
+	LOCAL:2 = MONSTER_DATA:ARG:2 - 1
+ELSEIF MONSTER_DATA:ARG:12 == MONSTER_DATA:ARG:2
+	LOCAL:2 = MONSTER_DATA:ARG:2
+ENDIF
+
+;디버그
+;PRINTFORML {ARG}는 {MONSTER_DATA:ARG:1},{MONSTER_DATA:ARG:2} 인데, 목표는 {MONSTER_DATA:ARG:11},{MONSTER_DATA:ARG:12}니까, {LOCAL:1}.{LOCAL:2}로 일단 가보기로 했다.
+
+;가야 할 곳에 주인공이 있다면.
+IF MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 0
+	;이동은 하지 않고, 전투로 돌입한다.
+	;디버그
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINTFORML "%CALLNAME:MASTER%! 오늘이 네놈 제삿날이다!"
+	PRINTFORML 악! 이건 정말로 아프다! {ARG}에게 공격당했다!
+	RESETCOLOR
+	RETURN 0
+;가야 할 곳에 벽이나 몬스터(주인공제외)나 닫힌 문이 있다면, 
+ELSEIF FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 0 || MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) > 0 || OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)  == 1
+	;PRINTFORML 목표가 막혀있다. 8방향 탐색 가동!
+	;8방향 탐색을 한다.
+	CALL CHECK_8_DIRECTION, LOCAL:0, MONSTER_DATA:ARG:1, MONSTER_DATA:ARG:2, LOCAL:1, LOCAL:2
+	;결과값을 적용한다.
+	;디버그
+	;PRINTFORML {RESULT:1},{RESULT:2}, {MONSTER_DATA:ARG:1}, {MONSTER_DATA:ARG:2}
+	LOCAL:1 = MONSTER_DATA:ARG:1 + RESULT:1
+	LOCAL:2 = MONSTER_DATA:ARG:2 + RESULT:2
+	;디버그
+	;PRINTFORML {LOCAL:1},{LOCAL:2}
+ENDIF
+
+;지정된 곳으로 이동한다. (설령 같은 곳일지라도...)
+;이전 위치를 지운다.
+MONSTER_MAP:(LOCAL:0):(MONSTER_DATA:ARG:1):(MONSTER_DATA:ARG:2) = -1
+;새로운 곳을 적용한다.
+MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) = ARG
+MONSTER_DATA:ARG:1 = LOCAL:1
+MONSTER_DATA:ARG:2 = LOCAL:2
+;PRINTFORML {ARG}는 {MONSTER_DATA:ARG:1},{MONSTER_DATA:ARG:2} 로 이동했다..
+
+;만약 목표에 도달했다면, 타겟정보는 0,0이 된다.
+IF MONSTER_DATA:ARG:1 == MONSTER_DATA:ARG:11 && MONSTER_DATA:ARG:2 == MONSTER_DATA:ARG:12
+	;PRINTFORML 목표에 도달했으므로, 목표를 재설정 하겠다.
+	MONSTER_DATA:ARG:11 = 0
+	MONSTER_DATA:ARG:12 = 0
+ENDIF
+
+
+;---------------------------------------------
+;타겟잡는 함수.
+;ARG - 몬스터번호.
+;1. (만약 몬스터라면) 유저가 시야에 있는지 확인하고 있으면 유저를 타겟으로 삼는다.
+;2. 타겟정보가 없거나, 타겟이 보이지 않는 곳이라면, 시야내 랜덤한 곳을 타겟으로 삼는다.
+@GET_TARGET_POSITION_MAP,ARG
+;맵번호 획득
+LOCAL:0 = MONSTER_DATA:ARG:0
+;랜덤목표좌표
+LOCAL:1 = 0
+LOCAL:2 = 0
+;랜덤부호용
+LOCAL:3 = 0
+;루프한계
+LOCAL:4 = 0
+;만약 몬스터라면, 
+IF ARG > 0
+	;디버그
+	;PRINTFORML  몬스터{ARG}는 주위를 살펴보기 시작했다...
+	;시야범위 내에 유저가 있는지 확인한다.
+	FOR LOCAL:99, MONSTER_DATA:ARG:1 - MONSTER_DATA:ARG:3, MONSTER_DATA:ARG:1 + MONSTER_DATA:ARG:3+1
+		FOR LOCAL:98, MONSTER_DATA:ARG:2 - MONSTER_DATA:ARG:3, MONSTER_DATA:ARG:2 + MONSTER_DATA:ARG:3+1
+		;범위밖은 무시
+			;디버그
+			;PRINTFORML  몬스터{ARG}는 {LOCAL:99},{LOCAL:98}를 노려보았다..
+			IF LOCAL:99 <0 || LOCAL:99 > DATA_MAP:(LOCAL:0):1 || LOCAL:98 <0 || LOCAL:98 > DATA_MAP:(LOCAL:0):2
+				;
+			;해당 영역이 보이고, 유저가 있다면
+			ELSEIF FOW_MONSTER:ARG:(LOCAL:99):(LOCAL:98) == 1 && MONSTER_MAP:(LOCAL:0):(LOCAL:99):(LOCAL:98) == 0
+				;좌표값이 목표값이 된다.
+				MONSTER_DATA:ARG:11 = LOCAL:99
+				MONSTER_DATA:ARG:12 = LOCAL:98
+				;디버그
+				CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+				PRINTFORML 몬스터{ARG}는 큰소리로 외쳤다! "거기냐!" {LOCAL:99},{LOCAL:98}
+				RESETCOLOR
+			ELSE
+				;디버그
+				;PRINTFORML 몬스터{ARG}는 주위를 두리번거렸지만 주인공을 찾지 못했다.
+			ENDIF
+		NEXT
+	NEXT
+ENDIF
+;타겟정보가 없거나, 타겟이 보이지 않는다면 시야내 랜덤한 곳을 타겟으로 삼는다. 주변이 모두 막혀있으면 현위치가 포지션이 될 것이다.
+IF (MONSTER_DATA:ARG:11 == 0 && MONSTER_DATA:ARG:12 == 0)  || CHECK_CAN_SEE(ARG, MONSTER_DATA:ARG:11, MONSTER_DATA:ARG:12) == 1
+	$SELECT_TARGET_POSITION
+	;음수 양수 랜덤생성
+	LOCAL:3 = RAND(2)
+	IF LOCAL:3 == 0
+		LOCAL:3 = -1
+	ELSE
+		LOCAL:3 = 1
+	ENDIF
+	;X축으로 랜덤한 곳을 잡아낸다.
+	LOCAL:1 = MONSTER_DATA:ARG:1 + (RAND:(MONSTER_DATA:ARG:3) * LOCAL:3)
+	;Y축으로 랜덤한 곳을 잡아낸다.
+	LOCAL:2 = MONSTER_DATA:ARG:2 + (RAND:(MONSTER_DATA:ARG:3) * LOCAL:3)
+	;범위 밖이면 제외
+	IF  LOCAL:1 <= 0 || LOCAL:2 <= 0 || LOCAL:1 >= DATA_MAP:(LOCAL:0):1|| LOCAL:2 >= DATA_MAP:(LOCAL:0):2
+		GOTO SELECT_TARGET_POSITION
+	;시야 안에 있고, 벽이 아니며, 몬스터가 없는곳이라면
+	ELSEIF  FOW_MONSTER:ARG:(LOCAL:1):(LOCAL:2) == 1 && FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 1 && MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) < 0
+		;좌표값이 목표값이 된다.
+		MONSTER_DATA:ARG:11 = LOCAL:1
+		MONSTER_DATA:ARG:12 = LOCAL:2
+		;디버그
+		;PRINTFORML 몬스터{ARG}는 {MONSTER_DATA:ARG:11},{MONSTER_DATA:ARG:12}로 목표를 정했다...
+	;루프 한계를 넘었다면, 더이상 돌리지 않는다.
+	ELSEIF LOCAL:4 > 100
+		RETURN 0
+	;아니면 다시 뽑도록 해. 100회만 돌린다.
+	ELSE
+		;디버그
+		;PRINTFORML {FOW_MONSTER:ARG:(LOCAL:1):(LOCAL:2)}, {FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)}
+		LOCAL:4 ++
+		GOTO SELECT_TARGET_POSITION
+	ENDIF
+ENDIF
+
+;------------------------------------------------------
+;시야내 길찾기 함수. 지형정보 만으로 판단한다. 몬스터가 있을 경우는 체크하지 못하는 게 문제.
+;장점 : '시야내' 이므로, 보이지 않는 곳에서는 검출하지 않는다.
+;시야는 직선이기 때문에, 길찾기 알고리즘은 매우, 매우 간단하고 빠르다.
+;벽이 있을 경우 찾지 못하므로, 
+;ARG:0 = 맵번호
+;ARG:1 = 탐색자의 X
+;ARG:2 = 탐색자의 Y
+;ARG:3 = 목표 X
+;ARG:4 = 목표 Y
+;LOCAL:1 = 이동할 방향X
+;LOCAL:2 = 이동할 방향Y
+;RESULT:1 = 이동할 X좌표
+;RESULT:2 = 이동할 Y좌표
+@FIND_ROAD_IN_SIGHT, ARG, ARG:1, ARG:2, ARG:3, ARG:4
+;대상과의 거리를 재서, 방향을 결정한다.
+;목표가 수직에 있다.
+IF ARG:1 == ARG:3 
+	;목표가 밑에있다
+	IF ARG:2 > ARG:4
+		LOCAL:2 = 1
+	;목표가 위에있다.
+	ELSE
+		LOCAL:2 = -1
+	ENDIF
+;목표가 수평에 있다.
+ELSEIF ARG:2 == ARG:4
+	;목표가 앞에 있다
+	IF ARG:1 > ARG:3
+		LOCAL:1 = 1
+	;목표가 위에있다.
+	ELSE
+		LOCAL:1 = -1
+	ENDIF
+;목표가 대각선에 있다.
+ELSEIF (ARG:1 - ARG:3) == (ARG:2 - ARG:4)
+	;좌상에 있다.
+	IF ARG:1 < ARG:3 && ARG:2 < ARG:4
+		LOCAL:1 = 1
+		LOCAL:2 = 1
+	;우상에 있다.
+	ELSEIF ARG:1 > ARG:3 && ARG:2 < ARG:4
+		LOCAL:1 = 1
+		LOCAL:2 = -1
+	;좌하에 있다.
+	ELSEIF ARG:1 < ARG:3 && ARG:2 > ARG:4
+		LOCAL:1 = -1
+		LOCAL:2 = 1
+	;우하에 있다.
+	ELSEIF ARG:1 < ARG:3 && ARG:2 < ARG:4
+		LOCAL:1 = -1
+		LOCAL:2 = -1
+	ENDIF
+;그 외의 경우. 오브젝트를 체크하면서 가야한다.
+ELSE
+	;>미작성
+ENDIF
+

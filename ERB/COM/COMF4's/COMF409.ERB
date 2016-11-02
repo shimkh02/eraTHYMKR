@@ -1,0 +1,113 @@
+﻿;=============================================================================
+;팽이 돌리기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE409
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:409 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 ヤマメでないとダメ
+SIF NO:PLAYER != 58
+	RETURN 0
+;グルグル巻きにしないとダメ
+SIF TEQUIP:40 != 6
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;실의 구석을 잡아 마음껏 이끌어, 노예가 몹시 놀라는 커맨드. 실용성 거의 제로.
+@COM409
+PRINTL 팽이 돌리기
+TSTR:0 = 팽이 돌리기
+CALL TRAIN_MESSAGE_COM409
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 10
+
+SOURCE:31 = 200
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:24 = 30
+	TIMES SOURCE:31, 1.00
+	LOCAL:1 = 200
+ELSEIF ABL:21 == 1
+	SOURCE:24 = 60
+	TIMES SOURCE:31, 0.90
+	LOCAL:1 = 100
+ELSEIF ABL:21 == 2
+	SOURCE:24 = 120
+	TIMES SOURCE:31, 0.70
+	LOCAL:1 = 75
+ELSEIF ABL:21 == 3
+	SOURCE:24 = 180
+	TIMES SOURCE:31, 0.50
+	LOCAL:1 = 50
+ELSEIF ABL:21 == 4
+	SOURCE:24 = 240
+	TIMES SOURCE:31, 0.30
+	LOCAL:1 = 25
+ELSE
+	SOURCE:24 = 300
+	TIMES SOURCE:31, 0.10
+	LOCAL:1 = 10
+ENDIF
+
+SOURCE:20 = LOCAL:1
+
+
+TFLAG:142 = 0
+TEQUIP:40 = 0
+TEQUIP:41 = 0
+FOR LOCAL, 0, 8
+	STAIN:LOCAL |= 1
+	STAIN:LOCAL |= 64
+NEXT
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM409
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 몸에 달라붙어있는 실을 잡고, 팽이를 돌리듯이 마구 돌려버렸다….
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+SIF ABL:21 < 3
+	PRINT 완전히 
+PRINTL 빙글빙글 눈이 돌아가고 있다….
+PRINTL
+PRINTFORMW %CALLNAME:TARGET%에게 붙어있던 거미줄은 모두 떨어졌다….

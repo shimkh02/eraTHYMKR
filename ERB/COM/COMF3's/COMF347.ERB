@@ -1,0 +1,209 @@
+﻿;=============================================================================
+;신혼부부처럼 보낸다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE347
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:347 > 0
+	RETURN 0
+;オトコだけど嫁ってありだよね？
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;主人でないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마中かウェディングドレス着用中でないとダメ
+SIF TEQUIP:59 != 1 && TEQUIP:59 != 19
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM347
+PRINTL 신혼부부처럼 보낸다
+TSTR:0 = 신혼부부처럼 보낸다
+CALL TRAIN_MESSAGE_COM347
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 30
+
+SOURCE:24 = 50
+SOURCE:17 = 120
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:11 = 10
+ELSEIF ABL:13 == 1
+	SOURCE:11 = 40
+ELSEIF ABL:13 == 2
+	SOURCE:11 = 80
+ELSEIF ABL:13 == 3
+	SOURCE:11 = 140
+ELSEIF ABL:13 == 4
+	SOURCE:11 = 200
+ELSE
+	SOURCE:11 = 200 + (ABL:13 * 20)
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:17 , 0.80
+	SOURCE:19 = 10
+	SOURCE:18 = 10
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:17 , 1.00
+	SOURCE:19 = 40
+	SOURCE:18 = 60
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:11 , 1.30
+	TIMES SOURCE:17 , 1.20
+	SOURCE:19 = 80
+	SOURCE:18 = 120
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:17 , 1.40
+	SOURCE:19 = 140
+	SOURCE:18 = 240
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:11 , 1.70
+	TIMES SOURCE:17 , 1.50
+	SOURCE:19 = 220
+	SOURCE:18 = 360
+ELSE
+	SOURCE:11 = SOURCE:11 * (ABL:21 * 15 + 125) / 100
+	SOURCE:17 = SOURCE:17 * (ABL:21 * 10 + 120) / 100
+	SOURCE:19 = 100 + (ABL:21 * 20)
+	SOURCE:18 = 150 + (ABL:21 * 35)
+ENDIF
+
+;[괴뢰]와[정신 붕괴]와[괴조인격]을 가지지 않고,[연모]소유라면 애정 경험이 가산
+SIF TALENT:150 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	TCVAR:21 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM347
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF RAND:5 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 공주님이라고 불러주었다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 목에 손을 둘러, 가만히 올려보고 있다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러워 하면서,묵묵히 %CALLNAME:PLAYER%에게 안기고 있다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 날뛰진 않았지만 몸을 뻣뻣하게 경직시키고 있다.
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 격렬하게 날뛰어서, 위험하게도 떨어뜨릴 뻔 했다….
+	ENDIF
+ELSEIF RAND:4 == 0
+	IF TEQUIP:59 == 1
+		PRINTFORML 앞치마의 끈을 잡아당겼다….
+		IF TALENT:150 && RAND:3 >= 1
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 못된 장난에, 싫어 싫어 하며 몸을 배배 꼬고 있다….
+		ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 살그머니 떨어졌다. 아무래도 앞치마를 벗는 것이 싫은 것 같다….
+		ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 앞치마를 벗으려고 해서, %조사선택(CALLNAME:PLAYER, "는")% 못된 장난을 단념했다….
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 그대로 앞치마를 벗어 버려서, 오히려 다시 입히는 처지가 되었다….
+		ENDIF
+	ELSE
+		PRINTFORML 드레스의 소매를 잡아당겼다….
+		IF TALENT:150 && RAND:3 >= 1
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 못된 장난에, 싫어 싫어 하며 몸을 배배 꼬고 있다….
+		ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 살그머니 떨어졌다. 아무래도 드레스를 벗는 것이 싫은 것 같다….
+		ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 드레스를 벗으려고 해서, %조사선택(CALLNAME:PLAYER, "는")% 못된 장난을 단념했다….
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 그대로 드레스를 벗어 버려서, 오히려 다시 입히는 처지가 되었다….
+		ENDIF
+	ENDIF
+ELSEIF RAND:3 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 꽉 껴안았다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %CALLNAME:TARGET% 도 %CALLNAME:PLAYER%의 몸을 꼭 껴안았다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러워 하면서,살그머니 %CALLNAME:PLAYER%의 머리를 어루만졌다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 약하게나마 저항하고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 팔짱을 끼고 외면하고 있다….
+	ENDIF
+ELSEIF RAND:2 == 0 && TEQUIP:42 == 0
+	PRINTFORML %CALLNAME:TARGET%의 이름을 불렀다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 만연에 미소를 띄고 대답 대신에 %CALLNAME:PLAYER%의 이름을 불렀다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 조금 얼굴을 붉히며, 제대로 대답을 해 왔다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 스러질 것 같을 만큼 작은 소리로 대답을 했다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "를")% 무시했다….
+	ENDIF
+ELSE
+	IF TEQUIP:59 == 1
+		PRINTFORML %CALLNAME:TARGET%의 새댁 모습을 가만히 응시했다….
+		IF TALENT:150 && RAND:3 >= 1
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "를")% 도발하는듯한 포즈를 취하고 있다….
+		ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 듯이 %조사선택(CALLNAME:PLAYER, "를")% 응시하고 있다….
+		ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 방의 한 귀퉁이로 도망쳐 버렸다….
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 앞치마를 벗으려고 했으므로, %조사선택(CALLNAME:PLAYER, "는")% 서둘러 억눌렀다….
+		ENDIF
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%의 새댁 모습을 가만히 응시했다….
+		IF TALENT:150 && RAND:3 >= 1
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "를")% 도발하도록 포즈를 취하고 있다….
+		ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 듯이 %조사선택(CALLNAME:PLAYER, "를")% 응시하고 있다….
+		ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 방의 한 귀퉁이로 도망쳐 버렸다….
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 드레스를 벗으려고 했으므로, %조사선택(CALLNAME:PLAYER, "는")% 서둘러 억눌렀다….
+		ENDIF
+	ENDIF
+ENDIF

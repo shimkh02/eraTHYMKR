@@ -1,0 +1,398 @@
+﻿;=============================================================================
+;거봉 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE404
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:404 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 아키 자매か[야채의 연금술사]でないとダメ
+SIF NO:PLAYER != 37 && NO:PLAYER != 38 && TALENT:PLAYER:831 == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:25 == 9
+	RETURN 1
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;체력이 1000미만으로는 장착 불가능
+SIF BASE:0 < 1000
+	RETURN 0
+;기력이 0일 때는 불가
+SIF BASE:1 <= 0
+	RETURN 0
+;Ａ확장경험 적으면 안 됨
+SIF EXP:33 < 5
+	RETURN 0
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;그밖의 Ａ계 장착구 사용 중에는 불가
+SIF (TEQUIP:25 && TEQUIP:25 != 9) || TEQUIP:26
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;A확장 경험이 붙은 강화 애널 비즈같은 것.
+@COM404
+PRINTL 포도 고문
+TSTR:0 = 거봉 고문
+CALL TRAIN_MESSAGE_COM404
+
+DOWNBASE:0 += 300
+DOWNBASE:1 += 400
+
+SOURCE:31 = 2000
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 100
+	SOURCE:22 = 300
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 300
+	SOURCE:22 = 800
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 600
+	SOURCE:22 = 1400
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 1000
+	SOURCE:22 = 1800
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1500
+	SOURCE:22 = 2100
+ELSE
+	SOURCE:2 = 2100
+	SOURCE:22 = 2400
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.50
+	SOURCE:20 = 2000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 = 300
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 1.10
+	SOURCE:20 = 50
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.20
+	SOURCE:20 = 10
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 1200
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 700
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 400
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 150
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.10
+ELSE
+	TIMES SOURCE:2 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:2 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:2 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:2 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:2 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:2 , 1.20
+ELSE
+	TIMES SOURCE:2 , 1.30
+ENDIF
+
+;작은 몸집 체형
+IF TALENT:128
+	TIMES SOURCE:20 , 2.00
+SIF TALENT:130 || TALENT:131
+	TIMES SOURCE:2 , 2.00
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+;야채성활
+IF TEQUIP:20 == 9 && TEQUIP:32 == 9
+	TIMES SOURCE:2 , 1.80
+ELSEIF TEQUIP:20 == 9 || TEQUIP:32 == 9
+	TIMES SOURCE:2 , 1.20
+ENDIF
+
+IF TEQUIP:20 == 9
+	TCVAR:1 += 3
+	TCVAR:33 += 4
+ELSE
+	TCVAR:1 += 2
+	TCVAR:33 += 3
+ENDIF
+
+;거봉의 착탈
+IF TEQUIP:25 == 9
+	TEQUIP:25 = 0
+	TFLAG:164 += 5
+ELSE
+	TEQUIP:25 = 9
+	TFLAG:164 += 10
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;거봉 삽입중
+;--------------------------------------------------
+@EQUIP_COM404
+PRINTL <거봉 포도 삽입 중>
+
+DOWNBASE:0 += 70
+DOWNBASE:1 += 120
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	LOCAL = 40
+	LOCAL:1 = 100
+ELSEIF ABL:2 == 1
+	LOCAL = 80
+	LOCAL:1 = 300
+ELSEIF ABL:2 == 2
+	LOCAL = 100
+	LOCAL:1 = 500
+ELSEIF ABL:2 == 3
+	LOCAL = 150
+	LOCAL:1 = 700
+ELSEIF ABL:2 == 4
+	LOCAL = 200
+	LOCAL:1 = 900
+ELSE
+	LOCAL = 300
+	LOCAL:1 = 1200
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES LOCAL , 0.50
+	LOCAL:2 = 3000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES LOCAL , 1.00
+	LOCAL:2 = 1000
+ELSEIF EXP:1 < EXPLV:3
+	TIMES LOCAL , 1.10
+	LOCAL:2 = 500
+ELSEIF EXP:1 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:2 = 100
+ELSEIF EXP:1 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:2 = 50
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:2 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.40
+	LOCAL:2 += 900
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:2 += 600
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:2 += 300
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	LOCAL:2 += 150
+ELSE
+	TIMES LOCAL , 1.80
+	LOCAL:2 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:2 , 1.50
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	LOCAL:1 /= 3
+
+SOURCE:2 += LOCAL
+SOURCE:22 += LOCAL:1
+SOURCE:20 += LOCAL:2
+
+TCVAR:1 += 2
+TCVAR:33 += 2
+
+TFLAG:164 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM404
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:25 == 9
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 항문에 비져나온 포도줄기를 기세 좋게 뽑아 냈다….
+	IF ABL:2 >= 5 && TALENT:170
+		PRINTFORML 한때는 행복한 얼굴을 하고 있던 %조사선택(CALLNAME:TARGET, "였")%지만 점차 직장의 상실감이 커져 오는지,
+		PRINTFORM 눈물과 침을 흘리며 허리를 경련하며 스스로의 손으로 항문을 펼치면서 애원의 눈빛으로 %조사선택(CALLNAME:PLAYER, "를")% 올려보고
+	ELSEIF ABL:2 >= 3 && EXP:1 < 5 && TALENT:170
+		PRINTFORM 포도의 열매가 항문에서 빠져나갈 때 마다 %조사선택(CALLNAME:TARGET, "는")% 움찔 움찔 떨고
+	ELSEIF ABL:2 >= 1 && EXP:1 < 3 && TALENT:170
+		PRINTFORM 크게 벌려진 %CALLNAME:TARGET%의 항문에서, 장내에 모여 있던 점액들이 방울 방울 떨어지고
+	ELSEIF ABL:2 == 0 && TALENT:170
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 아픈 듯이 얼굴을 찡그렸지만, 음순은 애액으로 젖어 들고
+	ELSEIF ABL:2 >= 4
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 황홀함이 가득한 눈으로 %CALLNAME:PLAYER% 쪽을 바라보고
+	ELSEIF ABL:2 >= 2
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 거친 숨을 내쉬면서 눈물을 흘리고
+	ELSE
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 삽입했을 때 이상으로 큰 소리로 비명을 지르고
+	ENDIF
+	PRINTW  있다….
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	SIF PALAM:10 >= PALAMLV:5
+		PRINT 충분히 
+	SIF PALAM:10 >= PALAMLV:3
+		PRINT 점액으로 미끌미끌한 
+	SIF PALAM:10 < PALAMLV:3
+		PRINT 단단히 닫혀있는 
+	IF TALENT:128
+		PRINT 사랑스러운 항문을 
+	ELSE
+		PRINT 애널을 
+	ENDIF
+	PRINTL 억지로 펼쳐, 굵은 거봉 포도의 열매들을 하나씩 집어넣었다….
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF EXP:1 > 200 && TALENT:150
+		PRINT 1알 삽입된 것만으로 부들부들 허리를 진동시키며 절정하려 하고
+	ELSEIF EXP:1 <= 200 && TALENT:150
+		PRINT 항문은 마치 식욕이 왕성한 아이 같이, 탐욕스럽게 포도를 삼키고
+	ELSEIF EXP:1 <= 100 && TALENT:150
+		PRINT 포도의 열매가 장내를 굴러대는 감촉을 느끼려고 허리를 배배 비틀어대고
+	ELSEIF EXP:1 <= 50 && TALENT:150
+		PRINT 고통이 얼굴에 가득했지만, 열매를 삼킬 때 마다 쾌락을 느끼기 시작했는지 서서히 얼굴을 풀고
+	ELSEIF EXP:1 > 200
+		PRINT 직장에 거대한 질량을 가지는 무엇인가가 들어올 때마다 황홀한 표정을 짓고
+	ELSEIF EXP:1 > 100
+		PRINT 열매가 장벽에 스치는 감촉을 즐기려는 듯 허리를 흔들고
+	ELSE
+		PRINT 고통에 얼굴을 찡그렸지만, 항문에서 정수리까지 찌릿하고 흘러가는 쾌락에 일순간 헤벌레 한 표정이 되어버리고
+	ENDIF
+	PRINTW  있다….
+ENDIF

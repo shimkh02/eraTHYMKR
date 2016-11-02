@@ -1,0 +1,198 @@
+﻿;=============================================================================
+;촉수 흡혈
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE554
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:554 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;吸血경험이 0일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:54 == 0
+	RETURN 0
+;조교자는 촉수사역LV2이상 필요
+SIF ABL:PLAYER:98 < 2
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;촉수가 [吸血촉수]を得ていないとダメ
+SIF (FLAG:75 & 65536) == 0
+	RETURN 0
+;이미 실행 중이면 불가
+SIF TFLAG:140 & 64
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;媚薬効果発揮中はダメ
+SIF TEQUIP:11
+	RETURN 0
+;利尿剤効果発揮中はダメ
+SIF TEQUIP:12
+	RETURN 0
+;強精神薬効果発揮中はダメ
+SIF TEQUIP:13
+	RETURN 0
+;睡眠薬効果発揮中はダメ
+SIF EQUIP:14
+	RETURN 0
+;排卵誘発剤効果発揮中はダメ
+SIF TEQUIP:16
+	RETURN 0
+;緊急避妊薬効果発揮中はダメ
+SIF TEQUIP:17
+	RETURN 0
+;鈴蘭の毒効果発揮中はダメ
+SIF TEQUIP:18
+	RETURN 0
+;昆虫採集セットの薬効果発揮中はダメ
+SIF TEQUIP:19
+	RETURN 0
+;촉수強制回復効果発揮中はダメ
+SIF TEQUIP:91
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;수집품 「혈액」을 채취 가능한 얼마 안되는 커맨드.
+;촉수가 거머리같이 노예의 피부에 들러 붙어, 피를 빨아 들여 가는 이미지.
+;「흡혈」 「바늘」을 참고에 작성.
+@COM554
+PRINTL 촉수 흡혈
+TSTR:0 = 촉수 흡혈
+CALL TRAIN_MESSAGE_COM554
+
+DOWNBASE:0 += 70
+DOWNBASE:1 += 80
+
+SOURCE:24 = 1000
+SOURCE:30 = 3000
+SOURCE:31 = 6000
+SOURCE:23 = 1500
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 2000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 2200
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 2500
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 2900
+ELSE
+	SOURCE:20 = 3400
+ENDIF
+
+;EXP:흡혈 경험을 본다
+IF EXP:54 < EXPLV:1
+	TIMES SOURCE:24 , 0.10
+	TIMES SOURCE:30 , 3.00
+	TIMES SOURCE:31 , 2.50
+	TIMES SOURCE:23 , 0.10
+ELSEIF EXP:54 < EXPLV:2
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:30 , 1.50
+	TIMES SOURCE:31 , 1.00
+	TIMES SOURCE:23 , 0.50
+ELSEIF EXP:54 < EXPLV:3
+	TIMES SOURCE:24 , 1.50
+	TIMES SOURCE:30 , 1.00
+	TIMES SOURCE:31 , 0.75
+	TIMES SOURCE:23 , 1.00
+ELSE
+	TIMES SOURCE:24 , 2.00
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:31 , 0.50
+	TIMES SOURCE:23 , 1.50
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES SOURCE:20 , 2.00
+	TIMES SOURCE:31 , 5.00
+ELSEIF ABL:35 == 1
+	TIMES SOURCE:20 , 1.75
+	TIMES SOURCE:31 , 2.00
+ELSEIF ABL:35 == 2
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:35 == 3
+	TIMES SOURCE:20 , 1.25
+	TIMES SOURCE:31 , 0.50
+ELSEIF ABL:35 == 4
+	TIMES SOURCE:20 , 1.00
+	TIMES SOURCE:31 , 0.25
+ELSE
+	TIMES SOURCE:20 , 0.75
+	TIMES SOURCE:31 , 0.00
+ENDIF
+
+LOCAL:1 = SOURCE:31 / 10
+
+;촉수 최면
+IF TEQUIP:92
+	TIMES SOURCE:20 , 0.75
+	TIMES SOURCE:30 , 0.75
+	TIMES LOCAL:1 , 0.25
+ENDIF
+
+SOURCE:25 += LOCAL:1
+
+SIF EXP:54 == 0
+	TCVAR:50 += 1
+
+TCVAR:54 += 1
+TFLAG:140 |= 64
+
+;혈액 채취 처리
+SIF FLAG:12 & 8
+	CALL SWEET_POTATO_RED_BLOOD
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM554
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINT 끄트머리에 칠성장어 같은 흡판이 붙은 촉수가 
+IF TEQUIP:40 && TEQUIP:25 == 2
+	PRINT 전신을 결박 된 채 항문에서 입까지 촉수가 관통되어 전혀 움직일 수가 없는 
+ELSEIF TEQUIP:40
+	PRINT 전신을 칭칭 얽어 메어져 움직일 수 없는 
+ELSEIF TEQUIP:25 == 2
+	PRINT 촉수에 관통되어 움직일 수 없는 
+ELSE
+	PRINT 사지가 구속되어 움직일 수 없는 
+ENDIF
+PRINTFORML %CALLNAME:TARGET%의 목덜미에 매달려, 피를 빨아들이기 시작했다….
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF TEQUIP:92
+	PRINTW 촉수의 최면술에 걸려 있는 탓인지, 멍한 표정을 띄운 채로 저항도 없이 피를 빨리고 있다….
+ELSEIF ABL:35
+	PRINTW 뺨에 홍조를 띄우고, 촉수가 하는 데로 피를 빨리고 있다….
+ELSEIF ABL:21
+	PRINTW 촉수에 대한 혐오감과 피를 뽑히는 황홀감에 번뇌하고 있다….
+ELSEIF TALENT:10 || TALENT:40
+	PRINTW 흐느껴 울면서 매달린 촉수를 뿌리치려 한다….
+ELSE
+	PRINTW 피를 빨리는 감각에 불쾌감을 내비치고 있다….
+ENDIF

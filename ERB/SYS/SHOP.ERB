@@ -1,0 +1,2056 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;SHOP 메뉴 관련
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;SHOP 메뉴 본처리
+;=============================================================================
+;복수 조교와 대인원수 대응을 합성. 복수 조교용 캐릭터 카드 체크를 삭제
+;커맨드 메뉴 및 조건을 변경
+;｢@SELECT_TARGET｣을 삭제
+;｢@SHOW_CHARADATA_MENU｣＝스테이터스 표시
+;｢@CHARA_SALE｣＝캐릭터 매각
+;｢@SALEITEM_CHECK｣｢@USE_ITEM｣＝아이템 구입과 사용
+;--------------------------------------------------
+;SHOP 메뉴 첫머리
+;--------------------------------------------------
+@EVENTSHOP
+DRAWLINE
+DRAWLINE
+;주인 외에 캐릭터가 있으며 낮 턴일 때에는 기념일 체크를 실행한다
+SIF CHARANUM > 1 && TIME == 0
+	CALL ANNIVERSARY_CHECK
+;工房処理のため調教対象なし状態の対処としてMASTERがTARGETになっているならここで修復
+IF CFLAG:MASTER:691 & 1p10
+	TARGET = -1
+	CFLAG:MASTER:691 -= 1p10 
+ENDIF
+
+;--------------------------------------------------
+;SHOP 메뉴 (표시)
+;--------------------------------------------------
+@SHOW_SHOP
+;토리코모드 - 노모어 글레이즈 사용중 게임오버 되었다면, 데이터 로드시 여기로 온다.
+CALL DECODE_SAVEINFO_TORIKOMODE
+SIF RESULT:0 == 2
+	CALL GAMEOVER_NOMOREGLAZE_TORIKOMODE
+;오나마스 모드 - 만약을 대비해, 타겟을 주인으로 세팅한다.
+SIF FLAG:4 == 18
+	TARGET =0
+;인계 처리 실행 중의 판정 OFF
+TFLAG:994 = 0
+;CHALLENGE 모드의 캐릭터 보충 처리
+SIF CHARANUM < 100 && FLAG:4 >= 50
+	CALL FILL_CHARA
+DRAWLINE
+PRINTFORM {DAY}일째
+CALL CALENDAR_PRINT, 1
+
+;낮밤표현의 토리코모드식 (칼라처리)
+IF TIME == 0
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+	PRINTFORM (낮)
+	RESETCOLOR
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "PURPLE", 3
+	PRINTFORM (밤)
+	RESETCOLOR
+ENDIF
+
+;주인에게 [Debug]가 있다=debug 모드일 경우
+SIF TALENT:MASTER:998
+	PRINT ＊Debug＊
+;기한 표시
+SIF FLAG:4 <= 1
+	CALL SHOW_DEADLINE
+
+;노 모어 글레이즈 옵션표시
+IF (FLAG:5002) /1000 == 1
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINT <NO MORE GLAZE>
+	RESETCOLOR
+ENDIF
+
+PRINTL 
+;Ｓ패치 추가분
+SIF DAY:7 == 1 && FLAG:13 & 1024 && ITEM:90
+	PRINTFORML ☆매주 일요일은 창관의 날☆
+CALL SHOW_HOUSE
+FLAG:996 = -1
+
+IF CFLAG:MASTER:4 == 3
+	CALL SHOW_WORKSHOP
+ELSE
+	;주인, 조수, 조교 대상 노예의 체력 표시
+	PRINTFORM %CALLNAME:MASTER%(주인)　
+
+	;취기가 있으면 취기 표시
+	;토리코모드
+	IF FLAG:5000 & 1
+	ELSE
+		;일반모드
+		CALL CALC_GAUGE8, MASTER, 1
+		PRINT 　
+	ENDIF
+
+	;토리코모드
+	IF FLAG:5000 & 1
+		CALL LIFE_BAR_TORIKOMODE, MASTER
+	ELSE
+		;일반모드
+		CALL LIFE_BAR, MASTER
+		PRINT 　
+	ENDIF
+
+	;토리코모드용 한줄추가
+	PRINTL
+
+	IF TARGET >= 0
+		PRINTFORM %CALLNAME:TARGET%(\@(ASSI < 0 && (TALENT:153 || TALENT:152)) ? 열애 # 조교\@중)　
+		;취기가 있으면 취기 표시
+
+		;토리코모드
+		IF FLAG:5000 & 1
+		;일반모드
+		ELSE
+			CALL CALC_GAUGE8, TARGET, 1
+			PRINT 　
+		ENDIF
+
+		;토리코모드
+		IF FLAG:5000 & 1
+			CALL LIFE_BAR_TORIKOMODE, TARGET
+		;일반모드　
+		ELSE
+			CALL LIFE_BAR, TARGET
+			PRINT 　
+		ENDIF
+
+		;토리코모드
+		IF FLAG:5000 & 1
+			CALL VITALITY_BAR_TORIKOMODE, TARGET
+		;일반모드
+		ELSE
+			CALL VITALITY_BAR, TARGET
+		ENDIF
+
+		;만복도모드
+		IF FLAG:5000 & 32
+			CALL HUNGER_BAR_TORIKOMODE, TARGET
+			CALL NUTRITION_BAR_TORIKOMODE, TARGET
+		ELSE
+		ENDIF
+		PRINT 
+
+		;촉수 관련의 게이지도 표시한다
+		IF FLAG:15 & 4096 && TALENT:146
+			CALL CALC_TENTACLE_GAUGE
+			PRINT 　
+			PRINT 기생
+			BAR MAX(BASE:6, 0), MAXBASE:6, 32
+			PRINTFORML ({BASE:6, 5}/{MAXBASE:6, 5})
+		ENDIF
+		;대사 존재 여부를 플래그에 넣는다
+		RESULT = -1
+		TRYCALLFORM TRY_{NO}
+		FLAG:996 = RESULT
+	ELSE
+	ENDIF
+
+	;토리코모드용 한줄추가
+	PRINTL
+
+	IF ASSI >= 0
+		PRINTFORM %CALLNAME:ASSI%(조수)　
+		;취기가 있으면 취기 표시
+		CALL CALC_GAUGE8, ASSI, 1
+		PRINT 　
+		;일반모드
+		CALL LIFE_BAR, ASSI
+		;토리코모드
+		;CALL LIFE_BAR_TORIKOMODE, ASSI
+		;PRINTL
+
+	ENDIF
+	;SIF ASSI >= 0
+	;	PRINTFORM (조수\@(TALENT:ASSI:157) ? 열애중 #\@:%CALLNAME:ASSI%)　
+	DRAWLINE
+	PRINTFORM 소지금:
+		SIF FLAG:5001
+			SETCOLOR 223,164,32
+	PRINTFORM {MONEY}
+		SIF FLAG:5001
+	RESETCOLOR
+	PRINTFORM 원
+	;목표 금액 표시
+	SIF FLAG:4 <= 1 && FLAG:5 == 0
+		CALL SHOW_GOAL
+	PRINTL 
+
+	;대출이 있을 시에는 대출액 표시
+	IF FLAG:5030 > 0
+		PRINTFORM 대출액:
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORM {FLAG:5030%1000000}
+		RESETCOLOR
+		PRINTFORM 원 (기한: 
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORM {FLAG:5030/1000000}
+		RESETCOLOR
+		PRINTFORM 일)
+		PRINTL
+	ENDIF
+
+	;조교 대상 노예 및 조수의 특수 장비 표시
+	SIF (TARGET >= 0 && CFLAG:42) || (ASSI >= 0 && CFLAG:ASSI:42)
+		CALL SHOW_SPECIAL_EQUIPMENT
+	;소지 아이템 표시가 유효할 때에는 소유하고 있는 아이템이 자동적으로 표시된다
+	SIF FLAG:21 & 1
+		CALL ARRANGE_PRINT_ITEM
+	DRAWLINE
+
+	VARSET LOCAL, 0
+	CALLF CLEAR_LIST
+	;『금단의 지식』, 『조합지식』을 가지고 있다
+	;주인과 조수 전체에서 금단의 지식과 조합지식을 검색
+	;비트 연산으로 LOCAL:3=1이 유효할 때에는 조합지식을,  LOCAL:3=2가 유효할 때에는 금단의 지식을 보유하고 있음을 뜻한다
+	REPEAT CHARANUM
+		;실종 중이라면 제외
+		SIF CFLAG:COUNT:4 && CFLAG:COUNT:4 != 1024
+			CONTINUE
+		IF COUNT == 0
+			;주인이 금단의 지식이나 조합지식을 가지고 있다
+			SIF TALENT:MASTER:55
+				LOCAL:3 |= 1
+			SIF TALENT:MASTER:56
+				LOCAL:3 |= 2
+		ELSE
+			;현 조수＋전 조수의 캐릭터 수 확인
+			IF CFLAG:COUNT:1 > 1
+				LOCAL:0 += 1
+				;조수 중 누군가가 금단의 지식이나 조합지식을 가지고 있다
+				SIF TALENT:COUNT:55
+					LOCAL:3 |= 1
+				SIF TALENT:COUNT:56
+					LOCAL:3 |= 2
+			ENDIF
+			;매각 또는 해방 가능한 캐릭터 수 확인
+			SIF ((FLAG:12 & 32 && (CFLAG:COUNT:20 & 16) == 0) || (CFLAG:COUNT:1 >= 1 && CFLAG:COUNT:3 == 0 && TALENT:COUNT:161 == 0 && TALENT:COUNT:169 == 0)) && TALENT:COUNT:164 == 0
+				LOCAL:1 += 1
+			;TIME에 맞는 조교 캐릭터가 있는가(주인공과 노예는 배제)
+			SIF COUNT != TARGET
+				LOCAL:2 += 1
+			;요정 목욕의 조건. 한 글자 변수는 요정(FAIRY)의 떡밥
+			IF FLAG:15 & 1024 && FLAG:74 & 8192
+				;남자, 임신, 포란, 회란이 없는 요정 캐릭터를 본다
+				SIF TALENT:COUNT:120 == 0 && TALENT:COUNT:140 == 0 && TALENT:COUNT:143 == 0 && TALENT:COUNT:145 == 0 && TALENT:COUNT:200
+					LOCAL:9 += 1
+			ENDIF
+			;사역마로 만들 수 있는 캐릭터가 있는지 판정
+			;주인이 [금단의 지식] 보유 전제
+			IF TALENT:MASTER:56
+				;이미 사역마라면 확정, 그렇지 않다면 될 수 있는지 체크
+				IF TALENT:COUNT:164
+					LOCAL:4 |= 1
+				ELSE
+					;[사역마] 조건을 충족하고 있는가?
+					SIF !FAMILIAR_ABLE(COUNT)
+						CONTINUE
+					;소지금 200000원 필요
+					SIF MONEY < 200000
+						CONTINUE
+					LOCAL:4 |= 2
+				ENDIF
+			ENDIF
+		ENDIF
+	REND
+
+	;구입 가능한 노예 인원수의 산출
+	LOCAL:5 = CALC_SLAVE_CAPACITY()
+
+	;아이템 · 노예 진열 플래그 삭제
+	VARSET ITEMSALES, 0
+
+	;엔딩으로 넘어가는가 마는가.
+	;토리코모드 사양. 빚이 있으면 엔딩불가. 오나마스 모드도 엔딩이 있다.
+	SIF (FLAG:4 == 0 || FLAG:4 == 1 || FLAG:4 == 18) && FLAG:5 == 0 && MONEY >= MONEY:100 && FLAG:5030 == 0
+		LOCAL:6 = 1
+
+	FOR COUNT, 0, 9
+		CALLF SET_LIST, COUNT, LOCAL:COUNT
+	NEXT
+	;술에 떡이 되어 있지 않은 조교 대상이 존재하고, 주인도 술에 떡이 되어 있지 않을 경우
+	;조교 돌입 커맨드지만, 네이밍은 식중 함수에서 오려냈다.
+
+	;디버그
+	;PRINTFORML BASE:8 이 MAXBASE:8  보다 작거나 같고 그리고  BASE:MASTER:8 이  MAXBASE:MASTER:8 보다 작거나 같고  그리고  CFLAG:MASTER:1501 == 0  이고  TALENT:MASTER:262 == 0 이어야 함
+	;PRINTFORML {BASE:8} 이 {MAXBASE:8} 보다 작거나 같고 그리고  {BASE:MASTER:8} 이  {MAXBASE:MASTER:8} 보다 작거나 같고  그리고  {CFLAG:MASTER:1501}  이고  {TALENT:MASTER:262} 이어야 함
+
+	SIF TARGET >= 0 && BASE:8 <= MAXBASE:8 && BASE:MASTER:8 <= MAXBASE:MASTER:8 && CFLAG:MASTER:1501 == 0 && TALENT:MASTER:262 == 0
+		PRINTFORMLC [100] - %NAME_SHOPCOMMAND_100()%
+	SIF CHARANUM > 0
+		PRINTLC [101] - 능력 보기
+	;일상생활 확장 플래그가 켜져 있으면 휴식 명령어 표시가 바뀜. 그뿐.
+	PRINTFORMLC [102] - \@(FLAG:12 & 64) ? 일상생활(휴식) # 휴식\@
+	;주인 외에 캐릭터가 있을 경우
+	SIF CHARANUM > 1
+		PRINTLC [103] - 능력 상승
+	;조교 대상이 존재하고, 그 대상에 전용 대사가 없을 경우
+	SIF TARGET >= 0 && FLAG:996 <= 0
+		PRINTLC [105] - 주인의 호칭
+	;조교 대상이 존재하고, 그 대상에 전용 대사가 없을 경우(현재 폐기)
+	SIF TARGET >= 0
+	; && FLAG:996 <= 0
+		PRINTLC [106] - 노예 칭호 변경
+	;조수 가능한 노예가 1명 이상 있을 경우
+	SIF LOCAL:0 >= 1
+		PRINTLC [108] - 조수 변경
+	;주인과 조교 대상 외에 TIME에 맞는 조교 가능한 노예가 1명 이상 있다  아니면　조교 대상이 존재할 경우
+	;오나마스 모드에서는 변경불가. 
+	SIF LOCAL:2 >= 1 || TARGET >= 0 && FLAG:4 != 18
+		PRINTLC [109] - 조교 대상 변경
+	;자금이 있을 경우
+	SIF MONEY > 0
+		PRINTLC [110] - 아이템 구입
+	;CHALLENGE 모드가 아니고, 자금이 있으며, 마련할 수 있는 노예에 여유가 있을 경우
+	;또한, 오나마스 모드에서는 구입불가.
+	SIF CHARANUM < LOCAL:5 && MONEY > 0 && FLAG:4 < 50 && FLAG:4 != 18
+		PRINTLC [111] - 노예 구입
+	;매각 또는 해방 가능한 노예가 존재할 경우
+	;또한, 오나마스 모드에서는 판매불가.
+	SIF LOCAL:1 >= 1 && FLAG:4 != 4 && FLAG:4 != 18
+		PRINTFORMLC [112] - \@(FLAG:12 & 32) ? 노예 판매·해방 # 노예 판매\@
+	;주인이 [금단의 지식]을 보유하고 노예 중에 [사역마(또는 식)]이 될 자격을 가진 자가 있을 경우
+	SIF TALENT:MASTER:56 && LOCAL:4 > 0
+		PRINTFORMLC [113] - \@(NO:MASTER == 21 || NO:MASTER == 22) ? 식신으로 삼는다 # 사역마로 삼는다\@
+	;자금이 있으며, CHALLENGE 모드이거나 아니면 지금까지 매각한 노예가 10명 이상일 경우
+	SIF (FLAG:34 >= 10 || FLAG:4 >= 50) && MONEY > 0
+		PRINTLC [120] - 비밀 도구점
+	;CONFIG에서 「기능훈련사를 이용할 수 없게 한다」가 무효에, 자금이 있을 경우
+	SIF (FLAG:12 & 65536) == 0 && MONEY > 0
+		PRINTLC [121] - 기능훈련사
+	;주인 또는 그 자리에 있으며 조수 가능한 노예 중 누구 한 명이 [조합지식]이나 [금단의 지식]을 가지고 있고, 자금이 있을 경우
+	SIF LOCAL:3 && MONEY > 0
+		PRINTLC [122] - 약방
+	;조교 대상이 존재하고, CONFIG의 「도시락 · 라이브」가 유효할 경우
+	IF TARGET >= 0 && FLAG:12 & 16
+		;조교 대상의 순종 Lv이 2 이상일 경우
+		SIF ABL:10 >= 2
+			PRINTFORMLC [130] - \@(TALENT:150) ? 애정요리 # 요리를 시킨다\@
+		;주인의 기교 Lv이 3 이상이고, 조교 대상이 조수 가능해졌을 경우
+		SIF ABL:MASTER:12 > 3 && CFLAG:1 == 2
+			PRINTLC [131] - 자기가 요리한다
+		;마이크가 있거나 아이템 없음 모드이고, 연속 야외 라이브 플래그가 켜져 있지 않으며, 조교 대상의 노출벽 Lv이 3이상이고, 
+		;[연모]를 가지고 있거나 순종 Lv이 5 이상일 경우. 단, 밤이 아닐 경우에 조교 대상이 [흡혈귀] 보유자일 경우에는 특주 양산도 필요하게 된다
+		SIF (ITEM:52 || NOITEM) && TFLAG:154 == 0 && ABL:14 >= 3 && (TALENT:150 || ABL:10 >= 5) && (TIME == 1 || TALENT:205 == 0 || (TALENT:205 && ITEM:48 ))
+			PRINTLC [132] - 야외 라이브 공연
+	ENDIF
+	;주인이 [자웅가변]을 가지고 있을 경우
+	SIF TALENT:MASTER:9
+		PRINTLC [140] - 주인 성별 변경
+	;수집품을 500종 이상 갖추면 전시실의 이름이 변경. 그뿐
+	SIF FLAG:500 > 0 && FLAG:12 & 8
+		PRINTFORMLC [150] - \@(FLAG:500 >= 500) ? 환상향 비보관 # 전시실로 간다\@
+	;CONFIG의 「신사적인 촉수계 커맨드」가 유효하고, 진화의 비법이 있거나 아이템 없음 모드일 경우
+	SIF FLAG:15 & 4096 && (ITEM:59 || NOITEM)
+		PRINTLC [160] - 촉수개발·배양시설
+	;CONFIG의 「특수 목욕탕계 커맨드」가 유효한 경우
+	SIF FLAG:15 & 1024
+		PRINTFORMLC [161] - \@(SPECIALBATH_CHECK() < 16) ? 목욕탕 개장 # 목욕탕을 본다\@
+	;요정이 30마리 이상 필요
+	SIF LOCAL:9 >= 30
+		PRINTLC [162] - 요정목욕을 한다
+	;CONFIG의 「고문계, 정신조작계 커맨드」가 유효하고 비밀 지하실이 설치되어 있으며, 주인이 술에 떡이 되어 있지 않을 경우
+	SIF FLAG:15 & 16 && FLAG:73 & 1 && BASE:MASTER:8 <= MAXBASE:MASTER:8
+		PRINTLC [163] - 비밀 지하실
+	;주인 외에 캐릭터가 존재하고, 허브 농장이 설치되어 있으며, 주인이 술에 떡이 되어 있지 않을 경우
+	SIF FLAG:79 > 1 && CHARANUM > 1 && BASE:MASTER:8 <= MAXBASE:MASTER:8
+		PRINTLC [165] - 꽃밭으로 간다
+	;Ｓ패치 추가분
+	SIF FLAG:13 & 1024 && ITEM:90 && TIME == 0
+		PRINTLC [166] - 창관으로 간다
+
+	;토리코모드 추가분
+		;만복도 시스템 사용중일때만 켜짐.
+		IF FLAG:5000 & 32
+		PRINTLC [167] - 식단을 설정한다
+		ENDIF
+		;의뢰 시스템 사용중일때만 켜짐.
+		IF FLAG:5010 > 2
+		PRINTLC [168] - 의뢰소
+		ENDIF
+		;매각가 시스템 사용중이며 조교중인 노예가 있을 때만 켜짐.
+		IF FLAG:5000 & 2 && TARGET > 0
+		PRINTLC [169] - 매각조사
+		ENDIF
+
+	;만약 전회 육아실 커맨드를 실행한 것이 이 턴이 아니고,
+	;육아실 커맨드 플래그가 켜져 있으면, 여기서 그 플래그를 재운다.
+	IF TFLAG:700 == 1 && (TFLAG:701 != DAY || TFLAG:702 != TIME)
+		TFLAG:700 = 0
+		TFLAG:701 = -1
+		TFLAG:702 = -1
+	ENDIF
+	;육아실이 ON인 상태(누군가가 임신 · 육아중인 경우 등)이며, 육아실 플래그가 켜져 있지 않을 경우
+	SIF FLAG:17 > 0 && TFLAG:700 == 0
+		PRINTLC [170] - 육아실로 간다
+	SIF (FLAG:1100 & 1) && (FLAG:1100 & 8) && FLAG:1102 > 0
+		PRINTFORMLC [171] - \@(FLAG:1102 < 2) ? 공방을 연다 # 공방에 간다\@
+	SIF CHARANUM > 4 && TARGET >= 0 && TIME == 0 && TALENT:TARGET:120 == 0 && MARK:9 <= 0 && MAXBASE:TARGET:0 * 8 / 10 <= BASE:TARGET:0  && MAXBASE:TARGET:1 * 8/10 <= BASE:TARGET:1
+		PRINTLC [180] - 윤간시킨다
+
+	;스케쥴 시스템 사용중이고, 노예가 1명 이상 있을 때.
+	IF FLAG:5000 & 1024  && CHARANUM > 1
+		;낮밤에 따른 색 변화
+		IF TIME == 1
+		ELSE
+			CALL SETCOLOR_TORIKOMODE, "BLACK", 2
+		ENDIF
+		PRINTLC [181] - 스케쥴 설정
+		RESETCOLOR
+	ENDIF
+
+	;경비 시스템 사용중일때
+	IF FLAG:5003 & 1
+		PRINTLC [182] - 경비원 관리
+		IF  CHARANUM > 1
+			PRINTLC [183] - 노예 구속
+		ENDIF
+	ENDIF
+
+	PRINTLC [190] - 환상향연기
+	PRINTLC [191] - 특수능력 취득
+
+	;노모어 글레이즈 옵션에서는 저장하기가 뜨지 않음.
+	SIF (FLAG:5002) / 1000 != 1
+		PRINTLC [200] - 저장하기
+
+	PRINTLC [300] - 불러오기
+	;주인도 포함해 캐릭터가 1명 이상 있을 경우(다시 말해, 반드시 성립할 터)
+	SIF CHARANUM > 0
+		PRINTLC [400] - 캐릭터 검색
+	;주차수가 2주 이상일 경우
+	SIF FLAG:6 > 1
+		PRINTLC [500] - 엔딩 일람
+	;엔드리스에 돌입하지 않은 NORMAL이나 ANNORMAL 모드에서, 자금을 엔딩 조건 이상으로 만들었을 경우
+	SIF LOCAL:6 == 1
+		PRINTLC [543] - 지금이다!
+	;CONFIG의 「강하게 뉴 게임」이 유효하며, 추가로 이번 주차에서 이미 BAD와 WRONG가 아닌 엔딩을 봤을 경우
+	SIF FLAG:5 & 2 && FLAG:12 & 1 && (FLAG:5 & 4) == 0
+		PRINTLC [555] - 새 게임 시작
+	;주인과 조교 대상 외에 TIME에 맞는 조교 가능한 노예가 1명 이상 있을 경우
+	SIF LOCAL:2 >= 1
+		PRINTLC [666] - 캐릭터 정렬
+	PRINTLC [777] - 컨피그 설정
+	;YASAI 모드인데 더해, 자금이 있고, 마련할 수 있는 노예에 여유가 있을 경우
+	SIF FLAG:570 & 1 && MONEY > 0 && CHARANUM < LOCAL:5
+		PRINTLC [830] - 특수노예 구입
+	;주인이 [야채의 연금술사]를 가지고 있을 경우
+	IF TALENT:MASTER:831
+		;주인이 술에 떡이 되어 있지 않고, 야채의 재고수가 최대(99999999개) 미만일 경우
+		SIF BASE:MASTER:8 <= MAXBASE:MASTER:8 && FLAG:574 < 99999999
+			PRINTLC [831] - 채소연성
+		;주인이 술에 떡이 되어 있지 않고, 자금이 있으며, 밭 확장의 여지(최대 20Lv까지)가 있을 경우
+		SIF FLAG:573 < 20 && MONEY > 0 && BASE:MASTER:8 <= MAXBASE:MASTER:8
+			PRINTLC [832] - 밭 확장
+		;야채의 재고가 있으며, 조교 대상이 존재하고, 대상의 체력이 최대가 아닌 경우
+		SIF FLAG:574 > 0 && TARGET >= 0 && BASE:0 < MAXBASE:0
+			PRINTLC [833] - 채소재생
+	ENDIF
+	;개발중
+	;SIF FLAG:5000 > 0
+	;	PRINTLC [996] - 개발중.
+	;토리코모드의 헬프
+	;SIF FLAG:5000 > 0
+	;	PRINTLC [997] - 토리코모드 설명
+	PRINTLC [998] - 동방조교전
+	;주인에게 [Debug]가 있다=debug 모드일 경우
+	SIF TALENT:MASTER:998
+		PRINTLC [999] - 디버그 메뉴
+
+	PRINTL 
+ENDIF
+
+;--------------------------------------------------
+;SHOP 메뉴 (유저 SHOP)
+;--------------------------------------------------
+@USERSHOP
+
+IF CFLAG:MASTER:4 == 3
+	CALL USERSHOP_WORKSHOP
+ELSE
+	IF RESULT == 100 && TARGET >= 0
+		;조교 대상이 술에 떡이 되어 있을 경우(이 경우에는 주인이 떡이 되어 있을 상황은 표시되지 않음)
+		IF BASE:8 > MAXBASE:8
+			PRINTFORML 취한 탓인지 %CALLNAME:TARGET%의 얼굴이 새파랗다.
+			PRINTW 잠시 쉬게 하는 편이 좋으리라…….
+		;주인이 술에 떡이 되어 있을 경우
+		ELSEIF BASE:MASTER:8 > MAXBASE:MASTER:8
+			PRINTFORML 취한 탓인지 속이 좋지 않다.
+			PRINTW 잠시 쉬는 편이 좋을 것 같다…….
+		ELSEIF CFLAG:MASTER:1501 != 0
+			PRINTW 매춘과 조교를 동시에 할 수 없다.
+		ELSEIF TALENT:MASTER:262 != 0
+			PRINTW 이런 일을 할 틈이 없을 것이다.
+		;주인이나 조교 대상이나 술에 떡이 되어 있을 경우(조수가 떡이 되어 있다면 Train 첫머리에서 조수만 이탈한다)
+		ELSE
+			BEGIN TRAIN
+			RETURN 1
+		ENDIF
+	ELSEIF RESULT == 101 && CHARANUM > 0
+		CALL SHOW_CHARADATA_MENU
+	ELSEIF RESULT == 102
+		DRAWLINE
+		PRINTFORML \@(TIME == 0) ? 밤까지 # 날이 밝을 때까지\@ 쉬기로 했다.
+		DRAWLINE
+		;휴식 플래그를 세운다
+		FLAG:0 = 1
+		;조교 대상이 존재하고, CONFIG의 [일상생활]이 유효할 경우
+		IF FLAG:12 & 64 && TARGET >= 0
+			CALL DAILY_EVENT_JUDGMENT
+			;일상 에로 이벤트가 일어나지 않았을 경우
+			SIF RESULT <= 0
+				CALL DAILY_LIFE
+		ENDIF
+		BEGIN TURNEND
+		RETURN 1
+	ELSEIF RESULT == 103 && CHARANUM > 1
+		CALL ABL_MANUAL_MENU
+	ELSEIF RESULT == 105 && TARGET >= 0 && FLAG:996 <= 0
+		CALL COMMAND_MASTER_NAME
+	ELSEIF RESULT == 106 && TARGET >= 0
+	; && FLAG:996 <= 0
+		CALL CHANGE_SLAVE_NICKNAME
+	ELSEIF RESULT == 108 && GET_LIST(0) >= 1
+		CALL SELECT_ASSI
+	ELSEIF RESULT == 109 && (GET_LIST(2) >= 1 || TARGET >= 0) && FLAG:4 != 18
+		CALL CHANGE_TARGET
+	ELSEIF RESULT == 110 && MONEY > 0
+		CALL TOOL_BUY_MAIN
+	ELSEIF RESULT == 111 && MONEY > 0 && CHARANUM < GET_LIST(5) && FLAG:4 < 50 && FLAG:4 != 18
+		CALL CHARA_BUY_MAIN
+	;Ｓ패치 추가분
+	ELSEIF RESULT == 112 && GET_LIST(1) >= 1 && FLAG:4 != 4 && FLAG:4 != 18
+		CALL CHARA_SALE
+	ELSEIF RESULT == 113 && TALENT:MASTER:56 && GET_LIST(4) > 0
+		CALL FAMILIAR_SELECT
+	ELSEIF RESULT == 120 && (FLAG:34 >= 10 || FLAG:4 >= 50) && MONEY > 0
+		DRAWLINE
+		DRAWLINE
+		CALL BUY_SPECIAL_ITEM
+	ELSEIF RESULT == 121 && (FLAG:12 & 65536) == 0 && MONEY > 0
+		CALL BUY_SKILL
+	ELSEIF RESULT == 122 && GET_LIST(3) && MONEY > 0
+		CALL BUY_DRUG
+	ELSEIF RESULT == 130 && TARGET >= 0 && ABL:10 >= 2 && FLAG:12 & 16
+		CALL LUNCH_JUDGE
+		RETURN 1
+	ELSEIF RESULT == 131 && TARGET >= 0 && ABL:MASTER:12 > 3 && CFLAG:1 == 2 && FLAG:12 & 16
+		CALL LUNCH_SELF
+		RETURN 1
+	ELSEIF RESULT == 132 && TARGET >= 0 && (ITEM:52 || NOITEM) && TFLAG:154 == 0 && ABL:14 >= 3 && (TALENT:150 || ABL:10 >= 5)  && (TIME == 1 || TALENT:205 == 0 || (TALENT:205 && (ITEM:48 || NOITEM))) && FLAG:12 & 16
+		CALL CONCERT_JUDGE
+		RETURN 1
+	ELSEIF RESULT == 140 && TALENT:MASTER:9
+		CALL CHANGE_SEX, MASTER
+		RETURN 1
+	ELSEIF RESULT == 150 && FLAG:500 > 0 && FLAG:12 & 8
+		PRINTFORMW \@(FLAG:500 >= 500) ? 환상향비보관으 # 전시실\@로 갔다.
+		DRAWLINE
+		DRAWLINE
+		CALL COLLECTION_ROOM_MENU
+	ELSEIF RESULT == 160 && FLAG:15 & 4096 && (ITEM:59 || NOITEM)
+		PRINTW 촉수개발·배양시설로 이동했다.
+		DRAWLINE
+		DRAWLINE
+		CALL TENTACLE_LABORATORY
+	ELSEIF RESULT == 161 && FLAG:15 & 1024
+		;개장 가능한 특수 목욕탕이 아직 남아 있을 경우
+		IF SPECIALBATH_CHECK() < 16
+			PRINTW 목욕탕으로 갔다.
+			DRAWLINE
+			DRAWLINE
+			CALL BATH_REFORM
+		;개장 가능한 모든 특수 목욕탕이 완비되어 있을 경우
+		ELSE
+			PRINTW 목욕탕 기능을 보여준다.
+			DRAWLINE
+			CALL SHOW_BATH_ABL
+			WAIT
+			DRAWLINE
+		ENDIF
+	ELSEIF RESULT == 162 && FLAG:15 & 1024 && FLAG:74 & 8192 && GET_LIST(9) >= 30
+		PRINTW 요정목욕을 하러 갔다.
+		CALL FAIRIES_BATH
+	ELSEIF RESULT == 163 && FLAG:15 & 16 && FLAG:73 & 1 && BASE:MASTER:8 <= MAXBASE:MASTER:8
+		PRINTW 비밀의 지하실로 갔다.
+		CALL HIDDEN_BASEMENT_MENU
+	;Ｓ패치 추가분
+	ELSEIF RESULT == 166 && FLAG:13 & 1024 && ITEM:90 && TIME == 0
+		PRINTW 창관으로 갔다.
+		CALL SPRING_1
+
+	;토리코모드 추가분
+	ELSEIF RESULT == 167
+		;만복도 시스템 사용중일때만 켜짐.
+		IF FLAG:5000 & 32
+		PRINTW 노예들의 식단은 어떻게 할까?
+		CALL LIST_FEED_MENU_TORIKOMODE
+		ELSE
+		ENDIF
+
+	ELSEIF RESULT == 168 && FLAG:5010 > 2
+		PRINTW 의뢰소로 향했다.
+		CALL MISSION_SHOP_TORIKOMODE
+
+	ELSEIF RESULT == 169 && FLAG:5000 & 2 && TARGET > 0
+		PRINTW 조교중인 노예의 매각가를 체크해보자.
+		CALL RESEARCH_CHARASALE_CALC_TORIKOMODE
+
+	ELSEIF RESULT == 165 && FLAG:79 > 1 && CHARANUM > 1 && BASE:MASTER:8 <= MAXBASE:MASTER:8
+		PRINTW 꽃밭으로 갔다.
+		CALL SHOP_HARB_MENU
+	ELSEIF RESULT == 170 && FLAG:17 > 0 && TFLAG:700 == 0
+		PRINTW 육아실로 갔다.
+		DRAWLINE
+		DRAWLINE
+		TFLAG:700 = 1
+		TFLAG:701 = DAY
+		TFLAG:702 = TIME
+		CALL CHILD_CARE_ROOM
+	ELSEIF RESULT == 171 && (FLAG:1100 & 1) && (FLAG:1100 & 8) && FLAG:1102 > 0
+		IF FLAG:1102 > 1
+			;主人、工房へ
+			CFLAG:MASTER:4 = 3
+		ELSE
+			CALL BUILD_WORKSHOP
+		ENDIF
+	;스케쥴 시스템 사용중이고, 노예가 1명 이상 있을 때. (토리코모드 사양)
+	ELSEIF RESULT == 181 && FLAG:5000 & 1024  && CHARANUM > 1
+		PRINTW 노예들의 스케쥴을 설정한다.
+		CALL LIST_SCHEDULE_TORIKOMODE
+
+	;경비시스템 사용중일때.
+	ELSEIF RESULT == 182 && FLAG:5003 & 1
+		CALL LIST_GUARDSMAN_TORIKOMODE
+	ELSEIF RESULT == 183 && CHARANUM > 1 && FLAG:5003 & 1
+		CALL LIST_RESTRICTION_TORIKOMODE
+
+	ELSEIF RESULT == 190
+		CALL TROPHY
+	ELSEIF RESULT == 191
+		CALL TROPHY_FEAT_GET
+	ELSEIF RESULT == 200
+		;노모어 글레이즈 옵션에서는 저장이 안됨.
+		IF (FLAG:5002) / 1000 != 1
+			call SAVEGAME_EX
+		ELSE
+			REUSELASTLINE
+		ENDIF
+	ELSEIF RESULT == 300
+		call LOADGAME_EX
+	ELSEIF RESULT == 400 && CHARANUM > 0
+		CALL SEARCH_CHARADATA_MENU
+	ELSEIF RESULT == 500 && FLAG:6 > 1
+		CALL ENDING_LIST
+	;빚이 있으면 안됨 (토리코모드사양)
+	ELSEIF RESULT == 543 && GET_LIST(6) == 1 && FLAG:5030 == 0
+		CALL ENDING_CONFIRM
+	ELSEIF RESULT == 555 && FLAG:5 & 2 && FLAG:12 & 1
+		CALL NEWGAME_SELECT
+		RETURN 0
+	ELSEIF RESULT == 666 && GET_LIST(2) >= 1
+		CALL CHARA_SORT
+	ELSEIF RESULT == 777
+		TFLAG:201 = 0
+		CALL SWEET_POTATO_CONFIGURATION
+	ELSEIF RESULT == 830 && FLAG:570 & 1 && MONEY > 0 && CHARANUM < GET_LIST(5)
+		CALL IRC_CHARA_BUY
+	ELSEIF RESULT == 831 && TALENT:MASTER:831 && BASE:MASTER:8 <= MAXBASE:MASTER:8 && FLAG:574 < 99999999
+		CALL IRC_ANATA_YASAI
+	ELSEIF RESULT == 832 && TALENT:MASTER:831 && FLAG:573 < 20 && MONEY > 0 && BASE:MASTER:8 <= MAXBASE:MASTER:8
+		CALL YASAI_FARM
+	ELSEIF RESULT == 833 && TALENT:MASTER:831 && FLAG:574 > 0 && TARGET >= 0 && BASE:0 < MAXBASE:0
+		CALL YASAI_REVIVAL
+	;개발중인 함수를 여기 넣고 돌린다.
+	ELSEIF RESULT == 996 && FLAG:5000 > 0
+		CALL TEST
+	;토리코모드의 헬프
+	;ELSEIF RESULT == 997 && FLAG:5000 > 0
+	;	CALL HELP_TORIKOMODE
+	ELSEIF RESULT == 998
+		CALL DICTIONARY_MENU
+	ELSEIF RESULT == 999 && TALENT:MASTER:998
+		PRINTW 디버그 메뉴를 불러온다.
+		CALL DEBUG_MENU_SHOP
+	ELSEIF RESULT == 180
+	SIF CHARANUM > 4 && TARGET >= 0 && TIME == 0 && TALENT:TARGET:120 == 0 && MARK:9 <= 0 && MAXBASE:TARGET:0 * 8 / 10 <= BASE:TARGET:0 && MAXBASE:TARGET:1 * 8/10 <= BASE:TARGET:1
+		CALL RINKAN
+	ELSE
+		REUSELASTLINE  
+	ENDIF
+	RETURN 0
+ENDIF
+RETURN 0
+
+;=============================================================================
+;SHOP으로부터 호출되는 기본적인 처리
+;=============================================================================
+;-------------------------------------------------
+;조교 대상 선택
+;-------------------------------------------------
+@CHANGE_TARGET
+;표시되는 캐릭터를 추출(LOCAL:2로 인원수)
+VARSET LOCAL, 0
+;CHARADATA_LIST를 위해서 대피
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;주인은 제외
+	SIF COUNT == MASTER
+		CONTINUE
+	;실종 중이라거나 이 자리에 없으면 제외
+	SIF CFLAG:COUNT:4 && (CFLAG:COUNT:4 != 1024 || TIME == 1)
+		CONTINUE
+	SIF CFLAG:COUNT:4 == 1024 && TALENT:COUNT:262
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 현재 \@(TARGET >= 0) ? %조사처리(CALLNAME:TARGET,"를")% 조교중 # 조교를 하고 있지 않습니다.\@
+PRINTFORML 누구를 조교하겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+IF TARGET >= 0
+	PRINTL   [ 0] 조교하지 않는다.
+	DRAWLINE
+ENDIF
+
+;일반모드
+	;CALL CHARADATA_LIST, LOCAL, LOCAL:99
+;토리코모드
+	CALL CHARADATA_LIST_TORIKOMODE, LOCAL, LOCAL:99
+
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞 페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음 페이지로\@
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 0
+	RESULT = -1
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP
+ENDIF
+
+IF RESULT != -1 && TARGET != RESULT
+	LOCAL:5 = RESULT
+	LOCAL:6 = TARGET
+	;조교 대상에서 풀렸다
+	SIF TARGET >0
+		CALL SELF_KOJO, TARGET, 128, LOCAL:5
+	TARGET = LOCAL:5
+	RESULT = -1
+	TRYCALLFORM TRY_{NO:TARGET}
+	FLAG:996 = RESULT
+	SIF TARGET == ASSI
+		ASSI = -1
+	;조교 대상으로 선택되었다
+	SIF TARGET > 0
+		CALL SELF_KOJO, TARGET, 124, LOCAL:6
+	;Ｓ패치 추가분
+	IF CFLAG:TARGET:1501 && TARGET > 0
+		PRINTL 매춘 상태가 해제됐습니다.
+		CFLAG:TARGET:4 = 0
+		CFLAG:TARGET:1501 = 0
+		FLAG:3001 -= 1
+	ENDIF
+ELSEIF RESULT != -1
+	;조교 대상에서 풀리게 될 것 같아졌다
+	CALL SELF_KOJO, TARGET, 127
+ELSE
+	;조교 대상에서 풀렸다
+	SIF TARGET > 0
+		CALL SELF_KOJO, TARGET, 128, -1
+	TARGET = -1
+	FLAG:996 = -1
+ENDIF
+
+;-------------------------------------------------
+;조수 변경 처리
+;-------------------------------------------------
+@SELECT_ASSI
+;표시되는 캐릭터를 추출(LOCAL:2로 인원수)
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;주인은 제외
+	SIF COUNT == MASTER
+		CONTINUE
+	;실종 중이라거나 이 자리에 없으면 제외
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;조수 가능하지 않은 이는 제외
+	SIF CFLAG:COUNT:1 < 2
+		CONTINUE
+	;술에 떡이 됐을 경우에도 제외
+	SIF BASE:COUNT:8 > MAXBASE:COUNT:8
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML \@(ASSI >= 0) ? %조사처리(NAME:ASSI,"가")% 조수 # 조수는 없습니다\@
+PRINTFORML 누구를 조수로 삼겠습니까? (현재의 조수는 ☆, 현재 조교 대상은 ★로 표시) ＜page.{LOCAL+1}＞
+DRAWLINE
+PRINTL   [ 0] 조수없음
+DRAWLINE
+CALL ASSI_LIST, LOCAL
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지\@
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 0
+	;조수 해임된 일자 기록(턴까지는 무리)
+	SIF ASSI >= 0
+		CFLAG:ASSI:47 = DAY
+	ASSI = -1
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP
+ENDIF
+
+;조수 해임된 일자 기록(턴까지는 무리)
+SIF ASSI >= 0
+	CFLAG:ASSI:47 = DAY
+ASSI = RESULT
+;Ｓ패치 추가분
+IF ASSI >= 0
+	IF CFLAG:ASSI:1501
+		PRINTL 매춘 상태가 해제됐습니다.
+		CFLAG:ASSI:4 = 0
+		CFLAG:ASSI:1501 = 0
+		FLAG:3001 -= 1
+	ENDIF
+ENDIF
+CALL ASSI_CHANGE
+ISASSI:ASSI = 1
+IF ASSI == TARGET
+	TARGET = -1
+	FLAG:996 = -1
+ENDIF
+
+;-------------------------------------------------
+;조수 가능 캐릭터 일람의 표시 처리
+;-------------------------------------------------
+@ASSI_LIST, ARG
+LOCALS:0 = ♀
+LOCALS:1 = ♂
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+
+	IF LOCAL == ASSI
+		PRINT ☆
+	ELSEIF LOCAL == TARGET
+		PRINT ★
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	IF LOCAL == ASSI
+		PRINT 　　　　 
+	ELSEIF EXP:LOCAL:99 >= EXPLV:5
+		PRINT [경험자] 
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT [원조수] 
+	ELSE
+		PRINT [미경험] 
+	ENDIF
+	PRINTFORM %LOCALS:(TALENT:LOCAL:120)% %ABLNAME:12%Lv{ABL:LOCAL:12} 
+	PRINTFORML %ABLNAME:(22+TALENT:LOCAL:120)%Lv{ABL:LOCAL:(22+TALENT:LOCAL:120)} %ABLNAME:(32+TALENT:LOCAL:120)%Lv{ABL:LOCAL:(32+TALENT:LOCAL:120)} \@(TALENT:LOCAL:83) ? 바이 #\@
+REND
+
+;-------------------------------------------------
+;스테이터스 표시(캐릭터 일람)
+;-------------------------------------------------
+@SHOW_CHARADATA_MENU
+;표시되는 캐릭터를 추출(LOCAL:2로 인원수)
+VARSET LOCAL, 0
+;CHARADATA_LIST를 위해서 대피
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;주인은 제외
+	SIF COUNT == MASTER
+		CONTINUE
+	;실종 중이라거나 이 자리에 없으면 제외
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+MARK:MASTER:98 = 1
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 스테이터스를 표시하고 싶은 캐릭터를 선택해주세요　＜page.{LOCAL+1}＞
+DRAWLINE
+PRINTFORML 　[0] %CALLNAME:MASTER%(주인)
+DRAWLINE
+
+;토리코모드
+IF FLAG:5000 & 1
+	CALL CHARADATA_LIST_TORIKOMODE, LOCAL, LOCAL:99
+ELSE
+;일반모드
+CALL CHARADATA_LIST, LOCAL, LOCAL:99
+ENDIF
+
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:2 / 20) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_1
+ENDIF
+CALL SHOW_CHARADATA_PAGE, RESULT
+RESTART
+
+;-------------------------------------------------
+;스테이터스 표시(각 캐릭터별)
+;-------------------------------------------------
+@SHOW_CHARADATA_PAGE, ARG
+;페이지 판별은 LOCAL로
+LOCAL = 1
+
+$PRINT_PAGE
+CALL NEW_DRAWLINE
+CALL GET_RACE , ARG
+PRINTFORM %CALLNAME:ARG%\@(NO:ARG >= 150 && NO:ARG < 200 && CALLNAME:ARG != NAME:ARG) ? (%ITEMNAME:(100+NO:ARG)%) # %" "*4%\@ 종족：%STR:2%
+SIF TALENT:MASTER:998
+	PRINTFORM 　캐릭터번호:{NO:ARG, 3}  
+
+
+
+;토리코모드
+IF FLAG:5000 & 1
+	CALL LIFE_BAR_TORIKOMODE, ARG
+	PRINT  
+	CALL VITALITY_BAR_TORIKOMODE, ARG
+	PRINTL 
+;일반모드
+ELSE
+	PRINTFORML 　체력:({BASE:ARG:0, 4}/{MAXBASE:ARG:0, 4})　기력:({BASE:ARG:1, 4}/{MAXBASE:ARG:1, 4})
+ENDIF
+
+IF ARG != MASTER && FLAG:12 & 4
+	CALL PRINT_SLAVE_STATUS, ARG
+ELSEIF ARG == MASTER && FLAG:12 & 4
+	CALL PRINT_MASTER_STATUS, ARG
+ENDIF
+CALLFORM SHOW_INFO_PAGE_{LOCAL}, ARG
+PRINTFORMLC \@(LOCAL == 1) ? %" " * 16% # [1001] 앞 페이지로\@
+PRINTLC   [1000] 돌아간다
+PRINTFORMLC \@(LOCAL == 5) ? %" " * 16% # [1009] 다음 페이지로\@
+PRINTL 
+;등록번호가 현재  표시되어 있는 전후의 캐릭터이고 『이 자리에 없다 플래그』가 켜져 있을 경우, 그 캐릭터로 전환하는 버튼을 표시
+PRINTFORMLC \@(ARG > 0 && CFLAG:(ARG-1):4 == 0) ? [1011] 10 페이지 앞으로 # %" " * 16%\@
+PRINTFORMLC %" " * 18%
+PRINTFORMLC \@(ARG < CHARANUM - 1 && CFLAG:(ARG+1):4 == 0) ? [1019] 10 페이지 뒤로 # %" " * 16%\@
+PRINTL 
+$INPUT_LOOP_2
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 1
+	LOCAL -= 1
+ELSEIF RESULT == 1009 && LOCAL < 5
+	LOCAL += 1
+ELSEIF RESULT == 1011 && ARG > 0 && (CFLAG:(ARG-1):4 == 0)
+	ARG -= 1
+ELSEIF RESULT == 1019 && ARG < CHARANUM - 1 && (CFLAG:(ARG+1):4 == 0)
+	ARG += 1
+ELSE
+	GOTO INPUT_LOOP_2
+ENDIF
+GOTO PRINT_PAGE
+
+;--------------------------------------------------
+;구입 가능한 노예의 인원수 산출
+;--------------------------------------------------
+;RETURNF로 구입 가능한 노예의 인원수를 반사하도록
+@CALC_SLAVE_CAPACITY
+#FUNCTION
+RETURNF (FLAG:4 >= 50) ? 100 # MIN(FLAG:91 + FLAG:92 + FLAG:93, BORDER_SLAVE_CAPACITY())
+
+;--------------------------------------------------
+;집의 수용 가능한 노예의 한계 인원수
+;--------------------------------------------------
+;RETURNF로 구입 가능한 노예의 인원수를 반사하도록
+@BORDER_SLAVE_CAPACITY
+#FUNCTION
+IF FLAG:90 == 5
+	RETURNF 1000
+ELSEIF FLAG:90 == 3 || FLAG:90 == 4
+	RETURNF 501
+ELSEIF FLAG:90 == 2
+	RETURNF 101
+ELSEIF FLAG:90 == 1
+	RETURNF 51
+ELSE
+	RETURNF 31
+ENDIF
+
+;--------------------------------------------------
+;기한 표시 처리
+;--------------------------------------------------
+@SHOW_DEADLINE
+IF FLAG:5 & 1
+	PRINT  ∞
+	RETURN 0
+ENDIF
+IF FLAG:3 == 1
+	;EASY(1주차에만 기한＋20일)
+	LOCAL = (FLAG:6 == 1) ? 140 # 120
+ELSEIF FLAG:3 == 2
+	;NORMAL(1주차에만 기한＋10일)
+	LOCAL = (FLAG:6 == 1) ? 100 # 90
+ELSEIF FLAG:3 == 3
+	;HARD
+	LOCAL = 99
+ELSEIF FLAG:3 == 4
+	;LUNATIC
+	LOCAL = 90
+ELSEIF FLAG:3 == 5
+	;PHANTASM
+	LOCAL = 60
+ELSEIF FLAG:3 == 6
+	;PRO
+	LOCAL = 30
+ELSEIF FLAG:3 == 7
+	;ULTRA
+	LOCAL = 14
+ELSE
+	;UNKOWN
+	LOCAL = 90
+ENDIF
+
+LOCAL:1 = LOCAL - DAY
+FONTSTYLE (LOCAL:1 == 0) ? 1 # 0
+PRINTFORM 　\@(LOCAL:1 == 0) ? 최종일 # 잔여 {LOCAL:1}일 \@
+FONTSTYLE 0
+
+;--------------------------------------------------
+;목표 금액 표시 처리
+;--------------------------------------------------
+@SHOW_GOAL
+PRINTFORM \@(MONEY:100 - MONEY > 0) ? (목표금액까지 {MONEY:100 - MONEY}원) # (목표달성)\@
+
+;--------------------------------------------------
+;[100]조교한다 관련의 커맨드명 선정 처리
+;--------------------------------------------------
+@NAME_SHOPCOMMAND_100
+#FUNCTIONS
+;REVERSAL 모드 때 용(조교받는 게 최초로 고른 캐릭터가 아니어도 이쪽)
+IF FLAG:4 == 3
+	;반발각인 3 이상
+	IF MARK:9 >= 3
+		RETURNF "반항한다"
+	;상애 보유에다 확률(밑의 헌신한다도 내보내고 싶으므로)
+	ELSEIF TALENT:153 && RAND:3
+		RETURNF "사랑을 바친다"
+	;친애 보유
+	ELSEIF TALENT:152
+		RETURNF "헌신한다"
+	;괴조인격 보유
+	ELSEIF TALENT:169
+		RETURNF "조정받는다"
+	;정신붕괴 or 괴뢰 보유
+	ELSEIF TALENT:167 || TALENT:168
+		RETURNF "귀여움받는다"
+	;복종 or 낙인 or 예속 보유에다 확률
+	ELSEIF (TALENT:160 || TALENT:161 || TALENT:162) && RAND:3
+		RETURNF "훈육받는다"
+	;음란 보유에다 확률
+	ELSEIF TALENT:170 && RAND:3
+		RETURNF "범해진다"
+	ELSE
+		RETURNF "조교받는다"
+	ENDIF
+;REVERSAL 모드가 아닌 게임 모드용
+ELSE
+	;상애 보유
+	IF TALENT:153
+		RETURNF "서로 사랑한다"
+	;괴조인격 보유
+	ELSEIF TALENT:169
+		RETURNF "조작한다"
+	;정신붕괴 or 괴뢰 보유
+	ELSEIF TALENT:167 || TALENT:168
+		RETURNF "귀여워한다"
+	;반발각인 3 이상에다 확률
+	ELSEIF MARK:9 >= 3 && RAND:3
+		RETURNF "벌을 준다"
+	;복종 or 낙인 or 예속 or 반발각인 3 이상에다 확률
+	ELSEIF (TALENT:160 || TALENT:161 || TALENT:162 || MARK:9 >= 3) && RAND:3
+		RETURNF "훈육한다"
+	;음란 보유에다 확률
+	ELSEIF TALENT:170 && RAND:3
+		RETURNF "육욕을 채운다"
+	;그 외
+	ELSE
+		RETURNF "조교한다"
+	ENDIF
+ENDIF
+;여기에 올 가능성은 없을 테지만 노파심에
+RETURNF "조교한다"
+
+;=============================================================================
+;[사역마] 관련의 처리
+;=============================================================================
+;--------------------------------------------------
+;[사역마]의 부여/해제의 대상 선택 처리
+;--------------------------------------------------
+@FAMILIAR_SELECT
+;표시되는 캐릭터를 추출(LOCAL:2로 인원수)
+VARSET LOCAL, 0
+;CHARADATA_LIST를 위해서 대피
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;주인에겐 쓸 수 없다
+	SIF COUNT == 0
+		CONTINUE
+	;이 자리에 없을 때에는 쓸 수 없다
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	IF TALENT:COUNT:164 == 0
+		;[사역마] 조건을 충족할 필요가 있음
+		SIF !FAMILIAR_ABLE(COUNT)
+			CONTINUE
+		;소지금 200000원 필요
+		SIF MONEY < 200000
+			CONTINUE
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+DRAWLINE
+IF NO:MASTER == 21 || NO:MASTER == 22
+	PRINTFORML 누구를 식(式)으로 삼거나/식을 해제하겠습니까?　＜page.{LOCAL+1}＞
+ELSE
+	PRINTFORML 누구와 사역마의 계약을 맺거나/파기하겠습니까?　＜page.{LOCAL+1}＞
+ENDIF
+
+	;일반모드
+	;CALL CHARADATA_LIST, LOCAL, LOCAL:99
+	;토리코모드
+	CALL CHARADATA_LIST_TORIKOMODE, LOCAL, LOCAL:99
+
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 뒤로
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_1
+ENDIF
+CALL FAMILIAR_PLEDGE, RESULT
+RESTART
+
+;--------------------------------------------------
+;[사역마]의 부여/해제의 계약 처리
+;--------------------------------------------------
+@FAMILIAR_PLEDGE, ARG
+LOCAL = TARGET
+TARGET = ARG
+IF TALENT:164
+	IF NO:MASTER == 21 || NO:MASTER == 22
+		PRINTFORML %CALLNAME:TARGET%의 식을 파기합니다
+		PRINTL 괜찮겠습니까?
+	ELSE
+		PRINTFORML %조사처리(CALLNAME:TARGET,"과")% 맺고 있던 계약을 파기합니다
+		PRINTL 괜찮겠습니까?
+	ENDIF
+ELSE
+	IF NO:MASTER == 21 || NO:MASTER == 22
+		PRINTFORML %CALLNAME:TARGET%에게 수식을 새겨넣어, 식(式)으로서 자신의 지배하에 둡니다(200000원 필요)
+		PRINTFORML ※주의!　%조사처리(NAME:TARGET,"를")% 식으로 삼고 있는 동안엔 헤어질 수 없게 됩니다.
+		PRINTFORML 그래도 괜찮겠습니까?　　소지금:{MONEY}원
+	ELSE
+		PRINTFORML %NAME:TARGET%의 존재를 재정립해 사역마로서 자신의 지배하에 둡니다(200000원 필요)
+		PRINTFORML ※주의!　%조사처리(NAME:TARGET,"를")% 사역마로 삼고 있는 동안엔 헤어질 수 없게 됩니다.
+		PRINTFORML 그래도 괜찮겠습니까?　　소지금:{MONEY}원
+	ENDIF
+ENDIF
+DRAWLINE
+PRINTC [0] 예
+PRINTC [1] 아니오
+PRINTL 
+$INPUT_LOOP_2
+INPUT
+IF RESULT == 1
+	RETURN 0
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP_2
+ENDIF
+IF TALENT:164
+	IF NO:MASTER == 21 || NO:MASTER == 22
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET%에 삽입되어 있던 수식을 해제했다.
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME:TARGET% 사이에 맺어져 있던 계약을 파기했다.
+	ENDIF
+	CALL SELF_KOJO, TARGET, 204
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 굉장히 아쉬운 듯한 표정을 띠고 있다…….
+	IF NO:MASTER == 21 || NO:MASTER == 22
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [식]을 잃었다.
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [%TALENTNAME:164%]를 잃었다.
+	ENDIF
+	TALENT:164 = 0
+	SIF CFLAG:15 & 8
+		CFLAG:15 -= 8
+ELSE
+	IF NO:MASTER == 21 || NO:MASTER == 22
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 수식이 새겨져 %CALLNAME:MASTER%의 식이 되었다.
+	ELSE
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 계약을 맺고 %CALLNAME:MASTER%의 사역마가 되었다.
+	ENDIF
+	CALL SELF_KOJO, TARGET, 203
+	IF NO:MASTER == 21 || NO:MASTER == 22
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% %CALLNAME:MASTER%의 식이 된 것을 
+		PRINTW 더없는 기쁨으로 여기고 있는 것 같다…….
+		PRINTL 
+		PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [식]을 얻었다.
+		TALENT:164 = 1
+		CFLAG:15 |= 8
+		PRINTFORMW ―――%조사처리(CALLNAME:TARGET,"는")% 식으로서 %CALLNAME:MASTER%의 지배하에 놓였습니다―――
+		PRINTW ………………
+		PRINTW …………
+		PRINTW ……
+		PRINTFORMW ＜수식에 의해 %조사처리(CALLNAME:TARGET,"과")% 깊은 인연으로 맺어졌습니다＞
+		PRINTFORML ＜%CALLNAME:TARGET%와과) 헤어질 수 없게 되었습니다＞
+	ELSE
+		PRINTFORML %조사처리(NAME:TARGET,"는")% %NAME:MASTER%의 사역마가 되었단 사실에 
+		PRINTW 실로 더없을 정도의 기쁨을 느끼고 있는 것 같다…….
+		PRINTL 
+		PRINTFORMW %조사처리(NAME:TARGET,"는")% [%TALENTNAME:164%]를 얻었다.
+		TALENT:164 = 1
+		CFLAG:15 |= 8
+		PRINTFORMW ―――%조사처리(NAME:TARGET,"는")% 사역마로서 %NAME:MASTER%의 지배하에 놓였습니다―――
+		PRINTW ………………
+		PRINTW …………
+		PRINTW ……
+		PRINTFORMW ＜계약에 의해 %조사처리(NAME:TARGET,"과")% 깊은 인연으로 맺어졌습니다＞
+		PRINTFORML ＜%조사처리(NAME:TARGET,"과")% 헤어질 수 없게 되었습니다＞
+	ENDIF
+	MONEY -= 200000
+ENDIF
+PRINTW  
+TARGET = LOCAL
+
+;=============================================================================
+;캐릭터의 능력 · 소질 · 경험 · 각인 검색
+;=============================================================================
+;TFLAG:0 값으로 검색하는 속성을 지정(1:능력, 2:소질, 3:경험, 4:각인)
+;@SEARCH_CHARADATA_INPUT의 LOCAL 값으로 속성의 번호를 지정
+;(예：TFLAG:0 = 1, LOCAL@SEARCH_CHARADATA_INPUT = 1로 Ｃ감각을 소지하고 있는 캐릭터가 검색 · 표시되도록)
+;--------------------------------------------------
+;검색 메인 메뉴 
+;--------------------------------------------------
+@SEARCH_CHARADATA_MENU
+TFLAG:0 = 0
+DRAWLINE
+PRINTL 무엇을 보시겠습니까?
+PRINTL  [1] 능력
+PRINTL  [2] 소질
+PRINTL  [3] 경험
+PRINTL  [4] 각인
+PRINTL  [5] 구슬
+PRINTL  [6] 기념일
+PRINTL  [7] 체력기력
+PRINTL  [8] 호감도, 돈벌이, 스트레스 등
+PRINTL  [9] 칭호·주인의 호칭
+IF TALENT:MASTER:998
+	PRINTL [10] Debug용 CFLAG
+	PRINTL [11] Debug용 CSTR
+ENDIF
+PRINTL [100] 돌아간다.
+DRAWLINE
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 1
+ELSEIF RESULT == 1
+	TSTR:99 = 능력
+ELSEIF RESULT == 2
+	TSTR:99 = 소질
+ELSEIF RESULT == 3
+	TSTR:99 = 경험
+ELSEIF RESULT == 4
+	TSTR:99 = 각인
+ELSEIF RESULT == 5
+	TSTR:99 = 구슬
+ELSEIF RESULT == 6
+	TSTR:99 = 기념일
+ELSEIF RESULT == 7
+	TSTR:99 = 체력,기력
+ELSEIF RESULT == 8
+	TSTR:99 = 호감도,돈벌이,스트레스
+ELSEIF RESULT == 9
+	TSTR:99 = 칭호,주인호칭
+ELSEIF RESULT == 10 && TALENT:MASTER:998
+	TSTR:99 = Debug용CFLAG
+ELSEIF RESULT == 11 && TALENT:MASTER:998
+	TSTR:99 = Debug용CSTR
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+TFLAG:0 = RESULT
+CALL SEARCH_CHARADATA_INPUT
+RESTART
+
+;--------------------------------------------------
+;캐릭터 능력 검색
+;--------------------------------------------------
+@SEARCH_CHARADATA_INPUT
+VARSET LOCAL, 0
+VARSET LOCALS,""
+SPLIT "생일,구입된 날,끌려온 날,결혼기념일,계약기념일,함락된 날",",",LOCALS
+$PRINT_LIST
+LOCAL:2 = 0
+DRAWLINE
+PRINTFORML 검색할 %TSTR:99%\@(TFLAG:0 == 10) ? (0~9999) # \@\@(TFLAG:0 == 11) ?  (0~99) # \@(을)를 선택해 주세요.  ＜page. {LOCAL:1}＞
+IF TFLAG:0 == 6
+	REPEAT 6
+		LOCAL:(COUNT + 100) = 0
+		TSTR:0 = %LOCALS:COUNT%
+		SIF LOCAL:2 / 30 >= LOCAL:1 && LOCAL:2 / 30 < 1 + LOCAL:1
+		PRINTFORMLC [{COUNT, 3}] %TSTR:0, 12, LEFT%
+		LOCAL:2 += 1
+		LOCAL:(COUNT + 100) = 1
+	REND
+ELSEIF TFLAG:0 != 10 && TFLAG:0 != 11
+	REPEAT 250
+		LOCAL:(COUNT + 100) = 0
+		IF TFLAG:0 == 1
+			SIF COUNT >= 100
+				CONTINUE
+			SIF STRLENS(ABLNAME:COUNT) <= 0
+				CONTINUE
+			TSTR:0 = %ABLNAME:COUNT%
+		ELSEIF TFLAG:0 == 2
+			SIF STRLENS(TALENTNAME:COUNT) <= 0
+				CONTINUE
+			TSTR:0 = %TALENTNAME:COUNT%
+			SIF COUNT == 164 && (NO:MASTER == 21 || NO:MASTER == 13)
+				TSTR:0 = 식
+		ELSEIF TFLAG:0 == 3
+			SIF COUNT >= 100
+				CONTINUE
+			SIF STRLENS(EXPNAME:COUNT) <= 0
+				CONTINUE
+			TSTR:0 = %EXPNAME:COUNT%
+		ELSEIF TFLAG:0 == 4
+			SIF COUNT >= 12
+				CONTINUE
+			SIF STRLENS(MARKNAME:COUNT) <= 0
+				CONTINUE
+			TSTR:0 = %MARKNAME:COUNT%
+		ELSEIF TFLAG:0 == 5
+			SIF (COUNT >= 20 && COUNT < 30) || COUNT > 198
+				CONTINUE
+			SIF STRLENS(PALAMNAME:COUNT) <= 0
+				CONTINUE
+			TSTR:0 = %PALAMNAME:COUNT%의 구슬
+		ELSEIF TFLAG:0 == 7
+			SIF COUNT >= 2 && COUNT <= 9
+				CONTINUE
+			SIF (FLAG:1500 & 1) == 0 && COUNT >= 10
+				CONTINUE
+			SIF STRLENS(BASENAME:COUNT) <= 0
+				CONTINUE
+			TSTR:0 = %BASENAME:COUNT%
+		ELSEIF TFLAG:0 == 8
+			STRLENS CFLAGNAME:COUNT
+			SIF RESULT < 1
+				CONTINUE
+			SIF (COUNT == 31 || (COUNT >= 60 && COUNT <= 64)) && TALENT:MASTER:198 == 0 && TALENT:MASTER:998 == 0
+				CONTINUE
+			SIF (COUNT == 80 || COUNT == 81) && FLAG:13 & 1024 == 0
+				CONTINUE
+			TSTR:0 = %CFLAGNAME:COUNT%
+		ELSEIF TFLAG:0 == 9
+			IF COUNT == 0
+				TSTR:0 = 칭호
+			ELSEIF COUNT == 1
+				TSTR:0 = 주인의 호칭
+			ELSE
+				CONTINUE
+			ENDIF
+		ENDIF
+		SIF LOCAL:2 / 30 >= LOCAL:1 && LOCAL:2 / 30 < 1 + LOCAL:1
+			PRINTFORMLC [{COUNT, 3}] %TSTR:0, 12, LEFT%
+		LOCAL:2 += 1
+		LOCAL:(COUNT + 100) = 1
+	REND
+ENDIF
+PRINTL 
+DRAWLINE
+IF TFLAG:0 != 10 && TFLAG:0 != 11
+	PRINTFORMLC \@(LOCAL:1 <= 0) ? %" " * 16% # [1001] 앞 페이지로\@
+	PRINTLC [1000] 돌아간다
+	PRINTFORMLC \@(LOCAL:1 >= LOCAL:2 / 30) ? %" " * 16% # [1009] 다음 페이지로\@
+ELSE
+	PRINTLC [10000] 돌아간다
+ENDIF
+PRINTL 
+$INPUT_LOOP_0
+INPUT
+IF TFLAG:0 != 10 && TFLAG:0 != 11 && RESULT == 1000
+	RETURN 1
+ELSEIF TFLAG:0 > 9 && TFLAG:0 < 12 && RESULT == 10000
+	RETURN 1
+ELSEIF RESULT == 1001 && TFLAG:0 != 10
+	IF LOCAL:1 > 0
+		LOCAL:1 -= 1
+		GOTO PRINT_LIST
+	ELSE
+		GOTO INPUT_LOOP_0
+	ENDIF
+ELSEIF RESULT == 1009 && TFLAG:0 != 10
+	IF LOCAL:1 < LOCAL:2 / 30
+		LOCAL:1 += 1
+		GOTO PRINT_LIST
+	ELSE
+		GOTO INPUT_LOOP_0
+	ENDIF
+ELSEIF RESULT < 0 || (TFLAG:0 != 10 && TFLAG:0 != 11 && (RESULT > 250 || LOCAL:(RESULT + 100) == 0)) || (TFLAG:0 == 10 && RESULT > 9999) || (TFLAG:0 == 11 && RESULT > 99)
+	GOTO INPUT_LOOP_0
+ENDIF
+
+IF TFLAG:0 == 1
+	TSTR:0 = %ABLNAME:RESULT%
+ELSEIF TFLAG:0 == 2
+	TSTR:0 = %TALENTNAME:RESULT%
+ELSEIF TFLAG:0 == 3
+	TSTR:0 = %EXPNAME:RESULT%
+ELSEIF TFLAG:0 == 4
+	TSTR:0 = %MARKNAME:RESULT%
+ELSEIF TFLAG:0 == 5
+	TSTR:0 = %PALAMNAME:RESULT%의 구슬
+ELSEIF TFLAG:0 == 6
+	TSTR:0 = %LOCALS:RESULT%
+ELSEIF TFLAG:0 == 7
+	TSTR:0 = %BASENAME:RESULT%
+ELSEIF TFLAG:0 == 8
+	SIF (RESULT == 80 || RESULT == 81) && FLAG:13 & 1024 == 0
+		GOTO INPUT_LOOP_0
+	TSTR:0 = %CFLAGNAME:RESULT%
+ELSEIF TFLAG:0 == 9
+	IF RESULT == 0
+		TSTR:0 = 칭호
+	ELSEIF RESULT == 1
+		TSTR:0 = 주인의 호칭
+	ENDIF
+ELSEIF TFLAG:0 == 10
+	TSTR:0 = CFLAG:{RESULT}
+ELSEIF TFLAG:0 == 11
+	TSTR:0 = CSTR:{RESULT}
+ENDIF
+CALL SHOW_SEARCH_CHARADATA, RESULT
+RESTART
+
+;--------------------------------------------------
+;캐릭터 검색 페이지 표시
+;--------------------------------------------------
+@SHOW_SEARCH_CHARADATA, ARG
+;표시되는 캐릭터를 추출(LOCAL:2로 인원수)
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;실종 중인 캐릭터는 배제
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+	IF TFLAG:0 == 1
+		SIF ABL:COUNT:ARG == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 2
+		SIF TALENT:COUNT:ARG == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 3
+		SIF EXP:COUNT:ARG == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 4
+		SIF MARK:COUNT:ARG == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 5
+		SIF JUEL:COUNT:ARG == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 6
+		SIF CFLAG:COUNT:(ARG+3110) == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 7
+		SIF ARG > 11 && TALENT:COUNT:120
+			CONTINUE
+	ELSEIF TFLAG:0 == 8 || TFLAG:0 == 10
+		SIF CFLAG:COUNT:ARG == 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 9 && TSTR:0 == "칭호"
+		STRLENS NICKNAME:COUNT
+		SIF RESULT <= 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 9 && TSTR:0 == "주인의 호칭"
+		STRLENS MASTERNAME:COUNT
+		SIF RESULT <= 0
+			CONTINUE
+	ELSEIF TFLAG:0 == 11
+		STRLENS CSTR:COUNT:ARG
+		SIF RESULT <= 0
+			CONTINUE
+	ENDIF
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML %TSTR:0%(을)를 소지하고 있는 캐릭터 목록입니다 ＜page.{LOCAL+1}＞
+CALL SHOW_SEARCH_LIST, LOCAL, ARG
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞 페이지로\@
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음 페이지로\@
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_1
+ENDIF
+
+CALL SHOW_CHARADATA_PAGE, RESULT
+RESTART
+
+;--------------------------------------------------
+;캐릭터 능력 검색의 표시
+;--------------------------------------------------
+@SHOW_SEARCH_LIST, ARG, ARG:1
+LOCAL = 0
+LOCAL:2 = 0
+IF MARK:MASTER:98 == 1
+	DRAWLINE
+	CALL ARRANGE_SEARCH_LIST, MASTER, ARG:1
+	PRINTFORML 　[0] %CALLNAME:MASTER%(주인) %STR:3%
+	LOCAL:2 += 1
+ENDIF
+DRAWLINE
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	;조건에 맞지 않는 캐릭터는 배제
+	SIF LOCAL == 0
+		CONTINUE
+	SIF MARK:LOCAL:98 == 0
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF CFLAG:LOCAL:4 == 4
+		PRINT ◆
+	ELSEIF CFLAG:LOCAL:4 == 2
+		PRINT ◇
+	ELSEIF CFLAG:LOCAL:4 == 16
+		PRINT ■
+	;Ｓ패치 추가분
+	ELSEIF CFLAG:LOCAL:4 == 1024
+		PRINT ▼
+	ELSEIF CFLAG:LOCAL:4 == 2048 || CFLAG:LOCAL:4 == 4096
+		PRINT ▽
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	CALL ARRANGE_SEARCH_LIST, LOCAL, ARG:1
+	IF FLAG:3998 & 1 && (TFLAG:0 == 3 && ((ARG:1 == 0 && CFLAG:LOCAL:11 & 1) || (ARG:1 == 1 && CFLAG:LOCAL:11 & 2) || (ARG:1 == 50 && CFLAG:LOCAL:11 & 4) || (ARG:1 == 12 && EXP:LOCAL:(ARG:1) > 999 && TALENT:MASTER:120 && CFLAG:LOCAL:18 == 0) || (ARG:1 == 13 && EXP:LOCAL:(ARG:1) > 999 && TALENT:MASTER:120 == 0 && CFLAG:LOCAL:18 == 0)))
+		FONTBOLD
+		PRINTFORML  %STR:3%
+		FONTREGULAR
+	ELSE
+		PRINTFORML  %STR:3%
+	ENDIF
+	LOCAL:2 += 1
+REND
+IF LOCAL:2 == 0
+	PRINTL 　조건에 맞는 캐릭터가 없습니다.
+ELSE
+	PRINTL 　☆:조교중 ★:조수 ○:조수가능 ◇:육아중 ◆:촉수유폐중 ■:투옥중 ▽:허브작업중을 표시한다
+ENDIF
+
+;-------------------------------------------------
+;검색 표시 보조 처리
+;-------------------------------------------------
+@ARRANGE_SEARCH_LIST, ARG, ARG:1
+
+IF TFLAG:0 == 1
+	LOCAL = ABL:ARG:(ARG:1)
+ELSEIF TFLAG:0 == 3
+	LOCAL = EXP:ARG:(ARG:1)
+ELSEIF TFLAG:0 == 4
+	LOCAL = MARK:ARG:(ARG:1)
+ELSEIF TFLAG:0 == 5
+	LOCAL = JUEL:ARG:(ARG:1)
+ELSEIF TFLAG:0 == 6
+	LOCAL = CFLAG:ARG:(3110 + ARG:1)
+ELSEIF TFLAG:0 == 7
+	LOCAL = BASE:ARG:(ARG:1)
+ELSEIF TFLAG:0 == 8 || TFLAG:0 == 10
+	LOCAL = CFLAG:ARG:(ARG:1)
+ELSE
+	LOCAL = 0
+ENDIF
+;1000만 이상은 표시하지 않는다
+LOCAL = MIN (LOCAL, 9999999)
+
+IF TFLAG:0 == 1 || TFLAG:0 == 4
+	STR:2 = (LV{LOCAL})
+ELSEIF TFLAG:0 == 2 && ARG:1 == 0 && TALENT:ARG:(ARG:1) > 1
+	STR:2 = (재생)
+ELSEIF TFLAG:0 == 2 && ARG:1 == 121 && TALENT:ARG:(ARG:1) > 1
+	STR:2 = (불알있음)
+ELSEIF TFLAG:0 == 2 && ARG:1 == 265
+	STR:2 = {TALENT:ARG:(ARG:1)}명
+ELSEIF TFLAG:0 == 2
+	STR:2 = 
+ELSEIF TFLAG:0 == 7
+	CALL MAKE_SIZE, 1, ARG
+	IF LOCAL:2 == 10
+		STR:2 = {BASE:ARG:10 / 10}.{BASE:ARG:10 % 10}cm
+	ELSEIF LOCAL:2 == 11
+		STR:2 = {BASE:ARG:11 / 10}.{BASE:ARG:11 % 10}kg
+	ELSEIF LOCAL:2 == 12
+		STR:2 = {BASE:ARG:12 / 10}.{BASE:ARG:12 % 10}cm
+	ELSEIF LOCAL:2 == 13
+		STR:2 = {BASE:ARG:13 / 10}.{BASE:ARG:13 % 10}cm
+	ELSEIF LOCAL:2 == 14
+		STR:2 = {BASE:ARG:14 / 10}.{BASE:ARG:14 % 10}cm
+	ELSE
+		STR:2 = ({LOCAL})
+	ENDIF
+ELSEIF TFLAG:0 == 6
+	STR:2 = ({LOCAL}일째)
+ELSEIF TFLAG:0 == 9 && TSTR:0 == "칭호"
+	STR:2 = : %NICKNAME:ARG%
+ELSEIF TFLAG:0 == 9 && TSTR:0 == "주인의 호칭"
+	STR:2 = : %MASTERNAME:ARG%
+ELSEIF TFLAG:0 == 11
+	STR:2 = : %CSTR:ARG:(ARG:1)%
+ELSE
+	STR:2 = ({LOCAL})
+ENDIF
+STR:3 = %TSTR:0, 12%%STR:2%
+SIF TFLAG:0 == 2 && ARG:1 == 153 && CFLAG:ARG:156 & 1
+	STR:3 = %"상사상애", 12%%STR:2%
+
+RETURN 1
+
+;=============================================================================
+;지금까지 본 엔딩 일람
+;=============================================================================
+;SHOP으로부터 호출된다
+;현재 특수 하렘 엔딩과 단독 엔딩, 노예 엔딩에 대응
+;단독 · 노예 엔딩은 FLAG:(4500＋캐릭터 번호)로 판단(비트 연산으로 1=단독 엔딩, 2=노예 엔딩)
+;노멀 엔딩, 특수 하렘 엔딩은 FLAG:4000으로 판정
+;추가로, 플래그의 추가 처리는 단독 · 노예 엔딩에서는 아이템을 구입했을 때에 (SHOP.ERB), 
+;노멀 엔딩, 특수 하렘 엔딩은 엔딩 시에 (ENDING.ERB) 실행한다
+@ENDING_LIST
+;변수의 리셋
+VARSET LOCAL, 0
+
+;통상 · 하렘 엔딩의 유무
+LOCAL:1 = (FLAG:4000 > 0)
+;개별 엔딩의 페이지 수
+LOCAL:2 = PAGE_ENDING_LIST()
+
+;페이지를 넘겼을 때 등은 여기서부터
+$PRINT_LIST_PAGE
+DRAWLINE
+IF LOCAL:1 == 0 && LOCAL:2 == 0
+	;보통은 여기에 오지 않을 터이지만 노파심에
+	PRINTL 지금까지 본 엔딩은 없습니다..
+ELSE
+	PRINTFORML 지금까지 본 엔딩은 다음과 같습니다. ＜page.{1 + LOCAL}＞
+	IF LOCAL:1 == 1 && LOCAL == 0
+		CALL ENDING_HAREM_LIST
+	ELSE
+		CALL ENDING_CHARA_LIST, (LOCAL - LOCAL:1)
+	ENDIF
+ENDIF
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16 % # [1001] 앞 페이지로\@
+PRINTLC [1000] 돌아간다
+PRINTFORMLC \@(LOCAL >= (LOCAL:1 + LOCAL:2 - 1)) ? %" " * 16 % # [1009] 다음 페이지로\@
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST_PAGE
+ELSEIF RESULT == 1009 && LOCAL < (LOCAL:1 + LOCAL:2 - 1)
+	LOCAL += 1
+	GOTO PRINT_LIST_PAGE
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+
+;--------------------------------------------------
+;통상 · 하렘 엔딩 표시
+;--------------------------------------------------
+@ENDING_HAREM_LIST
+LOCAL = 0
+PRINTL □ 통상 · 하렘 END-----------------------------------------------------------
+REPEAT 99
+	IF FLAG:(4001+COUNT)
+		CALL ENDING_HAREM_NAME
+		LOCAL += 1
+		IF LOCAL % 2 == 0
+			PRINTL 
+		ELSE
+			PRINT 　
+		ENDIF
+	ENDIF
+REND
+SIF LOCAL % 2 == 1
+	PRINTL 
+
+;통상 · 하렘 엔딩 보조 표시
+@ENDING_HAREM_NAME
+STR:0 = %STR:(1001+COUNT)%
+IF COUNT == 15 || COUNT == 17
+	IF FLAG:(4001+COUNT) & 1 && FLAG:(4001+COUNT) & 2
+		STR:0 += "Ⅰ＆Ⅱ"
+	ELSEIF FLAG:(4001+COUNT) & 2
+		STR:0 += "Ⅱ"
+	ELSEIF FLAG:(4001+COUNT) & 1
+		STR:0 += "Ⅰ"
+	ENDIF
+ENDIF
+STRLENS STR:0
+LOCAL = 20 - RESULT
+STR:1 = % " " * LOCAL %
+PRINTFORM “Ending No.{COUNT, 2} (%STR:0%)”%STR:1%
+RETURN 1
+
+;--------------------------------------------------
+;단독 엔딩 표시
+;--------------------------------------------------
+@ENDING_CHARA_LIST, ARG
+LOCALS:0 = %" " * 2%
+LOCALS:1 = ○
+LOCALS:2 = ●
+LOCALS:3 = ◎
+
+PRINTL □ 개별 END---------------------------------------------------------------------
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		RETURN 0
+	;～의 개별 END를 표시
+	PRINTFORML %LOCALS:(FLAG:LOCAL)%“Ending No.{LOCAL - 3500} (%ITEMNAME:(LOCAL - 4400)% 엔딩)”
+REND
+
+;엔딩 일람의 페이지 숫자 결정용
+@PAGE_ENDING_LIST
+#FUNCTION
+VARSET LOCAL, 0
+
+;엔딩 플래그가 존재했더라면 표시 가능 플래그를 세운다
+CALLF CLEAR_LIST
+FOR LOCAL, 4500, 5000
+	IF FLAG:LOCAL
+		CALLF SET_LIST, LOCAL:1, LOCAL
+		LOCAL:1 += 1
+	ENDIF
+NEXT
+RETURNF (LOCAL:1 + 19) / 20
+
+;--------------------------------------------------
+;주인의 호칭을 설정한다
+;--------------------------------------------------
+@COMMAND_MASTER_NAME
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 현재 조교중인 %조사처리(CALLNAME:TARGET,"가")% 주인을 어떻게 부를지를 변경할 수 있습니다.
+PRINTL 단, 어디까지나 명령만 할 뿐이고 그걸 지킬지 말지는 노예의 소질에 따릅니다.
+STRLENS MASTERNAME:TARGET
+PRINTFORML 현재 호칭은 \@(RESULT > 0) ? 「%MASTERNAME:TARGET%」입니다. # 위임중입니다.\@
+PRINTL 
+PRINTLC [0] 호칭을 노예에게 맡긴다
+PRINTLC [1] 호칭을 직접 정한다
+PRINTLC [2] 주인님이라 한다
+PRINTLC [3] 마스터라 한다
+PRINTFORMLC [4] \@(TALENT:MASTER:120) ? 오빠 # 언니\@라고 한다
+PRINTFORMLC [5] \@(TALENT:MASTER:120) ? 오라버니 # 큰언니\@라고 한다
+PRINTLC [6] 이름＋님을 붙인다
+PRINTLC [7] 이름만 부르게 한다
+PRINTL 
+DRAWLINE
+PRINTLC [1000] 돌아간다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 7
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 0
+	PRINTFORMW 노예가 주인을 어떻게 부를지 본인에게 맡겼습니다.
+	MASTERNAME:TARGET = 
+	RETURN 1
+ELSEIF RESULT == 2
+	PRINTFORMW 노예더러 주인을 「주인님」이라고 부르게 명령했습니다.
+	MASTERNAME:TARGET = 주인님
+	RETURN 1
+ELSEIF RESULT == 3
+	PRINTFORMW 노예더러 주인을 「마스터」라고 부르게 명령했습니다.
+	MASTERNAME:TARGET = 마스터
+	RETURN 1
+ELSEIF RESULT == 4
+	PRINTFORMW 노예더러 주인을 \@(TALENT:MASTER:120) ? 「오빠」 # 「언니」\@라고 부르게 명령했습니다.
+	MASTERNAME:TARGET = \@(TALENT:MASTER:120) ? 오빠 # 언니\@
+	RETURN 1
+ELSEIF RESULT == 5
+	PRINTFORMW 노예더러 주인을 \@(TALENT:MASTER:120) ? 「오라버니」 # 「큰언니」\@라고 부르게 명령했습니다.
+	MASTERNAME:TARGET = \@(TALENT:MASTER:120) ? 오라버니 # 큰언니\@
+	RETURN 1
+ELSEIF RESULT == 6
+	PRINTFORMW 노예더러 주인을 「%CALLNAME:MASTER% 님」이라고 부르게 명령했습니다.
+	MASTERNAME:TARGET = %CALLNAME:MASTER% 님
+	RETURN 1
+ELSEIF RESULT == 7
+	PRINTFORMW 노예더러 주인을  「%CALLNAME:MASTER%」%조사만처리(CALLNAME:MASTER,"라")%고 부르게 명령했습니다.
+	MASTERNAME:TARGET = %CALLNAME:MASTER%
+	RETURN 1
+ENDIF
+
+PRINTFORML %조사처리(CALLNAME:TARGET,"가")% 주인을 새로 어떻게 부를지 호칭을 입력해 주세요.
+PRINTFORML 공백일 경우는 변경되지 않습니다.
+
+$INPUT_LOOP2
+INPUTS
+STRLENS RESULTS
+SIF RESULT == 0
+	RETURN 0
+MASTERNAME:TARGET = %RESULTS%
+PRINTFORML 주인에 대한 %CALLNAME:TARGET%의 호칭은
+PRINTFORMW 앞으로 「%MASTERNAME:TARGET%」%조사만처리(MASTERNAME:TARGET,"라")% 부르라고 명령했습니다.
+RETURN 1
+
+;--------------------------------------------------
+;노예의 칭호를 변경한다
+;--------------------------------------------------
+@CHANGE_SLAVE_NICKNAME
+$PRINT_LIST
+;본래 칭호의 문자수 유지용 로컬 변수의 리셋
+LOCAL = 0
+DRAWLINE
+PRINTFORML 현재 조교중인 %CALLNAME:TARGET%의 칭호를 현 상태로 둘지, 
+;현 상황에서 양쪽을 다 가질 일은 없지만 노파심에
+SIF TALENT:218 || TALENT:219
+	PRINTFORML \@(TALENT:218) ?  「하쿠레이의 무녀」 혹은 #\@\@(TALENT:219) ?  「카제하후리」 혹은, # ,\@ 
+PRINTL 본래 칭호(이명)로 할지, 칭호를 대지 말도록 시킬지 선택할 수 있습니다.
+PRINTL 노예와 특별한 연을 맺고 있다면 칭호를 직접 지어줄 수도 있습니다.
+PRINTL 다만, 일단 본래 칭호에 되돌리거나 다른 칭호를 부여하거나 칭호를 대지 말도록 시키면, 
+PRINTL 되돌리기 전의 칭호로 복귀하려면 재취득할 수 밖에 없습니다.
+PRINTL 또, 본래 칭호의 설정이 없으면, 되돌릴 수 없습니다.
+STRLENS NICKNAME:TARGET
+PRINTFORML 현재\@(RESULT > 0) ? 의 칭호는 「%NICKNAME:TARGET%」입니다.  # 는 칭호를 가지고 있지 않습니다. \@
+CSVNICKNAME NO:TARGET , 0
+STRLENS RESULTS
+LOCAL = RESULT
+PRINTL 
+PRINTL [0] 현재의 칭호대로 놔둔다
+;SP 캐릭터는 본래의 칭호에 되돌릴 수 없게 한다
+IF LOCAL > 0 && CFLAG:0 == 0
+	PRINTFORML [1] 본래 칭호(%RESULTS%)로 되돌린다
+;다만, 레이무 님 · 구작 마리사 · 꼬마 앨리스는 되돌릴 수 있게
+ELSEIF NO:TARGET == 1 && CFLAG:0 == 2
+	PRINTFORML [1] 본래 칭호(귀무녀)로 되돌린다
+	RESULTS = 귀무녀
+	LOCAL = 6
+ELSEIF NO:TARGET == 2 && CFLAG:0 == 1
+	PRINTFORML [1] 본래 칭호(마법과 붉은 꿈으로 이루어진 존재)로 되돌린다
+	RESULTS = 마법과 붉은 꿈으로 이루어진 존재
+	LOCAL = 22
+ELSEIF NO:TARGET == 14 && CFLAG:0 == 1
+	PRINTFORML [1] 본래 칭호(죽음의 소녀)로 되돌린다
+	RESULTS = 죽음의 소녀
+	LOCAL = 8
+ENDIF
+PRINTL [2] 칭호를 대지 말도록 시킨다
+SIF TALENT:218
+	PRINTL [3] 하쿠레이의 무녀로 한다
+SIF TALENT:219
+	PRINTL [4] 카제하후리로 한다
+;[망신][친애][상애][복종][낙인][예속][괴뢰][괴조인격] 중 하나가 있으면 칭호를 직접 정할 수 있음
+SIF TALENT:151 || TALENT:152 || TALENT:153 || TALENT:160 || TALENT:161 || TALENT:162 || TALENT:168 || TALENT:169
+  PRINTL [5] 칭호를 직접 정해준다
+DRAWLINE
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 변경하지 않았습니다.
+	RETURN 1
+ELSEIF RESULT < 0 || RESULT > 5
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 3 && TALENT:218
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 「하쿠레이의 무녀」로 했습니다.
+	NICKNAME:TARGET = 하쿠레이의 무녀
+	RETURN 1
+ELSEIF RESULT == 4 && TALENT:219
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 「카제하후리」로 했습니다.
+	NICKNAME:TARGET = 카제하후리
+	RETURN 1
+ELSEIF RESULT == 3 || RESULT == 4
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 2
+	PRINTFORMW %CALLNAME:TARGET%의 칭호를 대지 말도록 시켰습니다.
+	NICKNAME:TARGET = 
+	RETURN 1
+ELSEIF RESULT == 5
+ PRINTFORML %CALLNAME:TARGET%의 새로운 칭호를 입력해 주세요.
+ PRINTFORML 공백일 경우는 변경되지 않습니다.
+
+ $INPUT_LOOP2
+ INPUTS
+ STRLENS RESULTS
+ELSEIF LOCAL < 1
+	GOTO INPUT_LOOP
+ENDIF
+NICKNAME:TARGET = %RESULTS%
+PRINTFORMW %CALLNAME:TARGET%의 칭호를 「%RESULTS%」로 했습니다.
+RETURN 1
+
+;=============================================================================
+;특수 범용 처리
+;=============================================================================
+;--------------------------------------------------
+;아이템 보충 범용 처리
+;--------------------------------------------------
+;ARG…아이템번호, ARG:1…부총되는 아이템 갯수가 대입된다
+;단, ARG:1의 최저치는 1로 한다
+@FILL_PLURAL_ITEM, ARG, ARG:1
+ARG:1 = MAX(ARG:1, 1)
+
+ITEM:ARG += ARG:1
+MONEY:0 -= ITEMPRICE:ARG * ARG:1
+
+;--------------------------------------------------
+;노예 매각 벌이 가산 처리
+;--------------------------------------------------
+;고급 노예 매각 벌이 가산 처리와 공용
+@INCOME_SLAVE_SALE, ARG
+MONEY:ARG = MIN (MONEY:ARG+MONEY:1, 10000000000000000)
+
+;--------------------------------------------------
+;최고 금액 판정 처리
+;--------------------------------------------------
+@NEW_HIGH_INCOME_ALL, ARG
+MONEY:ARG = MONEY:1
+;하이스코어 갱신 처리
+MONEY:998 = MAX(MONEY:998, MONEY:1)
+
+;--------------------------------------------------
+;노예가 번 금액 판정 처리
+;--------------------------------------------------
+@NEW_HIGH_INCOME_SLAVE, ARG
+CFLAG:ARG = MONEY:1
+;하이스코어 갱신 처리
+CFLAG:96 = MAX(CFLAG:96, MONEY:1)
+
+;--------------------------------------------------
+;노예가 번 합계 처리
+;--------------------------------------------------
+@TOTAL_INCOME_SLAVE, ARG
+CFLAG:97 = MIN (CFLAG:97+ARG, 10000000000000000)

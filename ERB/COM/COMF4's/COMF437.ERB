@@ -1,0 +1,367 @@
+﻿;=============================================================================
+;보지 요석
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE437
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:437 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;고문계, 정신조작계커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ｖ확장경험이 0일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:32 == 0
+	RETURN 0
+;조교자もしくは조교 대상이 天子でないとダメ
+SIF NO:TARGET != 52 && NO:PLAYER != 52
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:20 == 2
+	RETURN 1
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;ASSI일 경우, 순종3이상이거나 새드, または망신か복종じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:81 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;작은 체형なら순종이 4이상かつ마조끼が4이상じゃないと実行できない
+IF TALENT:128
+	SIF ABL:10 <= 3 || ABL:21 <= 3
+		RETURN 0
+ENDIF
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;일정의 Ｖ경험이 필요
+SIF EXP:0 < EXPLV:3
+	RETURN 0
+;그밖의 Ｖ계 장착구 사용 중에는 불가
+SIF (TEQUIP:20 && TEQUIP:20 != 2) || TEQUIP:21
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;통상은 약한 바이브래이터에 지나지 않지만, 뽑았을 때에 대지진이 발생
+@COM437
+PRINTL 보지 요석
+TSTR:0 = 보지 요석
+CALL TRAIN_MESSAGE_COM437
+
+IF TEQUIP:20 == 2
+	DOWNBASE:0 += 400
+	DOWNBASE:1 += 300
+
+	;ABL:V감각을 본다
+	IF ABL:1 == 0
+		SOURCE:1 = 2000
+	ELSEIF ABL:1 == 1
+		SOURCE:1 = 2500
+	ELSEIF ABL:1 == 2
+		SOURCE:1 = 3000
+	ELSEIF ABL:1 == 3
+		SOURCE:1 = 4000
+	ELSEIF ABL:1 == 4
+		SOURCE:1 = 5000
+	ELSE
+		SOURCE:1 = 6000
+	ENDIF
+	;요석을 끼고 있던 턴에 의해 쾌V와 체력 소모 수정
+	IF TFLAG:169
+		SOURCE:1 = 250 * TFLAG:169
+		DOWNBASE:0 += 50 * TFLAG:169
+	ENDIF
+ELSE
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 150
+
+	SOURCE:20 = 1200
+	
+	;ABL:V감각을 본다
+	IF ABL:1 == 0
+		SOURCE:1 = 10
+	ELSEIF ABL:1 == 1
+		SOURCE:1 = 50
+	ELSEIF ABL:1 == 2
+		SOURCE:1 = 100
+	ELSEIF ABL:1 == 3
+		SOURCE:1 = 200
+	ELSEIF ABL:1 == 4
+		SOURCE:1 = 600
+	ELSE
+		SOURCE:1 = 1000
+	ENDIF
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 += 50
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.10
+	SOURCE:20 += 10
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 += 0
+ELSE
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 += 0
+ENDIF
+
+SOURCE:12 = 1200
+SOURCE:31 = 6200
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 1000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 400
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.10
+ELSE
+	TIMES SOURCE:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.70
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.80
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 0.90
+ELSE
+	TIMES SOURCE:1 , 1.00
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;V민감, 둔감을 본다
+;쾌V자체의 체크는 다음에 정리해 준다
+IF TALENT:103
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:102
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;요석의 착탈
+IF TEQUIP:20 == 2
+	SOURCE:31 *= 2
+	TFLAG:169 = 0
+	TCVAR:0 += 25
+	TCVAR:32 += 3
+	TEQUIP:20 = 0
+ELSE
+	TCVAR:0 += 5
+	SIF EXP:32 == 0
+		TCVAR:50 += 1
+	TCVAR:32 += 1
+	TEQUIP:20 = 2
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;요석 삽입중
+;-------------------------------------------------
+@EQUIP_COM437
+PRINTL <요석 삽입 중>
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 60
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	LOCAL = 20
+ELSEIF ABL:1 == 1
+	LOCAL = 60
+ELSEIF ABL:1 == 2
+	LOCAL = 150
+ELSEIF ABL:1 == 3
+	LOCAL = 250
+ELSEIF ABL:1 == 4
+	LOCAL = 400
+ELSE
+	LOCAL = 600
+ENDIF
+
+;EXP:V경험을 본다
+;처녀는 있을 수 없다
+IF EXP:0 < EXPLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:1 = 100
+ELSEIF EXP:0 < EXPLV:4
+	TIMES LOCAL , 1.10
+	LOCAL:1 = 50
+ELSEIF EXP:0 < EXPLV:5
+	TIMES LOCAL , 1.20
+	LOCAL:1 = 10
+ELSE
+	TIMES LOCAL , 1.30
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.10
+	LOCAL:1 += 500
+	TIMES LOCAL:1 , 3.00
+	LOCAL:2 += 1000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.40
+	LOCAL:1 += 250
+	TIMES LOCAL:1 , 1.00
+	LOCAL:2 += 200
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.80
+	LOCAL:2 += 80
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 0.50
+ELSE
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.70
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 0.90
+ELSE
+	TIMES LOCAL , 1.00
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 2.00
+
+;정조관념(처녀는 있을 수 없다)
+SIF TALENT:30
+	TIMES LOCAL:2, 3.00
+
+SOURCE:1 += LOCAL
+SOURCE:20 += LOCAL:1
+SOURCE:22 += LOCAL:2
+SOURCE:31 += 200+LOCAL:2
+
+;자위 실행시는 경험＋1
+IF SELECTCOM == 7 || SELECTCOM == 124 || SELECTCOM == 125 || SELECTCOM == 127 || SELECTCOM == 182 || SELECTCOM == 205 || SELECTCOM == 628
+	TCVAR:0 += 3
+ELSE
+	TCVAR:0 += 2
+ENDIF
+
+TFLAG:169 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM437
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:20 == 2
+	PRINTFORML %CALLNAME:TARGET%의 질구에 끼워져 있던 요석을 뽑아 냈다.
+	PRINTFORML 질 내의 압박감에서 해방된 %조사선택(CALLNAME:TARGET, "가")% 잠깐 숨을 돌리는 순간,
+	PRINTW 상상을 넘은 쾌감이 엄습해왔다.
+	PRINTL
+	PRINTFORML 보지에게 전해지는 강렬한 자극에 %조사선택(CALLNAME:TARGET, "는")% 군침을 흘려,
+	PRINTW 눈을 하얗게 쳐 뜨고 기절 하면서 허리를 추잡하게 튕기고 절규하고 있다….
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	SIF PALAM:10 >= PALAMLV:5
+		PRINT 잔뜩 
+	SIF PALAM:10 >= PALAMLV:3
+		PRINT 점액으로 미끌거리는 
+	IF TALENT:128
+		PRINT 어린 균열에 
+	ELSE
+		PRINT 보지에 
+	ENDIF
+	PRINTL 요석을 찔러 넣었다….
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 성기를 억지로 확장되어 고통의 목소리를 냈다….
+ENDIF

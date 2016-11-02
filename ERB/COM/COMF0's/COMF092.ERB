@@ -1,0 +1,288 @@
+﻿;=============================================================================
+;의사 플레이
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE92
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:92 > 0
+	RETURN 0
+;강력 아이템·커맨드 무효시는 안 됨
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;해제는 언제라도 가능
+SIF TEQUIP:57
+	RETURN 1
+;아이템 「청진기」를 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:46 == 0 && NOITEM == 0
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;볼 개그 사용중은 불가
+SIF TEQUIP:42
+	RETURN 0
+;야외 플레이 중에는 불가
+SIF TEQUIP:52
+	RETURN 0
+;목욕탕 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;나체정식 중에는 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;순종이 낮으면 수치감이, 높으면 안심감을 줍니다.
+@COM92
+PRINTL 의사 플레이
+TSTR:0 = 의사 플레이
+CALL TRAIN_MESSAGE_COM092
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 100
+
+LOCAL:1 = 200
+LOCAL:2 = 200
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL:1, 0.30
+	TIMES LOCAL:2, 2.00
+ELSEIF ABL:10 == 1
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	TIMES LOCAL:1, 1.00
+	TIMES LOCAL:2, 1.50
+ELSEIF ABL:10 == 2
+	SOURCE:24 += 300
+	SOURCE:19 += 300
+	TIMES LOCAL:1, 1.60
+	TIMES LOCAL:2, 1.30
+ELSEIF ABL:10 == 3
+	SOURCE:24 += 500
+	SOURCE:19 += 500
+	TIMES LOCAL:1, 2.00
+	TIMES LOCAL:2, 1.00
+ELSEIF ABL:10 == 4
+	SOURCE:24 += 800
+	SOURCE:19 += 800
+	TIMES LOCAL:1, 2.60
+	TIMES LOCAL:2, 0.30
+ELSE
+	SOURCE:24 += 1200
+	SOURCE:19 += 1200
+	TIMES LOCAL:1, 3.80
+	TIMES LOCAL:2, 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 1.10
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.30
+ELSE
+	TIMES LOCAL:1 , 1.40
+ENDIF
+
+;겁장이
+SIF TALENT:10
+	TIMES LOCAL:2 , 1.50
+;무관심
+IF TALENT:21
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+ENDIF
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.80
+;호기심
+SIF TALENT:23
+	TIMES LOCAL:1 , 2.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:2 , 3.00
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL:2 , 0.50
+ENDIF
+;유치
+IF TALENT:131
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 0.50
+ENDIF
+
+SOURCE:11 += LOCAL:1
+SOURCE:12 += LOCAL:2
+
+IF TEQUIP:57
+	TEQUIP:57 = 0
+ELSE
+	TEQUIP:57 = 1
+	;조교자의 코스프레 경험
+	CFLAG:PLAYER:50 += 1
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;의사 플레이중
+;-------------------------------------------------
+@EQUIP_COM92
+PRINTL <의사 플레이 중>
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 100
+
+LOCAL = 150
+LOCAL:1 = 150
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES LOCAL, 0.30
+	TIMES LOCAL:1, 2.60
+ELSEIF ABL:10 == 1
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	TIMES LOCAL, 0.80
+	TIMES LOCAL:1, 2.00
+ELSEIF ABL:10 == 2
+	SOURCE:24 += 300
+	SOURCE:19 += 300
+	TIMES LOCAL, 1.60
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:10 == 3
+	SOURCE:24 += 500
+	SOURCE:19 += 500
+	TIMES LOCAL, 2.00
+	TIMES LOCAL:1, 0.80
+ELSEIF ABL:10 == 4
+	SOURCE:24 += 800
+	SOURCE:19 += 800
+	TIMES LOCAL, 2.60
+	TIMES LOCAL:1, 0.30
+ELSE
+	SOURCE:24 += 1200
+	SOURCE:19 += 1200
+	TIMES LOCAL, 3.00
+	TIMES LOCAL:1, 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 1.10
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.30
+ELSE
+	TIMES LOCAL , 1.40
+ENDIF
+
+;겁장이
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.50
+;무관심
+IF TALENT:21
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.80
+;호기심
+SIF TALENT:23
+	TIMES LOCAL , 2.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL , 1.50
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:1 , 3.00
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;유치
+IF TALENT:131
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+SOURCE:11 += LOCAL
+SOURCE:12 += LOCAL:1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:14 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM092
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:57
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 진찰을 끝냈다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 피부와 옷 틈새에 청진기를 대고 진찰을 했다….
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF ABL:10 <= 2
+		PRINT 기가 막힌 표정으로 당신을 바라보고 
+	ELSEIF ABL:10 <= 4
+		PRINT 투덜투덜거리면서 뺨을 붉히고 
+	ELSE
+		PRINT 청진기의 감촉을 더 받고 싶다고 말하고 
+	ENDIF
+	PRINTW 있다….
+ENDIF

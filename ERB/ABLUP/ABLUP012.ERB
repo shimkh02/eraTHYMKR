@@ -1,0 +1,115 @@
+﻿;=============================================================================
+;기교
+;=============================================================================
+@ABLUP12
+DRAWLINE
+SIF ABL:12 >= 5
+	JUMP ABLUP_MAX
+
+PRINTFORM [0] - %PALAMNAME:11%의 구슬×{COST12(0)}……
+CALL SHOW_ISABLUP_COMMON, CAN12(0)
+
+;サドっ気が3이상だと先導의 구슬でも上昇させることができる
+IF ABL:20 >= 3
+	PRINTFORM [1] - %PALAMNAME:11%의 구슬×{COST12(1)}, %PALAMNAME:32%의 구슬×{COST12(0)}……
+	CALL SHOW_ISABLUP_COMMON, CAN12(1)
+ENDIF
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF (RESULT == 0 || RESULT == 1) && CAN12(RESULT) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:11 -= COST12(0)
+ELSEIF RESULT == 1
+	JUEL:11 -= COST12(1)
+	JUEL:32 -= COST12(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:12 += 1
+PRINTFORMW %ABLNAME:12%의 레벨이 %조사처리(ABL:12,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP12
+SIF ABL:12 >= 5
+	RETURN 0
+
+CALLF CALC_COST12, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP12("CHECK")
+
+@COST12(ARG)
+#FUNCTION
+RETURNF CALC_COST12("GET", ARG)
+
+@CALC_COST12(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:12 == 0
+	LOCAL:0 = 1
+ELSEIF ABL:12 == 1
+	LOCAL:0 = 25
+ELSEIF ABL:12 == 2
+	LOCAL:0 = 200
+ELSEIF ABL:12 == 3
+	LOCAL:0 = 3000
+	;一線越えない
+	SIF TALENT:27
+		TIMES LOCAL:0 , 2.00
+ELSEIF ABL:12 == 4
+	LOCAL:0 = 20000
+	;一線越えない
+	SIF TALENT:27
+		TIMES LOCAL:0 , 3.00
+ENDIF
+
+;プライド高い
+SIF TALENT:16
+	TIMES LOCAL:0 , 1.50
+;求聞持
+SIF TALENT:216
+	TIMES LOCAL:0 , 0.75
+
+LOCAL:1 = LOCAL:0 / 2
+
+RETURNF 0
+
+@CAN12(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP12("GET", ARG)
+
+@CAN_ABLUP12(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;習得의 구슬で上げる
+SIF JUEL:11 < COST12(0)
+	LOCAL:0 |= 1
+
+;サドっ気が3이상だと先導의 구슬でも上昇させることができる
+IF ABL:20 >= 3
+	;習得의 구슬で上げる
+	SIF JUEL:11 < COST12(1)
+		LOCAL:1 |= 1
+	;先導의 구슬で上げる
+	SIF JUEL:32 < COST12(0)
+		LOCAL:1 |= 1
+ELSE
+	LOCAL:1 = 256
+ENDIF
+
+RETURNF (LOCAL:0 == 0 || LOCAL:1 == 0)

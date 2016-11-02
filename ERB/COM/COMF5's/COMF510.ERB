@@ -1,0 +1,108 @@
+﻿;=============================================================================
+;촉수 기생
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE510
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:510 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;一度も촉수寄生をしたことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:24 & 1) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;対象が既に촉수に寄生されているとダメ
+SIF TALENT:146
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;촉수強制回復中(口内)はダメ
+SIF TEQUIP:91 == 1
+	RETURN 0
+;촉수貫通中はダメ
+SIF TEQUIP:25 == 3
+	RETURN 0
+;촉수口辱中はダメ
+SIF TEQUIP:42 == 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM510
+PRINTL 촉수 기생
+TSTR:0 = 촉수 기생
+CALL TRAIN_MESSAGE_COM510
+
+DOWNBASE:0 += 500
+DOWNBASE:1 += 1500
+
+SOURCE:20 += 500
+SOURCE:24 = 5000
+SOURCE:30 = 10000
+SOURCE:31 = 105000
+SOURCE:32 = 5000
+SOURCE:23 = 5000
+
+;독인형, 액신, 봉래인은[체내 적응력 강화]가 없으면 기생 불가
+IF (TALENT:49 || NO:TARGET == 33 || NO:TARGET == 39) && (FLAG:75 & 8192) == 0
+	SOURCE:32 += 50000
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 촉수에【기생】당했다.
+	SOURCE:20 += 5000
+	SOURCE:25 += 5000
+	;첫체험 때 이상 경험+1
+	IF (CFLAG:24 & 1) == 0
+		TCVAR:50 += 1
+		CFLAG:24 |= 1
+	ENDIF
+	TALENT:146 = 1
+	CALL CALC_TENTACLE_GAUGE
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM510
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%의 얼굴에 가까워진 촉수는 일순간의 틈을 찔러, 흰 촉수의 일부를 구강 내로 들어가게 했다.
+PRINTFORMW %조사선택(CALLNAME:TARGET, "가")% 저항할 틈도 없이, 촉수의 조각은 단번에 식도를 타고 들어가 자취를 감추었다.
+PRINTL
+;독인형, 액신, 봉래인은[체내 적응력 강화]가 없으면 기생 불가
+IF (TALENT:49 || NO:TARGET == 33 || NO:TARGET == 39) && (FLAG:75 & 8192) == 0
+	PRINTFORM 촉수의 조각은 %CALLNAME:TARGET%에게 기생하려고 시도했지만, 
+	IF NO:TARGET == 33
+		PRINTFORML %조사선택(CALLNAME:TARGET, "가")% 가진 독에 견디지 못하고, 몸 속에서 용해되어버렸다….
+	ELSEIF NO:TARGET == 39
+		PRINTFORML %조사선택(CALLNAME:TARGET, "가")% 모은 액(厄) 때문에, 기생할 환경을 만들지 못했다….
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%의 몸의 경이로운 재생능력에 방해 받았다….
+	ENDIF
+	PRINTFORMW 지금 상태의 %CALLNAME:TARGET%에게 촉수를 기생시키는 것은 절망적이다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 목적을 알 수 없는 물체를
+	PRINTL 삼켜버린 것에 공포를 느끼고 있는 것 같다….
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 새파래진 얼굴로 필사적으로 삼킨 것을 토해내려고 시도했지만,
+	PRINTFORMW 촉수의 조각은 이미 %CALLNAME:TARGET%에게 기생하는 것에 성공한 것 같다….
+ENDIF

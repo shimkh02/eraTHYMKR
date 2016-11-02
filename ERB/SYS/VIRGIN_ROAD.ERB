@@ -1,0 +1,269 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;첫경험 관련 함수
+;기본적으로 캐릭터 번호는 CFLAG:500에 저장하며, 이름은 CSTR:5에 보존한다.
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;-------------------------------------------------
+;SOURCE0.ERB과 COMF_ALL에서 사용하는 누구에게 처녀 상실했는가? 판정용 함수
+;-------------------------------------------------
+@LOST_VIRGIN, TARGET, PLAYER, ARG
+;역강간 또는 노예가 조수를 범했는가?
+;역강간, 조수를 범하게 한다, 정상위시킨다, 후배위시킨다, 기승위한다, 수레바퀴, 거미집간
+IF SELECTCOM == 25 || SELECTCOM == 307 || SELECTCOM == 323 || SELECTCOM == 324 || SELECTCOM == 325 || SELECTCOM == 651 || SELECTCOM == 655
+	;조교자에게 첫경험 상대를 기록
+	IF CFLAG:PLAYER:500 == 0
+		CFLAG:PLAYER:500 = NO:TARGET + 1
+		CSTR:PLAYER:5 = %CALLNAME:TARGET%
+		;좆이 없는 노예(비대음핵, 남자, 후타나리 중 아무것도 없을 때)
+		SIF TALENT:TARGET:1 == 0 && TALENT:TARGET:120 == 0 && TALENT:TARGET:121 == 0
+			CFLAG:PLAYER:500 = NO:TARGET + 2000
+	ENDIF
+;주인이 조수를 범했는가?
+ELSEIF SELECTCOM == 26 || SELECTCOM == 657
+	;조수에게 첫경험 상대를 기록
+	IF CFLAG:ASSI:500 == 0
+		CFLAG:ASSI:500 = NO:PLAYER + 1
+		CSTR:ASSI:5 = %CALLNAME:PLAYER%
+		;좆이 없는 주인(비대음핵, 남자, 후타나리 중 아무것도 없을 때)
+		SIF TALENT:MASTER:1 == 0 && TALENT:MASTER:120 == 0 && TALENT:MASTER:121 == 0
+			CFLAG:ASSI:500 = NO:PLAYER + 2000
+	ENDIF
+;그 외
+ELSEIF CFLAG:500 == 0
+	;첫경험 상대를 기록(초기치가 0이기 때문에 +1해서 기록)
+	CFLAG:500 = NO:PLAYER + 1
+	CSTR:TARGET:5 = %CALLNAME:PLAYER%
+	;좆이 없는 조교자(비대음핵, 남자, 후타나리 중 아무것도 없을 때)
+	SIF TALENT:PLAYER:1 == 0 && TALENT:PLAYER:120 == 0 && TALENT:PLAYER:121 == 0
+		CFLAG:500 = NO:PLAYER + 2000
+	;첫경험이 페니스밴드 삽입일 경우
+	SIF SELECTCOM == 326
+		CFLAG:500 = NO:PLAYER + 2000
+	;첫경험이 손가락일 경우
+	SIF TEQUIP:20 == 0 && (SELECTCOM == 4 || SELECTCOM == 431)
+		CFLAG:500 = NO:PLAYER + 3000
+	;첫경험이 뿔일 경우
+	SIF SELECTCOM == 435
+		CFLAG:500 = NO:PLAYER + 4000
+	;첫경험이 로터일 경우
+	SIF TEQUIP:20 == 3 && SELECTCOM == 4
+		CFLAG:500 = 1001
+	;첫경험이 바이브일 경우
+	SIF SELECTCOM == 12 || SELECTCOM == 658
+		CFLAG:500 = 1002
+	;첫경험이 촉수생물일 경우
+	SIF SELECTCOM == 509 || (TEQUIP:90 && SELECTCOM == 501) || SELECTCOM == 582
+		CFLAG:500 = 1003
+	;첫경험이 개일 경우
+	SIF SELECTCOM == 381
+		CFLAG:500 = 1004
+	;첫경험이 돼지일 경우
+	SIF SELECTCOM == 383
+		CFLAG:500 = 1005
+	;첫경험이 말일 경우
+	SIF SELECTCOM == 386
+		CFLAG:500 = 1006
+	;첫경험이 주사일 경우
+	SIF SELECTCOM == 81
+		CFLAG:500 = 1008
+	;첫경험이 뱀장어일 경우
+	SIF SELECTCOM == 361
+		CFLAG:500 = 1009
+	;첫경험이 반령일 경우
+	SIF SELECTCOM == 441 && NO:PLAYER == 19
+		CFLAG:500 = 1011
+	SIF SELECTCOM == 441 && NO:PLAYER == 70
+		CFLAG:500 = 1012
+	;첫경험이 거미 다리일 경우
+	SIF SELECTCOM == 654
+		CFLAG:500 = 1013
+	;첫경험이 자기 꼬리일 경우
+	SIF SELECTCOM == 661
+		CFLAG:500 = 1014
+ENDIF
+
+;-------------------------------------------------
+;INFO0.ERB에서 사용하는, 상태창에 첫경험 항목 표시하는 함수
+;CFLAG:500 == 1007은 SHOP_DRUGUSE1.ERB에서 노란 사탕 처리
+;CFLAG:500 == 1010은 COMF_ALL.ERB에서 슬라임 목욕탕에서 처리
+;-------------------------------------------------
+@STATUS_VIRGIN, ARG
+;남자면 공백
+IF TALENT:ARG:120
+	PRINT
+ELSE
+	PRINT 　　 첫경험♥: 
+	CALL SETCOLOR_TORIKOMODE, "PINK", 3
+	;정진정명 처녀면 미통녀(처녀에 V경험 0)
+	IF TALENT:ARG:0 == 1 && EXP:ARG:0 == 0
+		PRINTL [미통녀]
+	ELSE
+		IF CFLAG:ARG:500 == 1001
+			PRINTFORML [로터]
+		ELSEIF CFLAG:ARG:500 == 1002
+			PRINTFORML [바이브]
+		ELSEIF CFLAG:ARG:500 == 1003
+			PRINTFORML [촉수생물]
+		ELSEIF CFLAG:ARG:500 == 1004
+			PRINTFORML [개]
+		ELSEIF CFLAG:ARG:500 == 1005
+			PRINTFORML [돼지]
+		ELSEIF CFLAG:ARG:500 == 1006
+			PRINTFORML [말]
+		ELSEIF CFLAG:ARG:500 == 1007
+			PRINTFORML [자기가 낳은 알]
+		ELSEIF CFLAG:ARG:500 == 1008
+			PRINTFORML [주사]
+		ELSEIF CFLAG:ARG:500 == 1009
+			PRINTFORML [뱀장어]
+		ELSEIF CFLAG:ARG:500 == 1010
+			PRINTFORML [슬라임]
+		ELSEIF CFLAG:ARG:500 == 1011
+			PRINTFORML [요우무의 반령]
+		ELSEIF CFLAG:ARG:500 == 1012
+			PRINTFORML [요우키의 반령]
+		ELSEIF CFLAG:ARG:500 == 1013
+			PRINTFORML [야마메의 거미다리]
+		ELSEIF CFLAG:ARG:500 == 1014
+			PRINTFORML [자기 꼬리]
+		;고유 상대(랜덤으로 결정되는 무명 캐릭터 및 캐릭터 대사 내부에서 처리하는 용도)
+		ELSEIF CFLAG:ARG:500 == 1020
+			PRINTFORML [%CSTR:ARG:5%]
+		ELSEIF CFLAG:ARG:500 >= 4000
+			;첫경험 상대가 만약 주인이라면 현재의 주인 이름으로
+			IF CFLAG:ARG:500 == 4000
+				PRINTFORML [%CALLNAME:MASTER%의 뿔]
+			ELSE
+				PRINTFORML [%CSTR:ARG:5%의 뿔]
+			ENDIF
+		ELSEIF CFLAG:ARG:500 >= 3000
+			;첫경험 상대가 만약 주인이라면 현재의 주인 이름으로
+			IF CFLAG:ARG:500 == 3000
+				PRINTFORML [%CALLNAME:MASTER%의 손가락]
+			ELSE
+				PRINTFORML [%CSTR:ARG:5%의 손가락]
+			ENDIF
+		ELSEIF CFLAG:ARG:500 >= 2000
+			;첫경험 상대가 만약 주인이라면 현재의 주인 이름으로
+			IF CFLAG:ARG:500 == 2000
+				PRINTFORML [%CALLNAME:MASTER%의 딜도]	
+			ELSE
+				PRINTFORML [%CSTR:ARG:5%의 딜도]
+			ENDIF			
+		ELSEIF CFLAG:ARG:500 > 0
+			;첫경험 상대가 만약 주인이라면 현재의 주인 이름으로
+			IF CFLAG:ARG:500 == 1
+				PRINTFORML [%CALLNAME:MASTER%의 페니스]
+			ELSE
+				PRINTFORML [%CSTR:ARG:5%의 페니스]
+			ENDIF
+		;여기까지 오면 윤간이나 창관 손님 중 하나다.
+		ELSE
+			PRINTFORML [불명]
+		ENDIF
+	ENDIF
+	RESETCOLOR
+ENDIF
+
+;-------------------------------------------------
+;무명 캐릭터 랜덤 첫경험 함수
+;RANDOM_STATE.ERB에서 사용함
+;-------------------------------------------------
+@RANDOM_VIRGIN, TARGET
+;비처녀인가?
+IF TALENT:0 == 0
+	;V경험 있으면 랜덤으로 첫경험 상대가 정해진다
+	IF EXP:0 > 0
+		;이상경험이 있으면 50%의 확률로 첫경험이 조금 괴상한 쪽으로
+		IF EXP:50 > 0 && RAND:2 == 0
+			;피강간 경험이 있으면 50%의 확률로 첫경험이 강간
+			;강간당했다는 이유로 해당 종족하고 상성이 나빠짐
+			IF EXP:81 > 0 && RAND:2 == 0
+				IF RAND:4 == 0
+					CSTR:5 = 텐구에게 강간당함
+					RELATION:32 = 50
+					RELATION:41 = 50
+					RELATION:79 = 50
+					RELATION:174 = 50
+					RELATION:175 = 50
+				ELSEIF RAND:3 == 0
+					CSTR:5 = 오니에게 강간당함
+					RELATION:23 = 50
+					RELATION:60 = 50
+					RELATION:181 = 50
+					RELATION:182 = 50
+				ELSEIF RAND:2 == 0
+					CSTR:5 = 캇파에게 강간당함
+					RELATION:40 = 50
+					RELATION:80 = 50
+				ELSE
+					CSTR:5 = 누군가에게 강간당함
+				ENDIF
+			;그 외의 이상한 첫경험…이라기보다 근친상간계
+			ELSE
+				IF RAND:5 == 0
+					CSTR:5 = 부친
+				ELSEIF RAND:4 == 0
+					CSTR:5 = 오빠
+				ELSEIF RAND:3 == 0
+					CSTR:5 = 남동생
+				ELSEIF RAND:2 == 0
+					CSTR:5 = 친척 아저씨
+				ELSE
+					CSTR:5 = 요괴
+				ENDIF
+			ENDIF
+		;자위경험이 있으면 50%의 확률로 자위하다가…
+		ELSEIF EXP:10 > 0 && RAND:2 == 0
+			IF RAND:2 == 0
+				CSTR:5 = 자기 손가락
+			ELSE
+				CSTR:5 = 막대기
+			ENDIF
+		;이상경험 및 자위경험이 없으면 노멀
+		ELSE
+			IF RAND:10 == 0
+				CSTR:5 = 남편
+			ELSEIF RAND:9 == 0
+				CSTR:5 = 남자친구
+			ELSEIF RAND:8 == 0
+				CSTR:5 = 애인
+			ELSEIF RAND:7 == 0
+				CSTR:5 = 소꿉친구
+			ELSEIF RAND:6 == 0
+				CSTR:5 = 연상의 오빠
+			ELSEIF RAND:5 == 0
+				CSTR:5 = 친한 아저씨
+			ELSEIF RAND:4 == 0
+				CSTR:5 = 명랑한 요정
+			ELSEIF RAND:3 == 0
+				CSTR:5 = 연하의 소년
+			ELSEIF RAND:2 == 0
+				CSTR:5 = 외래인
+			ELSE
+				CSTR:5 = 유력자
+			ENDIF
+		ENDIF
+	;V경험 없을 시에는 자위 및 기타 이유로 인해 처녀막 손실
+	;자위경험 있음
+	ELSEIF EXP:10 > 0
+		IF RAND:2 == 0
+			CSTR:5 = 자기 손가락
+		ELSE
+			CSTR:5 = 막대기
+		ENDIF
+	;자위경험 없음
+	ELSE
+		IF RAND:4 == 0
+			CSTR:5 = 격렬하게 운동하다가
+		ELSEIF RAND:3 == 0
+			CSTR:5 = 싸움 도중에
+		ELSEIF RAND:2
+			CSTR:5 = 원래 없었다
+		ELSE
+			CSTR:5 = 불명
+		ENDIF
+	ENDIF
+	CFLAG:500 == 1020
+;처녀일 경우에는 CFLAG:500을 0으로 유지
+ELSE
+ENDIF

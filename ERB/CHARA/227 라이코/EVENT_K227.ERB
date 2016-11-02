@@ -1,0 +1,1510 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;eratohoYM Mk-3用 口上テンプレート
+;X1をキャラ番号に置換して使用してください(霊夢なら1、蓮子なら49、魅魔なら100)。
+;
+;このファイルでは調教開始時・終了時・調教中イベント・エンディング口上用関数などが置いてあります。
+;このファイル内で他の関数を呼び出す処理のある関数は、削除せず残すことを推奨します。
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;==============================================================
+;堀川雷鼓口上
+;eratohoYM Mk-3改8proto6 
+;YM鈴奈庵、心綺楼、輝針城キャラ追加パッチVer１.10 雷鼓さん口上です
+;==============================================================
+;========================================================
+;口上ファイルの存在判定
+;========================================================
+;口上の存在判定（YM版）
+@TRY_227
+RETURN 1
+
+;========================================================
+;専用口上表示の固定化判定
+;========================================================
+;口上表示の専用口上使用設定において、選択肢を専用口上のみに固定化させたい場合は2を、専用口上＋地の文のみに固定化させたい場合は3を返すようにしてください
+;なお、1を返した(またはこの関数をコメントアウト等で使用できないようにした)場合は両方の選択肢が出るように、1・2・3以外の数値を返した時はエラー回避のため専用口上を使用できないようになっています
+;@KOJO_227_DISPLAY_SETTINGS
+;RETURN 1
+
+;========================================================
+;エキストラモード構文
+;自らの理想の嫁を表現するのに使う
+;========================================================
+@SET_CHARA_KOJO_EXTRA_K227
+IF CFLAG:7001 == 0
+	PRINTL 그런데, 라이코 씨는 처녀？
+	PRINTL [0] 당연하잖아（소질 : 처녀성을 획득）
+	PRINTL [1] 꽤 오래 전부터 큰 북의 츠쿠모가미였던 거 같으니까 없지 않을까…（변화 없음）
+	$INPUT_LOOP0
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―소질과 능력을 변경합니다―
+		TALENT:TARGET:처녀 = 1
+		ABL:TARGET:V감각 = 0
+		EXP:TARGET:절정경험 = 0
+		ABL:TARGET:레즈끼 = 0
+		EXP:TARGET:레즈경험 = 0
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드에서 조교를 시작합니다―
+	ELSE
+		GOTO INPUT_LOOP0
+	ENDIF
+
+	PRINTL 
+	PRINTL 구상 내에서 소질의 변화가 생기도록 하겠습니까？
+	PRINTL [0] Ｍ이기도 Ｓ이기도한 라이코씨라니 좋아 죽겠어!（특정 조건을 만족시키면 새로운 소질을 얻을 수 있습니다）
+	PRINTL [1] 그렇지 않아, 맞기만 하는 건 싫겠지（소질의 변동은 일어나지 않습니다）
+	$INPUT_LOOP1
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―소질의 변동을 ON으로 합니다―
+		CFLAG:7000 = 1
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드로 조교를 개시합니다―
+	ELSE
+		GOTO INPUT_LOOP1
+	ENDIF
+
+	PRINTL 
+	PRINTL 그런데 라이코씨의 음감은 어떤 편？
+	PRINTL [0] 제법이지（음감을 획득）
+	PRINTL [1] 그닥이려나（소질의 변동은 일어나지 않습니다）
+	PRINTL [2] 완전 음치（음치 획득）
+	$INPUT_LOOP2
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―소질, 능력을 변경합니다―
+		TALENT:TARGET:음감 = 1
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드로 조교를 개시합니다―
+	ELSEIF RESULT == 2
+		PRINTFORMW ―소질, 능력을 변경합니다―
+		TALENT:TARGET:음치 = 1
+	ELSE
+		GOTO INPUT_LOOP2
+	ENDIF
+	CFLAG:7001 = 1
+ENDIF
+
+;========================================================
+;調教開始口上
+;========================================================
+@EVENTTRAIN
+;대사 표시를 OFF했을 경우에는 돌아온다
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 227
+	RETURN 0
+;眠ってる場合は戻る
+;SIF EQUIP:14
+;	RETURN 0
+;口枷がある場合も戻る
+;SIF TEQUIP:42
+;	RETURN 0
+;失神中も戻る
+;SIF TFLAG:899 >= 1
+;	RETURN 0
+;精神崩壊の場合は戻る
+;SIF TALENT:167
+;	RETURN 0
+DRAWLINE
+
+;調教開始口上分岐
+IF CFLAG:5201 == 0
+	TRYCALL K227_MESSAGE_START_1
+ELSE
+	TRYCALL K227_MESSAGE_START_2
+ENDIF
+
+;-------------------------------------------------
+;初調教時
+;-------------------------------------------------
+@K227_MESSAGE_START_1
+IF CFLAG:5201 == 0
+	PRINTFORML 「응…여기는…？」
+	PRINTFORML 「라이브 끝나고…가볍게 한 잔하고 돌아가려고 했는데…」
+	PRINTFORMW 「…어째서 묶여있는 거지, 나」
+	PRINTFORML 「당신…그런 거네…」
+	PRINTFORML 「만취할 때까지 취하게 해선 여기로…」
+	PRINTFORML 「？」
+	PRINTFORML 「저항하지 않냐고？」
+	PRINTFORMW 「힘이 들어가질 않아서, 이 상태로는 당신에게 이길 수 없는 걸」
+	PRINTFORML 「성처리 도구로 삼으려면 삼으면 될 거 아냐」
+	PRINTFORML 「단지 기억해 둬」
+	PRINTFORML 「도구를 함부로 다루면 어떻게 될지…그 몸에 저주가 돌아갈 때 알게 될 거야」
+	CFLAG:5201 = 1
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;調教開始時
+;-------------------------------------------------
+@K227_MESSAGE_START_2
+;상애
+IF CFLAG:5201 < 4 && TALENT:상애
+	PRINTFORMW 「후후…오늘부터 부부구나 우리」
+	PRINTFORMW 「응～？정말 나로 좋았던 거야？」
+	PRINTFORMW 「뭐어 %CALLNAME:MASTER%에게 팔려오고 나서 여러가지 일이 있었지만」
+	PRINTFORMW 「도구로서만이 아니라 한 여자로서 다루어지는 것이 이렇게 즐거울 줄은 몰랐어」
+	PRINTFORMW 「사람에게 사용된다는 건 별로 마음에 들지 않았지만」
+	PRINTFORMW 「사랑해줘서」
+	PRINTFORMW 「그리고 도구로써도 소중히 여겨줘서」
+	PRINTFORMW 「사역되는 도구에게 여자로서의 기쁨을 주었어」
+	PRINTFORMW 「그리고 받기만 하는 관계로는 만족할 수 없게 되서」
+	PRINTFORMW 「당신과 같은 길을 걷고 나의 사랑을 당신에게 바치고 싶다고, 그렇게 생각하게 됐어」
+	PRINTFORMW 「정작 부부가 되었어도, 무슨 일을 해야할 지는 모르겠어」
+	PRINTFORMW 「왜냐면 지금까진 도구였고…사용하고 사용되는 정도의 관계였고…랄까」
+	PRINTFORMW 
+	PRINTFORMW 「제멋대로인 못난이지만 앞으로도 잘 부탁드립니다」
+	PRINTFORMW 「라고나 할까, 당신의 고동을 들려주지 않을래♪」
+	CFLAG:5201 = 4
+	RETURN 1
+;연모
+ELSEIF CFLAG:5201 < 3 && TALENT:연모
+	PRINTFORMW 「저기, %CALLNAME:MASTER%」
+	PRINTFORMW 「전부터 말하려고 생각했었어」
+	PRINTFORML 「나를…어떻게 생각해？」
+	PRINTFORMW 「나, 단지 받는 것만으로는 만족할 수 없게 되어버렸어」
+	PRINTFORMW 「진짜로 자유롭다는 건, 받는 것만으로는, 주는 것만으로는 성립될 수 없으니까」
+	PRINTFORMW 「내 사랑을 당신에게 주고 싶어」
+	PRINTFORMW 「…」
+	PRINTFORMW 「당신을 좋아하게 됐어」
+	PRINTFORMW 「만약에…괜찮으면 말이지만」
+	PRINTFORMW 「앞으로도 나의 고동을 들어주지 않을래?」
+	PRINTFORMW 「당신의 마력을 나에게 준다면」
+	PRINTFORMW 「앞으로도 당신과 함께…」
+	CFLAG:5201 = 3
+	RETURN 1
+;굴복각인Lv3
+ELSEIF CFLAG:5201 < 2 && MARK:반발각인 == 3
+	PRINTFORMW 「아아아…」
+	PRINTFORMW 「잠…그만…알았어…」
+	PRINTFORMW 「그렇게까지 나를 노예로 만들고 싶다면 좋아」
+	PRINTFORML 「당신의 도구로 만들어주세요」
+	PRINTFORML 「그렇게 못하면…알고 있겠죠？」
+	CFLAG:5201 = 2
+	RETURN 1
+	
+;助手の有無をチェック（いない場合は二回目以降へ飛ぶ）
+ELSEIF ASSI < 0 
+	CALL K227_MESSAGE_START_3
+
+;-------------------------------------------------
+;助手との掛け合い
+;弁々と八橋にあります
+;-------------------------------------------------
+;助手が弁々
+ELSEIF NO:ASSI == 223
+	;初めて
+	IF CFLAG:5202 == 0
+		;2人に상애
+		IF TALENT:상애 && TALENT:ASSI:상애
+			PRINTFORMW 『라이코 언니…』
+			PRINTFORMW 「벤벤, 뭐하는 거야？」
+			PRINTFORMW 『…바람을 피우고 있을 줄은 몰랐어요！』
+			PRINTFORMW 「후후후…벤벤은 순진하네」
+			PRINTFORMW 「이 사람, 환상향 안의 모든 여자를 손에 넣을 생각이야！」
+			PRINTFORMW 『…기가 막혀서 말도 안 나오네요』
+			PRINTFORMW 「라고, 말해도 두 사람은 기분 좋아지려나？」
+		;雷鼓のみ상애
+		ELSEIF TALENT:상애 && TALENT:ASSI:상애 == 0
+			PRINTFORMW 『뭐야…라이코 언니에요…？』
+			PRINTFORMW 「응ー？이 사람에게 반해버렸기 때문이려나？」
+			PRINTFORMW 『…』
+			PRINTFORMW 「기분이 좋아지는 건 이 사람에게 사랑 받고 있단 거야」
+			PRINTFORMW 『의미를…모르겠어…』
+			PRINTFORMW 「뭐, 곧 알게 되겠지。즐겨보자구」
+		;弁々のみ상애
+		ELSEIF TALENT:상애 == 0 && TALENT:ASSI:상애
+			PRINTFORMW 『라이코 언니 뭐하고 있는 거에요？』
+			PRINTFORMW 「이런…이런 일이…」
+			PRINTFORMW 「벤벤한테 무슨 짓을 한거야！？」
+			PRINTFORMW 「경우에 따라선…」
+			PRINTFORMW 『아니라구요, 라이코 언니』
+			PRINTFORMW 『저는 이 몸을 이 사람에게 바치기로 했어요, 자신의 의지로』
+			PRINTFORMW 「뭔데…그거 대체…」
+		;その他
+		ELSE
+			PRINTFORMW 「왜 벤벤이…」
+			PRINTFORMW 『…』
+			PRINTFORMW 『억지로…데려와 져선…』
+			PRINTFORMW （내가…더 잘했으면…）
+		ENDIF
+		CFLAG:5202 == 1
+		RETURN 1
+	;2回目以降
+	ELSEIF CFLAG:5202 == 1
+		;2人に상애
+		IF TALENT:상애 && TALENT:ASSI:상애
+			IF RAND:3 == 0
+				PRINTFORMW 『응…오늘은 셋이서？』
+				PRINTFORMW 「완전히…두 사람 모두 기세 좋네…좋아, 상대해주겠어！」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「후후후…벤벤은 그렇게까지 쌓여선…？」
+				PRINTFORMW 『…몸을 손에 넣어선…이렇게 되다니…불편하네, 인간은』
+			ELSE
+				PRINTFORMW 「오늘은 세 명이서 가는 거야？뭐어 좋아, 솜씨 좋게 해주겠어…」
+				PRINTFORMW 『라, 라이코 언니…？눈이 무서운데…』
+			ENDIF
+		;雷鼓のみ상애
+		ELSEIF TALENT:상애 && TALENT:ASSI:상애 == 0
+			IF RAND:3 == 0
+				PRINTFORMW 「벤벤, 뭐하고 있는 거야…방구석에서 무릎이나 껴안고 있어봐야 의미없는데？」
+				PRINTFORMW 『이런 건…싫어…뭐야…이젠…라이코 언니까지…』
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「어라 벤벤, 언제까지 웅크리고만 있을 셈이야」
+				PRINTFORMW 『이제 싫어…이런 건…라이코 언니…』
+			ELSE
+				PRINTFORMW 『…싷어어…이런 거 무리…』
+				PRINTFORMW 「이런 건 빨리 익숙해져서, 즐기지 않으면 손해라구？」
+			ENDIF
+		;弁々のみ상애
+		ELSEIF TALENT:상애 == 0 && TALENT:ASSI:상애
+			IF RAND:3 == 0
+				PRINTFORMW 「미안해…미안해애…내가 더 잘했더라면…」
+				PRINTFORMW 『？』
+				PRINTFORMW 『뭐때문에 사과하는 거에요 라이코 언니？기분 좋은 게 좋은 거라구요？』
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 『뭐어…즐기면 그것으로 좋잖아요』
+				PRINTFORMW 「아냐아아…몸을 허락하고…마음까지 허락해버리면…」
+			ELSE
+				PRINTFORMW 『조용히 즐기면 되잖아요…모처럼의 몸인데』
+				PRINTFORMW 「뭐야…이런 거…미안해…」
+			ENDIF
+		;その他
+		ELSE
+			IF RAND:2 == 0
+				PRINTFORMW 「벤벤…내가…좀 더…」
+				PRINTFORMW 『좋아요…참을 테니까…』
+			ELSE
+				PRINTFORMW 「내가 대신 조교를 받을테니까…벤벤만은…」
+				PRINTFORMW 『…』
+			ENDIF
+		ENDIF
+		RETURN 1
+	ENDIF
+
+;助手が八橋
+ELSEIF NO:ASSI == 224
+	;初めて
+	IF CFLAG:5203 == 0
+		;2人に상애
+		IF TALENT:상애 && TALENT:ASSI:상애
+			PRINTFORMW 『잠깐…이게 무슨 일이야…』
+			PRINTFORMW 「어라 야츠하시, 무슨 일이야？」
+			PRINTFORMW 『뭐하냐니 무슨 말…』
+			PRINTFORMW 「그런 아저씨 개그를…젊은 애가 하는 게 아냐」
+			PRINTFORMW 「좋아, 모처럼이고 하니 남자를 보내는 기술을 알려주도록 할게」
+			PRINTFORMW 『모, 못난 사람입니다만…아무쪼록 잘 부탁드립니다…』
+		;雷鼓のみ상애
+		ELSEIF TALENT:상애 && TALENT:ASSI:상애 == 0
+			PRINTFORMW 「야츠하시도 있었어？」
+			PRINTFORMW 『라이코씨…당신 뭐하고 있는거에요！이런 곳에서！？』
+			PRINTFORMW 「그야 여기서 하는 일이라고 해봤자 하나뿐인걸」
+			PRINTFORMW 「주인님께 봉사하는 게 우리들 도구의 역할」
+			PRINTFORMW 「너도 나처럼 봉사 기술을 연마하라구」
+			PRINTFORMW 『…』
+			PRINTFORMW 「야츠하시는 재능이 있어…그런 기분이 들어」
+		;八橋のみ상애
+		ELSEIF TALENT:상애 == 0 && TALENT:ASSI:상애
+			PRINTFORMW 『라이코씨도 여기 있는 건가』
+			PRINTFORMW 「야츠하시한테…뭘 한거야！？경우에 따라선―――」
+			PRINTFORMW 『무슨 생각을 하는지 모르겠지만 난 자신의 의사로 여기 있어요』
+			PRINTFORMW 『항상 말했잖아요, 순순히 사역될만한 도구가 아니라고』
+			PRINTFORMW 『그러니까, 이런 일도 즐길 수 있다면 좋지 않을까 하는거고』
+			PRINTFORMW 『나는 그렇게 생각해요, 그럼 앞으로도 잘 부탁해요』
+			PRINTFORMW 라이코는 절망을 느낀 표정으로 말문이 막혀버렸다
+		;その他
+		ELSE
+			PRINTFORMW 「왜 야츠하시가！？」
+			PRINTFORML 『다른 데서…억지로 데리고 와선…나…』
+			PRINTFORMW 「이, 쓰레기가！귀축！절대로 용서 못해…」
+			PRINTFORMW 격렬하게 저항하는 라이코의 옷을 벗기기 시작하자 분함 때문인지 몸을 웅크렸다
+		ENDIF
+		CFLAG:5203 == 1
+		RETURN 1
+	;2回目以降
+	ELSEIF CFLAG:5203 == 1
+		;2人に상애
+		IF TALENT:상애 && TALENT:ASSI:상애
+			IF RAND:3 == 0
+				PRINTFORMW 『오늘도 오늘도 3P？많이도 하네』
+				PRINTFORMW 「상대가 야츠하시니까 불타는 거야」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「슬슬 펠라 하나라도 기억했으려나？」
+				PRINTFORMW 『우으ー라이코씨는 스파르타식이야…』
+			ELSE
+				PRINTFORMW 「가끔은 셋이서 하는 것도 나쁘지 않네」
+				PRINTFORMW 『이렇게 말하자니 좀 그렇지만 엄청난 호색가네요…나도 당신도…』
+			ENDIF
+		;雷鼓のみ상애
+		ELSEIF TALENT:상애 && TALENT:ASSI:상애 == 0
+			IF RAND:3 == 0
+				PRINTFORMW 「야츠하시도 수줍어하기는」
+				PRINTFORMW 「더 솔직해지라구, 여자애라도 밝힐 수 있잖아？」
+				PRINTFORMW 『그게 무슨…딱 맞아떨어질리가 없잖아…』
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「얌전히 구는 게 좋을 거야. 저항해도 아플 뿐이거든」
+				PRINTFORMW 『어째서 이런 일이…라이코씨…믿었었는데…』
+			ELSE
+				PRINTFORMW 『거짓말…라이코 씨가 이런 짓을 하다니…』
+				PRINTFORMW 「거짓말도 뭣도 아니니까 이게 현실이란 걸 인정해」
+			ENDIF
+		;弁々のみ상애
+		ELSEIF TALENT:상애 == 0 && TALENT:ASSI:상애
+			IF RAND:3 == 0
+				PRINTFORMW 「미안해…내가…」
+				PRINTFORMW 『뭐때문에 사과하는 거에요？즐거운 일, 할 거잖아요？』
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 『라이코는 몸매가 좋으니까, 그 점에 주인님이 끌리신걸까』
+				PRINTFORMW 「이런 상황이 아니면 칭찬이었겠지만…」
+			ELSE
+				PRINTFORMW 『이제 포기하세요, 라이코씨도, 기분 좋아지면 되잖아요』
+				PRINTFORMW 「좋지 않아…자신이 한심해질 뿐이라구…」
+			ENDIF
+		;その他
+		ELSE
+			IF RAND:2 == 0
+				PRINTFORMW 「미안해…내가…적어도…」
+				PRINTFORMW 『…』
+			ELSE
+				PRINTFORMW 『왜 둘이서…』
+				PRINTFORMW 「…내가…대신해서…」
+			ENDIF
+		ENDIF
+		RETURN 1
+	ENDIF
+
+;口上のある助手が居ない場合は、通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K227_MESSAGE_START_3
+ENDIF
+
+;-------------------------------------------------
+;調教開始時（2回目以降)
+;-------------------------------------------------
+@K227_MESSAGE_START_3
+;상애
+IF TALENT:상애
+	IF RAND:3 == 0
+		PRINTFORMW 「ん…今日も元気そうね…」
+		PRINTFORMW 「こうして見るといい男よね、貴方」
+		PRINTFORMW 「だから貴方を受け入れたんだけど、さぁ貴方の鼓動聞かせて頂戴」
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「今日こそは貴方との子供、作るわよ」
+		PRINTFORMW 「ふふ、まぁ多くても困るわけじゃないしね…」
+	ELSE
+		PRINTFORMW 「お帰りなさい、ご飯にします？」
+		PRINTFORMW 「それともお風呂に入りながらシちゃう？」
+		PRINTFORMW 「…人の営みってのがよくわかんないのよ、教えてくれない？」
+	ENDIF
+	RETURN 1
+;상애2回目以降
+ELSEIF TALENT:상애
+	IF RAND:2 == 0
+		PRINTFORMW 「ふふ、今日もいっぱいエッチするの？」
+		PRINTFORMW 「人間って浅ましいわね、そんなに女の体がいいの？」
+		PRINTFORMW 「いいわよ、いっぱい愛してあげる…」
+	ELSE
+		PRINTFORMW 「人間の体って不便よね」
+		PRINTFORMW 「何にもしなくたってあなたのことを想うと火照ってきちゃう」
+		PRINTFORMW 「今日は何してくれるの？御主人様」
+	ENDIF
+	RETURN 1
+;반발각인Lv3
+ELSEIF MARK:반발각인 == 3
+	IF RAND:2 == 0
+		PRINTFORMW 「堀川の名は復讐の名」
+		PRINTFORMW 「こんなことしてただで済むと思ってないでしょうけど」
+		PRINTFORMW 「このまま私が九十九神だと甘く見ているのなら」
+		PRINTFORMW 「貴方が思う以上の神罰を与えてやる…」
+	ELSE
+		PRINTFORMW 「こっちに来るな！！」
+		PRINTFORMW 「誰がお前なんかの言いなりになるものか！」
+		PRINTFORMW 雷鼓は気丈に叫ぶが体は震えている
+	ENDIF
+	RETURN 1
+;굴복각인Lv3
+ELSEIF MARK:굴복각인 == 3
+	IF RAND:2 == 0
+		PRINTFORMW 「もう…なんだってすればいいじゃない…」
+		PRINTFORMW すっかり屈服した様子でうなだれている
+		PRINTFORMW 「せめて…他の子たちの身代わりになれるのなら…」
+	ELSE
+		PRINTFORMW 「おはよう、今日も元気ね」
+		PRINTFORMW 「私？」
+		PRINTFORMW 「そうね…諦めたほうが楽になれるもの」
+	ENDIF
+	RETURN 1
+;その他
+ELSE
+	IF RAND:2 == 0
+		PRINTFORMW 「また、するの…？」
+		PRINTFORMW 「ほんと、人間って身勝手ね…」
+	ELSE
+		PRINTFORMW 「今日はなにするの？」
+	ENDIF
+ENDIF
+
+;========================================================
+;調教終了時の口上
+;========================================================
+@EVENTEND
+;대사 표시를 OFF했을 경우에는 돌아온다
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 227
+	RETURN 0
+;眠ってる場合は戻る
+;SIF EQUIP:14
+;	RETURN 0
+;口枷がある場合も戻る
+;SIF TEQUIP:42
+;	RETURN 0
+;失神中も戻る
+;SIF TFLAG:899 >= 1
+;	RETURN 0
+;精神崩壊の場合は戻る
+;SIF TALENT:167
+;	RETURN 0
+DRAWLINE
+TRYCALL K227_MESSAGE_END
+
+;--------------------------------------------------
+;調教終了時の口上
+;--------------------------------------------------
+@K227_MESSAGE_END
+	;調教をすぐやめたとき
+	IF PREVCOM == -1
+		;상애
+		IF TALENT:상애
+			PRINTFORMW 「飽きてくれた…のかしらね」
+		;その他
+		ELSE
+			PRINTFORMW 「コレで終わり…？」
+			PRINTFORMW 「何考えてるのよ…不気味ね…」
+		ENDIF
+	;상애
+	ELSEIF TALENT:상애
+			IF RAND:2 == 0
+				PRINTFORMW 「今日はこれでお終い？」
+				PRINTFORMW 「そう、お仕事あるものね…」
+				PRINTFORMW 「でもね、私は貴方のことを想っています」
+				PRINTFORMW 「だから…あまり別の女のところに行かないでください」
+			ELSE
+				PRINTFORMW 「う～ん疲れたわね」
+				PRINTFORMW 「あ、でも貴方とならずっとしていられるわよ！？」
+			ENDIF
+	;상애
+	ELSEIF TALENT:상애 == 1
+			IF RAND:2 == 0
+				PRINTFORMW 「今日はコレで終わり？」
+				PRINTFORMW 「そう…もう少し私に構ってくれると思っていたのだけれど」
+				PRINTFORMW 「あまり浮気してると怒っちゃうぞ？」
+			ELSE
+				PRINTFORMW 「こうしてあなたと過ごしている時間が楽しくて楽しくて」
+				PRINTFORMW 「ふふ、抱き合ったまま一日過ごすってのもいいかもしれないわね」
+			ENDIF
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+			IF RAND:2 == 0
+				PRINTFORMW 「八橋や弁々はどうしているのかしら」
+				PRINTFORMW 「もう会えないのだろうけど…」
+			ELSE
+				PRINTFORMW 「どうせするのなら優しくしてくれればいいのに」
+				PRINTFORMW 「激しいだけの演奏はダメよ」
+				PRINTFORMW 「と言っても分かってくれないんだろうなぁ」
+			ENDIF
+	;반발각인Lv3
+	ELSEIF MARK:반발각인 == 3
+		PRINTFORMW 「覚えて…いなさい…」
+		PRINTFORMW 「絶対に貴方なんかに心を許すもんですか…」
+	;その他
+	ELSE
+		IF RAND:2 == 0
+			PRINTFORMW 「もう…ダメ…」
+			PRINTFORMW 「どうにかしてここから…」
+		ELSE
+			PRINTFORMW 「せっかく肉体を持っているっていうのにコレじゃ道具だわ…」
+		ENDIF
+	ENDIF
+;========================================================
+;@KOJO_MESSAGE_PALAMCNG
+;パラメータ変動をトリガーにした口上
+;パラメータ変動後に口上を発動します
+;========================================================
+@KOJO_MESSAGE_PALAMCNG_227
+;眠ってる場合は戻る
+;SIF EQUIP:14
+;	RETURN 0
+;口枷がある場合も戻る
+;SIF TEQUIP:42
+;	RETURN 0
+;失神中・失神回復時も戻る
+;SIF TFLAG:899 >= 1 || TFLAG:898 == 1
+;	RETURN 0
+;精神崩壊の場合は戻る
+;SIF TALENT:167
+;	RETURN 0
+
+;処女喪失時のメッセージ呼び出し
+SIF TFLAG:0
+	TRYCALL K227_MESSAGE_LOST_VIRGIN
+;初めてPALAMがLV2超えた時の口上呼び出し
+FOR LOCAL, 0, 35
+	SIF PALAM:LOCAL + UP:LOCAL > PALAMLV:2 && CFLAG:(5320 + LOCAL) == 0
+		TRYCALLFORM K227_MESSAGE_OVERLV2_{LOCAL}
+NEXT
+;絶頂時の口上呼び出し
+FOR LOCAL, 0, 50
+	SIF NOWEX:LOCAL
+		TRYCALLFORM K227_MESSAGE_ORGASM_{LOCAL}
+NEXT
+;射精させた
+FOR LOCAL, 8, 30
+	SIF TFLAG:LOCAL
+		TRYCALLFORM K227_MESSAGE_EJAC_PLAYER_{LOCAL}
+NEXT
+
+;-------------------------------------------------
+;処女喪失
+;-------------------------------------------------
+@K227_MESSAGE_LOST_VIRGIN
+;상애時かつ主人のペニス
+IF TFLAG:2
+	;PRINTFORMW 
+;それ以外
+ELSE
+	;PRINTFORMW 
+ENDIF
+
+;----------------------------------------------------------
+;初めてPALAMがLV2超えた時の口上 CFLAG 5320～5355を使用
+;@KOJO_MESSAGE_PALAMCNG_227から呼び出すのでセットで使うこと
+;----------------------------------------------------------
+;-------------------------------------------------
+;初めて潤滑がLV2超えた CFLAG:5330
+;-------------------------------------------------
+@K227_MESSAGE_OVERLV2_10
+IF (PALAM:10 + UP:10) > PALAMLV:2 && CFLAG:5330 == 0
+	;상애
+	IF TALENT:상애 == 1
+		RETURN 0
+	;前コマンドローション
+	ELSEIF SELECTCOM == 60
+		PRINTFORMW 「ちょっと…こんなの使って…」
+	;その他の場合
+	ELSE
+		PRINTFORMW 「なんでよ…」
+		PRINTFORMW （体が…勝手に…）
+	ENDIF
+	CFLAG:5330 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて欲情がLV2超えた CFLAG:5333
+;-------------------------------------------------
+@K227_MESSAGE_OVERLV2_13
+IF (PALAM:13 + UP:13) > PALAMLV:2 && CFLAG:5333 == 0
+	;상애
+	IF TALENT:상애 == 1
+		RETURN 0
+	;前コマンド媚薬
+	ELSEIF SELECTCOM == 61
+		PRINTFORMW 「何よこれ！？ちょ…」
+		PRINTFORMW （飲まされた薬のせい…？）
+	;その他の場合
+	ELSE
+		PRINTFORMW 「あ…あ…」
+		PRINTFORMW （やだ…濡れて来てる…？）
+	ENDIF
+	CFLAG:5333 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて恥情がLV2超えた CFLAG:5335
+;-------------------------------------------------
+@K227_MESSAGE_OVERLV2_15
+IF (PALAM:15 + UP:15) > PALAMLV:2 && CFLAG:5335 == 0
+	PRINTFORMW 「こんなの…見られて興奮するだなんて…」
+	CFLAG:5335 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて恐怖がLV2超えた CFLAG:5337
+;-------------------------------------------------
+@K227_MESSAGE_OVERLV2_17
+IF (PALAM:17 + UP:17) > PALAMLV:2 && CFLAG:5337 == 0
+	;絶頂した時
+	IF NOWEX:0 + NOWEX:1 + NOWEX:2 + NOWEX:3 > 0
+		RETURN 0
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+		PRINTFORMW 「お願いだから…」
+		PRINTFORMW 「もう…抵抗しないから…言うこと聞くから…お願い…」
+	;その他の場合
+	ELSE
+		PRINTFORMW 「やだ…お願いだから…優しくして…」
+	ENDIF
+	CFLAG:5337 = 1
+ENDIF
+
+;----------------------------------------------------------
+;絶頂時の口上 CFLAG 5300～を使用
+;@KOJO_227_MESSAGE_PALAMCNGから呼び出すのでセットで使うこと
+;----------------------------------------------------------
+;-------------------------------------------------
+;Ｃ絶頂 CFLAG:5300
+;-------------------------------------------------
+@K227_MESSAGE_ORGASM_0
+;初めて
+IF CFLAG:5300 == 0
+	;굴복각인Lv3
+	IF MARK:굴복각인 == 3
+		PRINTFORMW 「クリトリスに…来る…！？」
+	;その他の場合
+	ELSE
+		PRINTFORMW 「そんなとこで！？」
+		PRINTFORMW 「イっちゃう！…あああ！！！」
+	ENDIF
+	CFLAG:5300 = 1
+;２回目以降
+ELSE
+	;今回の調教でのＣ絶頂が50以上
+	IF EX:0 >= 50
+		;PRINTFORMW 「あがああああっ！？」
+	ELSE
+		;PRINTFORMW 「変なの…いっぱい来る…！！」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ絶頂 CFLAG:5301
+;-------------------------------------------------
+@K227_MESSAGE_ORGASM_1
+;初めて
+IF CFLAG:5301 == 0
+	;상애
+	IF TALENT:상애 == 1
+		;中出し
+		IF TFLAG:10 > 0 && (SELECTCOM == 20 || SELECTCOM == 21 || SELECTCOM == 22 || SELECTCOM == 23 || SELECTCOM == 24 || SELECTCOM == 27 || SELECTCOM == 28)
+			;절정경험 1以上
+			IF EXP:절정경험 >= 1
+				PRINTFORMW 「膣内で出て…イクッ…イッちゃう…！」
+				PRINTFORMW 雷鼓は歓喜しながら腰を振り続けている
+			;その他の場合
+			ELSE
+				PRINTFORMW 「んあぁ！！…んっふぅ…イっちゃった…」
+			ENDIF
+		;コマンドが挿入系列
+		ELSEIF SELECTCOM == 20 || SELECTCOM == 21 || SELECTCOM == 22 || SELECTCOM == 23 || SELECTCOM == 24 || SELECTCOM == 27 || SELECTCOM == 28
+			;절정경험 1以上
+			IF EXP:절정경험 >= 1
+				PRINTFORMW 「こんな…チンポなんかに…！？」
+			;その他の場合
+			ELSE
+				PRINTFORMW 「やだ…おまんこで…イッちゃう…」
+			ENDIF
+		;その他の場合
+		ELSE
+			PRINTFORMW 「だめぇ…頭真っ白になって…イッちゃう…」
+		ENDIF
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+		;コマンドが挿入系列
+		IF SELECTCOM == 20 || SELECTCOM == 21 || SELECTCOM == 22 || SELECTCOM == 23 || SELECTCOM == 24 || SELECTCOM == 27 || SELECTCOM == 28
+			PRINTFORMW 「大人しくしとけば…こんな感じで気持ちよくなれる…のね…」
+		;その他の場合
+		ELSE
+			PRINTFORMW 「こんなので…イクなんて…ダメ…なのに…」
+			PRINTFORMW 雷鼓はそう言いながら快楽を味わうように腰を振り続けている
+		ENDIF
+	;その他の場合
+	ELSE
+		;前コマンドが挿入系列
+		IF SELECTCOM == 20 || SELECTCOM == 21 || SELECTCOM == 22 || SELECTCOM == 23 || SELECTCOM == 27 || SELECTCOM == 28
+			PRINTFORMW 「やだ…中に入れられて…あああ！？」
+			PRINTFORMW 「イッちゃったの…私…？」
+		;その他の場合
+		ELSE
+			PRINTFORMW 「ふぇ！？…ひゃう！？」
+		ENDIF
+	ENDIF
+	CFLAG:5301 = 1
+;２回目以降
+ELSE
+	;今回の調教でのＶ絶頂が50以上
+	IF EX:1 >= 50
+		;PRINTFORMW 「気持ち…ぃい！？だめっ…！これ以上は…！！」
+	ELSE
+		;PRINTFORMW 「やだぁ…こんなので…イッちゃう…！？」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ絶頂 CFLAG:5302
+;-------------------------------------------------
+@K227_MESSAGE_ORGASM_2
+;初めて
+IF CFLAG:5302 == 0
+	;상애
+	IF TALENT:상애 == 1
+		;アナル中出し
+		IF TFLAG:9 > 0 && (SELECTCOM == 30 || SELECTCOM == 31 || SELECTCOM == 32 || SELECTCOM == 33 || SELECTCOM == 34 || SELECTCOM == 37 || SELECTCOM == 38)
+			PRINTFORMW 「%CALLNAME:MASTER%にお尻の穴きもちよくされちゃううううぅぅぅ！！！」
+			PRINTFORMW 「もっと…お尻をめちゃくちゃにして…んああぁぁぁぁ！！！」
+		;アナル挿入系列
+		ELSEIF SELECTCOM == 30 || SELECTCOM == 31 || SELECTCOM == 32 || SELECTCOM == 33 || SELECTCOM == 34 || SELECTCOM == 37 || SELECTCOM == 38
+			PRINTFORMW 「あ、ああああ！！」
+			PRINTFORMW 「お尻に入れられて…イッちゃううううう！！！」
+		;その他の場合
+		ELSE
+			PRINTFORMW 「お尻に入れられてイクッ…！！！」
+		ENDIF
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+		;アナル挿入
+		IF SELECTCOM == 30 || SELECTCOM == 31 || SELECTCOM == 32 || SELECTCOM == 33 || SELECTCOM == 34 || SELECTCOM == 37 || SELECTCOM == 38
+			PRINTFORMW 「こんな…こんなお尻で…チンポ入れられて！？」
+			PRINTFORMW 「がぁああああ！？らめぇえぇえ！！！」
+		;その他の場合
+		ELSE
+			PRINTFORMW 「お…お尻が…おしりぃぃぃぃイッちゃううううう！！」
+		ENDIF
+	;その他の場合
+	ELSE
+		PRINTFORMW 「やだ…！なんでお尻で…！？」
+	ENDIF
+	CFLAG:5302 = 1
+;２回目以降
+ELSE
+	;今回の調教でのＡ絶頂が50以上
+	IF EX:2 >= 50
+		;PRINTFORMW 「あ…あああぁお尻で…きもちひいいいぃぃぃ！！」
+	ELSE
+		;PRINTFORMW 「お尻でイッちゃう…！！！」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｂ絶頂 CFLAG:5303
+;-------------------------------------------------
+@K227_MESSAGE_ORGASM_3
+;初めて
+IF CFLAG:5303 == 0
+	;굴복각인Lv3
+	IF MARK:굴복각인 == 3
+		PRINTFORMW 「やらぁ…おっぱいが変な感じになっらうのぉぉ…」
+	;その他の場合
+	ELSE
+		PRINTFORMW 「んっ…おっぱいのむずむずが…おかしくなっちゃうっ！？」
+	ENDIF
+	CFLAG:5303 = 1
+;２回目以降
+ELSE
+	;今回の調教でのＢ絶頂が50以上
+	IF EX:3 >= 50
+		;PRINTFORMW 「ひぁっ…おっぱい溶けちゃう…」
+	ELSE
+		;PRINTFORMW 「おっぱい…もうダメ…イッちゃうううぅぅ！！！」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;噴乳 CFLAG:5304
+;-------------------------------------------------
+@K227_MESSAGE_ORGASM_10
+;初めて
+IF CFLAG:5304 == 0
+	;상애
+	IF TALENT:상애 == 1
+		PRINTFORMW 「お、おっぱいでちゃった…」
+		PRINTFORMW 「ということはとうとう妊娠…？」
+	;それ以外
+	ELSE
+		PRINTFORMW 「やだ…もうやだ…」
+		PRINTFORMW 「なんでおっぱい出るのよ…」
+	ENDIF
+		CFLAG:5304 = 1
+;２回目以降
+ELSE
+	;상애
+	IF TALENT:상애 == 1
+		IF RAND:2 == 0
+			PRINTFORMW 「ん…ふぅ…」
+		ELSE
+			PRINTFORMW 「いっぱい…出てくる…」
+		ENDIF
+		CFLAG:5304 = 4
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+		IF RAND:2 == 0
+			PRINTFORMW 「こ、こんなにいっぱいでちゃうの…？」
+		ELSE
+			PRINTFORMW 「どんどんでてきちゃう…」
+		ENDIF
+		CFLAG:5304 = 3
+	;それ以外
+	ELSE
+		PRINTFORMW 「なんでこんな…おっぱいでちゃうなんて…」
+		CFLAG:5304 = 2
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;放尿 CFLAG:5306
+;放尿または強制放尿コマンド時は呼び出さない
+;-------------------------------------------------
+@K227_MESSAGE_ORGASM_12
+SIF SELECTCOM == 111 || SELECTCOM == 620
+	RETURN 0
+;初めて
+IF CFLAG:5306 == 0
+	;PRINTFORMW 「잠깐！？차, 창피하단 말야…보, 보지마…」
+	;CFLAG:5306 = 1
+;２回目以降
+ELSE
+	;PRINTFORMW 「이런 곳을 보이다니…이젠…」
+ENDIF
+
+;-------------------------------------------------
+;アナルに射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_9
+;主人のペニス
+IF TFLAG:35
+	;상애
+	IF TALENT:상애
+		IF RAND:3 == 0
+			PRINTFORMW 「엉덩이로 하면, 아이는 생기지 않는다고？」
+		ELSEIF RAND:2 == 0
+			PRINTFORMW 「이렇게 많이 싸고…엉덩이 기분 좋았어？」
+		ELSE
+			PRINTFORMW 「응앗…뱃 속에 정액이 가득…」
+		ENDIF
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+		IF RAND:2 == 0
+			PRINTFORMW 「이런…뱃 속에 가득…」
+		ELSE
+			PRINTFORMW 「어, 엉덩이로 이렇게…」
+		ENDIF
+	;その他
+	ELSE
+		PRINTFORMW 「이…변…태！！！」
+	ENDIF
+;それ以外
+ELSE
+	;PRINTFORMW 
+ENDIF
+
+;-------------------------------------------------
+;膣内に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_10
+;主人のペニス
+IF TFLAG:35
+	;상애
+	IF TALENT:상애
+		IF RAND:3 == 0
+			PRINTFORMW 「좀 더 좀 더…안에 가득 싸줘…！！」
+		ELSEIF RAND:2 == 0
+			PRINTFORMW 「앗 앗…안에 정액을 가득 싸서…어…」
+		ELSE
+			PRINTFORMW 「가득…정액으로 들어차버렸어…」
+		ENDIF
+	;굴복각인Lv3
+	ELSEIF MARK:굴복각인 == 3
+		IF RAND:2 == 0
+			PRINTFORMW 「싫어…이렇게 안에 싸버리다니…」
+		ELSE
+			PRINTFORMW 「이렇게 싸버리면…」
+		ENDIF
+	;その他
+	ELSE
+		IF RAND:2 == 0
+			PRINTFORMW 「싫어！제발！안에는 안 돼！」
+		ELSE
+			PRINTFORMW （안에 싸버렸어…）
+		ENDIF
+	ENDIF
+;それ以外
+ELSE
+	;PRINTFORMW 
+ENDIF
+
+;-------------------------------------------------
+;口に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_11
+;フェラ
+IF SELECTCOM == 41
+		;精液中毒Lv5
+		IF ABL:31 >= 5
+			PRINTFORMW 「응…정액…맛있어…가득…」
+			PRINTFORMW 라이코는 입 안의 정액을 맛보며 삼키고 있다
+			CFLAG:5233 = 5
+		;精液中毒Lv3
+		ELSEIF ABL:31 >= 3
+			PRINTFORMW 「응…정액…으읏…츄…」
+			CFLAG:5233 = 3
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「정액…나왔네…」
+			CFLAG:5233 = 2
+		;それ以外
+		ELSE 
+			PRINTFORMW 「응…！우욱…나와버렸어… 」
+			CFLAG:5233 = 1
+		ENDIF
+;イマラチオ
+ELSEIF SELECTCOM == 230
+		;精液中毒Lv5
+		IF ABL:31 >= 5
+			PRINTFORMW 「으규웃…응…쿨럭쿨럭…응…쮸웁…！」
+			PRINTFORMW 라이코는 목 안쪽까지 삽입된 음경에서 나온 정액에 황홀해하고 있었다
+			CFLAG:5233 = 5
+		;精液中毒Lv3
+		ELSEIF ABL:31 >= 3
+			PRINTFORMW 「응그읏…그읏…우욱…」
+			CFLAG:5233 = 3
+		;奉仕精神Lv3以上
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「우웃…욱…응…」
+			CFLAG:5233 = 2
+		;それ以外
+		ELSE 
+			PRINTFORMW 「게엑…우욱 우우욱…」
+			CFLAG:5233 = 1
+		ENDIF
+;국내 통합판의 경우 파이즈리로 사정했을 때도 입에다 사정한 걸로 처리하고 있어서 여기에 가슴에 사정 시의 문장을 덧붙였습니다. T
+ELSEIF SELECTCOM == 42
+		;상애
+		IF TALENT:상애
+			PRINTFORMW 「가슴에 가득히라니…」
+			PRINTFORMW 「그렇게 젖가슴이 좋은거야？」
+		;その他
+		ELSE
+			PRINTFORMW 「응…가슴에 이렇게…」
+		ENDIF
+ELSE
+	PRINTFORMW 「응그읏…우욱…욱…」
+ENDIF
+
+;-------------------------------------------------
+;手に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_12
+;상애
+IF TALENT:상애
+	PRINTFORMW 「얼마나 싸는 거야…손에서 넘쳐버리다니…얼마나 기분 좋았으면？」
+;その他
+ELSE
+	PRINTFORMW 「…기분 나빠아…」
+ENDIF
+
+;-------------------------------------------------
+;調教者がキスで射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_14
+;PRINTFORMW
+
+;-------------------------------------------------
+;秘裂に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_15
+;PRINTFORMW
+
+;-------------------------------------------------
+;髪に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_16
+;상애
+IF TALENT:상애
+	PRINTFORMW 「이런 걸로 기분이 좋아지다니…」
+	PRINTFORMW 「정말로, 변태라니까…」
+;その他
+ELSE
+	PRINTFORMW 「여자의 머리에…잘도…」
+ENDIF
+
+;-------------------------------------------------
+;主人が助手を犯すで射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_17
+;PRINTFORMW 
+
+;-------------------------------------------------
+;足に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_19
+;상애
+IF TALENT:상애
+	PRINTFORMW 「후후, 다리에 끼워서…꽤 기분 좋겠네…」
+;その他
+ELSE
+	PRINTFORMW 「후응…이런 게 기분 좋아？」
+ENDIF
+
+;-------------------------------------------------
+;腋に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_20
+;PRINTFORMW 
+
+;-------------------------------------------------
+;竿に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_22
+;PRINTFORMW
+
+;-------------------------------------------------
+;胸に射精
+;-------------------------------------------------
+@K227_MESSAGE_EJAC_PLAYER_29
+;상애
+IF TALENT:상애
+	PRINTFORMW 「가슴에 가득히라니…」
+	PRINTFORMW 「그렇게 젖가슴이 좋은거야？」
+;その他
+ELSE
+	PRINTFORMW 「응…가슴에 이렇게…」
+ENDIF
+
+;-------------------------------------------------
+;顔に射精
+;국내 통합판에서 얼굴에 사정했을 때의 대사는 동작시킬 방법을 몰라서 일단 비활성화하겠습니다.
+;원래 XX에 14가 들어갔었는데 국내 통합판에서 14는 키스로 사정을 의미합니다. T
+;-------------------------------------------------
+;@K227_MESSAGE_EJAC_PLAYER_XX
+;;상애
+;IF TALENT:상애
+;	PRINTFORMW 「응…이 정액 냄새…굉장해…」
+;;その他
+;ELSE
+;	PRINTFORMW 「이거…싫어…냄새…」
+;ENDIF
+
+;-------------------------------------------------
+;腹に射精
+;국내 통합판에서 배에 사정했을 때의 대사는 동작시킬 방법을 몰라서 일단 비활성화하겠습니다.
+;원래 XX에 17이 들어갔었는데 국내 통합판에서 17은 조수를 범하여 사정했음을 의미합니다. T
+;-------------------------------------------------
+;@K227_MESSAGE_EJAC_PLAYER_XX
+;;PRINTFORMW 
+
+;-------------------------------------------------
+;尻に射精
+;국내 통합판에서 엉덩이에 묻혔을 때의 대사는 동작시킬 방법을 몰라서 일단 비활성화하겠습니다.
+;원래 XX에 22가 들어갔었는데 국내 통합판에서 22는 자지에다 사정했음을 의미합니다. T
+;-------------------------------------------------
+;@K227_MESSAGE_EJAC_PLAYER_XX
+;;상애
+;IF TALENT:상애
+;	PRINTFORMW 「엉덩이에 싸는 것도 좋지만…안에 싸주면…」
+;;その他
+;ELSE
+;	PRINTFORMW 「엉덩이에라니…아무데나 막 싸지르지 말라고…변태…」
+;ENDIF
+
+;-------------------------------------------------
+;太腿に射精
+;국내 통합판에서 허벅지에 묻혔을 때의 대사는 동작시킬 방법을 몰라서 일단 비활성화하겠습니다.
+;원래 XX에 23이 들어갔었는데 국내 통합판에서 23은 요도에다 사정했음을 의미합니다. T
+;-------------------------------------------------
+;@K227_MESSAGE_EJAC_PLAYER_XX
+;;PRINTFORMW 
+
+;-------------------------------------------------
+;調教者がコンドームに射精
+;국내 통합판에서 콘돔 사정 대사는 동작시킬 방법을 몰라서 일단 비활성화하겠습니다.
+;원래 XX에 28이 들어갔었는데 국내 통합판에서 28은 사용하지 않습니다. T
+;-------------------------------------------------
+;@K227_MESSAGE_EJAC_PLAYER_XX
+;;PRINTFORMW 
+
+;========================================================
+;@KOJO_MESSAGE_MARKCNG
+;刻印変動をトリガーにした口上
+;刻印変動後に口上を出力されます
+;========================================================
+@KOJO_MESSAGE_MARKCNG_227
+;眠ってる場合は戻る
+;SIF EQUIP:14
+;	RETURN 0
+;口枷がある場合も戻る
+;SIF TEQUIP:42
+;	RETURN 0
+;失神中・失神回復時も戻る
+;SIF TFLAG:899 >= 1 || TFLAG:898 == 1
+;	RETURN 0
+;精神崩壊の場合は戻る
+;SIF TALENT:167
+;	RETURN 0
+;刻印取得口上呼び出し
+FOR LOCAL, 0, 7
+	FOR LOCAL:1, 1, 4
+		SIF TFLAG:(LOCAL + 40) == LOCAL:1 && CFLAG:(LOCAL + 5310) < LOCAL:1
+			TRYCALLFORM K227_MESSAGE_MARK{LOCAL}_{LOCAL:1}
+	NEXT
+NEXT
+
+;----------------------------------------------------------
+;刻印取得時の口上 CFLAG 5310～を使用
+;@KOJO_X_MESSAGE_MARKCNGから呼び出すのでセットで使うこと
+;----------------------------------------------------------
+;-------------------------------------------------
+;苦痛刻印取得 CFLAG:5310
+;-------------------------------------------------
+@K227_MESSAGE_MARK0_1
+PRINTFORMW 「가앗…히이잇！이…이제 그만…」
+CFLAG:5310 = 1
+
+@K227_MESSAGE_MARK0_2
+PRINTFORMW 「그마안！제발, 아픈 건 싫어어어어엇！！」
+CFLAG:5310 = 2
+
+@K227_MESSAGE_MARK0_3
+PRINTFORMW 「이제 아픈 건…부탁…아아아아아아아아！！！」
+CFLAG:5310 = 3
+
+;-------------------------------------------------
+;快楽刻印取得 CFLAG:5311
+;-------------------------------------------------
+@K227_MESSAGE_MARK1_1
+PRINTFORMW 「앗…지금…나…」
+CFLAG:5311 = 1
+
+@K227_MESSAGE_MARK1_2
+PRINTFORMW 「시, 싫어…안 돼…기분 좋아져선…」
+CFLAG:5311 = 2
+
+@K227_MESSAGE_MARK1_3
+PRINTFORMW （기분 좋아…이 사람에게 이대로 몸을 맡긴다면…）
+CFLAG:5311 = 3
+
+;-------------------------------------------------
+;굴복각인取得 CFLAG:5312
+;-------------------------------------------------
+@K227_MESSAGE_MARK2_1
+PRINTFORMW 「이런 거…무리야…」
+CFLAG:5312 = 1
+
+@K227_MESSAGE_MARK2_2
+PRINTFORMW （이대로 저항하지 않으면…편하게 될 수 있을까…？）
+CFLAG:5312 = 2
+
+@K227_MESSAGE_MARK2_3
+PRINTFORMW 「아…아…」
+PRINTFORMW （이젠…전부 포기하고 이대로…）
+
+CFLAG:5312 = 3
+
+;-------------------------------------------------
+;恐怖刻印取得 CFLAG:5313
+;-------------------------------------------------
+@K227_MESSAGE_MARK3_1
+PRINTFORMW 「이런…제발…」
+CFLAG:5313 = 1
+
+@K227_MESSAGE_MARK3_2
+PRINTFORMW 「히잇…」
+PRINTFORMW 라이코는 몸을 떨며 겁먹은 눈으로 이 쪽을 보고 있다…
+CFLAG:5313 = 2
+
+@K227_MESSAGE_MARK3_3
+PRINTFORMW 「아아아아아아아아！！！」
+PRINTFORMW 라이코는 공포와 치욕으로 얼룩진 표정을 하곤 미쳐 날뛴다
+CFLAG:5313 = 3
+
+;-------------------------------------------------
+;반발각인取得 CFLAG:5314
+;-------------------------------------------------
+@K227_MESSAGE_MARK4_1
+PRINTFORMW 「이런 거…」
+CFLAG:5314 = 1
+
+@K227_MESSAGE_MARK4_2
+PRINTFORMW 「언젠가…언젠가 반드시…」
+CFLAG:5314 = 2
+
+@K227_MESSAGE_MARK4_3
+PRINTFORMW 「명심해두라고…」
+CFLAG:5314 = 3
+
+;-------------------------------------------------
+;恥辱刻印取得 CFLAG:5316
+;-------------------------------------------------
+@K227_MESSAGE_MARK6_1
+PRINTFORMW 「이런 거…」
+CFLAG:5316 = 1
+
+@K227_MESSAGE_MARK6_2
+PRINTFORMW 「…보지 마！」
+CFLAG:5316 = 2
+
+@K227_MESSAGE_MARK6_3
+PRINTFORMW 「아…싫어…」
+PRINTFORMW 라이코는 부끄러운 듯 몸을 웅크리고 있다
+CFLAG:5316 = 3
+
+;==================================================
+;@KOJO_MESSAGE_COM 관계
+;커맨드 대사 판정 처리
+;커맨드 실행시에 출력됩니다
+;==================================================
+@KOJO_MESSAGE_COM_227
+;;자고 있을 경우에는 돌아온다
+;SIF EQUIP:14
+;	RETURN 0
+;;재갈이 있고, 재갈을 채우는 커맨드가 아닐 경우에도 돌아온다
+;SIF (TEQUIP:42 && (SELECTCOM != 226 && SELECTCOM != 229 && SELECTCOM != 506 && SELECTCOM != 509 && SELECTCOM != 583))
+;	RETURN 0
+;;기절 중에도 돌아온다
+;SIF TFLAG:899 >= 1
+;	RETURN 0
+
+;커맨드 첫회 판정을 갱신
+CALL COM_FLAG
+;PANCTION 내의 장비품 대사 보완 함수를 사용한다
+SIF FLAG:10 == 1
+	TRYCALL EQUIPTEXT
+;커맨드 대사 호출
+TRYCALLFORM KOJO_227_TRAIN_MESSAGE_S_COM_{SELECTCOM}
+
+;==================================================
+;@SELF_KOJO 관계
+;이벤트 대사 판정 처리
+;SELF_KOJO 실행시에 출력됩니다
+;==================================================
+@SELF_KOJO_227
+;;자고 있을 경우에는 돌아온다
+;SIF EQUIP:14
+;	RETURN 0
+;;조교 중에다 재갈을 물렸을 때에도 돌아온다
+;SIF TFLAG:999 && TEQUIP:42
+;	RETURN 0
+;;조교 중에다 기절 중일 때에도 돌아온다
+;SIF TFLAG:999 && (TFLAG:899 >= 1 && TFLAG:200 != 12)
+;	RETURN 0
+
+;이벤트 대사 호출
+TRYCALLFORM K227_MESSAGE_EVENT_{(TFLAG:200)}
+
+;========================================================
+;@LOOK_VIDEO_KOJO
+;ビデオを一緒に鑑賞する時の口上
+;売却前の選択肢で鑑賞を選んだ場合に呼び出される
+;========================================================
+@LOOK_VIDEO_KOJO_227
+;PRINTFORMW 
+
+;========================================================
+;@IMPRESSION_MAIN関係
+;ステータス画面を見る時に出力されます
+;一言表示なのでセリフを一行で収めること
+;========================================================
+@IMPRESSION_227
+;PRINTFORML 　　　「」
+
+;=============================================================================
+;エンディング口上の処理
+;=============================================================================
+;-------------------------------------------------
+;@SINGLE_ENDING関係
+;単体エンディング
+;-------------------------------------------------
+@SINGLE_ENDING_227
+DRAWLINE
+PRINTFORMW ―――단체 엔드 조건 성취―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 「응…안녀엉…%CALLNAME:MASTER%」
+PRINTFORMW 「오늘은 어떻게 할거야？평소보다 격렬하게？」
+PRINTFORMW 잠자리에서 일어나며, 라이코는 말했다
+PRINTFORMW 라이코의 머리를 툭툭 치면서, 두 명은 함께 침대에서 내려 부엌으로 향했다
+PRINTFORMW 「응…어떻게 할거야 오늘은？얌전히 지낼 건 아닌 거 같은데」
+PRINTFORMW 「？」
+PRINTFORMW 「앞으로도 잘 부탁한다구？」
+PRINTFORMW 「아니, 그런 일 새삼스레 말해도～라고 생각하는데」
+PRINTFORMW 「…만약 당신이 날 버리는 일이 있더라도, 나는 당신을 버릴 생각이 없어」
+PRINTFORMW 「그리고 말야, 수명 때문에 당신이 덜컥하고 가버릴 지도 모르고」
+PRINTFORMW 「그럼 맹세하는 거다？」
+PRINTFORMW 「건강할 때에도, 병든 때라도 나를―――」
+PRINTFORMW 
+PRINTFORMW 「―――사랑하는거야？」
+PRINTFORMW 「…」
+PRINTFORMW 「…고마워, 그런 말을 들으니 기뻐」
+PRINTFORMW 「만약 당신이 없어진다해도, 나는 쭉 기억할테니까」
+PRINTFORMW 「내 영혼에 새겨진 추억은, 좋은 것도 나쁜 것도 있지만」
+PRINTFORMW 「잊지 않을테니까…」
+PRINTFORMW 
+PRINTFORMW 「그러며언 오늘은 둘이서―――」
+PRINTFORMW 
+PRINTFORMW 　　　　　　　　―― Ending No.10227 (라이코 엔드)
+RETURN 0
+;-------------------------------------------------
+;@SINGLE_ENDING_AFTER関係
+;単体エンド後に「続ける」を選んだ時に出力します
+;-------------------------------------------------
+@SINGLE_ENDING_AFTER_227
+;PRINTFORMW 
+RETURN 0
+
+;-------------------------------------------------
+;@SLAVE_ENDING関係
+;奴隷エンディング
+;-------------------------------------------------
+@SLAVE_ENDING_227
+DRAWLINE
+PRINTFORMW ―――奴隷エンド条件達成―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+;PRINTFORMW 
+PRINTFORMW  
+PRINTFORMW 　　　　　　　　―― Ending No.{1000+NO:TARGET}i (%CALLNAME:TARGET%奴隷エンド)
+RETURN 0
+;-------------------------------------------------
+;@SLAVE_ENDING_AFTER関係
+;奴隷エンド後に「続ける」を選んだ時に出力します
+;-------------------------------------------------
+@SLAVE_ENDING_AFTER_227
+;PRINTFORMW 
+RETURN 0
+
+;=============================================================================
+;売却後エピソード
+;エンディング時に売ったキャラのエピソードを挿入できる
+;=============================================================================
+;-------------------------------------------------
+;エピソード番号決定など
+;-------------------------------------------------
+;@SET_SLAVE_AFTERWARDS_227
+;対象を退避してTFLAG:710を対象にする。
+;LOCAL = TARGET
+;TARGET = TFLAG:710
+
+;淫乱
+;IF TALENT:淫乱
+;	LOCAL:1 = 1
+;エピソードなし
+;ELSE
+;	LOCAL:1 = 0
+;ENDIF
+
+;退避した対象を元に戻す
+;TARGET = LOCAL
+;RETURN LOCAL:1
+
+;-------------------------------------------------
+;エピソード表示
+;-------------------------------------------------
+;@SHOW_SLAVE_AFTERWARDS_K227, ARG, ARG:1
+;DRAWLINE
+;PRINTFORMW 　%CSVCALLNAME(227,0)%のその後
+;DRAWLINE
+;IF ARG == 1
+	;PRINTFORMW 
+;ENDIF
+;DRAWLINE
+;RETURN 0
+
+;=============================================================================
+;eratohoYM用プロローグ(及びそれに対応したエピローグ)のテンプレ
+;プロローグNo.227 -(サブタイトル入力欄)-
+;=============================================================================
+;--------------------------------------------------
+;プロローグNo.227の存在判定
+;--------------------------------------------------
+;「RETURN 0」を「RETURN 1」にすると読み込み可能になる
+@EXIST_PROLOGUE_YM_227
+RETURN 0
+
+;--------------------------------------------------
+;プロローグNo.227の表示
+;--------------------------------------------------
+;選択画面にてタイトルを記入する場合はここで
+@SHOW_PROLOGUE_YM_227
+PRINTL [227] プロローグNo.227 -(サブタイトル入力欄)-
+
+;--------------------------------------------------
+;プロローグNo.227 -(サブタイトル入力欄)-本文
+;--------------------------------------------------
+@EXE_PROLOGUE_YM_227
+PRINTW 　　　　　　　　―― Prologue No.227 -(サブタイトル入力欄)- (eratohoYM)
+PRINTW  
+DRAWLINE
+PRINTL -------------------------------------GOODLUCK------------------------------------
+DRAWLINE
+PRINTW 
+
+;=============================================================================
+;プロローグNo.227に対応したエピローグ
+;=============================================================================
+;表示させたプロローグに対応するエピローグをノーマルエンドの代わりに表示させることが可能
+;なお、システム上プロローグを作成していないと表示されない
+;--------------------------------------------------
+;プロローグNo.227に対応したエピローグの存在判定
+;--------------------------------------------------
+;「RETURN 0」を「RETURN 1」にすると読み込み可能になる
+@EXIST_EPILOGUE_YM_227
+RETURN 0
+
+;--------------------------------------------------
+;プロローグNo.227に対応したエピローグ本文
+;--------------------------------------------------
+@EXE_EPILOGUE_YM_227
+PRINTW  
+PRINTW 　　　　　　　　―― Ending No.01 (ノーマルエンド)
+
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■　　　　　　　　　　　　　 以下EXTRAモード用　　　　　　　　　　　　　　　　　　■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;EXTRAモードでは主人となったキャラの口上が読み込まれます
+;eratohoYM用とは違い、表示可能なのはデフォルトか主人口上のどちらかなので、選択肢の表示用の関数は存在しません
+;
+;例)○○はかねてから想いを寄せていた××を手中に収めるべく、行動を開始した……みたいな感じ?
+;
+;なおプロローグでキャラを追加したい場合、キャラIDの関係上直接「ADDCHARA Ｘ」を使うよりも
+;「CALL CHARA_STATE_BASIC, Ｘ」を使った方が望ましい。
+;その際、自動的に加入したキャラが調教対象として設定される。
+;また、「CALL CHARA_STATE_BASIC, Ｘ」の後に「CSTR:3 = ～～～～」を入力すると、
+;どのような方法で連れてこられたか記憶することができる。
+;=============================================================================
+;プロローグNo.227 -(サブタイトル入力欄)-
+;=============================================================================
+;--------------------------------------------------
+;プロローグNo.227の存在判定
+;--------------------------------------------------
+;「RETURN 0」を「RETURN 1」にすると読み込み可能(存在していると判断)になる
+@EXIST_PROLOGUE_EXTRA_227
+RETURN 0
+
+;--------------------------------------------------
+;プロローグNo.227 -(サブタイトル入力欄)-本文
+;--------------------------------------------------
+@EXE_PROLOGUE_EXTRA_227
+
+;………………………………………………
+;キャラ追加イベントを盛り込む場合
+;………………………………………………
+;製作者各人の判断でプロローグにキャラを追加することが可能です。
+;ただし、初期金額以上の値段のキャラを追加する場合、
+;最悪ゲームバランスが崩壊する可能性があります。そのことを踏まえてイベントを追加してください。
+;
+;特定のキャラを追加する場合(Ｘにはキャラ番号を入力)
+;CALL CHARA_STATE_BASIC, Ｘ
+;どのように連れてこられたかを記憶(例：CSTR:3 = 誘拐した。)
+;※あまり長過ぎると表示がずれる可能性あり
+;CSTR:3 = 
+;以下の行を解禁すると上で追加したキャラを購入したことに出来る(＝所持金が減る。ただし0未満にはならない)
+;MONEY = MIN(MONEY - ITEMPRICE:(NO:TARGET), 0)
+;………………………………………………
+
+PRINTW 　　　　　　　　―― EXTRA Prologue No.227 -(サブタイトル入力欄)-
+PRINTW  
+DRAWLINE
+PRINTL ------------------------------------LET’S ENJOY----------------------------------
+DRAWLINE
+PRINTW 

@@ -1,0 +1,385 @@
+﻿;=============================================================================
+;아스파라거스 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE405
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:405 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 아키 자매か[야채의 연금술사]でないとダメ
+SIF NO:PLAYER != 37 && NO:PLAYER != 38 && TALENT:PLAYER:831 == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:32 == 9
+	RETURN 1
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;체력이 1000미만으로는 장착 불가능
+SIF BASE:0 < 1000
+	RETURN 0
+;기력이 500미만일 때는 불가
+SIF BASE:1 < 500
+	RETURN 0
+;Ｕ확장경험 적으면 안 됨
+SIF EXP:34 < 5
+	RETURN 0
+;쿠스코 사용 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;조교 대상이 남자일 경우, Ｃ계 장착구 사용 중에는 불가
+SIF (TEQUIP:30 || TEQUIP:31) && TALENT:120
+	RETURN 0
+;그밖의 Ｕ계 장착구 사용 중에는 불가
+SIF (TEQUIP:32 && TEQUIP:32 != 9) || TEQUIP:26
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM405
+IF NO:TARGET == 12 || NO:TARGET == 15
+	PRINTL 흰 아스파라거스 고문
+	TSTR:0 = 흰 아스파라거스 고문
+ELSE
+	PRINTL 아스파라거스 고문
+	TSTR:0 = 아스파라거스 고문
+ENDIF
+CALL TRAIN_MESSAGE_COM405
+
+DOWNBASE:0 += 500
+DOWNBASE:1 += 600
+
+SOURCE:12 = 800
+SOURCE:17 = 600
+SOURCE:21 = 700
+SOURCE:22 = 1700
+SOURCE:31 = 2000
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 1000
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 1500
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 2000
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 2500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 3000
+ELSE
+	SOURCE:0 = 3500
+ENDIF
+
+;EXP:요도 개발 경험을 본다
+IF EXP:46 < EXPLV:1
+	TIMES SOURCE:0 , 0.20
+	SOURCE:20 = 8000
+	TCVAR:50 += 1
+ELSEIF EXP:46 < EXPLV:2
+	TIMES SOURCE:0 , 0.60
+	SOURCE:20 = 3600
+ELSEIF EXP:46 < EXPLV:3
+	TIMES SOURCE:0 , 1.00
+	SOURCE:20 = 1200
+ELSEIF EXP:46 < EXPLV:4
+	TIMES SOURCE:0 , 1.20
+	SOURCE:20 = 300
+ELSEIF EXP:46 < EXPLV:5
+	TIMES SOURCE:0 , 1.40
+	SOURCE:20 = 30
+ELSE
+	TIMES SOURCE:0 , 1.60
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:0 , 0.10
+	SOURCE:20 += 1000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:0 , 0.40
+	SOURCE:20 += 400
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:0 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:0 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.10
+ELSE
+	TIMES SOURCE:0 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:0 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:0 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:0 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:0 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:0 , 1.20
+ELSE
+	TIMES SOURCE:0 , 1.30
+ENDIF
+
+;남자
+SIF TALENT:120
+	TIMES SOURCE:20 , 4.50
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;야채성활
+IF TEQUIP:20 == 9 && TEQUIP:25 == 9
+	TIMES SOURCE:0 , 1.80
+ELSEIF TEQUIP:20 == 9 || TEQUIP:25 == 9
+	TIMES SOURCE:0 , 1.20
+ENDIF
+
+IF NO:TARGET == 12 || NO:TARGET == 15
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:20 , 1.50
+ENDIF
+
+TCVAR:46 += 2
+TCVAR:34 += 2
+
+;석작 카시와의 착탈
+IF TEQUIP:32 == 9
+	TEQUIP:32 = 0
+	TFLAG:165 += 2
+ELSE
+	TEQUIP:32 = 9
+	TFLAG:165 += 5
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;아스파라 삽입중
+;--------------------------------------------------
+@EQUIP_COM405
+IF NO:TARGET == 12 || NO:TARGET == 15
+	PRINTL <흰 아스파라거스 삽입 중>
+ELSE
+	PRINTL <아스파라거스 삽입 중>
+ENDIF
+
+DOWNBASE:0 += 70
+DOWNBASE:1 += 100
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL = 40
+ELSEIF ABL:01 == 1
+	LOCAL = 120
+ELSEIF ABL:0 == 2
+	LOCAL = 360
+ELSEIF ABL:0 == 3
+	LOCAL = 600
+ELSEIF ABL:0 == 4
+	LOCAL = 900
+ELSE
+	LOCAL = 1300
+ENDIF
+
+;EXP:요도 경험을 본다
+;0(은)는 있을 수 없다
+IF EXP:46 < EXPLV:2
+	TIMES LOCAL , 0.60
+	LOCAL:1 = 240
+ELSEIF EXP:46 < EXPLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:1 = 120
+ELSEIF EXP:46 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:1 = 60
+ELSEIF EXP:46 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:1 = 30
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.10
+	LOCAL:1 += 400
+	TIMES LOCAL:1 , 3.00
+	LOCAL:2 += 1000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.40
+	LOCAL:1 += 150
+	TIMES LOCAL:1 , 1.00
+	LOCAL:2 += 200
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.50
+	LOCAL:2 += 80
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.20
+ELSE
+	TIMES LOCAL , 1.80
+	TIMES LOCAL:1 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;남자
+SIF TALENT:120
+	TIMES LOCAL:1 , 4.50
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 2.00
+
+;정조관념(처녀는 있을 수 없다)
+SIF TALENT:30
+	TIMES LOCAL:1, 3.00
+
+IF NO:TARGET == 12 || NO:TARGET == 15
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.50
+ENDIF
+
+SOURCE:0 += LOCAL
+SOURCE:20 += LOCAL:1
+
+TCVAR:46 += 1
+TCVAR:34 += 1
+
+TFLAG:165 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM405
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:32 == 9
+	PRINTFORML %CALLNAME:TARGET%의 요도에 물려있는 아스파라거스를 천천히 뽑아 냈다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF EXP:34 >= 100 && TALENT:170
+		PRINT 잘 개발된 요도로 아스파라거스의 돌기로부터 쾌락을 탐내려는 듯이 얽고
+	ELSEIF TALENT:150 && TALENT:170
+		PRINT 아스파라거스의 돌기가 요도 벽을 비빌 때마다, 마치 경련하는 것 같이 사지를 떨고
+	ELSEIF TALENT:150
+		PRINTFORM 거친 숨을 몰아 쉬면서도 %조사선택(CALLNAME:PLAYER, "와")% 시선이 마주치자 만족스런 표정을 짓고
+	ELSEIF TALENT:170
+		PRINT 아스파라거스가 가져오는 쾌감에 야무지지 못하게도 혀를 늘어뜨리고 교성을 지르고
+	ELSEIF TALENT:40
+		PRINT 요도로부터 거대한 물체가 빠져나가는 감각에 결국 참지 못하고, 듣기 싫을 정도의 교성을 지르고
+	ELSE
+		PRINT 뽑혀진 순간 안심한 표정을 지었지만, 요도내의 상실감이 주는 위화감에 곤혹스러워 하고
+	ENDIF
+	PRINTW  있다….
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	IF TALENT:120
+		PRINT 음경의 끄트머리에 
+	ELSE
+		PRINT 살짝 벌름거리는 요도구에 
+	ENDIF
+	PRINTL 싱싱한 아스파라거스를 갖다 댔다….
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF TALENT:150 && TALENT:170
+		PRINT 열기 가득한 시선으로 “그것”을 응시하며 스스로 요도구를 크게 펼치고
+	ELSEIF TALENT:150
+		PRINTFORM 미소를 띠고는 있지만 당혹스러운 표정을 감추지 못한 채 %조사선택(CALLNAME:PLAYER, "를")% 보고
+	ELSEIF TALENT:170
+		PRINT 삽입되는 쾌감을 한계까지 끌어내려 요도구를 자신의 손가락으로 휘젓고 쑤시고
+	ELSEIF TALENT:40
+		PRINT 눈물을 흘리며 비명을 지르고, 요도에 기어들려 하는 물건을 뿌리치고
+	ELSE
+		PRINTFORM 건조한 웃음을 지으며 %CALLNAME:PLAYER%의 손안의 아스파라거스를 응시하고
+	ENDIF
+	PRINTW  있다….
+ENDIF

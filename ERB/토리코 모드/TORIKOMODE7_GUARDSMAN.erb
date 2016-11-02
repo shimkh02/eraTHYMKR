@@ -1,0 +1,575 @@
+﻿;===========================================
+;경비시스템 경비원 관리 관련 함수들.
+;경비대장은 캐릭터이지만 이쪽에서 처리한다.
+;--------------------------------------------
+
+;;-----------------------------------------
+;;경비원 레벨 계산기. (사용 안함)
+;;ARG = 해당 경비원의 플래그.
+;@CALC_LEVEL_GUARDSMAN_TORIKOMODE, ARG
+;;종족을 분리해낸다.
+;LOCAL:0 =
+;;경험치를 분리해낸다.
+;LOCAL:1 = ARG%10000
+
+;-----------------------------------------
+;경비원 종족 데이터
+;ARG = 종족번호
+@DATA_SPICES_GUARDSMAN_TORIKOMODE, ARG
+IF ARG == 1
+	RESULTS = 요정
+ELSEIF ARG == 2
+	RESULTS = 인간
+ELSEIF ARG == 3
+	RESULTS = 오니
+ENDIF
+
+;-----------------------------------------
+;경비원 임무 데이터
+;ARG = 종족번호
+@DATA_JOB_GUARDSMAN_TORIKOMODE, ARG
+IF ARG == 0
+	RESULTS = 감시
+ELSEIF ARG == 1
+	RESULTS = 전투
+ELSEIF ARG == 2
+	RESULTS = 수색
+ENDIF
+
+;-----------------------------------------
+;경비원 정보 계산기
+;ARG = 해당 경비원의 플래그.
+@CALC_DATA_GUARDSMAN_TORIKOMODE, ARG
+;봉급 추가 부분은 일단 꺼둔다.
+;봉급계산용 변수 저장.
+;CALL CALC_HOWMANY_GUARDSMAN_TORIKOMODE
+;LOCAL:99 = RESULT
+;디버그
+;PRINTFORML 현재 경비원은 {LOCAL:99}명 있다.
+
+;반복자
+LOCAL:99 =0
+;종족을 분리해낸다.
+LOCAL:0 = ARG%100000000000000000 / 10000000000000000
+;레벨을 분리해낸다.
+LOCAL:1 = ARG%10000000000000000 / 100000000000000
+;이름을 분리
+LOCAL:2 = ARG%100000000000000 / 100000000000 
+;무기를 분리
+LOCAL:3 = ARG%100000000000 / 1000000000 
+;현재체력을 분리
+LOCAL:4 = ARG%1000000000 / 100000
+;현재경험을 분리
+LOCAL:5 = ARG%100000 /10
+;임무를 분리
+LOCAL:6 = ARG%10
+;최대체력
+LOCAL:7 = 0
+;감시력
+LOCAL:8 = 0
+;전투력
+LOCAL:9 = 0
+;수색력
+LOCAL:10 = 0
+;봉급
+LOCAL:11 = 0
+;요정이다
+IF LOCAL:0 == 1
+	LOCAL:7 = (LOCAL:1*12) + 300
+	LOCAL:8 = (LOCAL:1*3) + 50
+	LOCAL:9 = (LOCAL:1*3) + 50
+	LOCAL:10 = (LOCAL:1*6) + 100
+	LOCAL:11 = (LOCAL:1*5)
+;잉간이다
+ELSEIF LOCAL:0 == 2
+	LOCAL:7 = (LOCAL:1*15) + 350
+	LOCAL:8 = (LOCAL:1*4) + 70
+	LOCAL:9 = (LOCAL:1*4) + 80
+	LOCAL:10 = (LOCAL:1*4) + 50
+	LOCAL:11 = (LOCAL:1*10)
+;오니다
+ELSEIF LOCAL:0 == 3
+	LOCAL:7 = (LOCAL:1*18) + 400
+	LOCAL:8 = (LOCAL:1*2) + 50
+	LOCAL:9 = (LOCAL:1*7) + 125
+	LOCAL:10 = (LOCAL:1*2) + 25
+	LOCAL:11 = (LOCAL:1*15)
+ENDIF
+
+;봉급의 인원수 보정. 1명 늘어날 때 마다 50%씩 증가한다. 10명이 되면 5배가 됨.
+;레벨보정도 있으므로, 너무 높이지 말 것. 일단은 꺼 둔다.
+;LOCAL:11 = LOCAL:11 + LOCAL:11*(LOCAL:99*50)/100
+
+
+;수치의 캐스팅.
+LOCAL:7 = LIMIT(LOCAL:7, 0, 9999)
+LOCAL:8 = LIMIT(LOCAL:8, 0, 999)
+LOCAL:9 = LIMIT(LOCAL:9, 0, 999)
+LOCAL:10 = LIMIT(LOCAL:10, 0, 999)
+LOCAL:11 = LIMIT(LOCAL:11, 0, 99999)
+
+;이름
+CALL NAME_GUARDSMAN_TORIKOMODE, LOCAL:2
+LOCALS:0  = %RESULTS:0%
+;종족명
+CALL DATA_SPICES_GUARDSMAN_TORIKOMODE, LOCAL:0
+LOCALS:1  = %RESULTS:0%
+;임무명
+CALL DATA_JOB_GUARDSMAN_TORIKOMODE, LOCAL:6
+LOCALS:2  = %RESULTS:0%
+
+CALL DATA_WEAPON_GUARDSMAN_TORIKOMODE, LOCAL:3 
+;분류, 이름, 설명, 감시, 공격, 수색, 가격
+LOCALS:3  = %RESULTS:0%
+;이름
+LOCALS:4  = %RESULTS:1%
+;설명
+LOCALS:5  = %RESULTS:2%
+;감시력
+LOCAL:12  = RESULT:0
+;전투력
+LOCAL:13  = RESULT:1
+;수색력
+LOCAL:14  = RESULT:2
+;가격
+LOCAL:15  = RESULT:3
+
+;무기착용후의 능력치 계산
+LOCAL:18 = LOCAL:8 + LOCAL:12
+LOCAL:19 = LOCAL:9 + LOCAL:13
+LOCAL:20 = LOCAL:10 + LOCAL:14
+;수치의 캐스팅.
+LOCAL:18 = LIMIT(LOCAL:18, 0, 999)
+LOCAL:19 = LIMIT(LOCAL:19, 0, 999)
+LOCAL:20 = LIMIT(LOCAL:20, 0, 999)
+
+
+;결과치 제작. 쓰지 않는 수치도 있음에 주의. 요소수가 늘어나면 루프 뒤의 범위를 늘려줄 것.
+LOCAL:99 = 0
+DO
+	RESULT:(LOCAL:99) = LOCAL:(LOCAL:99)
+	RESULTS:(LOCAL:99) = %LOCALS:(LOCAL:99)%
+	LOCAL:99 += 1
+LOOP LOCAL:99 < 22
+;	;디버그
+;	;경비정보
+;	PRINTFORM / 이름 : %RESULTS:0%
+;	PRINTFORM / 종족 : %RESULTS:1%
+;	PRINTFORM / 레벨 : {RESULT:1}
+;	PRINTFORM / 현재체력 : {RESULT:4}
+;	PRINTFORM / 최대체력 : {RESULT:7}
+;	PRINTFORM / 현재경험 : {RESULT:5}
+;	PRINTFORM / 임무 : %RESULTS:2%
+;	PRINTFORM / 감시력 : {RESULT:8 }
+;	PRINTFORM / 전투력 : {RESULT:9 }
+;	PRINTFORM / 수색력 : {RESULT:10 }
+;	PRINTFORM / 봉급 : {RESULT:11}
+;	;무기관련
+;	PRINTFORM / 무기분류 : %RESULTS:3%
+;	PRINTFORM / 무기명 : %RESULTS:4%
+;	PRINTFORM / 설명 : %RESULTS:5%
+;	PRINTFORM / 무기감시력 : {RESULT:12}
+;	PRINTFORM / 무기전투력 : {RESULT:13}
+;	PRINTFORM / 무기수색력 : {RESULT:14}
+;	;무기착용으로 늘어난 능력치
+;	PRINTFORM / 무기착용후 감시력 : {RESULT:18}
+;	PRINTFORM / 무기착용후 전투력 : {RESULT:19}
+;	PRINTFORM / 무기착용후 수색력 : {RESULT:20}
+;	PRINTL
+
+;-----------------------------------------
+;경비원 생성기
+;구입할때 정해진다. 종족은 정해져서 들어옴.
+;ARG = 종족
+@GENERATE_DATA_GUARDSMAN_TORIKOMODE, ARG
+LOCAL:0 = ARG
+;레벨을 생성한다
+LOCAL:1 = (RAND:3+1)
+;이름을 생성한다
+IF ARG == 1
+	LOCAL:2 = RAND:190 
+ELSEIF ARG == 2
+	LOCAL:2 = (RAND:250+190) 
+ELSEIF ARG == 3
+	LOCAL:2 = (RAND:280 +440)
+ENDIF
+;무기를 생성한다
+;요정
+IF ARG == 1
+	;야시경을 들고 있거나, 몽둥이를 들고 있거나 한다.
+	IF RAND:2 == 0
+		LOCAL:3 = 11
+	ELSE
+		LOCAL:3 = 1
+	ENDIF
+;인간
+ELSEIF ARG == 2
+	;횃불을 들고 있거나, 몽둥이를 들고 있거나 한다.
+	IF RAND:2 == 0
+		LOCAL:3 = 16
+	ELSE
+		LOCAL:3 = 1
+	ENDIF
+;오니. 무기가 좋은 편.
+ELSEIF ARG == 3
+	LOCAL:3 = (RAND:3+1)
+ENDIF
+;현재체력을 생성한다.
+IF ARG == 1
+	LOCAL:4 = (LOCAL:1*12) + 300
+ELSE IF ARG == 2
+	LOCAL:4 = (LOCAL:1*15) + 350
+ELSE IF ARG == 3
+	LOCAL:4 = (LOCAL:1*18) + 400
+ENDIF
+;현재경험을 생성한다
+LOCAL:5 = RAND:9999
+;현재임무를 생성한다. 종족에 맞는 기본직업을 탑재.
+IF ARG == 1
+	;수색
+	LOCAL:6 = 2
+ELSEIF ARG == 2
+	;감시
+	LOCAL:6 = 0
+ELSEIF ARG == 3
+	;전투
+	LOCAL:6 = 1
+ENDIF
+;완성된 값을 더한다.
+RESULT = LOCAL:0*10000000000000000  + LOCAL:1*100000000000000 + LOCAL:2 *100000000000 + LOCAL:3 *1000000000 + LOCAL:4*100000 + LOCAL:5*10 + LOCAL:6
+;디버그
+;PRINTFORML 생성된 경비원 정보 = {RESULT}
+;PRINTFORML 종족 {LOCAL:0}/ 레벨{LOCAL:1}/ 이름번호{LOCAL:2} / 무기번호{LOCAL:3} / 현재체력{LOCAL:4} / 현재경험{LOCAL:5} /현재임무{LOCAL:6}
+RETURN RESULT
+
+
+
+;-----------------------------------------
+;경비력 계산.
+;-----------------------------------------
+@CALC_SECURITY_POWER_TORIKOMODE
+;감시력
+LOCAL:0 = 0
+;전투력
+LOCAL:1 = 0
+;수색력
+LOCAL:2 = 0
+;카운터
+LOCAL:99 = 0
+;계산
+DO 
+	;카운터 증가. 1부터 사용한다. 
+	LOCAL:99 += 1
+	CALL CALC_DATA_GUARDSMAN_TORIKOMODE,  FLAG:(5050 + LOCAL:99)
+	
+	;디버그
+	;PRINTFORM 이름 : %RESULTS:0%
+	;PRINTFORML  / 임무 : %RESULTS:2%  /  감시력 : {RESULT:18} / 전투력 : {RESULT:19} / 수색력 : {RESULT:20}
+	
+	;감시중이면
+	IF RESULT:6 == 0
+		LOCAL:0 += RESULT:18
+	;전투중이면
+	ELSEIF RESULT:6 == 1
+		LOCAL:1 += RESULT:19
+	;수색중이면
+	ELSEIF RESULT:6 == 2
+		LOCAL:2 += RESULT:20
+	ENDIF
+LOOP LOCAL:99 < 9
+
+;디버그 
+;PRINTFORML LOCAL:0={LOCAL:0}, LOCAL:1={LOCAL:1}, LOCAL:2={LOCAL:2}
+;저장
+FLAG:5041 = LOCAL:0 
+FLAG:5042 = LOCAL:1 
+FLAG:5043 = LOCAL:2 
+
+
+
+;------------------------------------------------
+;경비원 1인의 정보 출력함수
+;ARG =경비원 플래그 번호
+@PRINT_DATA_GUARDSMAN_TORIKOMODE, ARG
+;경비원 정보 획득
+CALL CALC_DATA_GUARDSMAN_TORIKOMODE,  ARG
+
+;경비정보
+;이름,종족
+PRINTFORM %RESULTS:0, 12, LEFT% <%RESULTS:1%>
+;레벨, 경험치
+PRINTFORM  LV:
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+PRINTFORM {RESULT:1,2,LEFT}
+RESETCOLOR
+CALL PRINT_COLORBAR(RESULT:5, 10000, 5, BARCOLORSET("青緑"), BARCOLORSET("薄青"))
+;체력
+PRINTFORM  
+PRINTFORM ♡체력:({RESULT:4}/{RESULT:7})
+CALL PRINT_COLORBAR(RESULT:4, RESULT:7, (RESULT:7/30), BARCOLORSET("緑"), BARCOLORSET("赤"))
+PRINTL
+PRINTFORM     임무:
+;감시중이면
+IF RESULT:6 == 0
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+;전투중이면
+ELSEIF RESULT:6 == 1
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+;수색중이면
+ELSEIF RESULT:6 == 2
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+ENDIF
+PRINTFORM [%RESULTS:2%]
+RESETCOLOR
+PRINTFORM  ♎감시력:{RESULT:18}
+SIF RESULT:12 > 0
+	PRINTFORM (+{RESULT:12}) 
+PRINTFORM  ♆전투력:{RESULT:19}
+SIF RESULT:13 > 0
+	PRINTFORM (+{RESULT:13}) 
+PRINTFORM  ♏수색력:{RESULT:20}
+SIF RESULT:14 > 0
+	PRINTFORM (+{RESULT:14}) 
+PRINTFORM  $봉급:{RESULT:11} 
+PRINTFORM  ♐무기:
+CALL SETCOLOR_TORIKOMODE, "JADE", 2
+PRINTFORM %RESULTS:4%
+RESETCOLOR
+PRINTL
+
+;------------------------------------------------
+;무기 정보 출력
+;ARG =무기번호
+@PRINT_DATA_WEAPON_TORIKOMODE, ARG
+;무감
+LOCAL:0 = 0
+;무공
+LOCAL:1 = 0
+;무수
+LOCAL:2 = 0
+;무기 정보 획득
+CALL DATA_WEAPON_GUARDSMAN_TORIKOMODE, ARG
+LOCAL:0 = RESULT:0
+LOCAL:1 = RESULT:1
+LOCAL:2 = RESULT:2
+;무기명
+CALL SETCOLOR_TORIKOMODE, "JADE", 3
+PRINTFORM %RESULTS:1,16,LEFT%
+RESETCOLOR
+;무기능력
+IF LOCAL:0 >0
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+	PRINTFORM ♎+{LOCAL:0} 
+ENDIF
+IF LOCAL:1 >0
+	CALL SETCOLOR_TORIKOMODE, "RED", 2
+	PRINTFORM ♆+{LOCAL:1} 
+ENDIF
+IF LOCAL:2 >0
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+	PRINTFORM ♏+{LOCAL:2} 
+ENDIF
+;가격
+RESETCOLOR
+PRINTFORM $가격:{RESULT:3}원 
+;설명
+CALL SETCOLOR_TORIKOMODE, "BLACK", 1
+PRINTFORM '%RESULTS:2%'
+RESETCOLOR
+PRINTL
+
+;------------------------------------------------
+;보유 경비원의 수를 계산하는 함수
+@CALC_HOWMANY_GUARDSMAN_TORIKOMODE
+LOCAL:99 = 0
+LOCAL:0 = 0
+DO
+	SIF FLAG:(LOCAL:99+5051) > 0
+		LOCAL:0 ++
+	LOCAL:99++
+LOOP LOCAL:99 < 10
+
+RESULT = LOCAL:0
+RETURN RESULT  
+
+;------------------------------------------------
+;경비원 봉급 지불처리. 만약 봉급이 지불되지 못하면 때려친다.
+@PAY_GUARDSMAN_TORIKOMODE, ARG
+;경비원 정보 획득
+CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:ARG
+;봉급저장
+LOCAL:0 = RESULT:11
+;디버그
+;PRINTFORML %RESULTS:0%에게 봉급을 주자. 잔고{MONEY}
+;지불할 돈이 없다.
+IF MONEY < RESULT:11
+	PRINTFORMW 애석하지만, %RESULTS:0%(LV:{RESULT:1})에게 줄 봉급이 없다...(봉급:{LOCAL:0} / 잔고:{MONEY})
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %RESULTS:0%에게 사정을 설명했다...
+	PRINTFORMW %조사처리(RESULTS:0,"는")%.......
+	;75~25확률로 때려친다. 레벨이 오를수록 때려칠 확률이 높아진다...
+	IF RAND:100 > 25 + RESULT:1/2
+		PRINTFORMW "그렇습니까... 상황이 상황이니, 이번에는 제가 이해하고 넘어가도록 하죠."
+		PRINTFORMW ...다행히도 사정을 이해 해 준 것 같다.
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORMW (%RESULTS:0%에게 봉급을 지불하지 못했지만, 그만두지 않았다.)
+		RESETCOLOR
+		PRINTFORMW "그런데, 정규직으로는 언제 전환시켜줄 겁니까...?"
+		PRINTFORMW ...그럴 여유는 없다.
+		RESETCOLOR
+	ELSE
+		PRINTFORMW "무슨 말입니까! 일을 했으면 돈을 줘야죠! 이쪽은 목숨을 걸고 일하고 있는데!!"
+		PRINTFORMW 펄펄 뛰며 화를 냈다.
+		PRINTFORMW 그러나 어떻게든 돈을 받아낼 방법이 없다는 걸 깨닫고는, 욕을 하며 짐을 쌌다...
+		CALL SETCOLOR_TORIKOMODE, "RED", 2
+		PRINTFORMW (%조사처리(RESULTS:0,"는")% 봉급을 받지못해 경비원을 그만두었다!)
+		RESETCOLOR
+		;경비원 삭제
+		FLAG:ARG = 0
+	ENDIF
+	;결과반환
+	RESULT = 0
+	CUSTOMDRAWLINE ･
+;봉급을 지불한다.
+ELSE
+	MONEY -= LOCAL:0
+	;결과반환
+	RESULT = LOCAL:0
+ENDIF
+;디버그
+;PRINTFORML %RESULTS:0%에게 {RESULT}지급. 잔고{MONEY}
+RETURN RESULT  
+
+
+
+;------------------------------------------------------
+;노예를 경비원/대장으로 임명했을 때, 기본 전투력을 계산한다.
+;기본은 최대 기력의 10%임.
+;경비대장은 호감도 보정이 붙는다.
+;ARG = 노예 등록번호 
+;ARG:1 = 1:경비대장 2:경비원
+;전투력 계산 (기력의 1/10) *호감도 보정
+@CALC_ATTACKPOWER_GUARDSMAN_SLAVE, ARG, ARG:1
+;호감도 보정(하위)
+LOCAL:0 = 0
+;호감도 보정(상위)
+LOCAL:1 = 0
+;보정합
+LOCAL:2 = 0
+;----------------------------------------
+;경비대장 특별보정
+IF ARG:1 == 1
+	;호감도 보정(하위. X1~2) (호감도 1000~1500)
+	LOCAL:0 = CFLAG:ARG:2*100/1000
+	LOCAL:0 = LIMIT(LOCAL:0, 100,150)
+	;호감도 보정(상위. X0.0 ~ 2.0) (호감도 1500~5500)
+	LOCAL:1 = (CFLAG:ARG:2-1500)*100/2000
+	LOCAL:1 = LIMIT(LOCAL:1, 0, 200)
+	;호감도 보정합
+	LOCAL:2 = LOCAL:0 + LOCAL:1
+ENDIF
+;보정치 캐스팅
+LOCAL:2 = LIMIT(LOCAL:2, 100, 350)
+;전투력 계산
+;기력을 받아와서 전투력을 계산한다.
+RESULT = MAXBASE:ARG:1 *10/100 * (LOCAL:2)/100
+;디버그
+;PRINTFORML LOCAL:0 ={LOCAL:0} LOCAL:1={LOCAL:1} LOCAL:2={LOCAL:2} RESULT={RESULT}  MAXBASE:ARG:1={MAXBASE:ARG:1}
+;반환
+RETURN RESULT
+
+
+;----------------------------------------
+;경비대장 정보 출력
+;ARG = 등록번호
+;ARG:1 = 상대가 있을 때, 상대의 등록번호.
+@PRINT_GUARDSMAN_CAPTAIN, ARG, ARG:1
+;상정보정 전 전투력
+LOCAL:0 = 0
+;상정보정 후 전투력
+LOCAL:1 = 0
+;
+;상성계산
+IF ARG:0 > 0
+	LOCAL:0 = RELATION:ARG:(ARG:0)
+	SIF LOCAL:0 == 0
+		LOCAL:0 = 100
+ENDIF
+;이름
+PRINTFORM %CALLNAME:ARG% 
+SIF ARG:1 > 0
+	PRINTFORM <상성:{LOCAL:0}퍼센트>
+PRINTL
+;체력표시
+PRINTFORM ♡체력:({BASE:ARG:0}/{MAXBASE:ARG:0})
+CALL PRINT_COLORBAR(BASE:ARG:0, MAXBASE:ARG:0, MAXBASE:ARG:0 /40, BARCOLORSET("緑"), BARCOLORSET("赤"))
+;전투력 표시
+PRINTL
+CALL CALC_ATTACKPOWER_GUARDSMAN_SLAVE, ARG ,1
+PRINTFORML ☆공격력:{RESULT} 
+
+
+;----------------------------------------
+;경비원 경험치 획득
+;ARG :  = 경험치를 받을 경비원의 플래그'번호'
+;ARG:1  = 주어질 경험치
+@GETEXP_GUARDSMAN_TORIKOMODE, ARG, ARG:1
+CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(ARG)
+;입수 경험치의 캐스팅. 999이상 한번에 받을 수 없다.
+ARG:1 = LIMIT(ARG:1, 0, 9999)
+;현재 경험치
+LOCAL:0 = RESULT:5
+;현재 레벨
+LOCAL:1 = RESULT:1
+;돌려 줄 경험치
+LOCAL:2 = 0
+;회복 할 체력
+LOCAL:3 = 0
+;
+;경험치 증가.경험치는 레벨이 오를 수록 적게 획득한다.. 50렙에서 50%. 99렙에서 1%를 획득한다...
+LOCAL:2 += LOCAL:0 + (ARG:1*(100-LOCAL:1)/100)
+;레벨업 하는지 체크한다.
+IF LOCAL:2 > 10000
+	;윗 자리 잘라냄.
+	LOCAL:2 = LOCAL:2 %10000
+	;디버그
+	;PRINTFORML LOCAL:2={LOCAL:2}
+	;경험치를 치환한다.
+	FLAG:ARG = FLAG:ARG - (LOCAL:0*10) +(LOCAL:2*10)
+	;만렙인가?
+	IF RESULT:1 >= 99
+		FLAG:ARG = FLAG:ARG - (LOCAL:0*10) +(9999*10)
+	;레벨업 처리
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+		PRINTFORML <%조사처리(RESULTS:0,"가")% 레벨업!>
+		RESETCOLOR
+		PRINTFORM #레벨 
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+		FONTBOLD
+		PRINTFORM {RESULT:1+1}
+		FONTREGULAR
+		RESETCOLOR
+		PRINTFORMW 이 되었다!
+		;레벨 상승
+		FLAG:ARG += 100000000000000
+		PRINTFORML #능력치가 상승했다!
+		;이건 자동처리됨...
+		PRINTFORML #체력을 회복했다!
+		PRINTL
+		WAIT
+		;체력 상승 처리. 레벨업한 후, 최대체력을 받아서, 체력을 회복한다. 33%회복한다.
+		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(ARG)
+		LOCAL:3 = RESULT:4 + (RESULT:7)/3
+		;회복 후 체력이 최대 체력을 넘으면, 최대체력이 된다.
+		SIF LOCAL:3 > RESULT:7
+			LOCAL:3 = RESULT:7
+		;현재 체력 삭제
+		FLAG:ARG -= RESULT:4*100000
+		;변경된 체력 추가.
+		FLAG:ARG += LOCAL:3 *100000
+	ENDIF
+;레벨업 할 만큼은 아니다.
+ELSE
+	;경험치를 획득한다.
+	FLAG:ARG = FLAG:ARG + (ARG:1*10)
+ENDIF

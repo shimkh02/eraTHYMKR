@@ -1,0 +1,183 @@
+﻿;=============================================================================
+;젖 맞대기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE210
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:210 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;조교자もしくは対象がオトコだとダメ
+SIF TALENT:120 || TALENT:PLAYER:120
+	RETURN 0
+;조교 대상と조교자의 体格差が違いすぎるとダメ(금단의 지식は無関係で)
+SIF ABS(COMMON_BODYSIZE_CHECK2(PLAYER, TARGET)) > 1
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;패닉 중에는 불가
+SIF TFLAG:108 > 0
+	RETURN 0
+;조수가 ウェディングドレス · ゴスロリ着用中の場合助手に기교4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && (TEQUIP:ASSI:59 == 19 || TEQUIP:ASSI:59 == 20) && ABL:ASSI:12 < 4
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;조교자와 대상이 유두를 맞추는 플레이
+;외형적으로  진기한 것을 보고 즐김이지만 효과적으로는 초라하다
+@COM210
+PRINTL 젖 맞대기
+TSTR:0 = 젖 맞대기
+CALL TRAIN_MESSAGE_COM210
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 60
+
+SOURCE:15 = 60
+SOURCE:30 = 80
+SOURCE:12 = 120
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 10
+	SOURCE:11 = 30
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 50
+	SOURCE:11 = 60
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 200
+	SOURCE:11 = 100
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 400
+	SOURCE:11 = 120
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 700
+	SOURCE:11 = 140
+ELSE
+	SOURCE:3 = 1000
+	SOURCE:11 = 300
+ENDIF
+
+IF TALENT:134
+	;ABL:분유중독을 본다
+	IF ABL:34 == 0
+		TIMES SOURCE:3 , 1.00
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:34 == 1
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:34 == 2
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:11 , 1.20
+	ELSEIF ABL:34 == 3
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:11 , 1.20
+	ELSEIF ABL:34 == 4
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:11 , 1.40
+	ELSE
+		TIMES SOURCE:3 , 1.60
+		TIMES SOURCE:11 , 1.60
+	ENDIF
+ENDIF
+
+;ABL:조교자의 B감각을 본다
+IF ABL:PLAYER:3 == 0
+	SOURCE:3 += 10
+ELSEIF ABL:PLAYER:3 == 1
+	SOURCE:3 += 50
+ELSEIF ABL:PLAYER:3 == 2
+	SOURCE:3 += 200
+ELSEIF ABL:PLAYER:3 == 3
+	SOURCE:3 += 400
+ELSEIF ABL:PLAYER:3 == 4
+	SOURCE:3 += 700
+ELSE
+	SOURCE:3 += 1000
+ENDIF
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.20
+ENDIF
+
+;조교자가 음유
+IF TALENT:PLAYER:174
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.20
+ENDIF
+
+
+;노예의 B⇔조교자의 B의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:5
+STAIN:PLAYER:5 |= STAIN:5
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM210
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TALENT:PLAYER:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:PLAYER:128 && TALENT:PLAYER:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:PLAYER:111
+	PRINT 표준보다 약간 작은 
+ELSEIF TALENT:PLAYER:112
+	PRINT 커다랗고 곡선이 아름다운 
+ELSEIF TALENT:PLAYER:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+PRINTL 가슴의 끄트머리의, 아직 부드러운 돌기와
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:128 && TALENT:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:111
+	PRINT 표준보다 약간 작은 
+ELSEIF TALENT:112
+	PRINT 커다랗고 곡선이 아름다운 
+ELSEIF TALENT:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+IF TEQUIP:68
+	PRINT 가슴의 
+	SIF EX:23
+		PRINT 탱글탱글하게 응어리진 
+	PRINTW 끄트머리를 맞대었다….
+ELSEIF PALAM:13 > PALAMLV:3
+	PRINT 가슴의 끄트머리의, 
+	PRINTW 완전히 딱딱해진 돌기를 맞대고 살짝 눌렀다….
+ELSE
+	PRINT 가슴의 끄트머리의, 
+	PRINTW 아직 부드러운 돌기를 붙이고 살짝 눌렀다….
+ENDIF

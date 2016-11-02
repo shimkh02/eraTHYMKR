@@ -1,0 +1,258 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;YASAI 모드 관련
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;--------------------------------------------------
+;야채 연성
+;--------------------------------------------------
+@IRC_ANATA_YASAI
+PRINTFORML 야채수:{FLAG:574}
+PRINTL 야채를 연성하겠습니까?
+PRINTL [0] 예
+PRINTL [1] 아니오
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	LOCAL = RAND:10000
+	FLAG:574 += LOCAL
+	FLAG:574 = MIN(FLAG:574, 99999999)
+	PRINTFORML {LOCAL}개의 야채를 연성했습니다.
+	PRINTFORMW 야채수:{FLAG:574}
+	FLAG:0 = 1
+	BEGIN TURNEND
+	RETURN 1
+ELSEIF RESULT == 1
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;IRC 아나타 EX 모드
+;--------------------------------------------------
+@IRC_ANATA_EXMODE
+PRINTFORML 야채수:{FLAG:574}
+PRINTL 야채를 10000 소비해서 Ex 모드화 시킵니다
+PRINTL Ex모드화 하겠습니까?
+PRINTL [0] 예
+PRINTL [1] 아니오
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	FLAG:574 -= 10000
+	TEQUIP:78 = 1
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;IRC 아나타 Ph 모드
+;--------------------------------------------------
+@IRC_ANATA_PHMODE
+PRINTFORML 야채수:{FLAG:574}
+PRINTL 야채를 1000000 소비하여 Ph 모드화 시킬 수 있습니다
+PRINTL Ph 모드화 하겠습니까?
+PRINTL [0] 예
+PRINTL [1] 아니오
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	FLAG:574 -= 1000000
+	TEQUIP:78 = 2
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;야채 리저렉션
+;--------------------------------------------------
+@YASAI_REVIVAL
+LOCAL = (FLAG:574 + BASE:0)
+LOCAL:1 = BASE:0 + 1
+SIF LOCAL <= 0
+	RETURN 0
+PRINTFORML 야채수:{FLAG:574}
+PRINTFORML 야채를 소비한 숫자만큼 %NAME:TARGET%의 체력을 회복시킬 수 있습니다.
+PRINT 체력을 어느 선까지 회복시킵니까? (
+IF BASE:0 <= 0
+	PRINT 1
+ELSE
+	PRINTV LOCAL:1
+ENDIF
+	PRINT -
+PRINTFORML {(MAXBASE:0 <= LOCAL) ? MAXBASE:0 # LOCAL}, 0개 소모)
+
+PRINTLC [0] 취소
+SIF BASE:0 <= 0
+	PRINTLC [1] 1회 회복
+IF MAXBASE:0 <= LOCAL
+	PRINTFORMLC [{MAXBASE:0}] 몽땅 회복
+ELSEIF LOCAL > 1
+	PRINTFORMLC [{LOCAL}]{LOCAL}까지 회복
+ENDIF
+
+$INPUT_LOOP
+INPUT
+SIF RESULT == 0
+	RETURN 0
+SIF BASE:0 <= 0 && RESULT < 1
+	GOTO INPUT_LOOP
+SIF BASE:0 > 0 && RESULT < LOCAL:1
+	GOTO INPUT_LOOP
+SIF MAXBASE:0 <= LOCAL && RESULT > MAXBASE:0
+	GOTO INPUT_LOOP
+SIF MAXBASE:0 > LOCAL && RESULT > LOCAL
+	GOTO INPUT_LOOP
+
+IF BASE:0 <= 0
+	TCVAR:50 += 1
+	;YASAIリザレクション回数フラグ
+	CFLAG:165 += 1
+	IF ABL:10 > 0 && TALENT:150 == 0
+		ABL:10 -= 1
+		PRINTFORML %CALLNAME:TARGET%의 %ABLNAME:10%가 {ABL:10}낮아졌다.
+	ENDIF
+ENDIF
+
+FLAG:574 += BASE:0
+FLAG:574 -= RESULT
+BASE:0 = RESULT
+PRINTFORMW %CALLNAME:TARGET%의 체력을 {BASE:0}까지 회복
+
+;--------------------------------------------------
+;畑拡張
+;--------------------------------------------------
+@YASAI_FARM
+LOCAL = 5000
+IF FLAG:573 <= 15
+	REPEAT FLAG:573
+		LOCAL *= 2
+	REND
+ELSE
+	LOCAL = 200000000
+ENDIF
+
+PRINTFORML 밭확장Lv:{FLAG:573}
+PRINTFORML {LOCAL}원을 소비하여 밭을 더 확장시킬 수 있습니다.
+PRINTL 밭을 확장하겠습니까?
+PRINTL [0] 예
+PRINTL [1] 아니오
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	IF MONEY >= LOCAL
+		MONEY -= LOCAL
+		FLAG:573 += 1
+		PRINTFORMW 밭 확장 Lv이 {FLAG:573}가 되었습니다.
+	ELSE
+		PRINTW 금액이 부족합니다.
+		RETURN 0
+	ENDIF
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+
+;--------------------------------------------------
+;畑での野菜取得処理
+;--------------------------------------------------
+@EVENTTURNEND
+SIF TALENT:MASTER:831 == 0
+	RETURN 0
+;畑拡張Lv0のときは野菜を収穫できない
+SIF FLAG:573 < 1
+	RETURN 0
+;主人が酔っ払っているときは収穫できない
+SIF BASE:MASTER:8 > MAXBASE:MASTER:8
+	RETURN 0
+
+LOCAL = 100
+REPEAT FLAG:573
+	LOCAL *= 2
+REND
+
+LOCAL:1 = RAND:LOCAL
+FLAG:574 = MIN(FLAG:574 + LOCAL:1, 99999999)
+PRINTFORML \@(LOCAL:1 > 0) ? 밭에서 {LOCAL:1}의 채소를 수확했습니다 # 밭에서 야채의 수확을 할 수 없었습니다\@.
+PRINTFORMW 야채수:{FLAG:574}
+
+RETURN 0
+
+;--------------------------------------------------
+;リリーグレイ用の処理
+;--------------------------------------------------
+@GRAY_TALENT, ARG
+;[臆病]：[気丈]
+CALL TALENT_RAND_CHANGE_2, ARG, 10, 12
+;[反抗的]：[素直]
+CALL TALENT_RAND_CHANGE_2, ARG, 11, 13
+;[プライド高い]：[プライド低い]
+CALL TALENT_RAND_CHANGE_2, ARG, 16, 17
+;[無関心]：[好奇心]
+CALL TALENT_RAND_CHANGE_2, ARG, 21, 23
+;[楽観的]：[悲観的]
+CALL TALENT_RAND_CHANGE_2, ARG, 25, 26
+;[貞操観念]：[貞操無頓着]
+CALL TALENT_RAND_CHANGE_2, ARG, 30, 31
+;[抑圧]：[解放]
+CALL TALENT_RAND_CHANGE_2, ARG, 32, 33
+;[恥じらい]：[恥薄い]
+CALL TALENT_RAND_CHANGE_2, ARG, 35, 36
+;[男嫌い]：[女嫌い]
+CALL TALENT_RAND_CHANGE_2, ARG, 37, 38
+;[痛みに弱い]：[痛みに強い]
+CALL TALENT_RAND_CHANGE_2, ARG, 40, 41
+;[濡れやすい]：[濡れにくい]
+CALL TALENT_RAND_CHANGE_2, ARG, 42, 43
+;[習得早い]：[習得遅い]
+CALL TALENT_RAND_CHANGE_2, ARG, 50, 51
+;[汚臭鈍感]：[汚臭敏感]
+CALL TALENT_RAND_CHANGE_2, ARG, 61, 62
+;[快感に素直]：[快感の否定]
+CALL TALENT_RAND_CHANGE_2, ARG, 70, 71
+;[サド]：[マゾ]・[ドＳ]：[ドＭ]
+IF TALENT:ARG:177 && TALENT:ARG:178
+	TALENT:ARG:81 = 1
+	TALENT:ARG:82 = 1
+ELSEIF TALENT:ARG:177 || TALENT:ARG:178
+	IF RAND:2 == 1
+		TALENT:ARG:81 = 1
+		TALENT:ARG:177 = 1
+		TALENT:ARG:82 = 0
+		TALENT:ARG:178 = 0
+	ELSE
+		TALENT:ARG:81 = 0
+		TALENT:ARG:177 = 0
+		TALENT:ARG:82 = 1
+		TALENT:ARG:178 = 1
+	ENDIF
+ELSE
+	CALL TALENT_RAND_CHANGE_2, ARG, 81, 82
+ENDIF
+;[Ｃ敏感]：[Ｃ鈍感]
+CALL TALENT_RAND_CHANGE_2, ARG, 100, 101
+;[Ｖ敏感]：[Ｖ鈍感]
+CALL TALENT_RAND_CHANGE_2, ARG, 102, 103
+;[Ａ敏感]：[Ａ鈍感]
+CALL TALENT_RAND_CHANGE_2, ARG, 104, 105
+;[Ｂ敏感]：[Ｂ鈍感]
+CALL TALENT_RAND_CHANGE_2, ARG, 106, 107
+;[絶壁]：[爆乳]
+IF TALENT:ARG:110 || TALENT:ARG:113
+	CALL TALENT_RAND_CHANGE_2, ARG, 110, 113
+;[貧乳]：[巨乳]
+ELSEIF TALENT:ARG:111 || TALENT:ARG:112
+	CALL TALENT_RAND_CHANGE_2, ARG, 111, 112
+ENDIF
+;[回復早い]：[回復遅い]
+CALL TALENT_RAND_CHANGE_2, ARG, 137, 138
+;[早漏]：[遅漏]
+IF TALENT:ARG:120 || TALENT:ARG:121
+	CALL TALENT_RAND_CHANGE_2, ARG, 132, 133
+ELSE
+	TALENT:ARG:132 = 0
+	TALENT:ARG:133 = 0
+ENDIF
+

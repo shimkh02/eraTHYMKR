@@ -1,0 +1,288 @@
+﻿;=============================================================================
+;촉수 독심 고문
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE580
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:580 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;조교 대상이 心の目を閉ざしている[覚]だとダメ
+SIF TALENT:213 == 2
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:74 == 2
+	RETURN 1
+;조교자는 촉수사역LV3이상 필요
+SIF ABL:PLAYER:98 < 3
+	RETURN 0
+;촉수가 [SATORI촉수]を得ていないとダメ
+SIF (FLAG:98 & 1) == 0
+	RETURN 0
+;さとりを촉수生贄に捧げていない(=さとりが何らかの形で存在している)とダメ
+SIF (FLAG:97 & 1) == 0
+	RETURN 0
+;読心中はダメ
+SIF TEQUIP:76 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;독심을 베이스로 작성……이 거의 원형을 두지 않다고 하는 끝
+;촉수생지를 통해서 하반신이 촉수와 일체화하고 싶음 새응을 소환,
+;가슴을 꽉 누르거나 턱을 어루만지거나 하면서 노예의 마음을 읽어, 귓전으로 속삭여 간다……라고 하는 초수 유리한 플레이
+@COM580
+PRINTL 촉수 독심 고문
+TSTR:0 = 촉수 독심 고문
+CALL TRAIN_MESSAGE_COM580
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 300
+
+LOCAL:1 = 800
+LOCAL:2 = 1400
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 = 600
+	SOURCE:25 = 2500
+	SOURCE:31 = 10000
+	TIMES LOCAL:1, 0.60
+ELSEIF ABL:14 == 1
+	SOURCE:12 = 800
+	SOURCE:25 = 1800
+	SOURCE:31 = 7000
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 2
+	SOURCE:12 = 600
+	SOURCE:25 = 1300
+	SOURCE:31 = 5000
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 3
+	SOURCE:12 = 300
+	SOURCE:25 = 1500
+	SOURCE:31 = 3000
+	TIMES LOCAL:1, 2.00
+ELSEIF ABL:14 == 4
+	SOURCE:12 = 200
+	SOURCE:25 = 1000
+	SOURCE:31 = 1000
+	TIMES LOCAL:1, 2.60
+ELSE
+	SOURCE:12 = 100
+	SOURCE:25 = 1800
+	SOURCE:31 = 200
+	TIMES LOCAL:1, 3.80
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.40
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.80
+ELSE
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:2 , 1.50
+;무관심
+SIF TALENT:21
+	TIMES LOCAL:1 , 0.80
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.80
+;호기심
+SIF TALENT:23
+	TIMES LOCAL:1 , 2.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:2 , 3.00
+;도착적
+IF TALENT:80
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 0.50
+ENDIF
+
+;득도함과의 궁합 있고 없음으로 보정이 상하
+LOCAL:3 = 61
+IF RELATION:(LOCAL:3) > 0 && RELATION:(LOCAL:3) != 100
+	LOCAL:1 *= RELATION:(LOCAL:3)
+	LOCAL:1 /= 100
+	LOCAL:2 *= RELATION:(LOCAL:3)
+	LOCAL:2 /= 100
+ENDIF
+
+SOURCE:12 += LOCAL:1
+SOURCE:25 += (LOCAL:1 + LOCAL:2)/2
+SOURCE:31 += LOCAL:2
+
+IF TEQUIP:74
+	TEQUIP:74 = 0
+ELSE
+	TEQUIP:74 = 2
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;촉수 독심중
+;-------------------------------------------------
+@EQUIP_COM580
+PRINTL <촉수 독심 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 100
+
+LOCAL:1 = 400
+LOCAL:2 = 700
+SOURCE:25 += 750
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 += 300
+	SOURCE:25 += 1300
+	SOURCE:31 += 5000
+	TIMES LOCAL:1, 0.30
+ELSEIF ABL:14 == 1
+	SOURCE:12 += 400
+	SOURCE:25 += 9800
+	SOURCE:31 += 3500
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 2
+	SOURCE:12 += 300
+	SOURCE:25 += 650
+	SOURCE:31 += 2500
+	TIMES LOCAL:1, 2.00
+ELSEIF ABL:14 == 3
+	SOURCE:12 += 150
+	SOURCE:25 += 750
+	SOURCE:31 += 1500
+	TIMES LOCAL:1, 3.60
+ELSEIF ABL:14 == 4
+	SOURCE:12 += 100
+	SOURCE:25 += 500
+	SOURCE:31 += 500
+	TIMES LOCAL:1, 4.60
+ELSE
+	SOURCE:12 += 50
+	SOURCE:25 += 900
+	SOURCE:31 += 100
+	TIMES LOCAL:1, 5.80
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 1.10
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.40
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.60
+ELSE
+	TIMES LOCAL:1 , 1.80
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:2 , 1.50
+;무관심
+SIF TALENT:21
+	TIMES LOCAL:1 , 0.80
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.80
+;호기심
+SIF TALENT:23
+	TIMES LOCAL:1 , 2.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:2 , 3.00
+;도착적
+IF TALENT:80
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 0.50
+ENDIF
+
+;득도함과의 궁합 있고 없음으로 보정이 상하
+LOCAL = 61
+IF RELATION:LOCAL > 0 && RELATION:LOCAL != 100
+	LOCAL:1 *= RELATION:LOCAL
+	LOCAL:1 /= 100
+	LOCAL:2 *= RELATION:LOCAL
+	LOCAL:2 /= 100
+ENDIF
+
+SOURCE:12 += LOCAL:1
+SOURCE:25 += (LOCAL:1 + LOCAL:2)/2
+SOURCE:31 += LOCAL:2
+
+;득도함의 성별상, 조교 대상이♀의 때만 레즈비언 경험이 들어가는 사양에
+SIF TALENT:120 == 0
+	TCVAR:12 += 1
+
+;촉수 경험 플래그
+TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM580
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:74 == 2
+	PRINTFORML %CALLNAME:PLAYER%의 명령을 받자, 사토리는 불만스런 표정을 띄웠다.
+	PRINTFORML 그러나 기분을 고친 것 같고, %CALLNAME:TARGET%의 귓불을 살짝 깨문 후 저쪽으로 멀어져갔다.
+	PRINTFORML 작은 비명을 올린 %CALLNAME:TARGET%에게 음란한 미소를 띠며,
+	PRINTW 사토리는 관 모양의 촉수속에 몸을 숨기고 그대로 육벽의 저쪽 편으로 사라져 갔다….
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%의 명령에 응했는지, 촉수의 벽 속에서 한사람이 들어갈만한 공간이 나타났다.
+	PRINTFORML 촉수는 %CALLNAME:TARGET%에게 가까워지자 꽃잎을 열듯이 끄트머리가 갈려져, 촉수와 일체화한 사토리가 실오라기 걸치지 않은 모습으로 나타났다.
+	PRINTFORML 사토리는 %CALLNAME:MASTER%에게 향해 살짝 인사하고, 빛을 잃은 눈동자를 %조사처리(CALLNAME:TARGET, "로")%로 향했다.
+	PRINT 그리고 
+	IF RAND:2 == 0
+		PRINTFORML 음란한 미소를 지으며 자신의 가슴을 %CALLNAME:TARGET%에게 꽉 눌러,
+	ELSE
+		PRINTFORML 병적으로 흰 손을 %CALLNAME:TARGET%의 턱에 가져가 상냥하게 들어올리며,
+	ENDIF
+	PRINTFORMW %CALLNAME:TARGET%의 속마음을 들여다 보기 시작했다….
+ENDIF

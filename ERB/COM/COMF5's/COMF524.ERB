@@ -1,0 +1,284 @@
+﻿;=============================================================================
+;촉수 관통
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE524
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:524 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;一度も촉수貫通をしたことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:24 & 32) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조교자는 촉수사역LV4이상 필요
+SIF ABL:PLAYER:98 < 4
+	RETURN 0
+;촉수가 [遠隔精密制御]を得ていないとダメ
+SIF (FLAG:75 & 512) == 0
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;그밖의 Ａ계 촉수責め中は不可
+SIF TEQUIP:25 && TEQUIP:25 != 3
+	RETURN 0
+;ボールギャグ装着中, 촉수口辱中はダメ
+SIF TEQUIP:42
+	RETURN 0
+;촉수強制回復中(口内)はダメ
+SIF TEQUIP:91 == 1
+	RETURN 0
+;卵が邪魔で촉수貫通できない
+SIF TEQUIP:94
+	RETURN 0
+;촉수催眠中は不可
+SIF TEQUIP:92
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM524
+PRINTL 촉수 관통
+TSTR:0 = 촉수 관통
+CALL TRAIN_MESSAGE_COM524
+
+IF TEQUIP:25 == 3
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 200
+	TEQUIP:25 = 0
+	;촉수 경험 플래그
+	TFLAG:90 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 500
+DOWNBASE:1 += 500
+LOCAL:1 = 2500
+LOCAL:2 = 1000
+LOCAL:3 = 0
+;EXP:촉수 경험을 본다
+IF EXP:53 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:53 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:53 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:53 < EXPLV:4
+	TIMES LOCAL:1 , 1.50
+ELSEIF EXP:53 < EXPLV:5
+	TIMES LOCAL:1 , 1.00
+ELSE
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	LOCAL:3 += 0
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:35 == 1
+	LOCAL:3 += 50
+	TIMES LOCAL:2 , 1.20
+ELSEIF ABL:35 == 2
+	LOCAL:3 += 120
+	TIMES LOCAL:2 , 1.40
+ELSEIF ABL:35 == 3
+	LOCAL:3 += 350
+	TIMES LOCAL:2 , 1.60
+ELSEIF ABL:35 == 4
+	LOCAL:3 += 900
+	TIMES LOCAL:2 , 1.80
+ELSE
+	LOCAL:3 += 2000
+	TIMES LOCAL:2 , 2.00
+ENDIF
+
+SOURCE:25 += LOCAL:1 * 2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:2 += LOCAL:2 * 2
+SOURCE:20 += LOCAL:1
+SOURCE:24 += LOCAL:3
+SOURCE:30 += LOCAL:2 * 10
+SOURCE:22 += LOCAL:2 * 2
+SOURCE:31 += LOCAL:2 * 5
+SOURCE:23 += LOCAL:2
+
+TEQUIP:25 = 3
+STAIN:4 |= 64
+IF (CFLAG:24 & 32) == 0
+	TCVAR:50 += 4
+	;날뛰었습니다 매우 아픈…아마
+	SOURCE:20 += 9000
+	CFLAG:24 |= 32
+	;반발 각인 판정 부활
+	SIF MARK:9 < 3 && MARK:9 <= MARK:97
+		MARK:97 = 0
+ENDIF
+TCVAR:1 += 2
+;촉수 경험 플래그
+TFLAG:90 = 2
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+RETURN 1
+
+;--------------------------------------------------
+;촉수 관통
+;--------------------------------------------------
+@EQUIP_COM524
+PRINTL <촉수 관통 중>
+CALL EQUIP_MESSAGE_COM524
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 200
+
+LOCAL:1 = 500
+LOCAL:2 = 100
+LOCAL:3 = 0
+LOCAL = NO:TARGET + 7500
+
+;FLAG:소지하고 있는 조교 대상이 낳은 촉수의 수가 많을 정도(수록) 주는 자극이 증가한다
+IF FLAG:LOCAL < 5
+	TIMES LOCAL:2 , 1.00
+ELSEIF FLAG:LOCAL < 10
+	TIMES LOCAL:2 , 1.20
+ELSEIF FLAG:LOCAL < 15
+	TIMES LOCAL:2 , 1.50
+ELSEIF FLAG:LOCAL < 20
+	TIMES LOCAL:2 , 1.80
+ELSEIF FLAG:LOCAL < 30
+	TIMES LOCAL:2 , 2.10
+ELSE
+	TIMES LOCAL:2 , 2.50
+ENDIF
+
+;EXP:촉수 경험을 본다
+IF EXP:53 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:53 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:53 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:53 < EXPLV:4
+	TIMES LOCAL:1 , 1.50
+ELSEIF EXP:53 < EXPLV:5
+	TIMES LOCAL:1 , 1.00
+ELSE
+	TIMES LOCAL:1 , 0.80
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	LOCAL:3 += 0
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:35 == 1
+	LOCAL:3 += 50
+	TIMES LOCAL:2 , 1.20
+ELSEIF ABL:35 == 2
+	LOCAL:3 += 120
+	TIMES LOCAL:2 , 1.40
+ELSEIF ABL:35 == 3
+	LOCAL:3 += 350
+	TIMES LOCAL:2 , 1.60
+ELSEIF ABL:35 == 4
+	LOCAL:3 += 900
+	TIMES LOCAL:2 , 1.80
+ELSE
+	LOCAL:3 += 2000
+	TIMES LOCAL:2 , 2.00
+ENDIF
+
+SOURCE:25 += LOCAL:1 * 2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:2 += LOCAL:2 * 2
+SOURCE:20 += LOCAL:1
+SOURCE:22 += LOCAL:2 * 2
+SOURCE:23 += LOCAL:2
+SOURCE:24 += LOCAL:3
+SOURCE:31 += LOCAL:2 * 2
+SOURCE:30 += LOCAL:2 * 5
+
+TCVAR:1 += 2
+;촉수 경험 플래그
+TFLAG:90 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM524
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:25 == 3
+	PRINTFORML %CALLNAME:TARGET%의 소화관을 관통하고 있던 촉수를 입 안으로 되돌렸다.
+	PRINTFORML 촉수는 %조사선택(CALLNAME:TARGET, "를")% 다치지 않게 완만한 동작으로 움직여,
+	PRINTW 이윽고 애널로 빠져 나왔다….
+ELSE
+	PRINTFORML 가늘고 긴 촉수가 %CALLNAME:TARGET%의 애널에 기어들어 비벼댔다.
+	PRINTL 촉수는 천천히 장내로부터 위, 그리고 식도로 더듬어 간다….
+	PRINTL
+	PRINTFORML 몸 안의 이변을 느끼고 있던 %조사처리(CALLNAME:TARGET, "였")%지만,
+	PRINT 자신의 입에서 튀어나온 촉수를 본 순간 
+
+	IF (CFLAG:24 & 32) == 0 && ABL:35 >= 3
+		PRINTL 잠시 경악한 눈빛이 되었으나,
+		PRINTW 곧 촉수가 체내를 채우는 감각에 쾌감을 느꼈는지 코로부터 달콤한 숨을 토해댔다….
+	ELSEIF (CFLAG:24 & 32) == 0
+		PRINTL 전에 없는 공포감에 견딜 수 없게 되어
+		PRINTW 패닉상태로 날뛰어댔다….
+	ELSEIF ABL:35 < 2 && ABL:21 < 3
+		PRINT 자신의 생사여탈권은 이미 촉수에 있다는 것을 깨달았는지, 
+		IF ABL:10 >= 4 || MARK:2 > 2
+			PRINTW 단념한 표정으로 빨리 이 악몽이 끝나는 것을 기다리고 있다….
+		ELSEIF ABL:21 >= 4 || TALENT:170
+			PRINTW 이런 플레이도 나쁘지 않다고 생각을 고친 것 같다….
+		ELSE
+			PRINTW 공포로 전신을 부들부들 떨고 있다….
+		ENDIF
+	ELSE
+		PRINTW 몸 안의 이물감과 정복 된 쾌감, 그리고 희미한 공포감을 맛보면서 한층 더 촉수에 자극되고 있다….
+	ENDIF
+ENDIF
+;--------------------------------------------------
+;장착시 메시지
+;--------------------------------------------------
+@EQUIP_MESSAGE_COM524
+CALL KOJO_EQUIP_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF ABL:35 >= 2 && ABL:21 >= 3
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 촉수에 몸의 구석구석까지 제압되고 있는 상황에서조차 행복감을 찾아내고 있다….
+ELSEIF ABL:35 >= 2
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 촉수에 관통되고 있는 쾌감과 가벼운 질식감에 뺨을 상기 시키고 있다….
+ELSEIF ABL:21 >= 3 || TALENT:170
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 정체를 알 수 없는 이물감에조차 쾌락을 느끼고 있는 것 같다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 촉수에 꿰인 채로 공포에 떨고 있다….
+ENDIF

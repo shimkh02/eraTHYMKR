@@ -1,0 +1,7307 @@
+﻿;-------------------------------------------------
+;※마음대로 콘!(가명) ver. 0.95에서 변환한 파일입니다※
+;(RR1317 계열용 구문을 YM용 구문에 치환한 것입니다)
+;-------------------------------------------------
+;메리 말(캐릭터의 이름을 넣는, 아래에 컨셉 등 한마디 있으면 들어갈 수 있다)
+;
+;-------------------------------------------------
+
+;-------------------------------------------------
+;말설정 양식
+;X1와 X2를 캐릭터 번호에 치환해, YY를 조수의 캐릭터 번호, ZZ를 단체 엔딩의 행수에 치환한다.
+;다만, 캐릭터 번호가 한 자리수의 캐릭터의 경우, X1는 1, X2는 01과 같이 바꿀 필요가 있다
+;그리고 커멘드내의 적당한 조건아래의 PRINTFORMW의 뒤로 반각 스페이스를 두어 대사를 추가해 주세요.
+;템플릿이 갱신되었을 때에는, 새로운 텐프레를 베이스로 하고, 
+;해등 하는 조건의 PRINTFORMW의 행을 카피＆페이스트 해 저가는 것을 추천합니다.(수고는 걸리지만, 에러는 일어날 수 없다)
+;말을 추가하지 않는 커멘드에는 줄머리에 「;.」을 붙입시다.다음에 추가했을 때에 첫 말이 나오지 않는등의 폐해가 일어납니다.
+;또, 말을 추가한 커멘드의 「;.」을 제대로 제외합시다.이것이라면 조건을 채워도 말이 나오지 않습니다
+;조건의 추가저 변경은 자유롭습니다만, 그 때에는 수시 테스트를 해 저가면 좋을 것입니다.(에러의 원인은, 거의 확실히 손본 부분에 있기 위해)
+;끝에 할 수 있으면 read me도 읽어 주세요
+;-------------------------------------------------
+
+
+;--------------------------------------------------
+;말파일의 존재 판정(X2를 캐릭터 번호에 치환)
+;--------------------------------------------------
+@EVENTTRAIN
+#PRI
+;FLAG:1050 = 1
+SIF FLAG:11 == 0
+FLAG:11 = 2
+
+@EVENTEND
+#LATER
+;FLAG:1050 = 0
+
+;--------------------------------------------------
+;EVENTTRAIN 관계(X1를 캐릭터 번호에 치환)
+;조교 개시시의 대사 CFLAG 201210을 사용
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 50
+	RETURN 0
+
+;--------------------------------------------------
+;엑스트라 모드 구문　CFLAG:5209를 사용
+;네를 선택했을 때에 첫조교시에 말설정용의 소질로 변경할 수 있습니다
+;-------------------------------------------------
+IF CFLAG:5209 == 0
+	PRINTL 처녀+α모드로 이행합니까?
+	PRINTL [0] 네
+	PRINTL [1] 아니오
+	$INPUT_LOOP_k501
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―처녀+α모드에 소질, 능력을 변경합니다-
+		;처녀, 레즈비언 경험 100, V경험 0, V감각 Lv0, 낙관적 소멸
+		TALENT:0 = 1
+		TALENT:25 = 0
+		ABL:1 = 0
+		EXP:0 = 0
+		EXP:12 = 100
+		
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드로 조교를 개시합니다-
+	ELSE
+		GOTO INPUT_LOOP_k501
+	ENDIF
+	CFLAG:5209 = 1
+ENDIF
+
+;-------------------------------------------------
+;첫조교시 CFLAG201
+;-------------------------------------------------
+
+IF CFLAG:5201 == 0
+	DRAWLINE
+	PRINTFORMW 「눈을 뜨면 다른 세계에 있는 것은 지금까지도 몇 번인가 있었어요.」
+	PRINTFORMW 「그렇지만, 이번은 최악의 꿈이 될 것 같네요……꿈이라면, 빨리 깨어줘…….」
+	CFLAG:5201 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;조교 개시시(1회만) CFLAG201
+;-------------------------------------------------
+
+;굴복 각인 Lv1
+ELSEIF CFLAG:5201 < 2 && MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 메리는 방의 구석에서 웅크리고 앉아 울고 있다……
+	CFLAG:5201 = 2
+	RETURN 1
+
+;굴복 각인 Lv2
+ELSEIF CFLAG:5201 < 3 && MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「……렌코…….」
+	PRINTFORMW 메리는 울면서 친구의 이름을 중얼거리고 있다……
+	CFLAG:5201 = 3
+	RETURN 1
+
+;굴복 각인 Lv3
+ELSEIF CFLAG:5201 < 4 && MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「아……네, 준비는, 하고 있었습니다…….」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 방에 들어가니 메리는 이미 옷을 벗고 기다려요 있었다
+	CFLAG:5201 = 4
+	RETURN 1
+
+;굴복 각인 Lv3+연모
+ELSEIF CFLAG:5201 < 5 && MARK:2 == 3 && TALENT:150 == 1
+	;아래에
+	CALL K50_LTALK
+	RETURN 1
+
+;???
+ELSEIF CFLAG:5201 < 6 && MARK:2 == 3 && MARK:9 <= 1 && TALENT:150 == 0 && TALENT:26 == 1 && EXP:21 >= 100 && EXP:12 >= 2000
+	;아래에
+	CALL K50_STALK
+	RETURN 1
+
+;조수의 유무를 체크(없는 경우는 2회째 이후에 난다)
+ELSEIF ASSI < 0 
+	CALL K50_KOJO2
+
+;-------------------------------------------------
+;조수와의 흥정해(YY를 조수의 캐릭터 번호에 치환, X1를 캐릭터 번호로 변경한다) CFLAG202
+;교섭을 하는 캐릭터를 늘리는 경우는, 카피＆페이스트를 하고, CFLAG의 수를 203, 204로 늘린다
+;-------------------------------------------------
+;조수
+;렌코
+ELSEIF ASSINO() == 49
+	DRAWLINE
+	;처음
+	IF CFLAG:5202 == 0
+		;연모＋연모시 처음상(함락 이벤트)이 발생이 끝난 상태
+		IF TALENT:150 == 1 && CFLAG:5201 == 5
+			PRINTFORMW 「아, 메리.」
+			PRINTFORMW 「렌코……당신도, 여기에?」
+			PRINTFORMW 「「도.」는, 내가 여기에 있는 것? 그렇지 않으면?」
+			PRINTFORMW 「그 이상은 말하지 마요, 저는.」
+			PRINTFORMW 「메리야말로, 그 이상은 안 돼.」
+			PRINTFORMW 「주인님을 독점하다니 용서할 수 없어.」
+		;그 이외
+		ELSE
+			PRINTFORMW 「어머저 메리, 대단히 오래간만이네요.」
+			PRINTFORMW 「렌코! 당신도 여기에 와 있었다니.」
+			PRINTFORMW 「아, 역시 저희들은 운명의 실로 연결되고 있었을까요?」
+			PRINTFORMW 「그것은 제쳐두고 메리, 당신도 주인님에게, 군요?」
+			PRINTFORMW 「주인님이란 것은……그런, 거짓말이겠죠, 렌코…….」
+			PRINTFORMW 「이제 와서 거짓말 말할 수야 없잖아.후후, 메리, 함께 저속해집시다.주인님이 기다려요 있으니까.」
+		ENDIF
+			CFLAG:5202 = 1
+			RETURN 1
+	;2회째 이후
+	ELSEIF CFLAG:5202 == 1 && FLAG:11 == 2
+		;?
+		IF TALENT:150 == 1 && TALENT:151 == 1
+			IF RAND:3 == 0
+				PRINTFORMW 「자, 시작하자……쾌락에 몸을 바쳐…….」
+				PRINTFORMW 「……? 렌코, 괜찮아요?」
+				PRINTFORMW 「벌써 버릇이 나쁘네요.아무튼 좋아요, 시작합시다.」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「아, 렌코……응………….」
+				PRINTFORMW 「응……하, 안 돼 메리, 주인님이 있는데 마음대로…….」
+				PRINTFORMW 「아, 주인님, 미안해요……무심코…….」
+			ELSE
+				PRINTFORMW 「꿈에서도 주인님과 렌코와 함께였지만……그래도 역시 현실에서 안기고파요.」
+			ENDIF
+		;연모+?이벤트 발생이 끝난 상태
+		ELSEIF TALENT:150 == 1 && CFLAG:5201 == 8
+			IF RAND:3 == 0
+				PRINTFORMW 「메리.」
+				PRINTFORMW 「아, 주인님, 렌코……이번도, 잘 부탁합니다.」
+				PRINTFORMW 「아, 아아……그렇게 딱딱하게 안 되도 괜찮은데…….」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「아, 렌코……응………….」
+				PRINTFORMW 「응……하, 안 돼. 메리, 주인님이 있는데 마음대로…….」
+				PRINTFORMW 「아, 주인님, 미안해요……무심코…….」
+			ELSE
+				PRINTFORMW 「아……와 주셨네요…….」
+				PRINTFORMW 「늦어져서 미안해요.그럼 주인님, 시작해요.」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1
+			IF RAND:2 == 0
+				PRINTFORMW 「메리에게는 별로겠지만, 또 나도 함께야.」
+				PRINTFORMW 「렌코, 저는…….」
+				PRINTFORMW 「좋아, 좋으니까.주인님을 독점하는 것이 무리라면.」
+				PRINTFORMW 「적어도 함께 사랑하고 사랑받는 것, 그게 제일 좋은 일이라고 생각해.」
+			ELSE
+				PRINTFORMW 「아, 주인님, ……과 렌코…….」
+				PRINTFORMW 「응―？ 내가 있는 것이 불만일까?」
+				PRINTFORMW 「네? 아……, 그런 일 없어요. 시작해요, 주인님, 렌코.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && TALENT:150 == 0
+			PRINTFORMW 「자, 시작해요.」
+			PRINTFORMW 「렌코………….」
+		;반발 각인 Lv3+연모 없음
+		ELSEIF TALENT:150 == 0 && MARK:9 == 3
+			PRINTFORMW 「메리…….」
+			PRINTFORMW 「거리낌 없게 얘기하지 말고, 하고 싶으면 마음대로 하면 되잖아요!」
+		;그 이외
+		ELSE
+			PRINTFORMW 「렌코, 눈을 떠요, 어째서…….」
+			PRINTFORMW 「눈은 뜨고 있어, 메리도 빨리 본능에 눈을 떠서 주인님과 함께 쾌락에 몸을 맡기자구.」
+			PRINTFORMW 「렌코…….」
+		ENDIF
+			RETURN 1
+	ENDIF
+;자
+ELSEIF ASSINO() == 22
+	DRAWLINE
+	;처음
+	IF CFLAG:5203 == 0
+		;연모＋연모시 처음상(함락 이벤트)이 발생이 끝난 상태
+		IF TALENT:150 == 1 && CFLAG:5201 == 5
+			PRINTFORMW 「대강, 어디선가 본 적 있는 아가씨인거 같다고 생각했는데……밖의 사람에게까지 손을 대다니 안 되겠네.」
+			PRINTFORMW 「(이 사람, 어디선가 본 적 있는 것 같다……) 당신은 누구? 왜 저를 알고 있는 거죠?」
+			PRINTFORMW 「후후……나는 당신을 알고 있고, 당신은 나의 일을 지금부터 안다, 지금은 그것으로 충분해.」
+			PRINTFORMW 「여기에 있는 이상 당신이나 나나 단지 주인님에게  사랑받을 뿐이야, 당신도 알고 있을거 같은데?」
+			PRINTFORMW 「그러면 시작하자구요, 주인님.」
+			PRINTFORMW 「……그렇군요, 그러면 잘 부탁합니다…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「대강, 어디선가 본 적 있는 아가씨인거 같다고 생각했는데……밖의 사람에게까지 손을 대다니 안 되겠네.」
+			PRINTFORMW 「(이 사람, 어디선가 본 적 있는 것 같다……) 당신은 누구? 왜 저를 알고 있는 거죠?」
+			PRINTFORMW 「후후……나는 당신을 알고 있다, 당신은 나의 일을 지금부터 안다, 지금은 그것으로 충분해.」
+			PRINTFORMW 「여기에 있는 이상 당신이나 나나 단지 주인님에게 봉사할 뿐이야, 지금부터 싫어도 이해하게 될거야.」
+			PRINTFORMW 「그러면 시작하자구요, 주인님.」
+			PRINTFORMW 「………….」
+		ENDIF
+			CFLAG:5203 = 1
+			RETURN 1
+	;2회째 이후
+	ELSEIF CFLAG:5203 == 1 && FLAG:11 ==2
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「(역시 본 적 있는 것 같아……) 잘, 부탁합니다…….」
+			PRINTFORMW 「후후, 그렇게 딱딱하게 안 돼도 괜찮아요.」
+		;그 이외
+		ELSE
+			PRINTFORMW 「역시, 생각했던 것보다 고집이 있구나. 저속해지는 곳까지 저속해지면 편해져요.」
+			PRINTFORMW 「그런…….」
+		ENDIF
+			RETURN 1
+	ENDIF
+
+;ELSEIF ASSINO() == YY
+;	DRAWLINE
+	;처음
+;	IF CFLAG:5203 == 0
+		;연모＋연모시 처음상(함락 이벤트)이 발생이 끝난 상태
+;		IF TALENT:150 == 1 && CFLAG:5201 == 5
+;			PRINTFORMW 
+		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5203 = 1
+;			RETURN 1
+	;2회째 이후
+;	ELSE CFLAG:5203 == 1 && FLAG:11 ==2
+		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+;말이 있는 조수가 없는 경우는, 통상의 2회째 이후의 말에 난다
+ELSE
+	CALL K50_KOJO2
+ENDIF
+
+
+;-------------------------------------------------
+;조교 개시시(2번째 이후, X1를 캐릭터 번호로 변경한다) CFLAG 없음 
+;-------------------------------------------------
+
+@K50_KOJO2
+;반발 각인 Lv3
+IF TALENT:150 == 0 && MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「하고 싶으면 마음대로 하면 되잖아요!」
+	PRINTFORMW 「현실이 아니면 무엇을 해도 상관없는 것은 서로 마찬가지야.」
+	RETURN 1
+
+;굴복 각인 Lv0
+ELSEIF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「어째서, 깨지 않는거야…….」
+	PRINTFORMW 메리는 아직 여기가 꿈의 세계라고 믿고 있는 것 같다
+	RETURN 1
+
+;굴복 각인 Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 메리는 방의 구석에서 웅크리고 앉아 울고 있다
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 불러도 듣지 못한 것인지 전혀 반응하지 않는다……
+	RETURN 1
+
+;굴복 각인 Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「렌코……저, 어떻게 해야할까요…….」
+	RETURN 1
+
+;굴복 각인 Lv3＋연모 없음
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && TALENT:26 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「아……오늘도, 네…….」
+	PRINTFORMW 「네, 잘, 부탁합니다…….」
+	RETURN 1
+	
+;??
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && TALENT:26 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW (렌코가 아무것도 당하지 않고 끝난다면……)
+	RETURN 1
+	
+
+;굴복 각인 Lv3+연모
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	IF RAND:2 == 0
+		PRINTFORMW 「아, 주인님, 와 주셨군요.」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 방에 들어가자 마자 메리는 달라붙어 키스 해 왔다
+		PRINTFORMW 「이번도, 가득 사랑해주세요…….」
+	ELSE
+		PRINTFORMW 「꿈 속에서도 주인님에게 안기고 있었어요.」
+		PRINTFORMW 「그렇지만 역시, 현실에서도 안기고 싶거든요…….」
+	ENDIF
+	RETURN 1
+
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND 관계(X1를 캐릭터 번호에 치환)
+;조교 종료시의 대사 CFLAG 211220을 사용
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 50
+	RETURN 0
+
+;조수렌코가 있다
+IF ASSI > 0
+	IF ASSINO() == 49
+		;굴복 각인 Lv3 이상+순종 Lv5 이상+욕망 Lv5 이상+봉사 정신 Lv5 이상+레즈비언기분 Lv5 이상+레즈비언 중독 Lv5 이상+연모+함락 이벤트 발생이 끝난 상태(1회만)
+		IF TALENT:150 == 1 && ABL:10 >= 5 && ABL:11 >= 5 && ABL:13 >= 5 && ABL:22 >= 5 && ABL:32 >= 5 && MARK:2 == 3 && MARK:9 == 0 && CFLAG:5201 == 5 && CFLAG:5211 == 0
+			DRAWLINE
+			;아래에……
+			CALL K50_MOUTALK
+			RETURN 1
+		;굴복 각인 Lv3+레즈비언 중독 Lv5 이상+연모+체력 500이상
+		ELSEIF TALENT:150 == 1 && ABL:32 >= 5 && MARK:2 == 3 && MARK:9 == 0 && BASE:0 >= 500
+			DRAWLINE
+			PRINTFORMW 「아……끝난, 건가…….」
+			PRINTFORMW 「아, 기다려……주인님, 렌코, 다음도 가득 사랑해줘요…….」
+			PRINTFORMW 그렇게 말하면서 메리는 %조사처리(CALLNAME:MASTER,"과")% 렌코에게 짧게 키스를 했다
+			RETURN 1
+		;굴복 각인 Lv3+레즈비언 중독 Lv5 이상+연모+체력 500 미만
+		ELSEIF TALENT:150 == 1 && ABL:32 >= 5 && MARK:2 == 3 && MARK:9 == 0 && BASE:0 < 500
+			DRAWLINE
+			PRINTFORMW 메리는 완전히 지쳐 버렸는지 자고 있다……
+			PRINTFORMW 「잠들어 버렸군요, %CALLNAME:MASTER%도 이제 자면?」
+			PRINTFORMW 「응, 나? 아쉽지만 이번은%CALLNAME:MASTER%의 조수이니까……또, 다른 기회까지 참아…….」
+			PRINTFORMW 「그 때에는 아무쪼록 부탁해, %CALLNAME:MASTER%.」
+			RETURN 1
+		;굴복 각인 Lv3+연모+체력 500이상
+		ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 >= 500
+			DRAWLINE
+			PRINTFORMW 「아……이제, 끝인건가…….」
+			PRINTFORMW 「더해 주었으면 하지만……, 또 다음에도 잘 부탁해요, 주인님, 렌코.」
+			RETURN 1
+		;굴복 각인 Lv3+연모+체력 500 미만
+		ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 < 500
+			DRAWLINE
+			PRINTFORMW 메리는 완전히 지쳐 버렸는지 자고 있다……
+			PRINTFORMW 「잠들어 버렸군요, %CALLNAME:MASTER%도 이제 자면?」
+			PRINTFORMW 「그렇다 치더라도, 조금 질투해버리겠네……메리도 주인님에게 반하고 있다니.」
+			PRINTFORMW 「다음은, 나에게도 부탁해, %CALLNAME:MASTER%.」
+			RETURN 1
+		;레즈비언 중독 Lv3 이상+반발 각인 Lv3(1회만)
+		ELSEIF ABL:32 >= 3 && TALENT:150 == 0 && MARK:9 == 3 && CFLAG:5213 == 0
+			;아래에
+			CALL K50_UTTALK
+			RETURN 1
+		ELSEIF TALENT:26 == 1 && TALENT:150 == 0 && CFLAG:5213 == 1
+			DRAWLINE
+			PRINTFORMW (렌코에게 죄는 없어, 렌코에게는……)
+			PRINTFORMW (나쁜 것은, 저 사람과 나……)
+			CFLAG:5213 = 2
+			RETURN 1
+		ELSEIF TALENT:26 == 1 && TALENT:150 == 0 && CFLAG:5213 == 2
+			DRAWLINE
+			PRINTFORMW 「다시 또 보자, 메리.」
+			PRINTFORMW 「……예.」
+			PRINTFORMW 「나라면 걱정하지 않아도 괜찮아, 메리도 빨리 주인님에게 모든 걸 맡기면 좋을텐데.」
+			PRINTFORMW 「렌코……아…….」
+			RETURN 1
+		;반발 각인 Lv3(1회째)
+		ELSEIF TALENT:150 == 0 && MARK:9 == 3 && CFLAG:5212 == 0
+			;아래에
+			CALL K50_RNTALK
+			RETURN 1
+		;반발 각인 Lv3(매회)
+		ELSEIF TALENT:150 == 0 && MARK:9 == 3 && (CFLAG:5212 <= 1 || FLAG:11 == 2)
+			DRAWLINE
+			PRINTFORMW 「……빨리 사라져요, 2명 모두.」
+			CFLAG:5212 = 2
+			RETURN 1
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3
+			DRAWLINE
+			PRINTFORMW 「아……끝이군요…….다음 번도, 잘, 부탁합니다…….」
+			RETURN 1
+		;굴복 각인 Lv3 미만
+		ELSEIF MARK:2 < 3
+			DRAWLINE
+			PRINTFORMW 「어째서, 렌코…….」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"과")% 렌코가 방을 나오기 직전, 메리는 그렇게 중얼거렸다
+			RETURN 1
+		ENDIF
+	ENDIF
+
+;반발 각인 Lv3(1회째)
+ELSEIF TALENT:150 == 0 && MARK:9 == 3 && CFLAG:5212 == 0
+	;아래에
+	CALL K50_NTALK
+	RETURN 1
+
+;반발 각인 Lv3(2번째 이후)
+ELSEIF TALENT:150 == 0 && MARK:9 == 3 && (CFLAG:5212 <= 1 || FLAG:11 == 2)
+	DRAWLINE
+	PRINTFORMW 방을 나갈 때 지독할 정도로 차가운 시선을 느낀 것 같았다……
+	CFLAG:5212 = 2
+	RETURN 1
+
+;굴복 각인 Lv1 이하
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「언제까지 계속 되는 걸까, 이 악몽은…….」
+	RETURN 1
+
+;굴복 각인 Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「꿈과 현실이 같은 것이라면……지금 일어나고 있는 건…….」
+	PRINTFORMW 「……그런거, 믿고 싶지 않은데…….」
+	RETURN 1
+
+;굴복 각인 Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && TALENT:26 == 0
+	DRAWLINE
+	PRINTFORMW 「아……끝이군요…….다음 번도, 잘, 부탁합니다…….」
+	RETURN 1
+	
+;??
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && TALENT:26 == 1
+	DRAWLINE
+	PRINTFORMW 「……다음 번도, 잘, 부탁합니다…….」
+	PRINTFORMW 「…….」
+	RETURN 1
+
+;굴복 각인 Lv3＋연모＋체력 500 미만
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「흣~, 흣~……조금, 지쳐 버렸네요…….」
+	PRINTFORMW 「좀더 좀더 하고 싶지만, 이제, 무리인거 같네요……다음은 또 나중에, 주인님…….」
+	RETURN 1
+
+;굴복 각인 Lv3＋연모+체력 500이상
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 >= 500
+	DRAWLINE
+	PRINTFORMW 「아……끝난, 건가…….」
+	PRINTFORMW 「더해 주었으면 하지만…… 또, 다음도 잘 부탁해요, 주인님.」
+	RETURN 1
+
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM 관계(X1를 캐릭터 번호에 치환)
+;커멘드 실행시에 출력됩니다
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_50
+;조수가 조교했을 때에 말을 스킵 한다(기호에 따라 사용하는, 줄머리의 것;을 지우면 스킵 하게 된다)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;볼 개그 착용시에는 말을 스킵 한다(OFF라고 구를 차지하고 있는데 마구 말한다)
+SIF TEQUIP:42 == 1
+	RETURN 0 
+;-------------------------------------------------
+;커멘드 실행시의 대사 CFLAG 221270을 사용
+;-------------------------------------------------
+;-------------------------------------------------
+;애무 CFLAG221
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;처음
+	IF CFLAG:5221 == 0
+		;조수렌코
+		IF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;굴복 각인 Lv2 이상
+				IF MARK:2 >= 2
+					PRINTFORMW 「메리……응…….」
+					PRINTFORMW 「, 렌코……응, 응응응! ……하, , 흣~…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「메리……응…….」
+					PRINTFORMW 「응, 응-! ……하, 그런, 렌코, 그만 둬…….」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			;굴복 각인 Lv2 이상
+			IF MARK:2 >= 2
+				PRINTFORMW 「응, , 흣~…….」
+				PRINTFORMW 메리는 하는 대로 되고 있다……
+			;그 이외
+			ELSE
+				PRINTFORMW 「응, 응-! 갑자기, 뭘하는거에요!」
+				PRINTFORMW 「앗, 싫어, 손대지 마!」
+			ENDIF
+		ENDIF
+		CFLAG:5221 = 1
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5221 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 렌코, 주인님에게 실례에요…….」
+				PRINTFORMW 「안 돼 메리, 지금은 나만을 보라고…….」
+			ENDIF
+			CFLAG:5221 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5221 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아, 주인님……응응, …….」
+			PRINTFORMW 「더, 좀 더…….」
+			CFLAG:5221 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5221 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 아……렌코…….」
+				PRINTFORMW 「더, 더 해도 좋으니까…….」
+			ENDIF
+			CFLAG:5221 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5221 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 메리는%조사처리(CALLNAME:MASTER,"가")% 하는 대로 되고 있다……
+			CFLAG:5221 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5221 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3
+				IF MARK:2 == 3
+					PRINTFORMW 「응, 하…….」
+					PRINTFORMW 「아직, 더 해 줘요…….」
+				;굴복 각인 Lv2
+				ELSEIF MARK:2 == 2
+					PRINTFORMW 「응응, 부탁해요, 이제…….」
+					PRINTFORMW 「아니, 아직이야. 지금부터라구.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이제 그만둬, 아무리 렌코라도…….」
+					PRINTFORMW 「어머, 나라도 싫어? 무정하네.」
+				ENDIF
+			ENDIF
+			CFLAG:5221 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5221 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3
+			IF MARK:2 == 3
+				PRINTFORMW 「응, 아……그런…….」
+				PRINTFORMW 「저……어째서……이렇게 된걸까요…….」
+			;굴복 각인 Lv2
+			ELSEIF MARK:2 == 2
+				PRINTFORMW 「읏, 응……싫어, 싫은데…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「싫어, 그만 둬요! 제발!」
+			ENDIF
+			CFLAG:5221 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;커닐링구스 CFLAG222
+;이와시미즈 CFLAG328
+;-------------------------------------------------
+;커닐링구스
+IF SELECTCOM == 1 && TEQUIP:56 == 0
+	;처음
+	IF CFLAG:5222 == 0
+		;조수렌코
+		IF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;굴복 각인 Lv2 이상
+				IF MARK:2 >= 2
+					PRINTFORMW 「앗, 그런, 렌코, 그런 곳 쳐다보지 마요…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「앗, 렌코, 안 돼요, 그런 곳 쳐다보면 안되요!」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			;굴복 각인 Lv2 이상
+			IF MARK:2 >= 2
+				PRINTFORMW 「앗, 그런 곳 빨지 마요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「싫어, 기다려, 이상한 곳 빨지 말아요!」
+				PRINTFORMW 「그만둬요 제발, 이거 놔요!」
+			ENDIF
+		ENDIF
+			CFLAG:5222 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5222 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「아, 아 ……기분좋아…….」
+				PRINTFORMW 「아, 그렇지만, 안 되요 렌코……주인님이…….」
+				PRINTFORMW 「이제……렌코는 정말 주인님의 앞이라면 조금 모자른 거 같아서 싫어요…….」
+			ENDIF
+			CFLAG:5222 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5222 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아, 흣~……기분좋아…….」
+			PRINTFORMW 「더, 더 해줘요…….」
+			CFLAG:5222 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5222 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「읍, 응응, 어때, 메리?」
+				PRINTFORMW 「아, 아……렌코, 좋아, 기분 좋아……더……해도 좋으니까…….」
+			ENDIF
+			CFLAG:5222 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5222 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 메리는%조사처리(CALLNAME:MASTER,"가")% 하는 대로 참고 있다
+			PRINTFORMW 단지 열심히 참고 있는 것 같다……
+			CFLAG:5222 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5222 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3
+				IF MARK:2 == 3
+					PRINTFORMW 「싫어, 그런 곳 더러워요 메리…….」
+					PRINTFORMW 「메리의 것이라면 그렇지 않아.좀더 좀더 해 줄테니까.」
+					PRINTFORMW 「그런, 아, 아!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「렌코, 부탁해요, 이제 싫어요….」
+					PRINTFORMW 「응―？ 안 돼, 아직은.」
+				ENDIF
+			ENDIF
+			CFLAG:5222 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5222 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3
+			IF MARK:2 == 3
+				PRINTFORMW 「큿, 읏…….」
+				PRINTFORMW 「싫어, 싫은데…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「싫어, 기분 나빠, 이제 그만둬요!」
+			ENDIF
+			CFLAG:5222 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;이와시미즈
+ELSEIF SELECTCOM == 1 && TEQUIP:56
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5328 <= 6 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;노출버릇 Lv3 이상+C감각 Lv3 이상
+			IF ABL:14 >= 3 && ABL:0 >= 3
+				PRINTFORMW 「아, 아 ……그런, 싫어……렌코…….」
+				PRINTFORMW 「응……주인님의 앞이라면 조금 모자른 기분이 들어요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「렌코, 이런 건 부끄러워…….」
+				PRINTFORMW 「주인님의 앞이라고 그렇게 신경쓰면 안 돼.」
+				PRINTFORMW 「그, 그런건……!」
+			ENDIF
+		ENDIF
+		CFLAG:5328 = 7
+	;연모+조수 없음
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5328 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「응응, 아……, 기분좋아…….」
+		PRINTFORMW 「더, 더 해줘요…….」
+		CFLAG:5328 = 6
+	;?조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5328 <= 4 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;노출버릇 Lv3 이상+C감각 Lv3 이상
+			IF ABL:0 >= 3 && ABL:14 >= 3
+				PRINTFORMW 「흣~, 응……!」
+				PRINTFORMW 「기분이 좋아? 더 해 줘요……?」
+			;그 이외
+			ELSE
+				PRINTFORMW 「렌코, 괜찮은 거에요? 무겁지 않아요?」
+				PRINTFORMW 「괜찮아, 그것보다 메리, 더 느껴봐…….」
+			ENDIF
+		ENDIF
+		CFLAG:5328 = 5
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5328 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「응……응응…….」
+		PRINTFORMW 메리는 소리를 내지르는 것을 필사적으로 참고 있는 것 같다
+		CFLAG:5328 = 4
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5328 <= 2 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;노출버릇 Lv3 이상+C감각 Lv3 이상
+			IF ABL:0 >= 3 && ABL:14 >= 3
+				PRINTFORMW 「렌코, 안 되요, 이런 곳에서 이런 일을…….」
+				PRINTFORMW 「부끄러워? 이제 와서 신경쓸 일도 아닌데…….」
+			;굴복 각인 Lv3 이상
+			ELSEIF MARK:2 == 3 
+				PRINTFORMW 「렌코, 안 되요, 이런 곳에서 이런 일을…….」
+				PRINTFORMW 「부끄러워? 이제 와서 신경쓰는 게 필요할리 없을텐데…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「싫어…렌코, 그만둬요……이제, 그만둬요…….」
+				PRINTFORMW 메리는 눈물을 흘리면서 렌코에게 간절히 원하고 있다……
+			ENDIF
+		ENDIF
+		CFLAG:5328 = 3
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5328 <= 1 || FLAG:11 == 2)
+		;굴복 각인 Lv3+노출버릇 Lv3 이상+C감각 Lv3 이상
+		IF MARK:2 == 3 && ABL:0 >= 3 && ABL:14 >= 3
+			PRINTFORMW 「응, 응응, 그런, 아……부끄러워……하지만 느껴버려…….」
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3 
+			PRINTFORMW 「이제 …그만두둬……이런건 이제, 싫어….」
+			PRINTFORMW 「이런 것, 이런 것은…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「이런, 이런 건 싫어…!」
+		ENDIF
+		CFLAG:5328 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;어널 애무 CFLAG223
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;처음
+	IF CFLAG:5223 == 0
+		;연모+조수 없음
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「어, 여기를? 네, 읏……조금 기다려요, 마음의 준비가.」
+			PRINTFORMW 「……좋아요, 와.」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「어, 여기를? 네, 읏……조금 기다려요, 렌코, 마음의 준비가.」
+					PRINTFORMW 「싫다 뭐, 기다리다가 죽을 거 같아.」
+					PRINTFORMW 「아, 조금만, 기다리라니까는 정말, 아!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「있어, 싫어, 렌코, 그쪽은 안되요!」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「앗, 싫어, 거기는, 그만둬요……!」
+		ENDIF
+		CFLAG:5223 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		P = PALAM:10 + UP:10
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5223 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「아, 아……기분 좋아…….」
+					PRINTFORMW 「엉덩이로 기분 좋아져버린다니, 이제 메리도 충분히 변태인지도.」
+					PRINTFORMW 「싫어, 그런 일 말하지 말아요 …….」
+				;윤활 Lv2 이상
+				ELSEIF P >= PALAMLV:2
+					PRINTFORMW 「아……렌코의 손가락이 안에…….」
+					PRINTFORMW 「어때? 아프면 말해.」
+					PRINTFORMW 「응, 괜찮아……, 앗…….」
+				;윤활 Lv2 미만
+				ELSEIF P < PALAMLV:2
+					PRINTFORMW 「아파…….」
+					PRINTFORMW 「아, 아팠어? 미안.」
+					PRINTFORMW 「아……좀 더, 상냥하게 해줘요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5223 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5223 <= 5 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「아, 아, 엉덩이인데, 느껴버린다니……!」
+			;윤활 Lv2 이상
+			ELSEIF P >= PALAMLV:2
+				PRINTFORMW 「역시, 여기는 부끄럽네요…….」
+				PRINTFORMW 「, 응, 아, 싫어, 안되는데…….」
+			;윤활 Lv2 미만
+			ELSEIF P < PALAMLV:2
+				PRINTFORMW 「아, 아파요, 주인님, …….」
+				PRINTFORMW 「응……괜찮아요, 참을 수 있으니까…….」
+			ENDIF
+			CFLAG:5223 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5223 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;윤활 Lv2 이상＋A감각 Lv3 이상
+				IF P >= PALAMLV:2 && ABL:2 >= 3
+					PRINTFORMW 「아……렌코의 손가락이 안에…….」
+					PRINTFORMW 「어때? 아팠으면 말해.」
+					PRINTFORMW 「응……, 괜찮아, 참을 수 있으니까…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아파…….」
+					PRINTFORMW 「아, 아팠어? 미안.」
+					PRINTFORMW 「응……, 괜찮아, 참을 수 있으니까…….」
+				ENDIF
+			ENDIF
+			CFLAG:5223 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5223 <= 3 || FLAG:11 == 2)
+			;윤활 Lv2 이상＋A감각 Lv3 이상
+			IF P >= PALAMLV:2 && ABL:2 >= 3
+				PRINTFORMW 「큿……그런, 나…….」
+				PRINTFORMW (느끼고 싶지 않은데……기분 좋아지고 있다니? 그런……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「크……아파…….」
+			ENDIF
+			CFLAG:5223 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5223 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;윤활 Lv2 이상＋A감각 Lv3 이상
+				IF P >= PALAMLV:2 && ABL:2 >= 3
+					PRINTFORMW 「이런 건 싫어, 싫은데……어째서…….」
+					PRINTFORMW 「후후, 벌써 익숙해진 것같네…….확실히 느껴버리고는…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「싫어, 아파, 아파요구요 렌코, 이제, 그만둬요 정말!」
+					PRINTFORMW 「응, 아직인가……더 차분히 하지 않으면 안되려나?」
+				ENDIF
+			ENDIF
+			CFLAG:5223 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5223 <= 1 || FLAG:11 == 2)
+			;윤활 Lv2 이상＋A감각 Lv3 이상
+			IF P >= PALAMLV:2 && ABL:2 >= 3
+				PRINTFORMW 「아, 저, 저기……자주……자주 하지마요……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「뭐, 또 그쪽을……그만둬요, 아프기만 하니까!」
+			ENDIF
+			CFLAG:5223 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;자위 CFLAG224
+;샤워 자위 CFLAG312
+;-------------------------------------------------
+;통상 자위(샤워 없음)
+IF SELECTCOM == 7 && TEQUIP:54 == 0
+	;처음
+	IF CFLAG:5224 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「스스로 하라구요? ……네?」
+				PRINTFORMW 「모른다면 구체적으로 말해줄까?」
+				PRINTFORMW 「그, 좋아요……보여진다면 부끄러운데…….」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「스스로……? 응, 부끄럽지만, 좋아요.」
+			PRINTFORMW 「……그렇지만, 보고 있을 뿐인데 좋아요?」
+		;연모 없음+조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「스스로 하라구요? ……무슨 말이죠?」
+				PRINTFORMW 「모른다면 구체적으로 말해줄까?」
+				PRINTFORMW 「거짓말이겠지, 응……아니, 알았어요…….」
+			ENDIF
+		;연모 없음+조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「스스로 하라구요? ……무슨 말이죠?」
+			PRINTFORMW 「……, 알았어요……하면 되지요, 하세요…….」
+		ENDIF 
+		CFLAG:5224 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5224 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					;자위 중독 Lv3 이상
+					IF ABL:30 >= 3
+						PRINTFORMW 「아, 아……주인님, 렌코, 더, 더 봐줘!」
+					;그 이외
+					ELSE
+						PRINTFORMW 「응응, 흣~, 저기, 아무리 렌코라도……부끄러워…….」
+					ENDIF
+				;그 이외
+				ELSE
+					;자위 중독 Lv3 이상
+					IF ABL:30 >= 3
+						PRINTFORMW 「아, 싫어……이런거, 렌코에게 보여지고 있다니, 저, 너무 느껴 버려요……!」
+					;그 이외
+					ELSE
+						PRINTFORMW 「아, 렌코……너무, 보지 마…….」
+						PRINTFORMW 「혹시, 주인님에게라면 좋다든가…….」
+						PRINTFORMW 「웃, 그런 일 말하지 마…….」
+					ENDIF
+				ENDIF
+			ENDIF
+			CFLAG:5224 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5224 <= 5 || FLAG:11 == 2)
+			;자위 중독 Lv3 이상
+			IF ABL:30 >= 3
+				PRINTFORMW 「아, 주인님, 내가 느끼고 있는 모습, 더 봐줘요……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「주인님, 아, 정말로, 흣~, 보고 있을 뿐으로 좋아요?」
+				PRINTFORMW 「……으응, 보여주는 것은 싫지만, 주인님에게라면 좋아요…….」
+			ENDIF
+			CFLAG:5224 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5224 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;자위 중독 Lv3 이상
+				IF ABL:30 >= 3
+					PRINTFORMW 「, 큿……렌코, 저 이제…….」
+					PRINTFORMW 「렌코에게 보여지고, 느끼고 있다니……아…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「응, 아……너무, 보지 마…….」
+				ENDIF
+			ENDIF
+			CFLAG:5224 = 5
+		;?
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5224 <= 3 || FLAG:11 == 2)
+			;자위 중독 Lv3 이상
+			IF ABL:30 >= 3
+				PRINTFORMW 메리는 말한대로 묵묵히 자위를 하고 있다
+				PRINTFORMW 기분은 좋은 것 같지만, 가끔 소리를 내는 것을 필사적으로 참고 있는 것 같다
+			;그 이외
+			ELSE
+				PRINTFORMW 메리는 말해지는 대로 자위를 하고 있다
+				PRINTFORMW 소리는 올리지 않고 단지 작업을 하는 것 같다……
+			ENDIF
+			CFLAG:5224 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5224 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;자위 중독 Lv3 이상
+				IF ABL:30 >= 3
+					PRINTFORMW 「아, 렌코에게 보여지고 있는데, 저, 이걸,  그만둘 수 없어요……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「그런, 심해 렌코……이런 거, 부끄러워…….」
+				ENDIF
+			ENDIF
+			CFLAG:5224 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5224 <= 1 || FLAG:11 == 2)
+			;자위 중독 Lv3 이상
+			IF ABL:30 >= 3
+				PRINTFORMW 「아, 싫어, 보여지고 있는데,  그만둘 수 없다니……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「아, 어째서 이런 일을……보, 보지 마…….」
+			ENDIF
+			CFLAG:5224 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;샤워 자위
+ELSEIF SELECTCOM == 7 && TEQUIP:54
+	;처음
+	IF CFLAG:5312 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() ==49
+				PRINTFORMW 「샤워하며 하라구요? 잘도 생각했네요 그런걸.」
+				PRINTFORMW 「그러기 위해 날 목욕탕에 데리고 온 것인가요?」
+				PRINTFORMW 「뭔가 모처럼, 이제……아무튼 좋아요.」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「샤워하며? 여기에 온 이상 시킬 것이라고는 생각했지만…….」
+			PRINTFORMW 「……으응, 싫지 않아요, 단지, 조금 부끄러운 것뿐…….」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「샤워하며 해라? 잘도 생각했네요. 그런걸…….」
+				PRINTFORMW 「모처럼 목욕탕에 왔으니까.」
+				PRINTFORMW 「뭐가 모처럼이에요……뭐 좋아요, 할게요.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「……이것으로, 좋은 건가요?」
+		;연모 없음+조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「샤워하며 하라고……뭘 생각하는건가요.」
+				PRINTFORMW 「그러기 위해 목욕탕에 온 것이라구?」
+				PRINTFORMW 「적어도 욕실 정도 천천히 들어가게 해 주어도 좋은데…….」
+			ENDIF
+		;연모 없음+조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「샤워하며 하라구요…….」
+			PRINTFORMW 「단지 목욕을 할 뿐은 아닐거라고는 생각했지만…….」
+		ENDIF 
+		CFLAG:5312 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5312 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상
+				IF ABL:32 >= 5
+					;자위 중독 Lv3 이상
+					IF ABL:30 >= 3
+						PRINTFORMW 「아, 아……렌코도, 함께 하면 좋은데 ……!」
+						PRINTFORMW 「지금은 주인님의 조수이니까……참고 있을 뿐…….」
+					;그 이외
+					ELSE
+						PRINTFORMW 「아, 부끄러운데, 샤워가 기분이 좋다……!」
+						PRINTFORMW 「메리, 샤워하며 하는 것도 기분이 좋지요? 부끄러워하지 않는게 좋아요.」
+						PRINTFORMW 「아……렌코, 이제, 저…….」
+					ENDIF
+				;그 이외
+				ELSE
+					;자위 중독 Lv3 이상
+					IF ABL:30 >= 3
+						PRINTFORMW 「아, 싫어……이런거, 샤워하는데 기분이 좋다니…….」
+						PRINTFORMW 「나에게 보여지고 있는 것이 신경이 쓰이는 거야?」
+						PRINTFORMW 「응, 그런……건……!」
+					;그 이외
+					ELSE
+						PRINTFORMW 「, 아……응, 안되…….」
+						PRINTFORMW 「메리, 샤워하며 하는 것도 기분이 좋지요? 부끄러워하지 않는게 좋아요.」
+						PRINTFORMW 「응, 그런, 부끄러워요…….」
+					ENDIF
+				ENDIF
+			ENDIF
+			CFLAG:5312 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5312 <= 5 || FLAG:11 == 2)
+			;자위 중독 Lv3 이상
+			IF ABL:30 >= 3
+				PRINTFORMW 「아, 굉장해……물의 자극이……기분 좋아……!」
+				PRINTFORMW 「주인님, 더, 샤워하며 느끼고 있는 저를 봐줘요……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「아, 응응……아……주인님에게 볼 수 있고 있는데…….」
+				PRINTFORMW 「물의 자극이, 아, 흣~…….」
+			ENDIF
+			CFLAG:5312 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5312 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;자위 중독 Lv3 이상
+				IF ABL:30 >= 3
+					PRINTFORMW 「아……렌코, 기분 좋아, 기분이 좋아요……!」
+					PRINTFORMW 「빠지면 푹 빠지게 되죠―, 사양하지 않으니 좋아요.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「저기, 아무리 렌코의 명령이라도, 부끄러워요…….」
+					PRINTFORMW 「빠지면 푹 빠지게 돼, 하면 할수록 좋으니.」
+					PRINTFORMW 「그런, 아, 흣~……!」
+				ENDIF
+			ENDIF
+			CFLAG:5312 = 5
+		;?
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5312 <= 3 || FLAG:11 == 2)
+			;자위 중독 Lv3 이상
+			IF ABL:30 >= 3
+				PRINTFORMW 메리는 말한 것 대로 묵묵히 샤워하며 자위를 하고 있다
+				PRINTFORMW 기분은 좋은 것 같지만, 가끔 소리를 내는 것을 필사적으로 참고 있는 것 같다
+			;그 이외
+			ELSE
+				PRINTFORMW 메리는 말한 것 대로 샤워하며 자위를 하고 있다
+				PRINTFORMW 소리는 내지 않고 단지 작업을 하는 것 같다……
+			ENDIF
+			CFLAG:5312 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5312 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;자위 중독 Lv3 이상
+				IF ABL:30 >= 3
+					PRINTFORMW 「, 아……응, 안되…….」
+					PRINTFORMW 「메리, 샤워하며 하는 것도 기분이 좋지요? 부끄러워하지 않는게 좋아.」
+					PRINTFORMW 「응, 그런, 부끄럽다…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「우우, 목욕탕에서 무엇으로 이런 일…….」
+				ENDIF
+			ENDIF
+			CFLAG:5312 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5312 <= 1 || FLAG:11 == 2)
+			;자위 중독 Lv3 이상
+			IF ABL:30 >= 3
+				PRINTFORMW 「아, 굉장해……물의 자극이……너무 기분 좋아서, 멈추지 못하겠어요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「우우, 목욕탕에서 뭐하러 이런 일을…….」
+			ENDIF
+			CFLAG:5312 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;페라되는(뚜껑이든지/남자만) CFLAG225
+;-------------------------------------------------
+;IF SELECTCOM == 5
+;	;처음
+;	IF CFLAG:5225 == 0
+;		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+;		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5225 = 1
+;			RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5225 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5225 = 4
+;		;굴복 각인 Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5225 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5225 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5225 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5225 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;가슴 애무 CFLAG226
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;처음
+	IF CFLAG:5226 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「흣~…….」
+				PRINTFORMW 「……? 무슨 의미야?」
+				PRINTFORMW 「……아무것도 아니어요, 완전히, 이제, 이렇게!」
+				PRINTFORMW 「어, 아, 앗, 뭐에요, 갑자기 그렇게 강하게……!」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「저, 이렇게 가슴이 큰 걸 방해라고 생각햇어요, 남자에게도 여자에게도도 이상한 눈으로 보여지고.」
+			PRINTFORMW 「그렇지만, 주인님의 마음에 든다면, 이것으로 좋겠지요…….」
+			PRINTFORMW 「예, 좋아요……, 가득 비벼줘요…….」
+		;연모 없음+조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「흣~…….」
+				PRINTFORMW 「……뭐야.」
+				PRINTFORMW 「……응―, 아무것도 아니어요, 완전히, 이제, 이!」
+				PRINTFORMW 「어, 조금 기다려요 렌코, 아, 아파……그렇게 강하게 비비지 말아요!」
+			ENDIF
+		;연모 없음+조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「아! 싫어, 그만둬요, 손대지 마세요!」
+		ENDIF
+			CFLAG:5226 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5226 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「―……어떻게 하면 이렇게 되는거죠.」
+				PRINTFORMW 「참 부럽네요 이제, 완전히, 이 가슴이!」
+				PRINTFORMW 「아, 이제, 그러니까, 그렇게 강하게는 하지마요!」
+			ENDIF
+			CFLAG:5226 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5226 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응, 아……기분 좋아요…….」
+			PRINTFORMW 「더, 더 손대어 줘요…….」
+			CFLAG:5226 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5226 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「……렌코, 얼마든지 비비어도 좋으니까.」
+				PRINTFORMW 「응, 아……좋아…….」
+			ENDIF
+			CFLAG:5226 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5226 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「큿……우우…….」
+			CFLAG:5226 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5226 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;B감각 Lv3 이상
+				IF ABL:3 >= 3
+					PRINTFORMW 「아―, 이거, 어디를 어떻게 해서 이렇게 커진거야, 어떻게!」
+					PRINTFORMW 「아, 그러니까 그렇게 강하겐……싫어, 아!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아―, 이거, 어디를 어떻게 해서 이렇게 커진거야, 어떻게!」
+					PRINTFORMW 「아, 이제, 렌코, 이제 그만둬요 정말!」
+				ENDIF
+			ENDIF
+			CFLAG:5226 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5226 <= 1 || FLAG:11 == 2)
+			;B감각 Lv3 이상
+			IF ABL:3 >= 3
+				PRINTFORMW 「응, 그런……가슴만…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「응응, 싫다니까, 그만둬요!」
+			ENDIF
+			CFLAG:5226 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;키스 CFLAG227
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;처음
+	IF CFLAG:5227 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응……키스 하고 있을때가 제일 행복할지도…….」
+			PRINTFORMW 「정말로 사랑받고 있는구나라는 느낌이 들으니까요…….」
+		;연모 없음
+		ELSEIF ASSIPLAY
+			PRINTFORMW 「싫어, 무엇으로 당신 같은 것과……그만둬, 그만둬요!」
+		ENDIF
+		CFLAG:5227 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5227 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응………….」
+			PRINTFORMW 「주인님, 기뻐요……너무 좋아…….」
+		CFLAG:5227 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5227 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응……응응…….」
+			PRINTFORMW 메리는 저항하지 않지만 눈을 감고 있다
+		CFLAG:5227 = 4
+		;순종 Lv3 이상
+		ELSEIF ABL:10 >= 3 && (CFLAG:5227 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응……응응…….」
+			PRINTFORMW 메리는 저항하지 않고 혀를 받아 들이고 있다
+		CFLAG:5227 = 4
+		;그 이외
+		ELSEIF CFLAG:5227 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어, 응, 그만둬요 정말!」
+			PRINTFORMW 메리는 필사적으로 떼어 놓으려고 한다
+		CFLAG:5227 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;아무것도 하지 않는 CFLAG228
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;처음
+	IF CFLAG:5228 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「어라 렌코, 아무것도 하지 않는다면 주인님과 바꿔주면 좋을텐데―, 라든지, 어째서?」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「아, 저, 주인님……?」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「뭘 하는걸까 생각 했어?」
+				PRINTFORMW 「……응, 아무것도 아니에요.렌코야말로, 아무것도 하지 않는건가요?」
+				PRINTFORMW 「렌코에게라면……무엇 되어도…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「어떨까 했어……?」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「……렌코?」
+				PRINTFORMW 「어머나, 혹시 지금부터 뭘 당하는지 기대하고 있다거나?」
+				PRINTFORMW 「그렇지 않아요, 아무것도 하지 않는다면 그걸로 끝내죠.」
+			ENDIF
+		;연모 없음+조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「어떻게 할 생각이죠……?」
+		ENDIF
+		CFLAG:5228 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5228 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW (아 왠지, 어쩐지 초조하다……)
+			ENDIF
+			CFLAG:5228 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5228 <= 5 || FLAG:11 == 2)
+			;욕정 Lv3 이상
+			IF PALAM:13 >= 3
+				PRINTFORMW 「이젠 초조하게 하지 말아줘요……주인님…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「참아요, 참겠지만……그래도…….」
+			ENDIF
+			CFLAG:5228 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5228 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「조금 전부터 내 얼굴 빤히 보고 있네. 뭘 당하는 것일까 상상했어?」
+				PRINTFORMW 「어……아니요 아무것도 아니에요.」
+				PRINTFORMW 「그런건…….」
+			ENDIF
+			CFLAG:5228 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5228 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아무것도 하지 않는다면……조금, 그대로 해 주는 걸까…….」
+			CFLAG:5228 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5228 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「끝이야? 조금 혼자가 되고 싶어요.」
+				PRINTFORMW 「아니 아직.지금부터 좋은 일 할거니까.」
+			ENDIF
+			CFLAG:5228 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5228 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「아무것도 하지 않는다면 이제 끝내자구요.」
+			CFLAG:5228 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;로터 CFLAG229
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;처음
+	IF CFLAG:5229 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「아, 그 거, 혹시…….」
+			PRINTFORMW 「역시.여기에도 이런 물건이 존재하다니…….」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「여기는 다양하게 음란한 도구가 있지만, 이것으로 하는건가요.」
+				PRINTFORMW 「이것은……여기는 이런 것까지 존재하는 군요…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「이런 것까지…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「여기는 다양하게 음란한 도구가 있지만, 이것으로 하는건가요.」
+				PRINTFORMW 「이것은……조금 기다려요, 싫어, 그런 곳에 꽉 누르지 마요!」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「앗, 그거…….」
+			PRINTFORMW 「아니, 그런 곳에 꽉 누르지 말아요!」
+		ENDIF 
+			CFLAG:5229 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5229 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 더, 더 해줘요…….」
+				PRINTFORMW 「응? 여기? 여기가 좋은건가?」
+				PRINTFORMW 「아, , 굉장해……아, 흣~…….」
+			ENDIF
+			CFLAG:5229 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5229 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「진동이……, 굉장히……아, 기분, 좋아…….」
+			PRINTFORMW 「더, 해줘요, 주인님…….」
+			CFLAG:5229 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5229 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 더, 더 해주세요…….」
+				PRINTFORMW 「응? 여기? 여기가 좋은건가?」
+				PRINTFORMW 「아, 응, 거기, 아, 굉장해, 기분 좋아…….」
+			ENDIF
+			CFLAG:5229 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5229 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……응응……!」
+			PRINTFORMW 메리는 신체를 움찔거리면서 견디고 있다……
+			CFLAG:5229 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5229 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3
+				IF MARK:2 == 3
+					PRINTFORMW 「아, 아……렌코, 도, 이제, 그만둬요 …….」
+					PRINTFORMW 「그렇게 느끼고 있는데 멈춰도 좋아? 아직이야.」
+					PRINTFORMW 「아, 그런, 안되…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 이제 싫어, 그만둬요, 그만둬요, 렌코…….」
+				ENDIF
+			ENDIF
+			CFLAG:5229 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5229 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3
+			IF MARK:2 == 3
+				PRINTFORMW 「아, 아……싫어, 저, 이상해져버려요……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「……더이상 꽉 누르지 마요…….」
+			ENDIF
+			CFLAG:5229 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;바이브래이터 CFLAG230　CFLAG301
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 12 && TEQUIP:20 == 1
+	;처음
+	IF CFLAG:5230 == 0
+		;처녀
+		IF TALENT:0 == 1 && EXP:0 == 0
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					;레즈비언 중독 Lv5 이상+순종 Lv5 이상+반발 각인 Lv0
+					IF ABL:32 >= 5 && ABL:10 >= 5 && MARK:9 == 0
+						PRINTFORMW 「응 메리……이런거……이지만…….」
+						PRINTFORMW 「이것은……여기는 이런 것까지 있다니…….……렌코?」
+						PRINTFORMW 「……메리, 부탁이 있어.당신의 처음을, 내가 받아도 괜찮아?」
+						PRINTFORMW 「네…….……, ……응, 렌코라면, 좋아요.와줘요…….」
+						PRINTFORMW (주인님, 미안해요, 그렇지만, 저……)
+					;그 이외
+					ELSE
+						PRINTFORMW 「이것은……조금 기다려요, 렌코, 설마.」
+						PRINTFORMW 「그 대로야 메리, 당신의 처음은, 내가 받을게.」
+						PRINTFORMW 「그런, 거짓말이겠지 렌코, 저, 처음은, 주인님에게…….」
+						PRINTFORMW 「주인님에게는 허가를 받았어……, 간다구?」
+						PRINTFORMW 「그런, 그런거, 거짓말이야……주인님, 어째서…….」
+					ENDIF
+				ENDIF
+			;연모
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				;순종 Lv5 이상
+				IF ABL:10 >= 5
+					PRINTFORMW 「어, 그거 설마……!」
+					PRINTFORMW 「……아니요 좋아요, 주인님이 그것을 바란다면.」
+					PRINTFORMW 메리안에 바이브래이터를 넣기 직전, 메리로부터 한 줄기의 눈물이 흘러 내렸다……
+				;그 이외
+				ELSE
+					PRINTFORMW 「어, 그 거 설마……!」
+					PRINTFORMW 「저기, 주인님, 저 아직 했던 적이 없어요, 처음은, 주인님에게 주고 싶은데……!」
+				ENDIF
+			;?조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「응 메리……이런거……이지만…….」
+					PRINTFORMW 「그것……은……, ………….」
+					PRINTFORMW 「응 렌코, 저 사람의 명령이겠죠? ……주저하지 않아도 좋아요.」
+					PRINTFORMW 「부탁해요, 제 처음을 빼앗고, 렌코가 저를…….」
+					PRINTFORMW 「메리…….……알았어.……미안해, 간다구?.」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「……그것은…….」
+				PRINTFORMW 「제 처음을, 그런걸로 빼앗는 군요……좋아요, 이제 어떻게 되어도…….」
+				PRINTFORMW 「……이제 와서……주저하는 사람이 아니지요, 당신은…….한다면 빨리 해요…….」
+				PRINTFORMW 「………….」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「이것은……렌코, 설마.」
+					PRINTFORMW 「그 설마야.메리의 처음을, 내가 받을거야.」
+					PRINTFORMW 「안 돼, 싫어…그만둬요, 렌코, 그런……그런거 안 돼!」
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				 PRINTFORMW 「어, 그거 설마……!」
+				 PRINTFORMW 「부탁해요, 그만둬요, 그만 둬! 저, 아직인데……!」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「렌코, 이것은……여기는 이런 것까지 있군요…….」
+				ENDIF
+			;연모+조수 없음
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「이런 것까지 있다니…….」
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 메리는 식은 땀을 흘리며 바이브래이터를 보고 있다
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「렌코, 이것은……여기는 이런 것까지 있는 군요…….」
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「이것은……부탁해요, 제발, 그만둬요……!」
+			ENDIF
+		ENDIF
+			CFLAG:5230 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5230 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「……또 이건가요?」
+				PRINTFORMW 「싫진 않지? 이것에게 당할 때의 메리는 기뻐하는 것 같으니.」
+			ENDIF
+			CFLAG:5230 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5230 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「또 이건가요? 될 수 있으면, 주인님의 것을…….」
+			CFLAG:5230 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5230 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「이것보다 ……렌코와 얼싸안고 싶어요…….」
+				PRINTFORMW 「그런 말 해줘서 기뻐 메리, 그렇지만 이번은 이것이야.」
+			ENDIF
+			CFLAG:5230 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0  && (CFLAG:5230 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또……이건가…….」
+			CFLAG:5230 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5230 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「도, 이제 그만둬요 렌코…….」
+				PRINTFORMW 「모처럼 있는 것이니까 유효하게 활용하지 않으면.」
+				PRINTFORMW 「그만둬요 렌코……, 이제 안돼…….」
+			ENDIF
+			CFLAG:5230 = 3
+		;그 이외
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5230 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「부탁해요, 이제, 싫어….」
+			CFLAG:5230 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5301 < 6 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			PRINTFORMW 「……응! 흣~…….」
+			PRINTFORMW 「기분이 좋은 것은 확실하지만, 역시 이런 것은…….」
+		ENDIF
+		CFLAG:5301 = 6
+	;연모+조수 없음
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5301 < 5 || FLAG:11 == 2)
+		PRINTFORMW 「다음은, 주인님의 것으로…….」
+		CFLAG:5301 = 5
+	;?조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5301 < 4 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			PRINTFORMW 「메리, 뽑아요?」
+			PRINTFORMW 「……응! 아……흣~…….」
+		ENDIF
+		CFLAG:5301 = 4
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5301 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「……큿……흣~…….」
+		CFLAG:5301 = 3
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5301 < 2 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			PRINTFORMW 「아……흣~……이제, 그런 거 그만둬요…….」
+		ENDIF
+		CFLAG:5301 = 2
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5301 < 1 || FLAG:11 == 2)
+		PRINTFORMW 「아……흣~……도, 더이상 그런 것 넣지 마요…….」
+		CFLAG:5301 = 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;E맛사지 CFLAG231
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;처음
+	IF CFLAG:5231 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「이것은 맛사지기, 군요.」
+			PRINTFORMW 「그래서 무엇을 할까, 주인님? 네, 그쪽에?」
+			PRINTFORMW 「……응, 아, 흣~!, 굉장해, 앗, 뭐야 이거……!」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이것은……맛사지기?」
+				PRINTFORMW 「응, 아무튼, 그 말대로이지만, 이것은, 이렇게 사용하는거야.」
+				PRINTFORMW 「네, 여기에 대는 거야? 뭔가 싫은 예감 밖에 들지 않지만, 렌코라면…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「맛사지기……단지 맛사지만 할 리가 없지요…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이것은 맛사지기, 군요.」
+				PRINTFORMW 「응, 아무튼, 그 말대로이지만, 이것은, 이렇게 사용하는거야.」
+				PRINTFORMW 「네, 어디에……잠깐, 아니, 히, 그만둬요, 그만둬!」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「이것은 맛사지기, 군요.」
+			PRINTFORMW 「그래서 무엇을 할 생각? 단지 맛사지 해 줄 리……없어요.」
+			PRINTFORMW 「네, 무엇을……있어, 히! 아! 아니, 멈추어! 멈추어!」
+		ENDIF 
+			CFLAG:5231 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5231 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「주인님……또, 이것이에요? 이거, 조금 골칫거리…….」
+			PRINTFORMW 「히, 아! 읏, 격렬해져서, 이젠 안되, 이상하게 되어버려요!」
+			CFLAG:5231 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5231 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「또 하는 건가요, 이것으로?」
+				PRINTFORMW 「응.메리 굉장히 흐트러져서 귀여웠으니까.」
+				PRINTFORMW 「좋아요, 렌코에게라면……, 아! 읏, 격렬해져, 응응!」
+			ENDIF
+			CFLAG:5231 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5231 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「크읏………………!」
+			PRINTFORMW 메리는 필사적으로 참고 있다……
+			CFLAG:5231 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5231 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「또 하는 건가요, 이것으로?」
+					PRINTFORMW 「응.메리 굉장히 흐트러져서 귀여웠으니까.」
+					PRINTFORMW 「좋아요, 렌코에게라면……, 아! 읏, 격렬해져, 응응!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이제 그만둬줘요 렌코…….」
+					PRINTFORMW 「마구 그렇게 흐트러져 무슨 말하는거야. 시작한다.」
+					PRINTFORMW 「이제, 그만둬요, 렌코, 렌코는 정말, 아, 안 돼!」
+				ENDIF
+			ENDIF
+			CFLAG:5231 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5231 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「아, 이제 그것은 그만둬요! 망가져요, 저, 망가져버린다구요!」
+			CFLAG:5231 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;어널 바이브래이터 CFLAG232　CFLAG302
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 13 && TEQUIP:25 == 1
+	;처음
+	IF CFLAG:5232 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 이것은 설마…….」
+				PRINTFORMW 「아마 예상과는 조금 빗나가고 있다고 생각해, 이건말야, 여기에 넣는 거야.」
+				PRINTFORMW 「여기라니!, 조금 기다려요, 그건……아직 마음의 준비가……! 흣~…….」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「그거 설마……네? 뒤?」
+			PRINTFORMW 「앗, 조금 기다려요……아, 앗, 그런!」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이것을, 뒤로? ……글쎄요.」
+				PRINTFORMW 「괜찮아? 익숙해지긴 어려워.」
+				PRINTFORMW 「그렇게 말해봤자……싫어도 넣을텐데요…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「여기에……그렇게…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이것은 설마…….」
+				PRINTFORMW 「아마 예상과는 조금 빗나가고 있다고 생각해, 이건말야, 여기에 넣는 거야.」
+				PRINTFORMW 「여기!, 조금 기다려요, 거짓말이겠지, 싫어, 읏, 안된다니까요!」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「그거 설마……네? 뒤?」
+			PRINTFORMW 「거짓말이겠지, 그런……아, 읏, 싫어, 안돼---!」
+		ENDIF
+		CFLAG:5232 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5232 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「또, 뒤야?」
+					PRINTFORMW 「혹시 기대해 버린거야?」
+					PRINTFORMW 「……아……아앗……그게…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「또, 뒤에요? 별로 그쪽은 하고 싶지 않은데…….」
+					PRINTFORMW 「그래도 익숙해지면 좋을테니까.」
+				ENDIF
+			ENDIF
+			CFLAG:5232 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5232 <= 5 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「또 이것……될 수 있으면, 주인님의 것이…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「넣는 거야? ……응, 좋아요.」
+				PRINTFORMW 「아직 아프지만, 참을테니까…….」
+			ENDIF
+			CFLAG:5232 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5232 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「넣는 거야? ……응, 좋아요.」
+					PRINTFORMW 「벌써 익숙해진 건가―. 메리도 자신은 변태라고 인정해 버렸다던가?」
+					PRINTFORMW 「그런……저…….」
+					PRINTFORMW 「미안 미안, 그러면, 넣는다.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「넣는 거야? 응, 아직, 조금 서투르지만, 좋아…….」
+					PRINTFORMW 「그래도 익숙해지면 좋을테니까.」
+				ENDIF
+			ENDIF
+			CFLAG:5232 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5232 <= 4 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「또 이것을 넣는 거야……?」
+				PRINTFORMW (엉덩이로 기분 좋아지고 있다니……나 이상해진걸까……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「또, 해…….」
+			ENDIF
+			CFLAG:5232 = 5
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5232 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「뒤 쪽도 벌써 익숙해진 것이군요―. 이제, 넣는다.」
+					PRINTFORMW 「아니, 싫은데……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「렌코, 이제, 그만둬요, 정말……아플 뿐이니까…….」
+				ENDIF
+			ENDIF
+			CFLAG:5232 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5232 <= 2 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「또 뒤로 그런 걸…….」
+				PRINTFORMW (싫을텐데, 나, 기대해 버린다니? 그런……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「그만둬요 정말, 아픈 것뿐이니까…….」
+			ENDIF
+			CFLAG:5232 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5302 < 6 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「앗, ……흣~, 흣~…….」
+				PRINTFORMW 「기분 좋, 지만……그래도, 저…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「큿……흣~, 흣~……렌코…….」
+				PRINTFORMW 「아직 익숙해지지 않네요……좀 더 해 보지 않으면 안될까요.」
+			ENDIF
+		ENDIF
+		CFLAG:5302 = 6
+	;연모
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5302 < 5 || FLAG:11 == 2)
+		;A감각 Lv3 이상
+		IF ABL:2 >= 3
+			PRINTFORMW 「읏, ……흣~…….」
+			PRINTFORMW 「할 수 있으면 다음은 주인님의 것을 부탁…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「큿……흣~, 아무리 주인님의 명령이라고 해도…….」
+			PRINTFORMW 「아니요 그, 주인님……익숙해질 때까지 노력할테니까…….」
+		ENDIF
+		CFLAG:5302 = 5
+	;?조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5302 < 4 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「읏, ……흣~…….」
+				PRINTFORMW 「상당히 익숙해졌어? 더 격렬하게 하는게 좋을까.」
+				PRINTFORMW 「읏, 렌코……좋아요, 저, 뭘해도…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「큿……흣~, 흣~……렌코…….」
+				PRINTFORMW 「아직 익숙해지지 않네요……좀 더 해 보지 않으면 안될까요.」
+			ENDIF
+		ENDIF
+		CFLAG:5302 = 4
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5302 < 3 || FLAG:11 == 2)
+		;A감각 Lv3 이상
+		IF ABL:2 >= 3
+			PRINTFORMW 「읏, ……흣~, 흣~…….」
+			PRINTFORMW 「……끝났어요?」
+		;그 이외
+		ELSE
+			PRINTFORMW 「큿……흣~, 흣~……끝인 것같네요…….」
+		ENDIF
+		CFLAG:5302 = 3
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5302 < 2 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「읏, ……흣~, 흣~…….」
+				PRINTFORMW 「기분 좋았, 지만……그래도, 저…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「큿……흣~, 흣~……렌코…….」
+				PRINTFORMW 「아직 익숙해지지 않네요……좀 더 해 보지 않으면 안될까요.」
+			ENDIF
+		ENDIF
+		CFLAG:5302 = 2
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5302 < 1 || FLAG:11 == 2)
+		;A감각 Lv3 이상
+		IF ABL:2 >= 3
+			PRINTFORMW 「……! 흣~, 이제……그만둬요…….」
+			PRINTFORMW (기분 좋았던게 알려지면 어떻게 될까……)
+		;그 이외
+		ELSE
+			PRINTFORMW 「흣~, 흣~, 흣~……겨우, 끝났……군요.」
+		ENDIF
+		CFLAG:5302 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;클리 캡 CFLAG233　CFLAG303
+;-------------------------------------------------
+;개시시
+;IF SELECTCOM == 14 && TEQUIP:30 == 1
+;	;처음
+;	IF CFLAG:5233 == 0
+;		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+;		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5233 = 1
+;			RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5233 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5233 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5233 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5233 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;;탈착시
+;ELSEIF SELECTCOM == 14 && TEQUIP:30 == 0
+;	;연모
+;	IF TALENT:150 == 1 && (CFLAG:5303 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5303 = 2
+;	;그 이외
+;	ELSEIF CFLAG:5303 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5303 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+;
+;-------------------------------------------------
+;니프르캐프 CFLAG234　CFLAG304
+;-------------------------------------------------
+;;개시시
+;IF SELECTCOM == 15 && TEQUIP:35 == 1
+;	;처음
+;	IF CFLAG:5234 == 0
+;		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+;		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5234 = 1
+;			RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5234 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5234 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5234 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5234 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;탈착시
+;ELSEIF SELECTCOM == 15 && TEQUIP:35 == 0
+;	;연모
+;	IF TALENT:150 == 1 && (CFLAG:5304 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5304 = 2
+;	;그 이외
+;	ELSEIF CFLAG:5304 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5304 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+;
+;-------------------------------------------------
+;착유기(모유 체질만) CFLAG235　CFLAG305
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 191 && TEQUIP:35 == 2
+	;처음
+	IF CFLAG:5235 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「어라 렌코? 그거…….」
+				PRINTFORMW 「아니 아무튼, 모처럼 나오게 되었잖아?」
+				PRINTFORMW 「응…… 확실히 나오게 되었어요, 그렇지만…….」
+				PRINTFORMW 「좋은게 좋은거니까, 그러면, 대라큿……이렇게 크다면 많이 나오지 않아?」
+				PRINTFORMW 「크기 때문에 많이 나오는 것도 아니라고 생각하지만…………잠깐……큿……!」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「확실히 모유는 나오게 되었어요.그래서……짜고 싶어요?」
+			PRINTFORMW 「알았어요, 좋아요.응, 응큿!」
+			PRINTFORMW 「히, 아, 끝 쪽이, 굉장히, 좁혀지고 있어요!」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「그 거…….」
+				PRINTFORMW 「아니 아무튼, 모처럼 나오게 되었잖아?」
+				PRINTFORMW 「……응, 확실히 나오게 되었어요.그렇지만…….」
+				PRINTFORMW 「좋은게 좋은거니까, 그러면, 대라큿……이렇게 크다면 많이 나오지 않아?」
+				PRINTFORMW 「크기 때문에 많이 나오는 것도 아니라고 생각하지만…………좁혀져……큿……!」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「……가축 같은 수준의 취급을 하는군요.」
+			PRINTFORMW 「그렇지 않으면, 그것 이하일까…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「은? 렌코, 장난치는거죠?」
+				PRINTFORMW 「장난이 아냐.자, 모처럼 나오게 되었잖아?」
+				PRINTFORMW 「모처럼은 뭐야, 그런걸 붙이는 게 이상하다고 생각하지 않아?」
+				PRINTFORMW 「어쨌든 빨리 붙여야겠어.」
+				PRINTFORMW 「아니, 그만둬요 그만둬……안돼! 좁혀지고 있어, 그런, 아!」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「응? 장난이죠?」
+			PRINTFORMW 「무리하게 이런 체질이 되게 하고, 이번에는 이런 걸…….」
+			PRINTFORMW 「아니, 그만둬요 그만둬요, 그런 걸……아니! 좁혀지고 있어, 그런, 안 돼―！.」
+		ENDIF
+			CFLAG:5235 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5235 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코가 마셔도 괜찮아요? 되도록 직접 마시는걸로.」
+				PRINTFORMW 「자연스럽게 굉장해 일 말하네 …….」
+			ENDIF
+			CFLAG:5235 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5235 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응……주인님이 직접 마신다던가하는 것은, 싫은가요?」
+			PRINTFORMW 「무리하게 짜낸다던지 파는 일 같은 것은 안 해주었으면 하는데―, 음…….」
+			PRINTFORMW 「……그렇지만, 어쩔 수 없네요……응, 읏, 아!」
+			CFLAG:5235 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5235 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코가 마셔도 괜찮아요? 무리하게라든지 판다던가 하는 것보다 그쪽이…….」
+				PRINTFORMW 「응―……그것도 또 매력적……이지만 이번은 패스.」
+			ENDIF
+			CFLAG:5235 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5235 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또 하는 거야……?」
+			PRINTFORMW 「……아니요 아무것도 아니에요. 자유롭게, 아무쪼록…….」
+			CFLAG:5235 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5235 <= 2 || FLAG:11 == 2)
+			IF ASSINO() >= 49
+				PRINTFORMW 「우우……또 그걸 붙이는 거에요……?」
+				PRINTFORMW 「모처럼 나오는 것이니까 효과적으로 활용하지 않으면.」
+				PRINTFORMW 「좀 봐줘요……! 짜지 말고……이제 좀…….」
+			ENDIF
+			CFLAG:5235 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5235 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「우우……또 그걸 붙이는 거에요……?」
+			PRINTFORMW 「사람의 가슴을 짐승마냥……히! 읏, 이제 그만둬요, 아……!」
+			CFLAG:5235 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;탈착시
+ELSEIF SELECTCOM == 191 && TEQUIP:35 == 0
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5305 < 6 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			 PRINTFORMW 「그나저나, 이런 걸 누가 사는거죠?」
+			 PRINTFORMW 「글쎄? 주인님이 어딘가의 가게에 가지고 가는 것 같던데.」
+			 PRINTFORMW 「주인님이 아니라 다른 사람이 손에 넣어봤자 무슨 의미가 있을까…….」
+		ENDIF
+		CFLAG:5305 = 6
+	;연모
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5305 < 5 || FLAG:11 == 2)
+		PRINTFORMW 「응, 흣~, 응……정말로 파는 거에요?」
+		PRINTFORMW 「주인님이 마시면 좋은데…….」
+		CFLAG:5305 = 5
+	;?+조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5305 < 4 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			PRINTFORMW 「가득 나왔군요……그런데 렌코, 이것 정말로 파는 거에요?」
+			PRINTFORMW 「응, 물론.」
+			PRINTFORMW 「……렌코가 그렇게 말한다면, 그걸로 좋아요.그렇지만…….」
+		ENDIF
+		CFLAG:5305 = 4
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5305 < 3 || FLAG:11 == 2)
+		PRINTFORMW (그런 걸 누가 살까……)
+		CFLAG:5305 = 3
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5305 < 2 || FLAG:11 == 2)
+		IF ASSINO() >= 49
+			PRINTFORMW 「응 렌코……정말로 파는 거에요?」
+			PRINTFORMW 「처음부터 팔 생각이었어.」
+			PRINTFORMW 「좀 봐줘 이제…….」
+		ENDIF
+		CFLAG:5305 = 2
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5305 < 1 || FLAG:11 == 2)
+		PRINTFORMW 「우우……그런 걸, 누가 산다고…….」
+		PRINTFORMW 「파는 사람도 파는 사람이지만, 사는 사람도 사는 사람이네요…….」
+		CFLAG:5305 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;오나홀(뚜껑이든지/남자만) CFLAG236　CFLAG306
+;-------------------------------------------------
+;개시시
+;IF SELECTCOM == 16 && TEQUIP:30 == 2
+;	;처음
+;	IF CFLAG:5236 == 0
+;		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+;		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5236 = 1
+;			RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5236 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5236 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5236 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5236 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;종료시
+;ELSEIF SELECTCOM == 16 && TEQUIP:30 == 0
+;	;연모
+;	IF TALENT:150 == 1 && (CFLAG:5306 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5306 = 2
+;	;그 이외
+;	ELSEIF CFLAG:5306 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5306 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+;
+;-------------------------------------------------
+;정상위 CFLAG237
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;처음
+	IF CFLAG:5237 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+					IF ABL:32 >= 5 && MARK:9 == 0
+						PRINTFORMW 「아, 렌코……그건……?」
+						PRINTFORMW 「메리의 처음을……내가 받겠어.각오는 됐어?」
+						PRINTFORMW 「네……렌코……, ……응, 좋아……렌코라면…….」
+						PRINTFORMW (주인님, 미안해요, 그렇지만, 저……)
+					;그 이외
+					ELSE
+						PRINTFORMW 「응, 메리? 네, 어라…….」
+						PRINTFORMW 「주인님 아니라서 유감? 그래도, 나도 메리의 처음을 받고 싶어.」
+						PRINTFORMW 「부탁해, 좋지? ……그러면, 삽입한다.」
+						PRINTFORMW 「그렇지만, 저, 주인님에게……안돼, 싫어…아무리 렌코라도 그것만큼은……!」
+					ENDIF
+				ENDIF
+			;연모+조수 없음
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「아……겨우 주인님과 하나가 될 수 있는 군요…….」
+				PRINTFORMW 「부탁합니다, 빨리 제 처녀를 받아주세요…….」
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「메리의 처음을……나로, 정말로 좋아?」
+					PRINTFORMW 「저 사람에게 명령되고 있는거죠? 저 사람에게 빼앗길 정도라면……거기에, 렌코라면.」
+					PRINTFORMW 「부탁해요, 제 처음을, 받아줘요…….」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「마음대로 하면 되잖아요……?」
+				PRINTFORMW 「이제 와서 주저하는 사람이 아니니까요, 당신은.」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「메리, 하나가 되는거야…….」
+					PRINTFORMW 「, 렌코, 거짓말이겠죠……!」
+					PRINTFORMW 「안돼, 싫어, 그만둬요, 그만둬 렌코, 안되, 아, 안돼--!」
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「부탁해요, 저 처음이니까, 그것만큼은 그만둬요, 그런……!」
+				PRINTFORMW 「안돼, 싫어, 안돼---!」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+					IF ABL:32 >= 5 && MARK:9 == 0
+						PRINTFORMW 「주인님이 아니라서 유감……이라던가?」
+						PRINTFORMW 「그런 일 말하지 마요, 저는…….」
+						PRINTFORMW 「미안 메리, 그러면, 간다구?」
+					;그 이외
+					ELSE
+						PRINTFORMW 「주인님이 아니라서 유감……이라던가?
+						PRINTFORMW 「그런 일 말하지 마요…….」
+						PRINTFORMW 「미안 미안, 그러면, 간다구?」
+					ENDIF
+				ENDIF
+			;연모+조수 없음
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「와줘요, 주인님……아, 주인님, 좋아요, 아!」
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「렌코, 와줘요……제 질내에…….」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「이제 와서 보통으로 한다 라니……그렇게.」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				PRINTFORMW 「렌코, 이제 그만둬요, 그만둬요 제발…….」
+				PRINTFORMW 메리는 눈물을 흘리며 호소하지만 렌코는 단지 메리를 계속 범하고 있다……
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「그만둬요, 싫어요, 당신과 무엇도 하고 싶지 않아요!」
+				PRINTFORMW 「부탁해요, 그만둬요……싫어, 아, 아--!」
+			ENDIF
+		ENDIF
+		CFLAG:5237 = 1
+		RETURN 0
+	;2번째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5237 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「응, 메리……지금은 불필요한 일 생각하지 말고 나만 보고 있어…….」
+					PRINTFORMW 「렌코……아, 응응, 기분 좋아요, 아!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「있어, 좋은, 아, 이상해져버려!」
+					PRINTFORMW 「읏, 그렇지만, ……응응!」
+					PRINTFORMW 「이 때 정도만큼은 주인님의 일은 잊어……지금은 나와 하고 있잖아?」
+					PRINTFORMW 「읏, 렌코……응, 아, 그런, 아 아!」
+				ENDIF
+			ENDIF
+			CFLAG:5237 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5237 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아, 굉장해, 더, 더 찔러!」
+			PRINTFORMW 「응, 큿, 부탁해요, 이대로……이대로 질내에!」
+			CFLAG:5237 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5237 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3+V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「어떻게 해야 메리, 기분이 좋을까?」
+					PRINTFORMW 「응 렌코……더, 더 해도 좋으니까…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「메리, 괜찮아? 아프지 않아?」
+					PRINTFORMW 「응, 괜찮아……렌코와 연결되었다는게 기쁘니까…….」
+				ENDIF
+			ENDIF
+			CFLAG:5237 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5237 <= 3 || FLAG:11 == 2)
+			;굴복 각인 Lv3+V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「큿…………아…….」
+				PRINTFORMW 어떻게든 참으려 하고 있지만 때때로 소리가 새고 있다……
+			;그 이외
+			ELSE
+				PRINTFORMW 메리는 무표정하게 행위가 끝나는 것을 기다려요 있다……
+			ENDIF
+			CFLAG:5237 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5237 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3+V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「기분이 좋지, 메리? 이제 충분히 익숙해졌지?」
+					PRINTFORMW 「이제 격렬하게 간다구?, 각오는 됐어?」
+					PRINTFORMW 「읏, 렌코……아……그런, 안되요……저……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「……이제……그만둬……렌코……어째서…….」
+					PRINTFORMW 메리는 계속 단지 울고 있다……
+				ENDIF
+			ENDIF
+			CFLAG:5237 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5237 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3+V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「응, 아, 뜨거워……더, 움직여……!」
+				PRINTFORMW (안 돼, 너무 기분 좋아……이런 건, 안되는데……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「이제 그만둬요……부탁…….」
+			ENDIF
+			CFLAG:5237 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;후배위 CFLAG238
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;처음
+	IF CFLAG:5238 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+					IF ABL:32 >= 5 && MARK:9 == 0
+						PRINTFORMW 「아, 렌코……?」
+						PRINTFORMW 「……부탁해, 메리.하나가 되자…….」
+						PRINTFORMW 「렌코……응, ……그렇지만, 뒤로는……조금, 무섭달까요…….」
+						PRINTFORMW (주인님, 미안해요, 그렇지만, 저……)
+					;그 이외
+					ELSE
+						PRINTFORMW 「잠깐, 지금, 렌코, 무엇을…….」
+						PRINTFORMW 「무엇이라니, 메리의 처음을 받을거야.각오는 됐어?」
+						PRINTFORMW 「앗, 뭐에요, 기다려요, 뒤에서는……!」
+						PRINTFORMW 「안 되요, 렌코……그런……!」
+					ENDIF
+				ENDIF
+			;연모+조수 없음
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「네? 뒤에서? 처음이니까 주인님을 보면서 하고 싶은데…….」
+				PRINTFORMW 「……아니에요. 좋아요. 주인님, 제 처음을 받아 주세요…….」
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「메리의, 처음……받아도 괜찮아?」
+					PRINTFORMW 「……저 사람의 명령이겠지요? 렌코에게라면, 좋아요…….」
+					PRINTFORMW 「그렇지만 될 수 있으면, 렌코의 얼굴을 보면서 하는 편이 좋아요…….」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「……이런 자세로 처음을 빼앗는군요.」
+				PRINTFORMW 「이제 와서 딱히 더 말할 것도 없어요, 마음대로 하세요…….」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「안 돼, 렌코, 거짓말이겠죠……!」
+					PRINTFORMW 「메리, 하나가 되는거야…….」
+					PRINTFORMW 「안돼, 싫어, 그만둬요, 그만둬 렌코, 안 된다구요, 아, 안돼--!」
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「부탁해요, 저 처음이라구요, 그것만큼은 그만둬요, 그런……!」
+				PRINTFORMW 「아, 싫어, 안돼---!」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+					IF ABL:32 >= 5 && MARK:9 == 0
+						PRINTFORMW 「뒤로 하는건 무서워?」
+						PRINTFORMW 「……그런건, 아녜요.」
+						PRINTFORMW 「……그런가, 자, 불필요한 일은 생각할 수 없을 정도로 흐트러지게 해줄테니까……!」
+					;그 이외
+					ELSE
+						PRINTFORMW 「뒤로 하는건 무서워?」
+						PRINTFORMW 「그런건 아녜요, 그런건…….」
+						PRINTFORMW 「그런가…….……그러면, 간다구?」
+					ENDIF
+				ENDIF
+			;연모+조수 없음
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「뒤에서……조금 무섭, 지만…….」
+				PRINTFORMW 「으응, 좋아요, 와줘요…….」
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「뒤에서라면 무서워?」
+					PRINTFORMW 「……그런 건, 아녜요.그렇지만, 뒤에서 꼭 껴안아주면 기쁠거에요.」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「뒤에서 무리하게…….」
+				PRINTFORMW 「이제 와서 저항할수도……마음대로 하면 되잖아요.」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「렌코, 이제 그만둬요, 그만둬요 제발…….」
+					PRINTFORMW 메리는 눈물을 흘리며 호소하지만 렌코는 단지 메리를 계속 범하고 있다……
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「뒤라니……그렇지 않아도 싫은데 그런 걸…….」
+				PRINTFORMW 「부탁해요, 이제……싫어, 아, 아--!」
+			ENDIF
+		ENDIF
+		CFLAG:5238 = 1
+		RETURN 0
+	;2번째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5238 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「아, 좋아, 응응…….」
+					PRINTFORMW 「메리, 주인님이 신경이 쓰이는 것은 알지만, 지금은 내 쪽에 집중해줘.」
+					PRINTFORMW 「미안, 응, 렌코, 아, 가버려!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 좋은, 응응…….」
+					PRINTFORMW 「메리, 주인님이 신경이 쓰이는 것은 알지만, 지금은 내 쪽에 집중해줘.」
+					PRINTFORMW 「그런, 렌코, 심술궃게 말하지 마……, 아, 흣~!」
+				ENDIF
+			ENDIF
+			CFLAG:5238 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5238 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 좀더, 좀더 깊이, 더, 더 안쪽까지 와!」
+			PRINTFORMW 「주인님의 얼굴 보고 싶은데, 응, 나, 아, 너무 느껴버려……!」
+			CFLAG:5238 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5238 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3+V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「응, 렌코, 더, 움직여줘요…….」
+					PRINTFORMW 「좋아, 더 격렬하게 해 줄게!」
+					PRINTFORMW 「아, 렌코, 렌코, 더, 더, 가득……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아 ……렌코, 이제, 그만…….」
+					PRINTFORMW 「아직, 조금 무서워요, 렌코의 얼굴을 볼 수도 없으니, 적어도……부탁해요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5238 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5238 <= 3 || FLAG:11 == 2)
+			;굴복 각인 Lv3+V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「큿…………아…….」
+				PRINTFORMW (느끼고 싶지 않아, 느끼고 싶지 않은데……어째서……)
+			;그 이외
+			ELSE
+				PRINTFORMW 메리는 무표정하게 행위가 끝나는 것을 기다려요 있다……
+			ENDIF
+			CFLAG:5238 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5238 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3+V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「아, 흣~, 앙, 아……싫은……데 …….」
+					PRINTFORMW 「무서워……이렇게 느껴버리다니……렌코, 아…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「……이제……그만둬요……렌코……어째서…….」
+					PRINTFORMW 메리는 계속 울고 있다……
+				ENDIF
+			ENDIF
+			CFLAG:5238 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5238 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3+V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「아니, 이런 모습 싫은데……어째서…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「이런, 그렇지 않아도 싫은데, 또 이런 걸…….」
+			ENDIF
+			CFLAG:5238 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;어널 섹스 CFLAG239
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;처음
+	IF CFLAG:5239 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코……? 응, 여기야?」
+				PRINTFORMW 「조금 무섭지만, 그래도, 좋아요…….」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「주인님, 무엇을……? 그 쪽인가요?」
+			PRINTFORMW 「아뇨, 싫은건 아네요.그렇지만, 조금 무섭달까요…….」
+			PRINTFORMW 「……응, 좋아요, 와주세요…….」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 간다? 각오는 됐어?」
+				PRINTFORMW 「그쪽이라니……여기인거, 맞아요?」
+				PRINTFORMW 「그 쪽이라니……마음의 준비를 좀……응, 좋아요, 와줘요 렌코…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「……일단 물어보겠지만, 그쪽이에요? ……그런건가요?」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 간다.각오는 됐어?」
+				PRINTFORMW 「응?! 그쪽은……거짓말이겠지, 렌코, 거긴, 조금…….」
+				PRINTFORMW 「앗, 그런, 그만둬! 그만둬요, 렌코! 렌코, 안된다구요 정말……싫어어! 아, 안돼―！.」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「싫어, 그만둬요! 안에 넣지 말라구요……네, 아닌가요?」
+			PRINTFORMW 「그런데 무엇을……? 여기는……거짓말이겠죠, 네……?」
+			PRINTFORMW 「그런 게 들어갈리가……그만둬요, 그만둬요 제발, 싫어, 안돼―！.」
+		ENDIF
+		CFLAG:5239 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5239 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「아, 흣~, 읏~……엉덩이가……이상해져버릴거같아……읏, 나……아……그런…….」
+					PRINTFORMW 「엉덩이로 느끼다니 메리도 충분히 변태가 됐네.」
+					PRINTFORMW 「……그렇지만, 그런 메리도 좋아해. 좀더 좀더 해 줄테니까.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「또, 여기야? 여기는 아파서 무서운데…….」
+					PRINTFORMW 「주인님의 명령이라 어쩔 수 없어, 아무튼 익숙해지면 좋아질거야.」
+					PRINTFORMW 「……알았어요, 렌코.와줘요……역시 아파……큿…….」
+				ENDIF
+			ENDIF
+			CFLAG:5239 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5239 <= 5 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「주인님, 빨리 와줘요……흣~! 굉장해, 이런, 이런 걸……!」
+				PRINTFORMW 「저, 엉덩이의 구멍에서 느끼고 있다니……우우, 이런……저, 이상해져버린걸까요오…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「주인님, 또 여기야?」
+				PRINTFORMW 「아파, 아……주인님……부탁해요, 격렬하게 하지 말아주세요…….」
+			ENDIF
+			CFLAG:5239 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5239 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「아, 흣~, 흣~……엉덩이가……이상해져버리는……아……….」
+					PRINTFORMW 「엉덩이로 느끼다니 메리도 충분히 변태가 됐네 .」
+					PRINTFORMW 「……그렇지만, 그런 메리도 좋아해. 나, 좀더 좀더 해줄테니까.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「또 뒤야?」
+					PRINTFORMW 「익숙해지면 기분 좋아질 수 있어, 자, 간다.」
+					PRINTFORMW 「응, 와줘, 렌코……큿, 역시 아파…….」
+				ENDIF
+			ENDIF
+			CFLAG:5239 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5239 <= 3 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「읏……응……! …….」
+				PRINTFORMW (싫어…이런 곳으로 느끼고 있다니 이 무슨……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「아파……큿…….」
+			ENDIF
+			CFLAG:5239 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5239 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;A감각 Lv3 이상
+				IF ABL:2 >= 3
+					PRINTFORMW 「여기도 상당히 익숙졌네.어 때, 메리?」
+					PRINTFORMW 「렌코, 도, 이제, 그만둬……큿, 흣~, 앙, 앗!」
+					PRINTFORMW 「충분히 느껴 버리네, 자, 이제 더 격렬하게 한다구?」
+				;그 이외
+				ELSE
+					PRINTFORMW 「제발, 이제 그만둬요, 렌코, 그쪽은, 그쪽은 싫다니까…….」
+					PRINTFORMW 「렌코, 도, 이제, 그만둬 ……싫어, 안 돼--!」
+				ENDIF
+			ENDIF
+			CFLAG:5239 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5239 <= 2 || FLAG:11 == 2)
+			;A감각 Lv3 이상
+			IF ABL:2 >= 3
+				PRINTFORMW 「싫어, 싫은데……!」
+				PRINTFORMW 「나, 엉덩이의 구멍에서 느끼고 있다니……그런, 그런 거 내가 아닌거 같아……이런 건 거짓말이야…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「이런거, 그만둬요, 이제 안 돼--!」
+				PRINTFORMW 「렌코, 도와……누군가, 부탁…….」
+			ENDIF
+			CFLAG:5239 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;역강간 CFLAG240
+;(주인이 비남자, 노예가 남자/뚜껑이든지 마셔)
+;-------------------------------------------------
+;IF SELECTCOM == 25
+;	;처음
+;	IF CFLAG:5240 == 0
+;		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+;		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5240 = 1
+;			RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5240 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5240 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5240 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5240 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;자위 CFLAG241
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;처음
+	IF CFLAG:5241 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「손으로 하면 좋겠어요? 알았어요, 주인님.」
+			PRINTFORMW 「……언제라도 싸도 좋으니까요?」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「손으로……그것으로 좋다면…….」
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「어, 손으로? 그것으로 좋다면…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「손으로 하라고……어째서 그런 일을…….」
+		ENDIF
+			CFLAG:5241 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5241 <= 4 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「손만으로 좋아요? 말해 준다면 뭐든지 해줄텐데요.」
+			;그 이외
+			ELSE
+				PRINTFORMW 「벌벌 떨고 있네……기분이 좋은가요?」
+			ENDIF
+			CFLAG:5241 = 5
+		;?
+		ELSEIF TALENT:150 == 1 && (CFLAG:5241 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 메리는 묵묵히 %CALLNAME:MASTER%의 페니스를 취급하고 있다……
+			CFLAG:5241 = 4
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5241 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이런 걸로 좋은가요?」
+			CFLAG:5241 = 3
+		;그 이외
+		ELSEIF CFLAG:5241 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「스스로 하면 좋을텐데…….」
+			CFLAG:5241 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;펠라치오 CFLAG242
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;처음
+	IF CFLAG:5242 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이것을, 입으로 하는 건가요……알았어요, 응,읍…….」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「입으로……알았어요…….」
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「어, 입으로? 알았어요……어쩐지 굉장히 냄새가 나는데…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「입으로 하라고…….」
+			PRINTFORMW 「……하면 되겠죠, 하세요……, 어째서 이런 일을…….」
+		ENDIF
+			CFLAG:5242 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5242 <= 4 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「그렇게 제 입이 좋아요? ……응, 좋다면, 더 해 줄게요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「아직 변변치 않을지 모르지만, 주인님이 기분이 좋다면, 더 해 줄게요…….」
+			ENDIF
+			CFLAG:5242 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5242 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 읍, 읏…….」
+			PRINTFORMW 「이런 식으로 좋아요? 그런가요…….」
+			CFLAG:5242 = 4
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5242 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 응응……흣~, 이런 식으로 좋은 건가요?」
+			PRINTFORMW 「……그렇게, 계속하라고 한다면, 그대로 계속할게요.」
+			CFLAG:5242 = 3
+		;그 이외
+		ELSEIF CFLAG:5242 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응, 읏, 우우, 심한 냄새 나네……기분 나빠…….」
+			CFLAG:5242 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;파이즈리 CFLAG243
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;처음
+	IF CFLAG:5243 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「제 가슴, 쓸데 없이 크기만 한데……그래도, 주인님에게 이렇게 봉사할 수 있다면, 오히려 커서 좋은게 되어버렸네요.」
+			PRINTFORMW 「응……어때요? 기분 좋아요?」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「가슴으로……머지않아 시킬거라고는 생각했지만…….」
+			PRINTFORMW 「좋아요, 해줄테니까…….」
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「가슴으로 해라? ……흣~, 응……좋아요.」
+			PRINTFORMW 「이런 걸로 좋은 건가요?」
+		;그 이외
+		ELSE
+			PRINTFORMW 「가슴으로 해라? 그런 걸, 가슴 사이에 두다니…….」
+			PRINTFORMW (이러니까 가슴이 큰 것은 방해일 뿐이라고 생각해……)
+			PRINTFORMW (남자한테도 여자한테도 이상한 눈으로 보여지고, 이런 이상한 요구나 받고……)
+			PRINTFORMW 「……흣~, 하면 되지요, 하세요…….」
+		ENDIF
+			CFLAG:5243 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5243 <= 4 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「응, 앞 쪽을 조금……, 읏…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「이런 걸로 좋아요? ……그렇다면, 그대로 계속할게요.」
+				PRINTFORMW 「저도, 왠지 이상한 느낌이…….」
+			ENDIF
+			CFLAG:5243 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5243 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 메리는 묵묵히 %CALLNAME:MASTER%의 페니스를 가슴에 끼워 취급하고 있다……
+			CFLAG:5243 = 4
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5243 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 어때요? 이런 식으로 좋아요?」
+			PRINTFORMW 「아, 벌벌 떨리고 있다…….」
+			CFLAG:5243 = 3
+		;그 이외
+		ELSEIF CFLAG:5243 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「흣~……뭐하러 이런 일을…….」
+			CFLAG:5243 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;가랑이 CFLAG244
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;처음
+	IF CFLAG:5244 == 0
+		;처녀+연모
+		IF TALENT:0 == 1 && TALENT:150 == 1
+			PRINTFORMW 「어……처음을 받아 주시는 게 아닌가요…….」
+			PRINTFORMW 「……아니요 좋아요.가랑이로 하면 좋은거죠? 알겠어요.」
+		;연모
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「가랑이같은 걸로 좋은건가요? 주인님이 그것으로 좋다면 하겠지만요.」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「가랑이에 비비면 좋아요? 그게 좋은가…….」
+		;처녀
+		ELSEIF TALENT:0 == 1
+			PRINTFORMW 「부탁해요, 저 처음이니까, 그건 너무 빠르지……? 네? 가랑이요?……가랑이에 비비면 좋은건가요?」
+			PRINTFORMW 「그 정도라면, 차라리……낫네요…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「……가랑이로, 라니. 뭘 생각하고 있는지 잘 모르겠네요.」
+			PRINTFORMW 「안에 넣는 것보다는 훨씬 더 좋지만…….」
+		ENDIF
+			CFLAG:5244 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;처녀+연모
+		IF TALENT:0 == 1 && TALENT:150 == 1 && EXP:0 == 0 && (CFLAG:5244 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「흣~, 스쳐서, 기분이 좋아…….」
+			PRINTFORMW 「그렇지만, 할 수 있다면, 아…….」
+			CFLAG:5244 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:5244 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「흣~, 스쳐서, 기분이 좋아…….」
+			PRINTFORMW 「그렇지만, 안타까워요……주인님, 다음은, 안에 넣어줬으면 좋겠어요…….」
+			CFLAG:5244 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5244 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……이게, 좋아요?」
+			PRINTFORMW 「그런게, 기분이 좋다면, 계속할게요…….」
+			CFLAG:5244 = 4
+		;처녀
+		ELSEIF TALENT:0 == 1 && EXP:0 == 0 && (CFLAG:5244 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「절대,절대 안에는 넣지 말아 주세요…….」
+			CFLAG:5244 = 3
+		;그 이외
+		ELSEIF CFLAG:5244 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이것으로 좋아요? ……그런가요.」
+			CFLAG:5244 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;승마위 CFLAG245
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;처음
+	IF CFLAG:5245 == 0
+		;처녀
+		IF TALENT:0 == 1
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「렌코, 뭐죠……?」
+					PRINTFORMW 「내가 아래에서, 메리가 위에서 하는거야.자, 이제 와줘.」
+					PRINTFORMW 「앗, 조금 기다려요, 그런……! 저, 처음인데…….」
+					PRINTFORMW 「……나, 메리의 처음을 갖고 싶은거야.부탁해, 와줘…….」
+					PRINTFORMW 「……알았어요…….……큿……아파, 앗, 아!」
+					PRINTFORMW (주인님, 미안해요, 저……)
+				ENDIF
+			;연모
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				;순종 Lv5 이상
+				IF ABL:10 >= 5
+					PRINTFORMW 「자기 스스로, 군요……알았어요.」
+					PRINTFORMW 「……으응, 무섭지 않아요, 오히려 기쁜걸요.제 처음을 주인님에게 준다는게.」
+					PRINTFORMW 「주인님에게, 제 처음을 바치는거에요……큿, 아파……아!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「내가, 위에서……, 응……그래도, 무섭네요…….」
+					PRINTFORMW 「저, 아직 처음이니까……, 그렇지만, 주인님에게 줄 수 있는 것은 기뻐요.」
+					PRINTFORMW 「……예, 주인님, 가요……, 아파……, 아!」
+				ENDIF
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「자기 스스로, 군요……알았어요.」
+					PRINTFORMW 「괜찮아? 메리, 처음이잖아?」
+					PRINTFORMW 「렌코에게라면, 좋아요.거기에…….」
+					PRINTFORMW 「거기에?」
+					PRINTFORMW 「……아무것도 아니에요.렌코, 당신에게 모든 걸 바칠 테니까…….」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「자신 스스로…….」
+				PRINTFORMW 「그런것까지 시키는건가요…….」
+				PRINTFORMW 「………….」
+				PRINTFORMW 「좋아요……거역할 수 있을 리도 없고…….」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「앗, 렌코, 무엇을 시킬 생각인가요…….」
+					PRINTFORMW 「당신이 위로 와, 메리.」
+					PRINTFORMW 「……거짓말이겠지, 응, 거짓말이겠지요, 렌코……저, 아직인데…….」
+					PRINTFORMW 「렌코……심해요……그런 거…….」
+					PRINTFORMW 메리는 당분간 갈등했지만 렌코가 몇번이나 명령하자
+					PRINTFORMW 눈물을 흘리면서 천천히 렌코 위에 걸쳐 앉았다……
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「그……그렇군요, 하지만……자기 스스로라니…….」
+				PRINTFORMW 「싫어…부탁해요, 다른 것이라면  뭐든지 할테니까, 그것만큼은……!」
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 싫어하는 메리를 무리하게 위에 앉게 하고 아래로부터 튕겨올랐다
+				PRINTFORMW 「!, 아파, 아파앗, 이제, 이제 싫어!」
+			ENDIF
+		;비처녀
+		ELSE
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「네, 렌코……내가 위에……야?」
+					PRINTFORMW 「읏, 응……조금 무서운데…….」
+				ENDIF
+			;연모
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「내가 위에……조금, 부끄럽지만, 좋아요…….」
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「자기 스스로 넣고 하라는, 거군요…….」
+					PRINTFORMW 「좋아, 렌코……그대로……삽입부터…….」
+				ENDIF
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+				PRINTFORMW 「자기 스스로……알았어요…….」
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY
+				IF ASSINO() == 49
+					PRINTFORMW 「자기 스스로 하라니, 렌코, 농담이겠지…….」
+					PRINTFORMW 「그런……거짓말이 아니라니……심하잖아요, 렌코…….」
+				ENDIF
+			;조수 없음
+			ELSEIF ASSIPLAY == 0
+				PRINTFORMW 「싫어, 안돼! 그만둬요, 그만둬요 제발!」
+				PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 싫어하는 메리를 무리하게 주저앉히고 아래로부터 튕겨 올랐다
+				PRINTFORMW 「아, 싫어, 안돼―！.」
+			ENDIF
+		ENDIF
+			CFLAG:5245 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5245 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「아, 아……이런 자세라면 렌코를 내가 범하고 있는 것 같아…….」
+					PRINTFORMW 「후후, 이런 것도 좋지?」
+					PRINTFORMW 「, 응……흣~, 앙, 허리가, 마음대로 움직여……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 아……그런, 읏, 저…….」
+					PRINTFORMW 「메리, 주인님이 신경이 쓰이는 것은 알지만, 지금은 내 쪽에 집중해.」
+					PRINTFORMW 「미안, 렌코, 그래도, 그래도…………!」
+				ENDIF
+			ENDIF
+			CFLAG:5245 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5245 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아, 이 몸의 자세, 마치, 내가, 주인님을, 범하고 있는거, 같아…….」
+			PRINTFORMW 「읏, 응……이런, 기분이 드니까, 좋아……좋다고……?」
+			CFLAG:5245 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5245 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3+V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「아, 아……이런 자세라면 마치 렌코를 내가 범하고 있는 것 같아…….」
+					PRINTFORMW 「후후, 이런 것도 좋지?」
+					PRINTFORMW 「, 그런……흣~, 앙, 허리가, 마음대로 움직이고 있어…………!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 흣~, 앙, 아……렌코는, 움직이지 않아도 좋으니까…….」
+					PRINTFORMW 「아직 어색할지도 모르지만, 노력할테니까…….」
+				ENDIF
+			ENDIF
+			CFLAG:5245 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5245 <= 3 || FLAG:11 == 2)
+			;굴복 각인 Lv3+V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「큿…………!」
+				PRINTFORMW 메리는 소리를 흘리지 않게 필사적으로 있지만 자신의 허리가 움직이고 있는 것을 깨닫지 못하는 것 같다……
+			;그 이외
+			ELSE
+				PRINTFORMW 「내가 움직이지 않으면 안 되나요?」
+				PRINTFORMW 「……그런걸 한다해도, 당신이 기분이 좋을지 어떨지는 모르는데…….」
+			ENDIF
+			CFLAG:5245 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5245 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3+V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「아, 흣~, 앙, 아……허리가, 마음대로……!」
+					PRINTFORMW 「무서워……이렇게 느껴버리고 있다니……렌코, 아…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아 ……렌코, 이런 건 부끄럽고 무서워요…….」
+					PRINTFORMW 「적어도, 보통으로, 렌코가 해줘요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5245 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5245 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3+V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「아니, 그런, 이런 건 부끄러운데, 어째서……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「이런 건, 이런 건 싫어…….」
+			ENDIF
+			CFLAG:5245 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;스팬 킹 CFLAG246
+;-------------------------------------------------
+IF SELECTCOM == 220
+	;처음
+	IF CFLAG:5246 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「아파, 기다려요, 내가 뭔가 나쁜 짓한건가요?! 아!」
+			PRINTFORMW 「부탁해요, 아픈 것은……싫어, 그만 둬! 뭐가 잘못인지 알려주면 조심할테니까, 더 이상은……!」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW (큿……아파……하지만……)
+				PRINTFORMW (렌코는 저 사람에게 명령되고 있을 뿐, 렌코는 나쁘지 않아……저 사람과……제 탓이니까……)
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「아파……이제 와서 폭력으로 따르게 하다니…….」
+			PRINTFORMW 「그런 일 하지 않아도, 저는…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「아파……읏, 뭐에요, 렌코!」
+				PRINTFORMW 「아파요니까, 그만둬요, 그만 둬!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「어, 무엇을……아파, 아파요구요!」
+			PRINTFORMW 「뭐야, 폭력으로 따르게 하다니……!」
+			PRINTFORMW 「아파, 때리지 말아요, 부탁합, 니다 ……!」
+		ENDIF
+			CFLAG:5246 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5246 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv5 이상
+				IF ABL:21 >= 5
+					PRINTFORMW 「흣~, 응응!, 렌코, 저, 이상해요, 얻어맞고 있는데, 느끼고 있다니……!」
+					PRINTFORMW 「렌코, 저, 어째서 ……!」
+				;매저키스트기분 Lv3 이상
+				ELSEIF ABL:21 >= 3
+					PRINTFORMW 「아파, , 렌코, 이제 그만 둬요 정말…….」
+					PRINTFORMW 「뭔가 나쁜 짓을 해서 마음 상하게 했다면 사과할테니까, 부탁…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아파, 아픈 것은 싫어….」
+				ENDIF
+			ENDIF
+			CFLAG:5246 = 7
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5246 <= 5 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW 「아, 저, 이제, 이상해져……얻어맞고 있는데, 느끼고 있다니……!」
+				PRINTFORMW 「주인님, 저, 아, 어째서, 어째서야……!」
+			;매저키스트기분 Lv3 이상
+			ELSEIF ABL:21 >= 3
+				PRINTFORMW 「아파, 아……주인님, 이제……저…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「미안해요, 미안해요……! 아픈 것은, 싫어…….」
+			ENDIF
+			CFLAG:5246 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5246 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv5 이상
+				IF ABL:21 >= 5
+					PRINTFORMW 「아…………, 어째서…….」
+					PRINTFORMW (어째서……벌을 받고 있는 곳이 아니라 다른 곳이 쑤시는 거야……?)
+				;그 이외
+				ELSE
+					PRINTFORMW 「아파……렌코…….」
+					PRINTFORMW 「더, 때려도 좋으니까, 아파도 괜찮으니까…….」
+				ENDIF
+			ENDIF
+			CFLAG:5246 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5246 <= 3 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW 「아…………, 어째서…….」
+				PRINTFORMW (어째서……벌을 받고 있는 곳이 아니라 다른 곳이 쑤시는 거야……?)
+			;그 이외
+			ELSE
+				PRINTFORMW 「아파……큿……뭔가, 내가 나쁜 짓이라도 한건가요……?」
+			ENDIF
+			CFLAG:5246 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5246 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv3 이상
+				IF ABL:21 >= 3
+					PRINTFORMW 「아픈……읏, 정말, 렌코……제발, 이제…….」
+					PRINTFORMW 「라고 말하면서도……조금, 맞는 곳 말고 다른 곳이 욱신거리지 않아?」
+					PRINTFORMW 「……!, 그렇지 않아요…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아픈, 그만 둬 렌코, 싫어, 안돼!」
+				ENDIF
+			ENDIF
+			CFLAG:5246 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5246 <= 1 || FLAG:11 == 2)
+			;매저키스트기분 Lv3 이상
+			IF ABL:21 >= 3
+				PRINTFORMW 「아픈, 아……, 싫어, 싫어…….」
+				PRINTFORMW (어째서……얻어맞고 있는데, 아픈데, 그 곳이 쑤시고 있다니……?)
+			;그 이외
+			ELSE
+				PRINTFORMW 「아파, 싫어, 아파앗!」
+			ENDIF
+			CFLAG:5246 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;채찍 CFLAG247
+;-------------------------------------------------
+IF SELECTCOM == 221
+	;처음
+	IF CFLAG:5247 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「채찍으로……저 주인님, 저, 뭔가 나쁜 일이라도 했던건가요?」
+			PRINTFORMW 「달라? 그래도, 이것도 조교는 조교지만……저, 그러한 건 조금…….」
+			PRINTFORMW 「……그래도 한다고 하신다면, 나중에 상냥하게 해주세요.」
+			PRINTFORMW 「……아! 아파, 아파요! 부탁해요, 너무 세게는 하지 말아주세요……!」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「채찍으로……좋아요.아파도……참을테니까.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「네, 채찍으로……?」
+			PRINTFORMW 「좋아요, 마음대로 하세요…….」
+			PRINTFORMW 메리는 무관심을 가장하고 있지만 신체는 공포의 탓인지 떨리고 있다……
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「채찍으로……?, 렌코, 그거, 농담이죠?」
+				PRINTFORMW 「네, 뭔가의 농담이군요? 뭔가 나쁜 짓을 했다면 사과할테니까, 그것만은…….」
+				PRINTFORMW 「아무것도 아니야.단지 그냥 이걸 해보고 싶어진거야.」
+				PRINTFORMW 「……! 히, 앗, 아! 아파, 그만둬요 제발, 렌코!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「무슨, 그런 채찍으로 맞으라는 말을 순순히 들으라니……!」
+			PRINTFORMW 「앗, 아! 아픈, 그만둬요, 아파, 아악---!」
+		ENDIF
+			CFLAG:5247 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수 없음
+		IF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5247 <= 5 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW 「아, 저, 채찍으로 얻어맞아서……굉장히 아플텐데, 느끼고 있다니…….」
+				PRINTFORMW 「어째서, 저, 아픈 것이 싫지 않게 되어버려서, 아, 흣~, 응……!」
+			;매저키스트기분 Lv3 이상
+			ELSEIF ABL:21 >= 3
+				PRINTFORMW 「앗, 아픈, 아, 응, 시, 싫어….」
+				PRINTFORMW (어째서……너무 아파서, 싫은데……저……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「앗, 악, 주인님, ……부탁, 그렇게 강하게 하지 마세요!」
+				PRINTFORMW 「아파요!! 히! 아악, 아앗!」
+			ENDIF
+			CFLAG:5247 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5247 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv5 이상
+				IF ABL:21 >= 5
+					PRINTFORMW 「메리, 어때? 지금쯤, 슬슬 아픈 것도 좋아져 오고 있는거 아니야?」
+					PRINTFORMW 「아, 렌코, 무슨, 그런……!」
+					PRINTFORMW 「저, 아픈 것이 싫지 않게 되어버리다니……!, 어째서……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「히, ……! 읏…….」
+					PRINTFORMW (이것은 렌코로부터의 벌……렌코는 더 심한 일 받았을지도 모르니까……)
+				ENDIF
+			ENDIF
+			CFLAG:5247 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5247 <= 3 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW 「아, 아파, 아, 앗, 싫어…….」
+				PRINTFORMW (어째서……너무 아파서, 싫은데……나……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「아, 악……! 아파…………!!」
+			ENDIF
+			CFLAG:5247 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5246 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv5 이상
+				IF ABL:21 >= 5
+					PRINTFORMW 「메리, 어때? 지금쯤, 슬슬 아픈 것도 좋아져 오고 있는거 아니야?」
+					PRINTFORMW 「아, 렌코, 제발, 이제 그만 둬 ……!」
+					PRINTFORMW 「읏, 아픈 것이 좋아지고 있다니, 저, 이상해지고 있는거같아요!, 응……!」
+				;매저키스트기분 Lv3 이상
+				ELSEIF ABL:21 >= 3
+					PRINTFORMW 「아파…… 정말, 렌코……제발 이제 그만…….」
+					PRINTFORMW 「그렇게 말하면서도……조금, 다른 곳이 욱신거리거나 하지 않아?」
+					PRINTFORMW 「……!, 그렇지 않아요……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아파, ……히, 심하잖아요……렌코…….」
+				ENDIF
+			ENDIF
+			CFLAG:5246 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5246 <= 1 || FLAG:11 == 2)
+			;매저키스트기분 Lv3 이상
+			IF ABL:21 >= 3
+				PRINTFORMW 「앗, 아파, 아, 읏, 이제, 싫어….」
+				PRINTFORMW (어째서……너무 아파서, 싫을텐데……저……)
+			;그 이외
+			ELSE
+				PRINTFORMW 「싫어!, 도와줘, 렌코, 누군가, 부탁…해…앗―！！.」
+			ENDIF
+			CFLAG:5246 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;바늘 CFLAG248
+;이것은 새디즘이 없는 렌코는 할 수 없어……아마
+;-------------------------------------------------
+IF SELECTCOM == 222
+	;처음
+	IF CFLAG:5248 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「……과연, 이것은 뭔가의 농담……이군요?」
+			PRINTFORMW 「잠깐, 아니, 아무리 주인님이라도, 그것은, ……싫어!」
+			PRINTFORMW 「! 아파요, 아프다니까요……, 심하잖아요, 주인님…….」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「이것으로 찔러……무분별하게 찔러댄다니…….」
+			PRINTFORMW 「흠집이 있는 절 더욱 손상시킨다고…….」
+			PRINTFORMW 「그래서, 무엇을 바라는거죠…….」
+			PRINTFORMW 「찌르고 싶다면 찌르면 되잖아요……마음대로 해요…….」
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「그거 분명, 농담이군요?, 그런……, 싫어, 앗……싫어어……, 가, 가까이 오지 마요……!」
+			PRINTFORMW 「히익, 무서워……싫어…그만둬요 그만 둬……!」
+			PRINTFORMW 「악, 누군가, 렌코……, 제발, 도와……!」
+			PRINTFORMW 「――――――!」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 바늘을 메리의 피부에 접근하자 메리는 소리없는 비명을 질렀다
+		ENDIF
+			CFLAG:5248 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5248 <= 3 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW 「아……주인님, 저, 저……!」
+				PRINTFORMW 「무섭고 아픈데, 느껴 버린다니, 이상해져버렸어, 저, 어째서 ……!」
+			;매저키스트기분 Lv3 이상
+			ELSEIF ABL:21 >= 3
+				PRINTFORMW 「, …….」
+				PRINTFORMW 「주인님……부탁……합니다……, 이, 이제……아픈 것은…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「……, 어째서, 제발, 주인, 님…….」
+				PRINTFORMW 「, ……아픈 것, 싫어…싫은데…….」
+			ENDIF
+			CFLAG:5248 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5248 <= 2 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW (어째서……아플 뿐일텐데……)
+				PRINTFORMW (마음과 신체 뿐만이 아니라, 감각까지 망가진걸까, 나……)
+			;이벤트 후
+			ELSEIF CFLAG:5201 == 6
+				PRINTFORMW 「……차라리 제발, 급소를 찔러서 끝내달라구요.」
+				PRINTFORMW 「그러면 차라리 좋을거에요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「……, …….」
+				PRINTFORMW (차라리 급소를 찔려 끝……)
+				PRINTFORMW (차라리 그 쪽이 좋겠어요……)
+			ENDIF
+			CFLAG:5248 = 3
+		;그 이외
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5248 <= 1 && FLAG:11 == 2)
+			;매저키스트기분 Lv3 이상
+			IF ABL:21 >= 3
+				PRINTFORMW 「읏, ……이제 싫어…….」
+				PRINTFORMW 「아픈 것, 아니…………이제, 그만 둬 …….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「…………………….」
+				PRINTFORMW 「차라리 죽여줘요……, 급소에 찔러서…….」
+			ENDIF
+			CFLAG:5248 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;아이마스크 CFLAG250　CFLAG:5307
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 225 && TEQUIP:41 == 1
+	;처음
+	IF CFLAG:5250 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「암흑…….그런데……주인님, 곁에 있어요……?」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「깜깜해졌어……그리고 뭘 하는거죠, 렌코?」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「안보이게 한 다음……그래서 어떻게 뭘 할 생각이죠?」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「암흑……. 렌코, 지금부터 어떻게 하려고…….」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「안보이게 하고, 어떻게 할 생각이야…….」
+		ENDIF
+		CFLAG:5250 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5250 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「아무것도 안보여서 렌코가 언제 무엇을 하는지 모르겠어요…….」
+				PRINTFORMW 「흥분하는거야?」
+				PRINTFORMW 「잘……모르겠어…….그렇지만, 렌코에게라면…….」
+			CFLAG:5250 = 7
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5250 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아무것도 안보이는 채로 주인님에게 무엇을 당할지 상상할게요……아…….」
+			CFLAG:5250 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5250 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv5 이상
+				IF ABL:21 >= 5
+					PRINTFORMW 「안보이는 채 렌코에게 뭔가 당하는……건가…….」
+					PRINTFORMW 「흥분해? 안보이는 채로 무엇을 당할지 생각하는걸로.」
+					PRINTFORMW 「그, 그렇게 생각하지……는, 않아요…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「깜깜하고 무섭다든가, 그러한 건 괜찮을까요?」
+					PRINTFORMW 「그렇지만, 안보이는 채 뭔가 당한다고 하는 것도 흥분할 수 있다고 생각해요?」
+					PRINTFORMW 「……잘, 모르겠어요.렌코의 얼굴을 볼 수 없다는 것이 제일 싫을지도…….」
+				ENDIF
+			ENDIF
+			CFLAG:5250 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5250 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (어두우니까 오히려 침착해요……)
+			PRINTFORMW (무엇을 당할지 모르는 것은 무섭지만, 얼굴을 보지 않고 끝나니까.)
+			CFLAG:5250 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5250 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv3 이상
+				ELSEIF ABL:21 >= 3
+					PRINTFORMW 「안보이는 채 렌코에게 뭔가 당하다니……읏.」
+					PRINTFORMW 「안보이는 채로 뭔가 당하는 것에 흥분하거나 하지 않아?」
+					PRINTFORMW 「그, 그런 취미는……없어요. 좀, 무서운 것뿐…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「안보이는 채 렌코에게 뭔가 당하다니……읏.」
+					PRINTFORMW 「안보이는 채로 뭔가 당하는 것에 흥분하거나 하지 않아?」
+					PRINTFORMW 「그런 일……없어요.무엇을 당할지 몰라 무서워울뿐…….」
+				ENDIF
+			ENDIF
+			CFLAG:5250 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5250 <= 1 || FLAG:11 == 2)
+			;매저키스트기분 Lv3 이상
+			IF ABL:21 >= 3
+				PRINTFORMW 「안 보이게하다니…………어떻게 할 생각이야…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「안보이게 하면 내가 어둠을 무서워해서 말하는 걸 듣게 된다든가.」
+				PRINTFORMW 「설마 그런 식으로 생각하고 있는건가요…….」
+			ENDIF
+			CFLAG:5250 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 225 && TEQUIP:41 == 0
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5307 < 6 || FLAG:11 == 2)
+		IF ASSINO() ==49
+			PRINTFORMW 「아, 겨우 끝났군요…….렌코, 꼭 껴안아도 좋아요? 아직, 조금 무서워서…….」
+		ENDIF
+		CFLAG:5307 = 6
+	;연모
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5307 < 5 || FLAG:11 == 2)
+		PRINTFORMW 「주인님, 무서웠어요…….」
+		PRINTFORMW 「부탁해요, 다음은, 주인님의 얼굴을 보면서…….」
+		CFLAG:5307 = 5
+	;?+조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5307 < 4 || FLAG:11 == 2)
+		IF ASSINO() ==49
+			PRINTFORMW 「할 수 있으면 렌코의 얼굴을 보면서 하는 쪽이 좋아요…….」
+		ENDIF
+		CFLAG:5307 = 4
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5307 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「이제야 벗기는건가요? ……그렇군요.」
+		CFLAG:5307 = 3
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5307 < 2 || FLAG:11 == 2)
+		IF ASSINO() ==49
+			PRINTFORMW 「이제야 벗기는건가요? ……렌코, 이런 것은 그만 둬줘요.」
+		ENDIF
+		CFLAG:5307 = 2
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5307 < 1 || FLAG:11 == 2)
+		PRINTFORMW 「이제 벗기는건가요? ……그렇군요.」
+		CFLAG:5307 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;줄 CFLAG251　CFLAG:5308
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 224 && TEQUIP:40
+	;처음
+	IF CFLAG:5251 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「주인님, 줄로 무엇을……네, 묶는다구요? 좀, 너무 본격적인거 같은데요?」
+			PRINTFORMW 「너무 꽉 묶지 말아주세요…….」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「이제 와서 구속하다니……도망칠 수도 없는데…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「에, 렌코? 줄은 왜 꺼내는거죠, ……네? 묶어요?」
+				PRINTFORMW (렌코는 그런 취미 있었던걸까요……)
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「무슨……네, 묶는다니……저를?」
+			PRINTFORMW 「저기, 농담은……읏, 그만둬요, 아파, 아프니까, 그렇게 꽉 묶지 마요!」
+		ENDIF
+		CFLAG:5251 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5251 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;매저키스트기분 Lv5 이상
+				IF ABL:21 >= 5
+					PRINTFORMW 「젖고 있네……메리, 혹시…….」
+					PRINTFORMW 「……응……읏, 저……속박되니까, 느껴 버려요……!」
+					PRINTFORMW 「부탁해요 렌코, 더 저를 괴롭혀줘요! 참을 수 없어요!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아파요, 렌코!」
+					PRINTFORMW 「그렇지만 이 정도가 아니면 조교가 되지 않는걸.」
+					PRINTFORMW 「다른 것이라면  뭐든지 할테니까, 아픈 것만은 그만 둬줘요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5251 = 7
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5251 <= 5 || FLAG:11 == 2)
+			;매저키스트기분 Lv5 이상
+			IF ABL:21 >= 5
+				PRINTFORMW 「완전히 묶여버려서, 움직일 수 없다니……어떻게 될지 몰라 무섭네요.」
+				PRINTFORMW 「아픈 것이 기분이 좋다니……부탁해요 주인님, 더 저를 괴롭혀주세요!」
+			;매저키스트기분 Lv3 이상
+			ELSEIF ABL:21 >= 3
+				PRINTFORMW 「주인님, 좀 더, 느슨하게 해 주세요…….」
+				PRINTFORMW 「……거기에 이런걸 쓰다니 저는 봉사할 수 없게되었어요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「읏, ……주인님, 아파요…….」
+			ENDIF
+			CFLAG:5251 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5251 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「큿…….」
+				PRINTFORMW 「아파? 그렇지만 참아.이 정도가 아니면 조교가 되지 않으니까.」
+				PRINTFORMW 「읏, 괜찮아요……참아볼게요…….」
+			ENDIF
+			CFLAG:5251 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5251 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「그런 일 하지 않아도 도망치지 않아요…….」
+			CFLAG:5251 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5251 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49	
+				;매저키스트기분 Lv3 이상
+				IF ABL:21 >= 3
+					PRINTFORMW 「앗, 렌코, 그렇게 꽉 묶지 말아줘요!」
+					PRINTFORMW 「아픈 것은 싫어…싫어…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「큿…………렌코에게 사람을 묶는 취미가 있었어요?」
+					PRINTFORMW 「……그렇게 꽉 묶지 마요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5251 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5251 <= 1 || FLAG:11 == 2)
+			;매저키스트기분 Lv3 이상
+			IF ABL:21 >= 3
+				PRINTFORMW 「묶는다면 적어도 꽉 묶지 마요……아픈 것은 싫어….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「큿……! 그렇게 꽉 묶지 마요…….」
+			ENDIF
+			CFLAG:5251 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 224 && TEQUIP:40 == 0
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5308 < 6 || FLAG:11 == 2)
+		IF ASSINO() ==49
+			PRINTFORMW 「움직임이 봉쇄된 채 렌코에게 일방적으로 당하는 것도 좋지만…….」
+			PRINTFORMW 「역시 서로 다양하게 하는 것이 저는 좋아요.」
+		ENDIF
+		CFLAG:5308 = 6
+	;연모
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5308 < 5 || FLAG:11 == 2)
+		;매저키스트기분 Lv3 이상
+		IF ABL:21 >= 3
+			PRINTFORMW 「움직임이 묶인 채 주인님으로부터 일방적으로 당하는 것도 좋지만.」
+			PRINTFORMW 「그렇지만, 역시 저도 봉사하고 싶어요…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「아파요……역시, 아픈 것은 싫어….」
+		ENDIF
+		CFLAG:5308 = 5
+	;?조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5308 < 4 || FLAG:11 == 2)
+		IF ASSINO() ==49
+			PRINTFORMW 「끝이에요 렌코?」
+			PRINTFORMW 「응? 더 계속해주길 바래?」
+			PRINTFORMW 「움직일 수 없는 것은 조금…….」
+		ENDIF
+		CFLAG:5308 = 4
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5308 < 3 || FLAG:11 == 2)
+		PRINTFORMW (심한 반점……)
+		CFLAG:5308 = 3
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5308 < 2 || FLAG:11 == 2)
+		IF ASSINO() ==49
+			PRINTFORMW 「아팠어……멍들고 있네, 렌코, 너무 심한 일은 그만 둬줘요…….」
+		ENDIF
+		CFLAG:5308 = 2
+	;그 이외
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5308 < 1 || FLAG:11 == 2)
+		PRINTFORMW 「큿, ……멍 투성이……심하네…….」
+		CFLAG:5308 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;볼 개그 CFLAG252　CFLAG:5309
+;-------------------------------------------------
+;개시시
+;IF SELECTCOM == 226 && TEQUIP:42 == 1
+;	;처음
+;	IF CFLAG:5252 == 0
+;		PRINTFORMW 
+;		CFLAG:5252 = 1
+;		RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모＋매저키스트기분 Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5252 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5252 = 4
+;		;매저키스트기분 Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5252 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5252 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5252 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5252 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;종료시
+;ELSEIF SELECTCOM == 226 && TEQUIP:42 == 0
+;	;연모
+;	IF TALENT:150 == 1 && (CFLAG:5309 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5309 = 2
+;	;그 이외
+;	ELSEIF CFLAG:5309 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5309 = 1
+;	ENDIF
+;		RETURN 0
+;ENDIF
+
+;-------------------------------------------------
+;관장 CFLAG253
+;-------------------------------------------------
+;IF TEQUIP:25 == 1 && SELECTCOM == 174
+;	;처음
+;	IF CFLAG:5253 == 0
+;		PRINTFORMW 
+;		CFLAG:5253 = 1
+;		RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모＋매저키스트기분 Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5253 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5253 = 4
+;		;매저키스트기분 Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5253 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5253 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5253 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5253 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;배설 CFLAG254
+;-------------------------------------------------
+;IF TEQUIP:25 == 0 && SELECTCOM == 174
+;	;처음
+;	IF CFLAG:5254 == 0
+;		PRINTFORMW 
+;		CFLAG:5254 = 1
+;		RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모＋매저키스트기분 Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5254 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5254 = 4
+;		;매저키스트기분 Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5254 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5254 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5254 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5254 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+;
+;-------------------------------------------------
+;로션 사용 CFLAG255
+;-------------------------------------------------
+IF SELECTCOM == 60
+	;처음
+	IF CFLAG:5255 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「그것은……별로, 그런 거 사용하지 않아도 좋잖아요.」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「그런 것 사용하지 않아도 좋잖아요…….」
+				PRINTFORMW 「민첩하게 하고 싶어서 말이야.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW (무리하게 당하는 것보다는 낫겠지……나으려나?)
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상
+				IF ABL:32 >= 5
+					PRINTFORMW 「렌코, 그 거…….」
+					PRINTFORMW 「그런 것 사용하지 않아도, 저…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「그 거……아, 미끌미끌하네…….」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「그것은……아니, 바르지 마!」
+		ENDIF
+		CFLAG:5255 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5255 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「또 그것 사용하는 거야? 그런 거 쓰지 않아도…….」
+			PRINTFORMW 「그렇지 않으면 그렇게 빨리 하고 싶어?」
+			CFLAG:5255 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5255 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「전신 로션 투성이라고 하는 건 조금 음란해요.」
+				PRINTFORMW 「……그래? 잘 모르겠네.」
+			ENDIF
+			CFLAG:5255 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5255 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 메리는 식은 땀을 흘리며 눈으로 자신의 신체에 로션이 칠해져 가는 걸 보고 있다……
+			CFLAG:5255 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5255 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「렌코, 또 그것인가요? 그런 것에 의지하지 않아도, 저…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「렌코, 또 그것이에요? 미끌미끌해서 기분 나쁜데…….」
+				ENDIF
+			ENDIF
+			CFLAG:5255 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5255 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「또 그것인가요? 미끌미끌해서 기분 나쁜데…….」
+			CFLAG:5255 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;미약사용 CFLAG256
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;처음
+	IF CFLAG:5256 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 무엇을 먹인거죠……………….」
+				PRINTFORMW 「설마……미약……? 무슨……그런…….」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「응, 무엇을 먹인거죠?」
+			PRINTFORMW 「아……읏, 이상한 느낌……혹시 미약? 들은 적은 있지만 정말로 있다니.」
+			PRINTFORMW 「응, 흣~……, 몸이 뜨거워……주인님, 빨리…….」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「읏, 렌코……무얼 먹인거에요…….」
+				PRINTFORMW 「설마, 미약……그런 것까지 있다니…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 &&  ASSIPLAY == 0
+			PRINTFORMW 「읏, 무엇을 먹인거에요…………이건…….」
+			PRINTFORMW 「약같은 것에, 딱히 의지하지 않아도, 저는…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「렌코, 무엇을 먹인거……죠?」
+					PRINTFORMW 「앗, 아……이것은, 혹시 미약……?」
+					PRINTFORMW 「아, 신체가 뜨거워, 부탁해요, 렌코, 빨리……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「렌코, 무엇을 먹인거죠?………설마………?」
+					PRINTFORMW 「설마……미약이라니……무슨……그런…….약에 의지하다니 심하잖아요, 렌코…….」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「읏, 큿……무엇을 먹인것이죠………설마 이 것…….」
+			PRINTFORMW 「약같은 것에, 의, 의지하다니…….」
+		ENDIF
+			CFLAG:5256 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5256 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「그런 거 먹이지 않아도 되는데…….」
+			PRINTFORMW 「응, 흣~……이거 마시면, 저, 미칠 것 같아요…….」
+			CFLAG:5256 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5256 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코에게라면 그런 걸 쓰지 않아도 괜찮을텐데…….」
+			ENDIF
+			CFLAG:5256 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5256 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「……아……저항은 하지 않아요…….」
+			PRINTFORMW 「그렇지 않으면……무리해서라도 제 감정을 흥분되게 하고 싶어요……?」
+			CFLAG:5256 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5256 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「그런 걸 먹이지 않아도, 렌코라면, 저…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「또 이걸 마시는 거에요……?」
+					PRINTFORMW 「마시지 않는 쪽도 그런대로 좋지만……응…….」
+					PRINTFORMW 「읍, 렌코, 무엇을……, 응응-! 진한……약을 입으로……하, 흣~………….」
+				ENDIF
+			ENDIF
+			CFLAG:5256 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5256 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「또 그런 것으로……약같은 걸로, 무리하게는……!, 읍, 싫어!」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 입에서 입으로 억지로 미약을 메리에 먹였다……
+			PRINTFORMW 「……아……아…….」
+			CFLAG:5256 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;비디오 카메라 사용 CFLAG257
+;-------------------------------------------------
+IF SELECTCOM == 100 && TEQUIP:50
+	;처음
+	IF CFLAG:5257 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「그거 비디오? 매우 낡은 타입같지만.」
+			PRINTFORMW 「우리들이 하고 있는 것을 촬영하는 군요.좋아요, 조금 부끄럽지만, 기록을 남겨 두는 것도…….」
+			PRINTFORMW 「네? 파는 거에요? ……과연 그건, 조금……싫은데…….」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 &&  ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「그것은 비디오군요.녹화해서……뭘 하는거죠?」
+				PRINTFORMW 「조교에도 돈이 필요하잖아.그러니까 메리의 조교의 모습을 파는거야.」
+				PRINTFORMW 「……그런거면 빨리 시작합시다.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「비디오로 녹화해 판다, 고……그런…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「여기는 정말로 무엇이든지 있네. 저기, 이 쪽 봐.」
+					PRINTFORMW 「그거 비디오? 우리들이 하고 있는 것을 촬영하는 거야?」
+					PRINTFORMW 「좋아요, 부끄럽지만, 기록에 남겨 두는 것도 좋을지도.」
+					PRINTFORMW 「무슨 말이야, 촬영해서 파는거야. 돈이 필요하다는 거지.」
+					PRINTFORMW 「엣! 과연 그건 좀……, 부끄러워요, 그런거…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「여기는 정말로 무엇이든지 있어. 저기, 이것 봐.」
+					PRINTFORMW 「그거 설마 비디오? 설마, 찍을 생각!」
+					PRINTFORMW 「찍어서 파는거야.역시 돈은 필요하니까.」
+					PRINTFORMW 「뭣, 그런, 그만 둬요! 너무 부끄럽다구요……!」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「그것은 비디오? 정말로 무엇이든지 있군요, 여기는.」
+			PRINTFORMW 「그렇지만 그래서 무엇을……네? 촬영해 판다구요?!」
+			PRINTFORMW 「그런거, 농담이겠지, 제발 그만둬요, 부탁해요!」
+		ENDIF
+			CFLAG:5257 = 1
+			RETURN 0
+	;2회째 이후
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5257 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「비디오의 타이틀은……그렇구나, 비봉클럽의 비밀의 회합, 이라든지?」
+				PRINTFORMW 「별로 센스 좋다고 생각하지 않아요…….」
+				PRINTFORMW 「흠, ……응, 그런가…….아무튼 좋아요, 빨리 시작해요!」
+			ENDIF
+			CFLAG:5257 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5257 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응, 하나정도 남겨둬요……싫어요? 심술쟁이…….」
+			CFLAG:5257 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5257 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코도 찍힌 일 있어요……?」
+				PRINTFORMW 「예……처음은 부끄러웠지만, 익숙해지면 별로 쑥스러울 것은 없어요.」
+				PRINTFORMW 「익숙해지면, 이군요……, 그렇군요…….」
+			ENDIF
+			CFLAG:5257 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5257 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「찍어서 파는 것은 상관없어요, 그렇지만 그것이 원인으로 단서가 잡혀 파멸, 이라는 생각은 해본 적 없어요?」
+			PRINTFORMW 「하긴……그런 생각이 있으면 애초에 이런 식으로 찍을 리 없겠군요…….」
+			CFLAG:5257 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5257 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「또 찍는건가요…….전에 찍은 것은?」
+				PRINTFORMW 「아, 예의 그거? 벌써 팔았어.다음의 것은 더 비싸게 팔리도록 노력하지 않으면.」
+				PRINTFORMW 「노력하지 않아도 좋아요, 찍지 않는게 좋다구요, 그냥 찍지 마요!」
+			ENDIF
+			CFLAG:5257 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5257 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「그만둬요, 더이상 찍지 마……!」
+			PRINTFORMW 「부탁이니까 이 그만둬요, 이제, 이런거 견딜 수 없어요…….」
+			CFLAG:5257 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;야외 플레이 CFLAG258　CFLAG:5310
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 104 && TEQUIP:52
+	;처음
+	IF CFLAG:5258 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「저기, 이걸 목에 차고 나가자.」
+				PRINTFORMW 「목걸이……나간다구요? 그, 알몸으로? 조금 기다려요, 누군가에게 보여져 버리면.」
+				PRINTFORMW 「보여진다면 보여지는거지. 그 땐 그때야, 자, 나가자.」
+				PRINTFORMW 「……보여진다면, 책임져줘요…….」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「네? 이걸 차고 밖에 나가는 거에요? ……알았어요.」
+			PRINTFORMW 「조금 부끄럽지만, 주인님과라면…….」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 밖에 가요.」
+				PRINTFORMW 「목걸이에 알몸으로, 응……이제 아무래도 좋지만…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「벌거벗은 채로 밖에……목걸이를 차고……개군요, 개네요.」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「자, 이걸 목에 차고 나가자.」
+				PRINTFORMW 「목걸이……나간다구요? 그, 알몸으로? 조금 기다려요, 누군가에게 보여져 버리면.」
+				PRINTFORMW 「보여진다면 보여지는거지. 그 땐 그때야, 자, 나가자.」
+				PRINTFORMW 「앗, 싫어, 조금, 끌어당기지 말고, 그런거, 너무 부끄럽다구요……!」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「목걸이……차고, 밖에……! 뭘 생각하는거에요!」
+			PRINTFORMW 「싫어, 앗, 끌어당기지 말라구요 정말!」
+		ENDIF
+			CFLAG:5258 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5258 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;노출버릇 Lv3 이상
+				IF ABL:14 >= 3
+					PRINTFORMW 「자, 이거 차는거야.」
+					PRINTFORMW 「밖에 나가는거군요, ……후후, 지금부터 주인님과 렌코와 3명이서 데이트군요.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「자, 이거 차는거야.」
+					PRINTFORMW 「응, 옷 입고 보통으로 데이트라고 하는 것은……안되는거에요?」
+					PRINTFORMW 「음, 그것도 매력적이지만……응……다음에 주인님에게 말해 봐?」
+				ENDIF
+			ENDIF
+			CFLAG:5258 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5258 <= 5 || FLAG:11 == 2)
+			;노출버릇 Lv3 이상
+			IF ABL:14 >= 3
+				PRINTFORMW 「밖에 나가는 군요, 좋아요.」
+				PRINTFORMW 「후후, 데이트 하는 것 같고 기뻐요.」
+			ELSE
+				PRINTFORMW 「응……싫은 것은 아닌데…….」
+				PRINTFORMW 「저기 주인님, 알몸이 아니고 옷을 입고 보통으로 데이트라고 하는 것은……무리?」
+			ENDIF
+			CFLAG:5258 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5258 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「자, 이걸 매. 나가자.」
+				PRINTFORMW 「………….」
+				PRINTFORMW 딱히 저항도 하지 않고 렌코에게 끈을 붙잡혀 밖에 나갔다……
+			ENDIF
+			CFLAG:5258 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5258 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「노예는 애완동물과 같은걸까……그렇지 않으면 그것 이하일까……?」
+			CFLAG:5258 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5258 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;노출버릇 Lv3 이상
+				IF ABL:14 >= 3
+					PRINTFORMW 「자, 이거 목에 매.」
+					PRINTFORMW 「또, 밖이라니……, 싫을텐데……왜……두근거리는걸까……?」
+				;그 이외
+				ELSE
+					PRINTFORMW 「렌코……저기, 밖에 나가지 않으면 안되는 거에요?」
+					PRINTFORMW 「아무리 뭐라해도 너무 부끄러워요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5258 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5258 <= 1 || FLAG:11 == 2)
+			;노출버릇 Lv3 이상
+			IF ABL:14 >= 3
+				PRINTFORMW 「또 밖에……알몸으로…………이런 건 싫은데…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「아니, 그만 둬요 제발! 누군가에게 보여지면……저……!」
+				PRINTFORMW 「끌어당기지지 말아요 정말! 아……그런…….」
+			ENDIF
+			CFLAG:5258 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;연모+조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5310 < 6 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			PRINTFORMW 「렌코와 주인님이 함께니까, 어떤 일이 있어도 무섭지 않아요.」
+			PRINTFORMW 「또 함께 나가요.」
+		ENDIF
+		CFLAG:5310 = 6
+	;연모
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5310 < 5 || FLAG:11 == 2)
+		PRINTFORMW 「조금 부끄러웠지만, 주인님과 함께였기 때문에…….」
+		PRINTFORMW 「다음은, 언제 권해 줄래?」
+		CFLAG:5310 = 5
+	;?조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5310 < 4 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			PRINTFORMW 「밖에 나와서 누군가에게 보여지고, 그것이 원인으로 단서가 잡혀 파멸, 이라는 생각은 해본 적 없어요?」
+			PRINTFORMW 「응? 나도 같은 일 한 적 있지만, 괜찮았어.」
+			PRINTFORMW 「그런…….」
+		ENDIF
+		CFLAG:5310 = 4
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5310 < 3 || FLAG:11 == 2)
+		PRINTFORMW (누군가에게 보여져서……신고되서……그래서 끝나면 좋을텐데)
+		CFLAG:5310 = 3
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5310 < 2 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;레즈비언 중독 Lv3 이상
+			IF ABL:32 >= 3
+				PRINTFORMW 「조금 부끄러웠지만, 렌코와 함께였기 때문에…….」
+				PRINTFORMW 「다음은, 언제 나갈건가요?」
+			;그 이외
+			ELSE
+				PRINTFORMW 「절대 누군가에게 보여졌을꺼야…….」
+				PRINTFORMW 「렌코……이제 이런 건 그만 둬요…….」
+			ENDIF
+		ENDIF
+		CFLAG:5310 = 2
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5310 < 1 || FLAG:11 == 2)
+		PRINTFORMW 「절대 누군가에게 보여졌을거야……이제, 더이상 두 번 다시 이런건 하지마요…….」
+		CFLAG:5310 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;조수를 범하는 CFLAG259
+;-------------------------------------------------
+;조수가 렌코 때 마셔
+IF SELECTCOM == 26
+	;처음
+	IF CFLAG:5259 == 0
+		IF ASSINO() == 49
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「렌코만 해주시는건가요……주인님, 저도…….」
+			;?
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSINO() == 49
+				PRINTFORMW 「아니! 렌코에게, 렌코에겐 손대지 마요!」
+				PRINTFORMW 「뭐든지 할테니까, 렌코에게는……!」
+				PALAM:22 += 100000
+			;연모 없음
+			ELSE
+				PRINTFORMW 「아, 좋아! 더, 더 ……!」
+				PRINTFORMW 「그런……, 렌코……그만둬요, 그만 둬……!」
+			ENDIF
+		ENDIF
+			CFLAG:5259 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		IF ASSINO() == 49
+			;연모
+			IF TALENT:150 == 1 && (CFLAG:5259 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「주인님, 저, 저뿐만, 아, 만이 아니라, 응, 메리도 안아 줘요……!」
+				PRINTFORMW 「렌코…….」
+				CFLAG:5259 = 4
+			;?
+			ELSEIF TALENT:26 == 1 && (CFLAG:5259 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「부탁해요, 이제, 그만 둬요……렌코에게 손을 대지 마요……!」
+				PRINTFORMW 「글쎄, 메리…….」
+				PALAM:22 += 100000
+				CFLAG:5259 = 3
+			;연모 없음
+			ELSEIF CFLAG:5259 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「응……메리도 해주신다면 좋겠는데…….」
+				PRINTFORMW 「……어째서……렌코, 이런 건 이상해요……!」
+				CFLAG:5259 = 2
+			ENDIF
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;이라마치오 CFLAG260
+;-------------------------------------------------
+IF SELECTCOM == 230
+	;처음
+	IF CFLAG:5260 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「읍, 읍, 읍읍―！！.」
+			PRINTFORMW 「하, 흣~, 흣~, 격렬하게 할거면, 먼저 말해주신다면 좋을텐데.」
+			PRINTFORMW 「응, 노력할테니까, 계속해도 좋아요.」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「읍, 읍, 읍읍―！！.」
+			PRINTFORMW 「하, 한다면 한다고 말해주신다면 좋을텐데…….」
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 5
+			PRINTFORMW 「읍, 읍읍, 읍, 읏……우웃-!」
+			PRINTFORMW 「웃, 우웃, 이렇게, 무리하게……!」
+		;그 이외
+		ELSE
+			PRINTFORMW 「큿, 우, 우웃, 읍……큿, 저, 그만 둬주세요!」
+		ENDIF
+			CFLAG:5260 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5260 <= 4 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「또 격렬하게 하는 건가요? 좋아요.」
+				PRINTFORMW 「읏, 응, 읍……흣~, 더, 가득히…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「또 격렬하게 하는 건가요? 좋아요. 괴롭지만, 참아볼게요.」
+				PRINTFORMW 「응, 읍, 읏……흣~, 흣~, 노력해볼테니까, 더…….」
+			ENDIF
+			CFLAG:5260 = 5
+		;?
+		ELSEIF TALENT:150 == 1 && (CFLAG:5260 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (괴로워……그래도 그대로 있으면 질식……그건 싫으니……)
+			PRINTFORMW (단지 참고 봉사하고 있으면……)
+			CFLAG:5260 = 4
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5260 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 읏, 읏, 응응, 읍…….」
+			PRINTFORMW 「하, 흣~, 흣~, 이걸로, 아……!」
+			CFLAG:5260 = 3
+		;그 이외
+		ELSEIF CFLAG:5260 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「읏, 응응, 응-!, 큿, 이런걸, 흣~, 흣~…….」
+			PRINTFORMW 「목 가득히, 넣다니, 이제……! 응, 웃-!」
+			CFLAG:5260 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;피스트계 커멘드 CFLAG261
+;-------------------------------------------------
+;IF SELECTCOM == 231 || SELECTCOM == 232 || SELECTCOM == 233
+;	;처음
+;	IF CFLAG:5261 == 0
+;		PRINTFORMW 
+;		CFLAG:5261 = 1
+;		RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모＋매저키스트기분 Lv5
+;		IF TALENT:150 == 1 && ABL:21 >= 5 && (CFLAG:5261 <= 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5261 = 4
+;		;매저키스트기분 Lv3
+;		ELSEIF ABL:21 >= 3 && (CFLAG:5261 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5261 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5261 <= 1 && FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5261 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+;
+;-------------------------------------------------
+;촉수 소환 CFLAG262　CFLAG:5311
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 500 && TEQUIP:90
+	;처음
+	IF CFLAG:5262 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「……네, 어라……주인님? 이것으로 뭘…….」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「……뭐죠, 이건…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「――――――!」
+			PRINTFORMW 메리의 얼굴은 엄청나게 새파랗게 변하고 있다
+		ENDIF
+			CFLAG:5262 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5262 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우우, 역시 무서워…….」
+			PRINTFORMW 「주인님, 끝나면 이것을 잊을 정도로 안아줘요…….」
+			CFLAG:5262 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5262 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「당신에게 더럽혀지는 것과 저것에 더럽혀지는 것.」
+			PRINTFORMW 「어느 쪽이 나은 것일까요…….」
+			PRINTFORMW 메리는 촉수를 보고 남의 일처럼 그렇게 중얼거렸다
+			CFLAG:5262 = 3
+		;그 이외
+		ELSEIF CFLAG:5262 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「큿, 도와줘, 렌코, 누군가, 아, 안돼--!」
+			CFLAG:5262 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5311 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「아, 역시 무서워…….」
+		PRINTFORMW 「역시 이런 것보다 주인님이…….」
+		CFLAG:5311 = 3
+	;?
+	ELSEIF TALENT:150 == 1 && (CFLAG:5311 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「………….」
+		PRINTFORMW 「어느 쪽도 거기서 거기, 군요…….」
+		CFLAG:5311 = 2
+	;그 이외
+	ELSEIF CFLAG:5311 < 1 || FLAG:11 == 2
+		PRINTFORMW 「……………….」
+		CFLAG:5311 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;조수에 키스 시키는 CFLAG263
+;-------------------------------------------------
+;조수가 렌코의 경우만
+IF SELECTCOM == 6
+	;첫회
+	IF CFLAG:5263 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「응……하……렌코…….」
+					PRINTFORMW 「키스는 처음이던가? 더 해 줄게, 주인님에게 과시하듯이…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「응, 렌코, 주인님에게 실례에요…….」
+					PRINTFORMW 「이번은 나에게 맡기셨으니 별로 신경쓰지 않아도 괜찮아.」
+				ENDIF
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「응……하……렌코, 더…….」
+				PRINTFORMW 「얼마든지 해줄테니까……자, 혀를 내밀어서……얽듯이…….」
+			ENDIF
+		;연모 없음
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 싫어, 렌코, 그만 둬, 이런 곳에서……!」
+				PRINTFORMW 렌코는 메리의 말을 무시하고 키스를 계속하고 있다……
+			ENDIF
+		ENDIF
+		CFLAG:5263 = 1
+		RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5263 <= 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「응, 너무하면 주인님이 질투한다구요―.」
+					PRINTFORMW 「응, 흣~……, 그렇게 심술궃게 말하지 마요…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「응, 역시, 안되겠어요…….」
+					PRINTFORMW 「너무 좋아, 좀 더 해줘요…….」
+				ENDIF
+			ENDIF
+			CFLAG:5263 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5263 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 흣~, 렌코……이런건 좋아하는 사람하고…….」
+				PRINTFORMW 「응―, 너무 너무 하면 주인님은 기분 나쁠까―……나로서는 좋지만.」
+			ENDIF
+			CFLAG:5263 = 3
+		;연모 없음
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5263 <= 1 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 이제 그만둬요, 응응…….」
+				PRINTFORMW 「무슨 말이야 메리? 지금부터인데, 응, …….」
+			ENDIF
+			CFLAG:5263 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;커닐링구스 강제  CFLAG264
+;-------------------------------------------------
+;조수가 렌코의 경우만
+IF SELECTCOM == 300
+	;처음
+	IF CFLAG:5264 == 0
+		;레즈비언 중독 Lv3 이상
+		IF ABL:32 >= 3 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「내가 메리에게 봉사하는 거야?」
+				PRINTFORMW 「그래요. 자, 빨리 해주세요.」
+				PRINTFORMW 「응, 딱히 그렇게 부탁하지 않아도, 해줄테니까…….」
+			ENDIF
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「내가, 메리의 것을?」
+				PRINTFORMW 「그래요. 자, 빨리 해주세요.」
+				PRINTFORMW 「앗, 조금, 무리하게 누르지 마……!」
+			ENDIF
+		ENDIF
+			CFLAG:5264 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;레즈비언 중독 Lv3 이상
+		IF ABL:32 >= 3 && ASSI > 0 && ASSIPLAY && (CFLAG:5264 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 읏, 푸하…….」
+				PRINTFORMW (렌코를 유혹하는 기분이야……)
+			ENDIF
+			CFLAG:5264 = 3
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5264 <= 1 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW (무리하게 억눌러서 괴로워……빨리, 렌코……)
+			ENDIF
+			CFLAG:5264 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;짝 맞추기 놀이 CFLAG265
+;-------------------------------------------------
+;조수가 렌코의 경우만
+IF SELECTCOM == 301
+	;처음
+	IF CFLAG:5265 == 0
+		;레즈비언 중독 Lv3 이상+반발 각인 Lv0
+		IF ABL:32 >= 3 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 큿, 이런 것도, 좋지 않아? 메리.」
+				PRINTFORMW 「앗, 응, 아, 굉장해, 기분 좋아……아!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 메리, 어때? 이런 것도 좋지?」
+				PRINTFORMW 「응, 읏, 그런……안되, 멈추지 마요……!」
+			ENDIF
+		ENDIF
+			CFLAG:5265 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;레즈비언 중독 Lv3 이상+반발 각인 Lv0
+		IF ABL:32 >= 3 && ASSI > 0 && ASSIPLAY && (CFLAG:5265 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 더, 더 와줘요, 렌코!」
+				PRINTFORMW 「아, 읏, 응, 더 격렬하게 간다!」
+			ENDIF
+			CFLAG:5265 = 3
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5265 <= 1 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「아, 렌코, 안 되요, 저, 저……!」
+				PRINTFORMW 「응, 아, 나도, 이제!」
+			ENDIF
+			CFLAG:5265 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;3P CFLAG266
+;-------------------------------------------------
+;조수가 렌코의 경우만
+IF SELECTCOM == 610
+	;처음
+	IF CFLAG:5266 == 0
+		;연모+레즈비언 중독 Lv5 이상
+		IF TALENT:150 == 1 && ABL:32 >= 5 && ASSI > 0
+			IF ASSINO() == 49
+				PRINTFORMW 「주인님, 이제 좋지 않아?」
+				PRINTFORMW 「네, 무엇, 어, 주인님도 오는건가요!」
+				PRINTFORMW 「아, 그런, 무슨, 저, 어떻게 되어버릴지도 모르는데 그렇게……!」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0
+			IF ASSINO() == 49
+				PRINTFORMW 「이제 좋을까……주인님, 아무쪼록.」
+				PRINTFORMW 「네, 무엇, 히익……!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSI > 0
+			IF ASSINO() == 49
+				PRINTFORMW 「이제 좋을까……주인님, 아무쪼록.」
+				PRINTFORMW 「네, 무엇, 히……히익!」
+			ENDIF
+		ENDIF
+			CFLAG:5266 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+레즈비언 중독 Lv5 이상+반발 각인 Lv0
+		IF TALENT:150 == 1 && ABL:32 >= 5 && ASSI > 0 && (CFLAG:5266 <= 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「흣~, 흣~, 주인님과 렌코가, 함께라니…….」
+				PRINTFORMW 「렌코, 주인님, 좋아, 기뻐요, 더, 더 와줘요!」
+			ENDIF
+			CFLAG:5266 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && (CFLAG:5266 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「주인님과 나에게 동시에 당하고, 어때? 기분 좋아? ……어라, 잠깐, 이거……메리, 괜찮아?!」
+				PRINTFORMW 「…………아, ……아, 응, 괜찮아요…….」
+			ENDIF
+			CFLAG:5266 = 3
+		;그 이외
+		ELSEIF ASSI > 0 && (CFLAG:5266 <= 1 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「주인님과 나에게 동시에 당하고, 어때? 기분 좋아? ……어라, 잠깐, 이거……메리, 괜찮아?!」
+				PRINTFORMW 「…………, ………….」
+				PRINTFORMW 메리는 가끔 작게 허덕일 뿐으로 거의 움직일 수 없는 것 같다
+			ENDIF
+			CFLAG:5266 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;조수를 범하게 하는 CFLAG267
+;-------------------------------------------------
+;조수가 렌코의 경우만
+IF SELECTCOM == 307
+	;처음
+	IF CFLAG:5267 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상
+				IF ABL:32 >= 5
+					PRINTFORMW 「내가 렌코를……그래도 좋아요, 주인님?」
+					PRINTFORMW 「주인님이 좋다고 말했잖아, 빨리, 사양말고 와도 좋으니까.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「내가……렌코를 안는다…….」
+					PRINTFORMW 「그래, 메리……어서 와.」
+					PRINTFORMW 「그런……, 렌코……저는…….」
+				ENDIF
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5267 <= 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「내가……렌코를 안는다…….」
+				PRINTFORMW 「그래, 사양말고 와도 좋다니까.」
+				PRINTFORMW 「그런……저…….」
+			ENDIF
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「내가……렌코를 안아?」
+				PRINTFORMW 「무슨, 그런……, 그런걸 하라니…….」
+				PRINTFORMW 「해보면 좋다구 메리, 어서 빨리…….」
+			ENDIF
+		ENDIF
+			CFLAG:5267 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5267 <= 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상
+				IF ABL:32 >= 5
+					PRINTFORMW 「렌코, 어때? 기분 좋은가요? ……그렇다 치더라도, 주인님은 보고 있을 뿐으로 좋아요?」
+				;그 이외
+				ELSE
+					PRINTFORMW 「미안, 렌코…….」
+					PRINTFORMW 「좋아, 신경쓰지 않아도.그렇지 않으면 메리, 나 싫어졌어?」
+					PRINTFORMW 「그런 일 없어요.그렇지만, 저는…….」
+				ENDIF
+			ENDIF
+			CFLAG:5267 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5267 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「……미안해요, 렌코…….」
+				PRINTFORMW 「좋아 메리, 사양하지 않아도 되니 움직여.」
+				PRINTFORMW 「미안해요, 렌코…….」
+			ENDIF
+			CFLAG:5267 = 3
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5267 <= 1 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「……미안, 렌코……미안해요…….」
+				PRINTFORMW 메리는 눈물을 흘리며 렌코에게 사과하면서 허리를 천천히 움직이고 있다……
+			ENDIF
+			CFLAG:5267 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;더블 페라 CFLAG268
+;-------------------------------------------------
+;조수가 렌코의 경우만
+IF SELECTCOM == 303
+	;처음
+	IF CFLAG:5268 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「저와 렌코가 주인님에게 봉사군요, 알았어요.」
+				PRINTFORMW 「메리, 그 쪽에서 혀로 핥아…….」
+				PRINTFORMW 「응……주인님, 어때? 기분이 좋아요?」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 읏, 응, ……메리, 함께 하자.」
+				PRINTFORMW 「……응, …….」
+			ENDIF
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「저와 렌코가 주인님에게 봉사군요, 알았어요.」
+					PRINTFORMW 「메리, 그 쪽에서 혀로 핥아…….」
+					PRINTFORMW 「응……이런게 좋은걸까? 아, 벌벌 떨리고 있다…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「응, 읏, 응, ……메리, 함께 하자.」
+					PRINTFORMW 「저도, 하는건가요? 그런…….」
+				ENDIF
+			ENDIF
+		ENDIF
+			CFLAG:5268 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5268 <= 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, …….」
+				PRINTFORMW 「저기 메리, 가슴도 사용해봐…….」
+				PRINTFORMW 「이런 식으로……응……이렇게요?」
+			ENDIF
+			CFLAG:5268 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5268 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, …….」
+				PRINTFORMW 「응, 그런 느낌으로……계속해요.」
+			ENDIF
+			CFLAG:5268 = 3
+		;그 이외
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5268 <= 1 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「응, …….」
+					PRINTFORMW 「저기 메리, 가슴도 사용해봐…….」
+					PRINTFORMW 「이런게, 읏……좋은 걸까……?」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이거 하지 않으면 안되는건가요?」
+					PRINTFORMW 「자, 메리, 빨리.」
+					PRINTFORMW 「왜 그런 일……을, 시키는건지…….」
+				ENDIF
+			ENDIF
+			CFLAG:5268 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;69 CFLAG269　CFLAG329
+;-------------------------------------------------
+;주인+메리의 경우
+IF SELECTCOM == 602 && ASSIPLAY == 0
+	;첫회
+	IF CFLAG:5269 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이 몸의 자세로……내가 주인님의 것을, 주인님이 제 것을…….」
+			PRINTFORMW 「예, 함께 기분 좋아져봐요, 주인님.」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「이 몸의 자세로……서로 한다, 라고.」
+			PRINTFORMW 「저는 괜찮은데…….」
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「이 몸의 자세로, 서로…….」
+			PRINTFORMW 「또 굉장한 일 시키려고 하는군요…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「이런 모습으로 봉사하라고…….」
+			PRINTFORMW 「무슨, 그런, 놀리지 말아 주세요!」
+		ENDIF
+			CFLAG:5269 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5269 <= 4 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「응, 읏, 응…….」
+				PRINTFORMW 「주인님, 기분 좋은가요? 저도……히! 응, 응응…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「응…….」
+				PRINTFORMW 「읏, 집중하고 있지 않으면 너무 기분 좋아서…….」
+			ENDIF
+			CFLAG:5269 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5269 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「좋아요, 제 쪽은……당신에게 봉사만 해주는건 아니니까…….」
+			CFLAG:5269 = 4
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5269 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 읏……응응-! 응, 후…….」
+			CFLAG:5269 = 3
+		;그 이외
+		ELSEIF CFLAG:5269 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「흣~……무엇으로 이런 일…….」
+			PRINTFORMW 「응응응! 아, 그런 곳 핥지 마요…….」
+			CFLAG:5269 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;렌코+메리의 경우
+ELSEIF SELECTCOM == 602 && ASSI > 0 && ASSIPLAY
+	IF ASSINO() == 49
+		;첫회
+		IF CFLAG:5329 == 0
+			;?
+			IF TALENT:26 == 1
+				PRINTFORMW 「서로하라니……제 쪽은 어찌되도 좋은데.」
+			;레즈비언 중독 Lv5 이상
+			ELSEIF ABL:32 >= 5
+				PRINTFORMW 「저기, 렌코? 이런 몸의 자세로…….」
+				PRINTFORMW 「이렇게 하면 함께 기분 좋게 될 수 있잖아? 자, 메리도…….」
+			;봉사 정신 Lv3 이상
+			ELSEIF ABL:13 >= 3
+				PRINTFORMW 「이런 몸의 자세로, 서로의 것을……또 굉장한 일을 시키네요.」
+				PRINTFORMW 「자, 메리도 빨리…….」
+				PRINTFORMW 「응, 알았어요…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「저기, 이런 모습으로, 무엇을 하는거죠……히익!」
+				PRINTFORMW 「저기, 보지만 말고 빨리 내 것을 빨아 줘.」
+				PRINTFORMW 「아, 렌코, 쳐다보지 말아줘요!」
+			ENDIF
+			CFLAG:5329 = 1
+			RETURN 0
+		;2번째 이후
+		ELSE
+			;?
+			IF TALENT:26 == 1 && (CFLAG:5329 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「렌코……기분 좋은가요? 저는 신경쓰지 않아도 되니까, 더 해 줄게요…….」
+				PRINTFORMW 「응, 메리, 안 되잖아……서로 기분 좋게 되야지…….」
+				CFLAG:5329 = 4
+			;레즈비언 중독 Lv5 이상
+			ELSEIF ABL:32 >= 5 && (CFLAG:5329 <= 2 || FLAG:11 == 2)
+				;봉사 정신 Lv5 이상
+				IF ABL:13 >= 5
+					PRINTFORMW 「응……렌코, 기분 좋아요?」
+					PRINTFORMW 「응……흣~, 좋아, 메리도, 더 기분 좋게 해줄테니까…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「응……응응!, 흣~…….」
+					PRINTFORMW 「응응, 기분 좋아……, 응…….」
+				ENDIF
+				CFLAG:5329 = 3
+			;그 이외
+			ELSEIF CFLAG:5329 <= 1 || FLAG:11 == 2
+				;봉사 정신 Lv3 이상
+				IF ABL:13 >= 3
+					PRINTFORMW 「응……이런 게 좋아요?」
+					PRINTFORMW 「응, 좋아, 서로 느끼는거야…….」
+					PRINTFORMW 「응응응! 흣~, 응…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「흣~, 어째서 이런 일……을, 앗!」
+					PRINTFORMW 「메리, 내 것도 빨리.」
+					PRINTFORMW 「읏, 알았어요…….」
+				ENDIF
+				CFLAG:5329 = 2
+			ENDIF
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;더블 가랑이 CFLAG270
+;-------------------------------------------------
+IF SELECTCOM == 305
+	;처음
+	IF CFLAG:5270 == 0
+		;연모+레즈비언 중독 Lv5 이상
+		IF TALENT:150 == 1 && ABL:32 >= 5
+			IF ASSINO() == 49
+				PRINTFORMW 「이 상태로, 주인님에게 봉사를?」
+				PRINTFORMW 「그런거지. 주인님, 아무쪼록.」
+				PRINTFORMW 「응……아, 주인님의 것이……스쳐……굉장해……!」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 뭘?」
+				PRINTFORMW 「주인님, 이제 됐지?」
+				PRINTFORMW 「네? 뭔가, 오고 있……스쳐……?」
+			ENDIF
+		;그 이외
+		ELSE
+			IF ASSINO() == 49
+				PRINTFORMW 「흣~, 아, ……렌코, 왜?」
+				PRINTFORMW 「주인님, 이제 됐지?」
+				PRINTFORMW 「응? 뭐가……!?읏, 뭔가가, 스쳐……!」
+			ENDIF
+		ENDIF
+			CFLAG:5270 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+레즈비언 중독 Lv5 이상
+		IF TALENT:150 == 1 && ABL:32 >= 5 && (CFLAG:5270 <= 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 응……, 하, 아, 굉장해요, 더 와줘요, 주인님!」
+				PRINTFORMW 「아, 앙, 주인님, 굉장해요, 더, 더 와줘요, 아!」
+			ENDIF
+			CFLAG:5270 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5270 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 키스 해줘………….」
+				PRINTFORMW 「……렌코……응, 스쳐……아…….」
+			ENDIF
+			CFLAG:5270 = 3
+		;그 이외
+		ELSEIF CFLAG:5270 <= 1 || FLAG:11 == 2
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0 && (CFLAG:5270 <= 1 || FLAG:11 == 2)
+					PRINTFORMW 「주인님, 큿, 이것, 너무 굉장해, 아, 흣~, !」
+					PRINTFORMW 「아, 렌코, 그런, 저도, 느껴 버려서……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 메리도, 주인님도, 함께 느낀다……! 이것, 굉장해, 너무 굉장해애애애!」
+					PRINTFORMW 「렌코, 그런, 저, 응, 저, 도, 이제……!」
+				ENDIF
+			ENDIF
+			CFLAG:5270 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;
+;추가 커멘드 CFLAG313 이후를 사용
+;
+
+;-------------------------------------------------
+;손가락 삽입 CFLAG313
+;G스포트 자극 CFLAG323
+;-------------------------------------------------
+IF SELECTCOM == 4
+	;G스포트 자극
+	IF PREVCOM == 4 && ABL:PLAYER:12 >= 3 || PREVCOM == 600
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5323 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「이 근처인가…….」
+				PRINTFORMW 「앗, 앗, 렌코, 무슨!」
+				PRINTFORMW 「뭐지 이기, 기분 좋아, 좋아아, 아, 아, 앗!」
+			ENDIF
+			CFLAG:5323 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5323 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「히……잇, 거, 거기는……!」
+			PRINTFORMW 「앗, 주인님, 안되요, 거기를, 읏, 저……!」
+			CFLAG:5323 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5323 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「이 근처일까……어때?」
+				PRINTFORMW 「히……잇, 뭐에요, 렌코!」
+				PRINTFORMW 「앗, 싫어, 안되요 렌코, 그런 곳……!」
+			ENDIF
+			CFLAG:5323 = 5
+		;?
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5323 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「큿……! 뭐야, 이건……!」
+			CFLAG:5323 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;V감각 Lv3 이상
+				IF ABL:1 >= 3
+					PRINTFORMW 「이 근처구나……간다.」
+					PRINTFORMW 「네……히, 히잇!」
+					PRINTFORMW 「렌코, 싫어! 안되요! 이제, 손대지 말아줘요 제발, 저, 아!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「「이 근처구나……간다.」
+					PRINTFORMW 「네……?히, 힉?!무, 무슨!」
+					PRINTFORMW 「그런, 그만 둬요 렌코, 그 이상은 안 되에에에엣!」
+				ENDIF
+			ENDIF
+			CFLAG:5323 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5323 <= 1 || FLAG:11 == 2)
+			;V감각 Lv3 이상
+			IF ABL:1 >= 3
+				PRINTFORMW 「응……앗? 히, 히잇!」
+				PRINTFORMW 「아니, 아니, 저, 그런, 이상해져요, 이제, 그만둬요, 그만 둬줘요 제발!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「응……네? 히, 히잇!, 뭐, 뭐에요 이거!」
+				PRINTFORMW 「아니, 안돼요, 저, 그, 그런, 이상해질거같아요, 이제, 그만둬요, 그만 둬줘요 제발!」
+			ENDIF
+			CFLAG:5323 = 2
+		ENDIF
+			RETURN 0
+	;손가락 삽입
+	ELSE
+		;처음
+		IF CFLAG:5313 == 0
+			;처녀(처녀가 아닌 캐릭터의 경우는 무기입으로 좋다)
+			IF TALENT:0 == 1
+				;연모+조수렌코
+				IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+					IF ASSI == 49
+						;레즈비언 중독 Lv5 이상
+						IF ABL:32 >= 5
+							PRINTFORMW 「응, 아……네? 렌코 무슨 일이에요?」
+							PRINTFORMW 「메리…….……부탁해요, 당신의 처음을, 내가 받아도 좋아?」
+							PRINTFORMW 「아, 렌코…….……, ……응, 렌코라면, 좋아요.그대로, 안쪽까지…….」
+							PRINTFORMW (주인님, 미안해요, 그렇지만, 저……)
+						;그 이외
+						ELSE
+							PRINTFORMW 「응, 아……네? 렌코 무슨 일이에요?」
+							PRINTFORMW 「……메리, 미안.」
+							PRINTFORMW 「아파……네? 렌코, 앗, 무엇을……!」
+							PRINTFORMW 「거, 거짓말……, 어째서, 렌코……!」
+						ENDIF
+					ENDIF
+				;연모
+				ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+					PRINTFORMW 「아파, ……네? ……주인님……?」
+					PRINTFORMW 「어, 어째서…….」
+				;?+조수렌코
+				ELSEIF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+					IF ASSI == 49
+						PRINTFORMW 「응……렌코 아무쪼록 했어?」
+						PRINTFORMW 「메리……좋아? 이대로, 안쪽까지…….」
+						PRINTFORMW 「네, 렌코…….그, 그건………….」
+						PRINTFORMW 「……응, 렌코에게라면, 좋아요…….」
+						PRINTFORMW 「렌코, 제 처음, 받아 주세요…….」
+					ENDIF
+				;?
+				ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+					PRINTFORMW 「그렇게……제 처음을 빼앗는 군요…….」
+					PRINTFORMW 「마음대로 하면 되는거에요……마음대로…….」
+				;조수렌코
+				ELSEIF ASSI > 0 && ASSIPLAY
+					IF ASSI == 49
+						PRINTFORMW 「응, 그렇게 손가락 넣으면……? 렌코, 뭐하는거에요?」
+						PRINTFORMW 「……조금, 참아, 메리.」
+						PRINTFORMW 「아파……네? 렌코, 읏, 무엇을……!」
+						PRINTFORMW 「거, 거짓말……, 어째서, 렌코……!」
+					ENDIF
+				;조수 없음
+				ELSEIF ASSIPLAY == 0
+					 PRINTFORMW 「그렇게 안쪽까지 손가락 넣지 마세요! 저, 아직, ……아팟!」
+					 PRINTFORMW 「읏……, 무슨…………거짓말…….」
+				ENDIF
+					CFLAG:5313 = 1
+					RETURN 0
+			;비처녀
+			ELSE
+				;연모+조수렌코
+				IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+					IF ASSINO() == 49
+						;V감각 Lv3 이상
+						IF ABL:1 >= 3
+							PRINTFORMW 「어때, 메리, 이 근처가 좋아?」
+							PRINTFORMW 「앗, 응……좋아, 기분 좋아……그대로, 움직여줘요…….」
+						;그 이외
+						ELSE
+							PRINTFORMW 「메리의 약점은 분명 이 근처였던가……기분 좋아?」
+							PRINTFORMW 「응……약간…….」
+							PRINTFORMW 「아직 별로 익숙해지지 않았기 때문에 그럴거야, 조금씩 길들여 줄테니까.」
+						ENDIF
+					ENDIF
+				;연모
+				ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+					PRINTFORMW 「응……손가락, 기분 좋아……주인님……그대로, 움직여줘요…….」
+				;?조수렌코
+				ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+					IF ASSINO() == 49
+						;V감각 Lv3 이상
+						IF ABL:1 >= 3
+							PRINTFORMW 「어때, 메리, 이 근처가 좋아?」
+							PRINTFORMW 「읏, 응……좋아, 기분 좋아요……그대로, 움직여줘요…….」
+						;그 이외
+						ELSE
+							PRINTFORMW 「메리의 약점은 분명 이 근처였던가……기분 좋아?」
+							PRINTFORMW 「응……약간…….」
+							PRINTFORMW 「아직 별로 익숙해지지 않았기 때문에 그럴거야, 조금씩 길들여 줄테니까.」
+						ENDIF
+					ENDIF
+				;?
+				ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+					PRINTFORMW (이제 와서 손가락으로라니……무슨 의미가 있을까……)
+					PRINTFORMW (지금에 와서 상냥하게 한다는 것도 아닐텐데)
+				;조수렌코
+				ELSEIF ASSI > 0 && ASSIPLAY
+					IF ASSINO() == 49
+						;V감각 Lv3 이상
+						IF ABL:1 >= 3
+							PRINTFORMW 「어때, 메리, 이 근처가 좋아?」
+							PRINTFORMW 「히……렌코, 그렇게 움직이면, 아, 읏!」
+						;그 이외
+						ELSE
+							PRINTFORMW 「메리의 약점은 분명 이 근처였던가……기분 좋아?」
+							PRINTFORMW 「응, , 그런 곳……그런, 움직이지 마요, 렌코…….」
+						ENDIF
+					ENDIF
+				;조수 없음
+				ELSEIF ASSIPLAY == 0
+					;V감각 Lv3 이상
+					IF ABL:1 >= 3
+						PRINTFORMW 「아, 읏, 안되, 그런, 안에서 움직이지 마요……!」
+					;그 이외
+					ELSE
+						PRINTFORMW 「싫어……그런 곳에 손가락 넣지 마요…….」
+					ENDIF
+				ENDIF
+					CFLAG:5313 = 1
+					RETURN 0
+			ENDIF
+		;2회째 이후
+		ELSE
+			;연모+조수렌코
+			IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5313 <= 6 || FLAG:11 == 2)
+				IF ASSINO() == 49
+					PRINTFORMW 「읏, 응응……렌코의 손가락, 기분 좋아요…….」
+				ENDIF
+				CFLAG:5313 = 7
+			;연모
+			ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5313 <= 5 || FLAG:11 == 2)
+				PRINTFORMW 「기분이 좋지만……저만 좋아하는 것도…….」
+				PRINTFORMW 「주인님의 것도 갖고 싶은데…….」
+				CFLAG:5313 = 6
+			;?+조수렌코
+			ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5313 <= 4 || FLAG:11 == 2)
+				IF ASSINO() == 49
+					PRINTFORMW 「손가락……만으로 좋아요?」
+					PRINTFORMW 「메리에게 직접 접할 수 있으니까…….」
+					PRINTFORMW 「렌코……그렇다면, 더 움직여줘요…….」
+				ENDIF
+				CFLAG:5313 = 5
+			;?
+			ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5313 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「손가락만으로 만족?」
+				CFLAG:5313 = 4
+			;조수렌코
+			ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5313 <= 2 || FLAG:11 == 2)
+				IF ASSINO() == 49
+					;V감각 Lv3 이상
+					IF ABL:1 >= 3
+						PRINTFORMW 「읏, 응응……렌코의 손가락이………….」
+						PRINTFORMW 「기분 좋아? 좀, 격렬하게 간다……!」
+						PRINTFORMW 「응!, 렌코, 그런, 너무 격렬해……!」
+					;그 이외
+					ELSE
+						PRINTFORMW 「아직 별로 익숙해지진 않았겠지만, 손가락으로 느긋하게 길들여 줄테니까.」
+						PRINTFORMW 「큿, ……, 렌코, 그런 곳, 그만 둬요……!」
+					ENDIF
+				ENDIF
+			CFLAG:5313 = 3
+			;조수 없음
+			ELSEIF ASSIPLAY == 0 && (CFLAG:5313 <= 1 || FLAG:11 == 2)
+				;V감각 Lv3 이상
+				IF ABL:1 >= 3
+					PRINTFORMW 「아, 아, 앗, 그렇게 하면, 저……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「큿……읏, 기분 나쁜……어째서 당신같은 사람에게…….」
+				ENDIF
+				CFLAG:5313 = 2
+			ENDIF
+			RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;샤워 CFLAG314
+;-------------------------------------------------
+IF SELECTCOM == 351 && TEQUIP:54
+	;처음
+	IF CFLAG:5314 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「여기는 정말로 무엇이든지 있네요……샤워까지 있다니.」
+				PRINTFORMW 「정말 놀라워 ……, 함께 씻자구.」
+				PRINTFORMW 「렌코, 함께 씻는 것에 의미가 있는 거에요?」
+				PRINTFORMW 「아니, 웬지 모르게 그런 말이 나온거야.」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「샤워? 정말로 무엇이든지 있네요, 여기.」
+			PRINTFORMW 「응……아, 기분 좋아요…….」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「샤워까지 있어…….」
+				PRINTFORMW 「자, 깨끗이 하고, 빨리 시작하자구.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「목욕을 하고, 샤워를 한다……끝이 깨끗하군요.」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「여기는 정말로 무엇이든지 있네요……샤워까지 있다니.」
+					PRINTFORMW 「정말 놀라워……, 함께 씻자.」
+					PRINTFORMW 「욕실을 함께, 라는 것은 해본 적 있었지만, 샤워도 함께는 처음이네요.」
+					PRINTFORMW 「함께 몸을 깨끗이 하자.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「여기는 정말로 무엇이든지 있네요……샤워까지 있다니.」
+					PRINTFORMW 「정말 놀라워……, 함께 씻자.」
+					PRINTFORMW 「렌코, 함께 씻는 것에 의미가 있는 거에요?」
+					PRINTFORMW 「아니, 웬지 모르게 그런 말이 나온거야.」
+				ENDIF
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「샤워군요……아무튼, 싫진 않아요.」
+			PRINTFORMW 「다만 아무도 없는 곳에서 혼자서 씻고 싶네요.」
+		ENDIF
+			CFLAG:5314 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5314 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「―……기분 좋네…….」
+				PRINTFORMW 「그렇군요…….」
+				PRINTFORMW 「주인님도 함께 어때? 3명이서라면 과연 좁을까.」
+			ENDIF
+			CFLAG:5314 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5314 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「♪.」
+			PRINTFORMW 메리는 콧노래하면서 샤워를 하고 있다
+			CFLAG:5314 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5314 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「좋은 기분이네, 메리.」
+				PRINTFORMW 「……예, 그렇군요…….」
+				PRINTFORMW 「그대로 하자고 말하고 싶지만, 이제, 시작하자.」
+			ENDIF
+			CFLAG:5314 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5314 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (이 더럽혀진 신체도 함께 흘러내리면 좋은데……)
+			PRINTFORMW (비록 외관만은 깨끗이 되어도, 내용물은……)
+			CFLAG:5314 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5314 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv3 이상
+				IF ABL:32 >= 3
+					PRINTFORMW 「―……좋은 기분이군요, 렌코…….」
+					PRINTFORMW 「그렇구나……이대로 느긋해도 좋지만…….」
+					PRINTFORMW 「시원해졌네요, 이제, 시작할까요?」
+				;그 이외
+				ELSE
+					PRINTFORMW 「좋은 기분…….」
+					PRINTFORMW 「그렇구나…….」
+					PRINTFORMW 「지금부터 무엇을 당할까 생각하지 않으면, 기분은 좋지만…….」
+				ENDIF
+			ENDIF
+			CFLAG:5314 = 3
+		;그 이외
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5314 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「샤워는 싫지 않아요. 씻으면 기분도 좋구요.」
+			PRINTFORMW 「하지만 지금부터 무엇을 당할까 생각하면, 솔직하게 기뻐할 수 없어요…….」
+			CFLAG:5314 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;대면좌위 CFLAG315
+;-------------------------------------------------
+IF SELECTCOM == 22
+	;처음
+	IF CFLAG:5315 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이 몸의 자세인 채로? 또 굉장한 일을 생각했네요…….」
+				PRINTFORMW 「서로를 보면서 하는 것도 좋다고 생각하는데……좋지 않아?」
+				PRINTFORMW 「……응, 아무튼, 이것도 좋을까요……좋아요, 와주세요.」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「응, ……어라, 이런 자세로?」
+			PRINTFORMW 「서로를 보면서 하는 것도 좋네요, 응, 와 주세요…….」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「응, , 렌코…….」
+				PRINTFORMW 「응, 이 자세로 하는 것도 좋잖아?」
+				PRINTFORMW 「이대로는……, ……응, 이것도 좋을지도.」
+				PRINTFORMW 「부탁해요, 꼭 껴안아 주세요…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW (이제 와서 꼭 안아준다고 상냥하다고 생각하는 것은 아니에요……)
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이런 자세라니…….」
+				PRINTFORMW 「이런 식으로 서로 보고 껴안고 하면 보통으로 하는 것보다 좋을거라 생각해.」
+				PRINTFORMW 「될 수 있으면 아무것도 하지 않고 가만히 뒀으면 좋겠어요…….」
+				PRINTFORMW 「뭐, 이러쿵저러쿵 말하지 말고, 하자구.」
+				PRINTFORMW 「…….」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「이런 자세로는……당신의 얼굴을 보면서라니…….」
+			PRINTFORMW 「그렇지 않아도 싫은데, 그런 것…….」
+		ENDIF
+			CFLAG:5315 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5315 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「응, 앙, 흣~……, 렌코…….」
+					PRINTFORMW 「자, 메리……키스 하면서…….」
+					PRINTFORMW 「응, 읏, ……하, 렌코, 더……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 저, 응, 응, 흣~…….」
+					PRINTFORMW 「그런데, 키스 하면서………….」
+					PRINTFORMW 「아, 응……응큿……흣~, 이런 건, 너무 기분 좋아서, 저……!」
+				ENDIF
+			ENDIF
+			CFLAG:5315 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5315 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응, 아! 안쪽까지, 오고 있어……!」
+			PRINTFORMW 「응, 큿, 부탁해요…… 키스해주세요, 더 꼭 껴안아주세요……!」
+			CFLAG:5315 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5315 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3＋V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「렌코, 더, 더 힘껏 꼭 껴안아줘요…….」
+					PRINTFORMW 「응, 메리, 키스하자…….」
+					PRINTFORMW 「응, 읏, ……하, 렌코, 더, 더 와줘요……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이 모습이라면 렌코가 전신으로 느껴지기 때문에 안심할 수 있어요…….」
+					PRINTFORMW 「그래? 메리, 키스하자…….」
+					PRINTFORMW 「응, , ……하……흣~…….」
+				ENDIF
+			ENDIF
+			CFLAG:5315 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5315 <= 3 || FLAG:11 == 2)
+			;굴복 각인 Lv3＋V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「이제 와서 무리하게 사랑하는 척하는, 이런 모습으로 하지 않아도 괜찮은데…….」
+			;그 이외
+			ELSE
+				PRINTFORMW (빨리 끝나지 않으려나……)
+			ENDIF
+			CFLAG:5315 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5315 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3＋V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「아, 저, 응, 응, 흣~…….」
+					PRINTFORMW 「저기, 키스 하면서………….」
+					PRINTFORMW 「아, 응……응큿……흣~, 이런 건, 너무 기분 좋아서, 저……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이제, 이제 그만둬요, 렌코, 이제, 저, 이상해져서, 아…….」
+				ENDIF
+			ENDIF
+			CFLAG:5315 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5315 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3＋V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「싫어, 싫은데, 저……!」
+				PRINTFORMW 「그, 그런, 너무 느끼고 있……아니, 안 되에, 흣~, 응, 응!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「이런, 이런 건 싫어…….」
+				PRINTFORMW 메리는 얼굴을 마주보려 하지 않고 눈물을 흘리면서 행위를 하고 있다……
+			ENDIF
+			CFLAG:5315 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;배면좌위 CFLAG316
+;혼란 모란 CFLAG317
+;-------------------------------------------------
+;배면좌위
+IF SELECTCOM == 23 && TEQUIP:56 == 0
+	;처음
+	IF CFLAG:5316 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이 자세라면 뒤에서 꼭 껴안을 수 있어서 좋다고 생각하지 않아?」
+				PRINTFORMW 「아, 앗, 렌코, 응, 더 꼭 껴안아줘요, ……어, 앗, 가슴을 만지다니…….」
+				PRINTFORMW 「읏, 그런, 너무 느껴버려, 렌코, 더, 더……!」
+			ENDIF
+		;연모+조수 없음
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「주인님, 뒤에서 확실히 꼭 껴안아주세요……, 응, 흣~…….」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 이런 자세라니, 무섭다구요…….」
+				PRINTFORMW 「괜찮아, 자……이렇게 해봐…….」
+				PRINTFORMW 「응……렌코, 꼭 껴안아주세요…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「한다면 보통으로 하면 좋을텐데…….」
+			PRINTFORMW 「……아뇨, 이 자세가 좋으시다면, 괜찮아요.」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「이런 자세로……부끄러워요, 이건…….」
+				PRINTFORMW 「이렇게 뒤에서 안으면서 하는 것이 단지 뒤에서 하는 것보다 좋다고 생각하는데?」
+				PRINTFORMW 「하지만 아무것도 하지 않고 가만히 뒀으면 좋겠어요……어째서 이렇게도 이상한 일만 생각해낼까.」
+				PRINTFORMW 「이러쿵저러쿵 말하지 마.자, 움직인다…….」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「어째서 이런 모습으로……, 부끄러워…….」
+			PRINTFORMW 「그렇지 않아도 싫은데, 이런…….」
+		ENDIF
+			CFLAG:5316 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5315 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 「아, 굉장해, 안쪽까지, 닿아서……!」
+					PRINTFORMW 「그렇게 좋아? 자요, 가슴도 비비어 줄테니까…….」
+					PRINTFORMW 「응응, 그런, 저, 몸 전부가 너무 느껴 버려서 ……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이런, 이런 모습으로, 저……주인님이 보고 있는데……!」
+					PRINTFORMW 「이 자세라면 안쪽까지 닿아서 기분 좋지? 지금은 단지 느끼고 있으면 되는거야.」
+					PRINTFORMW 「그런, 렌코, 안되요, 하지만, 저, 너무 느껴 버려요……!」
+				ENDIF
+			ENDIF
+			CFLAG:5315 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5315 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응, 앙, 아, 흣~응!」
+			PRINTFORMW 「안 돼, 그런, 가슴을 그렇게 강하게 비비면……아, 굉장해……!」
+			CFLAG:5315 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5315 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3＋V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「응, 앗, 아, 흣~응!」
+					PRINTFORMW 「굉장히 혼란스러운거 같네…….자, 메리, 여기는 어때?」
+					PRINTFORMW 「읏, 렌코, 무슨? 아……응…………, 하, 렌코, 더 움직여주세요…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「이 자세라면 뒤에서 꼭 껴안을 수 있기 때문에 좋아.」
+					PRINTFORMW 「전신으로 렌코가 느껴지는 것은 좋지만, 그렇게 가슴만 만지는건…….」
+					PRINTFORMW 「뭐 어때, 줄어 드는 것도 아니고.」
+				ENDIF
+			ENDIF
+			CFLAG:5315 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5315 <= 3 || FLAG:11 == 2)
+			;굴복 각인 Lv3＋V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「가슴만이라니……읏……!」
+				PRINTFORMW 「응, 갑자기 격렬하게……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「응……응응응……!」
+				PRINTFORMW 메리는 필사적으로 소리를 내지 않고 있다……
+			ENDIF
+			CFLAG:5315 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5315 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;굴복 각인 Lv3＋V감각 Lv3 이상
+				IF MARK:2 == 3 && ABL:1 >= 3
+					PRINTFORMW 「아, 저, 응, 응, 흣~…….」
+					PRINTFORMW 「좋아, 여긴 어때?」
+					PRINTFORMW 「아, 응……응큿……흣~, 이런 건, 너무 기분 좋아서, 저……!」
+				;그 이외
+				ELSE
+					PRINTFORMW 「……, 전신이 만지작거려지고 있는 느낌이라니……싫어…….」
+					PRINTFORMW 「그런, 렌코……저, ……안되, 가슴, 손대지 말아줘요 제발!」
+				ENDIF
+			ENDIF
+			CFLAG:5315 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5315 <= 1 || FLAG:11 == 2)
+			;굴복 각인 Lv3＋V감각 Lv3 이상
+			IF MARK:2 == 3 && ABL:1 >= 3
+				PRINTFORMW 「아니, 이런 건 싫은데, 저, 저……!」
+				PRINTFORMW 「싫어, 가슴 비비지 말아요, 아, 그런, 안되!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「……, 전신이 만지작거려지고 있는 느낌이라니……싫어…….」
+				PRINTFORMW 「아니, 그런 곳 손대지 말아요!……아……그런…….」
+			ENDIF
+			CFLAG:5316 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;혼란 모란
+ELSEIF SELECTCOM == 23 && TEQUIP:56
+	;연모＋조수렌코
+	IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5317 <= 6 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;노출버릇 Lv3 이상+V감각 Lv3 이상
+			IF ABL:14 >= 3 && ABL:1 >= 3
+				PRINTFORMW 「거울 안의 우리들도, 연결되고, 느끼고 있는 것같아요……우리들…….」
+				PRINTFORMW 「자, 좀더 좀더 과시하도듯이……!」
+				PRINTFORMW 「! 격렬해져 ……저, 렌코와 연결되어서……굉장해, 굉장해요……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「거울 안의 우리들도, 연결되고, 느끼고 있는 것같아요……우리들…….」
+				PRINTFORMW 「자, 좀더 좀더 과시하듯이……!」
+				PRINTFORMW 「아, 렌코, 그런, 부끄러워요, 저……!」
+			ENDIF
+		ENDIF
+		CFLAG:5317 = 7
+	;연모
+	ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5317 <= 5 || FLAG:11 == 2)
+		;노출버릇 Lv3 이상+V감각 Lv3 이상
+		IF ABL:14 >= 3 && ABL:1 >= 3
+			PRINTFORMW 「비쳐있어……저와 주인님이 연결되고 있는 곳이……!」
+			PRINTFORMW 「앙, 아, 거울안의 저도, 굉장히, 기분 좋아하고 있어요……!」
+		;그 이외
+		ELSE
+			PRINTFORMW 「비쳐있는……저와 주인님이 연결되고 있는 곳(중)이……!」
+			PRINTFORMW 「아, 주인님, 부끄러운, 부끄러운데, 저, 저……!」
+		ENDIF
+		CFLAG:5317 = 6
+	;?+조수렌코
+	ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5317 <= 4 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;노출버릇 Lv3 이상+V감각 Lv3 이상
+			IF ABL:1 >= 3 && ABL:14 >= 3
+				PRINTFORMW 「거울 안의 우리들도, 연결되고, 느끼고 있는 것같아요……우리들…….」
+				PRINTFORMW 「자, 좀더 좀더 과시하듯이…….」
+				PRINTFORMW 「! 격렬하게 ……저, 렌코와 연결되어서……굉장해, 굉장하다……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「거울 안의 우리들도, 연결되고, 느끼고 있는 것같아요……우리들…….」
+				PRINTFORMW 「자, 좀더 좀더 과시하듯이…….」
+				PRINTFORMW 「아, 렌코, 그런, 부끄러운데, 저……!」
+			ENDIF
+		ENDIF
+		CFLAG:5317 = 5
+	;?
+	ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5317 <= 3 || FLAG:11 == 2)
+		;노출버릇 Lv3 이상+V감각 Lv3 이상
+		IF ABL:14 >= 3 && ABL:1 >= 3
+			PRINTFORMW 메리는 거울에 비치고 있는 %조사처리(CALLNAME:MASTER,"과")% 자신이 연결되어 있는 모습을 멍하니 보고 있다……
+		;그 이외
+		ELSE
+			PRINTFORMW 「이렇게 비쳐봐서……뭘하려는걸까…….」
+		ENDIF
+		CFLAG:5317 = 4
+	;조수렌코
+	ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5317 <= 2 || FLAG:11 == 2)
+		IF ASSINO() == 49
+			;노출버릇 Lv3 이상+V감각 Lv3 이상
+			IF ABL:1 >= 3 && ABL:14 >= 3
+				PRINTFORMW 「거울 안의 우리들도, 연결되고, 느끼고 있는 것같아요……우리들…….」
+				PRINTFORMW 「자, 좀더 좀더 과시하듯이…….」
+				PRINTFORMW 「아니! 그런 것, 보고 싶지 않아요, 저, 저……!」
+			;그 이외
+			ELSE
+				PRINTFORMW 「아니! 렌코, 그만둬요, 그만 둬주세요! 이런 건 너무 부끄럽다구요!」
+				PRINTFORMW 「자자, 손으로 눈을 가리면 안되지, 연결되어 있는 곳을 보는거야.」
+				PRINTFORMW 「앗, 그런 것 보여주지 마요……!」
+			ENDIF
+		ENDIF
+		CFLAG:5317 = 3
+	;조수 없음
+	ELSEIF ASSIPLAY == 0 && (CFLAG:5317 <= 1 || FLAG:11 == 2)
+		;노출버릇 Lv3 이상+V감각 Lv3 이상
+		IF ABL:14 >= 3 && ABL:1 >= 3
+			PRINTFORMW 「있어, 싫어, 비치고 있어, 부끄러운 것이 비쳐 있어……!」
+			PRINTFORMW 「웃, 그런 것, 부끄러운데, 싫어, 느껴버린다니, 이상해져버릴것만 같아……!」
+		;그 이외
+		ELSE
+			PRINTFORMW 「큿, 이런 부끄러운 일 보여주지 마요……!」
+			PRINTFORMW 메리는 손으로 얼굴을 감싼채, 몸 전체가 흔들리고 있다……
+		ENDIF
+		CFLAG:5317 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;거품 춤 CFLAG318
+;-------------------------------------------------
+IF SELECTCOM == 352
+	;처음
+	IF CFLAG:5318 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「잘도 생각하네요 그런거…….」
+				PRINTFORMW 「잡지로 본 적 있어. 모처럼이고 하니까.」
+				PRINTFORMW 「모처럼은 뭐야, 뭐……그래도 재미있을 것 같네요, 해 봐요.」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「제가 그렇게 봉사하면 좋은건가요? 뭔가 본 적 있던거 같아요, 그러는 거.」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「잘도 생각하네요 그런거…….」
+				PRINTFORMW 「잡지로 본 적 있어. 모처럼이고 하니까.」
+				PRINTFORMW 「응……아무튼, 좋아요…….」
+			ENDIF
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「목욕탕 데리고 와서 아무것도 안 할리가 없다고 생각했지만…….」
+			PRINTFORMW 「알고 있어요, 하는거겠죠…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「잘도 그러한 이상한 일을 생각했네요…….」
+				PRINTFORMW 「잡지로 본 적 있어. 모처럼이고 하니까.」
+				PRINTFORMW 「모처럼은 뭐에요, 또…….」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「이제 와서지만……잘도 그렇게 이상한 일을 생각하네요…….」
+			PRINTFORMW 「……뭐, 하면 되겠지요, 하면…….」
+		ENDIF
+			CFLAG:5318 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5318 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「이런 식으로 하는건가요? 렌코의 피부와 제 피부가 스치고, 뭔가 저도…….」
+				PRINTFORMW 「응……좋아요……그러니까 주인님도 함께 해보자구? 보고 있는것보단 좋다고 생각하는데?」
+			ENDIF
+			CFLAG:5318 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5318 <= 5 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「주인님, 어떻게, 기분이 좋아?」
+				PRINTFORMW 「응, 피부와 피부가 스치고, 뭔가 저도…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「응, 흣~, 주인님, 이런게 좋아요?」
+			ENDIF
+			CFLAG:5318 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5318 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;봉사 정신 Lv5 이상
+				IF ABL:13 >= 5
+					PRINTFORMW 「―……어째서…….」
+					PRINTFORMW 「……응……어때요, 렌코, 기분 좋아요? ……랄까 렌코, 듣고 있어요?」
+					PRINTFORMW 「응? 아, 아무것도 아니야, 계속해.」
+					PRINTFORMW 「흣~……(기분이 좋은 것은 확실하지만, 어째서 이렇게 차이가 날까……가슴에).」
+				;그 이외
+				ELSE
+					PRINTFORMW 「응……어때요? 이런게 좋아요?」
+					PRINTFORMW 「응, 좋아……메리의 피부가 스쳐서 기분 좋아…….」
+				ENDIF
+			ENDIF
+			CFLAG:5318 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5318 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 메리는 담담하게%CALLNAME:MASTER%에 스스로의 피부를 조정이라고 있다……
+			CFLAG:5318 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5318 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;봉사 정신 Lv3 이상
+				IF ABL:13 >= 3
+					PRINTFORMW 「어때요, 렌코? 기분 좋아요?」
+					PRINTFORMW 「뭔가 저까지 기분 좋네요……응…….」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아무리 렌코라고 해도 이런 일은…….」
+				ENDIF
+			ENDIF
+			CFLAG:5318 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5318 <= 1 || FLAG:11 == 2)
+			;봉사 정신 Lv3 이상
+			IF ABL:13 >= 3
+				PRINTFORMW 「응……이런 걸로 좋아요? ……그런가요?」
+			;그 이외
+			ELSE
+				PRINTFORMW 「어째서……어째서 이런 일을…….」
+			ENDIF
+			CFLAG:5318 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;이뇨제 CFLAG319
+;-------------------------------------------------
+;IF SELECTCOM == 62
+;	;연모+주되들 해 버릇
+;	IF TALENT:150 && TALENT:45 && (CFLAG:5319 < 4 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5319 = 4
+;	;연모
+;	ELSEIF TALENT:150 && (CFLAG:5319 < 3 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5319 = 3
+;	;굴복 각인 Lv3
+;	ELSEIF MARK:2 == 3 && (CFLAG:5319 < 2 || FLAG:11 == 2)
+;		PRINTFORMW 
+;		CFLAG:5319 = 2
+;	;그 이외
+;	ELSEIF CFLAG:5319 < 1 || FLAG:11 == 2
+;		PRINTFORMW 
+;		CFLAG:5319 = 1
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;수치 플레이 CFLAG320 해제 CFLAG321
+;-------------------------------------------------
+IF SELECTCOM == 103 && TEQUIP:56
+	;처음
+	IF CFLAG:5320 == 0
+		;연모＋조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「거울의 앞에서 하는 건가요? 또 별걸 다 생각했네요…….」
+				PRINTFORMW 「렌코……꿈과 현실은 같은 것이지만……거울의 세계와 현실의 세계는 같은걸까요?」
+				PRINTFORMW 「메리, 전에 내가 말했잖아.꿈은 현실로 바뀌는 것, 꿈의 세계를 현실로 바꾼다고.」
+				PRINTFORMW 「만약 거울의 세계가 같은 것이라고 해도, 비록 그것이 전혀 다른 세계라고 해도.」
+				PRINTFORMW 「저 편의 세계의 2명에게 과시하듯이 하면 되는 것 뿐이야.」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「거울……이군요.여기서 한다니……상상하는 것만으로도 굉장하네요…….」
+			PRINTFORMW 「꿈과 현실은 같은 것……거울의 세계와 현실의 세계는 같은걸까요?」
+			PRINTFORMW 「단지 반대로 되어 있을 뿐인데, 다른 세계가 비쳐지고 있는 것 같아요…….」
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「거울의 앞에서 하는 것도 재미있어.비치는 자신의 모습이 자신이 아닌 것 같은 걸……메리, 무슨 문제라도 있어?」
+				PRINTFORMW 「……아니에요, 아무것도 아니에요.………….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「거울……현실의 세계의 저와, 거울의 세계의 저……더러워져버린 현실의 세계의 저……저 편의 세계의 저는…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「……이건, 거울? 뭘할건가요, 렌코……?」
+				PRINTFORMW 「이런 것도 재미있지 않아? 자, 우리들이 비치고 있어.」
+				PRINTFORMW 「거짓말이겠죠, 여기서 한다니……!」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「……어라, 거울? 설마, 여기서!」
+			PRINTFORMW 「무슨 생각으로……그런, 부끄러운 일을…….」
+		ENDIF
+			CFLAG:5320 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5320 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「거울안의 저희들도 부끄러워하고 있어요……그리고 즐거운 듯 하네요.」
+				PRINTFORMW 「자, 메리, 거울의 저 편의 우리들에게 과시해주자고.」
+			ENDIF
+			CFLAG:5320 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5320 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「주인님, 또 거울 앞에서?」
+			PRINTFORMW 「역시, 왠지 이상한 느낌이군요…….」
+			CFLAG:5320 = 6
+		;?조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5320 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「현실과 거울과……어느 쪽이 진짜고 어느 쪽이 가짜인가…….」
+				PRINTFORMW 「……메리?」
+				PRINTFORMW 「지금의 저는 모르겠어요…….」
+			ENDIF
+			CFLAG:5320 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5320 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「거울 안의 저와 현실의 저, 교대할 수 있다면 교대하고 싶어요…….」
+			PRINTFORMW 「어느쪽이나 같을지도 모르겠지만…….」
+			CFLAG:5320 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5320 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;노출버릇 Lv3 이상
+				IF ABL:1 >= 3
+					PRINTFORMW 「부끄러운데……어쩐지 이상한 느낌…….」
+					PRINTFORMW 「좌우가 반대일뿐이고 다른건 완전히 같은데, 저 편은 별세계같아요…….」
+					PRINTFORMW 「자, 메리, 시작하자.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「또……야……?」
+					PRINTFORMW 「적당히 익숙해지면 좋을텐데.거울의 저 편의 저희들에게 과시하듯히 하는 것도 좋잖아.」
+					PRINTFORMW 「어떤 생각을 하고 있는거죠, 렌코…….」
+				ENDIF
+			ENDIF
+			CFLAG:5320 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5320 <= 1 || FLAG:11 == 2)
+			;노출버릇 Lv3 이상
+			IF ABL:1 >= 3
+				PRINTFORMW 「부끄러운데……어쩐지 이상한 느낌…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「또……거울의 앞에서 해…….」
+				PRINTFORMW 「저에게 과시하듯이 한다고 해도 그걸로 뭘…….」
+			ENDIF
+			CFLAG:5320 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+;ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;처음
+;	IF CFLAG:5321 == 0
+		;연모
+;		IF TALENT:150 == 1 && ASSIPLAY == 0
+;			PRINTFORMW 
+		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5321 = 1
+;			RETURN 0
+	;2회째 이후
+;	ELSE
+		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5321 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5321 = 3
+		;그 이외
+;		ELSEIF CFLAG:5321 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5321 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;목욕탕 플레이 CFLAG322 해제 CFLAG323
+;-------------------------------------------------
+IF SELECTCOM == 350 && TEQUIP:53
+	;처음
+	IF CFLAG:5322 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「주인님과 렌코와 함께 욕실인가요?」
+				PRINTFORMW 「오랜만에……어떻게 생각해?」
+				PRINTFORMW 「……목욕탕에서 뭔가의 행위를 하는거겠죠?」
+				PRINTFORMW 「당연하지.」
+				PRINTFORMW 「……역시.」
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「욕실? 주인님과 함께는 처음이네요.」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코와 함께한다니 오래간만이군요…….」
+				PRINTFORMW 「그렇네. 그렇지만 단지 들어가는 것만은 아니야.」
+				PRINTFORMW 「뭐, 상상은 했지만…….」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「욕실에서 뭔가 하는 건가…….」
+			PRINTFORMW 「적어도, 시작하기 전에 느긋하게 목욕할 수 있는 것일까…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「욕실……이군요.어차피 3명이서 한가로이는 씻는 것은 아니겠지요.」
+				PRINTFORMW 「상상에 맡길게.」
+				PRINTFORMW 「흣~…….」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「욕실……이군요.어차피 여기서 이상한 일을 할테니까……그렇게 생각하니 싫어지네요.」
+		ENDIF
+			CFLAG:5322 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5322 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 주인님과 단 둘이 좋아, 라던가 생각하지 않아?」
+				PRINTFORMW 「네? 그런 일 없어요, 응.」
+			ENDIF
+			CFLAG:5322 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5322 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「등을 씻어 드릴까요, 주인님?」
+			PRINTFORMW 「……랄까. 어라, 정말로 하는 거에요?」
+			PRINTFORMW 「응, 그렇다면 서로 깨끗이 씻고 나서 시작해요, 주인님.」
+			CFLAG:5322 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5322 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 함께 씻으면서 비비는거에요?」
+				PRINTFORMW 「응……그러한 것도 좋을지도.」
+				PRINTFORMW 「자, 우선 서로 깨끗이 되고 나서, 하는거요…….」
+			ENDIF
+			CFLAG:5322 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5322 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (적어도 욕실에서는 평온하게 씻고 싶은데……)
+			PRINTFORMW (노예에게는 허황된 소망인 걸까……)
+			CFLAG:5322 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5322 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「응, 아무튼 확실히 몸은 깨끗이 씻어야하고, 어디에서 해도 같기 때문에 아무래도 좋다고 생각해요.」
+				PRINTFORMW 「그렇지만 렌코, 욕실 정도는 천천히 즐겨도 되지 않아요?」
+			ENDIF
+			CFLAG:5322 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5322 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「혼자서 들어가게 해주면 좋겠어요…….」
+			CFLAG:5322 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;처음
+	IF CFLAG:5323 == 0
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상
+				IF ABL:32 >= 5
+					PRINTFORMW 「오랜만에 렌코와 들어온 것은 좋지만, 이런 다양한 일을 한 것은 처음이네요.」
+					PRINTFORMW 「처음으로 함께 들어갔을 때는 서로 서로 수줍어했잖아.」
+					PRINTFORMW 「후후……지금은 설마 이렇게 될거라고는 생각하지 않았지요.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 산뜻했어요…….」
+					PRINTFORMW 「좋지, 이런 것도?」
+					PRINTFORMW 「할 수 있으면 한가롭게 들어가서 있고 싶었어요……그래도 가끔씩은 좋을까.」
+				ENDIF
+			ENDIF
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「응―……산뜻했어요.역시 욕실은 좋네요…….」
+			PRINTFORMW 「또 함께 들어가요, 주인님.」
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「기분 좋았어―.」
+				PRINTFORMW 「그렇네요……그래도 좀 더 천천히 들어가고 싶었어요.」
+			ENDIF
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「모처럼의 욕실인데……아뇨, 아무것도 아니에요…….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「모처럼의 욕실인데…….」
+				PRINTFORMW 「그렇지만 기분 좋았겠지?」
+				PRINTFORMW 「느긋하게 물에 잠겨서 피로를 풀고 싶어요…….」
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「모처럼의 욕실인데, 이렇게 형편없는 건 처음…….」
+		ENDIF
+			CFLAG:5323 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모+조수렌코
+		IF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5323 <= 6 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상
+				IF ABL:32 >= 5
+					PRINTFORMW 「목욕탕이라서 여러가지를 하고도 곧 깨끗이 할 수 있기 때문에 좋네요.」
+					PRINTFORMW 「기분 좋았지? 산뜻했고, 좋잖아? 또 하자.」
+				;그 이외
+				ELSE
+					PRINTFORMW 「아, 산뜻했어요…….」
+					PRINTFORMW 「다음에도 어때?」
+					PRINTFORMW 「너무 자주는 별로지만, 가끔은…….」
+				ENDIF
+			ENDIF
+			CFLAG:5323 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && ASSIPLAY == 0 && (CFLAG:5323 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「목욕탕이라서 어떤 일을 해도 곧 깨끗이 할 수 있기 때문에 좋네요.」
+			PRINTFORMW 「산뜻하기도 했고, 다음은 무엇을 하는거죠, 주인님?」
+			CFLAG:5323 = 6
+		;?+조수렌코
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && (CFLAG:5323 <= 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코와 둘뿐만이라면 좋겠지만…….」
+				PRINTFORMW 「응? 무슨 말 했어?」
+				PRINTFORMW 「……아무것도 아니에요.」
+			ENDIF
+			CFLAG:5323 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && (CFLAG:5323 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (아무리 목욕을 해도 더러움이 씻겨지기는 커녕 더욱 더러워져 간다구?……)
+			PRINTFORMW (어디까지 더러워지고 저속해져야 하는 것일까……)
+			CFLAG:5323 = 4
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY && (CFLAG:5323 <= 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「목욕을 해도 기분이 좋아지지 않는다니…….」
+			ENDIF
+			CFLAG:5323 = 3
+		;조수 없음
+		ELSEIF ASSIPLAY == 0 && (CFLAG:5323 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「목욕을 해도 기분이 좋아지지 않는다니…….」
+			PRINTFORMW 「최저의 기분…….」
+			CFLAG:5323 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;새댁 플레이 CFLAG324 해제 CFLAG325
+;렌코가 메리에 새댁 플레이 강제라고 하는 것을 상상 해서는 안됩니다
+;-------------------------------------------------
+;개시시
+IF SELECTCOM == 90 && TEQUIP:59
+	;처음
+	IF CFLAG:5324 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「알몸에 에이프런……알몸으로 있는 것보다 음란하네요, 이 모습.」
+			PRINTFORMW 「저, 어울리나요? 후후, 왠지 행복한 기분…….」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「이것을 입으라구요? 그건 상관없는데…….」
+			PRINTFORMW 「이제 와서 저에게 애착이 생겼다든가하는건 아니겠죠…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「이것을 입으라니…….」
+			PRINTFORMW 「이제 와서지만 당신이 무엇을 생각하고 있는지 진심으로 모르겠어요…….」
+		ENDIF
+			CFLAG:5324 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5324 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이 모습으로 있으면 두근두근 해요….부끄럽지 않아요, 기쁘고, 행복하고.」
+			PRINTFORMW 「진짜 부부같은 느낌이기 때문일까요? 후후, 주인님, 시작해요.」
+			CFLAG:5324 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5324 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이제 와서 이런 것 입혀서 어떻게 될리가…….」
+		;그 이외
+		ELSEIF CFLAG:5324 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……또 이것? 이런 것 입게 해서 어떻게 될리가…….」
+			CFLAG:5324 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;종료시
+ELSEIF SELECTCOM == 90 && TEQUIP:59 == 0
+	;처음
+	IF CFLAG:5325 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아, 벌써 끝……?」
+			PRINTFORMW 「또, 입고 해요, 네?」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 메리는 말 없이 에이프런을 벗어 던졌다……
+		;그 이외
+		ELSE
+			PRINTFORMW 「흣~……대단히 비참한 기분…….」
+		ENDIF
+			CFLAG:5325 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5325 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「끝나면 외롭네요…….또 해요, 주인님.」
+			CFLAG:5325 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5325 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「무엇을 하고 싶었던 것일까 잘 모르겠네요…….」
+			CFLAG:5325 = 3
+		;그 이외
+		ELSEIF CFLAG:5325 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「흣~……대단히 비참한 기분…….」
+			CFLAG:5325 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;방뇨 CFLAG326
+;강제 방뇨 CFLAG327
+;-------------------------------------------------
+;IF SELECTCOM == 111
+;	;강제 방뇨
+;	IF (TALENT:45 && ABL:10 >= 3 && ABL:21 >= 3) || (TALENT:45 && TEQUIP:12 == 0)
+;		;연모+주되들 해 버릇+야외 플레이
+;		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5327 < 5 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 5
+;		;연모+주되들 해 버릇
+;		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5327 < 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 4
+;		;노출버릇 Lv5
+;		ELSEIF ABL:14 >= 5 && (CFLAG:5327 < 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 3
+;		;굴복 각인 Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5327 < 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5327 = 2
+;		;그 이외
+;		ELSEIF CFLAG:5327 < 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5327 = 1
+;		ENDIF
+;	;방뇨
+;	ELSE
+;		;연모+주되들 해 버릇+야외 플레이
+;		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:5326 < 5 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 5
+;		;연모+주되들 해 버릇
+;		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:5326 < 4 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 4
+;		;노출버릇 Lv5
+;		ELSEIF ABL:14 >= 5 && (CFLAG:5326 < 3 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 3
+;		;굴복 각인 Lv3
+;		ELSEIF MARK:2 == 3 && (CFLAG:5326 < 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5326 = 2
+;		;그 이외
+;		ELSEIF CFLAG:5326 < 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5326 = 1
+;		ENDIF
+;	ENDIF
+;ENDIF
+;
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG 관계(X1를 캐릭터 번호에 치환)
+;파라메타 변동을 트리거로 한 말
+;파라메타 변동 후에 말을 발동합니다
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_50
+;조수가 조교했을 때에 말을 스킵 한다(기호에 따라 사용하는, 줄머리의 것;을 지우면 스킵 하게 된다)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;볼 개그 착용시에는 말을 스킵 한다(OFF라고 구를 차지하고 있는데 마구 말한다)
+SIF TEQUIP:42 == 1
+	RETURN 0 
+;-------------------------------------------------
+;파라메타 변동시의 대사 CFLAG 271296을 사용
+;-------------------------------------------------
+;-------------------------------------------------
+;처음으로 윤활이 LV2 넘은 CFLAG271
+;-------------------------------------------------
+P = PALAM:10 + UP:10
+IF P > PALAMLV:2
+	;처음
+	IF CFLAG:5271 == 0
+		;로션을 사용했을 경우
+		IF SELECTCOM == 60
+			PRINTFORMW 「아, 미끌미끌해…….」
+		;그 이외
+		ELSE
+			PRINTFORMW (어……나, 저, 젖어오고 있어……?)
+		ENDIF
+			CFLAG:5271 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 욕정이 LV2 넘은 CFLAG272
+;-------------------------------------------------
+P = PALAM:13 + UP:13
+IF P > PALAMLV:2
+	IF CFLAG:5272 == 0
+		;미약을 사용했을 경우
+		IF SELECTCOM == 61
+			PRINTFORMW 「큿, 약의 탓……이니까…….」
+			PRINTFORMW 「그렇지만, 읏………….」
+		;그 이외
+		ELSE
+			PRINTFORMW (그런, 저……어째서……)
+		ENDIF
+			CFLAG:5272 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 치정이 LV2 넘은 CFLAG273
+;-------------------------------------------------
+P = PALAM:15 + UP:15
+IF P > PALAMLV:2
+	IF CFLAG:5273 == 0
+		PRINTFORMW 「…………!」
+		PRINTFORMW 메리는 얼굴이 새빨개져서 고개를 푹 숙이고 있다
+		CFLAG:5273 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 공포가 LV2 넘은 CFLAG274
+;-------------------------------------------------
+P = PALAM:17 + UP:17
+IF P > PALAMLV:2
+	IF CFLAG:5274 == 0
+		PRINTFORMW 「안돼……싫어…, 오지 마……!」
+		CFLAG:5274 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 C절정 CFLAG275
+;-------------------------------------------------
+IF NOWEX:0 > 0
+	IF CFLAG:5275 == 0
+		PRINTFORMW 「싫어, 무슨, 그런, 저, 가다니, 그런, 아!」
+		CFLAG:5275 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 V절정 CFLAG276
+;-------------------------------------------------
+IF NOWEX:1 > 0
+	IF CFLAG:5276 == 0
+		;연모
+		IF TALENT:150 == 0
+			PRINTFORMW 「아, 질내가 너무 기분 좋아서……이제 싫어, 싫어, 아!」
+		;조수렌코+레즈비언 중독 Lv5 이상
+		ELSEIF ABL:32 >= 5 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「앗, 렌코, 저, 도, 이제, 가요, 아, 아!」
+			ENDIF
+		;그 이외
+		ELSE
+			PRINTFORMW 「있어, 저, 느끼고 싶지 않은데, 안되, 아, 가버린다……!」
+		ENDIF
+		CFLAG:5276 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 A절정 CFLAG277
+;-------------------------------------------------
+IF NOWEX:2 > 0
+	IF CFLAG:5277 == 0
+		;연모
+		IF TALENT:150 == 0
+			PRINTFORMW 「아, 저, 엉덩이가, 너무 기분 좋아서 ……, 가다니, 아-!」
+		;조수렌코+레즈비언 중독 Lv5 이상
+		ELSEIF ABL:32 >= 5 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「앗, 그런, 저, 엉덩이같은 걸로 ……!」
+				PRINTFORMW 「싫어, 안돼, 렌코, 저, 어떻게 되는걸까요, 그렇게……아, 안돼, 이상해져버려, 아!」
+			ENDIF
+		;그 이외
+		ELSE
+			PRINTFORMW 「아니, 그만 둬, 이제 그만 둬요 제발, 아니, 아니, 이상해져버린다, 안돼!」
+		ENDIF
+		CFLAG:5277 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 B절정 CFLAG278
+;-------------------------------------------------
+IF NOWEX:3 > 0
+	IF CFLAG:5278 == 0
+		PRINTFORMW 「가슴이, 가슴이 이상해져버린다, 응, 아, 저, 아!」
+		CFLAG:5278 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처녀 상실(처녀만) CFLAG279
+;처녀는 무리하게 빼앗으면 안되지……
+;-------------------------------------------------
+IF TFLAG:0 > 0
+	;연모 한편 주인의 섹스에 의한 처녀 상실
+	IF TFLAG:2
+		;연모
+		IF TALENT:150 == 1 && CFLAG:5279 == 0
+			PRINTFORMW 「주인님에게 줄 수 있어서 좋았어요…….」
+			PRINTFORMW 메리는 아픔을 참으면서도 웃는 얼굴로 %CALLNAME:MASTER%에게 키스 해 왔다
+			PRINTFORMW 「……미안해요, 아직 조금 아파……잠시만, 그대로, 부탁드려요…….」
+			PRINTFORMW 메리는 잠시간 가만히 있었지만 그 후 천천히 허리를 움직이기 시작했다……
+		ENDIF
+	;조수 없음+손가락 삽입로 처녀 상실
+	ELSEIF SELECTCOM == 4 && ASSIPLAY == 0
+		;연모＋순종 Lv5
+		IF TALENT:150 == 1 && ABL:10 >= 5 && CFLAG:5279 == 0
+			PRINTFORMW 「아……으응, 이젠……싫어요……모든게…….」
+			PRINTFORMW 메리는 소리 죽여 울고 있다……
+			PALAM:22 += 1000
+		;연모
+		ELSEIF TALENT:150 == 1 && CFLAG:5279 == 0
+			PRINTFORMW 「저기……저……주인님……거짓말이겠죠……?」
+			PRINTFORMW 「응, 뭔가의 실수군요, 그렇겠죠, 그렇다고 말해줘요, 네……?!」
+			PALAM:22 += 10000
+		;???
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && CFLAG:5279 == 0
+			PRINTFORMW (이제 와서……어떤가요……)
+			PRINTFORMW (처음을 빼앗겨버린 정도로……)
+			PRINTFORMW (좋아하지도 않는 사람에게……제……)
+			PRINTFORMW (……이런 사람에게……처녀를, 흣…………)
+			PRINTFORMW 「……큿, ……아 아 아 아!」
+			PRINTFORMW 「이런 사람에게……어째서……!」
+			PALAM:22 += 50000
+		;그 이외
+		ELSEIF CFLAG:5279 == 0
+			PRINTFORMW 「그런……처음을………….」
+			PRINTFORMW 「이건 악몽이야, 나쁜 꿈……이야………….」
+			PRINTFORMW 「어째서……어째서 이런……사람에게……저……이제, 이젠…….」
+		ENDIF
+	;그 이외때에 처녀 상실
+	ELSE
+		;연모+순종 Lv5
+		IF TALENT:150 == 1 && ABL:10 >= 5 && CFLAG:5279 == 0
+			PRINTFORMW 「아……으응, 싫어……싫어요……이런걸로 처음을…….」
+			PRINTFORMW 메리는 소리 죽여 울고 있다……
+			PALAM:22 += 1000
+		;연모
+		ELSEIF TALENT:150 == 1 && CFLAG:5279 == 0
+			PRINTFORMW 「저기……저……주인님……거짓말이겠죠……?」
+			PRINTFORMW 「응, 뭔가의 실수군요, 그렇겠죠, 그렇다고 말해줘요, 네……?!」
+			PALAM:22 += 10000
+		;연모+렌코가 메리로 했을 경우
+		ELSEIF TALENT:150 == 1 && ASSI > 0 && ASSIPLAY && CFLAG:5279 == 0
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv5 이상+반발 각인 Lv0
+				IF ABL:32 >= 5 && MARK:9 == 0
+					PRINTFORMW 메리는 기쁜 지 슬픈 지 모를 복잡한 얼굴을 하고 있다……
+				;그 이외
+				ELSE
+					PRINTFORMW 「아……하하……렌코에게 빼앗겨 버렸네요…….」
+					PRINTFORMW 메리의 눈으로부터 한 줄기의 눈물이 흘러 내렸다……
+					PALAM:22 += 5000
+				ENDIF
+			ENDIF
+		;?그리고 렌코가 메리로 했을 경우
+		ELSEIF TALENT:26 == 1 && ASSI > 0 && ASSIPLAY && CFLAG:5279 == 0
+			IF ASSINO() == 49
+				PRINTFORMW 「큿………….」
+				PRINTFORMW 「메리, 괜찮아?」
+				PRINTFORMW 「응……괜찮아요.렌코, 고마워요…….」
+				PRINTFORMW (먼저 렌코에게 줄 수 있어서, 좋았어요……)
+			ENDIF
+		;???
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0 && CFLAG:5279 == 0
+			PRINTFORMW (이제 와서……어떤가요……)
+			PRINTFORMW (처음을 빼앗긴 정도로……)
+			PRINTFORMW (좋아하지도 않는 사람에게……제……)
+			PRINTFORMW (……이런 사람에게……, …………)
+			PRINTFORMW 「……큿, ……아 아 아 아!」
+			PRINTFORMW 「이런 사람에게……어째서……!」
+			PALAM:22 += 50000
+		;그 이외로 렌코가 메리로 했을 경우
+		ELSEIF ASSI > 0 && ASSIPLAY && CFLAG:5279 == 0
+			IF ASSINO() == 49
+				PRINTFORMW 「아……렌코……그런……그런…….」
+				PRINTFORMW 메리는 무언가 중얼거리면서 울고 있다……
+			ENDIF
+		;그 이외
+		ELSEIF CFLAG:5279 == 0
+			PRINTFORMW 「그런……처음을………….」
+			PRINTFORMW 「이건 악몽이야, 나쁜 꿈……이야………….」
+			PRINTFORMW 「어째서……어째서 이런……사람에게……저……이제, 이젠…….」
+		ENDIF
+	ENDIF
+		CFLAG:5279 = 1
+ENDIF
+
+;-------------------------------------------------
+;섹스로 사정시킨 CFLAG280 CFLAG290
+;-------------------------------------------------
+
+IF TFLAG:9 > 0 || TFLAG:10 > 0
+	;어널 섹스인가?
+	IF TFLAG:9 > 0
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5290 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아! 아……뒤로, 좀더…….」
+			PRINTFORMW 「주인님, 할 수 있으면, 여기에도…….」
+			CFLAG:5290 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5290 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「…………, 흣~…….」
+			CFLAG:5290 = 4
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5290 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「읏, 이런 건 싫어……」
+			CFLAG:5290 = 3
+		;그 이외
+		ELSEIF CFLAG:5290 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어, 아, 빼줘요! 싸지 말아요!」
+			CFLAG:5290 = 2
+		ENDIF
+		;그 이외
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5280 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아……주인님의 것이 나의 질내에, 가득……」
+			PRINTFORMW 「이렇게 나오면, 나……」
+			CFLAG:5280 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5280 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아……질내에……가득 나오고 있어……」
+			CFLAG:5280 = 4
+		;굴복 각인 Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:5280 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아…………더이상은 그만……안에 싸지 말아주세요……」
+			CFLAG:5280 = 3
+		;그 이외
+		ELSEIF CFLAG:5280 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「네……설마, 거짓말, 그만둬주세요 제발 , 안에 싸지 말아요, 싫어, 안돼!」
+			CFLAG:5280 = 2
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+;-------------------------------------------------
+;입으로 사정시킨 CFLAG282
+;-------------------------------------------------
+IF TFLAG:11 > 0
+	;페라, 이라마치오의 경우
+	IF SELECTCOM == 41 || SELECTCOM == 230
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5282 < 5 || FLAG:11 == 2)
+			;정액 중독 Lv5 이상
+			IF ABL:31 >= 5
+				PRINTFORMW 「응, 진하네요, 응큿……흣~……더…….」
+			;그 이외
+			ELSE
+				PRINTFORMW 「응, 진하네요, 응큿……굉장해……가득…….」
+			ENDIF
+			CFLAG:5282 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5282 < 4 || FLAG:11 == 2)
+			PRINTFORMW 「! 응, 응응……진하네요 …….」
+			PRINTFORMW 「싼다면 싼다고 해주면 좋을텐데…….」
+			CFLAG:5282 = 4
+		;정액 중독 Lv3
+		ELSEIF ABL:31 >= 3 && (CFLAG:5282 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 진하네요, 응큿…….」
+			PRINTFORMW (……어라? 이런 걸 아무렇지도 않게 마실 수 있다니……?)
+			CFLAG:5282 = 3
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5282 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 응응……!, 싼다면 싼다고 해줘요…….」
+			CFLAG:5282 = 2
+		;그 이외
+		ELSEIF CFLAG:5282 < 1 || FLAG:11 == 2
+			PRINTFORMW 「응……응응-!, …………입 속에 싸지 마요, 기분 나쁘니까…….」
+			CFLAG:5282 = 1
+		ENDIF
+	;파이즈리의 경우(CFLAG289)
+	ELSEIF SELECTCOM == 42
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5289 < 4 || FLAG:11 == 2)
+			;봉사 정신 Lv5 이상
+			IF ABL:13 >= 5
+				PRINTFORMW 「아……이렇게 가득……아, 아직 나오고 있다, 굉장해…….」
+				PRINTFORMW 「그렇게 기분 좋았던건가요, 주인님? 후후, 더 해달라고 하면 더 해드릴게요.」
+			;그 이외
+			ELSE
+				PRINTFORMW 「아, 나오고 있다, 굉장해, 이렇게 가득…….」
+				PRINTFORMW 「기분 좋았어요, 주인님? 이런게 좋은건가요…….」
+			ENDIF
+			CFLAG:5289 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5289 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「응! 아……많이 나오고 있네요…….」
+			PRINTFORMW 「그렇게 기분이 좋은 건가요? ……그래요?」
+			CFLAG:5289 = 3
+		;봉사 정신 Lv3 이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:5289 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「응! 아……갑자기 싸지 마요…….」
+			PRINTFORMW 「아……아직 나오고 있다니…….」
+			CFLAG:5289 = 2
+		;그 이외(봉사 정신 Lv3 미만)
+		ELSEIF CFLAG:5289 < 1 || FLAG:11 == 2
+			PRINTFORMW 「꺄!, 가슴이 미끌미끌해요…….」
+			CFLAG:5289 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;사정한(뚜껑이든지/남자만) CFLAG283
+;-------------------------------------------------
+;IF TFLAG:30 > 0
+;	;처음
+;	IF CFLAG:5283 == 0
+;		;연모
+;		IF TALENT:150 == 1
+;			PRINTFORMW 
+;		;그 이외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5283 = 1
+;			RETURN 0
+;	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5283 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5283 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5283 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5283 = 2
+;		ENDIF
+;			RETURN 0
+;	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;분유 한(모유 체질만) CFLAG284
+;-------------------------------------------------
+IF TFLAG:31 > 0
+	;처음
+	IF CFLAG:5284 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이것은……저, 임신한걸까요?」
+			PRINTFORMW 「네, 다른 거야? 유감인거 같기도하고 안심한 것같기도 하고…….」
+		;?
+		ELSEIF TALENT:26 == 1
+			PRINTFORMW 「설마……그런…….」
+		;그 이외
+		ELSE
+			PRINTFORMW 「네, 아니, 이건……설마……거짓말…….」
+			PRINTFORMW 메리는 임신했다고 생각했는지 얼굴이 새파래지고 있다.
+		ENDIF
+			CFLAG:5284 = 1
+			RETURN 0
+	;2회째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5284 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아, 또……왜 이렇게 많이……?」
+			CFLAG:5284 = 4
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5284 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「어째서 이렇게…….」
+			CFLAG:5284 = 3
+		;그 이외
+		ELSEIF CFLAG:5284 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「……저, 어떻게 된걸까요…….」
+			CFLAG:5284 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;C감각 Lv5로 C절정 50이상 CFLAG285
+;-------------------------------------------------
+IF ABL:0 >= 5 && EX:0 >= 50
+	;처음
+	IF CFLAG:5285 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「읏, 주인님, 님, 읏, 저, 너무 기분 좋아서, 안되겠어, 요, 아!」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW (……가고 싶지 않아, 가고 싶지 않은데……!)
+			PRINTFORMW 메리는 소리가 새어나오는 것을 필사적으로 억제하고 있다
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「앗, 렌코, 저, 또, 이, 안되, 아, 아!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「안돼, 싫어, 저, 또, ……아!」
+		ENDIF
+			CFLAG:5285 = 1
+			RETURN 0
+	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5285 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5285 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5285 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5285 = 2
+;		ENDIF
+;			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;V감각 Lv5로 V절정 50이상 CFLAG286
+;-------------------------------------------------
+IF ABL:1 >= 5 && EX:1 >= 50
+	;처음
+	IF CFLAG:5286 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「질내가, 너무 기분 좋아요, 주인님, 저, 앗, 아, 아, 앗!」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「앗, 그런……가고 싶지 않은데……안돼, 앗!」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「앗, 렌코, 저, 또, 질내에서 읏, 안되, 아, 앗!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「그런, 이제 싫은데, 그런, 안되, 이, 앗!」
+		ENDIF
+			CFLAG:5286 = 1
+			RETURN 0
+	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5286 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5286 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5286 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5286 = 2
+;		ENDIF
+;			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;A감각 Lv5로 A절정 50이상 CFLAG287
+;-------------------------------------------------
+IF ABL:2 >= 5 && EX:2 >= 50
+	;처음
+	IF CFLAG:5287 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「그런, 뒤로 몇번이나 한다니…….」
+			PRINTFORMW 「주인님, 저, 저……이상해져버려요……!」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「어, 어째서……저……뒤로 이렇게 느끼……아냐, 느끼는게 아닐거에요……!」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「앗, 렌코, 저, 또 뒤로 이렇게……!」
+				PRINTFORMW 「응, 아, 그런, 저, 이상해져버려요……!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「그런, 저, 뒤로 몇번이나 느끼다니……아냐, 그런 게 아닐거에요!」
+		ENDIF
+			CFLAG:5287 = 1
+			RETURN 0
+	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5287 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5287 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5287 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5287 = 2
+;		ENDIF
+;			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;B감각 Lv5로 B절정 50이상 CFLAG288
+;-------------------------------------------------
+IF ABL:3 >= 5 && EX:3 >= 50
+	;처음
+	IF CFLAG:5288 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「앗, 그런, 가슴만……안 되, 너무 기분 좋아서, 아, 아!」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「가슴의 끝이 찌릿찌릿……아……아니, 안되, 가고 싶지 않은데……!」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 그런, 가슴만……앗, 읏, 앗!」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「아니, 가슴만 그렇게 하면, 그런, 저, 더 이상은……앗!」
+		ENDIF
+			CFLAG:5288 = 1
+			RETURN 0
+	;2회째 이후
+;	ELSE
+;		;연모
+;		IF TALENT:150 == 1 && (CFLAG:5288 <= 2 || FLAG:11 == 2)
+;			PRINTFORMW 
+;			CFLAG:5288 = 3
+;		;그 이외
+;		ELSEIF CFLAG:5288 <= 1 || FLAG:11 == 2
+;			PRINTFORMW 
+;			CFLAG:5288 = 2
+;		ENDIF
+;			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG 관계(X1를 캐릭터 번호에 치환)
+;각인 변동을 트리거로 한 말
+;각인 변동 후에 말을 발동합니다
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_50
+;조수가 조교했을 때에 말을 스킵 한다(기호에 따라 사용하는, 줄머리의 것;을 지우면 스킵 하게 된다)
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;볼 개그 착용시에는 말을 스킵 한다(OFF라고 구를 차지하고 있는데 마구 말한다)
+SIF TEQUIP:42 == 1
+	RETURN 0 
+;-------------------------------------------------
+;고통 각인 Lv3 취득 CFLAG297
+;-------------------------------------------------
+IF TFLAG:40 == 3
+	IF CFLAG:5297 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「……아무리 주인님이라도……아픈 건…….」
+			PRINTFORMW 「부탁해요, 더 이상은 싫어요…….」
+		;?
+		ELSEIF TALENT:26 == 1 && ASSIPLAY == 0
+			PRINTFORMW 「……!」
+			PRINTFORMW 「싫어, 싫어…아픈 것은……싫어….」
+		;조수렌코
+		ELSEIF ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				PRINTFORMW 「부탁해요, 이제, 아픈 것은 싫어요, 제발, 렌코…….」
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「부탁해요, 이제, 아픈 건 싫어…….」
+		ENDIF
+		CFLAG:5297 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;쾌락 각인 Lv3 취득 CFLAG298
+;-------------------------------------------------
+IF TFLAG:41 == 3
+	IF CFLAG:5298 == 0
+		PRINTFORMW 「너무 기분 좋아……, 그런 것 안되는데…….」
+		CFLAG:5298 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;굴복 각인 Lv3 취득 CFLAG299
+;-------------------------------------------------
+IF TFLAG:42 == 3
+	IF CFLAG:5299 == 0
+		PRINTFORMW (싫어……이제 더 이상……견딜 수 없어……)
+		;조수
+		IF ASSI > 0 && ASSIPLAY
+			;조수렌코
+			IF ASSINO() == 49
+				PRINTFORMW (더이상 그 무렵으로는 돌아갈 수 없는걸까요……렌코……)
+			;조수 그 외
+			ELSE
+				PRINTFORMW (미안, 렌코……이제, 돌아올 수 있을 것 같지 않아요……)
+			ENDIF
+		;조수 없음
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW (미안, 렌코……이제, 돌아올 수 있을 것 같지 않아요……)
+		ENDIF
+		CFLAG:5299 = 1
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;반발 각인 Lv3 취득 CFLAG300
+;-------------------------------------------------
+IF TFLAG:44 == 3
+	IF CFLAG:5300 == 0
+		;조수렌코
+		IF TALENT:150 == 0 && ASSI > 0 && ASSIPLAY
+			IF ASSINO() == 49
+				;레즈비언 중독 Lv2 이상
+				IF ABL:32 >= 2
+					PRINTFORMW 메리는 일순간 렌코를 쳐다봤지만 곧바로 얼굴을 숙였다
+				;그 이외
+				ELSE
+					PRINTFORMW 「허락하지 않겠어요……아무리 렌코라도……!」
+				ENDIF
+			ENDIF
+		;그 이외
+		ELSEIF ASSIPLAY == 0
+			PRINTFORMW 「허락하지 않아요, 절대……!」
+		ENDIF 
+		CFLAG:5300 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;이벤트 말집(X1, X2를 캐릭터 번호에 치환한다)
+;-------------------------------------------------
+@SELF_KOJO_K50
+;-------------------------------------------------
+;조교 후 자위 CFLAG400
+;-------------------------------------------------
+IF TFLAG:200 == 151
+	;연모
+	IF TALENT:150 ==1 && (CFLAG:5400 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「아, 몸이 뜨거워, 응, 주인님, 흣~……!」
+		CFLAG:5400 = 3
+	;자위 중독 Lv3 이상
+	ELSEIF ABL:30 >= 3 && (CFLAG:5400 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「흣~……멈출 수 없어, 응……!」
+		CFLAG:5400 = 2
+	;그 이외
+	ELSEIF CFLAG:5400 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아, 응응…….」
+		PRINTFORMW ( 저, 뭐 하는 걸까요……)
+		CFLAG:5400 = 1
+	ENDIF
+
+;-------------------------------------------------
+;레즈비언 플레이 CFLAG401
+;-------------------------------------------------
+ELSEIF (TFLAG:200 == 154 || TFLAG:200 == 155)
+;조수가 렌코 때 마셔
+	;첫회
+	IF CFLAG:5401 == 0
+		;연모
+		IF TALENT:150 == 1 && ASSINO() == 49
+			PRINTFORMW 「메리, 계속할까? 계속 하고 싶지 않아?」
+			PRINTFORMW 「주인님에게는 실례겠지만……응, 좋아요.」
+		;연모 없음
+		ELSEIF ASSINO() == 49
+			PRINTFORMW 「메리, 계속할까? 계속 하고 싶지 않아?」
+			PRINTFORMW 「될 수 있으면 쉬었으면 좋겠어요…….」
+			PRINTFORMW 「네-, ……라니.싫어도 계속 할거야.」
+			PRINTFORMW 「아, 역시.」 
+		ENDIF
+		CFLAG:5401 = 1
+	;2번째 이후
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5401 < 5 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				IF RAND:3 == 0
+					PRINTFORMW 「아직 괜찮아?」
+					PRINTFORMW 「응……아직, 하는 거에요?」
+					PRINTFORMW 「당연하지, 나는 아직도 부족한걸.」
+				ELSEIF RAND:2 == 0
+					PRINTFORMW 「메리, 좋지?」
+					PRINTFORMW 「어차피 그만 두라고 말해도 그만두지 않겠지요.」
+					PRINTFORMW 「그렇게 말해도, 메리도 만족은 안한 것 같은데?」
+				ELSE
+					PRINTFORMW 「아, 렌코도 주인님도 어느 쪽도 좋아요……!」
+					PRINTFORMW 「후후, 주인님이 패배한 건 아니에요―, 더 가득 사랑해 주세요.」
+				ENDIF
+			ENDIF
+			CFLAG:5401 = 5
+		;?
+		ELSEIF TALENT:26 == 1 && (CFLAG:5401 < 4 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「렌코, 부탁…….」
+				PRINTFORMW 「어머나, 메리가 그렇게 적극적으로 해달라고.」
+				PRINTFORMW 「싫어, 그만…….」
+			ENDIF
+			CFLAG:5401 = 4
+		;레즈비언 중독 Lv5 이상
+		ELSEIF ABL:32 >= 5 && (CFLAG:5401 < 3 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				IF RAND:2 == 0
+					PRINTFORMW 「렌코……아직 부족해요, 더 …….」
+					PRINTFORMW 「어머, 메리가 이렇게 적극적이라고는 생각하지 않았는데.」
+				ELSE
+					PRINTFORMW 「메리, 오늘도 계속 하는거야.」
+					PRINTFORMW 「렌코……후후, 어쩔 수 없네요.」
+				ENDIF
+			ENDIF
+			CFLAG:5401 = 3
+		;레즈비언Lv3 이상
+		ELSEIF ABL:22 >= 3 && (CFLAG:5401 < 2 || FLAG:11 == 2)
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 계속 하는거야.」
+				PRINTFORMW 「부탁이니까 쉬게 해주세요…….」
+			ENDIF
+			CFLAG:5401 = 2
+		;그 이외(……는 최초부터 레즈비언기분 Lv3이지만 일단)
+		ELSEIF CFLAG:5401 < 1 || FLAG:11 == 2
+			IF ASSINO() == 49
+				PRINTFORMW 「메리, 좋지? 계속 한다…….」
+				PRINTFORMW 「아니, 렌코, 싫어, 안된다니까요……!」
+			ENDIF
+			CFLAG:5401 = 1
+		ENDIF
+	ENDIF
+
+
+;-------------------------------------------------
+;아침 페라 CFLAG402
+;-------------------------------------------------
+ELSEIF TFLAG:200 == 140
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:5402 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응, , 아……주인님, 안녕히 주무셨어요.」
+		PRINTFORMW 「저, 기분 좋았어요?」
+		CFLAG:5402 = 3
+	;봉사 정신 Lv5 이상
+	ELSEIF ABL:13 >= 5 && (CFLAG:5402 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응, 아……안녕히, 잘 주무셨어요……?」
+		CFLAG:5402 = 2
+	;그 이외
+	ELSEIF CFLAG:5402 < 1 || FLAG:11 == 2
+		PRINTFORMW ( 저, 어째서 이런 일을……)
+		PRINTFORMW 메리는 고개를 갸웃거리면서도 페니스를 입으로부터 떼어 놓으려고 하지 않는다……
+		CFLAG:5402 = 1
+	ENDIF
+
+
+;-------------------------------------------------
+;조교 후 섹스 CFLAG403
+;-------------------------------------------------
+ELSEIF TFLAG:200 == 150
+	;V감각 Lv4 이상
+	IF ABL:1 >= 4 && (CFLAG:5403 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「주인님, 부탁해요, 더, 더……!」
+		CFLAG:5403 = 2
+	;그 이외
+	ELSEIF CFLAG:5403 < 1 || FLAG:11 == 2
+		PRINTFORMW 「주인님, 저, 아직, 좀더……!」
+		CFLAG:5403 = 1
+	ENDIF
+
+
+;-------------------------------------------------
+;조교 후야 겨　 CFLAG404
+;-------------------------------------------------
+ELSEIF TFLAG:200 == 158
+	;V감각 Lv5 이상
+	IF ABL:1 >= 5 && (CFLAG:5404 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「미안해요 주인님, 아직 몸이 뜨거워요…….」
+		PRINTFORMW 「부탁해요, 더, 더 안아주세요…….」
+		CFLAG:5404 = 2
+	;그 이외
+	ELSEIF CFLAG:5404 < 1 || FLAG:11 == 2
+		PRINTFORMW 「부탁해요 주인님, 더, 더 사랑해주세요…….」
+		CFLAG:5404 = 1
+	ENDIF
+
+
+;-------------------------------------------------
+;매각
+;이것을 쓰는 것은 저에는 무리입니다……
+;-------------------------------------------------
+ELSEIF TFLAG:200 == 130
+	;연모+반발 각인 Lv3 미만
+	IF TALENT:150 && MARK:9 < 3
+		PRINTFORMW 
+	;반발 각인 Lv3
+	ELSEIF MARK:9 == 3
+		PRINTFORMW 
+	;음란
+	ELSEIF TALENT:170
+		PRINTFORMW 
+	;그 이외
+	ELSE
+		PRINTFORMW 
+	ENDIF
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+
+;-------------------------------------------------
+;@단체 엔딩 관계(X1, X2를 캐릭터 번호에 치환, ZZ를 엔딩의 행수로 한다)
+;통상의 엔딩 체크 전에 개별 엔딩을 판정
+;-------------------------------------------------
+@SINGLE_ENDING_K50
+DRAWLINE
+PRINTFORMW ―――단독 엔드 조건 달성---
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 문득 깨달아보니, %조사처리(CALLNAME:MASTER,"는")% 자신의 방에 있었다
+PRINTFORMW 수개월전, 그 이상한 세계에서 헤매기 전에 살고 있던「자신의 방.」이다
+PRINTFORMW 메리를 불러도 대답은 없다
+PRINTFORMW 마치 모두가 환상이었던것과 같이, 방은 이전인 채의 모습을 유지하고 있었다……
+PRINTFORMW 　
+PRINTFORMW 　
+PRINTFORMW 　
+PRINTFORMW 　
+PRINTFORMW ……라고 생각했지만
+PRINTFORMW 「아, 일어났어요? 잘 잤어요?」
+PRINTFORMW 메리가%CALLNAME:MASTER%의 방에 들어 왔다
+PRINTFORMW 「냉장고 안에 있는 것들, 마음대로 사용했는데 괜찮아요? 아침 밥 해놨으니, 먹자구요.」
+PRINTFORMW 그렇게 메리는 말했지만, %조사처리(CALLNAME:MASTER,"는")% 단지 멍하니 앉아 있었다
+PRINTFORMW 「왜 멍하니? ……아, 갑자기 원래의 세계로 돌아올 수 있었기 때문에 놀랐어요?」
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 입을 다문채 수긍했다
+PRINTFORMW 「깨어저면 여기에 있었어요.」
+PRINTFORMW 「방안이라든지 텔레비전이라든지 캘린더라든지 여러가지 보고, 원래의 세계로 돌아올 수 있다고 알아냈어요.」
+PRINTFORMW 「왜 돌아올 수 있었는지는 모르지만……그래도 그런 일은 아무래도 좋아요.」
+PRINTFORMW 그렇게 메리는 말하면, %CALLNAME:MASTER%에 접근 키스를 했다
+PRINTFORMW 「원래의 세계로 돌아올 수 있을지도 몰랐고 그러고 싶다고 생각도 하지 않았지만, 그런 일조차 아무래도 좋다구요.」
+PRINTFORMW 「앞으로도, 지금처럼만 사랑해 준다면 그래서…….」
+PRINTFORMW 「……아, 밥이 식어버리겠네요.빨리 먹자구요? 다 먹으면……?」
+PRINTFORMW 메리는 그렇게 말하고, 방에서 저간다구?
+PRINTFORMW 그러저%조사처리(CALLNAME:MASTER,"는")% 아직도 꿈에서도 보고 있는 것 같이 멍하니 있었다……
+PRINTFORMW 　
+PRINTFORMW 이렇게 해서 %조사처리(CALLNAME:MASTER,"는")% 평소의 일상에 돌아왔다
+PRINTFORMW 메리와 생애를 같이 한다고 하는 유일한, 그리고 최대의 차이를 제외하고……
+PRINTFORMW 　
+PRINTFORMW 　　　　　　　　―― Ending No.1050 (메리엔드)
+
+;CALL GAME_CONTINUE
+RETURN 0
+
+;-------------------------------------------------
+;여러가지 미묘하게 긴 말
+;-------------------------------------------------
+@K50_UTTALK
+	DRAWLINE
+	PRINTFORMW 「이런 곳에 헤맨 탓으로……이런 심한 일만…….」
+	PRINTFORMW 「……렌코도……친구라고 생각했는데, 어째서…….」
+	PRINTFORMW 「이제 싫어……이런 악몽, 빨리 깨어서……원래의 세계에 돌아가…….」
+	PRINTFORMW 「………….」
+	PRINTFORMW 「………….」
+	PRINTFORMW 「……아.」
+	PRINTFORMW 「여기는 분명하게 다른 세계……그리고 제 꿈……이라면.」
+	PRINTFORMW 「렌코도 모두 헤매고 있었던 것이라고 하세요…….」
+	PRINTFORMW 「렌코가 왜 여기에 있는지……렌코가 저에게 심한 일 하는 것은…….」
+	PRINTFORMW 「렌코가 저 사람의 말하는대로인 것은…….」
+	PRINTFORMW 「저 사람 탓만이 아닌……이런 곳에 헤매어, 렌코를 연루로 한, 제 탓……이라도 있는 군요…….」
+	PRINTFORMW 「………….」
+	PRINTFORMW 「……, 렌코…….」
+	PRINTFORMW 「미안……렌코……미안해요…….」
+	TALENT:23 = 0
+	TALENT:26 = 1
+	TALENT:35 = 0
+	CFLAG:5213 = 1
+
+@K50_RNTALK
+	DRAWLINE
+	PRINTFORMW 「꿈과 현실은 같은 것, 그렇지만 일어난 사실조차 꿈인지 생시인지 모른다…….」
+	PRINTFORMW 「이런 심한 것이 현실일 리가 없어요……그래, 꿈이야.」
+	PRINTFORMW 「이렇게, 렌코가 그렇게 심한 일을 할 리 없으니까요.」
+	PRINTFORMW 「현실일 리가 없는……이라면……후후……아하하, 그래요…….」
+	PRINTFORMW 「여기가 꿈의 세계라고 한다면…….」
+	PRINTFORMW 「무엇이 일어저도, 무엇을 하셔도, ……당신에게저 렌코에게 무엇을 당해도, 아무것도 문제 없어요…….」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"과")% 렌코가 방을 나오려고 했을 때 메리는 그런 일을 중얼거리고 있었다
+	PRINTFORMW 　　　
+	PRINTFORMW 　　　
+	PRINTFORMW 메리의【호기심】과【수줍음】이 소멸합니다
+	PRINTFORMW 메리에【무관심】【억압】【저항】이 추가됩니다
+	TALENT:21 = 1
+	TALENT:23 = 0
+	TALENT:32 = 1
+	TALENT:34 = 1
+	TALENT:35 = 0
+	CFLAG:5212 = 1
+
+@K50_NTALK
+	DRAWLINE
+	PRINTFORMW 「꿈과 현실은 같은 것, 그렇지만 일어난 사실조차 꿈인지 생시인지 모른다…….」
+	PRINTFORMW 「이런 심한 것이 현실일 리가 없어요……그래, 꿈이야.」
+	PRINTFORMW 「현실일 리가 없는……이라면……후후……아하하, 그래요…….」
+	PRINTFORMW 「여기가 꿈의 세계라고 한다면…….」
+	PRINTFORMW 「무엇이 일어저도, 무엇을 하셔도, ……당신에게 어떻게 당해도, 아무것도 문제 없어요…….」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 방을 나오려고 했을 때 메리는 그런 일을 중얼거리고 있었다
+	PRINTFORMW 　　　
+	PRINTFORMW 　　　
+	PRINTFORMW 메리의【호기심】과【수줍음】이 소멸합니다
+	PRINTFORMW 메리에【무관심】【억압】【저항】이 추가됩니다
+	TALENT:21 = 1
+	TALENT:23 = 0
+	TALENT:32 = 1
+	TALENT:34 = 1
+	TALENT:35 = 0
+	CFLAG:5212 = 1
+
+@K50_LTALK
+	DRAWLINE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 방에 들어가면 메리는 침대에 앉아 기다려요 있었다.
+	PRINTFORMW 「……그렇군요. 할 이야기가 있는데요, 시작하기 전에 조금 괜찮을까요?」?」
+	PRINTFORMW 「저, 이유도 알지 못한 채 갑자기 여기에 오고, 당신의 노예가 되었어요.」
+	PRINTFORMW 「그리고 지금까지 쭉 당신에게 더럽혀지고, 심한 일 당하고…….」
+	PRINTFORMW 「여기가 꿈의 세계라고 믿어 버리고 현실로부터 도망치고 있었어요.」
+	PRINTFORMW 「그런데도 지금은……당신을 좋아하게……되어 버렸어요…….」
+	PRINTFORMW 「당신 밖에 안 보여요, 세상이 당신으로 가득해…….」
+	PRINTFORMW 「싫어, 싫어서 견딜 수 없었는데, 당신은 싫었을 텐데, ……이상해요, 저.」
+	PRINTFORMW 거기까지 메리는 말하면서, %CALLNAME:MASTER%에 달라붙어 왔다.
+	PRINTFORMW 「……부탁해요, 앞으로도 쭉 제 곁에 있어줘요! 저를 사랑해줘요!」
+	PRINTFORMW 「당신에게 버려지는 악몽은 보고 싶지 않아요, 당신에게 사랑받는 현실을 보고 싶은거에요!」
+	PRINTFORMW 「부탁……좀더 좀더 열심히 봉사할게요, 뭐든지 할테니까…….흐윽, 흑, 흑…….」
+	PRINTFORMW 메리는 달라붙은 채로 울기 시작해 버렸다.%조사처리(CALLNAME:MASTER,"는")% 메리를 살그머니 꼭 껴안았다.
+	PRINTFORMW 잠시 후 울음이 그쳤는지, 또 메리는 이야기를 시작했다.
+	PRINTFORMW 「……미안해요.그렇지만……대답해줘요.저를……앞으로도 사랑해줄, 거에요?」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 대답하는 대신에, 메리를 다시 꼭 껴안고 키스를 했다.
+	PRINTFORMW 「응응……아……이걸로, 좋은거죠, 정말로……?」
+	PRINTFORMW 「읏, 미안해요, 아직 꿈꾸고 있는 것 같아서……그래도, 꿈이 아니군요.」
+	PRINTFORMW 「앞으로도, 잘 부탁이해요.고마워요, 정말 좋아해요……주인님……!」
+	PRINTFORMW 메리는 웃는 얼굴로 %CALLNAME:MASTER%에게 달라붙어, 키스를 했다…….
+	PRINTFORMW 　　　
+	PRINTFORMW 메리의【일선 넘지 않는】이 소멸합니다
+	TALENT:27 = 0
+		IF TALENT:21 == 1 || TALENT:32 == 1 || TALENT:34 == 1
+			TALENT:21 = 0
+			TALENT:32 = 0
+			TALENT:34 = 0
+		ENDIF
+	CFLAG:5201 = 5
+
+@K50_MOUTALK
+	DRAWLINE
+	PRINTFORMW 「주인님, 렌코……이따금 불안하게 되요. 이것도 또 꿈이 아닌 걸까, 깨면 혼자가 되어 있지 않을까 생각해요.」
+	PRINTFORMW 「주인님에게, 렌코에게 사랑받아 행복할 것인데, 저…….」
+	PRINTFORMW 「꿈은, 꿈은 현실로 바뀌는 것, 꿈의 세계를 현실로 바꾸면 되는거죠.」
+	PRINTFORMW 「그렇지만, 현실은 꿈에 어쩐지 안 된다.현실로부터 깨다니 그럴 순 없어요.」
+	PRINTFORMW 「앞으로도 쭉, 저도 주인님도 메리를 사랑해 주기 때문에.」
+	PRINTFORMW 「그러니까 메리.괜찮아. 우리들은, 쭉 함께.떨어져는 있을 수 없어.」
+	PRINTFORMW 「……고마워요, 렌코.저, 걱정거리만 생각해 버려서…….」
+	PRINTFORMW 「그렇지만, 이제 괜찮아요.고마워요, 렌코…….」
+	PRINTFORMW 「주인님, 렌코.재차, 앞으로도 잘 부탁합니다.」
+	TALENT:151 = 1
+	CFLAG:5211 = 1
+
+
+@K50_STALK
+	DRAWLINE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 방에 들어가니 메리는 침대에 앉아 기다려요 있었다.
+	PRINTFORMW 「……그렇군요. 할 이야기가 있는데요, 시작하기 전에 조금 괜찮을까요?」
+	PRINTFORMW 「당신은 저를 노예로서 취급하고 지금까지 쭉 심한 일만 해 왔어요.」
+	PRINTFORMW 「렌코에 대해서도 심한 짓을 하고, 무리하게 따르게 해서……군요?」
+	PRINTFORMW 「그렇지만……인정하고 싶지 않지만, 렌코는 당신에게 반하고 있죠…….」
+	PRINTFORMW 「……응, 당신은 어떻게 생각해요? 렌코, 어떻게 생각하는 거죠?」
+	DRAWLINE
+	PRINTL [0] 「좋아한다.」
+	PRINTL [1] 「노예의 1명에 지저지 않는다.」
+	$INPUT_LOOP_k502
+	INPUT
+	SIF RESULT != 0 && RESULT != 1
+		GOTO INPUT_LOOP_k502
+	DRAWLINE
+	SIF RESULT == 0
+		GOTO NEXT1
+
+	PRINTFORMW 「……역시, 그래요.」
+	PRINTFORMW 「당신은……그러한 사람이야.」
+	PRINTFORMW 「………….」
+	PRINTFORMW 「내가 이런 곳에 헤매지 않았으면, 렌코는……이런 일도 안당했을텐데…….」
+	PRINTFORMW 「흑, 흐윽……렌코……어째서 이런 녀석에게……!」
+	PRINTFORMW 「………….」
+	PRINTFORMW 「……이제 되어요, 마음대로 하세요…….」
+	PRINTFORMW 「아무것도 남지 않은 빈껍질의 저로 좋다면, 마음대로 해버려요…….」
+	CFLAG:5201 = 6
+	RETURN 1
+
+	$NEXT1
+	PRINTFORMW 「……정말로? 믿어도……좋아요?」
+	PRINTFORMW 「……렌코……좋겠네…….」
+	PRINTFORMW 「………….」
+	PRINTFORMW 메리는 안심했는지 눈물을 흘리기 시작했다.
+	PRINTFORMW 「이것으로 더이상 미련을 남길 것은 없어요.이제, 저는 노예로서라도 좋아요, 어떻게 되어도 상관없어요, 버림받아도 괜찮아요.」
+	PRINTFORMW 「렌코를……쭉 사랑해 줘요, 부탁…….」
+	PRINTFORMW 메리는 그렇게 말하며 %CALLNAME:MASTER%의 팔에 매달려 왔다.
+	PRINTFORMW 　　　
+	PRINTFORMW 여기서%조사처리(CALLNAME:MASTER,"는")% 문득 생각한다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 렌코를 좋아한다.그러저, 메리의 일은……?
+	DRAWLINE
+	PRINTL [0] (좋아)
+	PRINTL [1] (노예)
+	$INPUT_LOOP_k503
+	INPUT
+	SIF RESULT != 0 && RESULT != 1
+		GOTO INPUT_LOOP_k503
+	DRAWLINE
+	SIF RESULT == 0
+		GOTO NEXT2
+
+	PRINTFORMW 메리는 노예다.
+	PRINTFORMW 앞으로도 「주인.」과「노예.」의 입장인 채로 있기로 했다.
+	PRINTFORMW 　　　
+	PRINTFORMW ……지금부터 어떻게 할까.
+	PRINTFORMW 렌코를 위해서 메리를 두는지, 그렇지 않으면 관계없이 팔까.
+	PRINTFORMW 이지만 우선 지금은 메리를 어떻게 조교하는지, 그것을 생각하기로 했다…….
+	TALENT:26 = 0
+	TALENT:71 = 0
+	CFLAG:5201 = 7
+	RETURN 1
+	
+	$NEXT2
+	PRINTFORMW 메리도 좋아한다.%조사처리(CALLNAME:MASTER,"는")% 생각을 메리에게 전했다.
+	PRINTFORMW 「네……?」
+	PRINTFORMW 메리는 무슨 말을 들었는지 이해할 수 없는 모습이었다.
+	PRINTFORMW 「저기, 농담이죠……무슨 말하는거에요…….당신에게는 렌코가…….」
+	PRINTFORMW 「………….」
+	PRINTFORMW 「어째서…….」
+	PRINTFORMW 「그런 소리……들어봤자……저…….」
+	PRINTFORMW 「그렇게 심한 일만 당하고, 계속 더럽혀지고, 그런데도…….」
+	PRINTFORMW 「더이상 아무것도 남지 않은 저 따위를…….」
+	PRINTFORMW 「이제 와서, 좋아한다 라고……그런……그런…….」
+	PRINTFORMW 그렇게 메리는 중얼거리듯이 말했지만, 눈으로부터 굵은 눈물이 흘러넘쳐 떨어지기 시작했다.
+	PRINTFORMW 「……정말로, 좋아요? 저같은 걸로…….」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 대답하는 대신에, 메리를 꼭 껴안고 키스를 했다.
+	PRINTFORMW 「응응……아……정말로, 좋아요……? 이런 저를……아무것도 남지 않은 빈껍질같은 저를…….」
+	PRINTFORMW 「정말로……좋아한다고…….」
+	PRINTFORMW 「………………아아!」
+	PRINTFORMW 메리는 그대로 큰 소리를 지르며 울기 시작했다.%조사처리(CALLNAME:MASTER,"는")% 꼭 껴안은 채로 가만히 있었다…….
+	PRINTFORMW 이윽고 울어 그친 메리는 고개를 들며
+	PRINTFORMW 「미안해요, 아직 꿈을 꾸고 있는 느낌이라서……그래도, 꿈은 아닌거네요 .」
+	PRINTFORMW 「……고마워요, 좋아한다고 말해 줘서.그렇지만, 저는…….」
+	PRINTFORMW 「이제 와서 순애를 바랄 생각은 없으니까, 노예와 주인라고 하는 관계인 채라도 좋으니까, 그러니까…….」
+	PRINTFORMW 「앞으로도, 잘 부탁합니다, ……주인님.」
+	PRINTFORMW 그러면서 %CALLNAME:MASTER%에게 달라붙어, 키스를 했다…….
+	TALENT:26 = 0
+	TALENT:27 = 0
+	TALENT:71 = 0
+	TALENT:150 = 1
+	CFLAG:5201 = 8
+	
+
+;말의 존재 판정(YM판)
+@TRY_50
+RETURN 1
+

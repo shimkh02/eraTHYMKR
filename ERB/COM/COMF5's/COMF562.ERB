@@ -1,0 +1,269 @@
+﻿;=============================================================================
+;촉수 피임막도포
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE562
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:562 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;촉수調教中じゃないとはダメ
+SIF TEQUIP:90 == 0
+	RETURN 0
+;조교자는 촉수사역LV3이상 필요
+SIF ABL:PLAYER:98 < 3
+	RETURN 0
+;촉수가 [特殊ホルモン分泌]を得ていないとダメ
+SIF (FLAG:75 & 1024) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;妊娠中なら不可
+SIF TALENT:140
+	RETURN 0
+;懐卵中はダメ
+SIF TALENT:145
+	RETURN 0
+;産卵促進剤が効果を発揮している場合は使えない
+SIF TEQUIP:9
+	RETURN 0
+;排卵誘発が効果を発揮している場合は使えない
+SIF TEQUIP:16
+	RETURN 0
+;避妊が効果を発揮している場合は使えない
+SIF TEQUIP:17
+	RETURN 0
+;촉수가 邪魔で子宮壁に膜を塗布できない
+SIF TEQUIP:20 == 3
+	RETURN 0
+;幽霊膣鏡삽입中は不可
+SIF TEQUIP:21
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM562
+PRINTL 촉수 피임막도포
+TSTR:0 = 촉수 피임막도포
+CALL TRAIN_MESSAGE_COM562
+
+IF TEQUIP:20 == 3
+	LOCAL:1 = 60
+ELSEIF TEQUIP:20 == 3
+	LOCAL:1 = 30
+ELSEIF TEQUIP:20 == 1
+	LOCAL:1 = 20
+ELSE
+	LOCAL:1 = 10
+ENDIF
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1 *4
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+LOCAL:2 = 1
+
+SOURCE:24 = 900
+SOURCE:31 = 7000
+SOURCE:23 = 500
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 10
+	SOURCE:22 = 20
+	TIMES SOURCE:23 , 0.50
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 200
+	SOURCE:22 = 120
+	TIMES SOURCE:23 , 0.75
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 700
+	SOURCE:22 = 500
+	TIMES SOURCE:23 , 1.00
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 1600
+	SOURCE:22 = 1200
+	TIMES SOURCE:23 , 1.50
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 2500
+	SOURCE:22 = 1800
+	TIMES SOURCE:23 , 2.00
+ELSE
+	SOURCE:1 = 3400
+	SOURCE:22 = 2400
+	TIMES SOURCE:23 , 3.00
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 = 3000
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 1500
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 500
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 = 100
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 = 10
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 1000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 250
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 += 50
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;정조관념
+IF TALENT:30
+	IF TALENT:0 == 1
+		TIMES SOURCE:22 , 0.60
+		TIMES SOURCE:31, 5.00
+		SOURCE:30 += 3000
+	ELSE
+		TIMES SOURCE:22 , 0.60
+		TIMES SOURCE:31, 2.00
+		SOURCE:30 += 2000
+	ENDIF
+;정조무구애
+ELSEIF TALENT:31
+	IF TALENT:0 == 1
+		TIMES SOURCE:22 , 0.60
+		SOURCE:30 += 500
+	ENDIF
+ELSE
+	SIF TALENT:0 == 1
+		SOURCE:30 += 1000
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:24 , 0.90
+	TIMES SOURCE:30 , 1.80
+	TIMES SOURCE:22 , 0.90
+	TIMES SOURCE:23 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:30 , 1.50
+	TIMES SOURCE:22 , 1.00
+	TIMES SOURCE:23 , 1.00
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:24 , 1.20
+	TIMES SOURCE:30 , 1.00
+	TIMES SOURCE:19 , 1.10
+	TIMES SOURCE:22 , 1.10
+	TIMES SOURCE:23 , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:24 , 1.40
+	TIMES SOURCE:30 , 0.60
+	TIMES SOURCE:22 , 1.20
+	TIMES SOURCE:23 , 1.40
+ELSE
+	TIMES SOURCE:1 , 1.50
+	TIMES SOURCE:24 , 1.60
+	TIMES SOURCE:30 , 0.30
+	TIMES SOURCE:22 , 1.30
+	TIMES SOURCE:23 , 1.60
+ENDIF
+
+;V민감, 둔감을 본다
+;쾌V자체의 체크는 다음에 정리해 준다
+IF TALENT:103
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:102
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+SIF TALENT:0
+	LOCAL:2 = 0
+
+TEQUIP:17 = 2
+STAIN:3 |= 64
+IF LOCAL:2
+	TCVAR:0 += LOCAL:2
+	;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+	TFLAG:1 = 1
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM562
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINT 끄트머리가 말미잘과 같이 무수히 나뉘어진 촉수가 
+IF TEQUIP:20
+	PRINTFORML %CALLNAME:TARGET%의 성기에 기어들어 비벼대고 있는 촉수의 사이로 파고들어, 질 내로 미끄러져 들어갔다.
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 음순을 밀쳐내고, 성기 안으로 침입했다.
+ENDIF
+SIF TALENT:0
+	PRINTFORML 촉수들은 %CALLNAME:TARGET%의 처녀막을 손상시키는 일 없이, 자궁구를 목표로 전진했다….
+PRINTL 촉수들은 자궁까지 침입하자 끄트머리에서 난자의 착상을 방해하는 특수한 점액을 분비해,
+PRINTL 빠짐없이 꼼꼼히 자궁벽에 발라 갔다.
+PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 촉수가 자궁 내를 유린하고 있는 감촉과 기묘한 차가움에
+IF TALENT:170
+	IF TEQUIP:20
+		PRINT 촉수로 가득 찬 질구의 몇 안 되는 틈새로부터 애액을 방울져 떨어뜨리며, 
+	ELSE
+		PRINT 보지로부터 애액을 넘치도록 흘리며, 
+	ENDIF
+ENDIF
+PRINTW 눈과 입을 크게 열고, 몸을 뒤로 젖혀대고 있다….

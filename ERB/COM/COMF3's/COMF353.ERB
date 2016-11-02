@@ -1,0 +1,285 @@
+﻿;=============================================================================
+;거품 비비기한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE353
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:353 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;욕실 플레이中でプレイマットが無いとダメ
+IF TEQUIP:53 == 1
+	SIF ITEM:42 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	RETURN 0
+ENDIF
+;순종4미만 · 레즈끼(BL끼)3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;아이마스크사용 중에는 불가
+SIF TEQUIP:41
+	RETURN 0
+;볼 개그 사용 중에는 불가
+SIF TEQUIP:42
+	RETURN 0
+;조수가 スク水とビキニと褌以外のコスプレ中はだめ
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 > 1 && TEQUIP:ASSI:59 != 2 && TEQUIP:ASSI:59 != 12 && TEQUIP:ASSI:59 != 17
+	RETURN 0
+;ビキニと褌以外のコスプレ中はだめ
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 12 && TEQUIP:59 != 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;조교자가 노예에 거품 춤으로 반격 한다
+@COM353
+PRINTL 거품 비비기한다
+TSTR:0 = 거품 비기기한다
+CALL TRAIN_MESSAGE_COM353
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 40
+ELSEIF ABL:12 == 1
+	LOCAL = 260
+ELSEIF ABL:12 == 2
+	LOCAL = 800
+ELSEIF ABL:12 == 3
+	LOCAL = 2500
+ELSEIF ABL:12 == 4
+	LOCAL = 3500
+ELSE
+	LOCAL = 5600
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL)
+
+;조교자의 기교를 본다
+LOCAL = EJACULATIONCHECK_ABL_12_2(PLAYER, LOCAL)
+;조교자의 봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(PLAYER, LOCAL)
+
+;조교 대상의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(TARGET, LOCAL)
+
+SIF TALENT:120 || TALENT:121
+	BASE:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 30
+DOWNBASE:1 += 260
+
+SOURCE:10 = 1000
+SOURCE:11 = 1000
+SOURCE:12 = 60
+SOURCE:14 = 1500
+SOURCE:18 = 300
+SOURCE:24 = 400
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 500
+	SOURCE:15 = 1000
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 900
+	SOURCE:15 = 1300
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 1300
+	SOURCE:15 = 1600
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1800
+	SOURCE:15 = 2000
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2300
+	SOURCE:15 = 2400
+ELSE
+	SOURCE:0 = 2900
+	SOURCE:15 = 3000
+ENDIF
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 15
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 50
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 300
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 700
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1100
+ELSE
+	SOURCE:3 = 1600
+ENDIF
+
+;ABL:조교자의 기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:3 , 0.50
+	TIMES SOURCE:15 , 0.50
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:3 , 0.80
+	TIMES SOURCE:15 , 0.80
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:3 , 1.00
+	TIMES SOURCE:15 , 1.00
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:15 , 1.50
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 2.50
+	TIMES SOURCE:3 , 1.50
+	TIMES SOURCE:15 , 2.50
+ELSE
+	TIMES SOURCE:0 , 4.00
+	TIMES SOURCE:3 , 2.50
+	TIMES SOURCE:15 , 4.00
+ENDIF
+
+;B민감, B둔감
+IF TALENT:106
+	TIMES SOURCE:3 , 1.20
+ELSEIF TALENT:107
+	TIMES SOURCE:3 , 0.70
+ENDIF
+;큰 가슴, 폭유
+SIF TALENT:112 || TALENT:113
+	TIMES SOURCE:3 , 1.20
+;음유
+SIF TALENT:174
+	TIMES SOURCE:3 , 1.20
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(TARGET)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	TIMES SOURCE:15 , 3.00
+
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 += 0
+		TIMES SOURCE:16 , 2.00
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 1
+		SOURCE:24 += 200
+		TIMES SOURCE:16 , 2.50
+		TIMES SOURCE:22, 1.60
+	ELSEIF ABL:31 == 2
+		SOURCE:24 += 600
+		TIMES SOURCE:16 , 3.00
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 3
+		SOURCE:24 += 1500
+		TIMES SOURCE:16 , 4.00
+		TIMES SOURCE:22, 0.70
+	ELSEIF ABL:31 == 4
+		SOURCE:24 += 3000
+		TIMES SOURCE:16 , 5.00
+		TIMES SOURCE:22, 0.40
+	ELSE
+		SOURCE:24 += 6000
+		TIMES SOURCE:16 , 6.00
+		TIMES SOURCE:22, 0.10
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 17
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;노예 사정 판정이 끝난 플래그
+	TFLAG:705 = 1
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+
+;더러움은 리셋
+RESET_STAIN TARGET
+RESET_STAIN PLAYER
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && EXP:22 >= EXPLV:3
+	TFLAG:50 += 1
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM353
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 비누로 거품을 일으켜 자신의 몸에 흠뻑 묻히고는, 
+IF TALENT:PLAYER:127 || TALENT:PLAYER:128
+	PRINTFORM %CALLNAME:TARGET%에게 작은 몸을 힘껏 문질러가며 
+ELSEIF TALENT:PLAYER:112 || TALENT:PLAYER:113
+	PRINTFORM %CALLNAME:TARGET%에게 풍만한 가슴과 포근한 피부를 문질러가며 
+ELSE
+	PRINTFORM %CALLNAME:TARGET%에게 전신을 문질러 
+ENDIF
+PRINTW 애무했다….

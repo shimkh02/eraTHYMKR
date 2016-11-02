@@ -1,0 +1,395 @@
+﻿;=============================================================================
+;애널 비즈
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE172
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:172 > 0
+	RETURN 0
+;Ａ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:25 == 5
+	RETURN 1
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:11 == 0 && NOITEM == 0
+	RETURN 0
+;소인체형 보유자는, 쌍방이 조교자와 조교 대상이라면 OK
+;그 외의 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && (TALENT:MASTER:56 == 0 && TALENT:PLAYER:127 == 0)
+	RETURN 0
+;그밖의 Ａ계 장착구 사용 중에는 불가
+SIF (TEQUIP:25 && TEQUIP:25 != 5) || TEQUIP:26
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM172
+TSTR:7 = 애널 비즈
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 11
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 애널 비즈
+CALL TRAIN_MESSAGE_COM172
+
+DOWNBASE:0 += 40
+DOWNBASE:1 += 100
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 80
+	SOURCE:22 = 300
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 250
+	SOURCE:22 = 800
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 600
+	SOURCE:22 = 1400
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 1000
+	SOURCE:22 = 1800
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 1300
+	SOURCE:22 = 2100
+ELSE
+	SOURCE:2 = 1700
+	SOURCE:22 = 2400
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.50
+	SOURCE:20 = 2000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 = 300
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 1.10
+	SOURCE:20 = 50
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.20
+	SOURCE:20 = 10
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 1200
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 700
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 400
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 150
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.10
+ELSE
+	TIMES SOURCE:2 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:2 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:2 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:2 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:2 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:2 , 1.20
+ELSE
+	TIMES SOURCE:2 , 1.30
+ENDIF
+
+;작은 몸집 체형
+IF TALENT:128
+	TIMES SOURCE:20 , 2.00
+	SIF TALENT:130 || TALENT:131
+		TIMES SOURCE:2 , 2.00
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 11
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:2
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:2 = FLAG:1120
+ENDIF
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+
+;애널 비즈의 착탈
+IF TEQUIP:25
+	TEQUIP:25 = 0
+	LOCAL = 2
+	TIMES SOURCE:2 , 3.00
+ELSE
+	TEQUIP:25 = 5
+	LOCAL = 3
+	TIMES SOURCE:2 , 0.80
+ENDIF
+
+TCVAR:1 += LOCAL
+
+RETURN 1
+
+;--------------------------------------------------
+;애널 비즈 삽입중
+;--------------------------------------------------
+@EQUIP_COM172
+TSTR:7 = 애널 비즈
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 11
+	CALL NAMECHECK_CUSTOMTOOL
+ENDIF
+PRINTFORML <%TSTR:7% 삽입 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 30
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	LOCAL = 40
+	LOCAL:2 = 100
+ELSEIF ABL:2 == 1
+	LOCAL = 80
+	LOCAL:2 = 300
+ELSEIF ABL:2 == 2
+	LOCAL = 100
+	LOCAL:2 = 500
+ELSEIF ABL:2 == 3
+	LOCAL = 150
+	LOCAL:2 = 700
+ELSEIF ABL:2 == 4
+	LOCAL = 200
+	LOCAL:2 = 900
+ELSE
+	LOCAL = 300
+	LOCAL:2 = 1200
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES LOCAL , 0.50
+	LOCAL:1 = 2000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES LOCAL , 1.00
+	LOCAL:1 = 300
+ELSEIF EXP:1 < EXPLV:3
+	TIMES LOCAL , 1.10
+	LOCAL:1 = 50
+ELSEIF EXP:1 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:1 = 10
+ELSEIF EXP:1 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:1 = 0
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.40
+	LOCAL:1 += 800
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:1 += 500
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:1 += 300
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	LOCAL:1 += 120
+ELSE
+	TIMES LOCAL , 1.80
+	LOCAL:1 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 1.50
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ELSEIF TALENT:104
+	TIMES LOCAL , 0.60
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	LOCAL:2 /= 3
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 11
+	FLAG:1111 = 0
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:2 += LOCAL
+SOURCE:20 += LOCAL:1
+SOURCE:22 += LOCAL:2
+
+TCVAR:1 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM172
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:25
+	IF MARK:9 > 1
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 굴욕과 자극을 참고 있는 %CALLNAME:TARGET%의 항문에서 %조사선택(TSTR:7, "를")% 기세 좋게 뽑아 냈다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 항문에서 %조사선택(TSTR:7, "를")% 기세 좋게 뽑아 냈다….
+	ENDIF
+ELSE
+	IF MARK:9 > 1
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 싫어서 버둥대는 %조사선택(CALLNAME:TARGET, "를")% 억눌렀다.
+		PRINTFORM 그리고, %CALLNAME:TARGET%의 
+		SIF PALAM:10 >= PALAMLV:4
+			PRINT 점액 투성이가 된 
+		PRINTFORMW 항문에 %조사선택(TSTR:9, "를")% 하나씩 삼키게 했다….
+	ELSE
+		PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+		SIF PALAM:10 >= PALAMLV:4
+			PRINT 점액 투성이가 된 
+		PRINTFORMW 항문에 %조사선택(TSTR:9, "를")% 하나씩 삼키게 했다….
+	ENDIF
+ENDIF

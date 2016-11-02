@@ -1,0 +1,186 @@
+﻿;=============================================================================
+;음핵성장제
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE69
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:69 > 0
+	RETURN 0
+;C계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;이상 경험 필터가 오프가 되지 않으면 안 됨
+SIF FLAG:2 & 4
+	RETURN 0
+;음핵 성장제가 없으면 안 됨
+SIF ITEM:68 == 0 && NOITEM == 0
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;이미 봉이 있는(남자나 후타나리)라면 안 됨
+SIF EXIST_PENIS(TARGET)
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;클리토리스를 성장시키지 않았다고 안 됨
+SIF BASE:7 == 0
+	RETURN 0
+;클리토리스 링을 끼고 있으면(자) 안 됨
+SIF CFLAG:42 & 1
+	RETURN 0
+;음핵 성장제사용 중에는 불가
+SIF TEQUIP:8
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;C계 장착도구 사용중은 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;목욕탕 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM69
+PRINTL 음핵성장제
+TSTR:0 = 음핵성장제
+CALL TRAIN_MESSAGE_COM069
+
+;조제 지식이 있으면 소비를 억제한다
+LOCAL:1 = 300
+SIF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	LOCAL:1 /= 2
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1
+
+SOURCE:15 = 300
+SOURCE:26 = 200
+
+;ABL:순종을 본다
+IF ABL:0 == 0
+	TIMES SOURCE:15 , 2.00
+ELSEIF ABL:0 == 1
+	TIMES SOURCE:15 , 1.50
+ELSEIF ABL:0 == 2
+	TIMES SOURCE:15 , 1.00
+ELSEIF ABL:0 == 3
+	TIMES SOURCE:15 , 0.80
+ELSEIF ABL:0 == 4
+	TIMES SOURCE:15 , 0.60
+ELSE
+	TIMES SOURCE:15 , 0.30
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;약물 경험
+TCVAR:40 += 2
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 2
+
+;음핵 성장제 1개 소비
+IF NOITEM == 0
+	ITEM:68 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:68
+		CALL FILL_PLURAL_ITEM, 68
+ENDIF
+
+IF EX:0 < 5
+	LOCAL:2 = 5 + RAND:10
+ELSEIF EX:0 < 10
+	LOCAL:2 = 10 + RAND:10
+ELSEIF EX:0 < 20
+	LOCAL:2 = 15 + RAND:15
+ELSEIF EX:0 < 50
+	LOCAL:2 = 20 + RAND:15
+ELSEIF EX:0 < 100
+	LOCAL:2 = 30 + RAND:15
+ELSE
+	LOCAL:2 = 50 + RAND:15
+ENDIF
+BASE:7 = MIN(BASE:7 + LOCAL:2, 250)
+
+;음핵 성장제효과 발휘
+TEQUIP:8 = 1
+RETURN 1
+
+;--------------------------------------------------
+;음핵 성장제효과 발휘중
+;--------------------------------------------------
+@EQUIP_COM69
+IF EX:0 < 10
+	LOCAL = 1 + RAND:3
+ELSEIF EX:0 < 50
+	LOCAL = 2 + RAND:3
+ELSEIF EX:0 < 100
+	LOCAL = 3 + RAND:3
+ELSE
+	LOCAL = 5 + RAND:3
+ENDIF
+
+BASE:7 = MIN(BASE:7 + LOCAL, 250)
+SIF FLAG:12 & 4
+	PRINTFORML 음핵의 성장 상태:{BASE:7} 
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM069
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%에게 
+SIF ABL:PLAYER:12 >= 3
+	PRINT 입으로 
+SIF ABL:10 == 0
+	PRINT 억지로 
+	PRINTL 테스토스테론 개(改)를 먹였다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 가랑이 사이에서 느껴지는 위화감에 곤혹스러워 하고 있다….
+	

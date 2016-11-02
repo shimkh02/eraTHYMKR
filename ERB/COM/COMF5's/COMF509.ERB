@@ -1,0 +1,155 @@
+﻿;=============================================================================
+;촉수 메이든
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE509
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:509 > 0
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가(対象が[オトコ]の場合は除く)
+SIF FLAG:2 & 1 && TALENT:120 == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조교자는 촉수사역LV5필요
+SIF ABL:PLAYER:98 < 5
+	RETURN 0
+;촉수召喚と共通
+CALL COM_ABLE500
+SIF RESULT == 0
+	RETURN 0
+;ボールギャグ, 鼻フック, 耳栓装着中はダメ
+SIF TEQUIP:42 || TEQUIP:44 || TEQUIP:45
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM509
+PRINTL 촉수 메이든
+TSTR:0 = 촉수 메이든
+CALL TRAIN_MESSAGE_COM509
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+LOCAL:1 = 120
+;EXP:촉수 경험을 본다
+IF EXP:53 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:53 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:53 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:53 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:53 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 0.70
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 0.60
+ELSE
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;기생
+SIF TALENT:146
+	TIMES LOCAL:1 , 0.70
+;회란
+SIF TALENT:145
+	TIMES LOCAL:1 , 0.80
+;촉수 이식
+SIF CFLAG:41
+	TIMES LOCAL:1 , 0.75
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1 * 2
+SOURCE:25 += LOCAL:1 * 20
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:31 += LOCAL:1 * 10
+
+;촉수 삽입
+SIF TALENT:120 == 0
+	TEQUIP:20 = 1
+;어널 촉수
+TEQUIP:25 = 1
+;촉수 페니스 고문
+IF TALENT:120 || TALENT:121
+	TEQUIP:30 = 2
+;촉수 클리 고문
+ELSE
+	TEQUIP:30 = 1
+ENDIF
+;촉수 카테터
+SIF TALENT:120 == 0 && FLAG:75 & 64
+	TEQUIP:32 = 1
+;촉수 유두 고문
+TEQUIP:35 = 1
+;촉수 긴박
+TEQUIP:40 = 1
+;촉수구욕
+TEQUIP:42 = 2
+;촉수비혈삽입
+TEQUIP:44 = 2
+;촉수이혈삽입
+TEQUIP:45 = 2
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+
+TEQUIP:90 = 1
+;촉수 경험 플래그
+TFLAG:90 = 2
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM509
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "가")% 호출한 이상하게 뒤틀린 촉수가, %CALLNAME:TARGET%의 몸을 휘감았다….
+PRINTFORML 촉수는 %CALLNAME:TARGET%의 사지를 휘감고 높이 들어올려
+SIF TALENT:120 == 0
+	PRINT 보지, 
+PRINT 항문, 
+IF TALENT:120 || TALENT:121
+	PRINT 페니스, 
+ELSE
+	PRINT 클리토리스, 
+ENDIF
+SIF TALENT:120 == 0 && FLAG:75 & 64
+	PRINT 요도, 
+PRINTL 유두, 입 안, 코나 귀…
+PRINTW 마치 구멍이라고 하는 구멍을 다 범하듯이 처절한 고문을 시작했다….

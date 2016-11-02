@@ -1,0 +1,388 @@
+﻿;=============================================================================
+;로터 삽입
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE151
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:151 > 0
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:20 == 3
+	RETURN 1
+;Ｖ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:0 == 0 && NOITEM == 0
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;윤활 부족이고, 순종4미만 · 레즈끼4미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;소인체형 보유자는, 쌍방이 조교자와 조교 대상이라면 OK
+;그 외의 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && (TALENT:MASTER:56 == 0 && TALENT:PLAYER:127 == 0)
+	RETURN 0
+;그밖의 Ｖ계 장착구 사용 중에는 불가
+SIF (TEQUIP:20 && TEQUIP:20 != 3) || TEQUIP:21
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM151
+TSTR:7 = 로터
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 0
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8% 삽입
+TSTR:0 = 로터 삽입
+CALL TRAIN_MESSAGE_COM151
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 90
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 30
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 50
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 90
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 160
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 200
+ELSE
+	SOURCE:1 = 250
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 100
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.80
+	SOURCE:20 = 300
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 50
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 10
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:1 , 1.10
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 += 100
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+	SOURCE:20 += 50
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.10
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.10
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.00
+ELSE
+	TIMES SOURCE:1 , 1.00
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.20
+ELSE
+	TIMES SOURCE:1 , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 1.50
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 0
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:1 = FLAG:1120
+ENDIF
+
+;로터의 착탈
+IF TEQUIP:20 == 3
+	TEQUIP:20 = 0
+ELSE
+	TEQUIP:20 = 3
+ENDIF
+
+;노예의 V⇔조교자의 손의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:3
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;로터 삽입중
+;-------------------------------------------------
+@EQUIP_COM151
+TSTR:7 = 로터
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 0
+	CALL NAMECHECK_CUSTOMTOOL
+ENDIF
+PRINTFORML <%TSTR:7% 삽입 중>
+
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 30
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	LOCAL = 20
+ELSEIF ABL:1 == 1
+	LOCAL = 40
+ELSEIF ABL:1 == 2
+	LOCAL = 80
+ELSEIF ABL:1 == 3
+	LOCAL = 130
+ELSEIF ABL:1 == 4
+	LOCAL = 170
+ELSE
+	LOCAL = 200
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES LOCAL , 0.60
+	LOCAL:1 = 50
+ELSEIF EXP:0 < EXPLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:1 = 30
+ELSEIF EXP:0 < EXPLV:3
+	LOCAL:1 = 20
+ELSEIF EXP:0 < EXPLV:4
+	LOCAL:1 = 0
+ELSE
+	TIMES LOCAL , 1.10
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.60
+	LOCAL:1 += 50
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:1 += 20
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 0.20
+ELSE
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.60
+	LOCAL:2 = 20
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:2 = 50
+ELSEIF PALAM:13 < PALAMLV:3
+	LOCAL:2 = 80
+ELSEIF PALAM:13 < PALAMLV:4
+	LOCAL:2 = 100
+ELSE
+	LOCAL:2 = 150
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;정조관념
+IF TALENT:30
+	TIMES LOCAL:1, 1.50
+ENDIF
+;처녀
+SIF TALENT:0
+	TIMES LOCAL:1, 1.20
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 1.20
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 0
+	FLAG:1111 = 0
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:1 += LOCAL
+SOURCE:20 += LOCAL:1
+SOURCE:10 += LOCAL:2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM151
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:20 == 3
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%에서 고속으로 진동하는 %조사선택(TSTR:7, "를")% 천천히 뽑아 냈다.
+	IF EQUIP:14 == 0 && TFLAG:899 == 0
+		IF EXP:0 > 200 && TALENT:150
+			PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 음탕한 표정을 지으며, 완전히 풀려버린 구멍을 채울 페니스를 요구해왔다….
+		ELSEIF EXP:0 > 150 && TALENT:150
+			PRINTFORM 뽑아 낼 때 음핵을 스쳤는지, 일순간 몸을 퍼덕이며 신음하고 있다….
+		ELSEIF EXP:0 > 120 && TALENT:150
+			PRINTFORM 로터는, %CALLNAME:TARGET%의 애액으로 반짝반짝 빛난다….
+		ELSEIF EXP:0 > 70 && TALENT:150
+			PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 가랑이를 맞대고 비비며 %조사선택(CALLNAME:PLAYER, "를")% 보고 있다….
+		ELSEIF EXP:0 > 40 && TALENT:150
+			PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 눈을 촉촉히 적신 채, 열이 가득 찬 한숨을 토하고 있다….
+		ELSEIF EXP:0 > 20
+			PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 느슨해진 질구를 탐욕스럽게 벌름거린다….
+		ELSE
+			PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 안심한 것 같지만, 조금은 아쉬워하는 표정이다….
+		ENDIF
+		PRINTW
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%의 질구는 아직 모자란다는 듯이 열려있다….
+	ENDIF
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	SIF PALAM:10 >= PALAMLV:5
+		PRINT 잔뜩 
+	SIF PALAM:10 >= PALAMLV:3
+		PRINT 점액으로 끈적해진 
+	IF TALENT:128
+		PRINT 어린 균열에 
+	ELSE
+		PRINT 보지에 
+	ENDIF
+	PRINTFORML %조사선택(TSTR:9, "를")% 눌러 비벼, 애액이 나오기 쉽게 했다….
+
+	IF EQUIP:14 == 0 && TFLAG:899 == 0
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+		IF TALENT:0 && TALENT:150
+			PRINTFORM 추잡한 기대로 가득한 눈으로 %CALLNAME:PLAYER%의 고간을 응시하고 
+		ELSEIF TALENT:0 && TALENT:170
+			PRINT 그걸론 부족하다는 듯이 입을 비죽 내밀고 
+		ELSEIF TALENT:0
+			PRINTFORM 눈을 질끈 감고 %TSTR:7%에서 전해지는 자극을 참아내고 
+
+		ELSEIF EXP:0 > 200 && TALENT:150
+			PRINT 그걸론 부족하다는 듯이 입을 비죽 내밀고 
+		ELSEIF EXP:0 > 150 && TALENT:150
+			PRINTFORM 넋이 나간 눈을 하고 %조사선택(CALLNAME:PLAYER, "를")% 바라보며, 스스로 음순을 문지르고 
+		ELSEIF EXP:0 > 120 && TALENT:150
+			PRINT 황홀한 표정이 되어 더 이상 기다릴 수 없는 듯이 보지를 벌리고 
+		ELSEIF EXP:0 > 70 && TALENT:150
+			PRINTFORM 쾌락에 대한 욕심으로 눈물을 글썽이며 %조사선택(CALLNAME:PLAYER, "를")% 보고 
+		ELSEIF EXP:0 > 40 && TALENT:150
+			PRINTFORM 고속으로 진동하는 %조사선택(TSTR:7, "를")% 삼키고 싶은 듯이 질구를 벌름거리고 
+		ELSEIF EXP:0 > 0 && TALENT:150
+			PRINTFORM %TSTR:7%의 진동으로 애액을 튀겨대고 
+		ELSE
+			PRINTFORM %조사선택(TSTR:7, "가")% 주는 자극에 가랑이를 움찔움찔 거리고 
+		ENDIF
+		PRINTL 있다….
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 의식을 잃었으면서도, 아랫입을 꿈틀거리고 있다….
+	ENDIF
+	PRINTFORM 준비가 되었다고 판단한 %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	SIF PALAM:10 >= PALAMLV:4
+		PRINT 흠뻑 젖어있는 
+	PRINTFORMW 성기에 %조사선택(TSTR:9, "를")% 삽입했다….
+ENDIF

@@ -1,0 +1,86 @@
+﻿;여기서 조교 중의 파라미터의 표시(이모 형식 · J 형식) 처리를 실행한다
+;=============================================================================
+;파라미터 표시(1형 표시)
+;=============================================================================
+;表示順
+; 0,快Ｃ　　 3,快Ｂ　　13,欲情
+; 1,快Ｖ　　 2,快Ａ　　10,潤滑
+;12,恭順　　14,屈服　　11,習得
+;15,恥情　　17,恐怖　　16,苦痛
+;30,薬毒　　31,侵蝕　　32,先導
+;20,反感　　21,不快　　22,抑鬱
+@PRINT_PALAM_2
+VARSET LOCALS,""
+SPLIT "0,3,13,1,2,10,12,14,11,15,17,16,30,31,32,20,21,22",",",LOCALS
+
+REPEAT 18
+	LOCAL = TOINT(LOCALS:COUNT)
+
+	PRINTFORM 　%PALAMNAME:LOCAL% 
+	IF LOCAL == 10 && PALAM:10 >= 20000
+		PRINTFORM 　　흥건->
+	ELSEIF PALAM:LOCAL >= 99999999
+		PRINTFORM 　　초월->
+	ELSEIF PALAM:LOCAL > 9999999
+		PRINTFORM 　　한계->
+	ELSE
+		PRINTFORM  {PALAM:LOCAL, 7}->
+	ENDIF
+	IF LOCAL == 10
+		;潤滑のみ現在のPALAMLVを表示
+		GETPALAMLV PALAM:LOCAL, (TALENT:150 || TALENT:160 || TALENT:170) ? 14 # 13
+		PRINTFORM  PLv{RESULT, 2}
+	ELSE
+		;取得予定の珠数を表示
+		PRINTFORM {CALC_JUEL(LOCAL), 6}J
+	ENDIF
+	SIF COUNT%3 == 2
+		PRINTL 
+REND
+
+;=============================================================================
+;파라미터 표시(2형 표시)
+;=============================================================================
+;表示順
+; 0,快Ｃ　　 1,快Ｖ　　 2,快Ａ
+; 3,快Ｂ　　10,潤滑　　11,習得
+;12,恭順　　13,欲情　　14,屈服
+;15,恥情　　16,苦痛　　17,恐怖
+;30,薬毒　　31,侵蝕　　32,先導
+;20,反感　　21,不快　　22,抑鬱
+@NEW_PRINT_PALAM
+VARSET LOCALS,""
+SPLIT "0,1,2,3,10,11,12,13,14,15,16,17,30,31,32,20,21,22",",",LOCALS
+;パラメータを表示する順番を並べ替える
+REPEAT 18
+	LOCAL = TOINT(LOCALS:COUNT)
+
+	;現在のパラメータレベル取得
+	GETPALAMLV PALAM:LOCAL, (TALENT:150 || TALENT:160 || TALENT:170) ? 14 # 13
+
+	;パラメータレベルが9以上なら表示を固定
+	IF RESULT >= 9
+		LOCAL:1 = 8
+	;パラメータレベルごとの閾値の8分の1を1メモリとする
+	ELSE
+		LOCAL:1 = (PALAM:LOCAL * 8) / ((RESULT >= 13) ? PALAMLV:RESULT # PALAMLV:(RESULT+1))
+	ENDIF
+
+	;潤滑だけ特殊表示
+	IF LOCAL == 10 && PALAM:LOCAL >= 20000
+		LOCALS:20 = 젖음
+	;1億でカンストする様にしているのでメガ以降は削除
+	ELSEIF PALAM:LOCAL > 999999
+		LOCALS:20 = {PALAM:LOCAL / 1000}k
+	;6桁までノーマル表示
+	ELSE
+		LOCALS:20 = {PALAM:LOCAL}
+	ENDIF
+
+	;パラメータの情報をここで表示
+	PRINTFORM  %PALAMNAME:LOCAL%Lv{RESULT, 2}[%"*" * LOCAL:1 + "." * (8-LOCAL:1)%]%LOCALS:20, 6%
+
+	;3回ごとに改行
+	SIF COUNT%3 == 2
+		PRINTL 
+REND

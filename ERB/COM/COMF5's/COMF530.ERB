@@ -1,0 +1,214 @@
+﻿;=============================================================================
+;촉수 바기나 확장
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE530
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:530 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;Ｖ경험レベルが0かつ조교자가 オトコではない場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:0 < EXPLV:1 && TALENT:PLAYER:120 == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;조교자는 촉수사역LV2이상 필요
+SIF ABL:PLAYER:98 < 2
+	RETURN 0
+;촉수가 [ゴーヤ型촉수]を得ていないとダメ
+SIF (FLAG:75 & 128) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;ASSI일 경우, 순종4이상이거나 새드じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:81 == 0
+		RETURN 0
+ENDIF
+;작은 체형なら순종이 4이상かつ마조끼が4이상じゃないと実行できない
+IF TALENT:128
+	SIF ABL:10 < 4 || ABL:21 < 4
+		RETURN 0
+ENDIF
+;일정의 Ｖ경험이 필요
+SIF EXP:0 < 150
+	RETURN 0
+;Ｖ계 촉수責め中は不可
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;卵が邪魔で확장できない
+SIF TEQUIP:93
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM530
+PRINTL 촉수 바기나 확장
+TSTR:0 = 촉수 보지 확장
+CALL TRAIN_MESSAGE_COM530
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 250
+DOWNBASE:1 += 150
+
+SOURCE:20 = 1500
+SOURCE:12 = 1000
+SOURCE:22 = 1000
+SOURCE:31 = 4200
+SOURCE:23 = 1000
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 2000
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 2500
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 3000
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 3300
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 3600
+ELSE
+	SOURCE:1 = 3800
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 += 20000
+	SOURCE:18 += 2000
+	SIF TALENT:PLAYER:120 == 0
+		TCVAR:50 += 1
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 += 300
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 += 50
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 += 10
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.40
+	SOURCE:20 += 0
+ELSE
+	TIMES SOURCE:1 , 1.60
+	SOURCE:20 += 0
+ENDIF
+
+;EXP:촉수 경험을 본다
+IF EXP:53 < EXPLV:1
+	TIMES DOWNBASE:0 , 3.00
+	TIMES DOWNBASE:1 , 3.00
+	SOURCE:20 += 1000
+ELSEIF EXP:53 < EXPLV:2
+	TIMES DOWNBASE:0 , 2.50
+	TIMES DOWNBASE:1 , 2.50
+	SOURCE:20 += 800
+ELSEIF EXP:53 < EXPLV:3
+	TIMES DOWNBASE:0 , 2.00
+	TIMES DOWNBASE:1 , 2.00
+	SOURCE:20 += 500
+ELSEIF EXP:53 < EXPLV:4
+	TIMES DOWNBASE:0 , 1.00
+	TIMES DOWNBASE:1 , 1.00
+	SOURCE:20 += 100
+ELSEIF EXP:53 < EXPLV:5
+	TIMES DOWNBASE:0 , 0.80
+	TIMES DOWNBASE:1 , 0.80
+	SOURCE:20 += 50
+ELSE
+	TIMES DOWNBASE:0 , 0.60
+	TIMES DOWNBASE:1 , 0.60
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	SOURCE:24 = 1500
+	TIMES SOURCE:23 , 0.50
+ELSEIF ABL:35 == 1
+	TIMES DOWNBASE:0 , 0.90
+	TIMES DOWNBASE:1 , 0.90
+	SOURCE:24 = 1700
+	TIMES SOURCE:23 , 0.80
+ELSEIF ABL:35 == 2
+	TIMES DOWNBASE:0 , 0.80
+	TIMES DOWNBASE:1 , 0.80
+	SOURCE:24 = 2000
+ELSEIF ABL:35 == 3
+	TIMES DOWNBASE:0 , 0.70
+	TIMES DOWNBASE:1 , 0.70
+	SOURCE:24 = 2500
+	TIMES SOURCE:23 , 1.20
+ELSEIF ABL:35 == 4
+	TIMES DOWNBASE:0 , 0.60
+	TIMES DOWNBASE:1 , 0.60
+	SOURCE:24 = 3300
+	TIMES SOURCE:23 , 1.50
+ELSE
+	TIMES DOWNBASE:0 , 0.50
+	TIMES DOWNBASE:1 , 0.50
+	SOURCE:24 = 4200
+	TIMES SOURCE:23 , 1.80
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;더러운 처리
+STAIN:3 |= 2
+STAIN:3 |= 64
+
+SIF EXP:32 == 0
+	TCVAR:50 += 1
+TCVAR:0 += 25
+TCVAR:32 += 1
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM530
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%의 질은 고야열매 같이 엄청나게 굵은 촉수로 휘저어졌다.
+IF ABL:1 <= 1
+	PRINTFORMW 촉수가 뽑혀진 후에도, %CALLNAME:TARGET%의 질은 경련하고 있는 것 같이 벌름거린다.
+ELSEIF ABL:1 == 2
+	PRINTFORMW 촉수가 뽑혀진 후에도, %CALLNAME:TARGET%의 질은 뻐끔 입을 열고 있다.
+ELSEIF ABL:1 == 3
+	PRINTFORMW 촉수가 뽑혀진 후에도, %CALLNAME:TARGET%의 질은 벌려진 채로 좀처럼 돌아오지 않는다.
+ELSEIF ABL:1 == 4
+	PRINTFORML 촉수가 뽑혀진 후의 %CALLNAME:TARGET%의 성기로부터는 살점이 밀려나와,
+	PRINTW 활짝 열린 질구의 안으로 자궁구가 훤히 들여다 보이고 있다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 크게 벌려진 자신의 질구에 관심을 가진 채로, 황홀한 표정을 짓고 있다.
+ENDIF

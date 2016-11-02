@@ -1,0 +1,1588 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;「펑션」100518판
+;Emuera 전용 범용 함수 파일. 다소는 배리언트간 호환서 있음
+;무단 재배포 ＯＫ, 그때 개변 · 추가 기입은 원래의 기능을 손상하지 않는 범위 내로 부탁합니다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;「기초 함수군」 파일
+;배리언트 · 템플릿을 가리지 않고 사용할 수 있는 단순한 함수가 들어있습니다.
+;일반적인 능력 · 소질명을 사용하고 있는 배리언트일 경우, 거의 개변 없이 사용할 수 있습니다.
+;일반인용이기 때문에, 대사 · 패치 제작자님은 훑어봐두면 조금 편리합니다.
+;변경 등으로 지금까지 사용했던 기능을 사용할 수 없게 되는 경우는 거의 없습니다.
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;＠배리언트 설정
+;	인수：스코프의 몇 번째 숫자를 사용할지의 설정
+;펑션이 점유하는 CFLAG의 스코프를 설정합니다. LOCAL로 설정한 번호로부터 100의 CFLAG를 사용합니다
+;디폴트에서는 CFLAG:7900부터 7999를 사용
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+@PANCTION_CFLAG(ARG)
+#FUNCTION
+
+;디폴트에선 7900～7999. -1을 넣으면 관련 기능 전부 무효
+LOCAL = 7900
+
+RETURNF LOCAL+ARG
+
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;＠식중함수
+;「#FUNCTION」 속성을 가지고, 식중에서 직접 사용하는 함수입니다
+;「IF PENIS(MASTER)」 같이 조건식, 대입식에 사용합니다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;-------------------------------------------------
+;페니스 판정 함수@PENIS
+;	인수：대상 캐릭터의 등록번호
+;페니스가 있을 경우 1를 반환합니다
+;-------------------------------------------------
+@PENIS(ARG)
+#FUNCTION
+SIF ARG < 0
+	RETURNF 0
+RETURNF TALENTCHECK(ARG, "オトコ") || TALENTCHECK(ARG, "ふたなり")
+
+;-------------------------------------------------
+;주인 조교 판정 함수@MASTERONLY
+;	인수：판정하고 싶은 소질명(문자열)
+;TARGET이 인수의 素質を持っていて、かつ調教者が主人であれば1を返します
+;恋慕で조수にまでデレる現象を避ける条件式を簡略化するものです
+;문자열に誤りがある場合は警告のためエラー落ちします
+;-------------------------------------------------
+@MASTERONLY(ARGS)
+#FUNCTION
+RETURNF !ASSIPLAY && TALENT:(ARGS)
+
+;--------------------------------------------------
+;난수 판정 함수@PERCENT
+;	인수：판정하는 확률(0～100(％))
+;成否判定を行い、RESULTに判定成功=1、失敗=0を返します
+;--------------------------------------------------
+@PERCENT(ARG)
+#FUNCTION
+RETURNF ((ARG - RAND:100) > 0)
+
+;-------------------------------------------------
+;베이스 비율 산출 함수@BASERATIO
+;	인수0：대상 캐릭터의 등록번호
+;	인수1：베이스 번호(BASE:번호)
+;	인수2：바를 경우, 역치(％)
+;베이스 값이 MAXBASE의 몇 ％ 있는지 반환합니다
+;인수2を設定した場合はその％以上なら真を返します
+;-------------------------------------------------
+@BASERATIO(ARG, ARG:1, ARG:2)
+#FUNCTION
+RETURNF ARG:2 ? (BASE:ARG:(ARG:1)*100)/MAXBASE:(ARG:1) >= ARG:2 # (BASE:ARG:(ARG:1)*100)/MAXBASE:(ARG:1)
+
+;-------------------------------------------------
+;조수 소질 판정 함수@ASSITALENT
+;	인수：TALENT 번호
+;조수의 존재를 확인한 다음, 인수 번호의 TALENT의 수치를 반환합니다
+;조건식 간략화를 위해, 조수가 없을 경우에도 0을 반환합니다
+;「指定した素質を持つ조수がいるときに真になる」とご理解ください
+;-------------------------------------------------
+@ASSITALENT(ARG)
+#FUNCTION
+RETURNF ASSI >= 0 ? TALENT:ASSI:ARG # 0
+
+;-------------------------------------------------
+;조수 능력 판정 함수@ASSIABL
+;	인수：ABL 번호
+;조수의 존재를 확인한 다음, 인수 번호의 ABL의 수치를 반환합니다
+;조건식 간략화를 위해, 조수가 없을 경우에도 0을 반환합니다
+;-------------------------------------------------
+@ASSIABL(ARG)
+#FUNCTION
+RETURNF ASSI >= 0 ? ABL:ASSI:ARG # 0
+
+;-------------------------------------------------
+;조수 CFLAG 판정 함수@ASSICFLAG
+;	인수：CFLAG번호
+;조수의 존재를 확인한 다음, 인수 번호의 CFLAG의 수치를 반환합니다
+;조건식 간략화를 위해, 조수가 없을 경우에도 0을 반환합니다
+;-------------------------------------------------
+@ASSICFLAG(ARG)
+#FUNCTION
+RETURNF ASSI >= 0 ? CFLAG:ASSI:ARG # 0
+
+;-------------------------------------------------
+;조수 번호 판정 함수@ASSINO
+;조수의 존재를 확인한 다음, 조수의 NO를 반환합니다
+;조수가 없을 경우에는 -1을 반환합니다
+;NO:ASSI와의 차이는, 조수가 없을 경우에 에러가 되지 않는다는 점입니다
+;-------------------------------------------------
+@ASSINO(ARG)
+#FUNCTION
+RETURNF ASSI >= 0 ? NO:ASSI # -1
+
+;-------------------------------------------------
+;등가 체크 함수@EQUALCHECK
+;	인수0：チェックされる対象
+;	인수1～20：チェックに用いられる数値
+;식중で使用する함수です.인수0の値が与えられた値のいずれかと等しかった場合1を返します
+;인수に0を含ませる場合は、0を最後の인수にしてはいけません
+;인수0はチェックする対象、チェックされる数値は인수1～20まで引き受け可能
+;-------------------------------------------------
+@EQUALCHECK(ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9, ARG:10, ARG:11, ARG:12, ARG:13, ARG:14, ARG:15, ARG:16, ARG:17, ARG:18, ARG:19, ARG:20)
+#FUNCTION
+IF ARG
+	FOR LOCAL:100, 1, 20
+		SIF ARG == ARG:(LOCAL:100)
+			RETURNF 1
+	NEXT
+ELSE
+	;指定の変数が0の場合のみ別挙動
+	LOCAL = 0
+	FOR LOCAL:100, 0, 20
+		SIF ARG:(20-(LOCAL:100)) && !LOCAL
+			LOCAL = (LOCAL:100)
+	NEXT
+	FOR LOCAL:100, 1, 20-LOCAL
+		SIF ARG == ARG:(LOCAL:100)
+			RETURNF 1
+	NEXT
+ENDIF
+RETURNF 0
+
+;-------------------------------------------------
+;진가 집계 함수@TRUECHECK
+;	인수0～19：집계 대상
+;인수 가운데 참이 되는 것이 몇 개 있는지를 셉니다
+;-------------------------------------------------
+@TRUECHECK(ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9, ARG:10, ARG:11, ARG:12, ARG:13, ARG:14, ARG:15, ARG:16, ARG:17, ARG:18, ARG:19)
+#FUNCTION
+LOCAL = 0
+FOR LOCAL:100, 0, 20
+	SIF ARG:(LOCAL:100) > 0
+		LOCAL ++
+NEXT
+RETURNF LOCAL
+
+;--------------------------------------------------
+;가슴 비교 함수@BUSTSIZE
+;	인수0：비교 대상１의 등록번호
+;	인수1：비교 대상２의 등록번호
+;인수で渡された２キャラの胸の大きさを素質で比較します
+;どちらかがオトコか不在なら0、인수0のキャラが大きいなら1、인수1のキャラが大きいなら2、同じなら3が返ります
+;--------------------------------------------------
+@BUSTSIZE(ARG, ARG:1)
+#FUNCTION
+SIF ARG < 0 || ARG:1 < 0
+	RETURNF 0
+SIF TALENTCHECK(ARG, "オトコ") || TALENTCHECK(ARG:1, "オトコ")
+	RETURNF 0
+IF TALENTCHECK(ARG, "爆乳")
+	SIF TALENTCHECK(ARG:1, "爆乳")
+		RETURNF 3
+	RETURNF 1
+ELSEIF TALENTCHECK(ARG, "巨乳")
+	SIF TALENTCHECK(ARG:1, "爆乳")
+		RETURNF 2
+	SIF TALENTCHECK(ARG:1, "巨乳")
+		RETURNF 3
+	RETURNF 1
+ELSEIF TALENTCHECK(ARG, "絶壁")
+	SIF TALENTCHECK(ARG:1, "絶壁")
+		RETURNF 3
+	RETURNF 2
+ELSEIF TALENTCHECK(ARG, "貧乳")
+	SIF TALENTCHECK(ARG:1, "絶壁")
+		RETURNF 1
+	SIF TALENTCHECK(ARG:1, "貧乳")
+		RETURNF 3
+	RETURNF 2
+ELSE
+	SIF TALENTCHECK(ARG:1, "絶壁") || TALENTCHECK(ARG:1, "貧乳")
+		RETURNF 1
+	SIF TALENTCHECK(ARG:1, "爆乳") || TALENTCHECK(ARG:1, "巨乳")
+		RETURNF 2
+	RETURNF 3
+ENDIF
+
+;--------------------------------------------------
+;성감대 참조 함수@FAV_FEEL
+;	인수：대상 캐릭터의 등록번호
+;대상 캐릭터가 좋아하는 성감대를 반환합니다
+;性感帯別陥落素質（尻穴狂い等）があると無条件に優先されます
+;～敏感、～鈍感はそれぞれ該当感覚Lvを±1.5補正し、ふたなり・オトコはCを+1補正します
+;同じ数字の場合、V、C、A、Bの順で優先します
+;戻り値0ならどの感覚も2未満、1ならC、2はV、3はA、4はB性感が好きであることを意味します.
+;--------------------------------------------------
+@FAV_FEEL(ARG)
+#FUNCTION
+;성감대별 함락 소질을 참조한다
+SIF TALENTCHECK(ARG, "淫壷") && !TALENTCHECK(ARG, "オトコ")
+	RETURNF 2
+SIF TALENTCHECK(ARG, "淫核／淫茎") || TALENTCHECK(ARG, "淫核") || TALENTCHECK(ARG, "淫茎")
+	RETURNF 1
+SIF TALENTCHECK(ARG, "淫尻") || TALENTCHECK(ARG, "尻穴狂い")
+	RETURNF 3
+SIF TALENTCHECK(ARG, "淫乳")
+	RETURNF 4
+
+;각 감각을 LOCAL0～3에 카피해 10배로
+LOCAL = (ABLCHECK(ARG, "Ｃ感覚"))*10
+LOCAL:1 = (ABLCHECK(ARG, "Ｖ感覚"))*10
+LOCAL:2 = (ABLCHECK(ARG, "Ａ感覚"))*10
+LOCAL:3 = (ABLCHECK(ARG, "Ｂ感覚"))*10
+
+;각 민감 · 둔감 · 후타나리 · 남자의 처리
+IF TALENTCHECK(ARG, "Ｃ鈍感")
+	LOCAL -= 15
+ELSEIF TALENTCHECK(ARG, "Ｃ敏感")
+	LOCAL += 15
+ENDIF
+SIF PENIS(ARG)
+	LOCAL += 10
+IF TALENTCHECK(ARG, "Ｖ鈍感")
+	LOCAL:1 -= 15
+ELSEIF TALENTCHECK(ARG, "Ｖ敏感")
+	LOCAL:1 += 15
+ENDIF
+IF TALENTCHECK(ARG, "Ａ鈍感")
+	LOCAL:2 -= 15
+ELSEIF TALENTCHECK(ARG, "Ａ敏感")
+	LOCAL:2 += 15
+ENDIF
+IF TALENTCHECK(ARG, "Ｂ鈍感")
+	LOCAL:3 -= 15
+ELSEIF TALENTCHECK(ARG, "Ｂ敏感")
+	LOCAL:3 += 15
+ENDIF
+
+;전부 2 미만일 경우
+SIF LOCAL < 20 && LOCAL:1 < 20 && LOCAL:2 < 20 && LOCAL:3 < 20
+	RETURNF 0
+
+;비교
+IF LOCAL:1 >= LOCAL && LOCAL:1 >= LOCAL:2 && LOCAL:1 >= LOCAL:3 && !TALENTCHECK(ARG, "オトコ")
+	RETURNF 2
+ELSEIF LOCAL >= LOCAL:2 && LOCAL >= LOCAL:3
+	RETURNF 1
+ELSEIF LOCAL:2 >= LOCAL:3
+	RETURNF 3
+ELSE
+	RETURNF 4
+ENDIF
+
+;-------------------------------------------------
+;RGB색 지정 함수@RGBCOLOR
+;	인수0：Ｒ휘도（0～255）
+;	인수1：Ｇ휘도（0～255）
+;	인수2：Ｂ휘도（0～255）
+;식중으로 사용하는 함수입니다. 인수0～3でRGBを指定すると、16進（0xRRGGBB）にして返します
+;-------------------------------------------------
+@RGBCOLOR(ARG, ARG:1, ARG:2)
+#FUNCTION
+LOCAL = GETCOLOR()
+SETCOLOR ARG, ARG:1, ARG:2
+LOCAL:1 = GETCOLOR()
+SETCOLOR LOCAL
+RETURNF LOCAL:1
+
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;＠첫 회 판정계 함수
+;식중함수의 일종으로, 初めて呼ばれたときだけ真になる、というタイプの함수群
+;CFLAG스코프0～20を使用し、플래그節約と代入の省略に機能します
+;「IF FIRSTTIME(0)」や、「IF FIRSTCOM(SELECTCOM)」のように使用することで分岐が容易になります
+;	공통의 인수
+;	인수0：이벤트 · 이벤트 번호
+;	인수1：대상 캐릭터의 簡易指定（0=TARGET, 1=MASTER, 2=ASSI, 3=인수2で指定したキャラ）
+;	인수2：인수1が=3のとき、대상 캐릭터의 등록번호
+;	인수3以降は内部的に用いるものなので省略すること
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;-------------------------------------------------
+;미독 판정 함수@FIRSTTIME
+;CFLAG스코프0～3を利用し、イベント번호0～251までの任意な初回判定を管理します
+;調教前後などの会話イベントの初回判定に使用することを想定しています
+;-------------------------------------------------
+@FIRSTTIME(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+RETURNF FIRSTTIME_PROCESS(PANCTION_CFLAG(0), 4, ARG, ARG:1, ARG:2, ARG:3)
+
+;-------------------------------------------------
+;미독 참조 함수@FIRSTTIMECHECK
+;@FIRSTTIMEの初回判定を更新せずに参照だけを行います
+;-------------------------------------------------
+@FIRSTTIMECHECK(ARG, ARG:1, ARG:2)
+#FUNCTION
+RETURNF FIRSTTIME(ARG, ARG:1, ARG:2, 1)
+
+;-------------------------------------------------
+;커맨드 첫 회 판정 함수@FIRSTCOM
+;CFLAG스코프4～19を利用し、コマンド번호0～1007までの任意な初回判定を管理します
+;調教コマンド（SELECTCOM等）を直接渡し、コマンドの初回判定に使用することを想定しています
+;-------------------------------------------------
+@FIRSTCOM(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+RETURNF FIRSTTIME_PROCESS(PANCTION_CFLAG(4), 16, ARG, ARG:1, ARG:2, ARG:3)
+
+;-------------------------------------------------
+;커맨드 첫 회 참조 함수@FIRSTCOMCHECK
+;@FIRSTCOMの初回判定を更新せずに参照だけを行います
+;-------------------------------------------------
+@FIRSTCOMCHECK(ARG, ARG:1, ARG:2)
+#FUNCTION
+RETURNF FIRSTCOM(ARG, ARG:1, ARG:2, 1)
+
+;-------------------------------------------------
+;조교 내 첫 회 함수@ONCEPLAY
+;CFLAGを用いず、캐릭터 등록번호0～999ごとにイベント번호0～63までの任意な調教内初回判定を管理します
+;デフォルトだと@EVENTTRAINで初回判定をリセットしてすべて未読に戻します（対応できないバリアントもある）
+;その日（ターン）で一度目だけ見られる反応などを設定するために使用することを想定しています
+;-------------------------------------------------
+@ONCEPLAY(ARG, ARG:1, ARG:2, ARG:3, ARG:4)
+#FUNCTION
+IF !ARG:1
+	ARG:2 = TARGET
+ELSEIF ARG:1 == 1
+	ARG:2 = MASTER
+ELSEIF ARG:1 == 2
+	ARG:2 = ASSI
+ENDIF
+;規定の数を超えるか負か対象キャラがいないなら0を返す
+SIF ARG >= 64 || ARG < 0 || ARG:2 >= CHARANUM
+	RETURNF 0
+
+;인수4が1か2だと플래그リセット処理のみ行う
+IF ARG:4 == 2
+	FOR ARG:10, 0, 1000
+		LOCAL:(ARG:10) = 0
+	NEXT
+	RETURNF 0
+ELSEIF ARG:4 == 1
+	LOCAL:(ARG:2) = 0
+	RETURNF 0
+ENDIF
+
+IF !GETBIT(LOCAL:(ARG:2), ARG)
+	SIF !ARG:3
+		SETBIT LOCAL:(ARG:2), ARG
+	RETURNF 1
+ENDIF
+RETURNF 0
+
+;-------------------------------------------------
+;클리어 체크 함수@GLOBALEVENT
+;변수 GLOBAL을 이용해 클리어 체크를 시행합니다. GLOBAL 하나에 따라 이벤트 번호 0～63까지 관리 가능
+;GLOBAL:1000～1999을 사용
+;통상
+;	인수0：캐릭터 번호
+;	인수1：이벤트 번호
+;	인수2：참이면 클리어 체크를 갱산하지 않고 참조만
+;	인수3：참이면 GLOBAL의 세이브 로드를 넘어간다
+;-------------------------------------------------
+@GLOBALEVENT(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+;規定の数を超えるか負なら0を返す
+SIF ARG:1 >= 64 || ARG < 0
+	RETURNF 0
+LOCAL = 0
+ARG += 1000
+SIF !ARG:3
+	CALLF SINGLELOADG(ARG)
+IF !GETBIT(GLOBAL:ARG, ARG:1)
+	SIF !ARG:2
+		SETBIT GLOBAL:ARG, ARG:1
+	LOCAL = 1
+ENDIF
+SIF !ARG:3
+	CALLF SINGLESAVEG(ARG)
+RETURNF LOCAL
+;-------------------------------------------------
+;클리어 체크 참조 함수@GLOBALREAD
+;@GLOBALEVENTの初回判定を更新せずに参照だけを行います
+;そのイベントを見ていれば1、未読なら0を返します
+;-------------------------------------------------
+@GLOBALREAD(ARG, ARG:1)
+#FUNCTION
+RETURNF !GLOBALEVENT(ARG, ARG:1, 1)
+
+;-------------------------------------------------
+;클리어 체크 카운트 함수@GLOBALEVENTCHECK
+;	인수2：인수1からイベントいくつ分か
+;@GLOBALEVENTの初回判定を更新せずに参照だけを行います
+;인수1から인수2の数分だけの範囲から、既読のイベントの数を返します
+;-------------------------------------------------
+@GLOBALEVENTCHECK(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+VARSET LOCAL, 0
+SIF !ARG:3
+	CALLF SINGLELOADG(ARG+1000)
+FOR LOCAL, ARG:1, ARG:1+ARG:2
+	SIF !GLOBALEVENT(ARG, LOCAL, 1, 1)
+		LOCAL:1 ++
+NEXT
+
+RETURNF LOCAL:1
+
+;-------------------------------------------------
+;클리어 체크 실행 함수@GLOBALWRITE
+;@GLOBALEVENTの初回判定の更新を行います.一般함수です
+;-------------------------------------------------
+@GLOBALWRITE(ARG, ARG:1)
+RETURN GLOBALEVENT(ARG, ARG:1)
+
+;--------------------------------------------------
+;글로벌 입력 함수@SINGLESAVEG
+;	인수0：GLOBAL의 번호
+;	인수1：경량화 옵션(미보존 GLOBAL을 파기한다)
+;仕様上、少々動作が重いため軽量化無しでの多用は推奨されません
+;軽量化すると思わぬバグの原因となり得るので、濫用は推奨されません.というかSAVEGLOBALすれば済む話だこれ
+;指定した번호의 GLOBALのみをSAVEし、それ以外は全て元の（未保存状態の）ままにする식중함수です
+;保存されているGLOBALと現在のGLOBALが異なっていても、SAVEを壊さずに現在のGLOBALに復元します
+;ただし、인수1を真にするとこの配慮を行わず動作軽量化します（保存してあるGLOBALの状態に戻る.通常はこれで十分）
+;템포러리 플래그を使用します.戻り値は保存済みのGLOBALと違う値だった（値を更新した）場合1、同じなら0です
+;--------------------------------------------------
+@SINGLESAVEG(ARG, ARG:1)
+#FUNCTION
+IF !ARG:1
+	;템포러리 초기화
+	CALLF TEMPRESETALL(0)
+	;現在のGLOBALを템포러리へ逃がす
+	FOR LOCAL, 0, VARSIZE("GLOBAL")
+		SIF GLOBAL:LOCAL
+			CALLF TEMPSET(LOCAL, GLOBAL:LOCAL)
+	NEXT
+ELSE
+	CALLF TEMPSET(ARG, GLOBAL:ARG)
+ENDIF
+
+;GLOBAL読み込み
+LOADGLOBAL
+LOCAL:1 = GLOBAL:ARG
+;指定した번호의 み템포러리から引いてくる
+GLOBAL:ARG = TEMPFLAG(ARG)
+
+;GLOBAL保存
+SAVEGLOBAL
+
+IF !ARG:1
+	;未保存GLOBALを元に戻す
+	FOR LOCAL, 0, VARSIZE("GLOBAL")
+		GLOBAL:LOCAL = TEMPFLAG(LOCAL)
+	NEXT
+ENDIF
+
+RETURNF LOCAL:1 != GLOBAL:ARG
+
+;--------------------------------------------------
+;글로벌 읽어들이기 함수@SINGLELOADG
+;	인수：GLOBALの번호
+;仕様上、少々動作が重いため多用は推奨されません
+;指定した번호의 GLOBALのみをLOADし、それ以外は全て元の（未保存状態の）ままにする식중함수です
+;保存されているGLOBALと現在のGLOBALが異なっていても、SAVEを壊さずに現在のGLOBALに復元します
+;템포러리 플래그を使用します.戻り値は読み込んだGLOBALの値です
+;--------------------------------------------------
+@SINGLELOADG(ARG)
+#FUNCTION
+;템포러리 초기화
+CALLF TEMPRESETALL(0)
+;現在のGLOBALを템포러리へ逃がす
+FOR LOCAL, 0, VARSIZE("GLOBAL")
+	SIF GLOBAL:LOCAL
+		CALLF TEMPSET(LOCAL, GLOBAL:LOCAL)
+NEXT
+
+;GLOBAL 읽어들이기
+LOADGLOBAL
+
+;指定した번호以外を템포러리から引いてくる
+FOR LOCAL, 0, VARSIZE("GLOBAL")
+	SIF LOCAL != ARG
+		GLOBAL:LOCAL = TEMPFLAG(LOCAL)
+NEXT
+
+RETURNF GLOBAL:ARG
+
+;-------------------------------------------------
+;조교 내 첫 회 참조 함수@ONCEPLAYCHECK
+;@ONCEPLAY의 첫 회 판정을 갱신하지 않고 참조만을 실행합니다
+;-------------------------------------------------
+@ONCEPLAYCHECK(ARG, ARG:1, ARG:2)
+#FUNCTION
+RETURNF ONCEPLAY(ARG, ARG:1, ARG:2, 1)
+
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;＠템포러리 플래그계 함수
+;LOCALでは足りない、欲張りな貴方に
+;好き勝手な書き換えができる一時플래그用の함수です、@TEMPFLAG_0～9のLOCAL配列を利用
+;もちろん好き勝手な書き換えもされるので制御を他に渡したら保存されていることを期待してはいけない
+;一応全て식중함수ですが、TEMPSET等はCALLFと親和性があります
+;こんな大掛かりなの用意しても誰も使わないって？　ハハハこやつめ
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;-------------------------------------------------
+;템포러리 함수@TEMPFLAG
+;	인수0：플래그 번호
+;	인수1：원래 함수의 인수용
+;	인수2：파생 함수 번호 (내부 처리용)
+;템포러리 플래그を参照し、戻り値にします
+;配列の数はLOCALの配列数の10倍まで引き受けます.つまりデフォルトで0～9999です
+;変数置き場に困ったら、無駄に大量に管理できることを思い出してあげてください
+;万一配列外になったら仕方ないので0を参照します
+;-------------------------------------------------
+@TEMPFLAG(ARG, ARG:1, ARG:2)
+#FUNCTION
+
+LOCAL = ARG/VARSIZE("LOCAL")
+LOCAL:1 = ARG%VARSIZE("LOCAL")
+;0～999 (디폴트의 경우)
+IF !LOCAL
+	RETURNF TEMPFLAG_0(LOCAL:1, ARG:1, ARG:2)
+;1000～1999
+ELSEIF LOCAL == 1
+	RETURNF TEMPFLAG_1(LOCAL:1, ARG:1, ARG:2)
+;2000～2999
+ELSEIF LOCAL == 2
+	RETURNF TEMPFLAG_2(LOCAL:1, ARG:1, ARG:2)
+;3000～3999
+ELSEIF LOCAL == 3
+	RETURNF TEMPFLAG_3(LOCAL:1, ARG:1, ARG:2)
+;4000～4999
+ELSEIF LOCAL == 4
+	RETURNF TEMPFLAG_4(LOCAL:1, ARG:1, ARG:2)
+;5000～5999
+ELSEIF LOCAL == 5
+	RETURNF TEMPFLAG_5(LOCAL:1, ARG:1, ARG:2)
+;6000～6999
+ELSEIF LOCAL == 6
+	RETURNF TEMPFLAG_6(LOCAL:1, ARG:1, ARG:2)
+;7000～7999
+ELSEIF LOCAL == 7
+	RETURNF TEMPFLAG_7(LOCAL:1, ARG:1, ARG:2)
+;8000～8999
+ELSEIF LOCAL == 8
+	RETURNF TEMPFLAG_8(LOCAL:1, ARG:1, ARG:2)
+;9000～9999
+ELSEIF LOCAL == 9
+	RETURNF TEMPFLAG_9(LOCAL:1, ARG:1, ARG:2)
+ENDIF
+RETURNF TEMPFLAG_0(LOCAL:1, ARG:1, ARG:2)
+
+;-------------------------------------------------
+;템포러리 대입 함수@TEMPSET
+;	인수0：플래그 번호
+;	인수1：세트하는 숫자
+;템포러리 플래그に인수1の値を代入します
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPSET(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, ARG:1, 1)
+
+;-------------------------------------------------
+;템포러리 초기화 함수@TEMPRESET
+;	인수0：플래그 번호의 千の位
+;	인수1：초기화하는 숫자
+;템포러리 플래그配列を인수의 数字で초기화します
+;ただし1000区切りです.인수0に入れた数字を千の位とします（0なら0～999を초기화、但しLOCALがデフォの場合）
+;その結果の数字（つまり인수まま）を返り値としますが、CALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPRESET(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG*1000, 2, ARG:1)
+
+;-------------------------------------------------
+;템포러리 초기화 함수@TEMPRESETALL
+;	인수：초기화하는 숫자
+;템포러리 플래그配列すべてを인수의 数字で초기화します
+;その結果の数字（つまり인수まま）を返り値としますが、CALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPRESETALL(ARG)
+#FUNCTION
+RETURNF (TEMPFLAG(0, 2, ARG) + TEMPFLAG(1000, 2, ARG) + TEMPFLAG(2000, 2, ARG) + TEMPFLAG(3000, 2, ARG) + TEMPFLAG(4000, 2, ARG) + TEMPFLAG(5000, 2, ARG) + TEMPFLAG(6000, 2, ARG) + TEMPFLAG(7000, 2, ARG) + TEMPFLAG(8000, 2, ARG) + TEMPFLAG(9000, 2, ARG))/10
+
+;-------------------------------------------------
+;템포러리加算함수@TEMPADD
+;	인수0：플래그 번호
+;	인수1：加算する数字
+;템포러리 플래그に인수의 値を加算します
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPADD(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 3, ARG:1)
+
+;-------------------------------------------------
+;템포러리乗算함수@TEMPTIMES
+;	인수0：플래그 번호
+;	인수1：乗算する数字
+;템포러리 플래그に인수의 値を乗算しますが小数は使えません
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPTIMES(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 4, ARG:1)
+
+;-------------------------------------------------
+;템포러리除算함수@TEMPDIVISION
+;	인수0：플래그 번호
+;	인수1：除算する数字
+;템포러리 플래그に인수의 値を除算します
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPDIVISION(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 5, ARG:1)
+
+;-------------------------------------------------
+;템포러리余り計算함수@TEMPDIVISORS
+;	인수0：플래그 번호
+;	인수1：除算する数字
+;템포러리 플래그に인수의 値を除算し、あまりを代入します
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPDIVISORS(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 6, ARG:1)
+
+;-------------------------------------------------
+;템포러리累乗함수@TEMPPOWER
+;	인수0：플래그 번호
+;	인수1：뺄셈하는 숫자
+;템포러리 플래그を인수乗します
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPPOWER(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 7, ARG:1)
+
+;-------------------------------------------------
+;템포러리ビット取得함수@TEMPGETBIT
+;	인수0：플래그 번호
+;	인수1：ビット번호
+;템포러리 플래그のビットを取得し、返り値とします.플래그を編集はしません
+;-------------------------------------------------
+@TEMPGETBIT(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 8, ARG:1)
+
+;-------------------------------------------------
+;템포러리ビット立て함수@TEMPSETBIT
+;	인수0：플래그 번호
+;	인수1：ビット번호
+;템포러리 플래그の指定ビットを立てます
+;その結果の数字（つまり1）を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPSETBIT(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 9, ARG:1)
+
+;-------------------------------------------------
+;템포러리ビット下げ함수@TEMPCLEARBIT
+;	인수0：플래그 번호
+;	인수1：ビット번호
+;템포러리 플래그の指定ビットを降ろします
+;その結果の数字（つまり0）を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPCLEARBIT(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 10, ARG:1)
+
+;-------------------------------------------------
+;템포러리ビット反転함수@TEMPINVERTBIT
+;	인수0：플래그 번호
+;	인수1：ビット번호
+;템포러리 플래그の指定ビットを反転します
+;その結果の数字を返り値としますが、不要ならCALLFで呼ぶといい感じです
+;-------------------------------------------------
+@TEMPINVERTBIT(ARG, ARG:1)
+#FUNCTION
+RETURNF TEMPFLAG(ARG, 11, ARG:1)
+
+;-------------------------------------------------
+;기입 체크 함수@KOJO_WRITE
+;	인수0：기입 체크 내용
+;	인수1：기입 체크 번호
+;	인수2：참조만
+;템포러리 플래그の原理を利用して기입 체크を管理します
+;CALLFで呼ぶといい感じです.초기화はしません
+;-------------------------------------------------
+@KOJO_WRITE(ARG, ARG:1, ARG:2)
+#FUNCTION
+SIF !ARG:2
+	LOCAL:(ARG:1) = ARG
+RETURNF LOCAL:(ARG:1)
+
+;-------------------------------------------------
+;기입 체크 참조 함수@KOJO_WROTE
+;	인수：기입 체크 번호
+;템포러리 플래그의 원리를 이용해 기입 체크를 참조합니다
+;-------------------------------------------------
+@KOJO_WROTE(ARG)
+#FUNCTION
+RETURNF KOJO_WRITE(0, ARG, 1)
+
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;＠통상 함수
+;eramaker에서 사용되는 통상의 함수로, CALL계 커맨드로 호출해 사용합니다
+;기본적으로, RESULT 배열의 값을 고쳐 쓸 수 있습니다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;-------------------------------------------------
+;수치형 인풋 함수@INPUTINT
+;　인수0～19：입력 가능한 숫자
+;数値の入力待ちをします.인수に含まれない数字を選んだら自動的に入力待ちをし直します
+;有効な数字が入力されたらそれをRESULTへ返して戻ります
+;選択肢を汎用処理するため、ループの構文を書く必要がなくなります
+;-------------------------------------------------
+;注意：0を選択肢に含む場合は인수의 並びの最後に配置しないこと
+;（例：INPUTINT(3, 2, 1, 0)はダメ.INPUTINT(0, 1, 2, 3)はＯＫ）
+;-------------------------------------------------
+@INPUTINT(ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9, ARG:10, ARG:11, ARG:12, ARG:13, ARG:14, ARG:15, ARG:16, ARG:17, ARG:18, ARG:19)
+INPUT
+SIF EQUALCHECK(RESULT, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9, ARG:10, ARG:11, ARG:12, ARG:13, ARG:14, ARG:15, ARG:16, ARG:17, ARG:18, ARG:19)
+	RETURN RESULT
+RESTART
+
+;-------------------------------------------------
+;수치형 시간 제한 인풋 함수@TINPUTINT
+;	인수0：제한시간(ms)
+;	인수1：時間切れ時の戻り値
+;	인수2：=1だと残り時間を表示
+;	인수3～22：入力可能な数字
+;인수3以降で与えられた번호を有効な選択肢として数値の入力を受け付けます
+;인수に含まれない数字だとやり直し.RESULTに選んだ値を返します
+;-------------------------------------------------
+@TINPUTINT(ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9, ARG:10, ARG:11, ARG:12, ARG:13, ARG:14, ARG:15, ARG:16, ARG:17, ARG:18, ARG:19, ARG:20, ARG:21, ARG:22)
+TINPUT ARG, ARG:1, ARG:2
+SIF RESULT == ARG:1 || EQUALCHECK(RESULT, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9, ARG:10, ARG:11, ARG:12, ARG:13, ARG:14, ARG:15, ARG:16, ARG:17, ARG:18, ARG:19, ARG:20, ARG:21, ARG:22)
+	RETURN RESULT
+RESTART
+
+;--------------------------------------------------
+;상성 검색 함수@RELATION_QUERY
+;	인수0：대상의 캐릭터 번호(등록번호가 아니다. 수중에 존재해야 할 필요는 없다)
+;	인수1：검색 조건(0=지정하지 않는다, 1=수중에 없는 캐릭터만 고른다, 2=수중에 있는 캐릭터만 고른다)
+;대상 캐릭터와 전 캐릭터와의 상성을 검색해, 가장 상성이 좋은 상대를 추출합니다
+;--------------------------------------------------
+;반환값 일람
+;	RESULT：발견된 캐릭터와의 상성(0=발견 불가, 1=대상에 대한 상성 101～199, 2=대상에 대한 상성 200 이상)
+;	RESULT:1：발견한 캐릭터의 캐릭터 번호(발견 불가일 경우=-1)
+;	RESULT:2：발견한 캐릭터의 등록번호(수중에 없을 경우=-1)
+;	RESULTS：발견한 캐릭터의 부르는 이름
+;	RESULTS:1：발견한 캐릭터의 이름
+;--------------------------------------------------
+@RELATION_QUERY(ARG, ARG:1)
+;검색 대상의 등록번호를 추출
+LOCAL = GETCHARA(ARG, 1)
+LOCAL:6 = 0
+IF LOCAL == -1
+	ADDCHARA ARG
+	LOCAL = CHARANUM - 1
+	LOCAL:6 = 1
+ENDIF
+LOCAL:1 = -1
+IF ARG:1 == 2
+	;수중에서 검색
+	FOR LOCAL:100, 0, CHARANUM
+		LOCAL:2 = LOCAL:1 < 0 ? 100 # RELATION:LOCAL:(LOCAL:1)
+		LOCAL:3 = NO:(LOCAL:100) < 0 || NO:(LOCAL:100) >= VARSIZE("RELATION") ? 100 # RELATION:LOCAL:(NO:(LOCAL:100))
+		SIF LOCAL:2 == 0
+			LOCAL:2 = 100
+		SIF LOCAL:3 == 0
+			LOCAL:3 = 100
+		;같은 값일 경우 랜덤으로 남긴다
+		;뒤에 뽑힌 쪽이 클 경우 그것을 보존
+		SIF (LOCAL:2 == LOCAL:3 && RAND:2 && LOCAL:1 >= 0) || LOCAL:2 < LOCAL:3
+			LOCAL:1 = NO:(LOCAL:100)
+	NEXT
+ELSE
+	;전체에서 검색
+	;상성을 총 검색해 캐릭터 번호와 상성값을 추출
+	FOR LOCAL:100, 0, VARSIZE("RELATION")
+		;애초에 CSV가 없다면 볼 필요 없음
+		SIF EXISTCSV(LOCAL:100, 0)  == 0
+			CONTINUE
+		;캐릭터가 있는지 확인하고, 있고 또한 검색 조건=1이라면 다음으로 넘어감
+		SIF GETCHARA(LOCAL:100, 1) != -1 && ARG:1 == 1
+			CONTINUE
+		LOCAL:2 = LOCAL:1 < 0 ? 100 # RELATION:LOCAL:(LOCAL:1)
+		LOCAL:3 = RELATION:LOCAL:(LOCAL:100)
+		SIF LOCAL:2 == 0
+			LOCAL:2 = 100
+		SIF LOCAL:3 == 0
+			LOCAL:3 = 100
+		;같은 값일 경우 랜덤으로 남긴다
+		;뒤에 뽑힌 쪽이 클 경우 그것을 보존
+		SIF ((LOCAL:2 == LOCAL:3 && RAND:2 && LOCAL:1 >= 0) || LOCAL:2 < LOCAL:3) && LOCAL:100 < 149
+			LOCAL:1 = LOCAL:100
+	NEXT
+ENDIF
+SIF LOCAL:6
+	DELCHARA CHARANUM - 1
+
+;이름과 등록번호를 취득
+RESULT:1 = LOCAL:1
+IF LOCAL:1 >= 0
+	RESULT:2 = GETCHARA(LOCAL:1, 1)
+	IF RESULT:2 >= 0
+		RESULTS = %CALLNAME:(RESULT:2)%
+		RESULTS:1 = %NAME:(RESULT:2)%
+	ELSE
+		RESULTS = %CSVCALLNAME(LOCAL:1, 0)%
+		RESULTS:1 = %CSVNAME(LOCAL:1, 0)%
+	ENDIF
+ENDIF
+;수치에 응해 RETURN
+SIF RELATION:LOCAL:(LOCAL:1) > 199
+	RETURN 2
+SIF RELATION:LOCAL:(LOCAL:1) > 100
+	RETURN 1
+RETURN 0
+
+;--------------------------------------------------
+;절정 강도 산출 함수@ECST_LEVEL
+;CVAB 각 절정의 강도를 반환합니다. 그 외의 절정에는 대응하지 않습니다.
+;다중절정의 배율이 다른 배리언트에도 대응할 수 없습니다.
+;--------------------------------------------------
+;반환값 일람
+;	RESULT：몇 중 절정인가(0～4)
+;	RESULT:1：Ｃ절정（1=절정, 2=강절정, 4=초강절정, 9=최강절정）
+;	RESULT:2：Ｖ절정（1=절정, 2=강절정, 4=초강절정, 9=최강절정）
+;	RESULT:3：Ａ절정（1=절정, 2=강절정, 4=초강절정, 9=최강절정）
+;	RESULT:4：Ｂ절정（1=절정, 2=강절정, 4=초강절정, 9=최강절정）
+;	RESULT:5：현자의 피로 일어난 헛 절정(비트 연산：1=Ｃ, 2=Ｖ, 4=Ａ, 8=Ｂ절정 캔슬)
+;--------------------------------------------------
+@ECST_LEVEL
+;몇 중 절정인가 계산한다
+LOCAL = 0
+SIF NOWEXCHECK(TARGET, "Ｃ절정")
+	LOCAL += 1
+SIF NOWEXCHECK(TARGET, "Ｖ절정")
+	LOCAL += 1
+SIF NOWEXCHECK(TARGET, "Ａ절정")
+	LOCAL += 1
+SIF NOWEXCHECK(TARGET, "Ｂ절정")
+	LOCAL += 1
+
+;가고 있다면 각 절정의 강도를 산출
+IF LOCAL
+	RESULT:1 = NOWEXCHECK(TARGET, "Ｃ절정") / POWER(2, LOCAL-1)
+	RESULT:2 = NOWEXCHECK(TARGET, "Ｖ절정") / POWER(2, LOCAL-1)
+	RESULT:3 = NOWEXCHECK(TARGET, "Ａ절정") / POWER(2, LOCAL-1)
+	RESULT:4 = NOWEXCHECK(TARGET, "Ｂ절정") / POWER(2, LOCAL-1)
+ENDIF
+
+;현자의 피 판정
+IF ITEMCHECK("현자의 피")
+	RESULT:5 = 0
+	SIF DOWN:COUNT > 0 && NOWEX:COUNT == 0
+		SETBIT RESULT:5, COUNT
+ENDIF
+RETURN LOCAL
+
+;-------------------------------------------------
+;하트 마크 함수@HEART
+;	인수0：하트의 숫자(생략하면 1개)
+;	인수1：사용하는 폰트명(생략하면 Verdana)
+;흰색 하트마크를 표시합니다
+;-------------------------------------------------
+@HEART(ARG, ARGS)
+LOCAL = RESULT
+ARGS = \@ ARGS == "" ? Verdana # %ARGS% \@
+LOCALS = %GETFONT()%
+
+SETFONT CHKFONT(ARGS) ? ARGS # LOCALS
+
+CALL SYMBOLPRINT(ARG, UNICODE(0x2661))
+
+SETFONT LOCALS
+RETURN LOCAL
+
+;-------------------------------------------------
+;입력 대기 하트 마크 함수@HEARTW
+;	인수0：하트의 숫자(생략하면 1개)
+;	인수1：사용하는 폰트명(생략하면 Verdana)
+;	인수2：『」』の代わりに表示する문자열
+;	인수3：真にすると、『」』を表示しない
+;中抜き하트 마크を表示してから『」』を表示し、入力待ち・改行をします
+;-------------------------------------------------
+@HEARTW(ARG, ARGS, ARGS:1, ARG:1)
+CALL HEART(ARG, ARGS)
+SIF !ARG:1
+	ARGS:1 = \@ ARGS:1 == "" ? 」 # %ARGS:1% \@
+PRINTSW ARGS:1
+RETURN RESULT
+
+;-------------------------------------------------
+;검정 하트 마크 함수@HEARTB
+;	인수0：하트의 숫자(생략하면 1개)
+;	인수1：사용하는 폰트명(생략하면 Symbol)
+;색칠한 하트 마크를 표시합니다
+;-------------------------------------------------
+@HEARTB(ARG, ARGS)
+LOCAL = RESULT
+IF CHKFONT("Symbol")
+	ARGS = \@ ARGS == "" ? Symbol # %ARGS% \@
+ELSEIF CHKFONT("Verdana")
+	ARGS = \@ ARGS == "" ? Verdana # %ARGS% \@
+ENDIF
+LOCALS = %GETFONT()%
+
+SETFONT CHKFONT(ARGS) ? ARGS # LOCALS
+
+IF GETFONT() == "Symbol"
+	CALL SYMBOLPRINT(ARG, UNICODE(0xA9))
+ELSE
+	CALL SYMBOLPRINT(ARG, UNICODE(0x2665))
+ENDIF
+
+SETFONT LOCALS
+RETURN LOCAL
+
+;-------------------------------------------------
+;입력 대기 검정 하트 마크 함수@HEARTBW
+;	인수0：하트의 숫자(생략하면 1개)
+;	인수1：사용하는 폰트명(생략하면 Symbol)
+;	인수2：『」』の代わりに表示する문자열
+;	인수3：真にすると、『」』を表示しない
+;색칠한 하트 마크を表示してから『」』を表示し、入力待ち・改行をします
+;-------------------------------------------------
+@HEARTBW(ARG, ARGS, ARGS:1, ARG:1)
+CALL HEARTB(ARG, ARGS)
+SIF !ARG:1
+	ARGS:1 = \@ ARGS:1 == "" ? 」 # %ARGS:1% \@
+PRINTSW ARGS:1
+RETURN RESULT
+
+;-------------------------------------------------
+;하트 마크계 디폴트 컬러 함수@HEARTD～계
+;上記と同じバリエーションがありますが、デフォルトの文字色で表示します
+;また、こちらで呼ぶと入力待ち하트系の『」』がデフォルトで表示されません.つまり地の分向け
+;인수3を真にすれば逆に『」』を表示するようになります
+;-------------------------------------------------
+@HEARTD(ARG, ARGS)
+LOCAL = GETCOLOR()
+RESETCOLOR
+CALL HEART(ARG, ARGS)
+SETCOLOR LOCAL
+RETURN RESULT
+
+@HEARTDW(ARG, ARGS, ARGS:1, ARG:1)
+LOCAL = GETCOLOR()
+RESETCOLOR
+CALL HEARTW(ARG, ARGS, ARGS:1, !ARG:1)
+SETCOLOR LOCAL
+RETURN RESULT
+
+@HEARTDB(ARG, ARGS)
+LOCAL = GETCOLOR()
+RESETCOLOR
+CALL HEARTB(ARG, ARGS)
+SETCOLOR LOCAL
+RETURN RESULT
+
+@HEARTDBW(ARG, ARGS, ARGS:1, ARG:1)
+LOCAL = GETCOLOR()
+RESETCOLOR
+CALL HEARTBW(ARG, ARGS, ARGS:1, !ARG:1)
+SETCOLOR LOCAL
+RETURN RESULT
+
+;-------------------------------------------------
+;대사 색 지정  문자열 표시 함수@PRINTCOLOR～계
+;	인수0：문자색
+;	인수1：문자열
+;指定した文字色で문자열を表示します.カラー指定は16進ですが、RGBCOLOR함수を利用することができます
+;PRINT命令同様の「PRINTCOLORL」「PRINTCOLORW」もありますが、書式は面倒です
+;例えば…
+;CALL PRINTCOLORW(RGBCOLOR(255, 0, 0), "この문자열は赤く表示されて改行待ちをします.")
+;-------------------------------------------------
+@PRINTCOLOR(ARG, ARGS, ARG:1)
+LOCAL = GETCOLOR()
+SETCOLOR ARG
+PRINTFORM %ARGS%
+IF ARG:1 == 1
+	PRINTL 
+ELSEIF ARG:2 == 2
+	PRINTW 
+ENDIF
+SETCOLOR LOCAL
+RETURN RESULT
+
+@PRINTCOLORL(ARG, ARGS)
+CALL PRINTCOLOR(ARG, ARGS, 1)
+RETURN RESULT
+
+@PRINTCOLORW(ARG, ARGS)
+CALL PRINTCOLOR(ARG, ARGS, 2)
+RETURN RESULT
+
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;＠내부 함수
+;배리언트 호환을 위한 이유 등으로 펑션 내부에서 사용되는 자식 함수 · 손자 함수입니다
+;사용하는 것도 가능하지만 원칙적으로 비추천합니다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+
+;--------------------------------------------------
+;능력 판정 함수@ABLCHECK
+;인수：대상의 캐릭터 등록번호, 능력명
+;전 ABLNAME과 대조해서 수치를 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@ABLCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(ABL, ARGS)
+RETURNF LOCAL > 0 ? ABL:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;소질 판정 함수@TALENTCHECK
+;인수：대상의 캐릭터 등록번호, 능력명
+;전 TALENTNAME과 대조해서 수치를 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@TALENTCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(TALENT, ARGS)
+RETURNF LOCAL > 0 ? TALENT:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;경험 판정 함수@EXPCHECK
+;인수：대상의 캐릭터 등록번호, 경험명
+;전 EXPNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@EXPCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(EXP, ARGS)
+RETURNF LOCAL > 0 ? EXP:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;각인 판정 함수@MARKCHECK
+;인수：대상의 캐릭터 등록번호, 각인명
+;전 MARKNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@MARKCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(MARK, ARGS)
+RETURNF LOCAL > 0 ? MARK:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;패러미터 판정 함수@PALAMCHECK
+;인수：대상의 캐릭터 등록번호, 패러미터명
+;전 PALAMNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@PALAMCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(PALAM, ARGS)
+RETURNF LOCAL > 0 ? PALAM:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;아이템 판정 함수@ITEMCHECK
+;인수：아이템명
+;전 ITEMNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@ITEMCHECK(ARGS)
+#FUNCTION
+LOCAL = GETNUM(ITEM, ARGS)
+RETURNF LOCAL > 0 ? ITEM:LOCAL # 0
+
+;--------------------------------------------------
+;절정 판정 함수@EXCHECK
+;인수：대상의 캐릭터 등록번호, 경험명
+;전 EXNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@EXCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(EX, ARGS)
+RETURNF LOCAL > 0 ? EX:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;조교 내 절정 판정 함수@NOWEXCHECK
+;인수：대상의 캐릭터 등록번호, 경험명
+;전 EXNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@NOWEXCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(EX, ARGS)
+RETURNF LOCAL > 0 ? NOWEX:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;소스 판정 함수@SOURCECHECK
+;인수：대상의 캐릭터 등록번호, 소스
+;전 SOURCENAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@SOURCECHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(SOURCE, ARGS)
+RETURNF LOCAL > 0 ? SOURCE:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;EQUIP 판정 함수@EQUIPCHECK
+;인수：대상의 캐릭터 등록번호, EQUIP
+;전 EQUIPNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@EQUIPCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(EQUIP, ARGS)
+RETURNF LOCAL > 0 ? EQUIP:ARG:LOCAL # 0
+
+;--------------------------------------------------
+;TEQUIP 판정 함수@TEQUIPCHECK
+;인수：대상의 캐릭터 등록번호, TEQUIP
+;전 TEQUIPNAME과 대조해서 반환합니다.
+;존재하지 않을 경우, 0이 반환됩니다.
+;--------------------------------------------------
+@TEQUIPCHECK(ARG, ARGS)
+#FUNCTION
+LOCAL = GETNUM(TEQUIP, ARGS)
+RETURNF LOCAL > 0 ? TEQUIP:ARG:LOCAL # 0
+
+;-------------------------------------------------
+;기호 표시 함수@SYMBOLPRINT
+;내부적으로 사용하는 함수입니다. 호출하지 말아주세요
+;-------------------------------------------------
+@SYMBOLPRINT(ARG, ARGS)
+ARG = !ARG ? 1 # ARG
+FOR LOCAL:100, 0, ARG
+	PRINTS ARGS
+NEXT
+RETURN 0
+
+;-------------------------------------------------
+;첫 회 판정 처리 함수@FIRSTTIME_PROCESS
+;	인수0：使用するCFLAG스코프の始点
+;	인수1：使用するCFLAGの数（인수0が7000、인수1が20なら、7000～7019の20個を消費する）
+;	인수2：イベント・コマンド번호
+;	인수3：대상 캐릭터의 簡易指定（0=TARGET, 1=MASTER, 2=ASSI, 3=인수2で指定したキャラ）
+;	인수4：인수3が=3のとき、대상 캐릭터의 등록번호
+;	인수5：真の場合、初回判定を参照するのみで更新しない
+;CFLAGによる初回判定系の함수の処理を一括して行います
+;63*플래그使用数、の初回判定枠がプールされる（플래그を20確保した場合、63*20で0～1259の1260通り使える）
+;-------------------------------------------------
+@FIRSTTIME_PROCESS(ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5)
+#FUNCTION
+IF !ARG:3
+	ARG:4 = TARGET
+ELSEIF ARG:3 == 1
+	ARG:4 = MASTER
+ELSEIF ARG:3 == 2
+	ARG:4 = ASSI
+ENDIF
+;規定の数を超えるか負か対象キャラがいないか스코프が負なら0を返す
+SIF ARG:2 >= ARG:1*63 || ARG:2 < 0 || ARG:4 < 0 || PANCTION_CFLAG(0) < 0
+	RETURNF 0
+
+LOCAL = ARG + ARG:2/63
+ARG:2 %= 63
+
+IF !GETBIT(CFLAG:(ARG:4):LOCAL, ARG:2)
+	SIF !ARG:5
+		SETBIT CFLAG:(ARG:4):LOCAL, ARG:2
+	RETURNF 1
+ENDIF
+RETURNF 0
+
+;-------------------------------------------------
+;조교 내 첫 회 판정 초기화 함수@ONCEPLAYRESET
+;	인수0：대상 캐릭터의 간이 지정 (0=TARGET, 1=MASTER, 2=ASSI, 3=인수2로 지정한 캐릭터, 4=모든 캐릭터)
+;	인수1：인수3이=3일 때, 대상 캐릭터의 등록번호
+;@ONCEPLAY의 첫 회 판정을 리셋합니다
+;-------------------------------------------------
+@ONCEPLAYRESET(ARG, ARG:1)
+RETURN ONCEPLAY(0, ARG, ARG:1, 0, ARG == 4 ? 2 # 1)
+
+;디폴트의 플래그 리세터(전 캐릭터)
+@EVENTTRAIN_PANCTION
+CALL ONCEPLAYRESET(4)
+
+;-------------------------------------------------
+;템포러리保存함수@TEMPFLAG_0～9
+;	인수0：플래그 번호
+;	인수1：元함수の인수用
+;	인수2：派生함수번호（内部処理用）
+;템포러리 플래그を保存するための함수群です
+;-------------------------------------------------
+@TEMPFLAG_0(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_1(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_2(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_3(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_4(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_5(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_6(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_7(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_8(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG
+
+@TEMPFLAG_9(ARG, ARG:1, ARG:2)
+#FUNCTION
+;SET
+IF ARG:2 == 1
+	LOCAL:ARG = ARG:1
+;RESET
+ELSEIF ARG:2 == 2
+	VARSET LOCAL, ARG:1
+;ADD
+ELSEIF ARG:2 == 3
+	LOCAL:ARG += ARG:1
+;TIMES
+ELSEIF ARG:2 == 4
+	LOCAL:ARG *= ARG:1
+;DIVISION
+ELSEIF ARG:2 == 5
+	LOCAL:ARG /= ARG:1
+;DIVISORS
+ELSEIF ARG:2 == 6
+	LOCAL:ARG %= ARG:1
+;POWER
+ELSEIF ARG:2 == 7
+	POWER LOCAL:ARG, LOCAL:ARG, ARG:1
+;GETBIT
+ELSEIF ARG:2 == 8
+	RETURNF GETBIT(LOCAL:ARG, ARG:1)
+;SETBIT
+ELSEIF ARG:2 == 9
+	SETBIT LOCAL:ARG, ARG:1
+;CLEARBIT
+ELSEIF ARG:2 == 10
+	CLEARBIT LOCAL:ARG, ARG:1
+;INVERTBIT
+ELSEIF ARG:2 == 11
+	INVERTBIT LOCAL:ARG, ARG:1
+ENDIF
+RETURNF LOCAL:ARG

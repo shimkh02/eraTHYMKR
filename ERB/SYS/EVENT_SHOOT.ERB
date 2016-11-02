@@ -1,0 +1,641 @@
+﻿;=============================================================================
+;사정 관계의 처리
+;=============================================================================
+;TFLAG:703　～　デフォルト射精先設定一時変数
+;1=膣内射精, 2=アナル射精, 3=手淫関係, 4=フェラ・パイズリ, 5=素股, 
+;6=助手（主人から）, 7=クンニ, 8=助手(奴隷から), 9=逆レイプ
+;10=足扱き, 11=腋扱き, 12＝３Ｐ助手射精, 13=尻扱き, 14=竿扱き
+;15=助手のアナル（奴隷から）, 16=逆アナルレイプ, 17=泡踊りで逆に
+;18=獣姦で逆レイプ, 19=尿道, 20=肉便器プレイ, 21=胸, 22=キス
+;23=髪扱き, 24=フォーオブカインド派生
+;TFLAG:704　～　射精箇所選択可能か否か
+;0=不可, 1=可
+;---------------------------------------------------------
+;사정하느냐 체크
+;---------------------------------------------------------
+@SAMEN_CHECK(ARG)
+#FUNCTION
+LOCAL = 0
+;남자나 후타나리가 아니면 무조건 0 반환
+SIF TALENT:ARG:120 == 0 && TALENT:ARG:121 == 0
+	RETURNF 0
+;사정게이지가 0보다 작으면, 사정게이지를 만들어준다.
+SIF MAXBASE:ARG:2 <= 0
+	MAXBASE:ARG:2 = CALC_GAUGE2_COMMON(ARG)
+;사정량 계산.
+EJAC = MAXBASE:ARG:2
+LOCAL = MIN((BASE:ARG:2 / EJAC), 2)
+RETURNF LOCAL
+
+;---------------------------------------------------------
+;사정장소 선택
+;---------------------------------------------------------
+@SAMEN_SHOOT
+;ぶっかけ選択
+;[0] 髪 手コキ区分
+;[1] 顔	手コキ区分
+;[2] 胸	フェラ・パイズリ区分
+;[3] 腹	フェラ・パイズリ区分
+;[4] 腋 フェラ・パイズリ2区分
+;[5] 腿 セックス2区分
+;[6] 割れ目 セックス2区分
+;[7] ゴム射・中田氏
+
+;各コマンド中で射精の判定に使われるTFLAG:91使用する.
+;これまでの射精の処理をここに持たせ, 各コマンド内で使わないようにする.
+;よってここでTFLAG:91を初期化し, 各COMFに処理を返す（TFLAG:91 == 0ならば各コマンド内で射精の処理は行われない）
+
+;射精した人物の設定
+IF SELECTCOM == 303 || SELECTCOM == 305 || SELECTCOM == 306
+	TFLAG:92 = MASTER
+ELSEIF SELECTCOM == 116 || SELECTCOM == 304 || SELECTCOM == 610
+	TFLAG:92 = TFLAG:93
+ELSEIF TFLAG:703 == 8 || TFLAG:703 == 9 || TFLAG:703 == 16 || TFLAG:703 == 17 || TFLAG:703 == 18
+	TFLAG:92 = TARGET
+ELSE
+	TFLAG:92 = PLAYER
+ENDIF
+
+;射精する対象の設定(獣姦逆レイプの場合はこの変数に意味はない)
+IF SELECTCOM == 26 || SELECTCOM == 36 || TFLAG:703 == 6 || TFLAG:703 == 8 || TFLAG:703 == 15
+	TFLAG:94 = ASSI
+ELSEIF TFLAG:703 == 9 || TFLAG:703 == 16 || TFLAG:703 == 17
+	TFLAG:94 = PLAYER
+ELSE
+	TFLAG:94 = TARGET
+ENDIF
+
+;まず使うフラグを初期化
+CFLAG:(TFLAG:94):74 = 0
+
+;肉便器プレイではコンドームはなかったことにする
+SIF SELECTCOM == 106
+	TEQUIP:(TFLAG:92):31 = 0
+
+;---------------------------------------------------------
+;追加部分, 射精箇所選択機能をOFFにした際にコンドームを含めた通常の射精処理を行う
+;また, 状況的に射精箇所の選択を行えないであろうコマンドの場合もここで通常処理に飛ばす
+;---------------------------------------------------------
+
+;토리코모드
+IF FLAG:5000 & 256
+	IF (FLAG:18 & 1) == 0 || FLAG:19 == 8 || TFLAG:704 == 0
+		CFLAG:(TFLAG:94):74 = (TEQUIP:(TFLAG:92):31) ? 9 # 0
+	ELSEIF FLAG:19 < 8
+		CFLAG:(TFLAG:94):74 = (TEQUIP:(TFLAG:92):31) ? 9 # (FLAG:19 + 1) % 9
+	ELSE
+		PRINTFORMW %CALLNAME:(TFLAG:92)%의 페니스는 한계까지 팽창하여, 곧 사정 직전이다……
+		PRINTW  
+		PRINTFORMW %CALLNAME:(TFLAG:94)%의 어디에 사정하겠습니까?
+		PRINTL [0] 「입」
+		PRINTL [1] 「손바닥」
+		PRINTL [2] 「페니스」
+		PRINTL [3] 「음부」
+		PRINTL [4] 「엉덩이와 애널」
+		PRINTL [5] 「가슴」
+		PRINTL [6] 「다리」
+		PRINTL [7] 「발」
+		PRINTFORML [8] 「\@(TEQUIP:(TFLAG:92):31) ? 콘돔에 발사 # 그대로 발사\@」
+
+		$INPUT_LOOP2
+		INPUT
+		IF RESULT >= 0 && RESULT <= 8
+			CFLAG:(TFLAG:94):74 = (TEQUIP:(TFLAG:92):31) ? 9 # (RESULT + 1) % 9
+		ELSE
+			GOTO INPUT_LOOP2
+		ENDIF
+	ENDIF
+;일반모드
+ELSE
+	IF (FLAG:18 & 1) == 0 || FLAG:19 == 8 || TFLAG:704 == 0
+		CFLAG:(TFLAG:94):74 = (TEQUIP:(TFLAG:92):31) ? 9 # 0
+	ELSEIF FLAG:19 < 8
+		CFLAG:(TFLAG:94):74 = (TEQUIP:(TFLAG:92):31) ? 9 # (FLAG:19 + 1) % 9
+	ELSE
+		PRINTFORMW %CALLNAME:(TFLAG:92)%의 페니스는 한계까지 팽창하여, 곧 사정 직전이다……
+		PRINTW  
+		PRINTFORMW %CALLNAME:(TFLAG:94)%의 어디에 사정하겠습니까?
+		PRINTL [0] 「머리카락」
+		PRINTL [1] 「얼굴」
+		PRINTL [2] 「가슴」
+		PRINTL [3] 「배」
+		PRINTL [4] 「겨드랑이」
+		PRINTL [5] 「허벅지」
+		PRINTFORML [6] 「\@(TALENT:(TFLAG:94):120) ? 자지 # 보지\@」
+		PRINTL [7] 엉덩이」
+		PRINTFORML [8] 「\@(TEQUIP:(TFLAG:92):31) ? 콘돔에 발사 # 그대로 발사\@」
+
+		$INPUT_LOOP
+		INPUT
+		IF RESULT >= 0 && RESULT <= 8
+			CFLAG:(TFLAG:94):74 = (TEQUIP:(TFLAG:92):31) ? 9 # (RESULT + 1) % 9
+		ELSE
+			GOTO INPUT_LOOP
+		ENDIF
+	ENDIF
+ENDIF
+
+;사정처리
+CALL CHECK_CFLAG106
+TFLAG:91 = 0
+
+SIF CFLAG:74 > 0
+	CALL SAMEN_SHOOT_MESSAGE
+
+TEQUIP:(TFLAG:92):31 = 0
+
+;-------------------------------------------------
+;射精時の体力低下処理
+;-------------------------------------------------
+;難易度がLUNATIC以上のときキャラが射精するたびに体力が減少する処理を追加, ここで一括管理している.
+;また, これらの関数は事前に射精を示す変数Eが1以上かつ
+;難易度がLUNATIC以上のとき各コマンド等の射精処理から呼び出されるようになっている.
+;大量射精した場合は調教者の体力が150減少, 通常射精すると調教者の体力が50減少するようになっている.
+;(実装されるかは不明だが)大量射精を超える射精が設定された時は体力が250減少するようになっている.
+;なお, 調教者が大量射精したか通常射精したかは変数ARG:1を用いて判断する.
+
+;TFLAG:999に入っている値が1の時は調教中であることを示し, 変数DOWNBASEが増加され, 
+;それ以外の時は直接体力が低下される処理になっている.
+@EXHAUST_EJAC,ARG ,ARG:1
+;難易度LUNATIC以上でない場合は処理しない
+;調教中の場合
+IF TFLAG:999 == 1
+	DOWNBASE:ARG:0 += (FLAG:3 < 4) ? 0 # LIMIT(50*(2*ARG:1 - 1) , 0, 250)
+;それ以外の場合
+ELSE
+	BASE:ARG:0 = (FLAG:3 < 4) ? BASE:ARG:0 # LIMIT(BASE:ARG:0 - LIMIT(50*(2*ARG:1 - 1) , 0, 250), 0, MAXBASE:ARG:0)
+ENDIF
+
+;=============================================================================
+;妊娠パッチ系のメッセージ
+;=============================================================================
+;-------------------------------------------------
+;ぶっかけのメッセージ
+;-------------------------------------------------
+;EVENT_K.ERBから呼び出される.
+@SAMEN_SHOOT_MESSAGE
+
+;토리코모드
+IF FLAG:5000 & 256
+	;입
+	IF CFLAG:74 == 1
+		PRINTFORMW %CALLNAME:TARGET%의 턱을 한 손으로 들어올려, 얼굴과 입에 사정했다.
+		PRINTFORMW 입가에 농후한 정액이 흘러내린다...
+		STAIN:0 |= 4
+	;손
+	ELSEIF CFLAG:74 == 2
+		PRINTFORMW %CALLNAME:TARGET%의 손을 펴게 해서, 정액을 마구 쏟아부었다...
+		;순종 3이상
+		IF ABL:10 >= 3
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 눈을 감고, 평온한 표정으로 손바닥으로 정액을 받고 있다...
+		ELSE
+			PRINTFORMW 혐오감을 노골적으로 드러내며 떨고있는 %CALLNAME:TARGET%의 손바닥에 정액이 넘쳐흐른다...
+		ENDIF
+		STAIN:1 |= 4
+
+	;자지
+	ELSEIF CFLAG:74 == 3
+		;타겟이 남자일 때...
+		IF TALENT:120 || TALENT:121
+		PRINTL 몇 번이고 귀두를 마찰시킨 뒤, 
+		PRINTFORMW %CALLNAME:TARGET%의 다리 사이에서 자신의 존재를 당당히 주장하는 페니스를 향해 정액을 토해냈다.
+		STAIN:2 |= 4
+		;타겟이 여자일 때...
+		ELSE
+		PRINTFORMW 아차, %조사처리(CALLNAME:TARGET,"는")% 페니스가 없다는 걸 뒤늦게 떠올린 %조사처리(CALLNAME:PLAYER,"는")%, 
+		PRINTFORMW 머쓱한 웃음을 짓고 허공을 향해 무의미한 사격을 개시했다...
+		ENDIF
+	;보지
+	ELSEIF CFLAG:74 == 4
+		PRINTFORM %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 
+		IF (TALENT:127 || TALENT:128) && BASE:5 <= 50
+			PRINTL 아직 솜털조차 나지 않은 깨끗하기 그지없는 균열에 정액을 끈적하게 끼얹고 있다...
+		ELSE
+			PRINTFORM \@(TALENT:121) ? 바기나 # 클리토리스\@
+			PRINTW 에 몇 번이고 귀두를 비비다가, 정액을 토해냈다.
+			;小柄体型, 小人体型
+			IF (TALENT:127 || TALENT:128) && BASE:5 <= 50
+				PRINTL 아직 솜털조차 나지 않은 깨끗하기 그지없는 균열에 정액을 끈적하게 끼얹고 있다...
+			ELSE
+				PRINTL 살짝 부드러운 치모와 애액으로 물든 음순에 정액이 마구 묻고 있다...
+			ENDIF
+		ENDIF
+		STAIN:3 |= 4
+	;애널
+	ELSEIF CFLAG:74 == 5
+		PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %조사처리(CALLNAME:TARGET,"를")% 개처럼 뒤로 돌려, 엉덩이와 애널에 마구 정액을 흩뿌려댔다.
+		PRINTFORMW 매끈하고 통통한 %CALLNAME:TARGET%의 엉덩이 위로 정액이 흘러 내리고 있다...
+		STAIN:4 |= 4
+	;가슴
+	ELSEIF CFLAG:74 == 6
+		PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 땀에 젖은 가슴에 페니스 끝을 향했다.
+		;빈유 절벽
+		IF TALENT:110 || TALENT:111
+			PRINTFORMW 기복이 없는 가슴에 정액이 흘러 떨어져간다...
+			;?順3以上
+			SIF ABL:10 >= 3
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 기쁜 듯이 정액을 손으로 훑어서, 딱딱해진 자기 유두에 칠했다...
+		;거유 폭유
+		ELSEIF TALENT:112 || TALENT:113
+			PRINTFORMW 풍만한 가슴의 계곡에 흰 정액이 잔뜩 머물러 있다...
+			SIF ABL:10 >= 3
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 황홀한 듯한 표정으로, 정액을 가슴 전체에 바르고 있다...
+		ELSE
+			PRINTFORMW 보기 좋게 부푼 둔덕에 뜨거운 정액이 흩뿌려지고 있다...
+			SIF ABL:10 >= 3
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%, 그게 떨어지지 않도록 가슴을 모아 정액을 받아내고 있다...
+		ENDIF
+		STAIN:5 |= 4
+	;다리
+	ELSEIF CFLAG:74 == 7
+		PRINTFORMW 사정 직전의 페니스를 %CALLNAME:TARGET%의 넓적다리에 갖다 댔다...
+		PRINTFORMW 한계에 달한 페니스는 맥박치면서 매끈한 허벅지를 정액 투성이로 만들고 있다...
+		STAIN:6 |= 4
+	;발
+	ELSEIF CFLAG:74 == 8
+		PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% 귀엽고 사랑스러운 %CALLNAME:TARGET%의 발바닥에 귀두를 꾹 눌렀다.
+		PRINTFORMW 부드러운 감촉과 땀과 페로몬으로 섞인 오묘한 향을 충분히 맛보고 난 후, 마음껏 정액을 토해냈다...
+		STAIN:7 |= 4
+	;콘돔
+	ELSEIF CFLAG:74 == 9
+		IF TEQUIP:PLAYER:31
+			PRINTFORMW %CALLNAME:PLAYER%의 페니스가 토해낸 대량의 정액으로 콘돔이 가득찼다...
+			PRINTFORMW 페니스를 뽑아내어, 끝에 정자가 가득 담겨있는 콘돔을 %CALLNAME:TARGET%에게 보여줬다...
+			IF TALENT:0
+				;処女, アナルセックス系で出るかも出ないかも
+				IF TALENT:150
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:PLAYER,"가")% 피임을 해준 것에 대해, 애정을 느끼는 모양이다...
+				ELSE
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 질내사정을 상상하며, 창백해졌다...
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+;일반모드
+ELSE
+	;髪
+	IF CFLAG:74 == 1
+		PRINTFORMW %CALLNAME:TARGET%의 머리카락으로 페니스를 감싸고, 그대로 손으로 부벼서 사정했다
+		PRINTFORMW 풍성한 머리카락에, 농후한 정액이 잔뜩 얽혀 있다……
+		;髪に精液汚れ
+		STAIN:7 |= 4
+	;顔
+	ELSEIF CFLAG:74 == 2
+		PRINTFORMW %CALLNAME:TARGET%의 머리를 들어올려서, 정액을 마구 쏟아부었다…….
+		;?順3以上
+		IF ABL:10 >= 3
+			PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 눈을 감고, 평온한 표정으로 얼굴에 정액을 받고 있다…….
+		ELSE
+			PRINTFORMW 혐오감을 노골적으로 드러내며 저항하는 %CALLNAME:TARGET%의 머리를 움켜쥐고, 얼굴을 흰 정액으로 더럽혔다…….
+		ENDIF
+	;胸
+	ELSEIF CFLAG:74 == 3
+		PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 땀에 젖은 가슴에 페니스 끝을 향했다.
+		;貧乳?絶壁
+		IF TALENT:110 || TALENT:111
+			PRINTFORMW 기복이 없는 가슴에 정액이 흘러 떨어져간다…….
+			;?順3以上
+			SIF ABL:10 >= 3
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 기쁜 듯이 정액을 손으로 훑어서, 딱딱해진 자기 유두에 칠했다…….
+		;巨乳?爆乳
+		ELSEIF TALENT:112 || TALENT:113
+			PRINTFORMW 풍만한 가슴의 계곡에 흰 정액이 잔뜩 머물러 있다…….
+			SIF ABL:10 >= 3
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 황홀한 듯한 표정으로, 정액을 가슴 전체에 바르고 있다…….
+		ELSE
+			PRINTFORMW 보기 좋게 부푼 둔덕에 뜨거운 정액이 흩뿌려지고 있다…….
+			SIF ABL:10 >= 3
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")%, 그게 떨어지지 않도록 가슴을 모아 정액을 받아내고 있다…….
+		ENDIF
+		;胸に精液汚れ
+		STAIN:5 |= 4
+	;腹
+	ELSEIF CFLAG:74 == 4
+		PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% %조사처리(CALLNAME:TARGET,"를")% 반듯이 눕히고, 하얀 복부에 페니스를 부비며 절정했다……
+		PRINTFORMW %CALLNAME:TARGET%의 복부에 발사된 정액이, 작은 배꼽으로 흘러들어간다……
+	;腋
+	ELSEIF CFLAG:74 == 5
+		PRINTFORMW %조사처리(CALLNAME:PLAYER,"는")% 혈관조차 비쳐보일지도 모를 너무나도 깨끗하고 하얀 겨드랑이에 페니스를 끼웠다……
+		PRINTFORMW 얇은 피부의 부드러운 감촉을 충분히 맛보고 나서 귀두 전체를 겨드랑이에 꼽고, 마음껏 정액을 토해냈다……
+	;太腿
+	ELSEIF CFLAG:74 == 6
+		PRINTFORMW 사정 직전의 페니스를 %CALLNAME:TARGET%의 넓적다리에 갖다 댔다……
+		PRINTFORMW 한계에 달한 페니스는 맥박치면서 매끈한 허벅지를 정액 투성이로 만들고 있다……
+	;割れ目?竿（後者はもはや誰得）
+	ELSEIF CFLAG:74 == 7
+		IF TALENT:120
+			PRINTFORM %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 아누스
+			PRINTL 에 몇번이고 귀두를 마찰시킨 뒤, 
+			PRINTFORMW %CALLNAME:TARGET%의 다리 사이에서 자신의 존재를 당당히 주장하는 페니스를 향해 정액을 토해냈다.
+		ELSE
+			;?女（?入かと思って焦る）
+			IF TALENT:0
+				PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 페니스를 삽입해주지 않을까 기대에 몸을 긴장시켰다.
+				PRINTFORMW 하지만 그런 게 아니라는 걸 알고는, 미묘하게 안도의 표정을 띠었다.
+				PRINTFORMW 
+			ENDIF
+			PRINTFORM %조사처리(CALLNAME:PLAYER,"는")% %CALLNAME:TARGET%의 
+			PRINTFORM \@(TALENT:121) ? 바기나 # 클리토리스\@
+			PRINTW 에 몇 번이고 귀두를 비비다가, 정액을 토해냈다.
+			;小柄体型, 小人体型
+			IF (TALENT:127 || TALENT:128) && BASE:5 <= 50
+				PRINTL 아직 솜털조차 나지 않은 깨끗하기 그지없는 균열에 정액을 끈적하게 끼얹고 있다…….
+			ELSE
+				PRINTL 살짝 부드러운 치모와 애액으로 물든 음순에 정액이 마구 묻고 있다…….
+			ENDIF
+		ENDIF
+	;尻
+	ELSEIF CFLAG:74 == 8
+		PRINTFORM %조사처리(CALLNAME:TARGET,"를")% 개처럼 뒤집어 놓고, 
+		SIF TALENT:128
+			PRINT  작고 매끈하며 사랑스러운 
+		PRINTL 둔부에 정액을 마구 흩뿌렸다…….
+	;ゴム
+	ELSEIF CFLAG:74 == 9
+		IF TEQUIP:PLAYER:31
+			PRINTFORMW %CALLNAME:PLAYER%의 페니스가 토해낸 대량의 정액으로 콘돔이 가득찼다…….
+			PRINTFORMW 페니스를 뽑아내어, 끝에 정자가 가득 담겨있는 콘돔을 %CALLNAME:TARGET%에게 보여줬다…….
+			IF TALENT:0
+				;処女, アナルセックス系で出るかも出ないかも
+				IF TALENT:150
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% %조사처리(CALLNAME:PLAYER,"가")% 피임을 해준 것에 대해, 애정을 느끼는 모양이다……
+				ELSE
+					PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 질내사정을 상상하며, 창백해졌다……
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+;모드선택 종료.
+ENDIF
+
+
+
+;中出しかどうかの確認（妊娠出産パッチでのみ使用）
+@CHECK_NAKADASHI
+SIF TFLAG:703 == 1 || TFLAG:703 == 6 || TFLAG:703 == 9 || TFLAG:703 == 20
+	CALL IN_VAGINA_CHECK
+
+;-------------------------------------------------
+;ゴム射精の処理（妊娠出産パッチでのみ使用）
+;-------------------------------------------------
+;ほとんど他の射精と一緒だが, TFLAGを立てず（膣射阻止）, 精液経験も増やさない
+;コンドーム関連のフラグもできるだけここで扱う.
+@SAMEN_SHOOT_CONDOM
+
+CALL SAMEN_SHOOT_CALC
+
+;コンドームに精液溜まる
+CFLAG:75 = (ASSIPLAY) ? 2 # 1
+
+;-------------------------------------------------
+;妊娠出産パッチでの中出し処理分
+;-------------------------------------------------
+;射精箇所選択パッチのみの場合は不使用
+@IN_VAGINA_CHECK
+;プレイや及び助手の各コマンドでの中田氏チェック
+;各コマンドへの影響を小さくするのが目的（関数を呼ぶ, もしくはオミットするだけで良い）
+;TFLAG:10（中田氏）とTEQUIP:31（コンドーム）を条件に膣射を増やす処理を持つ
+
+;まず, コンドームの有無で分岐
+LOCAL = (ASSIPLAY) ? ASSI # MASTER
+IF TEQUIP:LOCAL:31 == 1
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+	PRINTL 콘돔 사정
+	RESETCOLOR
+	CALL SAMEN_SHOOT_CONDOM
+	RETURN 0
+ENDIF
+
+;コマンドごとの分岐
+;通常セックス系
+IF TFLAG:703 == 1
+	;マスターもしくは助手による奴隷への中田氏
+	IF TFLAG:10
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML \@(TFLAG:10 == 2) ? 질내대량 # 질내\@사정
+		RESETCOLOR
+		PRINTFORML \@(ASSIPLAY) ? 조수 # 사정\@정액＋{TFLAG:10}
+		CFLAG:(71 + ASSIPLAY) += TFLAG:10
+	ENDIF
+;助手を犯す
+ELSEIF TFLAG:703 == 6
+	IF TFLAG:17
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML \@(TFLAG:17 == 2) ? 질내대량 # 질내\@사정
+		RESETCOLOR
+		PRINTFORML 질사정액(조수)＋{TFLAG:17}
+		CFLAG:ASSI:71 += TFLAG:17
+	ENDIF
+;肉便器プレイ（TFLAG:10を使わないので独立処理）
+ELSEIF TFLAG:703 == 20
+	IF TFLAG:91
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORML \@(TFLAG:91 == 2) ? 질내대량 # 질내\@사정
+		RESETCOLOR
+		PRINTFORML 질사정액＋{TFLAG:91}
+		CFLAG:71 += TFLAG:91
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;奴隷の各コマンドでの中田氏チェック
+;-------------------------------------------------
+@IN_VAGINA_CHECK_T
+;各コマンドへの影響を小さくするのが目的（関数を呼ぶ, もしくはオミットするだけで良い）
+;TFLAG:10（中田氏）とTEQUIP:31（コンドーム）を条件に膣射を増やす処理を持つ
+
+;디버그
+PRINTFORML 노예에 의한 질내사정 체크
+WAIT
+
+;まずコンドームで分岐
+IF TEQUIP:31 == 1
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+	PRINTL 노예 콘돔 사정
+	CALL SAMEN_SHOOT_CONDOM
+	CFLAG:75 = 3
+	TEQUIP:31 = 0
+;妊娠モードであり, コンドームをしてないかつセックス系コマンドなら中出し
+ELSEIF (FLAG:18 & 2) && ASSIPLAY && (SELECTCOM == 25 || SELECTCOM == 307 || SELECTCOM == 323 || SELECTCOM == 324 || SELECTCOM == 325 || SELECTCOM == 651)
+	IF TFLAG:91
+		IF TFLAG:91 == 2
+			PRINTFORML 대량사정
+		ELSE
+			CALL SETCOLOR_TORIKOMODE, "PINK", 3
+			PRINTFORML 질내사정
+			RESETCOLOR
+		ENDIF
+		PRINTFORML 노예정액＋＋{TFLAG:91}
+		CFLAG:ASSI:73 += TFLAG:91
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;中田氏時の恐怖判定等
+;-------------------------------------------------
+@SAMEN_SHOOT_SOURCE
+;ソースの計算
+;LOCAL:1は不潔のソースに追加
+;LOCAL:2は液体追加のソースに追加
+;LOCAL:3は逸脱のソースに追加
+;LOCAL:4は恐怖に追加
+LOCAL:1 = 200
+LOCAL:2 = 500
+LOCAL:3 = 5000
+LOCAL:4 = 1250
+
+;大量射精時
+IF TFLAG:91 == 2
+	TIMES LOCAL:1 , 2.00
+	TIMES LOCAL:2 , 2.00
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 1.50
+ENDIF
+
+;相愛,隷属,壊造人格,淫魔で射精したのが主人の場合
+IF TFLAG:92 == MASTER && (TALENT:153 || TALENT:162 || TALENT:169 || TALENT:180)
+	LOCAL:1 = 0
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+	GOTO ADDING
+ENDIF
+
+;恋慕,妄信,服従,使い魔,淫乱がある場合
+IF TALENT:150 || TALENT:151 || TALENT:160 || TALENT:164 || TALENT:170
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+	GOTO ADDING
+ENDIF
+
+;臆病
+SIF TALENT:10
+	TIMES LOCAL:4 , 1.30
+
+;反抗的
+SIF TALENT:11
+	TIMES LOCAL:3 , 1.75
+
+;プライド高い
+IF TALENT:16
+	TIMES LOCAL:3 , 3.00
+	TIMES LOCAL:4 , 1.40
+ENDIF
+
+;無関心
+IF TALENT:21
+	TIMES LOCAL:3 , 0.20
+	TIMES LOCAL:4 , 0.20
+ENDIF
+
+;好奇心
+IF TALENT:23
+	TIMES LOCAL:3 , 0.60
+	TIMES LOCAL:4 , 0.50
+ENDIF
+
+;保守的
+IF TALENT:24
+	TIMES LOCAL:3 , 1.80
+	TIMES LOCAL:4 , 1.20
+ENDIF
+
+;一線越えない
+IF TALENT:27
+	TIMES LOCAL:3 , 3.50
+	TIMES LOCAL:4 , 1.25
+ENDIF
+
+;貞操観念, 貞操無頓着
+IF TALENT:30
+	TIMES LOCAL:3 , 2.50
+	TIMES LOCAL:4 , 1.50
+ELSEIF TALENT:31
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.50
+ENDIF
+
+;抵抗
+IF TALENT:34
+	TIMES LOCAL:3 , 2.00
+	TIMES LOCAL:4 , 1.20
+ENDIF
+
+;男嫌い・女嫌い
+IF TALENT:37 && TALENT:(TFLAG:92):120
+	TIMES LOCAL:3 , 3.50
+	TIMES LOCAL:4 , 1.50
+ELSEIF TALENT:38 && TALENT:(TFLAG:92):120 != 0
+	TIMES LOCAL:3 , 3.500
+	TIMES LOCAL:4 , 1.50
+ENDIF
+
+;快感に素直・快感の否定
+IF TALENT:70
+	TIMES LOCAL:3 , 0.25
+	TIMES LOCAL:4 , 0.20
+ELSEIF TALENT:71
+	TIMES LOCAL:3 , 3.00
+	TIMES LOCAL:4 , 1.25
+ENDIF
+
+;倒錯的
+SIF TALENT:80
+	TIMES LOCAL:3 , 0.30
+
+;魅力・魅惑・謎の魅力
+IF TALENT:(TFLAG:92):90 || TALENT:(TFLAG:92):91 || TALENT:(TFLAG:92):92
+	TIMES LOCAL:3 , 0.70
+	TIMES LOCAL:4 , 0.80
+ENDIF
+
+;Ｖ敏感・鈍感
+IF TALENT:102
+	TIMES LOCAL:3 , 0.90
+	TIMES LOCAL:4 , 0.85
+ELSEIF TALENT:103
+	TIMES LOCAL:3 , 1.20
+ENDIF
+
+;ABL:従順をみる
+IF ABL:10 == 1
+	TIMES LOCAL:3 , 0.90
+	TIMES LOCAL:4 , 0.95
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:3 , 0.75
+	TIMES LOCAL:4 , 0.90
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:3 , 0.60
+	TIMES LOCAL:4 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:3 , 0.20
+	TIMES LOCAL:4 , 0.40
+ELSEIF ABL:10 >= 5
+	TIMES LOCAL:3 , 0.10
+	TIMES LOCAL:4 , 0.20
+ENDIF
+
+;ABL:欲望をみる
+IF ABL:11 == 1
+	TIMES LOCAL:3 , 0.95
+	TIMES LOCAL:4 , 0.95
+ELSEIF ABL:11 == 2
+	TIMES LOCAL:3 , 0.85
+	TIMES LOCAL:4 , 0.85
+ELSEIF ABL:11 == 3
+	TIMES LOCAL:3 , 0.70
+	TIMES LOCAL:4 , 0.70
+ELSEIF ABL:11 == 4
+	TIMES LOCAL:3 , 0.55
+	TIMES LOCAL:4 , 0.55
+ELSEIF ABL:11 >= 5
+	TIMES LOCAL:3 , 0.35
+	TIMES LOCAL:4 , 0.35
+ENDIF
+
+$ADDING
+SOURCE:30 += LOCAL:1
+SOURCE:19 += LOCAL:2
+SOURCE:31 += LOCAL:3
+UP:17 += LOCAL:4

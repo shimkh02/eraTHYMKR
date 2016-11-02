@@ -1,0 +1,245 @@
+﻿;=============================================================================
+;매달기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE624
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM624
+TSTR:7 = 밧줄
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 29
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTL 매달기
+TSTR:0 = 매달기
+SELECTCOM = 624
+CALL TRAIN_MESSAGE_COM624
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 180
+	DOWNBASE:1 += 180
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 150
+	DOWNBASE:1 += 160
+ELSE
+	DOWNBASE:0 += 110
+	DOWNBASE:1 += 130
+ENDIF
+
+LOCAL:1 = 250
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:20 = 1000
+SOURCE:12 = 500
+SOURCE:22 = 1200
+SOURCE:31 = 900 + LOCAL:1
+SOURCE:23 = 300 + LOCAL:1
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 29
+	FLAG:1111 = 1
+	FLAG:1112 = SOURCE:12
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:12 = FLAG:1120
+	FLAG:1112 = SOURCE:22
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:22 = FLAG:1120
+	FLAG:1112 = SOURCE:23
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:23 = FLAG:1120
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+TCVAR:31 += 3
+
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 3
+
+;줄의 착탈
+TEQUIP:40 = 4
+RETURN 1
+
+;-------------------------------------------------
+;매달고 안
+;-------------------------------------------------
+@EQUIP_COM624
+PRINTL <매달기 중>
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 90
+	DOWNBASE:1 += 80
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 70
+	DOWNBASE:1 += 60
+ELSE
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 50
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 60
+ELSEIF ABL:21 == 1
+	LOCAL = 180
+ELSEIF ABL:21 == 2
+	LOCAL = 300
+ELSEIF ABL:21 == 3
+	LOCAL = 480
+ELSEIF ABL:21 == 4
+	LOCAL = 700
+ELSE
+	LOCAL = 850
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL , 2.00
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+LOCAL:3 += LOCAL + 1000
+LOCAL:1 += LOCAL + 700
+LOCAL:2 += LOCAL + 700
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 29
+	FLAG:1111 = 1
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+	FLAG:1112 = LOCAL:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+	FLAG:1111 = 2
+	FLAG:1112 = LOCAL:3
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:3 = FLAG:1120
+ENDIF
+
+SOURCE:20 += LOCAL:3
+SOURCE:12 += LOCAL
+SOURCE:22 += LOCAL:1
+SOURCE:31 += LOCAL:2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+
+TCVAR:31 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM624
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+;도착적이어 공포 각인이 1 이하로 반발 각인이 없을 때
+IF TALENT:80 && MARK:8 < 2 && MARK:9 < 1
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 묶어, 매달아 올렸다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 밧줄의 감촉을 온 몸으로 느끼며, 쾌감을 마음껏 맛보고 있는 것 같다….
+;반항적인가 저항을 가져 함락 하지 않는 경우
+ELSEIF (TALENT:11 || TALENT:34) && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORMW 격렬하게 거부하는 %조사선택(CALLNAME:TARGET, "를")% 억지로 %조사선택(TSTR:9, "로")% 묶어, 매달았다….
+;겁쟁이 소유나 공포 각인 2이상으로 기장과 감정결여를 가지지 않고, 함락 하고 있지 않는 경우
+ELSEIF  (TALENT:10 || MARK:8 >= 2) && TALENT:12 == 0 && TALENT:22 == 0 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORMW 공포에 질린 %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 정중하게 묶어, 매달았다….
+;프라이드 높은가 신령해 게다가, 굴복 각인과 치욕 각인이 1 이하로, 함락 하고 있지 않는 경우
+ELSEIF (TALENT:16 || TALENT:222) && MARK:2 < 2 && MARK:4 < 2 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 묶어, 매달아 올렸다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 매달리면서도, 그 프라이드만은 꺾이지 않는 것 처럼 보였다….
+;해방이나 쾌감에 솔직한가 봄의 사람으로 아픔에 약하지만 않고, 반발 각인이 없는 경우
+ELSEIF (TALENT:33 || TALENT:70 || TALENT:263) && TALENT:40 == 0 && MARK:9 <= 0
+	PRINTFORMW 어쩐지 즐기는 듯한 %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 정중하게 묶어, 매달았다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 묶어, 매달았다….
+ENDIF

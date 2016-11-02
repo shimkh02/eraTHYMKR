@@ -1,0 +1,170 @@
+﻿;=============================================================================
+;유두 깨물기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE627
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM627
+PRINTL 유두 깨물기
+TSTR:0 = 유두 깨물기
+SELECTCOM = 627
+CALL TRAIN_MESSAGE_COM627
+
+DOWNBASE:0 += 15
+DOWNBASE:1 += 150
+
+SOURCE:12 = 280
+SOURCE:15 = 90
+SOURCE:30 = 80
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 100
+	SOURCE:11 = 60
+	SOURCE:20 = 150
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 400
+	SOURCE:11 = 120
+	SOURCE:20 = 300
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 900
+	SOURCE:11 = 180
+	SOURCE:20 = 450
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1600
+	SOURCE:11 = 230
+	SOURCE:20 = 600
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 2000
+	SOURCE:11 = 250
+	SOURCE:20 = 800
+ELSE
+	SOURCE:3 = 2800
+	SOURCE:11 = 300
+	SOURCE:20 = 1000
+ENDIF
+
+IF TALENT:134
+	;ABL:분유중독을 본다
+	IF ABL:34 == 0
+		TIMES SOURCE:3 , 1.00
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:34 == 1
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:34 == 2
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:11 , 1.20
+	ELSEIF ABL:34 == 3
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:11 , 1.20
+	ELSEIF ABL:34 == 4
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:11 , 1.40
+	ELSE
+		TIMES SOURCE:3 , 1.60
+		TIMES SOURCE:11 , 1.60
+	ENDIF
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:3 , 0.50
+	TIMES SOURCE:11 , 0.60
+	TIMES SOURCE:15 , 0.60
+	TIMES SOURCE:30 , 1.40
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:3 , 0.70
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:30 , 1.20
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:3 , 0.80
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:3 , 1.00
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:30 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:30 , 0.40
+ELSE
+	TIMES SOURCE:3 , 1.50
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:30 , 0.00
+ENDIF
+
+;조교자의 TALENT:고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:3 , 0.70
+;조교자가［유아 퇴행］
+IF TALENT:PLAYER:159
+	TIMES SOURCE:11 , 1.20
+;조교자가［유아］,［유치］
+ELSEIF TALENT:PLAYER:130 || TALENT:PLAYER:131
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+ENDIF
+;음유
+IF TALENT:174
+	TIMES SOURCE:3 , 1.40
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:30 , 0.80
+ENDIF
+
+;노예의 B⇔조교자의 입의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:5
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM627
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:128 && TALENT:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:111
+	PRINT 표준 보다 약간 작은 
+ELSEIF TALENT:112
+	PRINT 손에서 흘러 넘칠 것 같을 만큼의 
+ELSEIF TALENT:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+PRINT 가슴의 끄트머리의, 
+IF PALAM:13 > PALAMLV:3
+	PRINT 완전히 딱딱해진 돌기 
+ELSE
+	PRINT 아직 부드러운 돌기 
+ENDIF
+IF TEQUIP:68
+	PRINTW 를 이빨의 끝으로 가볍게 물었다….
+ELSE
+	PRINTW 에 이빨을 세워 살짝 씹었다….
+ENDIF

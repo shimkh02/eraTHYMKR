@@ -1,0 +1,922 @@
+﻿;=============================================================================
+;창관 패치 관련의 SHOP 메뉴 처리 등
+;=============================================================================
+@SPRING_0
+PRINTFORMW 【%CALLNAME:MASTER% 창관 신장개업】
+FLAG:3000 |= 1048576
+;１週目と, 二週目以降で初期人気が異なる.
+IF FLAG:6 > 1
+	FLAG:3005 = FLAG:30
+	IF FLAG:3005 > 0
+		IF FLAG:3005 < 50
+			FLAG:3005 /= 2
+		ELSEIF FLAG:3005 >= 50 && FLAG:3005 < 150
+			FLAG:3005 = 25 + ((FLAG:3005 - 50) / 4)
+		ELSEIF FLAG:3005 >= 150 && FLAG:3005 < 2650
+			FLAG:3005 = 50 + ((FLAG:3005 - 150) / 10)
+		ELSEIF FLAG:3005 >= 2650 && FLAG:3005 < 7650
+			FLAG:3005 = 75 + ((FLAG:3005 - 2650) / 20)
+		ELSEIF FLAG:3005 >= 7650
+			FLAG:3005 = 100
+		ENDIF
+	ENDIF
+ELSE
+	FLAG:3005 = 30
+	FLAG:3005 += FLAG:30
+	FLAG:3005 += FLAG:30
+	SIF FLAG:3005 > 100
+		FLAG:3005 = 100
+ENDIF
+
+PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 업자의 알선으로 몇 명의 종업원을 고용하여 창관을 열었다.
+PRINTFORML %조사처리(CALLNAME:MASTER,"는")% 조교사로 유명해서인지
+PRINTFORMW 환상향 사람들 중 {FLAG:3005}퍼센트나 알고 있을 정도로 평판이 높다.
+PRINTL 
+PRINTFORMW SHOP에서, 창관의 조작과 시설의 증축이 가능하게 되었습니다.
+
+;-------------------------------------------------
+;ステータス表示(キャラ一覧)
+;-------------------------------------------------
+@SPRING_3
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+;表示ページ番号
+LOCAL = P
+;CHARADATA_LISTのために待避
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;主人は除外
+	SIF COUNT == MASTER && (FLAG:3000 & 67108864) == 0
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+MARK:MASTER:98 = 1
+
+$PRINT_LIST
+DRAWLINE
+DRAWLINE
+PRINT 　
+CALL ARRANGE_CHARALIST, 0
+CALL ARRANGE_CHARALIFE, 0
+CALL ARRANGE_CHARATALENT, 0
+PRINTL 
+DRAWLINE
+LOCAL:3 = 0
+REPEAT 20
+	LOCAL:10 = GET_LIST(COUNT + LOCAL * 20)
+	
+	SIF LOCAL:10 == 0
+		CONTINUE
+	SIF CFLAG:(LOCAL:10):4 == 1
+		CONTINUE
+	IF (LOCAL:10) == TARGET
+		PRINT ☆
+		LOCAL:3 |= 32
+	ELSEIF LOCAL:10 == ASSI
+		PRINT ★
+		LOCAL:3 |= 32
+	ELSEIF CFLAG:(LOCAL:10):4 == 4
+		PRINT ◆
+		LOCAL:3 |= 1
+	ELSEIF CFLAG:(LOCAL:10):4 == 8
+		CONTINUE
+	ELSEIF CFLAG:(LOCAL:10):4 == 16
+		CONTINUE
+	ELSEIF CFLAG:(LOCAL:10):4 & 1024
+		PRINT ▼
+		LOCAL:3 |= 16
+	ELSEIF CFLAG:(LOCAL:10):4 == 2048 || CFLAG:LOCAL:4 == 4096
+		PRINT ▽
+		LOCAL:3 |= 8
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL:10
+	CALL ARRANGE_CHARALIFE, LOCAL:10
+	CALL ARRANGE_CHARATALENT, LOCAL:10
+	PRINTL 
+REND
+IF LOCAL:3 >= 1
+	PRINT 　　　☆:조교중 ★:조수
+	SIF FLAG:15 & 4096 && FLAG:75 & 32768 && LOCAL:3 & 1
+		PRINT  ◆:촉수유폐중
+	SIF LOCAL:3 & 16
+		PRINT  ▼:매춘중
+	SIF FLAG:79 & 1 && LOCAL:3 & 8
+		PRINT  ▽:농사중
+	PRINTL 　임을 표시하고 있습니다.
+ENDIF
+
+DRAWLINE
+
+
+@SPRING_1
+;バグ回避用です
+SIF TARGET == -1
+	TARGET = 0
+
+;表示ページ番号初期化
+P = 0
+
+;売春対象を決定します.
+$SPRING
+
+
+DRAWLINE
+PRINTL 누구의 매춘 상황을 바꾸겠습니까?
+PRINTFORML 현재 매춘인원　{FLAG:3001}／{ITEM:90}    현재 인기 {FLAG:3005}
+$PRINT_LIST
+CALL SPRING_3
+DRAWLINE
+PRINTL 
+IF FLAG:3004 == 0 && FLAG:3000 && DAY:7 == 1 && ITEM:90 >= 5
+	PRINTL  [1003]  밤 이벤트를 개최한다
+;一桁はパーティー系.直接的なプレイは少なめで, 他の技能が優先される.
+ELSEIF FLAG:3004 == 1
+	PRINTL  [1003]  밤 이벤트 변경　　현재：처녀경매
+ELSEIF FLAG:3004 == 2
+	PRINTL  [1003]  밤 이벤트 변경　　현재：입식 파티
+ELSEIF FLAG:3004 == 3
+	PRINTL  [1003]  밤 이벤트 변경　　현재：가요 쇼
+;10台はシチュエーション系.様々ななりきりプレイを楽しむ
+ELSEIF FLAG:3004 == 10
+	PRINTL  [1003]  밤 이벤트 변경　　현재：S서당플레이
+ELSEIF FLAG:3004 == 11
+	PRINTL  [1003]  밤 이벤트 변경　　현재：S병원플레이
+ELSEIF FLAG:3004 == 12
+	PRINTL  [1003]  밤 이벤트 변경　　현재：S풀 플레이
+;20台は乱交系
+ELSEIF FLAG:3004 == 20
+	PRINTL  [1003]  밤 이벤트 변경　　현재：난교 파티
+;30台は客一人への超奉仕系
+ELSEIF FLAG:3004 == 30
+	PRINTL  [1003]  밤 이벤트 변경　　현재：일부다처제 플레이
+ELSEIF FLAG:3004 == 31
+	PRINTL  [1003]  밤 이벤트 변경　　현재：승천 직전 SM투어
+ELSEIF FLAG:3004 == 32
+	PRINTL  [1003]  밤 이벤트 변경　　현재：소녀 정액 목욕탕 체험 투어
+ENDIF
+SIF FLAG:3000 & 8388608
+	PRINTL  [1004]  창관 랭킹 체크
+IF FLAG:4 == 4
+	PRINTL  [1005]  증축한다  (1회 50000원)
+ELSE
+	PRINTL  [1005]  증축한다  (1회 80000원)
+ENDIF
+PRINTL  [1111]  창관계 컨피그
+PRINTFORM page.{P}
+IF P <= 0
+	PRINTLC                 
+ELSE
+	PRINTLC [1001] 앞페이지로
+ENDIF
+PRINTLC [1000] 돌아간다
+IF P >= LOCAL@SPRING_3:2 / 20
+	PRINTLC                 
+ELSE
+	PRINTLC [1009] 다음페이지로
+ENDIF
+
+
+
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	CALL SPRING_2
+	IF LOCAL@SPRING_2 != 2 && LOCAL@SPRING_2 != 0
+		PRINTW 세트 매춘은 2명이 필요합니다.
+		GOTO SPRING
+	ENDIF
+	;バグ回避用です
+	SIF TARGET == 0
+		TARGET = -1
+	LOCAL:99 = P
+	RETURN 0
+ELSEIF RESULT == 1001
+	;前のページへ
+	SIF LOCAL@SPRING_3 > 0
+		P -= 1
+	GOTO SPRING
+ELSEIF RESULT == 1009
+	;次のページへ
+	SIF LOCAL@SPRING_3 < LOCAL@SPRING_3:1
+		P += 1
+	GOTO SPRING
+ELSEIF RESULT == 1003 && FLAG:3000 && DAY:7 == 1
+	CALL SPRING_PARTY
+	GOTO SPRING
+ELSEIF RESULT == 1004 && FLAG:3000 & 8388608
+	CALL SPRING_RANKING
+	GOTO SPRING
+ELSEIF RESULT == 1005
+	IF FLAG:4 == 4 && MONEY < 50000
+		PRINTL 자금이 부족합니다.
+		GOTO SPRING
+	ELSEIF MONEY < 80000 && FLAG:4 != 4
+		PRINTL 자금이 부족합니다.
+		GOTO SPRING
+	ENDIF
+	CALL SPRING_WIDE
+	GOTO SPRING
+ELSEIF RESULT == 1111
+	CALL SPRING_CONFIG
+	GOTO SPRING
+ENDIF
+;RESULT=キャラ番号以外
+IF RESULT < 0 || RESULT >= CHARANUM
+	GOTO INPUT_LOOP
+ENDIF
+IF CFLAG:RESULT:1501 > 0
+	LOCAL@SPRING_DUMMY:1 = CFLAG:RESULT:1501
+	CFLAG:RESULT:1501 = 0
+	CFLAG:RESULT:4 -= 1024
+	FLAG:3001 -= 1
+ELSE
+	LOCAL@SPRING_DUMMY:1 = 0
+ENDIF
+
+
+IF RESULT == MASTER && (FLAG:3000 & 67108864) == 0
+	PRINTW 주인은 매춘을 할 수 없습니다.
+	GOTO SPRING
+ENDIF
+
+IF FLAG:3001 > ITEM:90
+	PRINTFORML 버그가 발생했습니다.
+	PRINTFORMW 긴급회피를 위해 전원의 매춘상태를 해제하고, 의뢰를 파기하겠습니다.
+	PRINTFORMW 버그가 발생한 자세한 상황을 동방 우후후판 eratoho 스레에 보고해주세요.
+	CALL SPRING_OUT
+	GOTO SPRING
+ENDIF
+IF CFLAG:RESULT:1501 == 0 && FLAG:3001 == ITEM:90
+	PRINTW 이 이상 매춘을 시킬 수 없습니다. 창관을 확장해주세요.
+	GOTO SPRING
+ENDIF
+IF BASE:RESULT:0 <= 500
+	PRINTW 체력이 500 이하이기 때문에 매춘을 할 수 없습니다.
+	GOTO SPRING
+ENDIF
+IF MARK:RESULT:9
+	PRINTW 반발감정이 심해서 매춘을 할 수 없습니다.
+	GOTO SPRING
+ENDIF
+IF TALENT:RESULT:146
+	PRINTW 촉수기생 중에는 매춘을 할 수 없습니다.
+	GOTO SPRING
+ENDIF
+IF TALENT:RESULT:145
+	PRINTW 알이 뱃속에 있는 동안에는 매춘을 할 수 없습니다.
+	GOTO SPRING
+ENDIF
+IF CFLAG:RESULT:4 == 2
+	PRINTW 육아 중에는 매춘을 할 수 없습니다.
+	GOTO SPRING
+ENDIF
+LOCAL@SPRING_DUMMY:0 = ABL:RESULT:10
+LOCAL@SPRING_DUMMY:0 += ABL:RESULT:11
+LOCAL@SPRING_DUMMY:0 += ABL:RESULT:12
+LOCAL@SPRING_DUMMY:0 += ABL:RESULT:13
+LOCAL@SPRING_DUMMY:0 += ABL:RESULT:14
+IF LOCAL@SPRING_DUMMY:0 < 7
+	PRINTW 조교가 부족합니다. 좀 더 키우지 않으면 상품으로 쓸 수 없습니다.
+	GOTO SPRING
+ENDIF
+IF RESULT == TARGET
+	TARGET = 0
+	LOCAL@SPRING_DUMMY:1 = 100
+ELSEIF RESULT == ASSI
+	ASSI = -1
+	LOCAL@SPRING_DUMMY:1 = 101
+ENDIF
+IF TALENT:RESULT:140
+	PRINTFORML ※※※※※※※※※경고※※※※※※※※※
+	PRINTFORML 【임신】 중의 매춘행위는 굉장히 위험합니다.
+	PRINTFORMW ※※※※※※※※※경고※※※※※※※※※
+ENDIF
+IF TALENT:RESULT:158 || TALENT:RESULT:161 || TALENT:RESULT:163 || TALENT:RESULT:167 || TALENT:RESULT:168 || TALENT:RESULT:169
+	PRINTFORML ※※※※※※※※※※※※경고※※※※※※※※※※※※※※
+	PRINTFORML 붕괴 계열 소질 때문에 상품으로서의 가치가 매우 저하합니다.
+	PRINTFORMW ※※※※※※※※※※※※경고※※※※※※※※※※※※※※
+ENDIF
+COUNT = RESULT
+PRINTFORML %조사처리(NAME:COUNT,"를")% 어떻게 하겠습니까?
+
+PRINTLC [0] 매춘하지 않음
+PRINTLC [1] 소프트 매춘
+LOCAL@SPRING_DUMMY:0 = ABL:COUNT:0
+LOCAL@SPRING_DUMMY:0 += ABL:COUNT:3
+SIF LOCAL@SPRING_DUMMY:0 >= 5
+	PRINTLC [2] ＣＢ매춘
+SIF ABL:COUNT:2 >= 3 && TALENT:COUNT:127 == 0
+	PRINTLC [3] Ａ매춘
+SIF (EXP:COUNT:0 > 30 || TALENT:COUNT:260 == 1) && ABL:COUNT:10 > 1 && ABL:COUNT:11 > 1 && ABL:COUNT:13 > 1 && ABL:COUNT:14 > 1 && TALENT:COUNT:127 == 0 && TALENT:COUNT:120 == 0
+	PRINTLC [4] Ｖ매춘
+SIF ABL:COUNT:10 > 1 && ABL:COUNT:13 >= 3 && MARK:COUNT:2 >= 2 && EXP:COUNT:76 >= 30 && FLAG:3000 & 1
+	PRINTLC [5] 집단시간
+LOCAL@SPRING_DUMMY:2 = ABL:COUNT:1
+LOCAL@SPRING_DUMMY:2 += ABL:COUNT:2
+SIF ABL:COUNT:10 > 1 && LOCAL@SPRING_DUMMY:2 >= 5 && MARK:COUNT:2 >= 3 && ABL:COUNT:13 >= 3 && EXP:COUNT:76 >= 30 && EXP:COUNT:77 >= 40 && (EXP:COUNT:0 > 0 || TALENT:COUNT:260 == 1) && FLAG:3000 & 1 && TALENT:COUNT:127 == 0 && TALENT:COUNT:120 == 0
+	PRINTLC [6] 난교
+SIF TALENT:COUNT:260 == 1
+	PRINTLC [7] 세트 매춘(2명까지)
+IF FLAG:3004 == 1 && TALENT:COUNT:0 && TALENT:COUNT:120 == 0
+	PRINTLC [8] 처녀경매
+ELSEIF FLAG:3004 == 2 && ABL:COUNT:13 >= 2
+	PRINTLC [8] 입식파티
+ELSEIF FLAG:3004 == 10 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTLC [8] S서당 플레이
+ELSEIF FLAG:3004 == 11 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTLC [8] S병원 플레이
+ELSEIF FLAG:3004 == 12 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTLC [8] S풀장 플레이
+ELSEIF FLAG:3004 == 20 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTLC [8] 난교 파티
+ELSEIF FLAG:3004 == 30 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && ABL:COUNT:20 >= 4 && TALENT:COUNT:120 == 0
+	PRINTLC [8] 일부다처제 플레이
+ELSEIF FLAG:3004 == 31 && TALENT:COUNT:0 == 0 && ABL:COUNT:20 >= 4 && TALENT:COUNT:120 == 0
+	PRINTLC [8] 승천직전 SM투어
+ELSEIF FLAG:3004 == 32 && TALENT:COUNT:121 && TALENT:COUNT:120 == 0
+	PRINTLC [8] 정액 목욕탕 투어
+ENDIF
+;個別専用売春行為を実装するならここ
+;TFLAG:200 = 1700
+;E = 0
+;Z = 0
+;CALL SELF_KOJO_COUNT
+
+PRINTL [100] 이대로 둔다
+$INPUT_LOOP2
+INPUT
+
+IF RESULT == 0
+	PRINTW 매춘을 해제합니다.
+	IF TALENT:COUNT:262
+		PRINTFORML %조사처리(CALLNAME:COUNT,"는")% 매춘에 참가하고 싶다며 울부짖고 있다.
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(CALLNAME:COUNT,"를")% 억지로 창관업무에서 빼버렸다.
+		PRINTFORMW 반발각인 Lv3을 취득
+		MARK:COUNT:9 = 3
+	ENDIF
+ELSEIF RESULT == 1
+	PRINTW 만지기 엄금 매춘을 행합니다.
+	CFLAG:COUNT:1501 = 1
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 2 && LOCAL@SPRING_DUMMY:0 >= 5
+	IF TALENT:COUNT:120 == 0
+		PRINTW 삽입 엄금의 매춘을 실시합니다.
+	ELSE
+		PRINTW OK의 매춘을 실시합니다.
+	ENDIF
+	CFLAG:COUNT:1501 = 2
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 3 && ABL:COUNT:2 >= 3 && TALENT:COUNT:127 == 0
+	PRINTW Ａ를 메인으로 한 매춘을 행합니다.
+	CFLAG:COUNT:1501 = 3
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 4 && (EXP:COUNT:0 > 30 || TALENT:COUNT:260 == 1) && ABL:COUNT:10 > 1 && ABL:COUNT:11 > 1 && ABL:COUNT:13 > 1 && ABL:COUNT:14 > 1 && TALENT:COUNT:127 == 0 && TALENT:COUNT:120 == 0
+	PRINTW 통상 매춘을 행합니다.
+	CFLAG:COUNT:1501 = 4
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 5 && ABL:COUNT:10 > 1 && ABL:COUNT:13 >= 3 && MARK:COUNT:2 >= 2 && EXP:COUNT:76 >= 30 && FLAG:3000 & 1
+	PRINTL 삽입 엄금의 다수 상대 매춘을 행합니다.
+	CFLAG:COUNT:1501 = 5
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 6 && ABL:COUNT:10 > 1 && LOCAL@SPRING_DUMMY:2 >= 5 && MARK:COUNT:2 >= 3 && ABL:COUNT:13 >= 3 && EXP:COUNT:76 >= 30 && EXP:COUNT:77 >= 40 && (EXP:COUNT:0 > 0 || TALENT:COUNT:260 == 1) && FLAG:3000 & 1 && TALENT:COUNT:127 == 0 && TALENT:COUNT:120 == 0
+	PRINTL 다수 상대 매춘을 행합니다.
+	CFLAG:COUNT:1501 = 6
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 7 && TALENT:COUNT:260 == 1
+	PRINTL 2인 세트의 매춘을 행합니다.
+	CFLAG:COUNT:1501 = 7
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 1 && TALENT:COUNT:0
+	PRINTL 처녀 옥션에 참가합니다.
+	CFLAG:COUNT:1501 = 8
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 2 && ABL:COUNT:13 >= 2
+	PRINTL 입식 파티에 참가합니다.
+	CFLAG:COUNT:1501 = 9
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 10 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTL 서당을 빌려서 되는대로 난교하는 이벤트에 참가합니다.
+	CFLAG:COUNT:1501 = 10
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 11 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTL 보건소를 통째로 빌려서 되는대로 난교하는 이벤트에 참가합니다.
+	CFLAG:COUNT:1501 = 11
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 12 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTL 호수를 통째로 대절해서 되는대로 난교하는 이벤트에 참가합니다.
+	CFLAG:COUNT:1501 = 12
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 20 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTL 난교 파티에 참가합니다.
+	CFLAG:COUNT:1501 = 13
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 30 && TALENT:COUNT:0 == 0 && ABL:COUNT:10 >= 4 && TALENT:COUNT:120 == 0
+	PRINTL VIP에 대한 봉사활동에 참가합니다.
+	CFLAG:COUNT:1501 = 14
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 31 && TALENT:COUNT:0 == 0 && ABL:COUNT:20 >= 4 && TALENT:COUNT:120 == 0
+	PRINTL VIP에 대한 과격하기 짝이 없는 봉사활동에 참가합니다.
+	CFLAG:COUNT:1501 = 15
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 8 && FLAG:3004 == 32 && TALENT:COUNT:121 && TALENT:COUNT:120 == 0
+	PRINTL VIP가 들어가는 정액 목욕탕을 만들기 위해 노력합니다.
+	CFLAG:COUNT:1501 = 16
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+;ELSEIF RESULT == 9 && Z == 1
+;	TFLAG:200 = 1700
+;	E = 0
+;	CALL SELF_KOJO_COUNT
+;	CFLAG:COUNT:1501 = 17
+;	CFLAG:COUNT:4 |= 1024
+;	FLAG:3001 += 1
+ELSEIF RESULT == 100 && LOCAL@SPRING_DUMMY:1 == 100
+	TARGET = COUNT
+ELSEIF RESULT == 100 && LOCAL@SPRING_DUMMY:1 == 101
+	ASSI = COUNT
+ELSEIF RESULT == 100 && LOCAL@SPRING_DUMMY:1 != 0
+	CFLAG:COUNT:1501 = LOCAL@SPRING_DUMMY:1
+	CFLAG:COUNT:4 |= 1024
+	FLAG:3001 += 1
+ELSEIF RESULT == 100
+	GOTO SPRING
+ELSE
+	GOTO INPUT_LOOP2
+ENDIF
+
+GOTO SPRING
+
+
+@SPRING_2
+LOCAL = 0
+REPEAT CHARANUM
+;セット売春の人を数えます
+SIF CFLAG:COUNT:1501 == 7
+	LOCAL += 1
+REND
+
+
+@SPRING_WIDE
+IF FLAG:4 == 4
+	MONEY -= 50000
+ELSE
+	MONEY -= 80000
+ENDIF
+
+PRINTL 창관의 확장을 행합니다.
+SIF ITEM:90 <= 30
+	PRINTL [0] 매춘가능인수를 늘린다.
+SIF (FLAG:3000 & 1) == 0
+	PRINTL [1] 대연회장을 설치한다.
+SIF (FLAG:3000 & 2) == 0
+	PRINTL [2] 여러 가지 기구를 비치한다.
+SIF (FLAG:3000 & 4) == 0
+	PRINTL [3] 비디오 판매 코너를 설치한다.
+SIF (FLAG:3000 & 8) == 0 && TALENT:MASTER:149 == 1
+	PRINTL [4] 촉수 방을 설치한다.
+PRINTL [100] 그만둔다
+
+$INPUT_LOOP
+INPUT
+
+IF RESULT == 0 && ITEM:90 <= 30
+	ITEM:90 += 1
+	PRINTFORMW 매춘 가능 인수가 {ITEM:90}명으로 늘었습니다.
+ELSEIF RESULT == 1 && (FLAG:3000 & 1) == 0
+	PRINTFORMW 대연회장이 설치되어, 많은 사람을 상대로 한 매춘이 가능해졌습니다.
+	FLAG:3000 |= 1
+ELSEIF RESULT == 2 && (FLAG:3000 & 2) == 0
+	PRINTFORMW 채찍이나 바이브 등이 완비되어, 레어한 요망에도 응할 수 있게 되었습니다.
+	FLAG:3000 |= 2
+ELSEIF RESULT == 3 && (FLAG:3000 & 4) == 0
+	PRINTFORMW 매춘 상황을 찍은 비디오를 선물로서 사서 돌아갈 수 있게 되었습니다.
+	FLAG:3000 |= 4
+ELSEIF RESULT == 4 && (FLAG:3000 & 8) == 0 && TALENT:MASTER:149 == 1
+	PRINTFORMW 촉수 방을 설치해서 보다 유니크한 요구에도 응답할 수 있게 되었습니다.
+	FLAG:3000 |= 8
+ELSEIF RESULT == 100
+	PRINTL 
+	IF FLAG:4 == 4
+		MONEY += 50000
+	ELSE
+		MONEY += 80000
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+RETURN 0
+
+
+@SPRING_PARTY
+
+
+PRINTL 무엇을 개최하겠습니까?
+$INPUT_LOOP
+PRINTC  [0]  개최 중지
+;一桁はパーティー系.直接的なプレイは少なめで, 他の技能が優先される.
+PRINTC  [1]  처녀 경매
+PRINTC  [2]  입식 파티
+;PRINTC  [3]  댄스파티
+;IF FLAG:3000 & 4
+;	PRINTC  [4]  가요쇼
+;	PRINTC  [5]  신사토론회
+;ENDIF
+;;10台はシチュエーション系.様々ななりきりプレイを楽しむ
+IF FLAG:3000 & 2
+	PRINTC  [10] S서당플레이
+	PRINTC  [11] S병원플레이
+	PRINTC  [12] S풀장플레이
+;	PRINTC  [13] S신혼집플레이
+;	PRINTC  [14] S전차치한플레이
+ENDIF
+;20台は乱交系.ある程度の人気が必要
+IF EXP:MASTER:77 >= 50
+	PRINTC  [20] 난교파티
+;	PRINTC  [21] 야외난교파티
+;	PRINTC  [22] 온천숙소파티
+ENDIF
+;;30台は客一人への超奉仕系
+IF FLAG:3000 & 16
+	PRINTC  [30] 일부다처플레이
+	PRINTC  [31] 승천직전SM투어
+	PRINTC  [32] 정액목욕투어
+ENDIF
+PRINTC [100] 변경하지 않는다
+INPUT
+IF RESULT == 0
+	PRINTL 밤의 이벤트를 중지합니다.
+	FLAG:3004 = 0
+ELSEIF RESULT == 1
+	PRINTL 처녀의 경매를 행합니다.
+	FLAG:3004 = 1
+ELSEIF RESULT == 2
+	PRINTL 요리와 봉사를 하는 심야영업을 실시합니다.
+	FLAG:3004 = 2
+;ELSEIF RESULT == 3
+;	PRINTL 춤과 봉사를 하는 심야영업을 실시합니다.
+;	FLAG:3004 = 3
+;ELSEIF RESULT == 4 && FLAG:3000 & 4
+;	PRINTL 노래와 요리와 봉사를 하는 심야영업을 실시합니다.
+;	FLAG:3004 = 4
+;ELSEIF RESULT == 5 && FLAG:3000 & 4
+;	PRINTL 특이한 호사가들을 모아서, 노예에 대해 토론을 실시합니다.
+;	FLAG:3004 = 5
+ELSEIF RESULT == 10 && FLAG:3000 & 2
+	PRINTL 서당이라는 시추에이션에서 되는대로 난교를 실시합니다.
+	FLAG:3004 = 10
+ELSEIF RESULT == 11 && FLAG:3000 & 2
+	PRINTL 병원의 환자・의사・간호사라는 시추에이션에서 되는대로 난교를 실시합니다.
+	FLAG:3004 = 11
+ELSEIF RESULT == 12 && FLAG:3000 & 2
+	PRINTL 호수에서 러브러브데이트라는 시추에이션으로 되는대로 난교를 실시합니다.
+	FLAG:3004 = 12
+;ELSEIF RESULT == 13 && FLAG:3000 & 2
+;	PRINTL 순혼집에서 네토라레를 한다는 시추에이션으로 플레이를 행합니다.
+;	FLAG:3004 = 13
+;ELSEIF RESULT == 14 && FLAG:3000 & 2
+;	PRINTL 전차에서 치한이 나왔다는 시추에이션으로 플레이를 행합니다.
+;	FLAG:3004 = 14
+ELSEIF RESULT == 20 && EXP:MASTER:77 >= 50
+	PRINTL 난교 파티를 개최합니다.
+	FLAG:3004 = 20
+;ELSEIF RESULT == 21 && EXP:MASTER:77 >= 50
+;	PRINTL 야외 난교 파티를 개최합니다.
+;	FLAG:3004 = 21
+;ELSEIF RESULT == 22 && EXP:MASTER:77 >= 50
+;	PRINTL 온천숙소를 대절해서 난교 파티를 개최합니다.
+;	FLAG:3004 = 22
+ELSEIF RESULT == 30 && FLAG:3000 & 16
+	PRINTL VIP 손님 한 분에게 모두 모여 봉사하는 특수영업을 실시합니다.
+	FLAG:3004 = 30
+ELSEIF RESULT == 31 && FLAG:3000 & 16
+	PRINTL VIP 손님 한 분을 모두 같이 괴롭히는 특수영업을 실시합니다.
+	FLAG:3004 = 31
+ELSEIF RESULT == 32 && FLAG:3000 & 16
+	PRINTL VIP 손님 한 분에게 모두 사정하는 후타나리 전용 특수영업을 실시합니다.
+	FLAG:3004 = 32
+ELSEIF RESULT == 100
+	PRINTL 변경하지 않습니다.
+	GOTO INPUT_AFTER
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+REPEAT CHARANUM
+	IF CFLAG:COUNT:1501 == 8
+		CFLAG:COUNT:1501 = 0
+		CFLAG:COUNT:4 -= 1024
+		FLAG:3001 -= 1
+	ENDIF
+REND
+$INPUT_AFTER
+
+
+@SPRING_OUT
+
+REPEAT CHARANUM
+	IF CFLAG:COUNT:1501
+		CFLAG:COUNT:1501 = 0
+		CFLAG:COUNT:4 -= 1024
+	ENDIF
+REND
+FLAG:3001 = 0
+FLAG:3003 = 0
+FLAG:3004 = 0
+
+@SPRING_CONFIG
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해주세요.
+DRAWLINE
+PRINTFORML  [ 0] 캐릭터 간이능력 표시기능
+PRINTFORML  [ 1] 매춘시 메시지 스킵 기능
+PRINTFORML  [ 2] 이벤트 매춘관련
+PRINTFORML  [ 3] 게임 밸런스 브레이크 기능
+PRINTFORML [100] ＯＫ
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	PRINTL 캐릭터의 표시능력에 관한 기능설정을 행합니다.
+	CALL SPRING_CONFIGURATION_0
+ELSEIF RESULT == 1
+	PRINTL 이벤트 매춘을 제외하고, 매춘시의 스킵 기능에 관한 설정을 행합니다.
+	CALL SPRING_CONFIGURATION_1
+ELSEIF RESULT == 2
+	PRINTL 이벤트 매춘에서의 기능설정을 행합니다.
+	CALL SPRING_CONFIGURATION_2
+ELSEIF RESULT == 3
+	PRINTL 게임 밸런스를 부숴버릴 정도로 위력적인 설정을 합니다.
+	CALL SPRING_CONFIGURATION_3
+ELSEIF RESULT != 100
+	GOTO INPUT_LOOP_1
+ENDIF
+PRINT 그밖에 
+GOTO INPUT_LOOP_0
+
+@SPRING_CONFIGURATION_0
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL 현재, 캐릭터 능력표시설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해주세요
+DRAWLINE
+PRINTS LOCALS:((FLAG:3000 & 2048) > 0)
+PRINTL [ 0] 부정의 구슬 여유도 표시
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 4096) > 0)
+PRINTL [ 1] 매춘중독도 표시
+;-------------------------------------------------
+PRINTL  [100] 돌아가기
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	IF FLAG:3000 & 2048
+		PRINTFORMW 부정의 구슬 여유・반발각인의 표시를 무효로 했습니다.
+		FLAG:3000 -= 2048
+	ELSE
+		PRINTFORMW 부정의 구슬 여유・반발각인의 표시를 유효로 했습니다.
+		FLAG:3000 |= 2048
+	ENDIF
+ELSEIF RESULT == 1
+	IF FLAG:3000 & 4096
+		PRINTFORMW 매춘중독 정도의 표시를 무효로 했습니다.
+		FLAG:3000 -= 4096
+	ELSE
+		PRINTFORMW 매춘중독 정도의 표시를 유효로 했습니다.
+		FLAG:3000 |= 4096
+	ENDIF
+ELSE
+	PRINTFORML 올바른 수치를 입력해주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에 
+GOTO INPUT_LOOP_0
+
+@SPRING_CONFIGURATION_1
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL 현재, 매춘 중의 메시지 스킵 기능 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+PRINTS LOCALS:((FLAG:3000 & 16384) > 0)
+PRINTL [ 0] 경험 표시 스킵
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 32768) > 0)
+PRINTL [ 1] 체력 감소 표시 스킵
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 65536) > 0)
+PRINTL [ 2] 부정의 구슬 표시 스킵
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 131072) > 0)
+PRINTL [ 3] 금전표시 스킵
+;-------------------------------------------------
+PRINTL  [100] 돌아가기
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	IF FLAG:3000 & 16384
+		PRINTFORMW 매춘으로 증가하는 경험표시 스킵을 무효로 했습니다.
+		FLAG:3000 -= 16384
+	ELSE
+		PRINTFORMW 매춘으로 증가하는 경험표시 스킵을 유효로 했습니다.
+		FLAG:3000 |= 16384
+	ENDIF
+ELSEIF RESULT == 1
+	IF FLAG:3000 & 32768
+		PRINTFORMW 매춘으로 감소하는 체력표시 스킵을 무효로 했습니다.
+		FLAG:3000 -= 32768
+	ELSE
+		PRINTFORMW 매춘으로 감소하는 체력표시 스킵을 유효로 했습니다.
+		FLAG:3000 |= 32768
+	ENDIF
+ELSEIF RESULT == 2
+	IF FLAG:3000 & 65536
+		PRINTFORMW 매춘으로 증가하는 부정의 구슬 표시 스킵을 무효로 했습니다.
+		FLAG:3000 -= 65536
+	ELSE
+		PRINTFORMW 매춘으로 증가하는 부정의 구슬 표시 스킵을 유효로 했습니다.
+		FLAG:3000 |= 65536
+	ENDIF
+ELSEIF RESULT == 3
+	IF FLAG:3000 & 131072
+		PRINTFORMW 매춘으로 증가하는 금전표시 스킵을 무효로 했습니다.
+		FLAG:3000 -= 131072
+	ELSE
+		PRINTFORMW 매춘으로 증가하는 금전표시 스킵을 유효로 했습니다.
+		FLAG:3000 |= 131072
+	ENDIF
+ELSE
+	PRINTFORML 올바른 수치를 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에 
+GOTO INPUT_LOOP_0
+
+@SPRING_CONFIGURATION_2
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL 현재, 이벤트 매춘 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주십시오
+DRAWLINE
+PRINTS LOCALS:((FLAG:3000 & 524288) > 0)
+PRINTL [ 0] 전 캐릭터를 묘사한다
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 1048576) > 0)
+PRINTL [ 1] 경험・체력・부정의 구슬 메시지 스킵(온 추천)
+;-------------------------------------------------
+PRINTL  [100] 돌아가기
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	IF FLAG:3000 & 524288
+		PRINTFORMW 일부 캐릭터만의 간결한 묘사를 합니다.
+		FLAG:3000 -= 524288
+	ELSE
+		PRINTFORMW 묘사는 번잡합니다만, 전 캐릭터를 묘사합니다.
+		FLAG:3000 |= 524288
+	ENDIF
+ELSEIF RESULT == 1
+	IF FLAG:3000 & 1048576
+		PRINTFORMW 이벤트 매춘중의 각종 시스템 메시지를 표시합니다.
+		FLAG:3000 -= 1048576
+	ELSE
+		PRINTFORMW 이벤트 매춘중의 각종 시스템 메시지를 스킵합니다.
+		FLAG:3000 |= 1048576
+	ENDIF
+ELSE
+	PRINTFORML 올바른 수치를 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에 
+GOTO INPUT_LOOP_0
+
+@SPRING_CONFIGURATION_3
+	PRINTFORML ※※※※※※※※※※※※경고※※※※※※※※※※※※※
+	PRINTFORML 이 항목을 변경하면 게임 밸런스가 크게 망가질 수 있습니다.
+	PRINTFORML 그걸 미리 숙지하시고 변경해 주세요.
+	PRINTFORMW ※※※※※※※※※※※※경고※※※※※※※※※※※※※
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL 현재, 이벤트 매춘 설정은 이하와 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경하고 싶은 내용을 선택해 주세요.
+DRAWLINE
+PRINTS LOCALS:((FLAG:3000 & 8388608) > 0)
+PRINTL [ 0] 인플레이션 모드
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 16777216) > 0)
+PRINTL [ 1] 사망회피 모드
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 33554432) > 0)
+PRINTL [ 2] 매춘중독 무효화
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 67108864) > 0)
+PRINTL [ 3] 주인도 매춘가능하게 함
+;-------------------------------------------------
+PRINTS LOCALS:((FLAG:3000 & 134217728) > 0)
+PRINTL [ 4] 매춘임신
+;-------------------------------------------------
+PRINTL  [100] 돌아가기
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	IF FLAG:3000 & 8388608
+		PRINTFORMW ☆☆☆창관 붐은 사라졌습니다☆☆☆
+		FLAG:3000 -= 8388608
+	ELSE
+		PRINTFORML 창관 붐이 도래. 일부 데이터에서 인플레가 일어나게 되었습니다.
+		PRINTFORMW (LV99 패치 도입 추천 모드입니다. 주의하세요)
+		FLAG:3000 |= 8388608
+	ENDIF
+ELSEIF RESULT == 1
+	IF FLAG:3000 & 16777216
+		PRINTFORMW ☆☆☆의료 붐은 사라졌습니다☆☆☆
+		FLAG:3000 -= 16777216
+	ELSE
+		PRINTFORMW 의료팀을 배치해서, 창부가 죽지 않도록 했습니다.
+		FLAG:3000 |= 16777216
+	ENDIF
+ELSEIF RESULT == 2
+	IF FLAG:3000 & 33554432
+		PRINTFORMW 창부들이 다시 매춘에 빠지기 시작했습니다.
+		FLAG:3000 -= 33554432
+	ELSE
+		PRINTFORMW 매춘중독에 의한 이벤트가 일어나지 않게 되었습니다.
+		FLAG:3000 |= 33554432
+	ENDIF
+ELSEIF RESULT == 3
+	IF FLAG:3000 & 67108864
+		PRINTFORMW 주인은 매춘 행위를 그만두기로 했습니다.
+		FLAG:3000 -= 67108864
+	ELSE
+		PRINTFORMW 주인이 자신도 봄팔이를 하기로 했습니다.
+		FLAG:3000 |= 67108864
+		IF ABL:MASTER:10 == 0 && ABL:MASTER:11 == 0 && ABL:MASTER:13 == 0 && ABL:MASTER:14 == 0
+			PRINTFORMW ※주인의 능력치를 설정했습니다.
+			ABL:MASTER:10 = 2
+			ABL:MASTER:11 = 1
+			ABL:MASTER:13 = 1
+			ABL:MASTER:14 = 1
+		ENDIF
+	ENDIF
+ELSEIF RESULT == 4
+	IF FLAG:3000 & 134217728
+		PRINTFORMW 성교 때 콘돔을 사용하도록 고객에게 의무화했습니다.
+		FLAG:3000 -= 134217728
+	ELSE
+		PRINTFORMW 성교 때 콘돔 미사용을 허가했습니다.
+		FLAG:3000 |= 134217728
+	ENDIF
+ELSE
+	PRINTFORML 올바른 수치를 입력해 주세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그밖에 
+GOTO INPUT_LOOP_0

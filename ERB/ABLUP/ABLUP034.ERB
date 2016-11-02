@@ -1,0 +1,196 @@
+﻿;=============================================================================
+;분유중독
+;=============================================================================
+@ABLUP34
+DRAWLINE
+IF TALENT:120 || (FLAG:15 & 8) == 0
+	RETURN 0
+ELSEIF ABL:34 >= 5
+	JUMP ABLUP_MAX
+ENDIF
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要(素質：[中毒しやすい][Ｂ敏感][淫乱]なら無視できる)
+SIF COST34(4)
+	PRINTFORM %EXPNAME:50% {COST34(4)} 이상, 그리고 
+;Ｂ感覚が必要
+PRINTFORML %ABLNAME:3% {ABL:34 + 1}LV 이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:3%의 구슬×{COST34(0)}, %PALAMNAME:13%의 구슬×{COST34(1)}, %PALAMNAME:14%의 구슬×{COST34(2)}, %EXPNAME:5% {COST34(3)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN34(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN34(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:3 -= COST34(0)
+	JUEL:13 -= COST34(1)
+	JUEL:14 -= COST34(2)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:34 += 1
+PRINTFORMW %ABLNAME:34%의 레벨이 %조사처리(ABL:34,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP34
+SIF ABL:34 >= 5 || TALENT:120
+	RETURN 0
+
+CALLF CALC_COST34, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP34("CHECK")
+
+@COST34(ARG)
+#FUNCTION
+RETURNF CALC_COST34("GET", ARG)
+
+@CALC_COST34(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:34 == 0
+	LOCAL:0 = 2500
+	LOCAL:1 = 6000
+	LOCAL:2 = 1000
+	LOCAL:3 = 10
+ELSEIF ABL:34 == 1
+	LOCAL:0 = 5000
+	LOCAL:1 = 14000
+	LOCAL:2 = 2500
+	LOCAL:3 = 25
+ELSEIF ABL:34 == 2
+	LOCAL:0 = 9000
+	LOCAL:1 = 27000
+	LOCAL:2 = 4800
+	LOCAL:3 = 80
+ELSEIF ABL:34 == 3
+	LOCAL:0 = 17000
+	LOCAL:1 = 65000
+	LOCAL:2 = 10000
+	LOCAL:3 = 150
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:2 , 2.00
+		TIMES LOCAL:3 , 2.00
+	ENDIF
+ELSEIF ABL:34 == 4
+	LOCAL:0 = 30000
+	LOCAL:1 = 130000
+	LOCAL:2 = 25000
+	LOCAL:3 = 300
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:2 , 3.00
+		TIMES LOCAL:3 , 3.00
+	ENDIF
+ENDIF
+
+;倒錯的
+IF TALENT:80
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 0.75
+ENDIF
+;中毒しやすい
+IF TALENT:84
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+;中毒しにくい
+ELSEIF TALENT:85
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 1.50
+ENDIF
+;[中毒扇動]有効
+IF TFLAG:995 == 1
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.80
+	TIMES LOCAL:3 , 0.80
+ENDIF
+;淫乱
+IF TALENT:170
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+ENDIF
+
+;Ｂ鈍感
+IF TALENT:107
+	TIMES LOCAL:0 , 1.20
+;Ｂ敏感
+ELSEIF TALENT:106
+	TIMES LOCAL:0 , 0.80
+ENDIF
+;絶壁
+IF TALENT:110
+	TIMES LOCAL:0 , 0.50
+;貧乳
+ELSEIF TALENT:111
+	TIMES LOCAL:0 , 0.80
+;巨乳
+ELSEIF TALENT:112
+	TIMES LOCAL:0 , 1.10
+;爆乳
+ELSEIF TALENT:113
+	TIMES LOCAL:0 , 1.30
+ENDIF
+
+;ＬＶ２から３, ＬＶ３から４, ４から５に上げるときは異常経験必要(素質：[中毒しやすい][Ｂ敏感][淫乱]なら無視できる)
+SIF ABL:34 >= 2 && TALENT:84 == 0 && TALENT:106 == 0 && TALENT:170 == 0
+	LOCAL:4 = ABL:34 - 1
+
+RETURNF 0
+
+@CAN34(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP34("GET", ARG)
+
+@CAN_ABLUP34(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;異常経験が必要な場合
+SIF EXP:50 < COST34(4)
+	LOCAL:0 |= 2
+
+;Ｂ感覚が必要
+SIF ABL:3 < ABL:34 + 1
+	LOCAL:0 |= 4
+
+;快Ｂ의 구슬で上げる
+SIF JUEL:3 < COST34(0)
+	LOCAL:0 |= 1
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST34(1)
+	LOCAL:0 |= 1
+;屈服의 구슬で上げる
+SIF JUEL:14 < COST34(2)
+	LOCAL:0 |= 1
+;噴乳経験が必要
+SIF EXP:5 < COST34(3)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

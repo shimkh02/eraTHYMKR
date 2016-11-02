@@ -1,0 +1,436 @@
+﻿;---------------------------------------------------------
+; SHOP_WORKSHOP_SELF 技師パッチ 工房イベントファイル 自慰結果
+;---------------------------------------------------------
+;中毒者曰く：
+;工房で自慰してた皆様の結果判定処理関数群。
+
+;以下関数群。自慰結果の経験・珠算出用。
+;@JUDGE_WORKSHOP_RESULT_ONANISM             工房自慰判定
+;@JUDGE_WORKSHOP_RESULT_ONANISM_MUTUAL      工房相互自慰判定
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_ONANISM 工房自慰結果
+;ARG引数
+; 0 : 判定対象のCHARANUM番号
+;LOCAL変数
+;  0 : 自慰しようとする回数
+;  1 : 自慰乱数の最大値
+;  2 : 自慰回数設定用テンポラリ
+;  3 : 自慰回数反復子
+;  4 : 自慰反復子２（手数／判定部位）
+;  5 : 自慰に使える手の数(苛映塚的に隻腕やったり手の代わりになるような追加器官(尻尾とか)があったりで増減することを想定して)
+;  6 : 自慰箇所乱数
+;  7 : 自慰箇所乱数最大値(11～16の合計)
+;  8 : 擬似SOURCE
+;  9 : 今回の絶頂回数
+; 10 : 今回の絶頂箇所数
+; 11～16 : 自慰可能箇所フラグ(値は選択率)
+; 11 : B
+; 12 : C
+; 13 : V (V調教用の道具開発中自慰用)
+; 14 : A
+; 15 : P (Cと分けておく)
+; 16 : U (……一応用意しておく、カテーテル等U調教の道具開発中自慰用)
+; 21～26 : 選択手数フラグ (今回いくつの手がそこを慰めているか)
+; 31～36 : 連続選択フラグ (前の自慰回に選択していたか)
+; 41～46 : 感度フラグ (同じ所を弄ってると上昇、休むと下降、高すぎると一時的に感覚麻痺？0～5くらいで)
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_ONANISM, ARG
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:ARG%의 자위결과개시
+;自慰中毒レベルと淫乱を元に自慰乱数の最大値を設定(最低1回)
+LOCAL:1 = ABL:ARG:30 + 1
+;自慰しやすい、中毒しやすいで自慰乱数の最大値が増加
+SIF TALENT:ARG:60
+	LOCAL:1 += 2
+SIF TALENT:ARG:84
+	LOCAL:1 += 2
+;淫乱で自慰乱数の最大値が倍
+SIF TALENT:ARG:170
+	LOCAL:1 *= 2
+;サボり状態ならさらに倍
+SIF CFLAG:ARG:691 & 1p2
+	LOCAL:1 *= 2
+;エロス暴走状態ならさらに倍
+SIF CFLAG:ARG:691 & 1p3
+	LOCAL:1 *= 2
+;最大80回……多い、か？調教時の最大行動回数は100回だから別に良いと思うことにしよう
+;とりあえず最大回数10回分毎に回数決定(つまり最大8D10)
+LOCAL:2 = (LOCAL:1 / 10) + 1
+LOCAL:0 = 0
+FOR LOCAL:3, 0, LOCAL:2
+	LOCAL:0 += RAND:10 + 1
+NEXT
+;たまにオーバーしうるので超えたら最大値まで落とす
+SIF LOCAL:0 > LOCAL:1
+	LOCAL:0 = LOCAL:1
+;;自慰できる箇所とどれだけそこを弄りそうかを確認
+;胸自慰は保障、TALENT感度とABL感覚で自慰率変動
+IF TALENT:ARG:106
+	LOCAL:11 = 8
+ELSEIF TALENT:ARG:107
+	LOCAL:11 = 2
+ELSE
+	LOCAL:11 = 5
+ENDIF
+;Ｂ感覚と噴乳中毒で胸自慰率増
+LOCAL:11 += ABL:ARG:3 * 2 + ABL:ARG:34
+;淫乳で胸自慰率倍
+SIF TALENT:ARG:174
+	LOCAL:11 *= 2
+;陰核自慰／陰茎自慰は保障、TALENT感度とABL感覚で自慰率変動
+IF TALENT:ARG:100
+	LOCAL:12 = 8
+ELSEIF TALENT:ARG:101
+	LOCAL:12 = 2
+ELSE
+	LOCAL:12 = 5
+ENDIF
+;Ｃ感覚で陰核自慰／陰茎自慰率増
+LOCAL:12 += ABL:ARG:0 * 2
+;オトコかふたなりなら射精中毒で陰茎自慰率増(肥大陰核では射精できないので変化無し)
+SIF TALENT:ARG:120 || TALENT:ARG:121
+	LOCAL:12 += ABL:ARG:37
+;淫核／淫茎で胸自慰率倍
+SIF TALENT:ARG:171
+	LOCAL:12 *= 2
+;膣自慰は膣がありＶ調教用調教器具製作中のみ可能
+;IF 
+;	LOCAL:13 = 
+;ELSE
+	LOCAL:13 = 0
+;ENDIF
+;アナニーはＡ系拡張機能有効かつＡ快楽経験ありならば可能
+IF (FLAG:15 & 4) && EXP:ARG:43
+	IF TALENT:ARG:104
+		LOCAL:14 = 8
+	ELSEIF TALENT:ARG:105
+		LOCAL:14 = 2
+	ELSE
+		LOCAL:14 = 5
+	ENDIF
+	;Ａ感覚と排泄中毒で胸自慰率増
+	LOCAL:14 += ABL:ARG:2 * 2 + ABL:ARG:36
+	;淫尻で胸自慰率倍
+	SIF TALENT:ARG:173
+		LOCAL:14 *= 2
+ELSE
+	LOCAL:14 = 0
+ENDIF
+;陰核が肥大しているかペニスがあるなら陰核自慰じゃなく陰茎自慰
+IF TALENT:ARG:120 || TALENT:ARG:121 || TALENT:ARG:1
+	LOCAL:15 = LOCAL:12
+	LOCAL:12 = 0
+ELSE
+	LOCAL:15 = 0
+ENDIF
+;尿道自慰は尿道開発系調教道具開発中のみ
+;IF
+;	LOCAL:16 =
+;ELSE
+	LOCAL:16 = 0
+;ENDIF
+;;手の数を確認する(とりあえず普通2なので暫定で2固定)
+LOCAL:5 = 2
+LOCAL:7 = LOCAL:11 + LOCAL:12 + LOCAL:13 + LOCAL:14 + LOCAL:15 + LOCAL:16
+;;決定した自慰回数分、どんな自慰をしたかを決定する
+;連続選択フラグと感度フラグをリセット
+LOCAL:31 = 0
+LOCAL:32 = 0
+LOCAL:33 = 0
+LOCAL:34 = 0
+LOCAL:35 = 0
+LOCAL:36 = 0
+LOCAL:41 = 0
+LOCAL:42 = 0
+LOCAL:43 = 0
+LOCAL:44 = 0
+LOCAL:45 = 0
+LOCAL:46 = 0
+FOR LOCAL:3, 0, LOCAL:0
+	;今回の絶頂回数をリセット
+	LOCAL:9 = 0
+	;手数フラグをリセット
+	LOCAL:21 = 0
+	LOCAL:22 = 0
+	LOCAL:23 = 0
+	LOCAL:24 = 0
+	LOCAL:25 = 0
+	LOCAL:26 = 0
+	;手ごとに弄る部位を選択
+	FOR LOCAL:4, 0, LOCAL:5
+		LOCAL:6 = RAND:(LOCAL:7)
+		SELECTCASE LOCAL:6
+			CASE IS < LOCAL:11
+				LOCAL:21 += 1
+			CASE IS < LOCAL:11 + LOCAL:12
+				LOCAL:22 += 1
+			CASE IS < LOCAL:11 + LOCAL:12 + LOCAL:13
+				LOCAL:23 += 1
+			CASE IS < LOCAL:11 + LOCAL:12 + LOCAL:13 + LOCAL:14
+				LOCAL:24 += 1
+			CASE IS < LOCAL:11 + LOCAL:12 + LOCAL:13 + LOCAL:14 + LOCAL:15
+				LOCAL:25 += 1
+			CASE IS < LOCAL:11 + LOCAL:12 + LOCAL:13 + LOCAL:14 + LOCAL:15 + LOCAL:16
+				LOCAL:26 += 1
+		ENDSELECT
+	NEXT
+	;部位ごとに判定
+	FOR LOCAL:4, 0, 6
+		IF LOCAL:(21 + LOCAL:4) > 0
+			LOCAL:8 = 0
+			;技巧・感覚・敏感鈍感・感度フラグで珠の量が変化
+			SELECTCASE LOCAL:4
+				CASE 0
+					;胸自慰
+					;技巧・Ｂ感覚(２乗)・自慰中毒をチェック(暫定)
+					LOCAL:8 += (ABL:ARG:12 + 1) * (ABL:ARG:3 + 1) * (ABL:ARG:3 + 1) * (ABL:ARG:30 + 1) * 10
+					;胸サイズ
+					IF TALENT:ARG:112
+						TIMES LOCAL:8, 0.90
+					ELSEIF TALENT:ARG:113
+						TIMES LOCAL:8, 0.75
+					ENDIF
+					;淫乳
+					SIF TALENT:ARG:174
+						TIMES LOCAL:8, 1.50
+					;母乳体質なら噴乳する
+					IF TALENT:ARG:134
+						LOCAL@VALUE_WORKSHOP_EXP_05:ARG += LOCAL:21
+						IF ABL:ARG:34 > 4
+							TIMES LOCAL:8, 1.60
+						ELSEIF ABL:ARG:34 > 2
+							TIMES LOCAL:8, 1.40
+						ELSEIF ABL:ARG:34 > 0
+							TIMES LOCAL:8, 1.20
+						ENDIF
+					ENDIF
+					IF TALENT:ARG:106
+						TIMES LOCAL:8, 2.00
+					ELSEIF TALENT:ARG:107
+						TIMES LOCAL:8, 0.50
+					ENDIF
+					;手の数だけ倍にする
+					LOCAL:8 *= LOCAL:21
+					;感度0でなければ現在の感度フラグの２乗倍する
+					SIF LOCAL:41 > 0
+						LOCAL:8 *= LOCAL:41 * LOCAL:41
+					;感度フラグが5の場合半減する
+					SIF LOCAL:41 == 5
+						LOCAL:8 /= 2
+					;LOCAL:8の値次第で絶頂回数決定
+					IF LOCAL:8 >= 1000000
+						LOCAL:9 += 9
+					ELSEIF LOCAL:8 >= 200000
+						LOCAL:9 += 4
+					ELSEIF LOCAL:8 >= PALAMLV:4 * 2
+						LOCAL:9 += 2
+					ELSEIF LOCAL:8 >= PALAMLV:4
+						LOCAL:9 += 1
+					ENDIF
+					SIF LOCAL:8 >= PALAMLV:4
+						LOCAL:10 += 1
+					;快Ｂ・習得・欲情に振り分け
+					LOCAL@VALUE_WORKSHOP_JUEL_003:ARG += LOCAL:8
+					LOCAL@VALUE_WORKSHOP_JUEL_011:ARG += LOCAL:8 / 15
+					LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += LOCAL:8 / 6
+				CASE 1
+					;陰核自慰
+					;技巧・Ｃ感覚(２乗)・自慰中毒をチェック
+					LOCAL:8 += (ABL:ARG:12 + 1) * (ABL:ARG:0 + 1) * (ABL:ARG:0 + 1) * (ABL:ARG:30 + 1) * 10
+					;淫核／淫茎
+					SIF TALENT:ARG:171
+						TIMES LOCAL:8, 1.50
+					IF TALENT:ARG:100
+						TIMES LOCAL:8, 2.00
+					ELSEIF TALENT:ARG:101
+						TIMES LOCAL:8, 0.50
+					ENDIF
+					;手の数だけ倍にする
+					LOCAL:8 *= LOCAL:21
+					;感度0でなければ現在の感度フラグの２乗倍する
+					SIF LOCAL:41 > 0
+						LOCAL:8 *= LOCAL:41 * LOCAL:41
+					;感度フラグが5の場合半減する
+					SIF LOCAL:41 == 5
+						LOCAL:8 /= 2
+					;LOCAL:8の値次第で絶頂回数決定
+					IF LOCAL:8 >= 1000000
+						LOCAL:9 += 9
+					ELSEIF LOCAL:8 >= 200000
+						LOCAL:9 += 4
+					ELSEIF LOCAL:8 >= PALAMLV:4 * 2
+						LOCAL:9 += 2
+					ELSEIF LOCAL:8 >= PALAMLV:4
+						LOCAL:9 += 1
+					ENDIF
+					;快Ｃ・習得・欲情に振り分け
+					LOCAL@VALUE_WORKSHOP_JUEL_000:ARG += LOCAL:8
+					LOCAL@VALUE_WORKSHOP_JUEL_011:ARG += LOCAL:8 / 15
+					LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += LOCAL:8 / 6
+				;CASE 2
+					;膣自慰
+				CASE 3
+					;尻自慰
+					;Ａ感覚・Ａ敏感・Ａ鈍感・淫尻をチェック
+					;技巧・Ａ感覚(２乗)・自慰中毒をチェック
+					LOCAL:8 += (ABL:ARG:12 + 1) * (ABL:ARG:2 + 1) * (ABL:ARG:2 + 1) * (ABL:ARG:30 + 1) * 10
+					;淫尻
+					SIF TALENT:ARG:173
+						TIMES LOCAL:8, 1.50
+;					;排泄中毒なら脱糞する……べき？とりあえず保留
+;						IF ABL:ARG:36 > 4
+;							TIMES LOCAL:8, 1.60
+;						ELSEIF ABL:ARG:36 > 2
+;							TIMES LOCAL:8, 1.40
+;						ELSEIF ABL:ARG:36 > 0
+;							TIMES LOCAL:8, 1.20
+;						ENDIF
+					IF TALENT:ARG:104
+						TIMES LOCAL:8, 2.00
+					ELSEIF TALENT:ARG:105
+						TIMES LOCAL:8, 0.50
+					ENDIF
+					;手の数だけ倍にする
+					LOCAL:8 *= LOCAL:21
+					;感度0でなければ現在の感度フラグの２乗倍する
+					SIF LOCAL:41 > 0
+						LOCAL:8 *= LOCAL:41 * LOCAL:41
+					;感度フラグが5の場合半減する
+					SIF LOCAL:41 == 5
+						LOCAL:8 /= 2
+					;LOCAL:8の値次第で絶頂回数決定
+					IF LOCAL:8 >= 1000000
+						LOCAL:9 += 9
+					ELSEIF LOCAL:8 >= 200000
+						LOCAL:9 += 4
+					ELSEIF LOCAL:8 >= PALAMLV:4 * 2
+						LOCAL:9 += 2
+					ELSEIF LOCAL:8 >= PALAMLV:4
+						LOCAL:9 += 1
+					ENDIF
+					SIF LOCAL:8 >= PALAMLV:4
+						LOCAL:10 += 1
+					;快Ａ・習得・欲情に振り分け
+					LOCAL@VALUE_WORKSHOP_JUEL_002:ARG += LOCAL:8
+					LOCAL@VALUE_WORKSHOP_JUEL_011:ARG += LOCAL:8 / 15
+					LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += LOCAL:8 / 6
+				CASE 4
+					;陰茎自慰
+					;技巧・Ｃ感覚(２乗)・自慰中毒をチェック
+					LOCAL:8 += (ABL:ARG:12 + 1) * (ABL:ARG:0 + 1) * (ABL:ARG:0 + 1) * (ABL:ARG:30 + 1) * 10
+					;淫核／淫茎
+					SIF TALENT:ARG:171
+						TIMES LOCAL:8, 1.50
+					;オトコかふたなりなら射精する(肥大陰核対応)
+					IF TALENT:ARG:120 || TALENT:ARG:121
+						LOCAL@VALUE_WORKSHOP_EXP_03:ARG += LOCAL:21
+						IF ABL:ARG:37 > 4
+							TIMES LOCAL:8, 1.60
+						ELSEIF ABL:ARG:37 > 2
+							TIMES LOCAL:8, 1.40
+						ELSEIF ABL:ARG:37 > 0
+							TIMES LOCAL:8, 1.20
+						ENDIF
+					ENDIF
+					IF TALENT:ARG:100
+						TIMES LOCAL:8, 2.00
+					ELSEIF TALENT:ARG:101
+						TIMES LOCAL:8, 0.50
+					ENDIF
+					;手の数だけ倍にする
+					LOCAL:8 *= LOCAL:21
+					;感度0でなければ現在の感度フラグの２乗倍する
+					SIF LOCAL:41 > 0
+						LOCAL:8 *= LOCAL:41 * LOCAL:41
+					;感度フラグが5の場合半減する
+					SIF LOCAL:41 == 5
+						LOCAL:8 /= 2
+					;LOCAL:8の値次第で絶頂回数決定
+					IF LOCAL:8 >= 1000000
+						LOCAL:9 += 9
+					ELSEIF LOCAL:8 >= 200000
+						LOCAL:9 += 4
+					ELSEIF LOCAL:8 >= PALAMLV:4 * 2
+						LOCAL:9 += 2
+					ELSEIF LOCAL:8 >= PALAMLV:4
+						LOCAL:9 += 1
+					ENDIF
+					SIF LOCAL:8 >= PALAMLV:4
+						LOCAL:10 += 1
+					;快Ｂ・習得・欲情に振り分け
+					LOCAL@VALUE_WORKSHOP_JUEL_003:ARG += LOCAL:8
+					LOCAL@VALUE_WORKSHOP_JUEL_011:ARG += LOCAL:8 / 15
+					LOCAL@VALUE_WORKSHOP_JUEL_013:ARG += LOCAL:8 / 6
+				;CASE 5
+					;尿道自慰
+			ENDSELECT
+			;弄り続けていると感度が上がる
+			IF LOCAL:(41 + LOCAL:4) < 5 && (LOCAL:(41 + LOCAL:4) * LOCAL:(41 + LOCAL:4)) < LOCAL:(31 + LOCAL:4)
+				LOCAL:(41 + LOCAL:4) += 1
+				LOCAL:(31 + LOCAL:4) = 0
+			ENDIF
+			LOCAL:(31 + LOCAL:4) += LOCAL:(21 + LOCAL:4)
+		ELSEIF LOCAL:(41 + LOCAL:4) > 0
+			;弄り続けていたならしばらく感度維持
+			LOCAL:(31 + LOCAL:4) -= 1
+		ELSEIF LOCAL:(41 + LOCAL:4) > 0
+			;弄ってない箇所は落ち着いていく
+			LOCAL:(31 + LOCAL:4) = LOCAL:(41 + LOCAL:4) * LOCAL:(41 + LOCAL:4)
+			LOCAL:(41 + LOCAL:4) -= 1
+		ENDIF
+	NEXT
+	;絶頂経験まとめて処理
+	LOCAL@VALUE_WORKSHOP_EXP_02:ARG += LOCAL:9
+	LOCAL@VALUE_WORKSHOP_EXP_10:ARG += 1
+NEXT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %CALLNAME:ARG%의 자위결과종료 회수:{LOCAL:0}회, 감도:B=({LOCAL:41})・C=({LOCAL:42})・V=({LOCAL:43})・A=({LOCAL:44})・P=({LOCAL:45})・U=({LOCAL:46})
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_ONANISM_MUTUAL 工房自慰結果
+;ARG引数
+; 0 : 判定対象のCHARANUM番号(一人目)
+; 1 : 判定対象のCHARANUM番号(二人目)
+;LOCAL変数(暫定版)
+;  0 : 反復子
+;  1 : 擬似欲情SOURCE
+;  2 : 擬似恥情SOURCE
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_ONANISM_MUTUAL, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사처리(CALLNAME:(ARG:0)%, "과")% %CALLNAME:(ARG:1)%의 자위결과개시 
+;暫定処理としてそれぞれ自慰結果を呼び出す
+FOR LOCAL:0, 0, 2
+	CALL JUDGE_WORKSHOP_RESULT_ONANISM, ARG:(LOCAL:0)
+	;擬似SOURCEを今回の自慰経験から算出
+	LOCAL:1 = LOCAL@VALUE_WORKSHOP_EXP_10:(ARG:(LOCAL:0)) * 100
+	LOCAL:2 = LOCAL@VALUE_WORKSHOP_EXP_10:(ARG:(LOCAL:0)) * 100
+	;双方それぞれに露出癖レベルに応じた恥情・欲情の珠を追加
+	IF ABL:(ARG:(LOCAL:0)):14 == 0
+		TIMES LOCAL:1, 0.05
+		TIMES LOCAL:2, 1.00
+	ELSEIF ABL:(ARG:(LOCAL:0)):14 == 1
+		TIMES LOCAL:1, 0.10
+		TIMES LOCAL:2, 0.90
+	ELSEIF ABL:(ARG:(LOCAL:0)):14 == 2
+		TIMES LOCAL:1, 0.20
+		TIMES LOCAL:2, 0.70
+	ELSEIF ABL:(ARG:(LOCAL:0)):14 == 3
+		TIMES LOCAL:1, 0.40
+		TIMES LOCAL:2, 0.50
+	ELSEIF ABL:(ARG:(LOCAL:0)):14 == 4
+		TIMES LOCAL:1, 0.60
+		TIMES LOCAL:2, 0.30
+	ELSE
+		TIMES LOCAL:1, 0.80
+		TIMES LOCAL:2, 0.10
+	ENDIF
+	;装飾品類は今回パス
+	LOCAL@VALUE_WORKSHOP_JUEL_013:(ARG:(LOCAL:0)) += LOCAL:1
+	LOCAL@VALUE_WORKSHOP_JUEL_015:(ARG:(LOCAL:0)) += LOCAL:2
+NEXT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사처리(CALLNAME:(ARG:0)%, "과")% %CALLNAME:(ARG:1)%의 자위결과종료
+RETURN 0

@@ -1,0 +1,290 @@
+﻿;=============================================================================
+;촉수 콧구멍 삽입
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE508
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:508 > 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;鼻フックか洗濯バサミ装着中だとダメ
+SIF TEQUIP:44 == 1 || TEQUIP:44 == 5
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM508
+PRINTL 촉수 콧구멍 삽입
+TSTR:0 = 촉수 콧구멍 삽입
+CALL TRAIN_MESSAGE_COM508
+
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 80
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 50
+ELSE
+	DOWNBASE:0 += 20
+	DOWNBASE:1 += 25
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL:1 = 50
+	LOCAL:2 = 0
+ELSEIF ABL:21 == 1
+	LOCAL:1 = 150
+	LOCAL:2 = 100
+ELSEIF ABL:21 == 2
+	LOCAL:1 = 300
+	LOCAL:2 = 150
+ELSEIF ABL:21 == 3
+	LOCAL:1 = 500
+	LOCAL:2 = 200
+ELSEIF ABL:21 == 4
+	LOCAL:1 = 750
+	LOCAL:2 = 300
+ELSE
+	LOCAL:1 = 1000
+	LOCAL:2 = 450
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 0.70
+	TIMES LOCAL:2 , 0.70
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.90
+	TIMES LOCAL:2 , 0.80
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 0.90
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 1.30
+	TIMES LOCAL:2 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 0.70
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+	TIMES LOCAL:2 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 0.90
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 1.00
+ELSE
+	TIMES LOCAL:1 , 1.20
+	TIMES LOCAL:2 , 1.10
+ENDIF
+
+;악취 둔감을 본다
+IF TALENT:61
+	TIMES LOCAL:2 , 0.50
+;악취 민감을 본다
+ELSEIF TALENT:62
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 2.00
+ENDIF
+;도착적을 본다
+IF TALENT:80
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.40
+ENDIF
+;중독 하기 쉬운을 본다
+IF TALENT:84
+	TIMES LOCAL:1 , 1.20
+	TIMES LOCAL:2 , 1.80
+ENDIF
+;정신 붕괴를 본다
+IF TALENT:167
+	TIMES LOCAL:1 , 0.10
+	TIMES LOCAL:2 , 0.10
+ENDIF
+;왕M를 본다
+IF TALENT:178
+	TIMES LOCAL:1 , 2.00
+	TIMES LOCAL:2 , 1.80
+ENDIF
+
+SOURCE:12 = LOCAL:1
+SOURCE:20 = 100 + (LOCAL:1 + LOCAL:2)/4
+SOURCE:22 = LOCAL:1
+SOURCE:24 = LOCAL:2
+SOURCE:25 = (LOCAL:1 + LOCAL:2)/2
+SOURCE:31 = LOCAL:1 * 2
+
+;촉수의 뽑아 꽂아
+IF TEQUIP:44
+	TEQUIP:44 = 0
+ELSE
+	TEQUIP:44 = 2
+ENDIF
+;촉수 경험 플래그
+TFLAG:90 = 0
+
+TCVAR:31 += 2
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+RETURN 1
+
+;-------------------------------------------------
+;촉수비혈삽입중
+;-------------------------------------------------
+;코훅을 참고
+@EQUIP_COM508
+PRINTL <촉수 콧구멍 삽입 중>
+
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 80
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 50
+ELSE
+	DOWNBASE:0 += 20
+	DOWNBASE:1 += 25
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 30
+	LOCAL:1 = 0
+ELSEIF ABL:21 == 1
+	LOCAL = 80
+	LOCAL:1 = 60
+ELSEIF ABL:21 == 2
+	LOCAL = 150
+	LOCAL:1 = 100
+ELSEIF ABL:21 == 3
+	LOCAL = 300
+	LOCAL:1 = 150
+ELSEIF ABL:21 == 4
+	LOCAL = 500
+	LOCAL:1 = 250
+ELSE
+	LOCAL = 750
+	LOCAL:1 = 400
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL , 0.70
+	TIMES LOCAL:1 , 0.70
+ELSEIF ABL:35 == 1
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:35 == 2
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:35 == 3
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:35 == 4
+	TIMES LOCAL , 1.30
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 0.70
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 1.00
+ELSE
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 1.10
+ENDIF
+
+;악취 둔감을 본다
+IF TALENT:61
+	TIMES LOCAL:1 , 0.50
+;악취 민감을 본다
+ELSEIF TALENT:62
+	TIMES LOCAL , 0.60
+	TIMES LOCAL:1 , 2.00
+ENDIF
+;도착적을 본다
+IF TALENT:80
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.40
+ENDIF
+;중독 하기 쉬운을 본다
+IF TALENT:84
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 1.80
+ENDIF
+;정신 붕괴를 본다
+IF TALENT:167
+	TIMES LOCAL , 0.10
+	TIMES LOCAL:1 , 0.10
+ENDIF
+;왕M를 본다
+IF TALENT:178
+	TIMES LOCAL , 2.00
+	TIMES LOCAL:1 , 1.80
+ENDIF
+
+;촉수구욕or촉수 강제 회복(입 안) 시는 고통·소모 업
+IF TEQUIP:42 == 2 || TEQUIP:91 == 1
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 20
+	SOURCE:20 += (LOCAL + LOCAL:1)/2
+ENDIF
+
+SOURCE:12 += LOCAL
+SOURCE:20 += (LOCAL + LOCAL:1)/4
+SOURCE:22 += LOCAL
+SOURCE:24 += LOCAL:1
+SOURCE:25 += (LOCAL + LOCAL:1)/2
+SOURCE:31 += LOCAL * 2
+
+TCVAR:31 += 1
+;촉수 경험 플래그
+TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM508
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:44
+	PRINTFORMW 촉수는 %CALLNAME:TARGET%의 콧구멍에서 빠져나왔다.
+ELSE
+	PRINTFORMW 기분 나쁜 색의 촉수가 %CALLNAME:TARGET%의 코의 구멍에 침입했다.
+ENDIF

@@ -1,0 +1,136 @@
+﻿;=============================================================================
+;가슴 주무르기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE200
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:200 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM200
+;모유 체질의 경우 착유로 난다. 그렇지만, 미마 님의 착유라면 조금 보고 싶을지도
+SIF TALENT:134
+	JUMP COM626
+
+PRINTL 가슴 주무르기
+TSTR:0 = 가슴 주무르기
+CALL TRAIN_MESSAGE_COM200
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:15 = 30
+SOURCE:30 = 10
+SOURCE:12 = 50
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 10
+	SOURCE:11 = 20
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 50
+	SOURCE:11 = 50
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 250
+	SOURCE:11 = 80
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 600
+	SOURCE:11 = 100
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1000
+	SOURCE:11 = 120
+ELSE
+	SOURCE:3 = 1600
+	SOURCE:11 = 200
+ENDIF
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.40
+ENDIF
+
+;조교자가［유아］,［유치］
+IF TALENT:PLAYER:130 || TALENT:PLAYER:131
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+ENDIF
+;조교자가［유아 퇴행］
+SIF TALENT:PLAYER:159
+	TIMES SOURCE:11 , 1.20
+
+;노예의 B⇔조교자의 손가락의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:5
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM200
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+SIF PALAM:13 > PALAMLV:3
+	PRINT 기대에 떠는 
+IF TALENT:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:128 && TALENT:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:111
+	PRINT 표준보다 약간 작은 
+ELSEIF TALENT:112
+	PRINT 커다랗고 곡선이 아름다운 
+ELSEIF TALENT:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+IF PALAM:13 > PALAMLV:3 && TALENT:150
+	PRINTL 가슴을 상냥하게 쓰다듬자,
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 살짝 부끄러워 하면서 가슴을 내밀어 보다 강한 애무를 요구했다….
+ELSEIF TALENT:110
+	PRINTW 가슴을 상냥하게 쓰다듬었다….
+ELSEIF TEQUIP:68
+	PRINTW 가슴을 아래로부터 살그머니 비볐다….
+ELSEIF PALAM:13 > PALAMLV:3 && TALENT:150
+	PRINTL 가슴을 강하게 주무르면,
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 교성을 높혀 
+	IF TALENT:111
+		PRINT 그 아담한 
+	ELSEIF TALENT:112
+		PRINT 그 커다란 
+	ELSEIF TALENT:113
+		PRINT 그 거대한 
+	ENDIF
+	PRINTL 가슴을 앞으로 내밀어,
+	PRINTW 보다 강한 애무를 요구했다….
+ELSEIF PALAM:13 > PALAMLV:3
+	PRINTW 가슴을 강하게 주물러 주었다….
+ELSE
+	PRINTW 가슴을 주물러 주었다….
+ENDIF

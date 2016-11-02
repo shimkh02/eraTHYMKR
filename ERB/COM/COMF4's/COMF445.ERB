@@ -1,0 +1,98 @@
+﻿;=============================================================================
+;지식대담
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE445
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:445 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;対象, または조교자가 霖之助でないとダメ
+SIF NO:TARGET != 26 && NO:TARGET != 69 && NO:PLAYER != 26 && NO:PLAYER != 69
+	RETURN 0
+;調教開始直後じゃないとダメ
+SIF PREVCOM != -1
+	RETURN 0
+;対象だった場合, 反発刻印があったらダメ
+SIF NO:TARGET == 69 && MARK:9 < 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;린노스케에 자기 마음대로 말하게 한다.
+;조교 대상의 경우, 달성감이 심상하지 않은 양 증가한다. 게임 모드가 eratohoYM나 ABNORMAL라면 호감도도 증가한다
+;한편 조교자였던 경우, 트라우마가 멋지게 증가한다
+;다만 다른 조교 실행 후는 사용 불가인 위, 사용하면(자) 조교 종료
+@COM445
+PRINTL 지식대담
+TSTR:0 = 지식대담
+CALL TRAIN_MESSAGE_COM445
+
+;린노스케를 조교
+IF NO:TARGET == 69
+	DOWNBASE:0 += 10
+	DOWNBASE:1 += 10
+	DOWNBASE:MASTER:1 += 333
+	SIF ASSI >= 0
+		DOWNBASE:ASSI:1 += 333
+	SOURCE:16 = 80000
+	SIF FLAG:4 <= 1
+		CFLAG:2 += 99
+
+	;주인 및 존재하면 조수의 수강 회수(여기는 조수는 도망가지 않는다)
+	CFLAG:MASTER:55 += 1
+	SIF ASSI >= 0 && EQUIP:ASSI:14 == 0
+		CFLAG:ASSI:55 += 1
+;린노스케가 조교
+ELSE
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 9999
+	SOURCE:25 = 6000
+
+	;ABL:순종을 본다
+	IF ABL:10 == 0
+		TIMES SOURCE:25 , 1.00
+	ELSEIF ABL:10 == 1
+		TIMES SOURCE:25 , 0.50
+	ELSEIF ABL:10 == 2
+		TIMES SOURCE:25 , 0.40
+	ELSEIF ABL:10 == 3
+		TIMES SOURCE:25 , 0.30
+	ELSEIF ABL:10 == 4
+		TIMES SOURCE:25 , 0.20
+	ELSE
+		TIMES SOURCE:25 , 0.10
+	ENDIF
+
+	;조교 대상의 수강 회수(조수가 있었다고 해도 도망치는 w)
+	CFLAG:55 += 1
+ENDIF
+TFLAG:107 = 999
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM445
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF NO:TARGET == 69
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%에게 그간 쌓아온 지식을 설파하기 시작했다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%에게 그간 쌓아온 지식을 설파하기 시작했다.
+ENDIF

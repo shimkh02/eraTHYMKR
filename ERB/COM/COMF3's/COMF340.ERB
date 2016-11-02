@@ -1,0 +1,126 @@
+﻿;=============================================================================
+;파후파후
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE340
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:340 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;絶壁, 貧乳, オトコは不可
+SIF TALENT:110 || TALENT:111 || TALENT:120
+	RETURN 0
+;主人でないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;순종4이상 필요
+SIF ABL:10 < 4
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;완전 취미 커맨드이므로 실용성 0
+@COM340
+IF NO:TARGET == 59 || (NO:TARGET == 14 && CFLAG:0 == 0 && TALENT:158)
+	PRINTL 파루파루
+	TSTR:0 = 파루파루
+ELSE
+	PRINTL 파후파후
+	TSTR:0 = 파후파후
+ENDIF
+CALL TRAIN_MESSAGE_COM340
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 10
+
+SOURCE:14 = 250
+SOURCE:17 = 50
+
+IF NO:TARGET == 59 || (NO:TARGET == 14 && CFLAG:0 == 0 && TALENT:158)
+	;쓸데없게 질투 보정＋α이 붙습니다
+	SOURCE:24 = 50
+	SOURCE:32 = 75
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM340
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF NO:TARGET == 59
+	PRINTFORM 끊임없이 다른 여자의 가슴\@(TEQUIP:42) ? 을 부러운 듯이 째려보면서도 # 이 부럽다고 군소리 하면서도\@ 
+ELSEIF NO:TARGET == 14 && CFLAG:0 == 0 && TALENT:158
+	PRINTFORM 어쩐지 자신의 가슴에 대해 \@(TEQUIP:42) ? 납득할 수 없는 것 같은 표정을 # 투덜투덜\@ 하면서도 
+ENDIF
+IF TALENT:112
+	PRINTFORM 그 큰 가슴으로 %CALLNAME:PLAYER%의 얼굴을 
+	SIF TALENT:150
+		PRINT 상냥하게 
+	PRINTW 감쌌다….
+	PRINTL
+	IF TALENT:150
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 그 부드러움에 무심코 잠이 들어 버렸지만,
+		PRINTFORMW %CALLNAME:TARGET%에게 상냥하게 일으켜졌다….
+	ELSE
+		PRINTFORMW 여성 특유의 달콤한 향기가 %CALLNAME:PLAYER%의 얼굴을 감싸고 있다….
+	ENDIF
+ELSEIF TALENT:113
+	PRINTFORM 그 풍만한 가슴으로 %CALLNAME:PLAYER%의 얼굴을 머리까지 
+	SIF TALENT:150
+		PRINT 상냥하게 
+	PRINTW 감쌌다….
+	PRINTL
+	IF TALENT:150
+		PRINTFORML 어머니를 생각나게 하는 따뜻함에,
+		PRINTFORMW %CALLNAME:PLAYER%의 마음이 편안해졌다….
+	ELSE
+		PRINTFORMW 여성 특유의 달콤한 향기가 %CALLNAME:PLAYER%의 얼굴을 감싸고 있다….
+	ENDIF
+ELSE
+	PRINTFORM 가슴으로 %CALLNAME:PLAYER%의 얼굴을 
+	SIF TALENT:150
+		PRINT 상냥하게 
+	PRINTW 감쌌다….
+	PRINTL
+	PRINTFORMW 여성 특유의 달콤한 향기가 %CALLNAME:PLAYER%의 얼굴을 감싸고 있다….
+ENDIF

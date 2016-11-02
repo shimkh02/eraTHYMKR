@@ -1,0 +1,859 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;특수 목욕탕 관계
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;여기서는 @BATH_REFORM로는 개장 처리를, @SHOW_BATH_ABL로는 개장 상황의 표시를,
+;@FAIRIES_BATH로는 요정목욕 처리를 실행한다.
+;또 몇 가지 목욕탕은 @SEAK_ASSIST_BATH에서는 모든 캐릭터를 참조해,
+;특정 캐릭터(소질)가 주인 또는 조수에 있을 때만 개장 가능한가 불가능한가를 판정한다
+;=============================================================================
+;목욕탕 개장 처리
+;=============================================================================
+;기호품(?)이란 이유로 자못 비싸게 설정
+;하단의 처리 중 LOCAL:1은 개장에 필요한 금액(목욕탕의 개장 상황은 FLAG:46(비트 연산)에서 행한다)
+;LOCAL은 조수 등을 참조해,
+@BATH_REFORM
+PRINTL 현재 목욕탕 기능:
+CALL SHOW_BATH_ABL
+LOCAL = SEAK_ASSIST_BATH()
+DRAWLINE
+PRINTL 어떤 목욕탕을 개발하겠습니까?
+PRINTFORML 소지금:{MONEY}원
+FOR COUNT,0, 16
+	SIF !GETBIT(FLAG:74, COUNT) && GETBIT(LOCAL, COUNT)
+		PRINTFORML   [{COUNT, 2}] %STR:(500+COUNT),16,LEFT%(%SHOW_YEN(SPECIAL_BATH_PRICE(COUNT))%)
+NEXT
+PRINTL [100] 돌아가기
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT >= 0 && RESULT <= 15 && !GETBIT(FLAG:74, RESULT) && GETBIT(LOCAL, RESULT)
+	LOCAL:1 = SPECIAL_BATH_PRICE(RESULT)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+IF MONEY < LOCAL:1
+	PRINTW 자금이 부족합니다.
+	RESTART
+ELSE
+	MONEY -= LOCAL:1
+	SETBIT FLAG:74, RESULT
+	PRINTL 목욕탕 기능을 확장했다.
+	PRINTFORMW 커맨드 \@(RESULT == 13) ? 《%STR:513%》%조사만처리(STR:513,"를")% # ＜%STR:(500+RESULT)%＞%조사만처리(STR:(500+RESULT),"를")%\@ 사용할 수 있게 되었다.
+ENDIF
+DRAWLINE
+RESTART
+
+;-----------------------------------------------
+;특수 목욕탕의 가격
+;-----------------------------------------------
+@SPECIAL_BATH_PRICE(ARG)
+#FUNCTION
+SELECTCASE ARG
+	;蟲 목욕탕의 개장 가격
+	CASE 0
+		RETURNF 230000
+	;鰻 목욕탕의 개장 가격
+	CASE 1
+		RETURNF 250000
+	;ローション 목욕탕의 개장 가격
+	CASE 2
+		RETURNF 150000
+	;スライム 목욕탕의 개장 가격
+	CASE 3
+		RETURNF 200000
+	;媚薬 목욕탕의 개장 가격
+	CASE 4
+		RETURNF 180000
+	;물 감옥의 개장 가격
+	CASE 5
+		RETURNF 500000
+	;精液 목욕탕의 개장 가격
+	CASE 6
+		RETURNF 300000
+	;酒 목욕탕의 개장 가격
+	CASE 7
+		RETURNF 260000
+	;トロロ 목욕탕의 개장 가격
+	CASE 8
+		RETURNF 200000
+	;毛玉 목욕탕의 개장 가격
+	CASE 9
+		RETURNF 200000
+	;蒸し 목욕탕의 개장 가격
+	CASE 10
+		RETURNF 520000
+	;国士無双の薬 목욕탕의 개장 가격
+	CASE 11
+		RETURNF 370000
+	;厄毒 목욕탕의 개장 가격
+	CASE 12
+		RETURNF 340000
+	;妖精 목욕탕의 개장 가격
+	CASE 13
+		RETURNF 990000
+	;岩盤浴の改装値段
+	CASE 14
+		RETURNF 750000
+	;札束 목욕탕의 개장 가격
+	CASE 15
+		RETURNF 880000
+	;그런 목욕탕은 없습니다.
+	CASEELSE
+		RETURNF 0
+ENDSELECT
+
+;-----------------------------------------------
+;목욕탕의 개장 상황을 표시
+;-----------------------------------------------
+@SHOW_BATH_ABL
+IF FLAG:74 == 0
+	PRINT ＊미개발＊
+ELSE
+	FOR COUNT, 0, 16
+		SIF !GETBIT(FLAG:74, COUNT)
+			CONTINUE
+		IF COUNT == 9
+			PRINT [모두 개발] 
+		ELSEIF COUNT == 11
+			PRINT [도핑 야고코로 바스] 
+		ELSE
+			PRINTFORM [%STR:(500+COUNT)%] 
+		ENDIF
+	NEXT
+ENDIF
+PRINTL 
+
+;-----------------------------------------------
+;특정 개장이 실행할 수 있는가 없는가 판단하기 위해서 주인 · 조수를 보는 처리
+;-----------------------------------------------
+@SEAK_ASSIST_BATH
+#FUNCTION
+LOCAL = 0
+;ローション風呂, スライム風呂, 媚薬風呂は無条件でＯＫ
+LOCAL |= 4
+LOCAL |= 8
+LOCAL |= 16
+;精液風呂は触手に[精液放出量強化]能力があれば追加可能
+SIF FLAG:75 & 16384
+	LOCAL |= 64
+;主人が禁断の知識を持っていると鰻, 蟲風呂両方追加可能
+IF TALENT:MASTER:56
+	LOCAL |= 1
+	LOCAL |= 2
+ENDIF
+REPEAT CHARANUM
+	;失踪中なら除外
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;主人か助手可能でなければ除外
+	SIF COUNT != MASTER && CFLAG:COUNT:1 < 2
+		CONTINUE
+	;リグルかヤマメの内誰かが主人もしくは助手可能の場合, 蟲風呂を追加可能
+	SIF NO:COUNT == 24 || NO:COUNT == 68
+		LOCAL |= 1
+	;みすちーか衣玖さんの内誰かが主人もしくは助手可能の場合, 鰻風呂を追加可能
+	SIF NO:COUNT == 25 || NO:COUNT == 51
+		LOCAL |= 2
+	;にとりか名無しキャラ(河童)の内誰かが主人もしくは助手可能の場合, 水牢を追加可能
+	SIF NO:COUNT == 40 || NO:COUNT == 180
+		LOCAL |= 32
+	;(旧条件)萃香か勇儀か文か紫の内誰かが主人もしくは助手可能の場合, 酒風呂を追加可能
+	;(修正)萃香か勇儀か文か紫か黄昏酒場の面々か名無しキャラ(鴉天狗)か名無しキャラ(旧都鬼)の内誰かが主人もしくは助手可能の場合, 酒風呂を追加可能
+	SIF NO:COUNT == 22 || NO:COUNT == 23 || NO:COUNT == 32 || NO:COUNT == 60 || NO:COUNT == 139 || NO:COUNT == 140 || NO:COUNT == 141 || NO:COUNT == 142 || NO:COUNT == 174 || NO:COUNT == 181
+		LOCAL |= 128
+	;ゆうかりんか秋姉妹の内誰かが主人もしくは助手可能の場合, トロロ風呂を追加可能
+	SIF NO:COUNT == 34 || NO:COUNT == 37 || NO:COUNT == 38
+		LOCAL |= 256
+	;パチュリーか橙, 藍様, 雛, 椛の内誰かが主人もしくは助手可能の場合, 毛玉風呂を追加可能
+	SIF NO:COUNT == 8 || NO:COUNT == 13 || NO:COUNT == 21 || NO:COUNT == 39 || NO:COUNT == 41
+		LOCAL |= 512
+	;フランちゃんか妹紅, お燐, うにゅほの内誰かが主人もしくは助手可能の場合, 蒸し風呂を追加可能
+	SIF NO:COUNT == 11 || NO:COUNT == 31 || NO:COUNT == 62 || NO:COUNT == 63
+		LOCAL |= 1024
+	;てゐかうどんげ, えーりん, 姫の内誰かが主人もしくは助手可能の場合, 国士無双の薬風呂を追加可能
+	SIF NO:COUNT == 27 || NO:COUNT == 28 || NO:COUNT == 29 || NO:COUNT == 30
+		LOCAL |= 2048
+	;メディ, 雛, ヤマメ, パルスィの内誰かが主人もしくは助手可能の場合, 厄毒風呂を追加可能
+	SIF NO:COUNT == 33 || NO:COUNT == 39 || NO:COUNT == 58 || NO:COUNT == 59
+		LOCAL |= 4096
+	;妖精が主人もしくは助手可能, かつ堕とした妖精がその時点で50人以上で[つるぺた堕し]か[大乳導]を取得している, または主人が[妖精知識]を取得している場合, 妖精風呂を追加可能
+	;CHALLENGEモードのときは妖精が主人もしくは助手可能かつ堕とした妖精が累計20人以上のとき妖精風呂を追加可能
+	IF (FLAG:4 >= 50 && FLAG:32 >= 20) || FLAG:32 >= 50 && (TALENT:MASTER:96 || TALENT:MASTER:97) || TALENT:MASTER:57
+		SIF TALENT:COUNT:200
+			LOCAL |= 8192
+	ENDIF
+	;理香子, ちゆり, 夢美の内誰かが主人もしくは助手可能の場合, 岩盤浴を追加可能
+	SIF NO:COUNT == 106 || NO:COUNT == 107 || NO:COUNT == 108
+		LOCAL |= 16384
+REND
+;주인의 조교사 Lv이 4 이상일 경우에는 돈다발 목욕탕을 추가 가능
+SIF ABL:MASTER:99 >= 4
+	LOCAL |= 32768
+;디버그 모드시에는 무조건 개조 가능
+SIF TALENT:MASTER:998
+	LOCAL = 65535
+RETURNF LOCAL
+
+;--------------------------------------------------
+;특수 목욕탕의 판정
+;--------------------------------------------------
+;특수 목욕탕의 숫자를 반환한다
+@SPECIALBATH_CHECK
+#FUNCTION
+LOCAL:1 = 0
+FOR LOCAL, 0, 20
+	LOCAL:1 += GETBIT(FLAG:74, LOCAL)
+NEXT
+RETURNF LOCAL:1
+
+;=============================================================================
+;요정목욕 처리
+;=============================================================================
+;LOCAL=요정 총숫자, LOCAL:1=험락된 요정 숫자, LOCAL:2=심취하고 있는 요정 숫자를 가리킨다
+@FAIRIES_BATH
+;요정 숫자 카운트 처리
+LOCAL = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+REPEAT CHARANUM
+	;주인, [남자]는 조건 상 튕김
+	SIF COUNT == MASTER || TALENT:COUNT:120
+		CONTINUE
+	;그 자리에 없는 캐릭터는 제외
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;임신, 포란, 회란도 제외
+	SIF TALENT:COUNT:140 || TALENT:COUNT:143 || TALENT:COUNT:145
+		CONTINUE
+	;요정이 아니라면 튕김
+	SIF TALENT:COUNT:200 == 0
+		CONTINUE
+	IF TALENT:COUNT:151 || TALENT:COUNT:152 || TALENT:COUNT:153 || TALENT:COUNT:160 || TALENT:COUNT:161 || TALENT:COUNT:162 || TALENT:COUNT:164
+		LOCAL:1 += 1
+		LOCAL:2 += 1
+	ELSEIF TALENT:COUNT:150 || TALENT:COUNT:170
+		LOCAL:1 += 1
+	ENDIF
+	LOCAL += 1
+REND
+
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 비어있는 커다란 욕조를 준비하고는 요정들을 불러, 안에다가 가득 채웠다.
+PRINT 욕조 안에는 
+IF LOCAL > 500
+	PRINT 셀 수 없을 정도의 
+ELSEIF LOCAL > 50
+	PRINT 엄청난 수의 
+ELSE
+	PRINT 수많은 
+ENDIF
+PRINTW 요정들이 서로 부대끼며, 
+IF LOCAL:1 > 300
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"를")% 기대에 가득찬 눈동자로 보고 있다…….
+ELSEIF LOCAL:1 > 30
+	PRINTFORMW 무엇을 하려는 건가 하고 %조사처리(CALLNAME:MASTER,"를")% 바라보고 있다…….
+ELSE
+	PRINTFORMW 불편한 듯한 얼굴을 하고 있다…….
+ENDIF
+PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그 안에 뛰어들었다.
+PRINTFORM %조사처리(CALLNAME:MASTER,"가")% 안에 들어간 순간, 
+IF LOCAL > 500
+	PRINT 셀 수 없을 정도의 
+ELSEIF LOCAL > 50
+	PRINT 엄청난 수의 
+ELSE
+	PRINT 수많은 
+ENDIF
+PRINT 요정들이 
+;목욕의 효과 계산
+LOCAL:3 = LOCAL + LOCAL:1 * 4 + LOCAL:2 * 16
+IF LOCAL == LOCAL:2
+	LOCAL:3 *= 16
+	PRINTFORMW 자기가 먼저라며 %CALLNAME:MASTER%의 쟁탈전에 나섰다…….
+ELSEIF LOCAL == LOCAL:1
+	LOCAL:3 *= 4
+	PRINTFORMW 일제히 %CALLNAME:MASTER%에게 무리지어 왔다…….
+ELSE
+	PRINTFORMW %CALLNAME:MASTER%의 주변으로 모여들었다…….
+ENDIF
+SIF (TALENT:MASTER:120 || TALENT:MASTER:121) && LOCAL:3 / 64
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 다수의 요정들에 둘러싸인 채로, 대량의 정액을 주변에 흩뿌렸다…….
+PRINTW ………………
+PRINTW …………
+PRINTW ……
+IF (TALENT:MASTER:120 || TALENT:MASTER:121) && LOCAL:3 / 64
+	PRINTFORML %조사처리(CALLNAME:MASTER,"는")% {LOCAL:3/64}번 사정했다.
+	EXP:MASTER:3 += (LOCAL:3 / 64) * 2
+ENDIF
+
+PRINTFORML %EXPNAME:2%＋?
+PRINTFORML %EXPNAME:3%＋?
+PRINTFORML %EXPNAME:4%＋?
+PRINTFORML %EXPNAME:5%＋?
+PRINTFORML %EXPNAME:20%＋?
+PRINTFORML %EXPNAME:50%＋?
+PRINTFORML %PALAMNAME:0%의 구슬＋?
+PRINTFORML %PALAMNAME:3%의 구슬＋?
+PRINTFORML %PALAMNAME:12%의 구슬＋?
+PRINTFORML %PALAMNAME:13%의 구슬＋?
+PRINTW (다만 0인경우도 있다.)
+
+REPEAT CHARANUM
+	;主人, [オトコ]は条件からはじく
+	SIF COUNT == 0 || TALENT:COUNT:120
+		CONTINUE
+	;失踪中は除外
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;[妊娠], [抱卵中], [懐卵]も除外
+	SIF TALENT:COUNT:140 || TALENT:COUNT:143 || TALENT:COUNT:145
+		CONTINUE
+	;[妖精]以外は除外
+	SIF TALENT:COUNT:200 == 0
+		CONTINUE
+	;快Ｃの珠, 절정経験, (射精経験, 異常経験)
+	LOCAL:4 = (ABL:COUNT:3 + 1) * (LOCAL:3/2)
+	SIF TALENT:COUNT:101
+		TIMES LOCAL:4 , 0.67
+	SIF TALENT:COUNT:100
+		TIMES LOCAL:4 , 1.50
+	JUEL:COUNT:0 += LOCAL:4
+	LOCAL:5 = LOCAL:4 / 20
+	IF LOCAL:4 >= 1000
+		EXP:COUNT:2 += LOCAL:4 / 1000
+		IF TALENT:COUNT:121
+			IF EXP:COUNT:3 == 0
+				EXP:COUNT:50 += 1
+				CFLAG:COUNT:11 |= 4
+			ENDIF
+			EXP:COUNT:3 += LOCAL:4 / 1000
+		ENDIF
+	ENDIF
+	;快Ｂの珠, 절정経験, (噴乳経験, 異常経験)
+	LOCAL:4 = (ABL:COUNT:3 + 1) * (LOCAL:3/4)
+	SIF TALENT:COUNT:107
+		TIMES LOCAL:4 , 0.67
+	SIF TALENT:COUNT:106
+		TIMES LOCAL:4 , 1.50
+	IF TALENT:COUNT:110
+		TIMES LOCAL:4 , 2.00
+	ELSEIF TALENT:COUNT:111
+		TIMES LOCAL:4 , 1.50
+	ELSEIF TALENT:COUNT:112
+		TIMES LOCAL:4 , 0.67
+	ELSEIF TALENT:COUNT:113
+		TIMES LOCAL:4 , 0.50
+	ENDIF
+	JUEL:COUNT:3 += LOCAL:4
+	LOCAL:5 += LOCAL:4 / 20
+	IF LOCAL:4 >= 1000
+		EXP:COUNT:2 += LOCAL:4 / 1000
+		IF TALENT:COUNT:134
+			IF EXP:COUNT:5 == 0
+				EXP:COUNT:50 += 1
+				CFLAG:COUNT:11 |= 4
+			ENDIF
+			EXP:COUNT:5 += LOCAL:4 / 1000
+		ENDIF
+	ENDIF
+	;정액경험
+	IF RAND:2 == 0
+		LOCAL:4 = (LOCAL:3/128 < 2) ? RAND:2 # RAND:(LOCAL:3/128)
+		EXP:COUNT:4 += LOCAL:4
+		LOCAL:5 += LOCAL:4
+	ENDIF
+	;恭順の珠, 欲情の珠, 奉仕快楽経験
+	LOCAL:5 *= 2 + (TALENT:COUNT:150 + TALENT:COUNT:151 + TALENT:COUNT:152 + TALENT:COUNT:153 + TALENT:COUNT:160 + TALENT:COUNT:161 + TALENT:COUNT:162 + TALENT:COUNT:164 + TALENT:COUNT:170 + TALENT:COUNT:180) * 2
+	JUEL:COUNT:13 += LOCAL:5
+	JUEL:COUNT:12 += LOCAL:5 / 10
+	EXP:COUNT:20 += LOCAL:5 / 20
+	;今回から否定の珠も追加.数を計算する.
+	;反発刻印によって基礎値が, 屈服刻印によってランダム値が決定される
+	IF MARK:COUNT:9 > MARK:COUNT:2
+		LOCAL:6 = (MARK:COUNT:9 - MARK:COUNT:2) * LOCAL:5 / 5
+	ELSEIF MARK:COUNT:9 > 0
+		LOCAL:6 = MARK:COUNT:9 * LOCAL:5 / 20
+	ELSE
+		LOCAL:6 = 0
+	ENDIF
+	IF LOCAL:3 < 10000
+		LOCAL:6 += RAND:20 * (3 - MARK:COUNT:2) / 3
+	ELSE
+		LOCAL:6 += RAND:(SQRT(LOCAL:3)/5) * (3 - MARK:COUNT:2) / 3
+	ENDIF
+	;반발 0이면 보너스
+	IF LOCAL:6 == 0
+		JUEL:COUNT:13 += LOCAL:5
+		JUEL:COUNT:12 += LOCAL:5 / 9
+		EXP:COUNT:20 += LOCAL:5 / 18
+	ELSEIF LOCAL:6 > LOCAL:5 * 11 / 10
+		JUEL:COUNT:100 += LOCAL:6 - LOCAL:5 * 11 / 10
+	ELSE
+		JUEL:COUNT:13 += LOCAL:5 - LOCAL:6 * 10 / 11
+		JUEL:COUNT:12 += LOCAL:5 / 10 - LOCAL:6 / 11
+		EXP:COUNT:20 += LOCAL:5 / 20
+	ENDIF
+
+	;마지막으로 체력을 한계로 한다
+	BASE:COUNT:0 = 1 + RAND:499
+REND
+BASE:MASTER:0 = 1 + RAND:499
+PRINTFORMW %CALLNAME:MASTER% 및 요정들은 피곤해져서 그 자리에 잠들어 버렸다….
+;妖精の総数が100以上, または堕ちている妖精の数が50以上, または心酔している妖精の数が30以上, 
+;または妖精の総数が心酔している妖精の数と同じ, または堕ちている妖精の数が妖精の総数の半分以上を占めているなら風呂は壊れる
+;(暴れまわると解釈)
+IF LOCAL >= 100 || LOCAL:1 >= 50 || LOCAL:2 >= 30 || LOCAL == LOCAL:2 || LOCAL:1 >= LOCAL/2
+		PRINTFORMW 너무 신나게 날뛴 탓인지 요정목욕탕은 부서져서 사용 불능이 되어버렸다…….
+	FLAG:74 -= 8192
+ENDIF
+BEGIN TURNEND
+
+RETURN 1
+
+;=============================================================================
+;집단 목욕 이벤트 관련 처리
+;=============================================================================
+;단, 주인이 제외되므로 주의. 이벤트를 발생시키고 싶다면 계획적으로.
+;--------------------------------------------------
+;먼저 발동 조건을 체크한다
+;--------------------------------------------------
+@GROUP_BATH_CHECK
+;캐릭터 전용 커맨드, 일상 생활, 밤 이벤트 확장 전부 ON 필수
+SIF (FLAG:15 & 16384) == 0 || (FLAG:12 & 64) == 0 || (FLAG:12 & 256) == 0
+	RETURN 0
+
+;eratohoYM, ABNORMAL, EXTRA 모드 전용이랄까 그 외에서 이것의 상상이 안 감(DEBUG 모드는 ＯＫ)
+SIF FLAG:4 != 0 && FLAG:4 != 1 && FLAG:4 != 2 && TALENT:MASTER:998 != 1
+	RETURN 0
+
+;현재 아무도 조교하고 있지 않다, 주인을 넣지 않고 모든 등록 캐릭터가 3명 이하라면 돌아간다
+SIF TARGET < 0 || CHARANUM < 4
+	RETURN 0
+
+;발생할 확률은 EASY～NORMAL에서 주인의 조교사 Lv*6%, HARD 이상에서 조교사 Lv*4%로 한다
+SIF (FLAG:3 <= 2 && RAND:100 > 6*(ABL:MASTER:99)) || (FLAG:3 > 2 && RAND:100 > 4*(ABL:MASTER:99))
+	RETURN 0
+
+;이벤트 분기용 한 문자 변수의 초기화
+VARSET LOCAL,0
+
+;여기서부터 모든 등록 캐릭터로부터 이벤트 있을 만한 캐릭터를 체크해간다
+REPEAT CHARANUM
+	;주인은 제외
+	SIF COUNT == MASTER
+		CONTINUE
+	;그 자리에 없는 캐릭터는 제외
+	SIF CFLAG:COUNT:4
+		CONTINUE
+	;연모 또는 복종 또는 음란 없는 캐릭터는 제외
+	SIF TALENT:COUNT:150 == 0 && TALENT:COUNT:160 == 0 && TALENT:COUNT:170 == 0
+		CONTINUE
+	;유아퇴행 또는 정신붕괴 또는 괴뢰 또는 괴조인격 또는 미약중독 또는 포란 중인 캐릭터는 제외
+	SIF TALENT:COUNT:159 || TALENT:COUNT:167 || TALENT:COUNT:168 || TALENT:COUNT:169 || TALENT:COUNT:46 || TALENT:COUNT:143
+		CONTINUE
+	;특수 장비를 장착하고 있는 경우에는 제외
+	SIF CFLAG:COUNT:42
+		CONTINUE
+	;반발각인 2 이상, 공포각인 3 이상, 약물각인 3 이상인 캐릭터는 제외
+	SIF MARK:COUNT:9 >= 2 || MARK:COUNT:8 >= 3 || MARK:COUNT:3 >= 3
+		CONTINUE
+
+	LOCAL = NO:COUNT
+	;바콰르텟＋보호자들(루미아, 치르노, 리글, 미스치, 다이쨩, 레티)
+	SIF LOCAL == 3 || LOCAL == 4 || LOCAL == 5 || LOCAL == 12 || LOCAL == 24 || LOCAL == 25
+		LOCAL:11 += 1
+	;야쿠모 일가＋백옥루 여성들(첸, 란샤마, 유카링, 묭, 유유 님, 반령)
+	SIF LOCAL == 13 || LOCAL == 19 || LOCAL== 20 || LOCAL == 21 || LOCAL == 22 || LOCAL == 65
+		LOCAL:12 += 1
+	;봉래 진료소 여러분(테위, 우동게, 에이린, 카구야)
+	SIF LOCAL == 27 || LOCAL == 28 || LOCAL == 29 || LOCAL == 30
+		LOCAL:13 += 1
+	;홍마관 여러분(문지기, 코아, 파체, 메이드장, 레미리아☆우~, 플랑쨩)
+	SIF LOCAL == 6 || LOCAL == 7 || LOCAL == 8 || LOCAL == 9 || LOCAL == 10 || LOCAL == 11
+		LOCAL:14 += 1
+	;모리야의 신님과 풍양의 신님과 액신님(사나에, 카나, 스와, 아키 자매, 히낫치)
+	SIF LOCAL == 37 || LOCAL == 38 || LOCAL == 39 || LOCAL == 42 || LOCAL == 43 || LOCAL == 44
+		LOCAL:15 += 1
+	;프리즘리버 3자매 VS 삼월정(리리카, 메를랑, 루나사, 서니, 루나, 스타)
+	SIF LOCAL == 16 || LOCAL == 17 || LOCAL == 18 || LOCAL == 45 || LOCAL == 46 || LOCAL == 47
+		LOCAL:16 += 1
+	;코메이지 일가(사토링, 오링링, 우뉴호, 코이시쨩)
+	SIF LOCAL == 61 || LOCAL == 62 || LOCAL == 63 || LOCAL == 64
+		LOCAL:17 += 1
+	;앨리스와 귀여운 인형들(앨리스 EX 불가, 샹하이, 호라이, 골리아테, 오오에도)
+	SIF (LOCAL == 14 && CFLAG:COUNT:0 == 0) || LOCAL == 66 || LOCAL == 67 || LOCAL == 96 || LOCAL == 97
+		LOCAL:18 += 1
+	;뱌쿠렌 씨와 유쾌한 모두들(나즈, 이치린, 무라사, 쇼우, 뱌쿠렌, 누에)
+	SIF LOCAL == 71 || LOCAL == 73 || LOCAL == 75 || LOCAL == 76 || LOCAL == 77 || LOCAL == 78
+		LOCAL:19 += 1
+	;꿈의 누님 올 스타! (유유코, 유카링, 에이린, 유우카링, 에이키 님, 카나코, 뱌쿠렌, 미마, 신키 님)
+	SIF LOCAL == 20 || LOCAL == 22 || LOCAL == 29 || LOCAL == 34 || LOCAL == 36 || LOCAL == 43 || LOCAL == 77 || LOCAL == 100 || LOCAL == 119
+		LOCAL:20 += 1
+	;가장 사랑하는 여동생 대집합! (플랑쨩, 메를랑, 리리카, 미노리코, 요리히메, 코이시, 무게츠)
+	SIF LOCAL == 11 || LOCAL == 16 || LOCAL == 17 || LOCAL == 38 || LOCAL == 54 || LOCAL == 64 || LOCAL == 112
+		LOCAL:21 += 1
+	;주인공들(레이무, 마리사, 사쿠야, 아야, 사나에)
+	SIF LOCAL == 1 || LOCAL == 2 || LOCAL == 9 || LOCAL == 32 || LOCAL == 42
+		LOCAL:22 += 1
+	;마리사 하렘(마리사 EX 불가, 앨리스, 파체, 플랑, 니토리, 코이시)
+	SIF (LOCAL == 2 && CFLAG:COUNT:0 == 0 ) || LOCAL == 8 || LOCAL == 11 || LOCAL == 14 || LOCAL == 40 || LOCAL == 64
+		LOCAL:23 += 1
+	;두근! 남자뿐인 집단 서비스 신(린노스케, 요우키, 반령(요우키), 운잔, 신교쿠, 유겐마간, 타츠미, 텐지에 전원 [남자] 보유)
+	SIF (LOCAL == 69 && TALENT:COUNT:120) || (LOCAL == 70 && TALENT:COUNT:120)  || (LOCAL == 74 && TALENT:COUNT:120) || (LOCAL == 99 && TALENT:COUNT:120) || (LOCAL == 120 && TALENT:COUNT:120)  || (LOCAL == 121 && TALENT:COUNT:120) || (LOCAL == 140 && TALENT:COUNT:120) || (LOCAL == 142 && TALENT:COUNT:120)
+		LOCAL:24 += 1
+	;몽전대사묘 여러분(요시카, 청아, 토지코, 후토, 미코)
+	SIF LOCAL == 82 || LOCAL == 83 || LOCAL == 84 || LOCAL == 85 || LOCAL == 86
+		LOCAL:25 += 1
+	;너구리 누님과 함께(마미조, 코스즈, 누에, 코코로, 코이시, 쿄코, 코가사)
+	SIF LOCAL == 64 || LOCAL == 72 || LOCAL == 78 || LOCAL == 81 || LOCAL == 87 || LOCAL == 88 || LOCAL == 89
+		LOCAL:26 += 1
+REND
+LOCAL = 0
+;바콰르텟＋보호자 모였어?
+IF LOCAL:11 >= 6
+	LOCAL:101 = 1
+	LOCAL += 1
+ENDIF
+;야쿠모 일가＋백옥루 여성진 모였어?
+IF LOCAL:12 >= 6
+	LOCAL:102 = 1
+	LOCAL += 1
+ENDIF
+;봉래 진료소 여러분 모였어?
+IF LOCAL:13 >= 4
+	LOCAL:103 = 1
+	LOCAL += 1
+ENDIF
+;홍마관 여러분 모였어?
+IF LOCAL:14 >= 6
+	LOCAL:104 = 1
+	LOCAL += 1
+ENDIF
+;신님들 다들 모였어?
+IF LOCAL:15 >= 6
+	LOCAL:105 = 1
+	LOCAL += 1
+ENDIF
+;프리즘리버와 삼월정 모였어?
+IF LOCAL:16 >= 6
+	LOCAL:106 = 1
+	LOCAL += 1
+ENDIF
+;코메이지 일가 다들 모였어?
+IF LOCAL:17 >= 4
+	LOCAL:107 = 1
+	LOCAL += 1
+ENDIF
+;앨리스와 인형들 모였어?
+IF LOCAL:18 >= 5
+	LOCAL:108 = 1
+	LOCAL += 1
+ENDIF
+;뱌쿠렌 씨 일동 모였어?
+IF LOCAL:19 >= 6
+	LOCAL:109 = 1
+	LOCAL += 1
+ENDIF
+;멋진 누님들만 모였어?
+IF LOCAL:20 >= 9
+	LOCAL:110 = 1
+	LOCAL += 1
+ENDIF
+;여동생 7명 모였어?
+IF LOCAL:21 >= 7
+	LOCAL:111 = 1
+	LOCAL += 1
+ENDIF
+;주인공 5인중 모였어?
+IF LOCAL:22 >= 5
+	LOCAL:112 = 1
+	LOCAL += 1
+ENDIF
+;마리사 하렘 다 모였어?
+IF LOCAL:23 >= 6
+	LOCAL:113 = 1
+	LOCAL += 1
+ENDIF
+;남자 8인중이 모였어?
+IF LOCAL:24 >= 8
+	LOCAL:114 = 1
+	LOCAL += 1
+ENDIF
+;몽전대사묘 5명 모였어?
+IF LOCAL:25 >= 5
+	LOCAL:115 = 1
+	LOCAL += 1
+ENDIF
+;마미조와 추종자들 7명 모였어?
+IF LOCAL:26 >= 7
+	LOCAL:116 = 1
+	LOCAL += 1
+ENDIF
+
+;결국 어느 조합도 없으면 종료
+SIF LOCAL <= 0
+	RETURN 0
+
+;디버그 모드에서 표시
+SIF TALENT:MASTER:998 == 1
+	PRINTFORML LOCAL = {LOCAL}
+
+;--------------------------------------------------
+;발동 결정
+;--------------------------------------------------
+;어느 이벤트를 발생시킬까?
+LOCAL = 1 + RAND:LOCAL
+
+REPEAT 16
+	SIF COUNT == 0
+		CONTINUE
+	;발생하지 않는 이벤트는 무시
+	SIF LOCAL:(100 + COUNT) == 0
+		CONTINUE
+
+	LOCAL:100 += 1
+
+	SIF LOCAL:100 == LOCAL
+		LOCAL:200 = COUNT
+
+REND
+
+;디버그 모드에서 표시
+SIF TALENT:MASTER:998 == 1
+	PRINTFORML LOCAL:200 = {LOCAL:200}
+
+SIF LOCAL:200 != 0
+	CALL GROUP_BATH_EVENT, LOCAL:200
+
+RETURN 1
+
+;--------------------------------------------------
+;집단 입욕 이벤트 본체 처리
+;--------------------------------------------------
+@GROUP_BATH_EVENT, ARG
+DRAWLINE
+;지문 컷
+IF CFLAG:99 == 0
+	IF ARG == 1
+		PRINTL 치르노와 레티가 사이좋게 전용 욕조에 들어가자, 
+		PRINTL 대요정과 루미아와 미스티나 리글 등의 멤버도 욕실에 들어왔다.
+		PRINTFORML %CALLNAME:MASTER%의 저택에서 나날이 조교당하는 신분이긴 하지만, 
+		PRINTL 역시 사이가 원래 좋았던 만큼 이렇게 모여있으면 회화도 활발하고, 여러가지로 시끌시끌해진다.
+		PRINTW 물론, 아무리 그래도 나중에 온 네 명이 다 들어간 욕조는 좁았기에 바로 보통의 욕조에 들어가기로 했다.
+	ELSEIF ARG == 2
+		PRINTL 목욕을 싫어하는 첸이긴 하지만 아무리 그렇다 해도 언제까지고 안 들어갈 수는 없다.
+		PRINTL 그래서 오늘은 란이 첸을 목욕시키기로 했다. 그랬을 텐데 어째서인지 거기엔, 
+		PRINTL 유카리와 유유코와 요우무까지 있었다.
+		PRINTL 뭐라뭐라 해도 결국 두 사람이 걱정되는 유카리에, 
+		PRINTL 모처럼 기회니 친구와 입욕하고 싶었던 유유코에, 
+		PRINTL 종자로서 뭘 할지 방치할 수 없는 요우무가 각자 따라붙었던 것이다.
+		PRINTFORML 그건 그렇다 쳐도 이만큼의 여성을 자신의 포로로 삼은 %CALLNAME:MASTER%의 엄청난 배포에, 
+		PRINTL 야쿠모 란은 다소의 공포와 그것 이상의 독점욕에 끓어오르기 시작했다.
+		PRINTW 그리고 그런 심정을 당연히 꿰뚫어본 유카링과 유유코. 싸움은 아직 계속되고 있었다….
+	ELSEIF ARG == 3
+		PRINTL 테위와 우동게가 즐거운 듯 목욕탕에서 떠들고 있고, 
+		PRINTL 그 곁에선 아름다은 피부를 지닌 카구야를 에이린이 사랑스러운듯 씻겨주고 있다.
+		PRINTL 있던 곳은 변했을지언정 이 네 사람이 있으면 어떻게든 된다는 모양이다.
+		PRINTL 실제로 각자 여기에서의 생활에 익숙해지고 나서는, 
+		PRINTL 이렇게 서로 모여서 즐기는 여유도 생기게 되었다.
+		PRINTFORML 이제 문제는, 얼마나 %CALLNAME:MASTER%의 총애를 얻을 것인가?
+		PRINTW 가족이나 마찬가지로 사이가 좋으면서도, 여자로서 양보할 수 없는 무언가는 있는 모양이다….
+	ELSEIF ARG == 4
+		PRINTFORML 지금은 %CALLNAME:MASTER%의 집이야말로 홍마관이나 마찬가지였다.
+		PRINTL 그도 그럴게, 본래 홍마관 주요 멤버가 이렇게 전원 여기 모여있기 때문이었다.
+		PRINTL 오늘도 아가씨와 여동생님을 시작으로 전원 이렇게 목욕을 같이 하고 있었지만, 
+		PRINTFORML 모두 뭔가 부족함을 느끼고 있었다.어차피 전원이 %CALLNAME:MASTER%에게 마음이 있는 건 알고 있다.
+		PRINTL 당연히, 여기에 그도 있어야만 하는 것이다, 그렇게 생각은 하지만 뭐 여러 가지로 바쁘니 별 수 있나.
+		PRINTFORMW 뭐 시간은 넉넉하게 있다.언젠가는 %CALLNAME:MASTER%도 같이 하겠지 하고 생각하는 모두였다….
+	ELSEIF ARG == 5
+		PRINTL 과연 상식을 폐기한 사나에도 이정도쯤 되면 좀 장관이라 생각할만한 광경이었다, 아무래도 입욕하고 있는 전원이 신들 뿐이었던 것이다.
+		PRINTL 자신도 현인신이라고 불리고는 있지만 역시 저쪽에선 보통의 인간으로 살아왔기 때문에…, 
+		PRINTL 스스로 모리야 두 위인 카나코 님과 스와코 님, 그리고 산에 이전부터 존재하고 있던 신이 두 위.
+		PRINTL 가을을 다스리는 시즈하 님과 미노리코 님, 그리고 인간의 재액을 회수하는 액신님이신 히나 님.
+		PRINTL 그야말로 신판…, 그렇게 생각하고 있노라니 카나코가 상냥하면서도 엄한 시선으로 제대로 된 자세를 부탁해온다.
+		PRINTW 그렇다, 자신도 「신」이었다…, 이 입욕은 「신사(神事)」인 것이다….
+	ELSEIF ARG == 6
+		PRINTL 그날 밤의 목욕탕은 가히 라이브회장과 전장이 뒤섞인 듯한 형태였다.
+		PRINTL 프리즘리버 세 명이 기세 좋게 즐거운 노래를 부르며 등을 밀어주고 있노라니, 
+		PRINTL 때때로 음이 끊기거나 부자연스럽게 시계가 가려지거나 했다.
+		PRINTL 하지만, 그런 장난질도 루나사에 의해 간파되고 나서는, 
+		PRINTL 삼월정을 쫓아가는 세 자매라는 카오스한 상황이 되버린 것이다.
+		PRINTW 목욕탕을 뒤집어 엎는 여섯 명, 하지만 뭐라고 하든간에 모두 즐기고 있는 것 같긴 했다….
+	ELSEIF ARG == 7
+		PRINTL 오랜만에 자매가 사이좋게 입욕하기로 한 사토리와 코이시.
+		PRINTL 느긋하게 등을 서로 밀어주고 있자니, 
+		PRINTL 오쿠와 오린이 뛰어들어왔다.두 사람 다 기운차게 욕탕 안으로 풍덩 뛰어든 것이다.
+		PRINTL 시끌시끌한 펫들의 행동을 보고 어쩔 수 없는 애들이구나 생각한 사토리는, 
+		PRINTL 일단, 코이시와 같이 뜨거운 물에 몸을 담그기로 했다.
+		PRINTL 그건 그렇다 쳐도 기운찬 오쿠와 오린이었지만, 아무래도
+		PRINTFORML 몸을 깨끗하게 하면 %조사처리(CALLNAME:MASTER,"가")% 안아줄거라는 사실에
+		PRINTL 서둘러서 씻으러 온 모양이었다.
+		PRINTW 그래도 자기야말로 먼저일거라 생각하는 사토리였지만 과연 어떻게 될는지….
+	ELSEIF ARG == 8
+		PRINTL 거대한 골리아테 인형을 기능을 잃지 않을 정도로 분해하여 입욕시킬 수 있게 된 것은, 
+		PRINTL 본디 앨리스가 제작자였기 때문이다. 실제로 인형의 관리에 신경을 많이 쓰는 앨리스에게 있어, 
+		PRINTL 인형들의 입욕이 가능한 이 저택에서의 생활은 상당히 쾌적한 것이기도 했다.
+		PRINTFORML %CALLNAME:MASTER%의 성적인 조교에도 최근엔 익숙해졌기에, 
+		PRINTL 오히려 좀 더 강하게 해도 될텐데? 하고 생각까지 하는 앨리스였다.
+		PRINTW 한편, 상하이도 호라이도 입욕에 익숙해진 것인지 기쁜 모습으로 뜨거운 물에 몸을 담그고 있었다….
+	ELSEIF ARG == 9
+		PRINTL 뱌쿠렌과 이치린에 무라사 선장에 토라마루 쇼우 네 사람이 같이 목욕탕에 들어가 있자니, 
+		PRINTL 허둥지둥 목욕탕으로 뛰어들어온 누에, 그리고 조금 늦게 우아하게 나즈린이 들어왔다.
+		PRINTL 아무래도 목욕하는게 싫어 내뺐던 누에를 나즈린이 데리고 온 모양이지만 상태가 좀 이상하다.
+		PRINTL 울다 웃다 정신이 없으면서도 누에는 주저주저 뱌쿠렌에게 안겨들었다. 그런 그녀를 쓴웃음을 지으면서도 상냥하게 위로해주는 뱌쿠렌.
+		PRINTL 그건 그렇다 쳐도 나즈린은 어떤 수를 써서 누에를 데리고 온 거지?
+		PRINTW 이상하게 생각하는 이치린과 무라사 선장과 쇼우였다….
+	ELSEIF ARG == 10
+		PRINTL 이 목욕탕은… 그야말로 누님 하렘이라 할 수 있는 엄청난 형상을 띠고 있었다!
+		PRINTL 망령공주인 유유코 아가씨, 요괴 현자 유카링 즉 야쿠모 유카리, 환상향 담당의 염마이신 시키 님, 
+		PRINTL 플라워 마스터 유카, 모리야의 전신인 야사카 카나코 님, 자애의 마법사이신 뱌쿠렌 님, 
+		PRINTL 악령일 터인데 언제부터인가 그냥 좋은 언니가 된 미마 님, 그리고 마계신이신 신키 님, 
+		PRINTL 오른쪽을 봐도 누님, 왼쪽을 봐도 누님, 화려함의 극치이긴 하지만…
+		PRINTL 각자 서로를 치열하게 견제하고 있다는 것도 또한 틀림없었다.
+		PRINTFORML 당연한 것이, 모두 %조사처리(CALLNAME:MASTER,"를")% 둘러싼 라이벌 사이였던 것이다….
+		PRINTW 표면적으로는 부드럽고 온화한 회화라 해도… 무시무시한 목욕이었다고 할까….
+	ELSEIF ARG == 11
+		PRINTFORML %조사처리(CALLNAME:MASTER,"가")% 모아온 일곱 명의 여동생들이 시끌시끌하게 목욕하고 있었다.
+		PRINTL 성격도 취향도 판이하게 다른 애들 뿐이었지만, 즐거운 걸 아주 좋아한다는 것만은 틀림없었다.
+		PRINTFORML 그럼과 동시에, %CALLNAME:MASTER% 제일의 여동생으로서 마음에 들기 위해서도, 여기서 확실하게 
+		PRINTL 몸을 깨끗하게 해서, 다른 여동생보다 조금이라도 앞서나가고 싶다는 마음을 각자 품고 있었다.
+		PRINTW 여기는 전장, 귀엽다고 해서 그것만으로 살아남을 수 있을 만큼 무르지 않은 곳이었다….
+	ELSEIF ARG == 12
+		PRINTL 어째서인지 신기한 멤버가 모여있는 목욕탕이었다.
+		PRINTL 접점이 그다지 없어 보이는 다섯 사람, 즉… 하쿠레이의 무녀인 레이무, 
+		PRINTL 숲에서 마법점을 하고 있는 마리사, 홍마관의 메이드장인 사쿠야, 
+		PRINTL 환상향 최속을 자칭하는 텐구인 아야, 산의 현인신이자 카제하후리인 사나에.
+		PRINTFORML %CALLNAME:MASTER%에게 몸을 맡겼다는 것 이외엔 이거다 싶은 공통점은 없어 보였지만, 
+		PRINTW 그녀들에게 있어선 아무래도 좋은 일일지도 모른다….
+	ELSEIF ARG == 13
+		PRINTL 마리사가 목욕탕에 들어가 있자니, 익숙한 멤버가 차례차례 들어왔다.
+		PRINTL 인형조종사인 앨리스에 움직이지 않는 도서관인 파츄리에 악마의 여동생인 플랑드르에 
+		PRINTL 산의 캇파인 니토리에 마음을 읽지 않는 사토리인 코이시가 그들이었다.
+		PRINTL 쓴웃음을 짓는 마리사였지만, 뭐 이렇게 다들 모이기도 했으니, 여섯명이서 시끌시끌하게 있는 것도 나쁘진 않다.
+		PRINTW 이렇게 해서, 모두 같이 즐겁게 목욕하는 건 그 뒤로도 정례행사처럼 되어가겠지….
+	ELSEIF ARG == 14
+		PRINTL 남캐들이 8명(?) 모이자 이상한 분위기가 형성되었다.
+		PRINTL 원래 평범한 남자 목욕탕이지만
+		PRINTFORML 그들은 %CALLNAME:MASTER%의 성욕을 만족시키기 위해 모인 셔틀들이기 때문에
+		PRINTFORML 남자들끼리 알몸의 교제를 가장하였지만, 각자 %CALLNAME:MASTER%의 총애를 받기 위해 견제도 치열했다.
+		PRINTL 이중에 누가 주인의 마음에 들까?
+		PRINTL 즐거운 목욕이라 하기엔 너무나도 격렬하다.
+		PRINTW 그 때 비누가 떨어지는 소리가 났다. 앗…
+	ELSEIF ARG == 15
+		PRINTL 평범한 목욕탕일 뿐이었던 그곳에서 광채가 나기 시작했다
+		PRINTL 역시 천재 태자의 위광은 다른 것인지 미코가 목욕탕에서 알몸으로 빛나고 있었다
+		PRINTL 너무도 기상천외한 모습을 그저 경외의 시선으로 바라보는 후토와, 그런 후토를 못마땅한 듯 바라보는 토지코
+		PRINTL 태자님의 가호는 자신의 것이라 평소에도 옥신각신하는 그들이지만 목욕탕에선 불도 번개도 안 된다는 미코의 말에
+		PRINTL 지금은 그저 느긋하게 물에 몸을 담그고 여유를 즐기고 있을 뿐이다
+		PRINTL 건너편에서는 청아가 몸이 뻣뻣해 혼자서는 몸을 씻을 수 없는 요시카를 씻겨주고 있었다
+		PRINTL 이미 썩어가는 강시인데 씻는 의미가 있는지는 의문이지만 청아에게는 분명 같이 목욕을 할 정도로 소중한 존재겠지
+		PRINTW 장엄하다면 장엄하고 화려하다면 화려하고 시끌벅적하다면 시끌벅적한 대사묘의 목욕시간이었다.
+	ELSEIF ARG == 16
+		PRINTL 목욕탕이라기보단 작은 풀장이라고 할 수 있을 곳에 코이시가 코코로를 이끌고 들어갔다.
+		PRINTL 아이처럼 까불까불 물을 튀기며 노는 코이시에게 응해주는 코코로 주위엔 즐거운 듯한 표정의 가면이 날아든다 .
+		PRINTL 그런가 하면 목욕하기 싫어하는 누에는 붙잡히지 않으려고 이리저리 빛의 구체가 되어 돌아다녔다.
+		PRINTL 쿄코의 즐거운 목소리가 욕실 안에 메아리치고, 목욕탕에서도 고서 읽기 바쁜 코스즈를 코가사가 놀래킨다.
+		PRINTL 시끄러운 주변에 독서시간을 방해받은 코스즈는 한숨을 쉬다 참다못해 코가사에게 물바가지를 엎었다.
+		PRINTL 당황한 코가사가 엎어지면서 누에를 치고 둘이 사이좋게 미끄러지던 찰나, 무언가 푹신한 것이 다치지 않게 둘을 받아주었다.
+		PRINTW 두 사람은 안도하며 가슴을 쓸어내렸지만 그들을 받아준 것은 무엇일까?
+	ENDIF
+ENDIF
+
+;각 캐릭터마다 대사 호출, 구슬 취득 체크
+FOR LOCAL:1 , 1 , 3 , 1
+	FOR COUNT , 0 , CHARANUM , 1
+		LOCAL = NO:COUNT
+
+		IF ARG == 1 && LOCAL != 3 && LOCAL != 4 && LOCAL != 5 && LOCAL != 12 && LOCAL != 24 && LOCAL != 25
+			CONTINUE
+		ELSEIF ARG == 2 && LOCAL != 13 && LOCAL != 19 && LOCAL != 20 && LOCAL != 21 && LOCAL != 22 && LOCAL != 65
+			CONTINUE
+		ELSEIF ARG == 3 && LOCAL != 27 && LOCAL != 28 && LOCAL != 29 && LOCAL != 30
+			CONTINUE
+		ELSEIF ARG == 4 && LOCAL != 6 && LOCAL != 7 && LOCAL != 8 && LOCAL != 9 && LOCAL != 10 && LOCAL != 11
+			CONTINUE
+		ELSEIF ARG == 5 && LOCAL != 37 && LOCAL != 38 && LOCAL != 39 && LOCAL != 42 && LOCAL != 43 && LOCAL != 44
+			CONTINUE
+		ELSEIF ARG == 6 && LOCAL != 16 && LOCAL != 17 && LOCAL != 18 && LOCAL != 45 && LOCAL != 46 && LOCAL != 47
+			CONTINUE
+		ELSEIF ARG == 7 && LOCAL != 61 && LOCAL != 62 && LOCAL != 63 && LOCAL != 64
+			CONTINUE
+		ELSEIF ARG == 8 && LOCAL != 14 && LOCAL != 66 && LOCAL != 67 && LOCAL != 96 && LOCAL != 97
+			CONTINUE
+		ELSEIF ARG == 9 && LOCAL != 71 && LOCAL != 73 && LOCAL != 75 && LOCAL != 76 && LOCAL != 77 && LOCAL != 78
+			CONTINUE
+		ELSEIF ARG == 10 && LOCAL != 20 && LOCAL != 22 && LOCAL != 29 && LOCAL != 34 && LOCAL != 36 && LOCAL != 43 && LOCAL != 77 && LOCAL != 100 && LOCAL != 119
+			CONTINUE
+		ELSEIF ARG == 11 && LOCAL != 11 && LOCAL != 16 && LOCAL != 17 && LOCAL != 38 && LOCAL != 54 && LOCAL != 64 && LOCAL != 112
+			CONTINUE
+		ELSEIF ARG == 12 && LOCAL != 1 && LOCAL != 2 && LOCAL != 9 && LOCAL != 32 && LOCAL != 42
+			CONTINUE
+		ELSEIF ARG == 13 && LOCAL != 2 && LOCAL != 8 && LOCAL != 11 && LOCAL != 14 && LOCAL != 40 && LOCAL != 64
+			CONTINUE
+		ELSEIF ARG == 14 && LOCAL != 69 && LOCAL != 70 && LOCAL != 74 && LOCAL != 99 && LOCAL != 120 && LOCAL != 121 && LOCAL != 140 && LOCAL != 142
+			CONTINUE
+		ELSEIF ARG == 15 && LOCAL != 82 && LOCAL != 83 && LOCAL != 84 && LOCAL != 85 && LOCAL != 86
+			CONTINUE
+		ELSEIF ARG == 16 && LOCAL != 64 && LOCAL != 72 && LOCAL != 78 && LOCAL != 81 && LOCAL != 87 && LOCAL != 88 && LOCAL != 89
+			CONTINUE
+		ELSE
+
+			IF LOCAL:1 == 1
+				;대사 호출, TFLAG:200의 501～를 사용
+				CALL SELF_KOJO, COUNT, 500+ARG
+			ELSE
+				IF FLAG:12 & 128 || FLAG:997 == 0
+					JUEL:COUNT:12 += 150
+					PRINTFORML %CALLNAME:COUNT%의 순종의 구슬＋150
+				ENDIF
+			ENDIF
+		
+		ENDIF
+	NEXT
+NEXT
+FLAG:997 = 1
+
+;지문 컷
+IF CFLAG:99 == 0
+	IF ARG == 1
+		PRINTW 즐거운 목욕 뒤에 여섯 명 각자 각각의 마음을 품은 채 밤을 보내게 되었다….
+	ELSEIF ARG == 2
+		PRINTL 이렇게 여섯 명은 시끌시끌한 목욕을 했다. 첸을 빨리 재우고 밤시중을 들려고 계획한 란과, 
+		PRINTW 그걸 슬쩍 빼고 자기가 가려는 유카리와 유유코들의 싸움은 매일 밤 이렇게 진행될지도 모른다….
+	ELSEIF ARG == 3
+		PRINTW 이렇게 입욕을 즐긴 네 사람은, 각자 밤을 보내게 되었다….
+	ELSEIF ARG == 4
+		PRINTL 이렇게 입욕을 마친 여섯 사람은 각자의 밤을 보내게 되었다.
+		PRINTFORMW 이중 누군가는 반드시 %CALLNAME:MASTER% 곁에 모시러 오게 되겠지….
+	ELSEIF ARG == 5
+		PRINTW 이렇게 여섯 위의 신들에 의한 엄격한 입욕 신사는 별 탈 없이 진행되었다….
+	ELSEIF ARG == 6
+		PRINTL 시끌시끌한 목욕 덕분에 꽤나 피곤해졌을 터인 여섯사람이었지만, 
+		PRINTW 아직 기운은 남아 도는 모양이라, 각자 즐거운 밤을 보낼 것 같다….
+	ELSEIF ARG == 7
+		PRINTL 뛰어들어왔을 때와 똑같은 기세로 뛰쳐나간 애완동물 두 마리를 보며, 
+		PRINTW 참 어쩔수 없는 애들이야 하고 생각한 사토리는, 오늘밤에는 어떻게 보낼까? 하고 생각하고 있었다….
+	ELSEIF ARG == 8
+		PRINTW 인형과 즐겁게 목욕을 마친 앨리스는, 골리아테 인형을 재조립하는 작업에 착수했다….
+	ELSEIF ARG == 9
+		PRINTW 활기찬 목욕을 즐긴 여섯 명은 각자의 밤을 보내기로 했다….
+	ELSEIF ARG == 10
+		PRINTL 은근히 서로를 견제해가면서 일곱 명의 정예들은 오늘밤 이후에도, 
+		PRINTFORMW %CALLNAME:MASTER%의 총애를 둘러싸고 격렬히 투쟁했다….
+	ELSEIF ARG == 11
+		PRINTFORMW 목욕탕에서 나온 일곱 명은 그대로 %CALLNAME:MASTER%의 밤시중 상대 쟁탈전에 몰두하고 있었다….
+	ELSEIF ARG == 12
+		PRINTW 목욕탕에서 나온 다섯 명은 각자의 밤을 즐기기로 했다….
+	ELSEIF ARG == 13
+		PRINTW 입욕 후에도 오늘밤 마리사가 해방될 일은 없어보이는 분위기였다나….
+	ELSEIF ARG == 14
+		PRINTFORMW 목욕탕에서 나온 여덟 남자는 곧바로 %CALLNAME:MASTER%의 밤시중 상대 쟁탈전을 벌이기 시작했다….
+	ELSEIF ARG == 15
+		PRINTFORMW 자신을 두고 신경전을 벌이는 둘과 강시에게 푹 빠진 하나를 본 미코는
+		PRINTFORMW  %CALLNAME:MASTER%의 밤을 독차지할 생각에 계획대로라는 듯 미소를 지었다….
+	ELSEIF ARG == 16
+		PRINTL 이들 중 아무도 풀장에 꼬리가 달려있다는 사실을 눈치채지 못했다….
+		PRINTW 목욕을 마친 마미조는 어안이 벙벙해하는 소녀들에게 능글맞게 웃으며 수건으로 물기를 닦아주고 있다….
+	ENDIF
+ENDIF
+

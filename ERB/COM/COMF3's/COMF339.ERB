@@ -1,0 +1,162 @@
+﻿;=============================================================================
+;포옹한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE339
+;개별 설정 커멘드 필터
+SIF DITEMTYPE:999:320 > 0
+	RETURN 0
+;조교자 봉사·우후후계 커멘드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;호감도 500이상 없으면 안 됨
+SIF CFLAG:2 <= 499
+	RETURN 0
+;순종 4 미만·레즈비언기분(BL기분) 3 미만의 ASSI의 경우, 조교 대상이 동성이라면 실행할 수 없다(망신이나 복종이라면 OK)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;줄사용중은 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마중은 안 됨
+SIF TEQUIP:43
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕중은 안 됨
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;나체정식안은 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;때 멈춤중은 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교중은 안 됨
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM339
+PRINTL 포옹한다
+TSTR:0 = 포옹하기
+CALL TRAIN_MESSAGE_COM339
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 30
+
+SOURCE:15 = 100
+SOURCE:10 = 80
+
+;봉사정신을 본다
+IF ABL:13 == 0
+	SOURCE:11 = 10
+ELSEIF ABL:13 == 1
+	SOURCE:11 = 30
+ELSEIF ABL:13 == 2
+	SOURCE:11 = 80
+ELSEIF ABL:13 == 3
+	SOURCE:11 = 150
+ELSEIF ABL:13 == 4
+	SOURCE:11 = 230
+ELSE
+	SOURCE:11 = 200 + (ABL:13 * 20)
+ENDIF
+
+;ABL:82っ気をみる
+IF ABL:21 == 0
+	TIMES SOURCE:10 , 0.80
+	TIMES SOURCE:11 , 0.80
+	SOURCE:18 = 10
+	SOURCE:19 = 10
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:10 , 1.00
+	TIMES SOURCE:11 , 1.00
+	SOURCE:18 = 60
+	SOURCE:19 = 40
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:10 , 1.20
+	TIMES SOURCE:11 , 1.30
+	SOURCE:18 = 120
+	SOURCE:19 = 80
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:10 , 1.40
+	TIMES SOURCE:11 , 1.40
+	SOURCE:18 = 240
+	SOURCE:19 = 140
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:10 , 1.50
+	TIMES SOURCE:11 , 1.70
+	SOURCE:18 = 360
+	SOURCE:19 = 220
+ELSE
+	SOURCE:10 = SOURCE:10 * (ABL:21 * 10 + 120) / 100
+	SOURCE:11 = SOURCE:11 * (ABL:21 * 15 + 125) / 100
+	SOURCE:18 = 150 + (ABL:21 * 35)
+	SOURCE:19 = 100 + (ABL:21 * 20)
+ENDIF
+
+;연모・친애なら情愛ソース追加
+IF  TALENT:152
+	SOURCE:11 = 230
+ELSEIF  TALENT:150
+	SOURCE:11 = 500
+ENDIF
+
+;[傀儡]と[精神崩壊]と[壊造人格]を持っておらず、[연모]持ちだと愛情経験が+2加算
+SIF TALENT:150 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	TCVAR:21 += 5
+;女同士だとレズ経験、男同士だとBL経験が増加
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM339
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;대사용 플래그
+TFLAG:144 = 0
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 꽉 껴안았다.
+;친애
+IF TALENT:152
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 안심한 표정으로 꼭 껴안고 있다.
+;연모
+ELSEIF TALENT:150
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼굴이 빨개지며, %조사선택(CALLNAME:PLAYER, "를")% 안았다….
+;호감도 800이상
+ELSEIF CFLAG:2 >= 800
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 뺨을 붉히면서, 긴장하며 %CALLNAME:PLAYER%에게 안기고 있다….
+;순종 Lv. 3이상 또한 봉사 쾌락 경험 150이상
+ELSEIF ABL:10 >= 3 && EXP:20 >= 150
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 싫지는 않은 모양이다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼굴을 찌푸리고 있지만 얌전히 하고 있다.
+ENDIF
+;대상의 머리카락의 더러움⇔조교자의 손가락의 더러움이 상호 이동
+STAIN:7 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:7

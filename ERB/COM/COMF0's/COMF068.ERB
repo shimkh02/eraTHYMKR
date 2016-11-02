@@ -1,0 +1,176 @@
+﻿;=============================================================================
+;산란촉진제
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE68
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:68 > 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;V조교 필터가 오프가 되지 않으면 안 됨
+SIF FLAG:2 & 1
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:67 == 0 && NOITEM == 0
+	RETURN 0
+;약물내성의 경우 안 됨
+SIF TALENT:44
+	RETURN 0
+;조교자가 남자나 후타나리 나오지 않으면 안돼
+SIF EXIST_PENIS(PLAYER) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;대상이 [난생]이나[산란 체질]이 아니면 안돼
+SIF TALENT:135 == 0 && TALENT:136 == 0
+	RETURN 0
+;임신중이라면 불가
+SIF TALENT:140
+	RETURN 0
+;회란 중에는 불가
+SIF TALENT:145
+	RETURN 0
+;벌써 사용중이라면 사용할 수 없다
+SIF TEQUIP:9
+	RETURN 0
+;현자의 피를 사용 중이면 사용할 수 없다
+SIF TEQUIP:13
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;배란유도제를 사용 중이면 사용할 수 없다
+;SIF TEQUIP:16
+;	RETURN 0
+;긴급 피임약을 사용 중이면 사용할 수 없다
+;SIF TEQUIP:17
+;	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM68
+PRINTL 산란촉진제
+TSTR:0 = 산란촉진제
+CALL TRAIN_MESSAGE_COM068
+
+;조제 지식이 있으면 소비를 억제한다
+IF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 60
+ELSE
+	DOWNBASE:0 += 100
+	DOWNBASE:1 += 120
+ENDIF
+
+SOURCE:18 = 250
+SOURCE:24 = 500
+SOURCE:26 = 1000
+SOURCE:31 = 1500
+
+ITEM:67 -= 1
+SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:67
+	CALL FILL_PLURAL_ITEM, 67
+TEQUIP:9 = 1
+TFLAG:128 = 0
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+
+;약물 경험
+TCVAR:40 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM068
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%에게 
+SIF ABL:PLAYER:12 >= 3
+	PRINT 입으로 
+SIF ABL:10 == 0
+	PRINT 억지로 
+PRINTL 산란촉진제를 먹였다.
+IF TALENT:150 || TALENT:152 || TALENT:153
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 의아한 표정으로 이쪽을 보고 있다….
+ELSEIF TALENT:160 || TALENT:161 || TALENT:170
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 이상한 표정을 지으면서 %CALLNAME:PLAYER%에게 범해지는 것을 기다리고 있다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 정체불명의 약을 먹은걸 두려워 하고 있다.
+ENDIF
+
+;-------------------------------------------------
+;산란 판정
+;-------------------------------------------------
+;절정의 강도에 의해 조교 종료후에 산란 회수를 설정
+;LOCAL는 1회의 조교에서의 최대 산란 회수, LOCAL:1은 이번 산란 회수의 판정용
+@EQUIP_COM68
+;EXP:산란 경험을 본다
+IF EXP:51 < EXPLV:1
+	LOCAL = 2
+ELSEIF EXP:51 < EXPLV:2
+	LOCAL = 4
+ELSEIF EXP:51 < EXPLV:3
+	LOCAL = 6
+ELSEIF EXP:51 < EXPLV:4
+	LOCAL = 10
+ELSEIF EXP:51 < EXPLV:5
+	LOCAL = 15
+ELSE
+	LOCAL = 20
+ENDIF
+
+LOCAL:1 = 0
+;최강 절정 V
+IF TFLAG:181 >= 9
+	LOCAL:1 += 4
+;초강 절정 V
+ELSEIF TFLAG:181 >= 4
+	LOCAL:1 += 2
+;강절정 V
+ELSE
+	LOCAL:1 += 1
+ENDIF
+
+;중독 하기 쉽다
+SIF TALENT:84
+	LOCAL += 1
+;난생
+IF TALENT:135
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;음 단지
+IF TALENT:172
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 1.50
+ENDIF
+
+;배란유도제
+IF TEQUIP:16
+	TIMES LOCAL:1 , 2.00
+;미약
+ELSEIF TEQUIP:11
+	TIMES LOCAL:1 , 1.50
+ENDIF
+
+;캡 처리
+TFLAG:128 = MIN(TFLAG:128 + LOCAL:1, LOCAL)

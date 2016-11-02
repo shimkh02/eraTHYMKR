@@ -1,0 +1,146 @@
+﻿;=============================================================================
+;초응시
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE452
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:452 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 ユウゲンマガンか目を閉ざしていない[覚]でないとダメ
+SIF NO:PLAYER != 121 && TALENT:PLAYER:213 != 1
+	RETURN 0
+;狂人には通用しない
+SIF TALENT:158
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;アイマスク, 暗闇展開中は不可能
+SIF TEQUIP:41 || TEQUIP:70
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;이 로리타들 째!
+@COM452
+PRINTL 초응시(超凝視)
+TSTR:0 = 초응시
+CALL TRAIN_MESSAGE_COM452
+
+;발동중이면 발동 정지
+IF TEQUIP:80
+	TEQUIP:80 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 40
+
+SOURCE:28 = 700
+SOURCE:31 = 4500
+SOURCE:23 = 500
+
+TEQUIP:80 = 1
+RETURN 1
+
+;-------------------------------------------------
+;초응시 발동중
+;-------------------------------------------------
+;파라미터 변화. 사랑 주도권 달성감 굴종 중독 충족 트라우마 수치 선정성 기술 학습의 소스를 랜덤으로 바꾸어 넣고
+;가산될 가능성을 두고 있는 것은 카오스 같아지기 때문에
+;또 카오스를 증강시키기 (위해)때문에, 한층 더 파라미터(parameter)에 가산되는 값이 상하에 변화하도록(듯이)
+@EQUIP_COM452
+VARSET LOCAL, 0
+PRINTL <초응시 발동 중>
+;텐포라리에 배치해, 원래의 SOURCE치를 리셋
+LOCAL:1 = SOURCE:11
+LOCAL:2 = SOURCE:14
+LOCAL:3 = SOURCE:16
+LOCAL:4 = SOURCE:22
+LOCAL:5 = SOURCE:24
+LOCAL:6 = SOURCE:25
+LOCAL:7 = SOURCE:28
+LOCAL:8 = SOURCE:29
+SOURCE:11 = 0
+SOURCE:14 = 0
+SOURCE:16 = 0
+SOURCE:22 = 0
+SOURCE:24 = 0
+SOURCE:25 = 0
+SOURCE:28 = 0
+SOURCE:29 = 0
+
+;재계산
+FOR LOCAL , 1, 9
+	LOCAL:9 = LOCAL:LOCAL
+	IF RAND:3 == 0
+		TIMES LOCAL:9 , 0.80
+	ELSEIF RAND:2 == 0
+		TIMES LOCAL:9 , 1.20
+	ENDIF
+	LOCAL:10 = RAND:100
+	LOCAL:10 %= 8
+	SELECTCASE LOCAL:10
+		CASE 0
+			SOURCE:11 += LOCAL:9
+		CASE 1
+			SOURCE:14 += LOCAL:9
+		CASE 2
+			SOURCE:16 += LOCAL:9
+		CASE 3
+			SOURCE:22 += LOCAL:9
+		CASE 4
+			SOURCE:24 += LOCAL:9
+		CASE 5
+			SOURCE:25 += LOCAL:9
+		CASE 6
+			SOURCE:28 += LOCAL:9
+		CASE 7
+			SOURCE:29 += LOCAL:9
+	ENDSELECT
+NEXT
+
+LOCAL = RAND:5
+IF LOCAL == 0
+	;불결이 욕정 추가에 추가
+	LOCAL:11 = SOURCE:30 / 10 * 7
+	SOURCE:18 += LOCAL:11
+ELSEIF LOCAL == 1
+	;일탈이 쿄우준 추가에 추가
+	LOCAL:11 = SOURCE:31 / 10 * 7
+	SOURCE:17 += LOCAL:11
+ELSEIF LOCAL == 2
+	;반감 추가가 액체 추가에 추가
+	LOCAL:11 = SOURCE:32 / 10 * 7
+	SOURCE:19 += LOCAL:11
+ENDIF
+;마지막에 쾌CVAB의 합계 에 비례해 지배의 소스가 증가한다
+LOCAL:11 = (SOURCE:0 + SOURCE:1 + SOURCE:2 + SOURCE:3) / 10 * 7
+SOURCE:23 += LOCAL:11
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM452
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:80
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 응시하는 것을 그만두었다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 응시했다….
+ENDIF

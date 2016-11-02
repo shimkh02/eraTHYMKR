@@ -1,0 +1,254 @@
+﻿;=============================================================================
+;뿔 삽입
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE435
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:435 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;조교자가 助手でその조수가 オトコではなくＶ경험Lvが0일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:0 < EXPLV:1 && ASSIPLAY && TALENT:PLAYER:120 == 0
+	RETURN 0
+;조교자가 助手でcaved!!!!イベントを体験しているとトラウマで実行できない
+SIF ASSIPLAY && CFLAG:PLAYER:20 & 4096
+	RETURN 0
+;既にcaved!!!!が発動しているとダメ
+SIF TFLAG:140 & 32
+	RETURN 0
+;조교자가 [鬼]またはハクタク化している[半白澤]ないとダメ
+SIF TALENT:PLAYER:212 != 2 && TALENT:PLAYER:214 == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;처녀で, 순종5미만 · 레즈끼4미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF TALENT:0 == 1 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 5 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;윤활 부족이고, 순종4미만 · 레즈끼3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM435
+;조교 대상이 긴박 하고 있지 않는 반발 각인 3의 하크타크였던 경우, 역습 될 가능성대
+IF NO:TARGET == 26 && TFLAG:199 && MARK:9 >= 3 && TEQUIP:40 == 0 && FLAG:15 & 32768
+	IF RAND:4 > 0 && (TFLAG:140 & 32) == 0
+		TFLAG:140 |= 32
+		JUMP CAVED
+	ENDIF
+ENDIF
+
+PRINTL 뿔 삽입 
+TSTR:0 = 뿔 삽입 
+CALL TRAIN_MESSAGE_COM435
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+DOWNBASE:0 += 700
+DOWNBASE:1 += 350
+
+SOURCE:11 = 200
+SOURCE:20 = 2500
+SOURCE:12 = 1200
+SOURCE:22 = 1800
+SOURCE:31 = 2500
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 1700
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 2000
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 2500
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 3000
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 3500
+ELSE
+	SOURCE:1 = 4000
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 += 5000
+	SIF ASSIPLAY && TALENT:PLAYER:120 == 0
+		TCVAR:50 += 2
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 += 600
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 += 300
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 += 30
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 += 3
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:20 += 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 900
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 250
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;정조관념
+IF TALENT:30
+	IF TALENT:0 == 1
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 10000
+	ELSE
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 1000
+	ENDIF
+;정조무구애
+ELSEIF TALENT:31
+	IF TALENT:0 == 1
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 300
+	ENDIF
+ELSE
+	SIF TALENT:0 == 1
+		SOURCE:32 = 3000
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.20
+ELSE
+	TIMES SOURCE:1 , 1.50
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:32 , 1.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:32 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:32 , 0.60
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:32 , 0.30
+ENDIF
+
+TCVAR:0 += 20
+TCVAR:32 += 1
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 4
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:1 >= 3) ?  2 # 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM435
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 자신의 뿔로 \@(TALENT:128) ? 아담한 체구의 # \@ %CALLNAME:TARGET%의 
+IF TALENT:0 == 1
+	PRINT 아직 남자를 모르는 
+ELSEIF PALAM:10 >= PALAMLV:4
+	PRINT 젖어 번들거리는 
+ELSEIF PALAM:13 <= PALAMLV:2
+	PRINT 아직 그다지 욕정 하지 않은 
+ENDIF
+IF TALENT:128
+	PRINT 어린 균열을 
+ELSE
+	PRINT 보지를 
+ENDIF
+PRINTW 꿰뚫었다….

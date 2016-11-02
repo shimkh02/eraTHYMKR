@@ -1,0 +1,214 @@
+﻿;=============================================================================
+;반발각인
+;=============================================================================
+@ABLUP99
+DRAWLINE
+IF MARK:9 <= 0
+	PRINTW 반발각인이 없습니다.
+	RETURN 0
+ENDIF
+
+;反発刻印Lvと同じLvの屈服刻印と反発刻印Lv+2Lvの従順が必要
+PRINTFORML %MARKNAME:2% {MARK:9}LV 이상(현재 {MARK:2})이고, %ABLNAME:10% {COST99(2)}LV 이상
+
+PRINTFORM [0] - %PALAMNAME:14%의 구슬×{COST99(0)}\@(COST99(1) > 0) ? , %PALAMNAME:12%의 구슬×{COST99(1)} # \@……
+CALL SHOW_ISABLUP_COMMON, CAN99(0)
+
+;恐怖で反発を下げられる場合あるが, 副作用として好感度低下及びストレス上昇あり
+IF COST99(3) > 0
+	;反発刻印Lvと同じLvの恐怖刻印と反発刻印Lv+2Lvの従順と反発刻印Lvと同じだけの調教失神経験が必要
+	PRINTFORML %MARKNAME:8% {MARK:9}LV 이상(현재 {MARK:8})이고, %ABLNAME:10% {COST99(2)}LV 이상, %EXPNAME:55% {MARK:9} 이상, 
+	PRINTFORM [1] - (부작용 있음) %PALAMNAME:17%의 구슬×{COST99(3)}\@(COST99(4) > 0) ? , %PALAMNAME:12%의 구슬×{COST99(4)} # \@……
+	CALL SHOW_ISABLUP_COMMON, CAN99(1)
+ENDIF
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF (RESULT == 0 || RESULT == 1) && CAN99(RESULT) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:14 -= COST99(0)
+	JUEL:12 -= COST99(1)
+ELSEIF RESULT == 1
+	JUEL:17 -= COST99(3)
+	JUEL:12 -= COST99(4)
+	;好感度半減
+	CFLAG:2 /= 2
+	;ストレス上昇
+	CFLAG:65 += COST99(3) + COST99(4)
+	;恐怖刻印が既に3のときに狂気がなければ狂気がついて異常経験＋１(該当すれば何回でも)
+	IF MARK:8 >= 3 && TALENT:158 == 0
+		TALENT:158 = 1
+		CFLAG:12 |= 1
+		CFLAG:17 |= 2
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 지나친 공포에 발광해버렸다…….
+		CALL COMMON_UP_EXP, TARGET, 50, 1, 0, 1
+	;恐怖刻印が2以下のときは+1Lv
+	ELSEIF MARK:8 < 3
+		CALL COMMON_MARK_UP, TARGET, 8, MARK:8+1, 0
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+MARK:9 -= 1
+PRINTFORMW %MARKNAME:9%의 레벨이 %조사처리(MARK:9,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP99
+SIF MARK:9 <= 0
+	RETURN 0
+
+CALLF CALC_COST99, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP99("CHECK")
+
+@COST99(ARG)
+#FUNCTION
+RETURNF CALC_COST99("GET", ARG)
+
+@CALC_COST99(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF MARK:9 == 1
+	LOCAL:0 = 5000
+	LOCAL:1 = 1000
+	LOCAL:3 = 6000
+	LOCAL:4 = 1200
+ELSEIF MARK:9 == 2
+	LOCAL:0 = 10000
+	LOCAL:1 = 2000
+	LOCAL:3 = 12000
+	LOCAL:4 = 2400
+ELSEIF MARK:9 == 3
+	LOCAL:0 = 50000
+	LOCAL:1 = 5000
+	LOCAL:3 = 60000
+	LOCAL:4 = 6000
+ENDIF
+
+;臆病
+IF TALENT:10
+	TIMES LOCAL:3 , 0.75
+	TIMES LOCAL:4 , 0.50
+ENDIF
+;気丈
+IF TALENT:12
+	TIMES LOCAL:0 , 3.00
+	LOCAL:3 = 0
+	LOCAL:4 = 0
+ENDIF
+;素直
+IF TALENT:13
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;生意気
+IF TALENT:15
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.25
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 1.25
+ENDIF
+;プライド高い
+IF TALENT:16
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.25
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 1.25
+;プライド低い
+ELSEIF TALENT:17
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:3 , 0.50
+	TIMES LOCAL:4 , 0.75
+ENDIF
+;感情乏しい
+IF TALENT:22
+	TIMES LOCAL:3 , 1.50
+	TIMES LOCAL:4 , 1.25
+ENDIF
+;弱味
+IF TALENT:39
+	TIMES LOCAL:3 , 0.80
+	TIMES LOCAL:4 , 0.90
+ENDIF
+;恋慕, 服従
+IF TALENT:150 || TALENT:160
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	IF TALENT:160
+		TIMES LOCAL:3 , 0.50
+		TIMES LOCAL:4 , 0.50
+	ENDIF
+ENDIF
+
+;反発刻印Lv+2Lvの従順が必要
+LOCAL:2 = MARK:9 + 2
+
+;難易度HARD이상の場合, 必要な屈服의 구슬は減るが, 恭順의 구슬も必要になってくる
+IF FLAG:3 > 2
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:3 , 0.75
+ELSE
+	LOCAL:1 = 0
+	LOCAL:4 = 0
+ENDIF
+
+RETURNF 0
+
+@CAN99(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP99("GET", ARG)
+
+@CAN_ABLUP99(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;反発刻印Lvと同じLvの屈服刻印が必要
+SIF MARK:9 > MARK:2
+	LOCAL:0 |= 8
+;反発刻印Lvと同じLvの恐怖刻印が必要
+SIF MARK:9 > MARK:8
+	LOCAL:1 |= 8
+
+;反発刻印Lv+2Lvの従順が必要
+IF COST99(2) > ABL:10
+	LOCAL:0 |= 4
+	LOCAL:1 |= 4
+ENDIF
+
+;屈服의 구슬で減らす
+SIF JUEL:14 < COST99(0)
+	LOCAL:0 |= 1
+;恭順의 구슬で減らす
+SIF JUEL:12 < COST99(1)
+	LOCAL:0 |= 1
+
+;恐怖의 구슬で減らす
+IF COST99(3) > 0
+	SIF JUEL:17 < COST99(3)
+		LOCAL:1 |= 1
+	;恭順의 구슬で減らす
+	SIF JUEL:12 < COST99(4)
+		LOCAL:1 |= 1
+	;この場合調教失神経験が反発刻印Lv이상必要
+	SIF EXP:55 < MARK:9
+		LOCAL:1 |= 2
+ELSE
+	LOCAL:1 = 256
+ENDIF
+
+RETURNF (LOCAL:0 == 0 || LOCAL:1 == 0)

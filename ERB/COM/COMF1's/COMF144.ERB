@@ -1,0 +1,561 @@
+﻿;=============================================================================
+;전극 카테터
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE144
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:144 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;요도개발경험이 1이하일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:46 <= 1
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:32 == 4
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:28 == 0 && NOITEM == 0
+	RETURN 0
+;남자일 경우, 기교3이상이 아니면 쓸 수 없다
+SIF TALENT:120 && ABL:12 < 3
+	RETURN 0
+;ASSI일 경우, 기교4이상이 아니면 쓸 수 없다。
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 4
+		RETURN 0
+ENDIF
+;그밖의 Ｕ계 장착구 사용 중에는 불가
+SIF (TEQUIP:32 && TEQUIP:32 != 4)
+	RETURN 0
+;남자일 경우, Ｃ계 장착구 사용 중에는 불가
+SIF (TEQUIP:30 || TEQUIP:31) && TALENT:120
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;카테터과 전극계 커맨드로부터 마개조.
+@COM144
+IF FLAG:1100 & 1
+	TSTR:7 = 전극 카테터
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 28
+	CALL NAMECHECK_CUSTOMTOOL
+	SIF TSTR:7 == ITEMNAME:28
+		TSTR:7 = 전극 첨부 카테터
+	SIF TSTR:9 == ITEMNAME:28
+		TSTR:9 = 전극이 달린 카테터
+ELSE
+	TSTR:7 = 전극 첨부 카테터
+	TSTR:8 = 전극 카테터
+	TSTR:9 = 전극이 달린 카테터
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 전극 카테터
+
+LOCAL:1 = 80
+
+;EXP:U확장 경험을 본다
+IF EXP:34 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:34 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:34 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:34 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:34 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:1 , 2.00
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1 * 2
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 200
+	SOURCE:20 = 1000
+	SOURCE:22 = 1500
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 500
+	SOURCE:20 = 1000
+	SOURCE:22 = 4000
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 900
+	SOURCE:20 = 1000
+	SOURCE:22 = 7000
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1700
+	SOURCE:20 = 1200
+	SOURCE:22 = 9000
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2200
+	SOURCE:20 = 1500
+	SOURCE:22 = 10500
+ELSE
+	SOURCE:0 = 3400
+	SOURCE:20 = 1800
+	SOURCE:22 = 12000
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 < 1
+	SOURCE:20 += 2000
+	SOURCE:22 += 200
+	SOURCE:30 = 3000
+	SOURCE:31 = 1000
+	SOURCE:32 = 2000
+ELSEIF ABL:21 < 2
+	SOURCE:20 += 1600
+	SOURCE:22 += 500
+	SOURCE:30 = 2500
+	SOURCE:31 = 1000
+	SOURCE:32 = 1000
+ELSEIF ABL:21 < 3
+	SOURCE:20 += 1200
+	SOURCE:22 += 800
+	SOURCE:30 = 1200
+	SOURCE:31 = 1000
+	SOURCE:32 = 500
+ELSEIF ABL:21 < 4
+	SOURCE:20 += 800
+	SOURCE:22 += 1200
+	SOURCE:30 = 600
+	SOURCE:31 = 500
+	SOURCE:32 = 100
+ELSEIF ABL:21 < 5
+	SOURCE:20 += 600
+	SOURCE:22 += 1500
+	SOURCE:30 = 300
+	SOURCE:31 = 100
+	SOURCE:32 = 0
+ELSE
+	SOURCE:20 += 400
+	SOURCE:22 += 2000
+	SOURCE:30 = 200
+	SOURCE:31 = 50
+	SOURCE:32 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:0 , 0.40
+	SOURCE:20 += 1600
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:0 , 0.80
+	SOURCE:20 += 1000
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+	SOURCE:20 += 600
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:0 , 1.40
+	SOURCE:20 += 250
+ELSE
+	TIMES SOURCE:0 , 1.80
+	SOURCE:20 += 120
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.10
+ELSE
+	TIMES SOURCE:0 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:0 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:0 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:0 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:0 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:0 , 1.20
+ELSE
+	TIMES SOURCE:0 , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+;요도광
+SIF TALENT:175
+	TIMES SOURCE:0 , 1.20
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:101
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:100
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 28
+	FLAG:1111 = 1
+	FLAG:1112 = SOURCE:0
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:0 = FLAG:1120
+	FLAG:1112 = SOURCE:22
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:22 = FLAG:1120
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+CALL TRAIN_MESSAGE_COM144
+
+;전극 카테터의 착탈
+IF TEQUIP:32 == 4
+	TEQUIP:32 = 0
+	LOCAL:2 = 2
+	IF TEQUIP:12
+		LOCAL:2 *= 2
+		TEQUIP:12 = 0
+	ENDIF
+ELSE
+	TEQUIP:32 = 4
+	LOCAL:2 = 1
+ENDIF
+
+;방뇨 레벨 증가
+CFLAG:31 += LOCAL:2
+SIF BASE:4
+	BASE:4 = 0
+TCVAR:46 += LOCAL:2
+SIF (EXP:46 + TCVAR:46) <= 5
+	TCVAR:50 += 1
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;--------------------------------------------------
+;전극 카테터 삽입중
+;--------------------------------------------------
+@EQUIP_COM144
+TSTR:7 = 전극 카테터
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 28
+	CALL NAMECHECK_CUSTOMTOOL
+	IF TSTR:7 == ITEMNAME:28
+		TSTR:9 = 전극 첨부 카테터
+	ELSE
+		TSTR:9 = %TSTR:7%
+	ENDIF
+ELSE
+	TSTR:9 = 전극 첨부 카테터
+ENDIF
+PRINTFORML <%TSTR:7% 삽입 중>
+
+LOCAL = 40
+
+;EXP:U확장 경험을 본다
+IF EXP:34 < EXPLV:1
+	TIMES LOCAL , 3.00
+ELSEIF EXP:34 < EXPLV:2
+	TIMES LOCAL , 2.50
+ELSEIF EXP:34 < EXPLV:3
+	TIMES LOCAL , 2.00
+ELSEIF EXP:34 < EXPLV:4
+	TIMES LOCAL , 1.00
+ELSEIF EXP:34 < EXPLV:5
+	TIMES LOCAL , 0.80
+ELSE
+	TIMES LOCAL , 0.60
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL , 2.00
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.60
+
+DOWNBASE:0 += LOCAL
+DOWNBASE:1 += LOCAL * 2
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL:1 = 200
+	LOCAL:2 = 1500
+	LOCAL:3 = 1000
+ELSEIF ABL:0 == 1
+	LOCAL:1 = 500
+	LOCAL:2 = 4000
+	LOCAL:3 = 1000
+ELSEIF ABL:0 == 2
+	LOCAL:1 = 900
+	LOCAL:2 = 7000
+	LOCAL:3 = 1000
+ELSEIF ABL:0 == 3
+	LOCAL:1 = 1700
+	LOCAL:2 = 9000
+	LOCAL:3 = 1200
+ELSEIF ABL:0 == 4
+	LOCAL:1 = 2200
+	LOCAL:2 = 10500
+	LOCAL:3 = 1500
+ELSE
+	LOCAL:1 = 3400
+	LOCAL:2 = 12000
+	LOCAL:3 = 1800
+ENDIF
+
+;EXP:요도 경험을 본다
+IF EXP:46 < EXPLV:1
+	TIMES LOCAL:1 , 0.50
+	LOCAL:3 += 2000
+ELSEIF EXP:46 < EXPLV:2
+	TIMES LOCAL:1 , 1.00
+	LOCAL:3 += 300
+ELSEIF EXP:46 < EXPLV:3
+	TIMES LOCAL:1 , 1.10
+	LOCAL:3 += 50
+ELSEIF EXP:46 < EXPLV:4
+	TIMES LOCAL:1 , 1.20
+	LOCAL:3 += 10
+ELSEIF EXP:46 < EXPLV:5
+	TIMES LOCAL:1 , 1.40
+	LOCAL:3 += 0
+ELSE
+	TIMES LOCAL:1 , 1.60
+	LOCAL:3 += 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL:1 , 0.40
+	LOCAL:3 += 800
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL:1 , 0.80
+	LOCAL:3 += 500
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+	LOCAL:3 += 300
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL:1 , 1.40
+	LOCAL:3 += 120
+ELSE
+	TIMES LOCAL:1 , 1.80
+	LOCAL:3 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.20
+ELSE
+	TIMES LOCAL:1 , 1.30
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES LOCAL:3 , 2.00
+;요도광
+SIF TALENT:175
+	TIMES LOCAL:1 , 1.20
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:101
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:3 , 1.50
+ELSEIF TALENT:100
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 0.60
+	TIMES LOCAL:3 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	LOCAL:2 /= 3
+
+LOCAL:4 = LOCAL:2
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 28
+	FLAG:1111 = 1
+	FLAG:1112 = LOCAL:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+	FLAG:1112 = LOCAL:2
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:2 = FLAG:1120
+	FLAG:1111 = 3
+	FLAG:1112 = LOCAL:3
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:3 = FLAG:1120
+ENDIF
+
+SOURCE:0 += LOCAL:1
+SOURCE:22 += LOCAL:2
+SOURCE:20 += LOCAL:3
+SOURCE:31 += LOCAL:4
+
+;전극 카테터 삽입중 때는 강제적으로 뇨의를 개최되는 효과도(=방뇨 레벨 증가)
+IF TEQUIP:12
+	CFLAG:31 += 2
+ELSE
+	CFLAG:31 += 1
+ENDIF
+
+CALL EQUIP_MESSAGE_COM144
+
+TCVAR:46 += 3
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 2
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM144
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:32 == 4
+	PRINTFORM %CALLNAME:TARGET%의 요도로부터 %조사선택(TSTR:7, "가")% 뽑혀진 순간, 뜨거운 물보라가 포물선을 그리며 뿜어 나왔다.
+	PRINTL
+
+	IF ABL:14 >= 5 && TALENT:45
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 마음 깊숙이 적셔오는 쾌감에 허우적대고 있다.
+		PRINTFORML %CALLNAME:TARGET%의 해방감으로 느슨해진 표정으로 퓩퓩 오줌을 싸면서 애액을 줄줄 흘리고 있다….
+	ELSEIF ABL:14 >= 4
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 해방된 즐거움에 넋을 잃은 표정으로, 아직도 퓩퓩 하고 오줌을 싸고 있는 자신의 요도구를 응시하고 있다.
+	ELSEIF ABL:14 == 3
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 부끄러움보다 해방감 쪽이 컸는지, 안심한 표정을 짓고 있다.
+	ELSEIF ABL:14 >= 1
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 몸을 기역자로 꺾은채로, 아직 남아있는 잔뇨감에 번민하고 있다….
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 치욕감에 새빨갛게 된 얼굴을 돌려버렸다.
+	ENDIF
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 요도에 %조사선택(TSTR:9, "를")% 삽입했다.
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 요도를 가득 채우는 전극 카테터의 감촉에 오열하고 있다….
+ENDIF
+WAIT
+
+;--------------------------------------------------
+;장착시 메시지
+;--------------------------------------------------
+@EQUIP_MESSAGE_COM144
+CALL KOJO_EQUIP_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 요도에 %조사선택(TSTR:9, "를")% 넣어진 채로 계속해서 괴롭혀지고 있다….
+PRINTL
+IF ABL:21 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 요도에 차오르는 이물감과 전격을 받아들일 수 없는지, 고뇌의 표정을 짓고 있다.
+ELSEIF ABL:21 == 1
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 질끈 눈을 감고 결사적으로 전격과 오줌을 참고 있다.
+ELSEIF ABL:21 == 2
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 전기에 자극되어, 오줌을 참으려 얼굴을 붉게 불들이고 허벅지를 모으고 있다.
+ELSEIF ABL:21 == 3
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 하복부의 격통에 시달리면서도, 때때로 황홀한 표정을 짓고 있다.
+ELSEIF ABL:21 >= 5 && TALENT:45
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 요도의 찌릿찌릿한 자극을 마음껏 만끽하고 있다.
+	PRINTFORML %CALLNAME:TARGET%의 입은 쾌감으로 헤 벌려지고 \@(TALENT:120) ? 거기에서 # 거기와 질구에서\@ 끈적한 군침이 방울져 떨어지고 있다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 전격과 요의와 요도통을 쾌감으로 느끼고 있는지, 넋을 잃은 표정을 하고 있다….
+ENDIF
+WAIT

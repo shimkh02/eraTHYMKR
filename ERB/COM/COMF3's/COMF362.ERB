@@ -1,0 +1,203 @@
+﻿;=============================================================================
+;로션 목욕탕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE362
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:362 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 4) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 3
+	RETURN 1
+;ローションを30個이상持っているか, 아이템なし設定でないとダメ
+SIF ITEM:60 < 30 && NOITEM == 0
+	RETURN 0
+;조교자가 소인체형のときは기교가 3이상 없으면 안 됨
+IF TALENT:PLAYER:127
+	SIF ABL:PLAYER:12 < 3
+		RETURN 0
+ENDIF
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;潤滑が15000이상のときはダメ
+SIF PALAM:10 >= 15000
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 3
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;로션 30개를 이케니에에 전신 로션을 잠기게 해 가는 커맨드. 쿠스코를 붙이고 있으면(자) 효과가 상승.
+;윤활은 단순하게 액체의 양 뿐만이 아니라, 마찰에도 관계하고 있다고 해석.
+; 고로 일정치를 넘은 윤활(1만 이상이라든지)이라고 하는 것은 애액등의 양이00L라고 하는 것보다 오히려 미끄러져나 물러나 의미 쪽이 강하다고 판단해, 목욕탕의 사양에 반영
+@COM362
+PRINTL 로션 목욕탕
+TSTR:0 = 로션 목욕탕
+CALL TRAIN_MESSAGE_COM362
+
+IF TEQUIP:55 == 3
+	DOWNBASE:0 += 5
+	DOWNBASE:1 += 20
+	TEQUIP:55 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 80
+
+SOURCE:16 = 60
+SOURCE:19 = 15000
+SOURCE:12 = 800
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 20
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 60
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 300
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 800
+ELSE
+	SOURCE:0 = 1300
+ENDIF
+
+;쿠스코 장착중은 효과 변동
+IF TEQUIP:21
+	TIMES SOURCE:0 , 0.30
+	SOURCE:19 += 10000
+	SOURCE:12 += 500
+	SIF EXP:0 || TALENT:0 != 1
+		SOURCE:1 += 50 * (1 + ABL:1)
+ENDIF
+
+IF NOITEM == 0
+	ITEM:60 -= 30
+	SIF FLAG:13 & 4 && MONEY:0 >= (30 * ITEMPRICE:60)
+		CALL FILL_PLURAL_ITEM, 60, 30
+ENDIF
+TEQUIP:55 = 3
+TEQUIP:10 = 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;로션 목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM362
+PRINTL <로션 목욕탕 입욕 중>
+
+SOURCE:19 += 500
+SOURCE:12 += 800
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 += 10
+ELSEIF ABL:0 == 1
+	SOURCE:0 += 20
+ELSEIF ABL:0 == 2
+	SOURCE:0 += 40
+ELSEIF ABL:0 == 3
+	SOURCE:0 += 80
+ELSEIF ABL:0 == 4
+	SOURCE:0 += 200
+ELSE
+	SOURCE:0 += 600
+ENDIF
+
+;쿠스코 장착중은 효과 변동
+IF TEQUIP:21
+	TIMES SOURCE:0 , 0.50
+	SOURCE:19 += 800
+	SOURCE:12 += 500
+	SIF EXP:0 || TALENT:0 != 1
+		SOURCE:1 += 20 * (1 + ABL:1)
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM362
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 3
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 로션이 채워진 목욕탕에서 집어넣었다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 안고, 로션으로 채워진 거대한 그릇 안에 잠기게 했다.
+	IF TEQUIP:21
+		PRINTFORML 쿠스코에 의해 강제적으로 열린 %CALLNAME:TARGET%의 보지안으로 차가운 로션이 흘러들어 간다….
+		IF EXP:0
+			PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 질에 
+			SIF EXP:0 > EXPLV:5
+				PRINT 그리고 자궁내에 
+			PRINTL 흘러들어 오는 로션의 감촉에 놀랐는지 몸을 젖히고 있다.
+		ENDIF
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 로션의 차가운 감촉에 몸을 경직시키고 있다….
+	ENDIF
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 온 몸이 로션 투성이가 되었다.
+ENDIF

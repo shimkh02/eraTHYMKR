@@ -1,0 +1,134 @@
+﻿;=============================================================================
+;방중술
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE448
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:448 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;대상, 또는 조교자가 메이링이나 청아, 카센, 후토, 미코 혹은 기교 4 이상의 [선인]이 아니면 불가
+SIF (NO:TARGET != 6 && NO:PLAYER != 6) && (NO:TARGET != 80 && NO:PLAYER != 80) && (NO:TARGET != 83 && NO:PLAYER != 83) && (NO:TARGET != 85 && NO:PLAYER != 85) && (NO:TARGET != 86 && NO:PLAYER != 86) && ((TALENT:TARGET:225 == 0 && TALENT:PLAYER:225 == 0) || ABL:12 < 4)
+	RETURN 0
+;조수 플레이 중에는 불가
+SIF ASSIPLAY
+	RETURN 0
+;메이링이나 청아, 카센, 후토, 미코가 대상일 경우에는 조수 가능 또는 연모 또는 봉사정신 ４ 이상 또는 순종 · 기교 · 봉사정신이 모두 3 이상
+IF NO:TARGET == 6 || NO:TARGET == 80 || NO:TARGET == 83 || NO:TARGET == 85 || NO:TARGET == 86 || TALENT:TARGET:225 == 1
+	SIF CFLAG:1 < 2 && TALENT:150 == 0 && ABL:13 < 4 && (ABL:10 < 3 || ABL:12 < 3 || ABL:13 < 3)
+		RETURN 0
+ENDIF
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;5턴 계속, 사용중 성교에 대해서 마이너스 소스 경감 효과와 기력 소비 감소 효과 있어
+;다만, 성교 이외의 조교시에 기력 소비 증가 효과도 있어
+;TEQUIP:79를 사용했습니다
+;유명의 근심 윤중의 것을 마개조. 중국4천년의 신비가 마침내 해금
+@COM448
+PRINTL 방중술
+TSTR:0 = 방중술
+CALL TRAIN_MESSAGE_COM448
+
+DOWNBASE:0 += 5
+
+IF TEQUIP:79 > 0
+	DOWNBASE:1 += 50
+	TEQUIP:79 = 0
+ELSE
+	DOWNBASE:1 += 70
+	TEQUIP:79 = 6
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;방중술 발동중
+;--------------------------------------------------
+@EQUIP_COM448
+PRINTFORML <방중술 발동 중>
+
+SOURCE:11 += 300
+IF (SELECTCOM >= 20 && SELECTCOM <= 39) || (SELECTCOM >= 323 && SELECTCOM <= 325) || (SELECTCOM >= 332 && SELECTCOM <= 334) || SELECTCOM == 430 || SELECTCOM == 431 || (SELECTCOM >= 612 && SELECTCOM <= 619) || SELECTCOM == 651 || SELECTCOM == 652 || SELECTCOM == 655 || SELECTCOM == 656
+	PRINTFORMW 메이링의 기의 힘으로… 
+	TIMES DOWNBASE:1 , 0.80
+	TIMES SOURCE:20 , 0.80
+	TIMES SOURCE:21 , 0.80
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:31 , 0.80
+	TIMES SOURCE:32 , 0.80
+ELSE
+	TIMES DOWNBASE:1 , 1.20
+ENDIF
+
+TEQUIP:79 -= 1
+SIF TEQUIP:79 == 0
+	PRINTFORMW <방중술 효과 종료>
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM448
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:79 > 0
+	IF NO:MASTER == 6
+		PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% 체내의 기를 흩트려 방중술의 효과를 중단했다….
+	;연모로 게다가 주인 조교
+	ELSEIF TALENT:150 && ASSIPLAY == 0
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:MASTER%의 명령대로 기를 흩트려 방중술의 효과를 중단했다….
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 왠지 기분 아쉬운 듯이 보였다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:MASTER%의 명령대로 기를 흩트려 방중술의 효과를 중단했다….
+	ENDIF
+ELSE
+	IF NO:MASTER == 6
+		PRINTFORMW %조사선택(CALLNAME:MASTER, "는")% 체내의 기를 모아 방중술의 효과를 발동시켰다….
+	;연모로 게다가 주인 조교
+	ELSEIF TALENT:150 && ASSIPLAY == 0
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:MASTER%의 명령대로 기를 모아 방중술의 효과를 발동시켰다.
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 지금부터 %CALLNAME:MASTER%에게 범해진다고 하는 기대감에 두근거림이 멈추지 않는 것 같다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:MASTER%의 명령대로 기를 모아 방중술의 효과를 발동시켰다.
+	ENDIF
+ENDIF

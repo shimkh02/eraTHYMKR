@@ -1,0 +1,264 @@
+﻿;=============================================================================
+;흡혈
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE400
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:400 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;이미 실행 중이면 불가
+SIF TFLAG:140 & 4
+	RETURN 0
+;조교자가 흡혈귀 아니면 불가
+SIF TALENT:PLAYER:205 == 0
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;媚薬効果発揮中はダメ
+SIF TEQUIP:11
+	RETURN 0
+;利尿剤効果発揮中はダメ
+SIF TEQUIP:12
+	RETURN 0
+;強精神薬効果発揮中はダメ
+SIF TEQUIP:13
+	RETURN 0
+;睡眠薬効果発揮中はダメ
+SIF EQUIP:14
+	RETURN 0
+;排卵誘発剤効果発揮中はダメ
+SIF TEQUIP:16
+	RETURN 0
+;緊急避妊薬効果発揮中はダメ
+SIF TEQUIP:17
+	RETURN 0
+;鈴蘭の毒効果発揮中はダメ
+SIF TEQUIP:18
+	RETURN 0
+;昆虫採集セットの薬効果発揮中はダメ
+SIF TEQUIP:19
+	RETURN 0
+;触手強制回復効果発揮中はダメ
+SIF TEQUIP:91
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;베이스는 바늘. 성공 판정은 주로 다리 코키로부터.
+;TFLAG:140으로 EXP:54를 사용합니다
+@COM400
+PRINTL 흡혈
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 흡혈
+CALL TRAIN_MESSAGE_COM400
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 150
+
+SOURCE:22 = 1000
+SOURCE:31 = 4000
+SOURCE:18 = 1000
+SOURCE:17 = 1000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 2000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 2300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 2600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 2850
+ELSE
+	SOURCE:20 = 3000
+ENDIF
+
+;EXP:흡혈 경험을 본다
+IF EXP:54 < EXPLV:1
+	TIMES SOURCE:22 , 0.10
+	TIMES SOURCE:31 , 2.50
+	TIMES SOURCE:18 , 0.00
+	TIMES SOURCE:17 , 0.00
+ELSEIF EXP:54 < EXPLV:2
+	TIMES SOURCE:22 , 1.00
+	TIMES SOURCE:31 , 1.00
+	TIMES SOURCE:18 , 1.00
+	TIMES SOURCE:17 , 0.50
+ELSEIF EXP:54 < EXPLV:3
+	TIMES SOURCE:22 , 2.00
+	TIMES SOURCE:31 , 0.25
+	TIMES SOURCE:18 , 10.0
+	TIMES SOURCE:17 , 5.00
+ELSE
+	TIMES SOURCE:22 , 5.00
+	TIMES SOURCE:31 , 0.00
+	TIMES SOURCE:18 , 20.0
+	TIMES SOURCE:17 , 10.0
+ENDIF
+
+;ABL:조교자의 기교를 본다
+IF ABL:PLAYER:12 < 1
+	TIMES SOURCE:20 , 2.00
+ELSEIF ABL:PLAYER:12 < 2
+	TIMES SOURCE:20 , 1.75
+ELSEIF ABL:PLAYER:12 < 3
+	TIMES SOURCE:20 , 1.50
+ELSEIF ABL:PLAYER:12 < 4
+	TIMES SOURCE:20 , 1.25
+ELSEIF ABL:PLAYER:12 < 5
+	TIMES SOURCE:20 , 1.00
+ELSE
+	TIMES SOURCE:20 , 0.75
+ENDIF
+
+;매님
+IF NO:PLAYER == 11
+	TIMES SOURCE:20 , 5.00
+	DOWNBASE:0 += 450
+	DOWNBASE:1 += 350
+;광기
+ELSEIF TALENT:PLAYER:158
+	TIMES SOURCE:20 , 2.00
+	DOWNBASE:0 += 150
+	DOWNBASE:1 += 50
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+TCVAR:54 += 1
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+
+TFLAG:140 |= 4
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_400
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%의 피를 빨아들이려고 목덜미를 붙잡았지만 완강하게 거절당했다.
+PRINTW 좀 더 조교가 필요할 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM400
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 목덜미를 물고,
+PRINTFORMW 송곳니를 찔러 넣어 %CALLNAME:TARGET%의 피를 마시기 시작했다.
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_400, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:마조끼
+IF ABL:21
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:21
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:21%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;보수적
+IF TALENT:24
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 3
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:24%({LOCAL:99})
+ENDIF
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;쾌감에 솔직
+IF TALENT:70
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:70%({LOCAL:99})
+;쾌감의 부정
+ELSEIF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+
+;조교자의 소악마
+IF TALENT:PLAYER:93
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %조사처리(CALLNAME:PLAYER,"가")% %TALENTNAME:93%({LOCAL:99})
+ENDIF
+
+;흡혈 첫체험
+IF EXP:54 == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 흡혈 첫체험({LOCAL:99})
+ENDIF
+
+TFLAG:241 = 30

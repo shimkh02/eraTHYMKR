@@ -1,0 +1,174 @@
+﻿;=============================================================================
+;IRC 계열의 캐릭터 함수 처리
+;=============================================================================
+;※本ファイルにはIRCネタが多分に含まれています.苦手な方はすぐに閉じてください
+;-------------------------------------------------
+;IRCキャラ購入処理
+;-------------------------------------------------
+;霊夢様のみ特殊な処理を行っているため、仕様上購入額と売却額のベースに差が出ます
+@IRC_CHARA_BUY
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+;霊夢様購入可能判定
+IF ITEM:101 == 0
+	REPEAT CHARANUM
+		SIF (NO:COUNT == 401 || NO:COUNT == 402 || NO:COUNT == 403) && (ISASSI:COUNT == 1 || COUNT == MASTER)
+			LOCAL += 1
+	REND
+ENDIF
+;IRCキャラ購入可能判定
+REPEAT 100
+	CALLF SET_LIST, COUNT, ITEMPRICE:(COUNT + 500)
+	IF NO:MASTER == 400
+		IF COUNT <= 3
+			SIF (FLAG:570 & 4) == 0
+				CALLF SET_LIST, COUNT, ITEMPRICE:(COUNT + 500) * 10
+		ENDIF
+	ENDIF
+	;霊夢様とスペルカード達は特殊な条件を満たす必要あり
+	SIF COUNT == 0 && LOCAL < 3 || (COUNT >= 23 && COUNT <= 29 && ITEM:108 == 0)
+		CALLF SET_LIST, COUNT, 0
+REND
+;購入できるキャラの表示
+REPEAT 100
+	SIF GET_LIST(COUNT) == 0
+		CONTINUE
+	IF COUNT == 0 && ITEM:101 == 0
+		PRINTFORML [{COUNT}] 레이무님（{GET_LIST(COUNT)}원）
+	ELSEIF ITEM:(COUNT + 500) == 0
+		PRINTFORML [{COUNT}] %ITEMNAME:(COUNT+500)%（{GET_LIST(COUNT)}원）
+		IF NO:MASTER == 400
+			SIF (FLAG:570 & 6) == 0 && COUNT <= 3
+				PRINTL ※이 노예는 구입 후 시간이 경과합니다
+			SIF COUNT == 1
+				PRINTFORML ※이 노예를 구입하면, 노예가 조수 가능해질 때까지%CALLNAME:MASTER%는【촉수 사역방법】을 잃습니다
+			SIF COUNT == 2
+				PRINTL ※이 노예를 구입하면, 노예가 조수 가능해질 때까지 노예의 구입 및 매각에 제한이 있습니다.
+		ENDIF
+	ENDIF
+REND
+SIF FLAG:570 & 2
+	PRINTL ※노예 상인이 없기 때문에, 노예를 구입 후 시간이 경과합니다
+PRINTL [100] 취소
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 100 || GET_LIST(RESULT) == 0 || ITEM:(RESULT + 500) > 0
+	GOTO INPUT_LOOP
+ELSEIF MONEY < GET_LIST(RESULT)
+	PRINTW 자금이 부족합니다.
+	RETURN 0
+ENDIF
+MONEY -= GET_LIST(RESULT)
+IF RESULT == 0
+	ITEM:101 += 1
+	LOCAL = 501
+ELSE
+	ITEM:(RESULT + 500) += 1
+	LOCAL = RESULT + 400
+ENDIF
+;共通処理(霊夢様処理のためにCHARA_STATE_BASICは利用できない)
+ADDCHARA LOCAL
+TARGET = CHARANUM-1
+CFLAG:3111 = DAY
+CFLAG:3109 = FLAG:998
+FLAG:998 += 1
+FLAG:39 += 1
+CSTR:3 = 特殊な奴隷商人から購入した.
+;霊夢様の特別処理
+IF RESULT == 0
+	NO:TARGET = 1
+	CFLAG:0 = 2
+	REPEAT 400
+		SIF COUNT == 0 || COUNT == 1
+			CONTINUE
+		RELATION:COUNT = 10
+	REND
+;触手娘の特別処理
+ELSEIF RESULT == 1 && NO:MASTER == 400
+	TALENT:MASTER:149 = 0
+	IF ABL:MASTER:98 > 0
+		ABL:MASTER:98 = 0
+		FLAG:571 = ABL:MASTER:98
+	ENDIF
+;ドリアードの特別処理
+ELSEIF RESULT == 2 && NO:MASTER == 400
+	FLAG:570 |= 2
+ENDIF
+;射精ゲージ設定
+SIF (TALENT:120 || TALENT:121) && MAXBASE:2 <= 0
+	MAXBASE:2 = CALC_GAUGE2_COMMON(TARGET)
+;噴乳ゲージ設定
+SIF TALENT:134
+	CALL CALC_GAUGE3_SLAVE, TARGET, 1
+;尿意ゲージ設定
+SIF TALENT:45 || EXP:6
+	CALL CALC_GAUGE4_SLAVE, TARGET, 1
+;触手ゲージ設定
+SIF TALENT:146
+	CALL CALC_TENTACLE_GAUGE
+;酔いゲージ設定
+CALL CALC_GAUGE8, TARGET, 0
+;購入メッセージおよび口上
+PRINTFORML ＜%조사처리(NAME:TARGET,"를")% 구입했다＞
+;購入された直後のイベント口上呼び出し
+CALL SELF_KOJO, TARGET, 198
+;専用口上フラグの設定
+FLAG:996 = -1
+IF TARGET >= 0
+	RESULT = -1
+	TRYCALLFORM TRY_{NO}
+	FLAG:996 = RESULT
+ENDIF
+;ドリアード不在による時間経過
+IF FLAG:570 & 2 || ((FLAG:570 & 6) == 0 && RESULT <= 3 && NO:MASTER == 400)
+	FLAG:0 = 1
+	BEGIN TURNEND
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;スペルカードキャラ追加購入処理
+;-------------------------------------------------
+@ROYALFLARE, ARG
+;入手可能なキャラとその数をチェック
+CALLF CLEAR_LIST()
+LOCAL = 0
+REPEAT 7
+	IF ITEM:(523+COUNT) == 0 && MONEY >= ITEMPRICE:(523+COUNT)
+		CALLF SET_LIST(LOCAL, 423 + COUNT)
+		LOCAL++
+	ENDIF
+REND
+;購入できないならここで処理を切り上げ
+SIF LOCAL == 0
+	RETURN 0
+
+;その中からランダムで一人拾う
+LOCAL:1 = GET_LIST(RAND:LOCAL)
+;キャラ追加及び初期設定の処理へ
+CALL CHARA_STATE_BASIC, LOCAL:1
+;購入人数追加
+FLAG:39 += 1
+;入手方法の記録
+CSTR:3 = 主人パチュリーの付属品として奴隷商人から購入した.
+;購入された日を記録
+CFLAG:3111 = DAY
+
+;追加購入メッセージ
+PRINTFORML ＜파츄리를 구입했기 때문에, %조사처리(NAME:TARGET,"를")% 구입했습니다＞
+
+;MONEY徴収
+MONEY -= ITEMPRICE:(LOCAL:1+100)
+
+;購入された直後のイベント口上呼び出し(スペルカードたち、なおパチュリーの当該イベントがその後にあるので注意）
+CALL SELF_KOJO, TARGET, 198
+
+;キャラの空きを-1し、まだ空いているならもう一度判定
+ARG -= 1
+SIF ARG > 0 && (LOCAL - 1) > 0
+	RESTART
+RETURN 0

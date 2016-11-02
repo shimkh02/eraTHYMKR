@@ -1,0 +1,137 @@
+﻿;=============================================================================
+;공포각인
+;=============================================================================
+;未完成……というより未調整
+@ABLUP98
+DRAWLINE
+IF MARK:8 <= 0
+	PRINTW 공포각인이 없습니다.
+	RETURN 0
+ENDIF
+
+;恐怖刻印Lvと同じLvの快楽刻印と恐怖刻印Lv+2Lvの従順が必要
+PRINTFORML %MARKNAME:1% {MARK:8}LV 이상(현재 {MARK:1}), 그리고 %ABLNAME:10% {COST98(2)}LV 이상
+
+PRINTFORM [0] - %PALAMNAME:12%의 구슬×{COST98(0)}\@(COST98(1) > 0) ? , %PALAMNAME:13%의 구슬×{COST98(1)} # \@……
+CALL SHOW_ISABLUP_COMMON, CAN98(0)
+
+PRINTL [100] - 돌아간다
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN98(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:12 -= COST98(0)
+	JUEL:13 -= COST98(1)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+MARK:8 -= 1
+PRINTFORMW %MARKNAME:8%의 레벨이 %조사처리(MARK:8,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP98
+SIF MARK:8 <= 0
+	RETURN 0
+
+CALLF CALC_COST98, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP98("CHECK")
+
+@COST98(ARG)
+#FUNCTION
+RETURNF CALC_COST98("GET", ARG)
+
+@CALC_COST98(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF MARK:8 == 1
+	LOCAL:0 = 5000
+	LOCAL:1 = 1000
+ELSEIF MARK:8 == 2
+	LOCAL:0 = 10000
+	LOCAL:1 = 2000
+ELSEIF MARK:8 == 3
+	LOCAL:0 = 50000
+	LOCAL:1 = 5000
+ENDIF
+
+;臆病
+SIF TALENT:10
+	TIMES LOCAL:0 , 3.00
+;気丈
+IF TALENT:12
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+ENDIF
+;素直
+IF TALENT:13
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;生意気
+SIF TALENT:15
+	TIMES LOCAL:0 , 1.50
+;楽観的
+IF TALENT:25
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+;悲観的
+ELSEIF TALENT:26
+	TIMES LOCAL:0 , 1.25
+	TIMES LOCAL:1 , 1.25
+ENDIF
+;恋慕、服従
+IF TALENT:150 || TALENT:160
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+;恐怖刻印Lv+2Lvの従順が必要
+LOCAL:2 = MARK:8 + 2
+
+;難易度HARD이상の場合、必要な恭順의 구슬は減るが、欲情의 구슬も必要になってくる
+IF FLAG:3 > 2
+	TIMES LOCAL:0 , 0.75
+ELSE
+	LOCAL:1 = 0
+ENDIF
+
+RETURNF 0
+
+@CAN98(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP98("GET", ARG)
+
+@CAN_ABLUP98(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;恐怖刻印Lvと同じLvの快楽刻印が必要
+SIF MARK:8 > MARK:1
+	LOCAL:0 |= 8
+
+SIF COST98(2) > ABL:10
+	LOCAL:0 |= 4
+
+;恭順의 구슬で減らす
+SIF JUEL:12 < COST98(0)
+	LOCAL:0 |= 1
+;欲情의 구슬で減らす
+SIF JUEL:13 < COST98(1)
+	LOCAL:0 |= 1
+
+RETURNF (LOCAL:0 == 0)

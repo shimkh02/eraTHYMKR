@@ -1,0 +1,416 @@
+﻿;=============================================================================
+;후배위 수음
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE630
+RETURN 0
+
+@EXCOM_ABLE630
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;조교자가 助手でその조수가 オトコではない場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && ASSIPLAY && TALENT:PLAYER:120 == 0
+	RETURN 0
+;조교자에게 ペニスがない, かつペニスバンドもないとダメ
+SIF EXIST_BAR(PLAYER) == 0 && ITEM:2 == 0 && NOITEM == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;주인이 [금단의 지식]持ちじゃないとき, 体格差が2段階以内か조교자가 [금단의 지식]持ちじゃないとダメ
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, TARGET) == 0
+	RETURN 0
+;처녀で, 순종5미만 · 레즈끼5미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF TALENT:0 == 1 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 5 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 5)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;윤활 부족이고, 순종4미만 · 레즈끼4미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 훈도시 착용 중일 경우 기교4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 == 17 && ABL:12 < 4
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;인어는 안됨
+SIF TALENT:229 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM630
+PRINTL 후배위 수음
+TSTR:0 = 후배위 수음
+SELECTCOM = 630
+CALL TRAIN_MESSAGE_COM630
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+SIF TALENT:0 && TALENT:150 && ASSIPLAY == 0
+	TFLAG:2 = TALENT:0
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 1500
+ELSEIF ABL:12 == 1
+	LOCAL = 1600
+ELSEIF ABL:12 == 2
+	LOCAL = 1800
+ELSEIF ABL:12 == 3
+	LOCAL = 2000
+ELSEIF ABL:12 == 4
+	LOCAL = 2400
+ELSE
+	LOCAL = 3000
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;욕망을 본다
+LOCAL = EJACULATIONCHECK_ABL_11_1(TARGET, LOCAL)
+;윤활을 본다
+LOCAL = EJACULATIONCHECK_PALAM_10_1(TARGET, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 60
+DOWNBASE:1 += 200
+
+SOURCE:12 = 1400
+SOURCE:14 = 500
+SOURCE:18 = 800
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 40
+	SOURCE:11 = 550
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 150
+	SOURCE:11 = 650
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 400
+	SOURCE:11 = 750
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 1000
+	SOURCE:11 = 850
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 1700
+	SOURCE:11 = 1100
+ELSE
+	SOURCE:1 = 2200
+	SOURCE:11 = 1350
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 = 5000
+	SIF ASSIPLAY && TALENT:PLAYER:120 == 0
+		TCVAR:50 += 1
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 = 220
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 = 30
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 = 5
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 900
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.40
+	SOURCE:20 += 250
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;조교자가[남자]
+SIF TALENT:PLAYER:120
+	TIMES SOURCE:1 , 2.50
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;정조관념
+IF TALENT:30
+	IF TALENT:0 == 1
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 10000
+	ELSE
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 1000
+	ENDIF
+;정조무구애
+ELSEIF TALENT:31
+	IF TALENT:0 == 1
+		TIMES SOURCE:11 , 0.60
+		SOURCE:32 = 300
+	ENDIF
+ELSE
+	SIF TALENT:0 == 1
+		SOURCE:32 = 3000
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:11 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:11 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:11 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:11 , 1.50
+ELSE
+	TIMES SOURCE:1 , 1.50
+	TIMES SOURCE:11 , 1.80
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:11 , 0.60
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:32 , 1.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:11 , 1.20
+	TIMES SOURCE:32 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:32 , 0.60
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:32 , 0.30
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 60
+	SOURCE:15 = 60
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 180
+	SOURCE:15 = 180
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 800
+	SOURCE:15 = 800
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1700
+	SOURCE:15 = 1700
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2700
+	SOURCE:15 = 2700
+ELSE
+	SOURCE:0 = 3800
+	SOURCE:15 = 3800
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:16 = 130
+ELSEIF ABL:21 == 1
+	SOURCE:16 = 250
+ELSEIF ABL:21 == 2
+	SOURCE:16 = 500
+ELSEIF ABL:21 == 3
+	SOURCE:16 = 800
+ELSEIF ABL:21 == 4
+	SOURCE:16 = 1400
+ELSE
+	SOURCE:16 = 2000
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:15 , 0.50
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:15 , 0.80
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:15 , 1.00
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:15 , 1.50
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:15 , 2.50
+ELSE
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:15 , 4.00
+ENDIF
+
+TCVAR:0 += 1
+IF PLAYER == MASTER
+	TCVAR:42 += 1
+	SIF TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1
+		CFLAG:173 += 1
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+
+	;사정처 타입의 설정
+	TFLAG:703 = 1
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 1
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+;노예의 V⇔조교자의 P의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:3
+;조교자의 손가락⇔노예의 P의 불결이 이동
+STAIN:PLAYER:2 |= STAIN:1
+STAIN:2 |= STAIN:PLAYER:1
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:1 >= 3) ?  2 # 1
+
+;처녀 상실의 후에 페니스를 뽑고 있을까
+TFLAG:101 = (TFLAG:101 == 2) ?  1 # 0
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM630
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;전회와 이번 조교자가 같아, 전회의 조교가 후배위이며, 뽑지 않는 플래그가 있는 경우
+IF PREVCOM == 21 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	;애태우기플레이
+	IF TEQUIP:68
+		PRINTFORM %CALLNAME:TARGET%의 
+		SIF EX:21
+			PRINT 펄떡펄떡 경련하는 
+		PRINTL 허리를 억눌러 삽입한 채로 작고 그라인드 시키면서,
+	;조교자가 남자나 후타나리이다
+	ELSEIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINTFORML %CALLNAME:TARGET%의 질 내의 감촉을 맛보면서, 다시 허리를 움직이면서,
+	ELSE
+	;페니스 밴드를 사용하고 있는 경우
+		PRINTFORML %CALLNAME:TARGET%의 질안에서 뽑지 않고, 다시 허리를 움직이면서,
+	ENDIF
+	SIF TFLAG:101
+		TFLAG:101 = 2
+	;애태우기플레이
+	IF TEQUIP:68
+		PRINTFORMW %CALLNAME:TARGET%의 페니스에 손가락을 걸어 천천히 훑어 주었다….
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%의 페니스에 손을 더해 리듬을 담아 훑어 주었다….
+	ENDIF
+ELSE
+	;애태우기플레이
+	IF TEQUIP:68
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 계속해, %CALLNAME:TARGET%의 페니스를 천천히 훑으면서
+		PRINTFORMW 허리를 느슨하게 움직여, %CALLNAME:TARGET%의 질을 자극했다….
+	;조교자가 남자나 후타나리이다
+	ELSEIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 계속해, %CALLNAME:TARGET%의 페니스를 손으로 훑으면서
+		PRINTW 질 안을 페니스로 계속 자극했다….
+	;페니스 밴드를 사용하고 있는 경우
+	ELSE
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 계속해, %CALLNAME:TARGET%의 페니스를 손으로 훑으면서
+		PRINTW 질 안을 페니스 밴드로 계속 자극했다….
+	ENDIF
+ENDIF

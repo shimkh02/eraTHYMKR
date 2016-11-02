@@ -1,0 +1,176 @@
+﻿;=============================================================================
+;매도
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE227
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:227 > 0
+	RETURN 0
+;조교자가 새드持ちまたはドＳ持ちまたは새드끼Lv3이상이 아니면 불가
+SIF TALENT:PLAYER:81 == 0 && TALENT:PLAYER:177 == 0 && ABL:PLAYER:20 < 3
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM227
+PRINTL 매도
+TSTR:0 = 매도
+CALL TRAIN_MESSAGE_COM227
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 5
+DOWNBASE:1 += 150
+
+SOURCE:22 = 200
+SOURCE:31 = 300
+SOURCE:32 = 200
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:16 = 150
+	SOURCE:23 = 60
+	SOURCE:18 = 0
+	TIMES DOWNBASE:1 , 2.00
+ELSEIF ABL:21 == 1
+	SOURCE:16 = 300
+	SOURCE:23 = 120
+	SOURCE:18 = 100
+	TIMES SOURCE:22 , 1.50
+	TIMES DOWNBASE:1 , 1.50
+ELSEIF ABL:21 == 2
+	SOURCE:16 = 600
+	SOURCE:23 = 240
+	SOURCE:18 = 150
+	TIMES SOURCE:22 , 2.00
+	TIMES DOWNBASE:1 , 1.00
+ELSEIF ABL:21 == 3
+	SOURCE:16 = 900
+	SOURCE:23 = 360
+	SOURCE:18 = 250
+	TIMES SOURCE:22 , 2.50
+	TIMES DOWNBASE:1 , 0.75
+ELSEIF ABL:21 == 4
+	SOURCE:16 = 1500
+	SOURCE:23 = 480
+	SOURCE:18 = 500
+	TIMES SOURCE:22 , 3.00
+	TIMES DOWNBASE:1 , 0.50
+ELSE
+	SOURCE:16 = 2200
+	SOURCE:23 = 600
+	SOURCE:18 = 1000
+	TIMES SOURCE:22 , 4.00
+	TIMES DOWNBASE:1 , 0.25
+ENDIF
+
+;TALENT:반항적을 본다
+IF TALENT:11
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:32 , 2.50
+ENDIF
+;TALENT:기장을 본다
+IF TALENT:12
+	TIMES SOURCE:22 , 2.50
+	TIMES SOURCE:32 , 1.50
+ENDIF
+;TALENT:거만함을 본다
+IF TALENT:15
+	TIMES SOURCE:22 , 1.75
+	TIMES SOURCE:32 , 1.75
+ENDIF
+;TALENT:프라이드 높은을 본다
+IF TALENT:16
+	TIMES SOURCE:22 , 2.00
+	TIMES SOURCE:32 , 2.00
+;TALENT:프라이드 낮은을 본다
+ELSEIF TALENT:17
+	TIMES SOURCE:22 , 0.75
+	TIMES SOURCE:32 , 0.75
+ENDIF
+;TALENT:감정결여를 본다
+IF TALENT:22
+	TIMES SOURCE:16 , 0.50
+	TIMES SOURCE:23 , 0.50
+	TIMES SOURCE:22 , 0.50
+	TIMES SOURCE:31 , 0.50
+	TIMES SOURCE:32 , 0.50
+ENDIF
+
+;줄로 긴박중 때 효과 상승
+SIF TEQUIP:40
+	TIMES SOURCE:22 , 1.50
+;볼 개그 장착중 때 효과 상승
+SIF TEQUIP:42
+	TIMES SOURCE:22 , 1.75
+
+IF ABL:21 == 0 && TFLAG:84 == 0
+	;반발 각인 1에 상당(프라이드 높은 또는 거만함 소유라면 2)
+	TFLAG:84 = (TALENT:15 || TALENT:16) ?  2 # 1
+ELSEIF ABL:21 > 2
+	;마조끼 3이상이라면 매도해져 쾌락을 느끼도록(듯이)
+	TFLAG:100 |= 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM227
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 도발하듯이 %CALLNAME:TARGET%의 치태를 비웃어대며 험담을 퍼부었다.
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF TEQUIP:42
+	IF ABL:21 == 0
+		PRINTL 무엇인가 말대답하려 하고 있지만 재갈이 물려 말을 할 수가 없다….
+	ELSEIF ABL:21 < 3
+		PRINTL 일순간 무엇인가 말대답하고 싶은 것 같은 행동을 보였지만, 자신의 입이 막혀있는 것을 생각해 냈는지 점잖아졌다….
+	ELSEIF ABL:21 < 5
+		PRINTL 매도 당하는 것에 쾌감을 느끼고 있는 것 같다….
+	ELSE
+		PRINTL 얼굴을 붉히며 콧바람을 내고 있다. 
+		PRINTL 아무래도 매도 당하는 것에 강한 쾌감을 느끼고 있는 것 같다.
+		PRINT 입과 재갈의 사이에서는 군침이, 고간에서는 애액이 줄줄 흘러나와, 
+		PRINTFORML %CALLNAME:TARGET%의 발 밑에 큰 웅덩이를 만들어내고 있다.
+		PRINTFORM 네발로 엎드린 채 딱딱하게 곤두선 유두의 끄트머리를 %CALLNAME:PLAYER%에게 문지르며, 
+		PRINTL 한층 더 매도해달라고 말하는 듯이 음탕한 시선을 보내고 있다….
+	ENDIF
+ENDIF
+IF ABL:21 == 0
+	IF TALENT:11 == 0 && TALENT:15 == 0 && TALENT:16 == 0
+		PRINTFORML 눈에 희미하게 눈물을 머금으면서 %CALLNAME:PLAYER%의 갖은 험담을 견디고 있다.
+	ELSEIF TALENT:11 && TALENT:15 && TALENT:16
+		PRINTFORML 부득부득 이빨을 갈아대며 %조사선택(CALLNAME:PLAYER, "를")% 째려보고 있다.
+	ELSE
+		PRINTFORML 분노와 굴욕으로 가득 한 얼굴로 %조사선택(CALLNAME:PLAYER, "를")% 노려보고 있다.
+	ENDIF
+ELSEIF ABL:21 < 3
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "를")% 째려보고 있지만 그 표정에는 조그마한 쾌감이 스치고 있다.
+ELSEIF ABL:21 < 5
+	PRINTL 매도 당하는 것에 쾌감을 느끼고 있는 것 같다….
+ELSE
+	PRINTL 매도 당하는 것에 완전히 쾌감을 느끼고 있는 것 같다….
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 얼굴을 붉게 물들여 교태스럽게 %조사선택(CALLNAME:PLAYER, "를")% 올려보며,
+	PRINTL 애원이 가득한 목소리로 더욱 매도해 달라고 부탁하고 있다….
+ENDIF
+PRINTW

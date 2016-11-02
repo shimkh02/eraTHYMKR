@@ -1,0 +1,131 @@
+﻿;=============================================================================
+;욕망
+;=============================================================================
+;先導의 구슬でも上げられるように変更
+@ABLUP11
+DRAWLINE
+SIF ABL:11 >= 5
+	JUMP ABLUP_MAX
+
+;ＬＶ４から５に上げるときは異常経験必要(素質：[快感に素直][淫乱]なら無視できる)
+SIF COST11(2)
+	PRINTFORML %EXPNAME:50%{COST11(2)}이상, 그리고 
+
+PRINTFORM [0] - %PALAMNAME:13%의 구슬×{COST11(0)}……
+CALL SHOW_ISABLUP_COMMON, CAN11(0)
+
+;サドっ気が3이상だと先導의 구슬でも上昇させることができる
+IF ABL:20 >= 3
+	PRINTFORM [1] - %PALAMNAME:13%의 구슬×{COST11(1)}, %PALAMNAME:32%의 구슬×{COST11(0)}……
+	CALL SHOW_ISABLUP_COMMON, CAN11(1)
+ENDIF
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF (RESULT == 0 || RESULT == 1) && CAN11(RESULT) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:13 -= COST11(0)
+ELSEIF RESULT == 1
+	JUEL:13 -= COST11(1)
+	JUEL:32 -= COST11(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:11 += 1
+PRINTFORMW %ABLNAME:11%의 레벨이 %조사처리(ABL:11,"가")% 되었습니다.
+SIF ABL:11 >= 3 && (TALENT:32 || TALENT:34)
+	CALL YOKUBO_UP_CHECK
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP11
+SIF ABL:11 >= 5
+	RETURN 0
+
+CALLF CALC_COST11, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP11("CHECK")
+
+@COST11(ARG)
+#FUNCTION
+RETURNF CALC_COST11("GET", ARG)
+
+@CALC_COST11(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:11 == 0
+	LOCAL:0 = 5
+ELSEIF ABL:11 == 1
+	LOCAL:0 = 50
+ELSEIF ABL:11 == 2
+	LOCAL:0 = 1000
+ELSEIF ABL:11 == 3
+	LOCAL:0 = 8000
+	;一線越えない
+	SIF TALENT:27
+		TIMES LOCAL:0 , 2.00
+ELSEIF ABL:11 == 4
+	LOCAL:0 = 24000
+	;一線越えない
+	SIF TALENT:27
+		TIMES LOCAL:0 , 3.00
+ENDIF
+
+;淫乱
+SIF TALENT:170
+	TIMES LOCAL:0 , 0.80
+;悪魔
+SIF TALENT:209
+	TIMES LOCAL:0 , 0.80
+
+LOCAL:1 = LOCAL:0 / 2
+
+;ＬＶ４から５に上げるときは異常経験必要(素質：[快感に素直][淫乱]なら無視できる)
+SIF ABL:11 == 4 && TALENT:70 == 0 && TALENT:170 == 0
+	LOCAL:2 = 1
+
+RETURNF 0
+
+@CAN11(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP11("GET", ARG)
+
+@CAN_ABLUP11(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;異常経験が必要な場合
+IF EXP:50 < COST11(2)
+	LOCAL:0 |= 2
+	LOCAL:1 |= 2
+ENDIF
+
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST11(0)
+	LOCAL:0 |= 1
+
+;サドっ気が3이상だと先導의 구슬でも上昇させることができる
+IF ABL:20 >= 3
+	;欲情의 구슬で上げる
+	SIF JUEL:13 < COST11(1)
+		LOCAL:1 |= 1
+	;先導의 구슬で上げる
+	SIF JUEL:32 < COST11(0)
+		LOCAL:1 |= 1
+ELSE
+	LOCAL:1 = 256
+ENDIF
+
+RETURNF (LOCAL:0 == 0 || LOCAL:1 == 0)

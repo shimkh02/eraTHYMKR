@@ -1,0 +1,463 @@
+﻿;=============================================================================
+;시리코다마 빼기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE402
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:402 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;Ａ확장경험이 0일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:33 == 0
+	RETURN 0
+;이미 실행 중이면 불가
+SIF TFLAG:140 & 8
+	RETURN 0
+;조교자가 にとりまたは河童でないとダメ
+SIF NO:PLAYER != 40 && TALENT:PLAYER:210 == 0
+	RETURN 0
+;HARDモード이상は別条件
+IF FLAG:3 >= 3
+	;기교가 4이상無いと駄目
+	SIF ABL:PLAYER:12 < 4
+		RETURN 0
+	;조교자의 기교가 4のときは일정의 Ａ경험이 필요
+	SIF ABL:PLAYER:12 == 4 && EXP:1 < EXPLV:3
+		RETURN 0
+ELSE
+	;にとり以外の河童の場合は기교가 4이상無いと駄目
+	IF TALENT:PLAYER:210 && NO:PLAYER != 40
+		SIF ABL:PLAYER:12 < 4
+			RETURN 0
+	ENDIF
+ENDIF
+;체력이 1500이상이 아니면 불가
+SIF BASE:0 < 1500
+	RETURN 0
+;기력이 500이상이 아니면 불가
+SIF BASE:1 < 500
+	RETURN 0
+;ASSI일 경우, 순종3이상이거나 새드じゃないとできない。
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 3 && TALENT:ASSI:81 == 0
+		RETURN 0
+ENDIF
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;작은 체형なら순종이 3이상かつ마조끼が3이상じゃないと実行できない
+IF TALENT:128
+	SIF ABL:10 < 3 || ABL:21 < 3
+		RETURN 0
+ENDIF
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;(원파일로부터 시리코다마를 제쳐지면(자) 내장 누락이 되어 버리는 것 같다. 되어 주지 않겠니.
+;시츄보다 게임성을 추구하고 있다고 해석했으므로 별도 준비한 시리코다마 빼기를 작성
+;강함과 실행 판정이 존재하는 이외는 원의 시리코다마 빼기와 취급은 같아서 TFLAG:140을 사용. 이 근처의 참고는 흡혈
+;내장 누락 설정을 살리기 (위해)때문에 첫회는 최대 체력과 기력이 저하하도록(듯이). 또 지문을 추가해, A확장 경험도 들어가는 것처럼
+@COM402
+PRINTL 엉덩이구슬(시리고다마) 뽑기
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 시리코다마 빼기
+CALL TRAIN_MESSAGE_COM402
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;한 번 시리코다마를 제쳐지면(자) 소모가 경감
+DOWNBASE:0 += (CFLAG:10 & 1) ?  500 # 700
+DOWNBASE:1 += (CFLAG:10 & 1) ?  1000 # 5000
+
+SOURCE:12 = 500
+SOURCE:31 = 14000
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 2000
+	SOURCE:22 = 1500
+	SOURCE:30 = 25000
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 3000
+	SOURCE:22 = 1700
+	SOURCE:30 = 17000
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 4500
+	SOURCE:22 = 2000
+	SOURCE:30 = 8000
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 6900
+	SOURCE:22 = 3200
+	SOURCE:30 = 3500
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 7500
+	SOURCE:22 = 4500
+	SOURCE:30 = 1200
+ELSE
+	SOURCE:2 = 10000
+	SOURCE:22 = 6000
+	SOURCE:30 = 500
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:22, 0.60
+	SOURCE:20 = 1500
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:22, 0.90
+	SOURCE:20 = 900
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22, 1.00
+	SOURCE:20 = 700
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.10
+	TIMES SOURCE:22, 1.10
+	SOURCE:20 = 300
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.25
+	TIMES SOURCE:22, 1.25
+	SOURCE:20 = 150
+ELSE
+	TIMES SOURCE:2 , 1.40
+	TIMES SOURCE:22, 1.40
+	SOURCE:20 = 80
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:20 , 3.00
+	TIMES SOURCE:22 , 0.10
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:20 , 2.00
+	TIMES SOURCE:22 , 0.20
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:20 , 1.00
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:20 , 0.50
+	TIMES SOURCE:22, 1.00
+ELSE
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:20 , 0.10
+	TIMES SOURCE:22 , 1.30
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:22, 0.10
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:22, 0.50
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:22, 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.10
+	TIMES SOURCE:22, 1.10
+ELSE
+	TIMES SOURCE:2 , 1.25
+	TIMES SOURCE:22, 1.25
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+SIF EXP:33 == 0
+	TCVAR:50 += 1
+TCVAR:33 += 1
+TCVAR:1 += 10
+
+;노예의 A⇔조교자의 손가락의 불결이 이동
+STAIN:4 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:4
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+TFLAG:140 |= 8
+
+;시리코다마 입수 이벤트
+SIF FLAG:12 & 8
+	CALL SWEET_POTATO_SHIRIKODAMA
+
+LOCAL:1 = 0
+IF CFLAG:10 & 1
+	;몇 번이나 시리코다마를 제쳐지고 있다면 버릇이 되어 버린다
+	SOURCE:24 = 2500
+	IF ABL:2 >= 5
+		LOCAL:1 = 4
+		SOURCE:24 += 2500
+	ELSEIF ABL:2 == 4
+		LOCAL:1 = 3
+		SOURCE:24 += 1500
+	ELSEIF ABL:2 == 3
+		LOCAL:1 = 2
+		SOURCE:24 += 500
+	ENDIF
+ELSE
+	;시리코다마 빼기가 첫체험 때는 내장 누락이 되어 버린다
+	SOURCE:25 = 2500
+	MAXBASE:0 -= 100
+	MAXBASE:1 -= 200
+	LOCAL:1 = 1
+ENDIF
+SIF LOCAL:1 > 0
+	CALL TRAIN_MESSAGE_SHIRIKODAMA, LOCAL:1
+
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_402
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%의 시리고다마를 빼려 했지만 거부당했다.
+PRINTW 좀 더 조교가 필요할 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM402
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 네발로 엎드리게 해, 엉덩이를 높이 들어올리게 했다.
+PRINTFORML 그리고 %CALLNAME:TARGET%의 항문에 주먹을 찔러 넣어, 안쪽에 자리잡고 있던 시리고다마를 재빨리 빼냈다.
+PRINTFORM %CALLNAME:PLAYER%의 주먹이 뽑혀진 %CALLNAME:TARGET%의 항문은 
+IF ABL:2 <= 2
+	PRINTL 뻐끔 입을 열고 있다.
+ELSEIF ABL:2 == 3
+	PRINTL 벌려진 채로 좀처럼 돌아오지 않는다.
+ELSEIF ABL:2 == 4
+	PRINTL 마치 동굴과 같이 큰 입을 열고 있다….
+ELSE
+	PRINTL 최초부터 그랬던 것 처럼 넓게 열려있다….
+	PRINTFORML 시리고다마가 빼내진 쾌감 때문인지, 아니면 고통 때문인지 %조사선택(CALLNAME:TARGET, "가")% 가쁜 숨을 몰아 쉴 때 마다, 항문이 움찔 움찔 거린다….
+ENDIF
+
+;--------------------------------------------------
+;조교시 메시지(시리코다마를 제친 후 )
+;--------------------------------------------------
+@TRAIN_MESSAGE_SHIRIKODAMA, ARG
+SIF FLAG:10 == 0 || CFLAG:99 == 1
+	RETURN 0
+
+PRINTL
+IF ARG == 1
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 전신의 힘이 빠져 가는 것을 느꼈다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼간이가 되어버렸다.
+ELSEIF ARG == 2
+	PRINTFORML %CALLNAME:TARGET%의 찡그렸던 얼굴이 조금 편해졌다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 시리고다마를 빼는 감각을 받아들인 것 같다.
+ELSEIF ARG == 3
+	PRINTFORML %CALLNAME:TARGET%의 눈이 촉촉히 젖어있다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 시리고다마를 빼는 행위에 눈을 뜬 것인지도 모른다….
+ELSEIF ARG == 4
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 뺨을 상기시켜, 거친 숨을 내쉬고 있다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 시리고다마를 빼는 감촉에 푹 빠져버린 것 같다….
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_402, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+;ABL:A감각
+IF ABL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:2%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:노출벽
+IF ABL:14
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:14
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:14%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;자제심
+IF TALENT:20
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:20%({LOCAL:99})
+ENDIF
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+;부끄럼없음
+ELSEIF TALENT:36
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 3
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:36%({LOCAL:99})
+ENDIF
+;남자 싫다
+IF TALENT:37 && TALENT:PLAYER:120
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:37%({LOCAL:99})
+;여자 증오
+ELSEIF TALENT:38 && TALENT:PLAYER:120 == 0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 12
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:38%({LOCAL:99})
+ENDIF
+;쾌감에 솔직
+IF TALENT:70
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:70%({LOCAL:99})
+;쾌감의 부정
+ELSEIF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 7
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+;음고
+IF TALENT:173
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 7
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:173%({LOCAL:99})
+ENDIF
+
+;미약
+IF TEQUIP:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 8
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ITEMNAME:61%({LOCAL:99})
+ENDIF
+
+TFLAG:241 = 50

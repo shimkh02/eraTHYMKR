@@ -1,0 +1,1388 @@
+﻿;---------------------------------------------------------
+; SHOP_WORKSHOP_PROMISCUITY 技師パッチ 工房イベントファイル 判定部
+;---------------------------------------------------------
+;中毒者曰く：
+;工房で発生した乱交による結果の判定処理関数群
+
+;以下関数群。大まかに三種。
+
+;1. 乱交時の経験・珠算出用。
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY         工房乱交結果判定
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH    工房乱交行為内容判定
+;以下プレイ内容ごとの算出
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_MOUTH
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_HAND_GENITALS
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_PENIS
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_PENIS
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_VAGINA_PENIS
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_ANAL_PENIS
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_URETHRA_PENIS
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_BUST
+;@JUDGE_WORKSHOP_RESULT_PROMISCUITY_CLITORIS_CLITORIS
+
+
+;2. 結果報告。経験・珠の取得用。
+;@RESULT_WORKSHOP_PROMISCUITY               工房乱交結果報告
+
+;3. 変数確保用ダミー関数。
+;@VALUE_WORKSHOP_RESULT_PROMISCUITY         工房乱交結果変数(輪姦チェック用)
+;以下外部関数
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY 工房乱交結果判定
+;LOCAL変数
+;   0 : 反復子
+;   1 : 反復子
+;   2 : 反復子
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공방 난교 결과 판정 개시
+CALL VALUE_WORKSHOP_RESULT_PROMISCUITY
+FOR LOCAL:0, 0, CHARANUM
+	;工房に居ないか乱交中でないキャラはスキップ
+	SIF CFLAG:(LOCAL:0):4 != 3
+		CONTINUE
+	SIF (CFLAG:(LOCAL:0):691 & 1p7) == 0
+		CONTINUE
+	LOCAL:1 = -1
+	WHILE 1
+		SIF (LOCAL:1 + 1) == CHARANUM
+			BREAK
+		;誘っているキャラを探す
+		FINDCHARA CFLAG:792, CFLAG:(LOCAL:0):3109, LOCAL:1 + 1
+		LOCAL:1 = RESULT
+		;尽きたらループ脱出
+		SIF LOCAL:1 < 0
+			BREAK
+		;行為判定へ
+		CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH, LOCAL:0, LOCAL:1
+		IF CFLAG:(LOCAL:0):691 & 1p3
+			;誘われた側がエロ暴走してるならお返しする
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH, LOCAL:1, LOCAL:0
+		ELSE
+			;誘われた側が暴走してなければ誘った側がもう一度判定
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH, LOCAL:0, LOCAL:1
+		ENDIF
+	WEND
+	;追加の遊び相手とは1回ずつだけ
+	FOR LOCAL:2, 793, 4
+		SIF CFLAG:(LOCAL:0):(LOCAL:2) < 0
+			BREAK
+		FINDCHARA CFLAG:3109, CFLAG:(LOCAL:0):(LOCAL:2), 0
+		LOCAL:1 = RESULT
+		;追加の遊び相手に存在しないキャラが選ばれていたらスキップする
+		SIF LOCAL:1 < 0
+			CONTINUE
+		IF CFLAG:(LOCAL:0):691 & 1p3
+			;誘われた側がエロ暴走してるなら攻める
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH, LOCAL:1, LOCAL:0
+		ELSE
+			;誘われた側が暴走してなければ攻められる
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH, LOCAL:0, LOCAL:1
+		ENDIF
+	NEXT
+NEXT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공방 난교 결과 판정 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH 工房乱交行為内容判定
+;ARG引数
+;   0 : 襲われた方
+;   1 : 襲った方
+;LOCAL変数
+;   0 : 遊べる最大欲求回数(素質を元に1～5回か？)
+;   1 : 欲求回数(乱数で設定)
+;   2 : 反復子
+;   3 : 反復子
+;   4 : プレイ選択幅 (100以降のプレイ選択幅の合計)
+;   5 : 選択プレイ内容(乱数で決定)
+;   6 : 選択プレイ内容決定テンポラリ(選択幅の総計)
+; 100～ : 各プレイの選択幅
+;    ※プレイ分類は以下の12通り
+;      0 : ディープキス
+;      1 : 手淫
+;      2 : フェラ／クンニ
+;      3 : パイズリ
+;      4 : Ｖ挿入
+;      5 : Ａ挿入
+;      6 : Ｕ挿入
+;      7 : パイズリする
+;      8 : Ｖ挿入させる
+;      9 : Ａ挿入させる
+;     10 : Ｕ挿入させる
+;     11 : 乳合わせ
+;     12 : 貝合わせ
+;     ?? : 罵る・叩く(保留)
+;     ?? : 道具を使う？(今回は保留)
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_WITH, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 행위 내용 판정 개시
+;まずは初期化
+VARSET LOCAL, 0
+;欲望に応じて回数設定
+IF ABL:(ARG:1):11 > 4
+	;Lv5以上で3回
+	LOCAL:0 = 3
+ELSEIF ABL:(ARG:1):11 > 2
+	;Lv3以上で2回
+	LOCAL:0 = 2
+ELSE
+	LOCAL:0 = 1
+ENDIF
+;淫乱で+2回
+SIF TALENT:(ARG:1):170
+	LOCAL:0 += 2
+LOCAL:1 = RAND:(LOCAL:0) + 1
+;どのプレイが出来そうか確認
+;ディープキス：保障
+LOCAL:100 = 1
+;手淫：保障(手コキか手マンかは知らん)
+LOCAL:101 = 1
+;フェラ／クンニ：襲われ側に貞操帯がなく、襲い側が汚臭敏感が無いか淫乱持ちであれば可能
+SIF (CFLAG:(ARG:0):42 & 2) == 0 && TALENT:(ARG:1):62 == 0 || TALENT:(ARG:1):170
+	LOCAL:102 = 1
+;以下襲い側にペニスか肥大陰核が必要(貞操帯つけてるとダメ)
+IF (CFLAG:(ARG:1):42 & 2) == 0 && (TALENT:(ARG:1):120 || TALENT:(ARG:1):121 || TALENT:(ARG:1):1)
+	;パイズリ：襲われ側にバストサイズに応じた技巧があれば可能
+	SIF (TALENT:(ARG:0):111 && ABL:(ARG:0):12 > 4) || (TALENT:(ARG:0):112 && ABL:(ARG:0):12 > 1) || (TALENT:(ARG:0):113 && ABL:(ARG:0):12 > 0) || (TALENT:(ARG:0):110 == 0 && TALENT:(ARG:0):111 == 0 && TALENT:(ARG:0):112 == 0 && TALENT:(ARG:0):113 == 0 && ABL:(ARG:0):12 > 2)
+		LOCAL:103 = 1
+	;以下、襲われ側に貞操帯がなく、体格が同程度であるか襲い側に禁断の知識があるか、禁断の知識持ちのマスターが工房で乱交に襲う側で参加している必要がある
+	IF (TALENT:(ARG:0):127 && TALENT:(ARG:1):127) || (TALENT:(ARG:0):127 == 0 && TALENT:(ARG:1):127 == 0) || TALENT:(ARG:1):56 || (TALENT:MASTER:56 && CFLAG:MASTER:4 == 3 && (CFLAG:MASTER:691 & 1p7) && (CFLAG:MASTER:691 & 1p3))
+		;Ｖ挿入：襲われ側にＶが必要(つまりオトコ以外なら可能)
+		SIF TALENT:(ARG:0):120 == 0 || TALENT:(ARG:0):121
+			LOCAL:104 = 1
+		;Ａ挿入：襲われ側にＡ感覚Lv3以上が必要
+		SIF ABL:(ARG:0):2 > 2
+			LOCAL:105 = 1
+;体力消耗等考えたくなるので保留
+;		;Ｕ挿入：襲われ側にそれなりのＵ拡張経験が必要
+;		SIF EXP:(ARG:0):Ｕ拡張経験 > 4
+;			LOCAL:106 = 1
+	ENDIF
+ENDIF
+;以下襲われ側にペニスか肥大陰核が必要(貞操帯つけてるとダメ)
+IF (CFLAG:(ARG:0):42 & 2) == 0 && (TALENT:(ARG:0):120 || TALENT:(ARG:0):121 || TALENT:(ARG:0):1)
+	;パイズリ：襲い側にバストサイズに応じた技巧があれば可能
+	SIF (TALENT:(ARG:1):111 && ABL:(ARG:1):12 > 4) || (TALENT:(ARG:1):112 && ABL:(ARG:1):12 > 1) || (TALENT:(ARG:1):113 && ABL:(ARG:1):12 > 0) || (TALENT:(ARG:1):110 == 0 && TALENT:(ARG:1):111 == 0 && TALENT:(ARG:1):112 == 0 && TALENT:(ARG:1):113 == 0 && ABL:(ARG:1):12 > 2)
+		LOCAL:107 = 1
+	;以下、襲い側に貞操帯がなく、体格が同程度であるか襲い側に禁断の知識があるか、禁断の知識持ちのマスターが工房で乱交に襲う側で参加している必要がある(あくまで禁断の知識は襲い側への要求とする)
+	IF (TALENT:(ARG:1):127 && TALENT:(ARG:0):127) || (TALENT:(ARG:1):127 == 0 && TALENT:(ARG:0):127 == 0) || TALENT:(ARG:1):56 || (TALENT:MASTER:56 && CFLAG:MASTER:4 == 3 && (CFLAG:MASTER:691 & 1p7) && (CFLAG:MASTER:691 & 1p3))
+		;Ｖ挿入させる：襲い側にＶが必要(つまりオトコ以外なら可能)
+		SIF TALENT:(ARG:1):120 == 0 || TALENT:(ARG:1):121
+			LOCAL:108 = 1
+		;Ａ挿入させる：襲い側にＡ感覚Lv3以上が必要
+		SIF ABL:(ARG:1):2 > 2
+			LOCAL:109 = 1
+;体力消耗等考えたくなるので保留
+;		;Ｕ挿入させる：襲い側にそれなりのＵ拡張経験が必要
+;		SIF EXP:(ARG:1):Ｕ拡張経験 > 4
+;			LOCAL:110 = 1
+	ENDIF
+ENDIF
+;乳あわせは実は誰でも可能(絶壁乳あわせ・オトコ同士乳あわせとか誰得すぎるが)
+LOCAL:110 = 1
+;貝合わせは双方に貝があり貞操帯をつけていなければ可能
+SIF (CFLAG:(ARG:0):42 & 2) == 0 && (TALENT:(ARG:0):120 == 0 || TALENT:(ARG:0):121) && (CFLAG:(ARG:1):42 & 2) == 0 && (TALENT:(ARG:1):120 == 0 || TALENT:(ARG:1):121)
+	LOCAL:111 = 1
+;プレイ方法集計
+FOR LOCAL:2, 100, 113
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; LOCAL:(LOCAL:2) = LOCAL:{LOCAL:2} = {LOCAL:(LOCAL:2)}
+	LOCAL:4 += LOCAL:(LOCAL:2)
+NEXT
+;欲求した回数分 犯る
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; 욕구회수 LOCAL:1 = {LOCAL:1}
+FOR LOCAL:2, 0, LOCAL:1
+	;プレイ内容を選択
+	LOCAL:5 = RAND:(LOCAL:4)
+	LOCAL:3 = 0
+	LOCAL:6 = LOCAL:100
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 난수 LOCAL:5 = {LOCAL:5}
+	WHILE LOCAL:6 < LOCAL:5
+		;チェック済みプレイ選択幅の総計より選択プレイ内容の値が大きければ現在チェックしているプレイ内容の選択幅を総計に加算する
+		LOCAL:3 += 1
+		LOCAL:6 += LOCAL:(100 + LOCAL:3)
+	WEND
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 체크 결과 LOCAL:3 = {LOCAL:3} LOCAL:6 = {LOCAL:6}
+	SELECTCASE LOCAL:3
+		CASE 0
+			;ディープキス
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_MOUTH, ARG:1, ARG:0
+		CASE 1
+			;手淫
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_HAND_GENITALS, ARG:1, ARG:0
+		CASE 2
+			;フェラ／クンニ
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_PENIS, ARG:1, ARG:0
+		CASE 3
+			;パイズリ
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_PENIS, ARG:0, ARG:1
+		CASE 4
+			;Ｖ挿入
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_VAGINA_PENIS, ARG:0, ARG:1
+		CASE 5
+			;Ａ挿入
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_ANAL_PENIS, ARG:0, ARG:1
+;		CASE 6
+;			;Ｕ挿入
+;			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_URETHRA_PENIS, ARG:0, ARG:1
+		CASE 7
+			;パイズリ
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_PENIS, ARG:1, ARG:0
+		CASE 8
+			;Ｖ挿入させる
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_VAGINA_PENIS, ARG:1, ARG:0
+		CASE 9
+			;Ａ挿入させる
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_ANAL_PENIS, ARG:1, ARG:0
+;		CASE 10
+;			;Ｕ挿入させる
+;			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_URETHRA_PENIS, ARG:1, ARG:0
+		CASE 11
+			;乳合わせ
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_BUST, ARG:1, ARG:0
+		CASE 12
+			;貝合わせ
+			CALL JUDGE_WORKSHOP_RESULT_PROMISCUITY_CLITORIS_CLITORIS, ARG:1, ARG:0
+		CASEELSE
+			;エラーのためスキップ
+			SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 8)
+				PRINTFORML ;;; 공방 난교 행위 내용 판정：행위 선택 이상
+			CONTINUE
+	ENDSELECT
+	;何にせよ行為に至った場合、同性であればその経験が+1 (ここではふたなりを考慮しない)
+	IF TALENT:(ARG:0):120 == 0 && TALENT:(ARG:1):120 == 0
+		;女性同士ならレズ経験
+		LOCAL@VALUE_WORKSHOP_EXP_12:(ARG:0) += 1
+		LOCAL@VALUE_WORKSHOP_EXP_12:(ARG:1) += 1
+	ELSEIF TALENT:(ARG:0):120 && TALENT:(ARG:1):120
+		;オトコ同士ならＢＬ経験
+		LOCAL@VALUE_WORKSHOP_EXP_13:(ARG:0) += 1
+		LOCAL@VALUE_WORKSHOP_EXP_13:(ARG:1) += 1
+	ENDIF
+NEXT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 행위 내용 판정 완료
+RETURN LOCAL:0
+
+;以下行為時の値設定は総じて暫定処理
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_MOUTH 工房乱交キス
+;ARG引数
+; 0 : 求めた側
+; 1 : 求められた側
+;LOCAL変数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_MOUTH, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 키스 개시
+;双方がキス経験+1
+LOCAL@VALUE_WORKSHOP_EXP_23:(ARG:0) += 1
+LOCAL@VALUE_WORKSHOP_EXP_23:(ARG:1) += 1
+;双方の恭順の珠増加
+LOCAL@VALUE_WORKSHOP_JUEL_012:(ARG:0) += 100
+LOCAL@VALUE_WORKSHOP_JUEL_012:(ARG:1) += 100
+;双方の欲情の珠増加
+LOCAL@VALUE_WORKSHOP_JUEL_013:(ARG:0) += 100
+LOCAL@VALUE_WORKSHOP_JUEL_013:(ARG:1) += 100
+;襲ったのであれば襲った側は先導の珠、襲われた側は否定の珠も増加
+IF (CFLAG:(ARG:1):691 & 1p3) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += 50
+ELSEIF (CFLAG:(ARG:0):691 & 1p3) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += 50
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 키스 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_HAND_GENITALS 工房乱交手淫
+;ARG引数
+; 0 : 弄る側(弄らされる側)
+; 1 : 弄られる側(弄らされる側)
+;LOCAL変数
+; 0 : 絶頂回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_HAND_GENITALS, ARG:0, ARG:1
+;弄られる側の絶頂回数に応じて弄る側の習得の珠と弄られる側の快Ｃの珠が増加
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 수음 개시
+IF TALENT:(ARG:1):120 || TALENT:(ARG:1):121
+	;弄られる側が射精可能であれば弄る側の技巧と弄られる側の射精中毒・遅漏・早漏に応じて弄られる側の射精経験と絶頂経験を同数増加
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0 TO 1
+			;技巧不足、絶頂に届かない
+			LOCAL = 0
+		CASE 2 TO 3
+			LOCAL = 1
+		CASE 4
+			LOCAL = 2
+		CASEELSE
+			LOCAL = 3
+	ENDSELECT
+	;弄られる側が射精中毒なら弄る側の手を使って無理やり射精するっぽい
+	SELECTCASE ABL:(ARG:1):37
+		CASE 0
+			;中毒じゃない以上変動もなし
+			LOCAL += 0
+		CASE 1 TO 2
+			;1回保障
+			LOCAL += 1
+		CASE 3 TO 4
+			;1回保障のうえで1.5倍
+			LOCAL += 1
+			TIMES LOCAL, 1.50
+		CASEELSE
+			;2回保障のうえで1.5倍
+			LOCAL += 2
+			TIMES LOCAL, 1.50
+	ENDSELECT
+	;早漏・遅漏
+	IF TALENT:(ARG:1):132
+		;さらに1.5倍(中毒じゃなく技巧不足なら0のまま)
+		TIMES LOCAL, 1.50
+	ELSEIF TALENT:(ARG:1):133
+		;射精回数1割減
+		TIMES LOCAL, 0.90
+	ENDIF
+	LOCAL@VALUE_WORKSHOP_EXP_03:(ARG:1) += LOCAL
+	;精液経験は射精回数に等しい
+	LOCAL@VALUE_WORKSHOP_EXP_04:(ARG:0) += LOCAL
+ELSE
+	;弄られる側が射精不可能であれば弄る側の技巧に応じて弄られる側の絶頂経験増加
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0 TO 1
+			;技巧不足、絶頂に届かない
+			LOCAL = 0
+		CASE 2
+			LOCAL = 1
+		CASE 3
+			LOCAL = 2
+		CASE 4
+			LOCAL = 4
+		CASEELSE
+			LOCAL = 8
+	ENDSELECT
+ENDIF
+LOCAL@VALUE_WORKSHOP_EXP_02:(ARG:1) += LOCAL
+;弄られる側の絶頂回数に応じて弄る側の習得の珠と弄られる側の快Ｃの珠が増加
+SELECTCASE LOCAL
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 200
+ENDSELECT
+;弄る側は先導の珠も増加
+LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 수음 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_PENIS 工房乱交口淫
+;ARG引数
+; 0 : 口を使う側(口を犯される側)
+; 1 : 舐められる側(しゃぶらせる側)
+;LOCAL変数
+; 0 : 絶頂回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_MOUTH_PENIS, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 구강 성교 개시
+IF TALENT:(ARG:1):120 || TALENT:(ARG:1):121
+	;しゃぶられる(しゃぶらせる)側が射精可能であれば口を使う(犯される)側の技巧としゃぶられる(しゃぶらせる)側の射精中毒・遅漏・早漏に応じてしゃぶられる(しゃぶらせる)側の射精経験と絶頂経験を同数増加
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0 TO 1
+			;技巧不足、絶頂に届かない
+			LOCAL = 0
+		CASE 2 TO 3
+			LOCAL = 1
+		CASE 4
+			LOCAL = 2
+		CASEELSE
+			LOCAL = 3
+	ENDSELECT
+	;しゃぶられる(しゃぶらせる)側が射精中毒なら口を使う(犯される)側の手を使って無理やり射精するっぽい
+	SELECTCASE ABL:(ARG:1):37
+		CASE 0
+			;中毒じゃない以上変動もなし
+			LOCAL += 0
+		CASE 1 TO 2
+			;1回保障
+			LOCAL += 1
+		CASE 3 TO 4
+			;1回保障のうえで1.5倍
+			LOCAL += 1
+			TIMES LOCAL, 1.50
+		CASEELSE
+			;2回保障のうえで1.5倍
+			LOCAL += 2
+			TIMES LOCAL, 1.50
+	ENDSELECT
+	;早漏・遅漏
+	IF TALENT:(ARG:1):132
+		;さらに1.5倍(中毒じゃなく技巧不足なら0のまま)
+		TIMES LOCAL, 1.50
+	ELSEIF TALENT:(ARG:1):133
+		;射精回数1割減
+		TIMES LOCAL, 0.90
+	ENDIF
+	LOCAL@VALUE_WORKSHOP_EXP_03:(ARG:1) += LOCAL
+	;精液経験は射精回数の3倍
+	LOCAL@VALUE_WORKSHOP_EXP_04:(ARG:0) += LOCAL * 3
+ELSE
+	;しゃぶられる(しゃぶらせる)側が射精不可能であれば口を使う(犯される)側の技巧に応じてしゃぶられる(しゃぶらせる)側の絶頂経験増加
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0 TO 1
+			;技巧不足、絶頂に届かない
+			LOCAL = 0
+		CASE 2
+			LOCAL = 1
+		CASE 3
+			LOCAL = 2
+		CASE 4
+			LOCAL = 4
+		CASEELSE
+			LOCAL = 8
+	ENDSELECT
+ENDIF
+LOCAL@VALUE_WORKSHOP_EXP_02:(ARG:1) += LOCAL
+;口を使う(犯される)側のフェラ経験もしゃぶられる(しゃぶらせる)側の絶頂回数だけ増加
+;しゃぶられる(しゃぶらせる)側にペニスがあるか肥大陰核の場合、しゃぶられる(しゃぶらせる)側の絶頂回数に応じて口を使う(犯される)側の習得の珠としゃぶられる(しゃぶらせる)側の快Ｃの珠が増加
+SIF TALENT:(ARG:1):120 || TALENT:(ARG:1):121 || TALENT:(ARG:1):1
+	LOCAL@VALUE_WORKSHOP_EXP_22:(ARG:0) += LOCAL
+SELECTCASE LOCAL
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 200
+ENDSELECT
+;"襲った側"がはっきりするならばその側は先導の珠も増加
+IF (CFLAG:(ARG:0):691 & 1p3) == 0
+	;口を犯される側が襲われているならば舐めさせる側に先導の珠
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	;襲われた側には絶頂回数に応じて否定の珠が入る
+	IF TALENT:(ARG:1):120 || TALENT:(ARG:1):121
+		LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL * 150
+	ELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL * 50
+	ENDIF
+ELSEIF (CFLAG:(ARG:1):691 & 1p3) == 0
+	;舐められる側が襲われているならば口を使う側に先導の珠
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	;襲われた側には絶頂回数に応じて否定の珠が入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += LOCAL * 50
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 구강 성교 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_PENIS 工房乱交パイズリ
+;ARG引数
+; 0 : 挟む側(挟まされる側)
+; 1 : 挟まれる側(挟ませる側)
+;LOCAL変数
+; 0 : 挟む側の絶頂回数
+; 1 : 挟まれる側の絶頂回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_PENIS, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 파이즈리 개시
+;挟む(挟まされる)側のＢサイズと技巧に応じて双方の絶頂回数を変動
+;挟む(挟まされる)側はＢ感覚でも変動、母乳体質なら噴乳中毒でも変動
+IF TALENT:(ARG:0):113
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0
+			;技巧不足、絶頂に届かない
+			LOCAL:0 = ABL:(ARG:0):3 / 4 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 3 + 1) # 1)
+			LOCAL:1 = 0
+		CASE 1 TO 2
+			LOCAL:0 = ABL:(ARG:0):3 / 2 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 3 + 1) # 1)
+			LOCAL:1 = 1
+		CASE 3
+			LOCAL:0 = ABL:(ARG:0):3 / 2 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 2 + 1) # 1)
+			LOCAL:1 = 2
+		CASE 4
+			LOCAL:0 = ABL:(ARG:0):3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 2 + 1) # 1)
+			LOCAL:1 = 3
+		CASEELSE
+			LOCAL:0 = ABL:(ARG:0):3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 + 1) # 1)
+			LOCAL:1 = 4
+	ENDSELECT
+ELSEIF TALENT:(ARG:0):112
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0 TO 1
+			;技巧不足、絶頂に届かない
+			LOCAL:0 = ABL:(ARG:0):3 / 3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 4 + 1) # 1)
+			LOCAL:1 = 0
+		CASE 2 TO 3
+			LOCAL:0 = ABL:(ARG:0):3 / 2 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 3 + 1) # 1)
+			LOCAL:1 = 1
+		CASE 4
+			LOCAL:0 = ABL:(ARG:0):3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 2 + 1) # 1)
+			LOCAL:1 = 2
+		CASEELSE
+			LOCAL:0 = ABL:(ARG:0):3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 + 1) # 1)
+			LOCAL:1 = 3
+	ENDSELECT
+ELSE
+	SELECTCASE ABL:(ARG:0):12
+		CASE 0 TO 1
+			;技巧不足、絶頂に届かない
+			LOCAL:0 = ABL:(ARG:0):3 / 2 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 4 + 1) # 1)
+			LOCAL:1 = 0
+		CASE 2 TO 3
+			LOCAL:0 = ABL:(ARG:0):3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 3 + 1) # 1)
+			LOCAL:1 = 1
+		CASEELSE
+			LOCAL:0 = ABL:(ARG:0):3 * (TALENT:(ARG:0):134 ? (ABL:(ARG:0):34 / 2 + 1) # 1)
+			TIMES LOCAL:0, 1.50
+			LOCAL:1 = 2
+	ENDSELECT
+ENDIF
+IF TALENT:(ARG:1):120 || TALENT:(ARG:1):121
+	;挟まれる(挟ませる)側が射精可能であれば射精中毒・遅漏・早漏に応じて挟まれる(挟ませる)側の射精経験と絶頂経験を同数増加
+	SELECTCASE ABL:(ARG:1):37
+		CASE 0
+			;中毒じゃない以上変動もなし
+			LOCAL:1 += 0
+		CASE 1 TO 2
+			;1回保障
+			LOCAL:1 += 1
+		CASE 3 TO 4
+			;1回保障のうえで1.5倍
+			LOCAL:1 += 1
+			TIMES LOCAL:1, 1.50
+		CASEELSE
+			;2回保障のうえで1.5倍
+			LOCAL:1 += 2
+			TIMES LOCAL:1, 1.50
+	ENDSELECT
+	;早漏・遅漏
+	IF TALENT:(ARG:1):132
+		;さらに1.5倍(中毒じゃなく技巧不足なら0のまま)
+		TIMES LOCAL:1, 1.50
+	ELSEIF TALENT:(ARG:1):133
+		;射精回数1割減
+		TIMES LOCAL:1, 0.90
+	ENDIF
+	LOCAL@VALUE_WORKSHOP_EXP_03:(ARG:1) += LOCAL:1
+	;精液経験は射精回数の3倍
+	LOCAL@VALUE_WORKSHOP_EXP_04:(ARG:0) += LOCAL:1 * 3
+ELSE
+	;肥大陰核ならＣ感覚のみで達する回数変動
+	SELECTCASE ABL:(ARG:1):0
+		CASE 0 TO 1
+			;変動なし
+			LOCAL:1 += 0
+		CASE 2 TO 3
+			;1回保障
+			LOCAL:1 += 1
+		CASE 4
+			;1回保障のうえで1.5倍
+			LOCAL:1 += 1
+			TIMES LOCAL:1, 1.50
+		CASEELSE
+			;2回保障のうえで1.5倍
+			LOCAL:1 += 2
+			TIMES LOCAL:1, 1.50
+	ENDSELECT
+	;で、1.5倍
+	TIMES LOCAL:1, 1.50
+ENDIF
+LOCAL@VALUE_WORKSHOP_EXP_02:(ARG:0) += LOCAL:0
+LOCAL@VALUE_WORKSHOP_EXP_02:(ARG:1) += LOCAL:1
+;噴乳経験はＢ絶頂と同回数とする
+SIF TALENT:(ARG:0):134
+	LOCAL@VALUE_WORKSHOP_EXP_05:(ARG:0) += LOCAL:0
+;フェラ経験はＣ絶頂と同回数とする
+LOCAL@VALUE_WORKSHOP_EXP_22:(ARG:0) += LOCAL:1
+;挟む(挟まされる)側の絶頂回数に応じて挟む(挟まされる)側の快Ｂの珠が増加
+SELECTCASE LOCAL:1
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * 50
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * LOCAL:0 * 1000
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * LOCAL:0 * 2000
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * LOCAL:0 * 4000
+ENDSELECT
+;挟まれる(挟ませる)側の絶頂回数に応じて挟む(挟まされる)側の習得の珠と挟まれる(挟ませる)側の快Ｃの珠が増加
+SELECTCASE LOCAL:1
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL * 200
+ENDSELECT
+;"襲った側"がはっきりするならばその側は先導の珠も増加
+IF (CFLAG:(ARG:0):691 & 1p3) == 0
+	;挟まされる側が襲われているならば挟ませる側に先導の珠
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	;襲われた側には絶頂回数に応じて否定の珠が入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL:0 * 50
+ELSEIF (CFLAG:(ARG:1):691 & 1p3) == 0
+	;挟まれる側が襲われているならば挟む側に先導の珠
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	;襲われた側には絶頂回数に応じて否定の珠が入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += LOCAL:1 * 50
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 파이즈리 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_VAGINA_PENIS 工房乱交セックス
+;ARG引数
+; 0 : 挿入される側
+; 1 : 挿入側
+;LOCAL変数
+; 0 : 挿入される側の絶頂回数
+; 1 : 挿入側の絶頂回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_VAGINA_PENIS, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 섹스 개시
+;互いの技巧に応じて双方の絶頂回数を変動
+;挿入される側はＶ感覚でも変動
+SELECTCASE ABL:(ARG:1):12
+	CASE 0 TO 1
+		;技巧不足、絶頂に届かない
+		LOCAL:0 = ABL:(ARG:0):1 / 2
+		LOCAL:1 = 0
+	CASE 2 TO 3
+		LOCAL:0 = ABL:(ARG:0):1 + 1
+		LOCAL:1 = 1
+	CASEELSE
+		LOCAL:0 = ABL:(ARG:0):1 + 1
+		TIMES LOCAL:0, 1.50
+		LOCAL:1 = 2
+ENDSELECT
+SELECTCASE ABL:(ARG:0):12
+	CASE 0 TO 1
+		;技巧不足、絶頂に届かない
+		LOCAL:0 += 0
+		LOCAL:1 += ABL:(ARG:1):0 / 2
+	CASE 2 TO 3
+		LOCAL:0 += 1
+		LOCAL:1 += ABL:(ARG:1):0 + 1
+	CASEELSE
+		LOCAL:0 += 2
+		LOCAL:1 += ABL:(ARG:1):0 + 1
+		TIMES LOCAL:1, 1.50
+ENDSELECT
+IF TALENT:(ARG:1):120 || TALENT:(ARG:1):121
+	;挿入側が射精可能であれば射精中毒・遅漏・早漏にも応じて挿入側の射精経験と絶頂経験を同数増加
+	SELECTCASE ABL:(ARG:1):37
+		CASE 0
+			;中毒じゃない以上変動もなし
+			LOCAL:1 += 0
+		CASE 1 TO 2
+			;1回保障
+			LOCAL:1 += 1
+		CASE 3 TO 4
+			;1回保障のうえで1.5倍
+			LOCAL:1 += 1
+			TIMES LOCAL:1, 1.50
+		CASEELSE
+			;2回保障のうえで1.5倍
+			LOCAL:1 += 2
+			TIMES LOCAL:1, 1.50
+	ENDSELECT
+	;早漏・遅漏
+	IF TALENT:(ARG:1):132
+		;さらに1.5倍(中毒じゃなく技巧不足なら0のまま)
+		TIMES LOCAL:1, 1.50
+	ELSEIF TALENT:(ARG:1):133
+		;射精回数1割減
+		TIMES LOCAL:1, 0.90
+	ENDIF
+	LOCAL@VALUE_WORKSHOP_EXP_03:(ARG:1) += LOCAL:1
+	;精液経験は射精回数の3倍
+	LOCAL@VALUE_WORKSHOP_EXP_04:(ARG:0) += LOCAL:1 * 3
+ELSE
+	;肥大陰核なら射精による絶頂限界がない分絶頂回数が増加
+	TIMES LOCAL:1, 1.50
+ENDIF
+LOCAL@VALUE_WORKSHOP_EXP_02:(ARG:1) += LOCAL:1
+;挿入される側が処女かつこのターンに工房でのＶ経験がない場合は破瓜のため苦痛の珠追加
+SIF TALENT:(ARG:0):0 && LOCAL@VALUE_WORKSHOP_EXP_00:(ARG:0) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_016:(ARG:0) += 200
+;Ｖ経験は挿入する側の絶頂回数に等しい
+LOCAL@VALUE_WORKSHOP_EXP_00:(ARG:0) += LOCAL:1
+;挿入される側の絶頂回数に応じて挿入する側の習得の珠と挿入される側の快Ｖの珠が増加
+SELECTCASE LOCAL:0
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_001:(ARG:0) += (ABL:(ARG:0):1 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_001:(ARG:0) += (ABL:(ARG:0):1 + 1) * LOCAL:0 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0 * 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_001:(ARG:0) += (ABL:(ARG:0):1 + 1) * LOCAL:0 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0 * 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_001:(ARG:0) += (ABL:(ARG:0):1 + 1) * LOCAL:0 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0 * 200
+ENDSELECT
+;挿入する側の絶頂回数に応じて挿入する側の習得の珠と挟まれる(挟ませる)側の快Ｃの珠が増加
+SELECTCASE LOCAL:1
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1 * 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1 * 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1 * 200
+ENDSELECT
+IF (CFLAG:(ARG:0):691 & 1p3) == 0
+	;挿入される側が襲われているならば挿入側に先導の珠と強姦経験、挿入される側に被強姦経験
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	LOCAL@VALUE_WORKSHOP_EXP_80:(ARG:1) += 1
+	LOCAL@VALUE_WORKSHOP_EXP_81:(ARG:0) += 1
+	;輪姦フラグを確認
+	IF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) == -1
+		LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) = ARG:1
+	ELSEIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) == ARG:1
+		LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) = -2
+	ENDIF
+	;襲われた側には絶頂回数に応じて否定の珠がごそっと入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL:0 * 200
+	;襲った側が主人でなくて相性も高くないか、襲った側が主人で恋愛系素質が無い場合は恐怖の珠もごそっと入れたい(今回見送り)
+ELSEIF (CFLAG:(ARG:1):691 & 1p3) == 0
+	;挿入側が襲われているならば挿入される側に先導の珠
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	;襲われた側には絶頂回数に応じて否定の珠がごそっと入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += LOCAL:1 * 200
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 섹스 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_ANAL_PENIS 工房乱交アナルセックス
+;ARG引数
+; 0 : 挿入される側
+; 1 : 挿入側
+;LOCAL変数
+; 0 : 挿入される側の絶頂回数
+; 1 : 挿入側の絶頂回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_ANAL_PENIS, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 애널 섹스 개시
+;互いの技巧に応じて双方の絶頂回数を変動
+;挿入される側はＡ感覚でも変動
+SELECTCASE ABL:(ARG:1):12
+	CASE 0 TO 1
+		;技巧不足、絶頂に届かない
+		LOCAL:0 = ABL:(ARG:0):2 / 2
+		LOCAL:1 = 0
+	CASE 2 TO 3
+		LOCAL:0 = ABL:(ARG:0):2 + 1
+		LOCAL:1 = 1
+	CASEELSE
+		LOCAL:0 = ABL:(ARG:0):2 + 1
+		TIMES LOCAL:0, 1.50
+		LOCAL:1 = 2
+ENDSELECT
+SELECTCASE ABL:(ARG:0):12
+	CASE 0 TO 1
+		;技巧不足、絶頂に届かない
+		LOCAL:0 += 0
+		LOCAL:1 += ABL:(ARG:1):0 / 2
+	CASE 2 TO 3
+		LOCAL:0 += 1
+		LOCAL:1 += ABL:(ARG:1):0 + 1
+	CASEELSE
+		LOCAL:0 += 2
+		LOCAL:1 += ABL:(ARG:1):0 + 1
+		TIMES LOCAL:1, 1.50
+ENDSELECT
+IF TALENT:(ARG:1):120 || TALENT:(ARG:1):121
+	;挿入側が射精可能であれば射精中毒・遅漏・早漏にも応じて挿入側の射精経験と絶頂経験を同数増加
+	SELECTCASE ABL:(ARG:1):37
+		CASE 0
+			;中毒じゃない以上変動もなし
+			LOCAL:1 += 0
+		CASE 1 TO 2
+			;1回保障
+			LOCAL:1 += 1
+		CASE 3 TO 4
+			;1回保障のうえで1.5倍
+			LOCAL:1 += 1
+			TIMES LOCAL:1, 1.50
+		CASEELSE
+			;2回保障のうえで1.5倍
+			LOCAL:1 += 2
+			TIMES LOCAL:1, 1.50
+	ENDSELECT
+	;早漏・遅漏
+	IF TALENT:(ARG:1):132
+		;さらに1.5倍(中毒じゃなく技巧不足なら0のまま)
+		TIMES LOCAL:1, 1.50
+	ELSEIF TALENT:(ARG:1):133
+		;射精回数1割減
+		TIMES LOCAL:1, 0.90
+	ENDIF
+	LOCAL@VALUE_WORKSHOP_EXP_03:(ARG:1) += LOCAL:1
+	;精液経験は射精回数の3倍
+	LOCAL@VALUE_WORKSHOP_EXP_04:(ARG:0) += LOCAL:1 * 3
+ELSE
+	;肥大陰核なら射精による絶頂限界がない分絶頂回数が増加
+	TIMES LOCAL:1, 1.50
+ENDIF
+LOCAL@VALUE_WORKSHOP_EXP_02:(ARG:1) += LOCAL:1
+;Ａ経験は挿入する側の絶頂回数に等しい
+LOCAL@VALUE_WORKSHOP_EXP_01:(ARG:0) += LOCAL:1
+;挿入される側の絶頂回数に応じて挿入する側の習得の珠と挿入される側の快Ａの珠が増加
+SELECTCASE LOCAL:0
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_002:(ARG:0) += (ABL:(ARG:0):2 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_002:(ARG:0) += (ABL:(ARG:0):2 + 1) * LOCAL:0 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0 * 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_002:(ARG:0) += (ABL:(ARG:0):2 + 1) * LOCAL:0 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0 * 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_002:(ARG:0) += (ABL:(ARG:0):2 + 1) * LOCAL:0 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0 * 200
+ENDSELECT
+;挿入する側の絶頂回数に応じて挿入される側の習得の珠と挿入する側の快Ｃの珠が増加
+SELECTCASE LOCAL:1
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1* 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1* 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:0):0 + 1) * LOCAL:1* 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 200
+ENDSELECT
+IF (CFLAG:(ARG:0):691 & 1p3) == 0
+	;挿入される側が襲われているならば挿入側に先導の珠と強姦経験、挿入される側に被強姦経験
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	LOCAL@VALUE_WORKSHOP_EXP_80:(ARG:1) += 1
+	LOCAL@VALUE_WORKSHOP_EXP_81:(ARG:0) += 1
+	;輪姦フラグを確認
+	IF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) == -1
+		LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) = ARG:1
+	ELSEIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) == ARG:1
+		LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(ARG:0) = -2
+		LOCAL@VALUE_WORKSHOP_EXP_82:(ARG:0) += 1
+	ENDIF
+	;襲われた側には絶頂回数に応じて否定の珠がごそっと入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL:0 * 200
+ELSEIF (CFLAG:(ARG:1):691 & 1p3) == 0
+	;挿入側が襲われているならば挿入される側に先導の珠
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	;襲われた側には絶頂回数に応じて否定の珠がごそっと入る
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += LOCAL:1 * 200
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 애널 섹스 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_PENIS_URETHRA 工房乱交尿道挿入
+;保留中のため何もしない
+;ARG引数
+; 0 : 挿入側
+; 1 : 挿入される側
+;LOCAL変数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_PENIS_URETHRA, ARG:0, ARG:1
+;IF (CFLAG:(ARG:0):691 & 1p3) == 0
+;	;挿入側が襲われているならば挿入される側に先導の珠
+;	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+;ELSEIF (CFLAG:(ARG:1):691 & 1p3) == 0
+;	;挿入される側が襲われているならば挿入側に先導の珠
+;	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+;ENDIF
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_BUST 工房乱交胸あわせ
+;ARG引数
+; 0 : 求めた側
+; 1 : 求められた側
+;LOCAL変数
+; 0 : 求めた側の絶頂回数
+; 1 : 求められた側の絶頂回数
+; 2 : 噴乳による修正値(%)
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_BUST_BUST, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 가슴 맞대기 개시
+;超暫定処理。絶頂回数：技巧×技巧×Ｂ感覚×(バストサイズによる修正)×(バストサイズごとの噴乳中毒による修正)
+LOCAL:0 = (ABL:(ARG:0):12 / 2 + 1) * (ABL:(ARG:1):12 / 2 + 1) * (ABL:(ARG:0):3 / 2 + 1) - 1
+LOCAL:1 = (ABL:(ARG:0):12 / 2 + 1) * (ABL:(ARG:1):12 / 2 + 1) * (ABL:(ARG:1):3 / 2 + 1) - 1
+IF TALENT:(ARG:0):110
+	TIMES LOCAL:0, 1.75
+	LOCAL:2 = 10
+ELSEIF TALENT:(ARG:0):111
+	TIMES LOCAL:0, 1.5
+	LOCAL:2 = 25
+ELSEIF TALENT:(ARG:0):112
+	LOCAL:2 = 75
+ELSEIF TALENT:(ARG:0):113
+	TIMES LOCAL:0, 0.80
+	LOCAL:2 = 90
+ELSE
+	TIMES LOCAL:0, 1.25
+	LOCAL:2 = 50
+ENDIF
+IF TALENT:(ARG:1):134
+	LOCAL:1 *= LOCAL:2 * (ABL:(ARG:1):34 + 1)
+	LOCAL:1 /= 100
+ENDIF
+IF TALENT:(ARG:1):110
+	TIMES LOCAL:1, 1.75
+	LOCAL:2 = 10
+ELSEIF TALENT:(ARG:1):111
+	TIMES LOCAL:1, 1.5
+	LOCAL:2 = 25
+ELSEIF TALENT:(ARG:1):112
+	LOCAL:2 = 75
+ELSEIF TALENT:(ARG:1):113
+	TIMES LOCAL:1, 0.80
+	LOCAL:2 = 90
+ELSE
+	TIMES LOCAL:1, 1.25
+	LOCAL:2 = 50
+ENDIF
+IF TALENT:(ARG:1):134
+	LOCAL:1 *= LOCAL:2 * (ABL:(ARG:1):34 + 1)
+	LOCAL:1 /= 100
+ENDIF
+;相手の絶頂回数で自分の習得の珠が、自分の絶頂回数で自分の快Ｂの珠が貯まる
+SELECTCASE LOCAL:0
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * LOCAL:0 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0* 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * LOCAL:0 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0* 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:0) += (ABL:(ARG:0):3 + 1) * LOCAL:0 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0* 200
+ENDSELECT
+SELECTCASE LOCAL:1
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:1) += (ABL:(ARG:1):3 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:1) += (ABL:(ARG:1):3 + 1) * LOCAL:1 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:1) += (ABL:(ARG:1):3 + 1) * LOCAL:1 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_003:(ARG:1) += (ABL:(ARG:1):3 + 1) * LOCAL:1 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 200
+ENDSELECT
+;襲ったのであれば襲った側は先導の珠、襲われた側は絶頂回数にあわせて否定の珠も増加
+IF (CFLAG:(ARG:1):691 & 1p3) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += LOCAL:1 * 50
+ELSEIF (CFLAG:(ARG:0):691 & 1p3) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL:0 * 50
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 가슴 맞대기 완료
+RETURN 0
+
+;=======================================;
+;JUDGE_WORKSHOP_RESULT_PROMISCUITY_CLITORIS_CLITORIS 工房乱交貝合わせ
+;ARG引数
+; 0 : 求めた側
+; 1 : 求められた側
+;LOCAL変数
+; 0 : 求めた側の絶頂回数
+; 1 : 求められた側の絶頂回数
+;=======================================;
+@JUDGE_WORKSHOP_RESULT_PROMISCUITY_CLITORIS_CLITORIS, ARG:0, ARG:1
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 조개 맞대기 개시
+;超暫定処理。絶頂回数：(技巧/2)×(技巧/2)×(Ｃ感覚/2)-1、1/2時の端数切上げ、10回超えたら残りを半減
+LOCAL:0 = (ABL:(ARG:0):12 / 2 + 1) * (ABL:(ARG:1):12 / 2 + 1) * (ABL:(ARG:0):0 / 2 + 1) - 1
+LOCAL:1 = (ABL:(ARG:0):12 / 2 + 1) * (ABL:(ARG:1):12 / 2 + 1) * (ABL:(ARG:1):0 / 2 + 1) - 1
+SIF LOCAL:0 > 10
+	LOCAL:0 = (LOCAL:0 - 10) / 2 + 10
+SIF LOCAL:1 > 10
+	LOCAL:1 = (LOCAL:1 - 10) / 2 + 10
+;相手の絶頂回数で自分の習得の珠が、自分の絶頂回数で自分の快Ｃの珠が貯まる
+SELECTCASE LOCAL:0
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:0) += (ABL:(ARG:0):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:0) += (ABL:(ARG:0):0 + 1) * LOCAL:0 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0* 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:0) += (ABL:(ARG:0):0 + 1) * LOCAL:0 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0* 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:0) += (ABL:(ARG:0):0 + 1) * LOCAL:0 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:1) += LOCAL:0* 200
+ENDSELECT
+SELECTCASE LOCAL:1
+	CASE 0
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:1):0 + 1) * 50
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += 10
+	CASE 1, 2
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:1):0 + 1) * LOCAL:1 * 1000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 100
+	CASE 3 TO 5
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:1):0 + 1) * LOCAL:1 * 2000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 100
+	CASEELSE
+		LOCAL@VALUE_WORKSHOP_JUEL_000:(ARG:1) += (ABL:(ARG:1):0 + 1) * LOCAL:1 * 4000
+		LOCAL@VALUE_WORKSHOP_JUEL_011:(ARG:0) += LOCAL:1* 200
+ENDSELECT
+;襲ったのであれば襲った側は先導の珠、襲われた側は絶頂回数にあわせて否定の珠も増加
+IF (CFLAG:(ARG:1):691 & 1p3) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:0) += 50
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:1) += LOCAL:1 * 50
+ELSEIF (CFLAG:(ARG:0):691 & 1p3) == 0
+	LOCAL@VALUE_WORKSHOP_JUEL_032:(ARG:1) += 50
+	LOCAL@VALUE_WORKSHOP_JUEL_100:(ARG:0) += LOCAL:0 * 50
+ENDIF
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; %조사선택(CALLNAME:(ARG:0), "과")% %CALLNAME:(ARG:1)%의 공방 난교 조개 맞대기 완료
+RETURN 0
+
+;=======================================;
+;RESULT_WORKSHOP_PROMISCUITY 工房乱交結果報告
+;LOCAL変数
+;  0 : 反復子
+;  1 : 口上等の表示開始キャラ人数番(乱数)
+;  2 : カウンタ
+;  3 : 未表示残り人数
+; 10 : 強姦された人数
+; 11 : 輪姦された人数
+; 12 : 大乱交参加者人数
+; 13 : 望んで乱交に参加している人数
+;LOCALS変数
+; 0 : 作業内容
+;=======================================;
+@RESULT_WORKSHOP_PROMISCUITY
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 2)
+	PRINTFORML ;;; 공방 난교 결과 보고 시작   난교 인원：{FLAG:1136}
+;性行為参加者数が2人以上いないのであれば即終了
+SIF FLAG:1136 < 2
+	RETURN 0
+;口上表示管理用変数初期化
+CALL VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO
+;各種人数確認
+LOCAL:10 = 0
+LOCAL:11 = 0
+LOCAL:12 = 0
+LOCAL:13 = 0
+FOR LOCAL:0, 0, CHARANUM
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 난교 상황 확인  %CALLNAME:(LOCAL:0)%({LOCAL:0})：{LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0)}
+	;乱交不参加ならスキップ
+	SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+		CONTINUE
+	;強姦されているなら強姦された人数としてカウント
+	SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 4
+		LOCAL:10 += 1
+	;輪姦されているなら輪姦された人数としてカウント
+	SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 8
+		LOCAL:11 += 1
+	;望んで乱交に参加しているならその人数としてカウント
+	SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 16
+		LOCAL:13 += 1
+	;乱交参加者としてカウント
+	LOCAL:12 += 1
+NEXT
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; 공방 난교 결과 보고 시작   실제 난교 인원：{LOCAL:12}
+;大乱交参加者が2人以上いなければ即終了
+SIF LOCAL:12 < 2
+	RETURN 0
+;乱交参加者一気表示
+;乱交の筆頭を選択
+LOCAL:1 = RAND:(LOCAL:13)
+LOCAL:2 = 0
+FOR LOCAL:0, 0, CHARANUM
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 공방 난교 결과 보고   참여자 대표 설정：{LOCAL:0} %CALLNAME:(LOCAL:0)%…… 난교 찬가 상황 플래그 {LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0)}
+	;乱交不参加ならスキップ
+	SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+		CONTINUE
+	;乱交に望んで参加していないならスキップ
+	SIF (LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 16) == 0
+		CONTINUE
+	;該当者であれば選択完了
+	SIF LOCAL:2 == LOCAL:1
+		BREAK
+	;そうでなければチェック数をカウント
+	LOCAL:2 += 1
+NEXT
+;BREAK時に番号がズレるため-1が必要
+LOCAL:4 = LOCAL:0 - 1
+PRINTW
+PRINTFORML %CALLNAME:(LOCAL:4)%\@ LOCAL:13 > 1 ? %조사만처리(CALLNAME:(LOCAL:4),"를")% 비롯한 {LOCAL:13}명은 # %조사만처리(CALLNAME:(LOCAL:4),"는")% \@ 욕정에 빠져, 서로가 서로를 원하는 듯 혼음을 시작했다.
+IF LOCAL:12 > LOCAL:13
+	;乱交の筆頭を選択
+	LOCAL:1 = RAND:(LOCAL:12 - LOCAL:13)
+	LOCAL:2 = 0
+	FOR LOCAL:0, 0, CHARANUM
+		;乱交不参加ならスキップ
+		SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+			CONTINUE
+		;乱交に望んで参加しているならスキップ
+		SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 16
+			CONTINUE
+		;該当者であれば選択完了
+		SIF LOCAL:2 == LOCAL:1
+			BREAK
+		;そうでなければチェック数をカウント
+		LOCAL:2 += 1
+	NEXT
+	;BREAK時に番号がズレるため-1が必要
+	LOCAL:0 -= 1
+	PRINTW
+	IF LOCAL:12 - LOCAL:13 > 0
+		PRINTFORM 그 난교는 %CALLNAME:(LOCAL:0)%\@ LOCAL:12 - LOCAL:13 > 1 ? %조사만처리(CALLNAME:(LOCAL:0),"를")% 포함한 {LOCAL:12 - LOCAL:13}명이 # %조사만처리(CALLNAME:(LOCAL:0),"가")% \@ 얽혀, 총 {LOCAL:12}명의 대난교로 번졌다
+		IF LOCAL:10 > 0
+			IF LOCAL:11 > 0
+				;被輪姦の代表を選択
+				LOCAL:1 = RAND:(LOCAL:11)
+				LOCAL:2 = 0
+				FOR LOCAL:0, 0, CHARANUM
+					;乱交不参加ならスキップ
+					SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+						CONTINUE
+					;輪姦されていないならスキップ
+					SIF (LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 8) == 0
+						CONTINUE
+					;該当者であれば選択完了
+					SIF LOCAL:2 == LOCAL:1
+						BREAK
+					;そうでなければチェック数をカウント
+					LOCAL:2 += 1
+				NEXT
+				;BREAK時に番号がズレるため-1が必要
+				LOCAL:0 -= 1
+				PRINTL 
+				PRINTFORM \@ LOCAL:12 - LOCAL:13 > LOCAL:11 ? 특히 # \@%CALLNAME:(LOCAL:0)%\@ LOCAL:11 > 1 ? 일행 {LOCAL:11}명은 # %조사만처리(CALLNAME:(LOCAL:0),"는")% \@ 저항도 뚫린 채, 교대로 범해졌다
+			ENDIF
+			IF LOCAL:10 - LOCAL:11 > 0
+				IF LOCAL:11 == 0
+					LOCAL:1 = 0
+					LOCAL:2 = 0
+				ELSE
+					;被強姦の代表を選択
+					LOCAL:1 = RAND:(LOCAL:11)
+					LOCAL:2 = 0
+				ENDIF
+				FOR LOCAL:0, 0, CHARANUM
+					;乱交不参加ならスキップ
+					SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+						CONTINUE
+					;輪姦されているならスキップ
+					SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 8
+						CONTINUE
+					;強姦されていないならスキップ
+					SIF (LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) & 4) == 0
+						CONTINUE
+					;該当者であれば選択完了
+					SIF LOCAL:2 == LOCAL:1
+						BREAK
+					;そうでなければチェック数をカウント
+					LOCAL:2 += 1
+				NEXT
+				;BREAK時に番号がズレるため-1が必要
+				LOCAL:0 -= 1
+				IF LOCAL:11 > 0
+					PRINTL 
+					PRINTFORM 또한, %CALLNAME:(LOCAL:0)%\@ LOCAL:10 - LOCAL:11 > 1 ? 일행 {LOCAL:10 - LOCAL:11}명도 각각, # 도 \@
+				ELSE
+					PRINTFORM %CALLNAME:(LOCAL:0)%\@ LOCAL:10 - LOCAL:11 > 1 ? 일행 {LOCAL:10 - LOCAL:11}명은 각각, # %조사만처리(CALLNAME:(LOCAL:0),"는")% \@
+				ENDIF
+				PRINTFORM 한 명에게 꿰뚫리며, 그 몸을 요동치고 있었다
+			ENDIF
+		ELSE
+			PRINTL 
+			PRINTFORM 연루된 {LOCAL:12 - LOCAL:13}명은, 그저 희롱당하며 몸부림치고 있었다
+		ENDIF
+		PRINTL ……
+	ENDIF
+ENDIF
+;;口上等の表示(全員表示する？)
+;;乱交参加中のキャラ数を未表示人数として取得
+;LOCAL:13 = LOCAL:12
+;WHILE LOCAL:13 > 0
+;	;最初の表示キャラをランダム選択
+;	LOCAL:1 = RAND:(LOCAL:13)
+;	LOCAL:2 = 0
+;	FOR LOCAL:0, 0, CHARANUM
+;		;乱交に不参加であればスキップ
+;		SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+;			CONTINUE
+;		;該当者であれば選択終了
+;		SIF LOCAL:1 == LOCAL:2
+;			BREAK
+;		;違うならチェック人数をカウント
+;		LOCAL:2 += 1
+;	NEXT
+;	;BREAK時に番号がズレるため-1が必要
+;	LOCAL:0 -= 1
+;	
+;	LOCAL:13 -= 1
+;WEND
+;乱交参加者のパラメ表示
+FOR LOCAL:0, 0, CHARANUM
+	;乱交に不参加であればスキップ
+	SIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO:(LOCAL:0) < 0
+		CONTINUE
+	;パラメ表示
+	PRINTW
+	PRINTFORML %CALLNAME:(LOCAL:0)%
+	CALL VALUE_WORKSHOP_SUM, LOCAL:0, 0, 2
+	;表示完了フラグをセット
+	SIF (CFLAG:(LOCAL:0):691 & 1p9) == 0
+		CFLAG:(LOCAL:0):691 |= 1p9
+	;行動内容を元に戻す
+	SELECTCASE CFLAG:(LOCAL:0):690
+		CASE 100 TO 199
+			CFLAG:(LOCAL:0):690 = 0
+		CASE 200 TO 299
+			CFLAG:(LOCAL:0):690 = 1
+		CASE 300 TO 399
+			CFLAG:(LOCAL:0):690 = 2
+		CASE 500 TO 599
+			CFLAG:(LOCAL:0):690 = 3
+	ENDSELECT
+NEXT
+RETURN 0
+
+;=======================================;
+;VALUE_WORKSHOP_RESULT_PROMISCUITY 工房乱交結果変数
+;LOCAL変数
+; 0～999 : 乱交状況チェック済フラグ
+;    -1 : 未判定か和姦
+;    -2 : 輪姦
+;   0～ : 一人目の強姦してきた相手番号
+;=======================================;
+@VALUE_WORKSHOP_RESULT_PROMISCUITY, ARG
+SIF ARG != 0
+	RETURN LOCAL:ARG
+VARSET LOCAL, -1
+RETURN 0
+
+;=======================================;
+;VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO 工房乱交口上表示変数
+;ARG引数
+; 0 : 処理内容 (0:初期化 1:値呼び出し 2:値設定
+; 1 : 対象LOCAL変数番号
+; 2 : 値設定用設定値
+;LOCAL変数
+; 0～999 : 口上表示済フラグ (-1:乱交不参加 0以上：ビット管理)
+;         1:状況表示済み
+;         2:口上表示済み
+;         4:強姦されたか否か
+;         8:輪姦されたか否か
+;        16:望んで参加しているか否か
+;=======================================;
+@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO, ARG:0, ARG:1, ARG:2
+IF ARG:0 != 0
+	SIF ARG:0 == 2
+		LOCAL:(ARG:1) = ARG:2
+	RETURN LOCAL:(ARG:1)
+ENDIF
+VARSET LOCAL, -1
+;LOCAL:0を一時的に反復子として使用
+FOR LOCAL:0, 1, CHARANUM
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 공방 난교 대사 표시 변수 초기화 처리  %CALLNAME:(LOCAL:0)%의 CFLAG:%CALLNAME:(LOCAL:0)%:691 = {CFLAG:(LOCAL:0):691} 난교플래그 \@ CFLAG:(LOCAL:0):691 & 1p7 ? on # off \@ 표시제플래그 \@ CFLAG:(LOCAL:0):691 & 1p9 ? on # off \@
+	;乱交に不参加であればスキップ
+	SIF (CFLAG:(LOCAL:0):691 & 1p7) == 0
+		CONTINUE
+	;個人授業等で表示済みであればスキップ
+	SIF CFLAG:(LOCAL:0):691 & 1p9
+		CONTINUE
+	IF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(LOCAL:0) > -1
+		LOCAL:(LOCAL:0) = 4
+	ELSEIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:(LOCAL:0) == -2
+		LOCAL:(LOCAL:0) = 12
+	ELSEIF CFLAG:(LOCAL:0):691 & 1p3
+		LOCAL:(LOCAL:0) = 16
+	ELSE
+		LOCAL:(LOCAL:0) = 0
+	ENDIF
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 공방 난교 대사 표시 변수 초기화 처리  %CALLNAME:(LOCAL:0)%의 LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO = {LOCAL:(LOCAL:0)}
+NEXT
+;最後にLOCAL:0を初期化
+SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+	PRINTFORML ;;; 공방 난교 대사 표시 변수 초기화 처리  %CALLNAME:0%のCFLAG:%CALLNAME:0%:691 = {CFLAG:0:691} 난교플래그 \@ CFLAG:0:691 & 1p7 ? on # off \@ 표시제플래그 \@ CFLAG:0:691 & 1p9 ? on # off \@
+IF CFLAG:0:691 & 1p7 && (CFLAG:0:691 & 1p9) == 0
+	IF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:0 > -1
+		LOCAL:0 = 4
+	ELSEIF LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY:0 == -2
+		LOCAL:0 = 12
+	ELSEIF CFLAG:0:691 & 1p3
+		LOCAL:0 = 16
+	ELSE
+		LOCAL:0 = 0
+	ENDIF
+	SIF TALENT:MASTER:Debug && (FLAG:1109 & 1) && (FLAG:1109 & 4)
+		PRINTFORML ;;; 공방 난교 대사 표시 변수 초기화 처리  %CALLNAME:0%의 LOCAL@VALUE_WORKSHOP_RESULT_PROMISCUITY_KOJO = {LOCAL:0}
+ELSE
+	LOCAL:0 = -1
+ENDIF
+RETURN 0
+

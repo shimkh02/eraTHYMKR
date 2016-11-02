@@ -1,0 +1,142 @@
+﻿;=============================================================================
+;비디오 감상
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE101
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:101 > 0
+	RETURN 0
+;촬영 커맨드 확장의 설정이 유효하지 않으면 불가
+SIF (FLAG:15 & 128) == 0
+	RETURN 0
+;녹화 비디오를 가지고 있지 않으면 불가
+SIF FLAG:62 != 1
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;비디오 촬영 중에는 안 됨
+SIF TEQUIP:50
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;말로 사용하는 경우는 TEQUIP:52 = 1(비디오 감상중)을 조건으로 해 주세요
+;TFLAG:123　;TFLAG:123은 상영의 부분, 2라면 촬영 2번째
+;TFLAG:119에 감상하는 비디오의 촬영 회수
+;(으)로 하는 것으로 상영중의 비디오의 내용을 말에 반영 당합니다
+;녹화 비디오를 가지고 있지 않은 경우와 비디오 촬영중이나 감상중에는 실행할 수 없다
+@COM101
+PRINTL 비디오 감상
+TSTR:0 = 비디오 감상
+CALL TRAIN_MESSAGE_COM101
+
+IF TEQUIP:51
+;테이프가 끝났으므로 비디오 감상 종료
+;테이프는 종료시에 파기
+	TEQUIP:51 = 0
+	FLAG:62 = 0
+	TFLAG:119 = 0
+	PRINTW ★★★비디오 감상을 종료합니다★★★
+ELSE
+;비디오 감상 개시
+	TEQUIP:51 = 1
+	TFLAG:123 = 0
+	PRINTW ★★★비디오 감상을 개시합니다★★★
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;비디오 감상중
+;-------------------------------------------------
+@EQUIP_COM101
+;카운트는 촬영 회수(1~10)로 합니다
+REPEAT 10
+	LOCAL = COUNT+51
+	SIF FLAG:LOCAL != -1
+		TFLAG:119 = COUNT + 1
+REND
+
+IF TFLAG:123 == 0
+;첫회는 카운트에 넣지 않는다
+	TFLAG:123 += 1
+ELSEIF TFLAG:123 > 0 && TFLAG:123 <= TFLAG:119
+	LOCAL = TFLAG:123 + 50
+	
+;비쳐 있는 커맨드를 표시한다
+	PRINTFORML <비디오 감상 중{TFLAG:123}/{TFLAG:119}>
+	PRINT 비디오의 내용:
+	PRINTFORML [%VIDEO_COMF(FLAG:LOCAL)%]
+	PRINTL
+	TFLAG:123 += 1
+;----------------------------------
+	;파라미터 변화 (밸런스를 생각하는 것이 어렵기 때문에 방치)
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 50
+	;ABL:욕망을 본다(노출만 조금 상승)
+	IF ABL:11 == 0
+		SOURCE:12 += 10
+	ELSEIF ABL:11 == 1
+		SOURCE:12 += 30
+	ELSEIF ABL:11 == 2
+		SOURCE:12 += 50
+	ELSEIF ABL:11 == 3
+		SOURCE:12 += 70
+	ELSEIF ABL:11 == 4
+		SOURCE:12 += 100
+	ELSE
+		SOURCE:12 += 150
+	ENDIF
+ENDIF
+;------------------------------------
+
+;방영 시간이 없어지면(자) 강제적으로 EQUIP 플래그를 제외한다
+IF TFLAG:123 <= 0 || TFLAG:123 > TFLAG:119
+	TEQUIP:51 = 0
+	FLAG:62 = 0
+	TFLAG:123 = 0
+	TFLAG:119 = 0
+	PRINTL <테이프가 끝났습니다. 비디오 감상을 종료합니다>
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:14 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM101
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:51
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 비디오를 다 봤다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 비디오를 재생해서, %조사선택(CALLNAME:TARGET, "와")% 함께 보기 시작했다.
+ENDIF

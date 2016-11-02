@@ -1,0 +1,114 @@
+﻿;=============================================================================
+;긴급피임약
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE67
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:67 > 0
+	RETURN 0
+;약품계 확장 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:65 == 0 && NOITEM == 0
+	RETURN 0
+;약물내성의 경우 안 됨
+SIF TALENT:44
+	RETURN 0
+;조교자가 남자나 후타나리 나오지 않으면 안돼
+SIF EXIST_PENIS(PLAYER) == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;임신중이라면 불가
+SIF TALENT:140
+	RETURN 0
+;회란 중에는 불가
+SIF TALENT:145
+	RETURN 0
+;산란촉진제를 사용 중이면 사용할 수 없다
+SIF TEQUIP:9
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;배란유도제를 사용 중이면 사용할 수 없다
+SIF TEQUIP:16
+	RETURN 0
+;벌써 사용중이라면 사용할 수 없다
+SIF TEQUIP:17
+	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM67
+PRINTL 긴급피임약
+TSTR:0 = 긴급피임약
+CALL TRAIN_MESSAGE_COM067
+
+;조제 지식이 있으면 소비를 억제한다
+IF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 30
+ELSE
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 50
+ENDIF
+
+;준비할 뿐(만큼)이므로 기본적으로는 아무것도 변동은 하지 않아 좋을지도
+;(다소의 반발이나 공포는 발생해도 될지도 모르는데)
+
+IF NOITEM == 0
+	ITEM:65 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:65
+		CALL FILL_PLURAL_ITEM, 65
+ENDIF
+TEQUIP:17 = 1
+
+SOURCE:26 = 150
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+
+;약물 경험
+TCVAR:40 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM067
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%에게 보여주듯이 긴급 피임약을 꺼냈다.
+PRINTFORM 그것을 본 %조사선택(CALLNAME:TARGET, "는")% 
+IF TALENT:150 || TALENT:152 || TALENT:153
+	;【연모】,【친애】,【상애】의 최악이어도 1개를 가진다
+	PRINTW 조금 아쉬운 표정을 짓고 있다.
+ELSEIF TALENT:160 || TALENT:161
+	;【복종】,【낙인】의 어느 쪽인지
+	PRINTFORMW 다음에 무엇을 할지 이해한 듯, 가랑이를 열고 %CALLNAME:PLAYER%에게 범해지는 것을 기다리고 있다….
+ELSEIF TALENT:170
+	;【음란】
+	PRINTW 질 내 사정을 기다릴 수 없다는 듯이 몸을 배배 꼬고 있다.
+ELSEIF ABL:10 >= 5 && MARK:2 == 3 && MARK:9 == 0
+	;종속 Lv5 또한 굴복 각인 Lv3 또한 반발 각인 Lv0
+	PRINTW 조금 안심한 표정을 지었다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "를")% 경멸하는 눈으로 쳐다보고 있다….
+ENDIF

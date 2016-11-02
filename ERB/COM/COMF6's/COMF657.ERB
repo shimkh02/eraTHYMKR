@@ -1,0 +1,366 @@
+﻿;=============================================================================
+;거미먹이 플레이
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE657
+RETURN 0
+
+@EXCOM_ABLE657
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;ヤマメのスカートの中は蜘蛛の脚という設定でないとダメ
+SIF (FLAG:15 & 65536) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;조교자가 天然처녀であり, 조교 대상の前でまだ一度も助手を犯すを行ったことが無い場合, 
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && TALENT:PLAYER:0 == 1 && (CFLAG:21 & 4) == 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;조수가 ヤマメでないとダメ
+SIF NO:ASSI != 58
+	RETURN 0
+;조수가 オトコだとダメ
+SIF TALENT:ASSI:120
+	RETURN 0
+;소인체형 보유자는, 쌍방이 조교자와 조교 대상이라면 OK
+;그 외의 경우에는 조수가 소인체형のとき주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:ASSI:127 && (TALENT:MASTER:56 == 0 && TALENT:PLAYER:127 == 0)
+	RETURN 0
+;主人にペニスがない, かつペニスバンドもないとダメ
+SIF EXIST_BAR(MASTER) == 0 && ITEM:2 == 0 && NOITEM == 0
+	RETURN 0
+;縄使用中か순종이 3이상 없으면 안 됨
+SIF TEQUIP:40 == 0 && ABL:10 < 4
+	RETURN 0
+;蜘蛛の巣にかけていないとダメ
+SIF TEQUIP:40 != 7
+	RETURN 0
+;조수가 코스프레 중에는 불가
+SIF ASSI >= 0 && ASSIPLAY && TEQUIP:ASSI:59 > 1
+	RETURN 0
+;야외 플레이 중이 아니면 불가
+SIF TEQUIP:52 == 0
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;時間帯が夜でないとだめ
+SIF TIME == 0
+	RETURN 0
+;対象と助手の相性が良くないとダメ
+SIF RELATION:(NO:ASSI) <= 100
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM657
+PRINTL 거미먹이 플레이
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER, 657
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+TSTR:0 = 거미먹이 플레이
+SELECTCOM = 657
+CALL TRAIN_MESSAGE_COM657
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;조수의 ABL:기교를 본다
+IF ABL:ASSI:12 == 0
+	LOCAL = 50
+ELSEIF ABL:ASSI:12 == 1
+	LOCAL = 300
+ELSEIF ABL:ASSI:12 == 2
+	LOCAL = 800
+ELSEIF ABL:ASSI:12 == 3
+	LOCAL = 1500
+ELSEIF ABL:ASSI:12 == 4
+	LOCAL = 2000
+ELSE
+	LOCAL = 3200
+ENDIF
+
+;조수의 순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(ASSI, LOCAL)
+;조수의 봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(ASSI, LOCAL)
+;조수의 V감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_1_1(ASSI, LOCAL)
+;조수의 마조끼를 본다
+LOCAL = EJACULATIONCHECK_ABL_21_2(ASSI, LOCAL)
+;조수의 V경험을 본다
+LOCAL = EJACULATIONCHECK_EXP_0_1(ASSI, LOCAL)
+
+;조교 대상의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(TARGET, LOCAL)
+
+SIF TALENT:MASTER:120 || TALENT:MASTER:121
+	BASE:MASTER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 280
+
+SOURCE:11 = 1200
+SOURCE:31 = 2800
+
+;ABL:욕망을 본다
+IF ABL:11 == 0
+	SOURCE:19 = 75
+	SOURCE:22 = 3200
+ELSEIF ABL:11 == 1
+	SOURCE:19 = 150
+	SOURCE:22 = 3800
+ELSEIF ABL:11 == 2
+	SOURCE:19 = 300
+	SOURCE:22 = 4600
+ELSEIF ABL:11 == 3
+	SOURCE:19 = 550
+	SOURCE:22 = 5400
+ELSEIF ABL:11 == 4
+	SOURCE:19 = 800
+	SOURCE:22 = 6200
+ELSE
+	SOURCE:19 = 1000
+	SOURCE:22 = 7000
+ENDIF
+
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	TIMES SOURCE:11 , 0.10
+	TIMES SOURCE:19 , 0.50
+ELSEIF ABL:13 == 1
+	TIMES SOURCE:11 , 0.40
+	TIMES SOURCE:19 , 0.80
+ELSEIF ABL:13 == 2
+	TIMES SOURCE:11 , 0.70
+	TIMES SOURCE:19 , 1.00
+ELSEIF ABL:13 == 3
+	TIMES SOURCE:11 , 1.00
+	TIMES SOURCE:19 , 1.50
+ELSEIF ABL:13 == 4
+	TIMES SOURCE:11 , 1.60
+	TIMES SOURCE:19 , 2.00
+ELSE
+	TIMES SOURCE:11 , 2.00
+	TIMES SOURCE:19 , 2.50
+ENDIF
+
+LOCAL:1 = 1000
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.50
+;기장
+SIF TALENT:12
+	TIMES LOCAL:1 , 0.50
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.20
+;자위하기 쉽다
+SIF TALENT:60
+	TIMES SOURCE:11 , 2.50
+SOURCE:25 += LOCAL:1
+
+;조수가 처녀
+IF TALENT:ASSI:0
+	PRINTL <조수가 처녀>
+	CALL LOST_VIRGIN, TARGET, PLAYER, ARG
+	IF TALENT:ASSI:0 == 1
+		TIMES SOURCE:22 , 20.00
+		TIMES SOURCE:31 , 3.00
+		IF (CFLAG:21 & 4) == 0
+			TCVAR:50 += 1
+			CFLAG:21 |= 4
+		ENDIF
+		IF ABL:10 < 2
+			PRINTFORML 그리고 %ABLNAME:10%이 2가 되었다. 
+			ABL:10 = 2
+		ENDIF
+	ELSE
+		TIMES SOURCE:22 , 15.00
+		TIMES SOURCE:31 , 2.50
+	ENDIF
+	TFLAG:5 += TALENT:ASSI:0
+	TALENT:ASSI:0 = 0
+	STAIN:ASSI:3 |= 32
+ENDIF
+TCVAR:ASSI:0 += 1
+SIF TALENT:MASTER:120 || TALENT:MASTER:121 || TALENT:MASTER:1
+	CFLAG:ASSI:173 += 1
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 1
+		TIMES SOURCE:22, 1.20
+	ELSEIF ABL:31 == 2
+		TIMES SOURCE:22, 1.50
+	ELSEIF ABL:31 == 3
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 4
+		TIMES SOURCE:22, 2.50
+	ELSE
+		TIMES SOURCE:22, 3.00
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 6
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+IF TALENT:MASTER:120 || TALENT:MASTER:121
+	;주인의 P⇔조수의 V의 불결이 이동
+	STAIN:MASTER:2 |= STAIN:ASSI:3
+	STAIN:ASSI:3 |= STAIN:MASTER:2
+ENDIF
+
+IF TALENT:MASTER:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:ASSI:12 += 10
+ELSEIF TALENT:MASTER:120 && TALENT:ASSI:120
+	TCVAR:ASSI:13 += 10
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;처녀 상실의 후에 페니스를 뽑고 있을까
+TFLAG:101 = (TFLAG:101 == 2) ?  1 # 0
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_657
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:ASSI%에게 서로의 성교를 %CALLNAME:TARGET%에게
+PRINTFORML 보이라고 명령했지만 거부당했다.
+PRINTFORMW %조사선택(CALLNAME:ASSI, "는")% 아직도 예의 범절이 부족한 것 같다.
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM657
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "와")% %조사선택(CALLNAME:ASSI, "는")% 거미집에 구속되어 움직일 수 없는 %조사선택(CALLNAME:TARGET, "를")% 방치하고 어둠으로 숨었다….
+PRINTFORML 기분 나쁜 고요함이 퍼지는 중, %CALLNAME:TARGET%의 눈에 들어온 것은
+PRINTFORML 나무 위로부터 도롱이 벌레와 같이 실로 내려오면서 %CALLNAME:TARGET%에게 과시하면서,
+;대상의 욕망 Lv와 봉사 정신 Lv가 모두 Lv4 이상 있는 경우
+IF ABL:11 > 3 && ABL:13 > 3
+	PRINTFORML %조사선택(CALLNAME:ASSI, "를")% 계속 범하고 있는 %CALLNAME:MASTER%의 모습이었다.
+	PRINTFORMW 그 모습을 부러운 듯이 보고 있는 %CALLNAME:TARGET%의 아랫입에서 주루룩 음액이 흘러내리고 있다….
+;그 외의 경우
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:ASSI, "를")% 계속 범하고 있는 %CALLNAME:MASTER%의 모습이었다….
+ENDIF
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_657, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;조수의 ABL:노출벽
+IF ABL:ASSI:14
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:ASSI:14
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% 조수의 %ABLNAME:14%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;조수가 처녀
+IF TALENT:ASSI:0
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 15
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% 조수가 처녀({LOCAL:99})
+ENDIF
+;조수가 연모
+IF TALENT:ASSI:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% 조수가 연모({LOCAL:99})
+ENDIF
+
+;실행치는 40
+TFLAG:241 = 40

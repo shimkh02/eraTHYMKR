@@ -1,0 +1,144 @@
+﻿;=============================================================================
+;eratoho계에서 필요한 동방 관련 고유의 이벤트
+;=============================================================================
+;-------------------------------------------------
+;[반백택]이고 시간이 밤일 때, 1/3 확률로 백택으로 변신
+;-------------------------------------------------
+@CHANGE_HAKUTAKU
+;조교 대상
+SIF TARGET >= 0 && TALENT:212 == 1 && RAND:3 == 0
+	CALL HAKUTAKU_ON, TARGET
+;주인
+SIF MASTER >= 0 && TALENT:MASTER:212 == 1 && RAND:3 == 0
+	CALL HAKUTAKU_ON, MASTER
+;조수
+SIF ASSI >= 0 && TALENT:ASSI:212 == 1 && RAND:3 == 0
+	CALL HAKUTAKU_ON, ASSI
+
+;-------------------------------------------------
+;[반백택]으로 백택화했을 때, 원래대로 돌아온다
+;-------------------------------------------------
+@EVENT_NEXTDAY_TOHO
+;조교 대상
+SIF TARGET >= 0 && TALENT:212 == 2
+	CALL HENSHIN_OFF, TARGET
+;주인
+SIF MASTER >= 0 && TALENT:MASTER:212 == 2
+	CALL HENSHIN_OFF, MASTER
+;조수
+SIF ASSI >= 0 && TALENT:ASSI:212 == 2
+	CALL HENSHIN_OFF, ASSI
+;IF FLAG:408 >= 50 && CHECK_GAMEMODE_ENDING_EXIST() == 1 && (FLAG:70 & 256) == 0
+IF FLAG:408 >= 50 && FLAG:4 <= 1 && (FLAG:70 & 256) == 0
+	PRINTFORML %조사처리(NAME:MASTER,"는")% 백택의 자세한 생태를 이해했다….
+	PRINTFORMW ※강하게 뉴 게임 개시시에 %NAME:MASTER%의 종족을 [반백택]으로 선택할 수 있습니다.
+	FLAG:70 |= 256
+ENDIF
+
+;=============================================================================
+;백택 변신 · 해제 처리
+;=============================================================================
+;TALENT:212의 값이 1일 때는 인간, 2일 때는 백택화
+
+;たぶん今後も使われないと思うので変身フラグにTFLAG:199を使用
+;変身での素質変更の記憶はPBAND:400～999を使用
+;-------------------------------------------------
+;변신 처리(백택화)
+;-------------------------------------------------
+@HAKUTAKU_ON, ARG
+IF ARG == TARGET
+	LOCAL:1 = 400
+	TFLAG:199 |= 1
+ELSEIF ARG == MASTER
+	LOCAL:1 = 600
+	TFLAG:199 |= 2
+ELSE
+	LOCAL:1 = 800
+	TFLAG:199 |= 4
+ENDIF
+
+REPEAT 200
+	LOCAL = COUNT + LOCAL:1
+	;素質の消滅処理.既に消滅している場合, PBAND:XXXに1を立てるだけで消滅しない
+	;消滅素質：自制心(20), 保守的(24), 一線を越えない(27), 貞操観念(30), 濡れにくい(43), 人気(94)
+	IF COUNT == 20 || COUNT == 24 || COUNT == 27 || COUNT == 30 || COUNT == 43 || COUNT == 94
+		IF TALENT:ARG:COUNT == 0
+			PBAND:LOCAL = 1
+		ELSE
+			PBAND:LOCAL = 0
+			TALENT:ARG:COUNT = 0
+		ENDIF
+	;素質の習得処理.既に習得している場合, PBAND:XXXに2を立てるだけで習得しない
+	;習得素質：解放(33), 濡れやすい(42), 汚れ無視(64), 両刀(83), 月光浴(115)
+	ELSEIF COUNT == 33 || COUNT == 42 || COUNT == 64 || COUNT == 83 || COUNT == 115
+		IF TALENT:ARG:COUNT == 1
+			PBAND:LOCAL = 2
+		ELSE
+			PBAND:LOCAL = 0
+			TALENT:ARG:COUNT = 1
+		ENDIF
+	ENDIF
+REND
+PRINTFORMW ＜%조사처리(CALLNAME:ARG,"는")% 백택의 모습이 되었다＞
+TALENT:ARG:212 = 2
+
+;-------------------------------------------------
+;변신 해제 처리(인간화)
+;-------------------------------------------------
+@HENSHIN_OFF, ARG
+IF ARG == TARGET
+	LOCAL:1 = 400
+	TFLAG:199 -= 1
+ELSEIF ARG == MASTER
+	LOCAL:1 = 600
+	TFLAG:199 -= 2
+ELSE
+	LOCAL:1 = 800
+	TFLAG:199 -= 4
+ENDIF
+
+REPEAT 200
+	LOCAL = COUNT + LOCAL:1
+	;変身解除時, 習得処理を行なう(消滅していた素質は除く.PBAND:XXXに1が立っていたら習得処理を飛ばす)
+	;習得素質：自制心(20), 保守的(24), 一線を越えない(27), 貞操観念(30), 濡れにくい(43), 人気(94)
+	IF COUNT == 20 || COUNT == 24 || COUNT == 27 || COUNT == 30 || COUNT == 43 || COUNT == 94
+		SIF PBAND:LOCAL == 0
+			TALENT:ARG:COUNT = 1
+	;変身解除時, 消滅処理を行なう(習得していた素質は除く.PBAND:XXXに2が立っていたら消滅処理を飛ばす)
+	;消滅素質：解放(33), 濡れやすい(42), 汚れ無視(64), 両刀(83), 月光浴(115)
+	ELSEIF COUNT == 33 || COUNT == 42 || COUNT == 64 || COUNT == 83 || COUNT == 115
+		SIF PBAND:LOCAL == 0
+			TALENT:ARG:COUNT = 0
+	ENDIF
+REND
+
+PRINTFORMW ＜%조사처리(CALLNAME:ARG,"는")% 원래 모습으로 돌아왔다＞
+TALENT:ARG:212 = 1
+;주인 이외일 경우, 변신 횟수를 카운트
+SIF ARG != MASTER
+	FLAG:408 += 1
+
+;=============================================================================
+;늑대인간 발모 처리
+;=============================================================================
+;-------------------------------------------------
+;[늑대인간]이고 시간이 밤일 때, 1/3 확률로 [음모없음]을 잃는다
+;-------------------------------------------------
+@HATUMOU_OOKAMI
+;조교 대상
+SIF TARGET >= 0 && TALENT:65 == 1 && TALENT:231 == 1 && RAND:3 == 0
+	CALL HATUMOU_ON, TARGET
+;주인
+SIF MASTER >= 0 && TALENT:65 == 1 && TALENT:231 == 1 && RAND:3 == 0
+	CALL HATUMOU_ON, MASTER
+;조수
+SIF ASSI >= 0 && TALENT:65 == 1 && TALENT:231 == 1 && RAND:3 == 0
+	CALL HATUMOU_ON, ASSI
+;-------------------------------------------------
+;발모 처리(늑대화)
+;-------------------------------------------------
+@HATUMOU_ON, ARG:1
+PRINTFORML ＜%조사처리(CALLNAME:(ARG:1),"는")% 털이 많아졌다＞
+PRINTFORMW %조사처리(CALLNAME:(ARG:1),"는")% [음모없음]을 잃었다.
+TALENT:(ARG:1):65 = 0
+BASE:(ARG:1):5 = 1000

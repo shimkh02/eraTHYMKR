@@ -1,0 +1,208 @@
+﻿;-------------------------------------------------
+;코가사 대사용. 마을 사람 터미널 파일
+;이하 사토코. 심플하게 만든다.
+;-------------------------------------------------
+
+;--------------------------------------------------
+;대사의 존재 판정
+;-------------------------------------------------
+@TRY_171
+RETURN ! (! SATOKO(TARGET))
+
+;--------------------------------------------------
+;특수 엔딩 판정
+;-------------------------------------------------
+@EX_ENDING_171
+;사토코가 1인째이며 이벤트 진행 완료&코가사와 사토코에게 연모&노예가 코가사와 사토코밖에 없을 때
+RETURN SATOKO(TARGET) && CHARANUM == 3 && GETCHARA(72) >= 0 && CFLAG:(GETCHARA(72)):9103 == 6 && TALENT:(GETCHARA(72)):150 && TALENT:150  && CFLAG:8900 == 1
+
+;--------------------------------------------------
+;코가사에게 끌려온 마을 소녀 판정용 함수
+;인수의 인물이(0=사토코가 아니다, 1=사토코가 1인째, 2=2인째 이후, 3=코가사 굴종 후, 4=코가사 매각 등 후, 5=반발 해제 후, 6=타락 완료, 7=괴담 엔딩 직후, 8=괴담 엔딩 후, 9=Ex 엔딩 후)
+;-------------------------------------------------
+@SATOKO(ARG)
+#FUNCTION
+RETURNF ARG < 0 || NO:ARG != 171 ?  0 # CFLAG:ARG:8900
+
+;--------------------------------------------------
+;EVENTTRAIN 관계
+;-------------------------------------------------
+@EVENTTRAIN
+;사토코가 아니면 돌아온다
+SIF ! SATOKO(TARGET)
+	RETURN 0
+SIF FLAG:11 == 0
+	RETURN 0
+
+;조교 개시 전 대사
+TRYCALL KOJO_TRAIN_SATOKO
+
+;-------------------------------------------------
+;EVENTEND 관계
+;-------------------------------------------------
+@EVENTEND
+;사토코가 아니면 돌아온다
+SIF ! SATOKO(TARGET)
+	RETURN 0
+SIF FLAG:11 == 0
+	RETURN 0
+
+;조교 종료시 대사
+TRYCALL KOJO_END_SATOKO
+
+;-------------------------------------------------
+;@SELF_KOJO 관계
+;-------------------------------------------------
+@SELF_KOJO_K171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP SELF_KOJO_X
+
+;이벤트 대사
+TRYCALL SELF_KOJO_SATOKO(TFLAG:200)
+
+;-------------------------------------------------
+;@SINGLE_ENDING 관계
+;-------------------------------------------------
+@SINGLE_ENDING_K171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP SINGLE_ENDING_X
+
+;단독 엔딩
+TRYCALL SINGLE_ENDING_SATOKO
+
+;-------------------------------------------------
+;@SLAVE_ENDING 관계
+;-------------------------------------------------
+@SLAVE_ENDING_K171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP SLAVE_ENDING_X
+
+;노예 엔딩
+TRYCALL SLAVE_ENDING_SATOKO
+
+;-------------------------------------------------
+;@SINGLE_ENDING_AFTER 관계
+;-------------------------------------------------
+@SINGLE_ENDING_AFTER_K171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP SINGLE_ENDING_AFTER_X
+
+;단독 엔딩 애프터
+TRYCALL SINGLE_ENDING_AFTER_SATOKO
+
+;-------------------------------------------------
+;@SLAVE_ENDING_AFTER 관계
+;-------------------------------------------------
+@SLAVE_ENDING_AFTER_K171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP SLAVE_ENDING_AFTER_X
+
+;노예 엔딩 애프터
+TRYCALL SLAVE_ENDING_AFTER_SATOKO
+
+;--------------------------------------------------
+;@IMPRESSION_MAIN 관계
+;※본체와 충돌해서(다른 유명 캐릭터 전용 한 마디가 출력되지 않음) 코멘트아웃
+;--------------------------------------------------
+;@IMPRESSION_MAIN, ARG
+;사토코가 아니면 범용으로 넘어간다
+;SIF ! SATOKO(ARG)
+;	TRYJUMP IMPRESSION_KX, ARG
+
+;한 마디 말
+;TRYCALL IMPRESSION_SATOKO, ARG
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM 관계
+;여기는 자동 신음에 맡김.
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_171
+TRYCALLFORM TRAINVOICE(SATOKO(TARGET))
+SIF SATOKO(TARGET)
+	CALL EQUIPTEXT
+
+;--------------------------------------------------
+;이하, EVENT_K가 TRYCCALL 쓰고 자빠진 탓에 써야만 하는 귀찮은 구문
+;그러니까 RESULT 관리가 좋다고 말했잖아 염병…!
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_MASTER_171
+;사토코가 아니면 범용으로 넘어간다
+;현상 존재하지 않지만 실장될 가능성을 감안해서
+SIF ! SATOKO(MASTER)
+	TRYJUMP KOJO_MESSAGE_COM_MASTER_X
+
+@KOJO_MESSAGE_COM_ASSI_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(ASSI)
+	TRYJUMP KOJO_MESSAGE_COM_ASSI_X
+
+@KOJO_MESSAGE_PLAYERCHANGE_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(ASSI)
+	TRYJUMP KOJO_MESSAGE_PLAYERCHANGE_X
+
+@KOJO_MESSAGE_CHANGEASSI_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(ASSI)
+	TRYJUMP KOJO_MESSAGE_CHANGEASSI_X
+
+@KOJO_DENIAL_MESSAGE_COM_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP KOJO_DENIAL_MESSAGE_COM_X
+
+@KOJO_TRAIN_MESSAGE_COM_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP KOJO_TRAIN_MESSAGE_COM_X
+
+@KOJO_EQUIP_MESSAGE_COM_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP OJO_EQUIP_MESSAGE_COM_X
+
+@KOJO_MESSAGE_PALAMCNG_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP KOJO_MESSAGE_PALAMCNG_X
+
+@KOJO_MESSAGE_MARKCNG_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP KOJO_MESSAGE_MARKCNG_X
+
+@KOJO_EVENT_COM_171
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(TARGET)
+	TRYJUMP KOJO_EVENT_COM_X
+
+@LOOK_VIDEO_KOJO_K171
+;사토코가 아니면 범용으로 넘어간다
+;현상 없는데
+SIF ! SATOKO(TARGET)
+	TRYJUMP LOOK_VIDEO_KOJO_X
+
+@DAILY_MASSAGE_171, ARG
+;사토코가 아니면 범용으로 넘어간다
+SIF ! SATOKO(ARG)
+	TRYJUMP DAILY_MESSAGE_X, ARG
+
+;-------------------------------------------------
+;한 글자 변수 수정을 먹을 것 같은 부분
+;아니 여기 범용 버그났구먼 뭐! 이젠 몰러!
+;※본체와 충돌해서(다른 마을사람 매각 후 에피소드랑 충돌) 코멘트아웃
+;-------------------------------------------------
+;@SET_SLAVE_AFTERWARDS_K171
+;사토코가 아니면 범용으로 넘어간다
+;SIF ! SATOKO(H)
+;	TRYJUMP SET_SLAVE_AFTERWARDS_KX
+
+;매각 후에 사용하므로 NO:TARGET는 사용할 수 없다
+;@SHOW_SLAVE_AFTERWARDS_K171
+;TRYJUMP SHOW_SLAVE_AFTERWARDS_KX
+

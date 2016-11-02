@@ -1,0 +1,275 @@
+﻿;=============================================================================
+;프리스크 삽입
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE184
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:184 > 0
+	RETURN 0
+;Ａ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:83 == 0 && NOITEM == 0
+	RETURN 0
+;윤활 부족이고, 순종4미만 · 레즈끼(BL끼) 4 미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM184
+IF TEQUIP:15 & 4
+	PRINTL 프리스크 추가삽입
+	TSTR:0 = 프리스크 추가 삽입
+ELSE
+	PRINTL 프리스크 삽입
+	TSTR:0 = 프리스크 삽입
+ENDIF
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 25
+
+SOURCE:12 = 350
+SOURCE:31 = 400
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 10
+	SOURCE:22 = 50
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 50
+	SOURCE:22 = 75
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 100
+	SOURCE:22 = 150
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 250
+	SOURCE:22 = 300
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 400
+	SOURCE:22 = 500
+ELSE
+	SOURCE:2 = 750
+	SOURCE:22 = 800
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	SOURCE:20 = 500
+	TIMES SOURCE:2 , 0.20
+	TIMES SOURCE:22 , 0.20
+ELSEIF EXP:1 < EXPLV:2
+	SOURCE:20 = 400
+	TIMES SOURCE:2 , 0.50
+	TIMES SOURCE:22 , 0.50
+ELSEIF EXP:1 < EXPLV:3
+	SOURCE:20 = 300
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF EXP:1 < EXPLV:4
+	SOURCE:20 = 200
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:22 , 1.20
+ELSEIF EXP:1 < EXPLV:5
+	SOURCE:20 = 100
+	TIMES SOURCE:2 , 1.60
+	TIMES SOURCE:22 , 1.60
+ELSE
+	SOURCE:20 = 50
+	TIMES SOURCE:2 , 1.80
+	TIMES SOURCE:22 , 1.80
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.10
+	TIMES SOURCE:20 , 3.00
+	TIMES SOURCE:22 , 0.10
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.20
+	TIMES SOURCE:20 , 2.00
+	TIMES SOURCE:22 , 0.20
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:20 , 1.00
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:20 , 0.50
+	TIMES SOURCE:22 , 1.00
+ELSEIF PALAM:10 >= PALAMLV:4
+	TIMES SOURCE:2 , 2.00
+	TIMES SOURCE:20 , 0.10
+	TIMES SOURCE:22 , 2.00
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.30
+	TIMES SOURCE:22 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:22 , 1.30
+ELSEIF PALAM:13 >= PALAMLV:4
+	TIMES SOURCE:2 , 1.60
+	TIMES SOURCE:22 , 1.60
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:104
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:105
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+CALL TRAIN_MESSAGE_COM184
+TEQUIP:15 |= 4
+
+TCVAR:1 += 2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+IF NOITEM == 0
+	ITEM:83 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:83
+		CALL FILL_PLURAL_ITEM, 83
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;프리스크 효과 발휘중
+;-------------------------------------------------
+@EQUIP_COM184
+PRINTL <프리스크 효과 발휘 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 25
+
+LOCAL:1 = 200
+LOCAL:2 = 100
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	LOCAL = 5
+ELSEIF ABL:2 == 1
+	LOCAL = 10
+ELSEIF ABL:2 == 2
+	LOCAL = 20
+ELSEIF ABL:2 == 3
+	LOCAL = 50
+ELSEIF ABL:2 == 4
+	LOCAL = 100
+ELSE
+	LOCAL = 180
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:104
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ELSEIF TALENT:105
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 0.60
+ENDIF
+
+SOURCE:2 += LOCAL
+SOURCE:18 += LOCAL/2
+SOURCE:19 += LOCAL/2
+SOURCE:22 += LOCAL:1
+SOURCE:31 += LOCAL:2
+SOURCE:24 += LOCAL+LOCAL:1
+
+TCVAR:1 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM184
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:15 & 4
+	PRINTFORML 프리스크의 자극을 받고 있는 %CALLNAME:TARGET%의 애널에
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 추가로 프리스크를 쑤셔 넣었다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 항문에 프리스크를 쑤셔 넣었다.
+ENDIF
+
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF EXP:1 < 20
+	PRINTL 공포에 얼굴을 일그러뜨리며, 쓸모 없다는 걸 알면서도
+	PRINTFORM 어떻게든 %CALLNAME:PLAYER%의 손에서 피하려고 날뛰고 
+ELSEIF EXP:1 < 40
+	PRINT 항문에서 침입해오는 이물감에 혐오스런 표정을 하고 
+ELSEIF EXP:1 < 75
+	PRINTL 싫어하면서도, 별다른 저항은 하지 않고
+	PRINT 어른스럽게 프리스크를 받아들이고 
+ELSEIF EXP:1 < 100
+	PRINT 항문을 통과할 때의 자극을 참을 수 없는지 몸을 떨고 
+ELSEIF EXP:1 < 140
+	PRINT 프리스크가 들어오는 느낌이 좋은지 표정을 풀고 
+ELSEIF EXP:1 < 180
+	PRINT 약을 삽입한 후에도 허리를 떨며 더욱 큰 쾌락을 끌어내려 하고 
+ELSE
+	PRINTL 그걸로는 만족할 수 없는지 프리스크를
+	PRINT 자신의 손가락으로 엉덩이 더욱 깊은 곳 까지 쑤셔 넣고 
+ENDIF
+PRINTW 있다.

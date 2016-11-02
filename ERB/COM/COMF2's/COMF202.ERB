@@ -1,0 +1,190 @@
+﻿;=============================================================================
+;유두 핥기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE202
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:202 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;조교자가 고양이혀일 경우 고양이 펠라 패치 유효가 아니면 불가
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀일 경우 조교자에게 기교4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM202
+;연속으로 사용하면 약간 성능이 높아진 유두 깨물기로 변화.
+SIF PREVCOM == 202
+	JUMP COM627
+
+PRINTL 유두 핥기
+TSTR:0 = 유두 핥기
+CALL TRAIN_MESSAGE_COM202
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 100
+
+SOURCE:12 = 140
+SOURCE:15 = 60
+SOURCE:16 = 40
+SOURCE:30 = 80
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 20
+	SOURCE:11 = 50
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 100
+	SOURCE:11 = 100
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 400
+	SOURCE:11 = 160
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 800
+	SOURCE:11 = 200
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1400
+	SOURCE:11 = 230
+ELSE
+	SOURCE:3 = 2000
+	SOURCE:11 = 250
+ENDIF
+
+IF TALENT:134
+	;ABL:분유중독을 본다
+	IF ABL:34 == 0
+		TIMES SOURCE:3 , 1.00
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:34 == 1
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:11 , 1.00
+	ELSEIF ABL:34 == 2
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:11 , 1.20
+	ELSEIF ABL:34 == 3
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:11 , 1.20
+	ELSEIF ABL:34 == 4
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:11 , 1.40
+	ELSE
+		TIMES SOURCE:3 , 1.60
+		TIMES SOURCE:11 , 1.60
+	ENDIF
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:11 , 0.60
+	TIMES SOURCE:15 , 0.60
+	TIMES SOURCE:30 , 1.40
+	TIMES SOURCE:3 , 0.50
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+	TIMES SOURCE:30 , 1.20
+	TIMES SOURCE:3 , 0.70
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+	TIMES SOURCE:30 , 1.00
+	TIMES SOURCE:3 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:16 , 1.60
+	TIMES SOURCE:30 , 0.40
+	TIMES SOURCE:3 , 1.20
+ELSE
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+	TIMES SOURCE:30 , 0.00
+	TIMES SOURCE:3 , 1.50
+ENDIF
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.40
+ENDIF
+
+;조교자가［유아］,［유치］
+IF TALENT:PLAYER:130 || TALENT:PLAYER:131
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+ENDIF
+;조교자가［유아 퇴행］
+SIF TALENT:PLAYER:159
+	TIMES SOURCE:11 , 1.20
+
+;조교자의 TALENT:고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:3 , 0.70
+
+;노예의 B⇔조교자의 입의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:5
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM202
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:128 && TALENT:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:111
+	PRINT 표준보다 약간 작은 
+ELSEIF TALENT:112
+	PRINT 커다랗고 곡선이 아름다운 
+ELSEIF TALENT:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+PRINT 가슴의 
+IF PALAM:13 > PALAMLV:3
+	PRINT 완전히 딱딱해진 돌기를 
+ELSE
+	PRINT 아직 부드러운 돌기를 
+ENDIF
+IF TEQUIP:68
+	PRINTW 혀끝에서 튕기듯이 간질였다….
+ELSEIF TALENT:PLAYER:54
+	PRINTW 혀의 돌기에 닿게 했다….
+ELSE
+	PRINTW 빨았다….
+ENDIF

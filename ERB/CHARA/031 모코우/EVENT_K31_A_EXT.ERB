@@ -1,0 +1,131 @@
+﻿;대사 템플릿 확장 조수 인계 처리
+
+;특수 인계 처리
+;통상의 인계 처리는 실행할 수 없게 되므로 주의
+;복붙으로 소질 리셋 및 호감도 리셋은 실행됩니다.
+;모르는 부분은 건들지 않는 것을 추천.
+
+;어느 함수에도 소속되어 있지 않은 처리가 있으면 곤란하므로 더미 함수를 선언
+@KOJO_HOGE_EVENT_ASSI_TAKEOVER_DUMMY, ARG
+
+;■사용시에는 ↓의 선언의 코멘트아웃을 지우고,
+;■X1을 캐릭터 번호로 치환해서 사용해주세요(레이무라면 1, 렌코라면 49, 미마라면 100).
+@KOJO_31_EVENT_ASSI_TAKEOVER, ARG
+
+;통상의 리셋 처리 함수 @ASSI_STATE_TAKEOVER, ARG를 거의 복붙.
+;ARG에는 괴조인격 및 즉각함락을 취득시켰는지가 비트 연산으로 들어가 있음.
+;■조수 인계에서는 TARGET이 아니라 ASSI를 사용하므로, 플래그 등을 참조할 경우에는 CFLAG:(TARGET, 생략 가능):0이 아니라 CFLAG:ASSI:0라고 쓸 것.
+
+;------여기서부터 처리 내용------
+
+;■무난하게 PRINT 따위로도 가능합니다.
+;그 경우에는 캐릭터명을 모종의 형태로 적어두기를 추천합니다.
+;PRINTFORMW 특수한 인계 처리 템플릿
+
+;조수를 경험한 사실을 표시함
+ISASSI:ASSI = 1
+;인계한 캐릭터임을 판별하기 위한 플래그
+CFLAG:ASSI:18 = 1
+;칭호 리셋
+NICKNAME:ASSI = %CSVNICKNAME (NO:ASSI , 0)%
+;저택에 있었을 때의 상황
+CSTR:ASSI:3 = 과거에 %CALLNAME:MASTER%의 조교를 받았다.
+
+;임신 · 포란 중 · 유모가 아닌 육아 중일 때는 줄어 있는 체력을 되돌린다
+IF TALENT:ASSI:140 || TALENT:ASSI:143 || (TALENT:ASSI:141 && CFLAG:ASSI:79 == 0)
+	MAXBASE:ASSI:0 += 500
+	CALL RESET_ASSI_PREGNANT, ASSI
+;회란시의 체력 최대치 저하를 되돌리는 처리
+ELSEIF TALENT:ASSI:145
+	MAXBASE:ASSI:0 += 500
+ENDIF
+
+;특정 게이지를 리셋
+REPEAT 4
+	MAXBASE:ASSI:(COUNT+4) = 0
+	BASE:ASSI:(COUNT+4) = 0
+REND
+;어디 있는지 장소 플래그 리셋
+CFLAG:ASSI:4 = 0
+;공포 · 반발각인 취득 완료 판정 리셋
+MARK:ASSI:96 = 0
+MARK:ASSI:97 = 0
+;약물각인 1Lv분 감소
+MARK:ASSI:3 = MAX(MARK:ASSI:3 - 1, 0)
+
+;특정 소질을 리셋
+FOR LOCAL, 140, 180
+	;괴조인격, 즉각함락은 인계로 취득시키지 않을 경우에는 리셋
+	IF (LOCAL == 169 && (ARG & 2) == 0) || (LOCAL == 179 && (ARG & 1) == 0)
+		TALENT:ASSI:LOCAL = 0
+	;임신, 육아중, 모성, 포란중, 기생, 회란은 리셋(버그 막으려고)
+	ELSEIF (LOCAL >= 140 && LOCAL <= 143) || LOCAL == 145 || LOCAL == 146
+		TALENT:ASSI:LOCAL = 0
+	;연모계, 복종계, 음란계도 리셋(특히 연모, 음란, 복종은 함락한 인원수 카운트에 영향받기 때문)
+	ELSEIF (LOCAL >= 150 && LOCAL < 157) || (LOCAL >= 159 && LOCAL < 169) || (LOCAL >= 170 && LOCAL < 179)
+		TALENT:ASSI:LOCAL = 0
+	ENDIF
+NEXT
+TALENT:ASSI:65 = 0
+TALENT:ASSI:998 = 0
+
+;CFLAG를 리셋
+FOR LOCAL, 0, 100
+	;매각 불가 플래그, ＶＡ이상경험 변동 플래그 리셋
+	IF LOCAL == 3 || LOCAL == 11
+		CFLAG:ASSI:LOCAL = 0
+	;질투, 방뇨 레벨, 미약중독, 은방울꽃 독, 음모, 촉수 임플란트, 낙인용 장비 플래그는 리셋
+	ELSEIF (LOCAL >= 30 && LOCAL <= 33) || LOCAL == 36 || LOCAL == 41 || LOCAL == 42
+		CFLAG:ASSI:LOCAL = 0
+	;범용 대사, 역 대사의 인격 재설정용
+	ELSEIF LOCAL == 43 || LOCAL == 44
+		CFLAG:ASSI:LOCAL = 0
+	;마지막 조교를 받은 날과 마지막으로 조수에서 해임된 날을 리셋(하지 않으면 표시가 부자연스러워짐)
+	ELSEIF LOCAL == 46 || LOCAL == 47
+		CFLAG:ASSI:LOCAL = 0
+	;부위 개발도, 강제정음절정 플래그는 리셋
+	ELSEIF (LOCAL >= 60 && LOCAL <= 64)
+		CFLAG:ASSI:LOCAL = 0
+	;임신 출산계 플래그도 전부 리셋
+	ELSEIF LOCAL >= 70 && LOCAL <= 79
+		CFLAG:ASSI:LOCAL = 0
+	ENDIF
+NEXT
+FOR LOCAL, 1000, 10000
+	;딸에 관련된 플래그를 보존
+	SIF LOCAL >= 3100 && LOCAL < 3110
+		CONTINUE
+	;종족 유전자에 관한 플래그를 보존
+	SIF LOCAL >= 3200 && LOCAL < 3400
+		CONTINUE
+	;성별반전했을 때의 원래 소질에 관한 플래그를 보존
+	SIF LOCAL >= 4995 && LOCAL < 5000
+		CONTINUE
+
+	;■여기서 겨우 특별한 처리
+	;CONTINUE에 0을 넣는 처리를 지정한 번호만 패스한다
+	;예 : CFLAG의 7990,7991, ... , 7999는 인계
+	;SIF LOCAL >= 7990 && LOCAL < 8000
+	;	CONTINUE
+	SIF LOCAL == 7000
+		CONTINUE
+
+	CFLAG:ASSI:LOCAL = 0
+NEXT
+
+;EQUIP을 리셋한다
+VARSET EQUIP:ASSI:0, 0, 0, 15
+
+;호감도는 감소시킨 상태로 인계
+;최저는 50(인계하는 시점에서 1000 이상은 있다고 어림잡고 있기 때문)
+;소질이 변동하는 700, 1000, 2000, 5000을 경계로 인계율이 격감하게.
+LOCAL:1 = CFLAG:ASSI:2 / 20
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 100, 90)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 250, 80)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 500, 75)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 700, 66)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 1000, 50)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 2000, 33)
+LOCAL:1 = TABLE_CALC2(LOCAL:1, 5000, 25)
+CFLAG:ASSI:2 = LOCAL:1
+

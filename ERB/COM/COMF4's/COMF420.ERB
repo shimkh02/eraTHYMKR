@@ -1,0 +1,428 @@
+﻿;=============================================================================
+;은방울꽃의 독
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE420
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:420 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 メディスンじゃないとダメ
+SIF NO:PLAYER != 33
+	RETURN 0
+;薬毒耐性だとダメ。ただし[人形]は除く
+SIF TALENT:44 && TALENT:174 == 0
+	RETURN 0
+;체력이 1000미만では使用不可
+SIF BASE:0 < 1000
+	RETURN 0
+;使いすぎるとダメ
+SIF CFLAG:33 >= 1000
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;鈴蘭の毒効果発揮中は不可
+SIF TEQUIP:18
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM420
+PRINTL 은방울꽃의 독
+TSTR:0 = 은방울꽃의 독
+
+LOCAL:1 = RAND:16
+TFLAG:99 = LOCAL:1
+LOCAL:2 = CFLAG:33
+CALL TRAIN_MESSAGE_COM420
+
+DOWNBASE:0 += 50 + (50 * (16-LOCAL:1) / (LOCAL:2+1))
+DOWNBASE:1 += 30 + (30 * (16-LOCAL:1) / (LOCAL:2+1))
+
+SOURCE:20 = 3000
+SOURCE:26 = 3500
+SOURCE:31 = 8000
+
+TEQUIP:18 = 1
+
+IF LOCAL:1 == 0 && CFLAG:33 == 0
+	CALL POISON_EFFECT
+ELSEIF LOCAL:1 == 0 && CFLAG:33 > 0
+	SIF BASE:0 > 10
+		BASE:0 = 10
+ELSEIF LOCAL:1 >= 1 && LOCAL:1 < 4
+	PALAM:12 += 5000
+	PALAM:14 += 5000
+	PALAM:20 /= 2
+ELSEIF LOCAL:1 >= 4 && LOCAL:1 < 8
+	PALAM:10 += 5000
+	PALAM:13 += 5000
+	PALAM:15 += 5000
+ELSEIF LOCAL:1 >= 8 && LOCAL:1 < 12
+	PALAM:17 += 5000
+ELSE
+	PALAM:16 += 5000
+	PALAM:21 += 5000
+ENDIF
+
+CFLAG:33 += 10 + RAND:11
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;약물 경험
+TCVAR:40 += 3
+
+RETURN 1
+
+;--------------------------------------------------
+;은방울꽃의 독효과 발휘중
+;--------------------------------------------------
+@EQUIP_COM420
+PRINTL <은방울꽃의 독효과 발휘 중>
+
+DOWNBASE:0 += 100
+DOWNBASE:1 += 90
+
+LOCAL = 1
+SIF CFLAG:33 / 10 > 0
+	LOCAL += CFLAG:33 / 10
+SOURCE:20 += 2500 / LOCAL
+SOURCE:26 += 500
+
+CFLAG:33 -= RAND:5
+
+LOCAL:1 = 100
+;[봉래인],[령체]는 빨리 내성이 붙는다
+SIF TALENT:49 || TALENT:207
+	TIMES LOCAL:1 , 0.50
+;[신령],[반신],[죽음의 신]도 같이 내성이 빨리 붙는다
+SIF TALENT:222 || TALENT:223 || TALENT:224
+	TIMES LOCAL:1 , 0.66
+;이상 경험이 많으면 같이 빨리 내성이 붙는다
+SIF EXP:50 >= 5
+	TIMES LOCAL:1 , 0.75
+;중독 하기 쉬운이라면 내성이 붙기 어렵다
+SIF TALENT:84
+	TIMES LOCAL:1 , 2.00
+
+LOCAL:2 = RAND:8
+IF CFLAG:33 >= LOCAL:1 && LOCAL:2 == 0 && TALENT:44 == 0
+	CALL SELF_KOJO, TARGET, 7, 19
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 독이나 약에 대한 저항력을 가지게 되었다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [약독내성]을 얻었다.
+	CFLAG:33 += 1000
+	TALENT:44 = 1
+ELSEIF CFLAG:33 >= LOCAL:1
+	CALL SELF_KOJO, TARGET, 7, 19
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 은방울꽃의 독에 대한 내성을 얻었다.
+	CFLAG:33 += 1000
+ENDIF
+
+;--------------------------------------------------
+;독의 효과
+;--------------------------------------------------
+@POISON_EFFECT
+
+LOCAL = RAND:10
+IF LOCAL == 0 && TALENT:10 == 0
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 정신을 침식했다.
+	CALL SELF_KOJO, TARGET, 7, 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [겁쟁이]가 되었다.
+	TALENT:10 = 1
+	CFLAG:12 |= 4
+ELSEIF LOCAL == 1 && TALENT:22 == 0
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 정신을 침식했다.
+	CALL SELF_KOJO, TARGET, 7, 1
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [감정결여]가 되었다.
+	TALENT:22 = 1
+	CFLAG:12 |= 8
+ELSEIF LOCAL == 2
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 정신을 침식했다.
+	IF CFLAG:12 & 16 || CFLAG:12 & 32
+		CALL SELF_KOJO, TARGET, 7, 2
+		PRINTFORMW %CALLNAME:TARGET%의 기력이 소모됐다.
+		BASE:1 = MAX(BASE:1 - 200, 0)
+	ELSEIF TALENT:25
+		CALL SELF_KOJO, TARGET, 7, 3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [비관적]이 되었다.
+		TALENT:25 = 0
+		TALENT:26 = 1
+		CFLAG:12 |= 16
+	ELSEIF TALENT:26
+		CALL SELF_KOJO, TARGET, 7, 4
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [낙관적]이 되었다.
+		TALENT:25 = 1
+		TALENT:26 = 0
+		CFLAG:12 |= 32
+	ELSE
+		LOCAL:1 = RAND:2
+		IF LOCAL:1 == 0
+			CALL SELF_KOJO, TARGET, 7, 3
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [비관적]이 되었다.
+			TALENT:26 = 1
+			CFLAG:12 |= 16
+		ELSE
+			CALL SELF_KOJO, TARGET, 7, 4
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [낙관적]이 되었다.
+			TALENT:25 = 1
+			CFLAG:12 |= 32
+		ENDIF
+	ENDIF
+ELSEIF LOCAL == 3 && TALENT:28 == 0 && TALENT:32 == 0
+	LOCAL:1 = RAND:2
+	IF LOCAL:1 == 0
+		CALL SELF_KOJO, TARGET, 7, 5
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 좀 더 자신을 드러내고 싶은 기분으로 가득 차 올랐다.
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [눈에 띄고 싶어함]이 되었다.
+		TALENT:28 = 1
+		CFLAG:12 |= 64
+	ELSE
+		CALL SELF_KOJO, TARGET, 7, 6
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 우울한 상태에 빠졌다.
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [억압]이 되었다.
+		TALENT:32 = 1
+		CFLAG:12 |= 128
+	ENDIF
+ELSEIF LOCAL == 4 && TALENT:64
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 신경을 침식했다.
+	IF CFLAG:12 & 256 || CFLAG:12 & 512
+		CALL SELF_KOJO, TARGET, 7, 2
+		PRINTFORMW %CALLNAME:TARGET%의 기력이 소모했다.
+		BASE:1 = MAX(BASE:1 - 200, 0)
+	ELSEIF TALENT:61
+		CALL SELF_KOJO, TARGET, 7, 7
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [냄새민감] 이 되었다.
+		TALENT:61 = 0
+		TALENT:62 = 1
+		CFLAG:12 |= 256
+	ELSEIF TALENT:62
+		CALL SELF_KOJO, TARGET, 7, 8
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [냄새둔감] 이 되었다.
+		TALENT:61 = 1
+		TALENT:62 = 0
+		CFLAG:12 |= 512
+	ELSE
+		LOCAL:1 = RAND:2
+		IF LOCAL:1 == 0
+			CALL SELF_KOJO, TARGET, 7, 7
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [냄새민감] 이 되었다.
+			TALENT:62 = 1
+			CFLAG:12 |= 256
+		ELSE
+			CALL SELF_KOJO, TARGET, 7, 8
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [냄새둔감] 이 되었다.
+			TALENT:61 = 1
+			CFLAG:12 |= 512
+		ENDIF
+	ENDIF
+ELSEIF LOCAL == 5
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 신경을 침식했다.
+	LOCAL:1 = RAND:2
+	IF LOCAL:1 == 0
+		IF TALENT:101
+			CALL SELF_KOJO, TARGET, 7 , 9
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% C에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [C둔감]을 잃었다.
+			TALENT:101 = 0
+		ELSEIF TALENT:101 == 0 && TALENT:100 == 0
+			CALL SELF_KOJO, TARGET, 7, 9
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% C에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [C민감]을 얻었다.
+			TALENT:100 = 1
+		ELSEIF TALENT:100
+			CALL SELF_KOJO, TARGET, 7, 10
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% C에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [C민감]을 잃었다.
+			TALENT:100 = 0
+		ENDIF
+	ELSE
+		IF TALENT:100
+			CALL SELF_KOJO, TARGET, 7, 10
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% C에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [C민감]을 잃었다.
+			TALENT:100 = 0
+		ELSEIF TALENT:101 == 0 && TALENT:100 == 0
+			CALL SELF_KOJO, TARGET, 7, 10
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% C에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [C둔감]을 얻었다.
+			TALENT:101 = 1
+		ELSEIF TALENT:101
+			CALL SELF_KOJO, TARGET, 7, 9
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% C에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [C둔감]을 잃었다.
+			TALENT:101 = 0
+		ENDIF
+	ENDIF
+ELSEIF LOCAL == 6 && TALENT:120 == 0
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 신경을 침식했다.
+	LOCAL:1 = RAND:2
+	IF LOCAL:1 == 0
+		IF TALENT:103
+			CALL SELF_KOJO, TARGET, 7, 11
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% V에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [V둔감]을 잃었다.
+			TALENT:103 = 0
+		ELSEIF TALENT:103 == 0 && TALENT:102 == 0
+			CALL SELF_KOJO, TARGET, 7, 11
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% V에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [V민감]을 얻었다.
+			TALENT:102 = 1
+		ELSEIF TALENT:102
+			CALL SELF_KOJO, TARGET, 7, 12
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% V에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [V민감]을 잃었다.
+			TALENT:102 = 0
+		ENDIF
+	ELSE
+		IF TALENT:102
+			CALL SELF_KOJO, TARGET, 7, 12
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% V에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [V민감]을 잃었다.
+			TALENT:102 = 0
+		ELSEIF TALENT:103 == 0 && TALENT:102 == 0
+			CALL SELF_KOJO, TARGET, 7, 12
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% V에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [V둔감]을 얻었다.
+			TALENT:103 = 1
+		ELSEIF TALENT:103
+			CALL SELF_KOJO, TARGET, 7, 11
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% V에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [V둔감]을 잃었다.
+			TALENT:103 = 0
+		ENDIF
+	ENDIF
+ELSEIF LOCAL == 7
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 신경을 침식했다.
+	LOCAL:1 = RAND:2
+	IF LOCAL:1 == 0
+		IF TALENT:105
+			CALL SELF_KOJO, TARGET, 7, 13
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% A에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [A둔감]을 잃었다.
+			TALENT:105 = 0
+		ELSEIF TALENT:105 == 0 && TALENT:104 == 0
+			CALL SELF_KOJO, TARGET, 7, 13
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% A에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [A민감]을 얻었다.
+			TALENT:104 = 1
+		ELSEIF TALENT:104
+			CALL SELF_KOJO, TARGET, 7, 14
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% A에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [A민감]을 잃었다.
+			TALENT:104 = 0
+		ENDIF
+	ELSE
+		IF TALENT:104
+			CALL SELF_KOJO, TARGET, 7, 14
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% A에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [A민감]을 잃었다.
+			TALENT:104 = 0
+		ELSEIF TALENT:105 == 0 && TALENT:104 == 0
+			CALL SELF_KOJO, TARGET, 7, 14
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% A에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [A둔감]을 얻었다.
+			TALENT:105 = 1
+		ELSEIF TALENT:105
+			CALL SELF_KOJO, TARGET, 7, 13
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% A에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [A둔감]을 잃었다.
+			TALENT:105 = 0
+		ENDIF
+	ENDIF
+ELSEIF LOCAL == 8
+	PRINTFORML 은방울꽃의 독은 %CALLNAME:TARGET%의 신경을 침식했다.
+	LOCAL:1 = RAND:2
+	IF LOCAL:1 == 0
+		IF TALENT:107
+			CALL SELF_KOJO, TARGET, 7, 15
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% B에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [B둔감]을 잃었다.
+			TALENT:107 = 0
+		ELSEIF TALENT:107 == 0 && TALENT:106 == 0
+			CALL SELF_KOJO, TARGET, 7, 15
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% B에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [B민감]을 얻었다.
+			TALENT:106 = 1
+		ELSEIF TALENT:106
+			CALL SELF_KOJO, TARGET, 7, 16
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% B에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [B민감]을 잃었다.
+			TALENT:106 = 0
+		ENDIF
+	ELSE
+		IF TALENT:106
+			CALL SELF_KOJO, TARGET, 7, 16
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% B에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [B민감]을 잃었다.
+			TALENT:106 = 0
+		ELSEIF TALENT:107 == 0 && TALENT:106 == 0
+			CALL SELF_KOJO, TARGET, 7, 16
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% B에의 자극에 둔하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [B둔감]을 얻었다.
+			TALENT:107 = 1
+		ELSEIF TALENT:107
+			CALL SELF_KOJO, TARGET, 7, 15
+			PRINTFORML %조사선택(CALLNAME:TARGET, "는")% B에의 자극에 민감하게 되었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [B둔감]을 잃었다.
+			TALENT:107 = 0
+		ENDIF
+	ENDIF
+ELSEIF LOCAL == 9 && TALENT:138 != 1
+	CALL SELF_KOJO, TARGET, 7, 17
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 체력의 회복하는 힘이 저하했다.
+	IF TALENT:137
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [회복 빠름]을 잃었다.
+		TALENT:137 = 0
+	ELSEIF TALENT:138 == 0
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [회복느림]을 얻었다.
+		TALENT:138 = 1
+	ENDIF
+ELSE
+	CALL SELF_KOJO, TARGET, 7, 18
+	PRINTFORML %CALLNAME:TARGET%의 컨디션이 이상하다….
+	PRINTFORMW %CALLNAME:TARGET%의 체력과 기력의 최대치가 줄어들어 버렸다.
+	MAXBASE:0 -= 100
+	MAXBASE:1 -= 100
+	BASE:0 = MIN(BASE:0, 10)
+	BASE:1 = MAX(BASE:1, 0)
+ENDIF
+
+CFLAG:33 += 50
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM420
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%에게 은방울꽃의 독을 퍼부었다.
+IF TFLAG:99 == 0 && CFLAG:33 > 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 독으로 체력을 소모하고 있다….
+ELSEIF TFLAG:99 >= 1 && TFLAG:99 < 4
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 초점 없는 눈으로 %조사선택(CALLNAME:PLAYER, "를")% 올려보고 있다….
+	PRINTFORMW 그 눈동자로부터는 반항할 의사조차 느껴지지 않는다.
+ELSEIF TFLAG:99 >= 4 && TFLAG:99 < 8
+	PRINTFORMW 독의 영향인가 %조사선택(CALLNAME:TARGET, "는")% 얼굴을 붉혀, 숨을 헐떡이고 있다….
+ELSEIF TFLAG:99 >= 8 && TFLAG:99 < 12
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% 시선이 마주치자 %조사선택(CALLNAME:TARGET, "는")% 갑자기 무서워하며 도망치려 했다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 속이 메스꺼운 것인지 안면이 창백해져, 입가에 손을 대고 있다….
+ENDIF

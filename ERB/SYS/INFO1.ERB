@@ -1,0 +1,128 @@
+﻿;=============================================================================
+;능력 표시(1형 표시)
+;=============================================================================
+;表示順は@PRINT_ABL_COUNTのコメント参照
+@SHOW_INFO_ABL, ARG
+LOCAL:1 = 0
+REPEAT 25
+	LOCAL = PRINT_ABL_COUNT(ARG)
+	IF LOCAL < 0
+		CONTINUE
+	ELSEIF ABL:ARG:LOCAL > 0
+		PRINTFORM %ABLNAME:LOCAL, 8%-LV{ABL:ARG:LOCAL}
+		LOCAL:1 += 1
+		IF LOCAL:1 >= 5
+			PRINTL 
+			LOCAL:1 = 0
+		ELSE
+			PRINT 　
+		ENDIF
+	ENDIF
+REND
+SIF LOCAL:1 != 0
+	PRINTL 
+DRAWLINE
+
+;=============================================================================
+;소질 표시(1형 표시)
+;=============================================================================
+;弐型表示と違い、素質を6つ表示させた後の改行処理は無い(従来の表示に近い)
+@SHOW_INFO_TALENT, ARG
+REPEAT 270
+	SIF TALENT:ARG:COUNT
+		CALL SHOW_INFO_EACH_TALENT, ARG
+REND
+REPEAT 10
+	SIF TALENT:ARG:(830+COUNT)
+		PRINTFORM [%TALENTNAME:(830+COUNT)%] 
+REND
+SIF TALENT:ARG:998
+	PRINTFORM [%TALENTNAME:998%] 
+SIF CFLAG:ARG:0
+	PRINTFORM [\@(EQUIP:ARG:0 == 1) ? ｅｘ # ＥＸ\@] 
+PRINTL 
+
+;토리코모드분기
+IF FLAG:5000 & 8
+	;
+ELSE
+	DRAWLINE
+ENDIF
+
+;=============================================================================
+;각인 표시(1형 표시)
+;=============================================================================
+@SHOW_INFO_MARK, ARG
+LOCAL = 0
+REPEAT 11
+	SIF COUNT >= 5 && COUNT < 8
+		CONTINUE
+	IF FLAG:3998 & 1 && ((COUNT == 8 && MARK:ARG:96) || (COUNT == 9 && MARK:ARG:97))
+		FONTBOLD
+		PRINTFORM %MARKNAME:COUNT%-LV{MARK:ARG:COUNT}
+		FONTREGULAR
+	ELSE
+		PRINTFORM %MARKNAME:COUNT%-LV{MARK:ARG:COUNT}
+	ENDIF
+	;最後のループ以外では間隔をあける
+	LOCAL += 1
+	IF LOCAL%4 == 0
+		PRINTL 
+	ELSE
+		PRINT 　
+	ENDIF
+REND
+;Debugモード（無条件）もしくは主人が[超常目算]持ちで難易度EASY～HARDのときは刻印取得履歴も表示
+IF TALENT:MASTER:998 || (TALENT:MASTER:198 && (FLAG:3 >= 1 && FLAG:3 <= 3)) 
+	FOR COUNT, 96, 98
+		PRINTFORM \@(COUNT == 96) ? 공포 이력 # 반발 이력 \@-LV{MARK:ARG:COUNT}
+
+		LOCAL += 1
+		;最後のループ以外では間隔をあける
+		IF LOCAL%4 == 0
+			PRINTL 
+		ELSE
+			PRINT 　
+		ENDIF
+	NEXT
+ENDIF
+;最後のループで改行してなかったら、ここで改行しておく
+SIF LOCAL%4 != 0
+	PRINTL 
+DRAWLINE
+
+;=============================================================================
+;경험 표시(1형 표시)
+;=============================================================================
+;表示順は@PRINT_EXP_COMMONのコメント参照
+@SHOW_INFO_EXP, ARG
+CALL PRINT_EXP_COMMON, ARG
+DRAWLINE
+
+;=============================================================================
+;구슬 표시(1형 표시)
+;=============================================================================
+;表示順
+; 0,快Ｃ　 1,快Ｖ　 2,快Ａ　 3,快Ｂ
+;11,習得　12,恭順　13,欲情　14,屈服
+;15,恥情　16,苦痛　17,恐怖　30,薬毒
+;31,侵蝕　32,先導 100,否定 198,触手(主人のみ)
+@SHOW_INFO_JUEL, ARG
+VARSET LOCALS,""
+SPLIT "0,1,2,3,11,12,13,14,15,16,17,30,31,32,100,198", ",", LOCALS
+REPEAT 15 + (ARG == MASTER)
+	LOCAL = TOINT(LOCALS:COUNT)
+	PRINTFORM %PALAMNAME:LOCAL%의 구슬:{JUEL:ARG:LOCAL, 7}
+
+	;改行or表示位置あけ
+	IF COUNT%4 == 3
+		PRINTL 
+	ELSE
+		PRINT 　
+	ENDIF
+REND
+
+;最後のループで改行してなかったら、ここで改行しておく
+SIF COUNT%4 != 0
+	PRINTL 
+DRAWLINE

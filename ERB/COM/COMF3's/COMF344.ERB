@@ -1,0 +1,138 @@
+﻿;=============================================================================
+;서로 젖 주무르기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE344
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:344 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;조교자か조교 대상이 オトコだとダメ
+SIF TALENT:PLAYER:120 || TALENT:120
+	RETURN 0
+;순종4미만 · 레즈끼3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3)) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;레즈끼3이상限定
+SIF ABL:22 < 3
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;조수가 ウェディングドレス · ゴスロリ着用中の場合助手に기교4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && (TEQUIP:ASSI:59 == 19 || TEQUIP:ASSI:59 == 20) && ABL:ASSI:12 < 4
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM344
+PRINTL 서로 젖 주무르기
+TSTR:0 = 서로 젖 주무르기 
+CALL TRAIN_MESSAGE_COM344
+
+DOWNBASE:0 += 7
+DOWNBASE:1 += 70
+
+SOURCE:12 = 90
+SOURCE:15 = 80
+SOURCE:30 = 30
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 20
+	SOURCE:11 = 50
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 100
+	SOURCE:11 = 100
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 500
+	SOURCE:11 = 160
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1200
+	SOURCE:11 = 200
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 2000
+	SOURCE:11 = 230
+ELSE
+	SOURCE:3 = 2800
+	SOURCE:11 = 250
+ENDIF
+
+;조교자의 B감각을 본다
+SOURCE:14 = 50 * (1 + ABL:PLAYER:3)
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:3 , 1.40
+	TIMES SOURCE:11 , 1.40
+ENDIF
+
+;조교자가［유아］,［유치］
+IF TALENT:PLAYER:130 || TALENT:PLAYER:131
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+ENDIF
+;조교자가［유아 퇴행］
+SIF TALENT:PLAYER:159
+	TIMES SOURCE:11 , 1.20
+
+;노예의 B⇔조교자의 손가락의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:5
+;노예의 손가락⇔조교자의 B의 불결이 이동
+STAIN:1 |= STAIN:PLAYER:5
+STAIN:PLAYER:5 |= STAIN:1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM344
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF (TALENT:PLAYER:130 || TALENT:PLAYER:131 || TALENT:PLAYER:159) && (TALENT:130 || TALENT:131 || TALENT:159)
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 마치 아기가 어머니에게 젖을 요구하듯이 서로의 가슴을 비벼댔다.
+ELSEIF TALENT:PLAYER:174 && TALENT:174
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 서로의 가슴을 불쾌한 손놀림으로 비볐다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "와")% %조사선택(CALLNAME:TARGET, "는")% 서로의 가슴을 비볐다….
+ENDIF

@@ -1,0 +1,220 @@
+﻿;=============================================================================
+;뿔 애널 삽입
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE436
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:436 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;조교자가 助手でcaved!!!!イベントを体験しているとトラウマで実行できない
+SIF ASSIPLAY && CFLAG:PLAYER:20 & 4096
+	RETURN 0
+;既にcaved!!!!が発動しているとダメ
+SIF TFLAG:140 & 32
+	RETURN 0
+;조교자가 [鬼]またはハクタク化している[半白澤]ないとダメ
+SIF TALENT:PLAYER:212 != 2 && TALENT:PLAYER:214 == 0
+	RETURN 0
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;윤활 부족이고, 순종4미만 · 레즈끼4미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;일정의 Ａ경험이 필요
+SIF EXP:1 < EXPLV:3
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM436
+;조교 대상이 긴박 하고 있지 않는 반발 각인 3의 하크타크였던 경우, 역습 될 가능성대
+IF NO:TARGET == 26 && TFLAG:199 && MARK:9 >= 3 && TEQUIP:40 == 0 && FLAG:15 & 32768
+	IF RAND:4 > 0 && (TFLAG:140 & 32) == 0
+		TFLAG:140 |= 32
+		JUMP CAVED
+	ENDIF
+ENDIF
+
+PRINTL 뿔 애널 삽입
+TSTR:0 = 뿔 애널 삽입
+CALL TRAIN_MESSAGE_COM436
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 700
+DOWNBASE:1 += 350
+
+SOURCE:11 = 100
+SOURCE:20 = 2500
+SOURCE:12 = 1200
+SOURCE:22 = 2000
+SOURCE:31 = 2700
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 11
+	SOURCE:22 += 100
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 110
+	SOURCE:22 += 700
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 550
+	SOURCE:22 += 1500
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 1100
+	SOURCE:22 += 3000
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 2200
+	SOURCE:22 += 5000
+ELSE
+	SOURCE:2 = 3300
+	SOURCE:22 += 8000
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:1
+	TIMES SOURCE:2 , 0.10
+	SOURCE:20 += 26000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 0.30
+	SOURCE:20 += 13000
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 0.50
+	SOURCE:20 += 6500
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 2000
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 1000
+ELSE
+	TIMES SOURCE:2 , 1.60
+	SOURCE:20 += 500
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 10000
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	SOURCE:20 += 3600
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 1200
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:2 , 1.40
+	SOURCE:20 += 200
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 100
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:22 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:22 , 1.20
+ELSE
+	TIMES SOURCE:2 , 1.40
+	TIMES SOURCE:22 , 1.40
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+TCVAR:1 += 25
+TCVAR:33 += 2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 10
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += (ABL:2 >= 3) ?  2 # 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM436
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 자신의 뿔을 \@(TALENT:128) ? 아담한 체구의 # \@%CALLNAME:TARGET%의 
+SIF ABL:2 >= 3
+	PRINT 충분히 개발된 
+PRINTW 애널에 뿌리까지 집어넣었다….

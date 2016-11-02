@@ -1,0 +1,95 @@
+﻿;=============================================================================
+;아이언 메이든
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE252
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:252 > 0
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;조수로는 안 됨
+SIF ASSIPLAY
+	RETURN 0
+;アイアンメイデンを購入(開発?)していないとダメ
+SIF (FLAG:73 & 32) == 0
+	RETURN 0
+;조교자가 새드と狂気을 갖고 있지 않으면 불가
+SIF TALENT:PLAYER:81 == 0 || TALENT:PLAYER:158 == 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;거의 처형.
+@COM252
+PRINTL 아이언 메이든
+TSTR:0 = 아이언 메이든
+CALL TRAIN_MESSAGE_COM252
+
+DOWNBASE:0 += 400
+DOWNBASE:1 += 550
+
+SOURCE:31 = 120000
+SOURCE:25 = 5000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 13000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 15500
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 18500
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 21000
+ELSE
+	SOURCE:20 = 23500
+ENDIF
+
+;사라시 장착하고 있는 경우 고통 소스 경감도 사라시 파손
+IF TEQUIP:36
+	SOURCE:20 -= 200
+	TEQUIP:36 = 0
+	ITEM:24 = 0
+ENDIF
+;의상을 장착하고 있는 경우 고통 소스 경감도 앞치마와 학교수영복 파손
+IF TEQUIP:59
+	SOURCE:20 -= 100
+	SIF TEQUIP:59 == 1
+		ITEM:44 = 0
+	SIF TEQUIP:59 == 2
+		ITEM:45 = 0
+	TEQUIP:59 = 0
+ENDIF
+
+;아이언 메이든에 넣어지는 것은 이상 경험이므로 점을 넣는다
+TCVAR:50 += 2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;커맨드 속성：도구(조교자)
+SIF TEQUIP:90 == 0
+	TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM252
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% 안쪽에 날카로운 바늘이 가득한 「철의 처녀」 속에 집어넣고, 문을 닫아 버렸다.

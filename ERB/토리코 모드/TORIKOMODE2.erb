@@ -1,0 +1,2146 @@
+﻿;======================================================
+; 토리코모드 의뢰소 관련 함수들.
+; 130830 ~ BY V.K
+;======================================================
+
+;-------------------------------------------------
+;의뢰 시스템에서 소질을 만들어내기 위한 함수.
+; 좀 어거지성이 있는 IF문을 사용한다...
+; 입력 : 없다
+; 출력 LOCAL:0 = 소질번호 ;LOCAL:1 = 소질의 가격레벨 ;LOCAL:2 = 소질의 레벨
+@GENERATE_MISSION_ABILITY_TORIKOMODE
+;.................................................
+;PHASE1 . 소질번호를 생성한다.
+;앞에서부터 차례대로 확률을 잡아간다. 따라서 5레벨이 등장할 확률은 매우 낮아진다. 40% * 50% * ...
+;LOCAL:0 = 소질번호
+;LOCAL:1 = 소질의 가격레벨
+;LOCAL:2 = 소질의 레벨
+
+LOCAL:0 = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+
+;언제든 체크에 성공하면 튕겨나간다.
+;레벨1 어빌리티를 체크한다
+LOCAL:0 = RAND:10
+IF LOCAL:0 == 0 || LOCAL:0 == 1 || LOCAL:0 == 2 || LOCAL:0 == 3
+	LOCAL:1 = 1
+	GOTO SELECT_LEVEL
+
+ENDIF
+;레벨2 어빌리티를 체크한다.
+LOCAL:0 = RAND:10 + 10
+IF LOCAL:0 == 10  || LOCAL:0 == 11 || LOCAL:0 == 12 || LOCAL:0 == 13 || LOCAL:0 == 14
+	LOCAL:1 = 2
+	GOTO SELECT_LEVEL
+ENDIF
+
+;레벨3 어빌리티를 체크한다.
+LOCAL:0 = RAND:10 + 20
+IF LOCAL:0 == 20 || LOCAL:0 == 21 || LOCAL:0 == 22 || LOCAL:0 == 23
+	LOCAL:1 = 3
+	GOTO SELECT_LEVEL
+ENDIF
+
+;레벨4 어빌리티를 체크한다.
+LOCAL:0 = RAND:10 + 70
+IF LOCAL:0 == 70 || LOCAL:0 == 71 || LOCAL:0 == 72 || LOCAL:0 == 73
+	LOCAL:1 = 4
+	GOTO SELECT_LEVEL
+ENDIF
+
+;레벨5 어빌리티를 체크한다.
+LOCAL:0 = RAND:8 + 30
+IF LOCAL:0 == 30 || LOCAL:0 == 31 || LOCAL:0 == 32 || LOCAL:0 == 33 || LOCAL:0 == 34 || LOCAL:0 == 35 || LOCAL:0 == 36 || LOCAL:0 == 37
+	LOCAL:1 = 5
+	GOTO SELECT_LEVEL
+ENDIF
+
+$SELECT_LEVEL
+;.................................................
+;PHASE2 . 소질번호를 생성한다.
+
+LOCAL:2 = RAND:3 + 3
+
+;디버그
+;PRINTFORML LOCAL:0 {LOCAL:0}   LOCAL:1 {LOCAL:1}   LOCAL:2 {LOCAL:2}
+
+;결과값을 돌려준다.
+RESULT:0 = LOCAL:0
+RESULT:1 = LOCAL:1
+RESULT:2 = LOCAL:2
+RETURN RESULT:0
+RETURN RESULT:1
+RETURN RESULT:2
+
+
+
+
+;-------------------------------------------------
+; 랜덤하게 생성된 소질번호와 레벨에 가격을 메겨준다.
+; 입력 : 소질레벨, 가격레벨
+; 출력 : 가격 
+@CALC_MISSION_REWARD_ABILITY_TORIKOMODE, ARG:0, ARG:1
+LOCAL:0 = ARG:0*ARG:0*200 +1000
+LOCAL:0 *= ARG:1
+RESULT:0  = LOCAL:0
+RETURN RESULT:0
+
+
+
+;-------------------------------------------------
+; 랜덤하게 의뢰 날짜를 만들어낸다. (5~25)
+; 입력 : 없다.
+; 출력 : 날짜
+@GENERATE_MISSION_DAY_TORIKOMODE
+LOCAL:0 = (RAND:5+1) * 5
+RESULT:0 = LOCAL:0
+RETURN RESULT:0
+
+
+
+;-------------------------------------------------
+; 날짜를 받아서 보상값을 만들어낸다.
+; 입력 : 날짜
+; 출력 : 보상보정치(100배)
+@CALC_MISSION_REWARD_DAY_TORIKOMODE, ARG:0
+IF ARG:0 == 25
+	LOCAL:0 = 80
+ELSEIF ARG:0 == 20
+	LOCAL:0 = 90
+ELSEIF ARG:0 == 15
+	LOCAL:0 = 100
+ELSEIF ARG:0 == 10
+	LOCAL:0 = 110
+ELSEIF ARG:0 == 5
+	LOCAL:0 = 120
+ELSE
+ENDIF
+RESULT:0 = LOCAL:0
+RETURN RESULT:0
+
+
+;---------------------------------------------------
+;노예 납품 의뢰을 생성, 출력한다.
+;입력 : 없다
+;출력 : 노예납품 코드
+@GENERATE_MISSION_SLAVE_TORIKOMODE
+;의뢰내용생성
+CALL GENERATE_MISSION_DAY_TORIKOMODE
+LOCAL:0=RESULT:0
+CALL GENERATE_MISSION_TALENT_TORIKOMODE
+LOCAL:1=RESULT:0
+CALL GENERATE_MISSION_ABILITY_TORIKOMODE
+LOCAL:2=RESULT:0
+LOCAL:3=RESULT:1
+LOCAL:4=RESULT:2
+
+;보상계산
+CALL CALC_MISSION_REWARD_TALENT_TORIKOMODE, LOCAL:1
+LOCAL:5 = RESULT:0
+CALL CALC_MISSION_REWARD_ABILITY_TORIKOMODE, LOCAL:4, LOCAL:3
+LOCAL:6 = RESULT:0
+CALL CALC_MISSION_REWARD_DAY_TORIKOMODE, LOCAL:0
+LOCAL:7 = RESULT:0
+LOCAL:9 = ((LOCAL:5*3) + LOCAL:6) * LOCAL:7 /100
+
+;;디버그
+;PRINTFORM 의뢰: 
+;CALL SETCOLOR_TORIKOMODE, "PINK", 3
+;PRINTFORM %ABLNAME:(LOCAL:2)%
+;RESETCOLOR
+;PRINTFORM 이 
+;CALL SETCOLOR_TORIKOMODE, "PINK", 3
+;PRINTFORM LV{LOCAL:4}
+;RESETCOLOR
+;PRINTFORM 이상, 
+;CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+;PRINTFORM [%TALENTNAME:(LOCAL:1)%]
+;RESETCOLOR
+;PRINTFORM 소질을 가진 노예의 납품. 기한:
+;CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+;PRINTFORM {LOCAL:0}
+;RESETCOLOR
+;PRINTFORM 일, 보수:
+;CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+;PRINTFORM {LOCAL:9}
+;RESETCOLOR
+;PRINTFORML 원.
+
+;정보 저장한다.
+RESULT:0 = LOCAL:9*100000000 + LOCAL:0*1000000 + LOCAL:1*1000 + LOCAL:2*10 + LOCAL:4
+RETURN RESULT
+
+
+;---------------------------------------------------
+;노예 납품 의뢰을 코드에서 파싱하여 다시 보여준다.
+;입력 : 노예납품 코드
+;출력 : 노예납품 상세정보
+@DECODE_MISSION_SLAVE_TORIKOMODE, ARG:0
+
+IF ARG:0 == 0
+	PRINTFORML -  -  -  -  -  -  -  -  -  -의뢰가 없습니다-  -  -  -  -  -  -  -  -  -
+ELSE
+	LOCAL:0 = (ARG:0 %100000000000000)/100000000
+	LOCAL:1 = (ARG:0 %100000000)/1000000
+	LOCAL:2 = (ARG:0 %1000000)/1000
+	LOCAL:3 = (ARG:0 %1000)/10
+	LOCAL:4 = (ARG:0 %10)
+	;탈렌트를 요구하지 않는 미션
+	IF LOCAL:2 == 999
+		PRINTFORM 노예납품 : 
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORM %ABLNAME:(LOCAL:3)%
+		RESETCOLOR
+		PRINTFORM 스킬이 
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORM LV{LOCAL:4}
+		RESETCOLOR
+		PRINTFORM 이상인 노예의 납품. 기한 :
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+		PRINTFORM {LOCAL:1}
+		RESETCOLOR
+		PRINTFORM 일, 보수:
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+		PRINTFORM {LOCAL:0}
+		RESETCOLOR
+		PRINTFORML 원.
+	;탈렌트를 요구하는 미션
+	ELSE
+		PRINTFORM 노예납품 : 
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORM %ABLNAME:(LOCAL:3)%
+		RESETCOLOR
+		PRINTFORM 스킬이 
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORM LV{LOCAL:4}
+		RESETCOLOR
+		PRINTFORM 이상, 
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+		PRINTFORM [%TALENTNAME:(LOCAL:2)%]
+		RESETCOLOR
+		PRINTFORM 소질을 가진 노예의 납품. 기한:
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+		PRINTFORM {LOCAL:1}
+		RESETCOLOR
+		PRINTFORM 일, 보수:
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+		PRINTFORM {LOCAL:0}
+		RESETCOLOR
+		PRINTFORML 원.
+	ENDIF
+ENDIF
+
+;---------------------------------------------------
+;의뢰소 플로우
+@MISSION_SHOP_TORIKOMODE
+
+;테스트
+;의뢰의 종류. 0 = 노예납품 , 1 = 상품납품
+LOCAL:0 = 0
+;대출액
+LOCAL:1 = 0
+
+;첫 만남. 이 후 의뢰를 받을 수 있게 됨.
+IF FLAG:5010 == 3
+	PRINTW "음? 자네는..."
+	PRINTW 허름한 건물 안으로 들어서자, 흰 수염이 허리까지 내려오는 늙은 텐구가 안경너머로 흘겨보더니, 입을 뗐다.
+	PRINTW "소문의 그 조교사로구먼" 
+	PRINTFORMW "이름이 어디보자... [%CALLNAME:MASTER%]... 켓. 센스하고는." 
+	PRINTW "반갑네. 난 대텐구라고 하네. 내 이름은 알 거 없고"
+	PRINTW "내가 보낸 전령에게 설명은 잘 들었을테고. 그럼 앞으로 잘 부탁하네. "
+	PRINTW 늙은 텐구는 그 말만 하고는 담뱃대를 꼬나물고 창밖을 넘겨보고 있다.
+	PRINTW ...설명은 들은 적 없었는데?
+	PRINTW 하여튼 텐구란 놈들이란...
+	PRINTW 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE" , 4
+	PRINTW  [ <의뢰>를 받을 수 있게 되었습니다. ]
+	RESETCOLOR
+
+	;의뢰소 초기미션을 생성한다.
+	CALL GENERATE_MISSION_SLAVE_TORIKOMODE
+	FLAG:5011 = RESULT:0
+	CALL GENERATE_MISSION_SLAVE_TORIKOMODE
+	FLAG:5012 = RESULT:0
+	CALL GENERATE_MISSION_SLAVE_TORIKOMODE
+	FLAG:5013 = RESULT:0
+	;노예 캐릭터가 없다면 상품의뢰는 발생하지 않는다.
+	IF CHARANUM >= 2
+		CALL GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+		FLAG:5016 = RESULT:0
+		CALL GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+		FLAG:5017 = RESULT:0
+		CALL GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+		FLAG:5018 = RESULT:0
+	ENDIF	
+	;의뢰소 플래그 조정
+	FLAG:5010 = 4
+ELSE
+ENDIF
+;그리고 지원금을 받는다. (1회한정)
+IF FLAG:5031 == 0
+	PRINTL
+	PRINTW "아, 그리고 이걸 받아두게"
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE" , 4
+	PRINTW  <대텐구로부터 5000원을 받았다.>
+	RESETCOLOR
+	MONEY += 5000
+	PRINTW "큰 돈은 아니지만 도움은 될 걸세."
+	PRINTW "그리고 대출서비스도 하고 있으니, 필요하면 언제든 말만 하게나. 이힛힛..."
+	RESETCOLOR
+	PRINTW "
+	FLAG:5031 = 1
+ENDIF
+
+
+$LOOP_MISSION_SHOP
+DRAWLINE
+PRINTFORM "그럼 어떤 걸 하겠나?"
+PRINTL
+PRINTFORML [0]노예 납품 의뢰서를 본다.
+PRINTFORML [1]노예를 납품한다 / 포기한다
+PRINTFORML [2]상품 납품 의뢰서를 본다.
+PRINTFORML [3]상품을 납품한다 / 포기한다.
+PRINTFORML [4]대출/상환
+PRINTFORML [5]카지노를 즐긴다.
+;오나마스 온리
+SIF FLAG:4 == 18
+	PRINTFORML [8]쾌락의 구슬을 판다.
+PRINTFORML [9]설명을 듣는다.
+PRINTFORML [999] 조교관으로 돌아간다
+
+INPUT
+;노예납품 의뢰를 받는다
+IF RESULT == 0
+	$LOOP_MISSION_SHOP_GET_SLAVE_MISSION
+	PRINTL
+	PRINTFORML "오늘 들어온 의뢰는 이런거네. 마음에 드는 걸 골라보게나."
+	DRAWLINE
+	PRINTFORM [1] 
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5011
+	PRINTFORM [2] 
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5012
+	PRINTFORM [3] 
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5013
+	DRAWLINE
+	PRINTFORML [999] 돌아간다
+
+	INPUT
+	IF RESULT == 1 && FLAG:5011 > 0
+		PRINTL
+		PRINTFORML [0] 바로 납품한다.
+		PRINTFORML [1] 의뢰를 수락한다.
+		INPUT
+			IF RESULT == 0
+			CALL SHOW_SLAVE_MISSION_CHAR_LIST_TORIKOMODE, FLAG:5011
+			ELSEIF RESULT == 1
+			CALL ACCEPT_MISSION_SLAVE_TORIKOMODE, FLAG:5011
+			ENDIF
+			GOTO LOOP_MISSION_SHOP_GET_SLAVE_MISSION
+	ELSEIF RESULT == 2 && FLAG:5012 > 0
+		PRINTL
+		PRINTFORML [0] 바로 납품한다.
+		PRINTFORML [1] 의뢰를 수락한다.
+		INPUT
+			IF RESULT == 0
+			CALL SHOW_SLAVE_MISSION_CHAR_LIST_TORIKOMODE, FLAG:5012
+			ELSEIF RESULT == 1
+			CALL ACCEPT_MISSION_SLAVE_TORIKOMODE, FLAG:5012
+			ENDIF
+			GOTO LOOP_MISSION_SHOP_GET_SLAVE_MISSION
+	ELSEIF RESULT == 3 && FLAG:5013 > 0
+		PRINTL
+		PRINTFORML [0] 바로 납품한다.
+		PRINTFORML [1] 의뢰를 수락한다.
+		INPUT
+			IF RESULT == 0
+			CALL SHOW_SLAVE_MISSION_CHAR_LIST_TORIKOMODE, FLAG:5013
+			ELSEIF RESULT == 1
+			CALL ACCEPT_MISSION_SLAVE_TORIKOMODE, FLAG:5013
+			ENDIF
+			GOTO LOOP_MISSION_SHOP_GET_SLAVE_MISSION
+	ELSEIF RESULT == 999
+		GOTO LOOP_MISSION_SHOP
+	ELSE
+		GOTO LOOP_MISSION_SHOP_GET_SLAVE_MISSION
+	ENDIF
+
+
+
+;노예를 납품한다/포기한다
+ELSEIF RESULT == 1
+	
+	$LOOP_MISSION_SHOP_SOLVE_SLAVE_MISSION
+	PRINTL
+	PRINTFORML 누구를 납품/포기 할까?
+	DRAWLINE
+	PRINTFORM [1] 
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5021
+	PRINTFORM [2] 
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5022
+	PRINTFORM [3] 
+	CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5023
+	DRAWLINE
+	PRINTFORML [999] 돌아간다
+	INPUT
+		IF RESULT == 1 && FLAG:5021 >0
+			CALL MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, FLAG:5021, 0
+			GOTO LOOP_MISSION_SHOP_SOLVE_SLAVE_MISSION
+		ELSEIF RESULT == 2 && FLAG:5022 >0
+			CALL MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, FLAG:5022, 0
+			GOTO LOOP_MISSION_SHOP_SOLVE_SLAVE_MISSION
+		ELSEIF RESULT == 3 && FLAG:5023 >0
+			CALL MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, FLAG:5023, 0
+			GOTO LOOP_MISSION_SHOP_SOLVE_SLAVE_MISSION
+		ELSEIF RESULT == 999
+			GOTO LOOP_MISSION_SHOP
+		ELSE
+			GOTO LOOP_MISSION_SHOP_SOLVE_SLAVE_MISSION
+		ENDIF
+;상품납품 의뢰를 받는다
+ELSEIF RESULT == 2
+	$LOOP_MISSION_SHOP_GET_DITEMTYPE_MISSION
+	PRINTL
+	PRINTFORML "이런 상품들을 구해달라는 의뢰가 들어와 있네."
+	DRAWLINE
+	PRINTFORM [1] 
+	CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5016
+	PRINTFORM [2] 
+	CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5017
+	PRINTFORM [3] 
+	CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5018
+	DRAWLINE
+	PRINTFORML [999] 돌아간다
+	;디버그
+	;PRINTFORML {FLAG:5016} FLAG:5016 {FLAG:5017} FLAG:5017 {FLAG:5018} FLAG:5018
+
+	INPUT
+	IF RESULT == 1 && FLAG:5016 > 0
+		PRINTL
+		PRINTFORML [0] 바로 납품한다.
+		PRINTFORML [1] 의뢰를 수락한다.
+		INPUT
+			IF RESULT == 0
+			CALL CHECK_DELIVER_DITEMTYPE_TORIKOMODE, FLAG:5016
+			ELSEIF RESULT == 1 &&  FLAG:5016 >0
+			CALL ACCEPT_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5016
+			ENDIF
+			GOTO LOOP_MISSION_SHOP_GET_DITEMTYPE_MISSION
+	ELSEIF RESULT == 2 && FLAG:5017 >0
+		PRINTL
+		PRINTFORML [0] 바로 납품한다.
+		PRINTFORML [1] 의뢰를 수락한다.
+		INPUT
+			IF RESULT == 0
+			CALL CHECK_DELIVER_DITEMTYPE_TORIKOMODE, FLAG:5017
+			ELSEIF RESULT == 1 &&  FLAG:5017 >0
+			CALL ACCEPT_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5017
+			ENDIF
+			GOTO LOOP_MISSION_SHOP_GET_DITEMTYPE_MISSION
+	ELSEIF RESULT == 3 && FLAG:5018 >0
+		PRINTL
+		PRINTFORML [0] 바로 납품한다.
+		PRINTFORML [1] 의뢰를 수락한다.
+		INPUT
+			IF RESULT == 0
+			CALL CHECK_DELIVER_DITEMTYPE_TORIKOMODE, FLAG:5018
+			ELSEIF RESULT == 1 &&  FLAG:5018 >0
+			CALL ACCEPT_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5018
+			ENDIF
+			GOTO LOOP_MISSION_SHOP_GET_DITEMTYPE_MISSION
+	ELSEIF RESULT == 999
+		GOTO LOOP_MISSION_SHOP
+	ELSE
+		GOTO LOOP_MISSION_SHOP_GET_DITEMTYPE_MISSION
+	ENDIF
+
+;상품을 납품한다/포기한다
+ELSEIF RESULT == 3
+	$LOOP_MISSION_SHOP_SOLVE_DITEMTYPE_MISSION
+	PRINTL
+	PRINTFORML 어떤 것을 납품/포기 할까?
+	DRAWLINE
+	PRINTFORM [1] 
+	CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5026
+	PRINTFORM [2] 
+	CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5027
+	PRINTFORM [3] 
+	CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5028
+	DRAWLINE
+	PRINTFORML [999] 돌아간다
+	INPUT
+		IF RESULT == 1 && FLAG:5026 >0
+			CALL MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, FLAG:5026, 1
+			GOTO LOOP_MISSION_SHOP_SOLVE_DITEMTYPE_MISSION
+		ELSEIF RESULT == 2 && FLAG:5027 >0
+			CALL MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, FLAG:5027, 1
+			GOTO LOOP_MISSION_SHOP_SOLVE_DITEMTYPE_MISSION
+		ELSEIF RESULT == 3 && FLAG:5028 >0
+			CALL MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, FLAG:5028, 1
+			GOTO LOOP_MISSION_SHOP_SOLVE_DITEMTYPE_MISSION
+		ELSEIF RESULT == 999
+			GOTO LOOP_MISSION_SHOP
+		ELSE
+			GOTO LOOP_MISSION_SHOP_SOLVE_DITEMTYPE_MISSION
+		ENDIF
+
+;대출/상환
+ELSEIF RESULT == 4
+	$LOOP_RENT
+	PRINTL
+	PRINTFORML [0] 대출한다
+	PRINTFORML [1] 상환한다
+	PRINTFORML [999] 돌아간다
+	INPUT
+	IF RESULT == 0
+		IF FLAG:5030 > 0 
+			PRINTFORMW "뭐시라? 자네 아직 전에 빌려간 돈도 못 갚았잖나?!"
+			PRINTFORMW 대텐구는 흥 하고 콧방귀를 뀌며 못마땅한 표정으로 바라보고 있다...
+		ELSE
+			$LOOP_RENT_HOWMUCH
+			PRINTFORMW "그럼, 얼마나 필요한가?"
+			PRINTL
+			PRINTFORML [0] 1만원 빌린다 / 기한 : 10일 / 상환액 1만5천원
+			PRINTFORML [1] 5만원 빌린다 / 기한 : 20일 / 상환액 10만원
+			PRINTFORML [2] 10만원 빌린다 / 기한 : 30일 / 상환액 25만원
+			PRINTFORML [999] 그만둔다
+			INPUT
+			IF RESULT == 0
+				PRINTFORMW "여기 있네"
+				PRINTFORMW 1만원을 빌렸다...
+				MONEY += 10000
+				PRINTFORMW 현재 소지금:{MONEY}원
+				FLAG:5030 = 10015000
+			ELSEIF RESULT == 1
+				PRINTFORMW "흠. 돈이 꽤 궁한가 보군?"
+				PRINTFORMW 5만원을 빌렸다...
+				MONEY += 50000
+				PRINTFORMW 현재 소지금:{MONEY}원
+				FLAG:5030 = 20100000
+			ELSEIF RESULT == 2
+				PRINTFORMW "꽤 큰 돈인데? 못 갚으면 어떻게 되는 지 알고 있겠지...?"
+				PRINTFORMW 10만원을 빌렸다...
+				MONEY += 100000
+				PRINTFORMW 현재 소지금:{MONEY}원
+				FLAG:5030 = 20250000
+			ELSEIF RESULT == 999
+				GOTO LOOP_RENT
+			ELSE
+				GOTO LOOP_RENT_HOWMUCH
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 1
+		;빌린 돈이 없다
+		IF FLAG:5030 == 0
+			PRINTFORMW 현재 상환해야 할 빚은 없다.
+		ELSE
+			;대출액 디코드
+			LOCAL:1 = FLAG:5030%1000000
+			IF MONEY >= LOCAL:1
+				MONEY -= LOCAL:1
+				PRINTFORMW "오오. 고맙네"
+				PRINTFORMW {LOCAL:1}원을 갚았다...
+				PRINTFORMW 현재 소지금:{MONEY}원
+				FLAG:5030 = 0
+			ELSE
+				PRINTFORMW 돈이 모자란다... 상환액 : {LOCAL:1}원
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 999
+		GOTO LOOP_MISSION_SHOP
+	ELSE
+	ENDIF
+	GOTO LOOP_RENT
+
+;카지노
+ELSEIF RESULT == 5
+	;RPG모드에서 쓸 정보를 초기화 한다.
+	CALL INIT_RPG_DATA
+	PRINTFORML "호오? 한 판 놀아볼텐가?"
+	$SELECT_CAZINO
+	PRINTFORML [0] 카지노를 즐긴다. (1회 1000원. 잔고:{MONEY}원)
+	PRINTFORML [1] 그만두자...
+	INPUT
+	IF RESULT == 0 && MONEY >= 1000
+		MONEY -= 1000
+		PRINTFORMW 카지노 머신에 1000원을 넣었다. 행운이 따르길...
+		;룰렛가동
+		CALL RULLET, 0,1,2,3,4
+		;잭팟보상
+		IF RESULT:0 == 1
+			PRINTFORML !!!잿팟!!! 3000원을 추가로 획득했다!
+			MONEY += 3000
+		ENDIF
+		;룰렛보상 지급
+		CALL ITEM_REWARD_RPG, RESULT:1
+		CALL ITEM_REWARD_RPG, RESULT:2
+		CALL ITEM_REWARD_RPG, RESULT:3
+	ELSEIF RESULT == 0 && MONEY < 500
+		PRINTFORMW 돈이 부족하다...(잔고:{MONEY}원)
+	ELSEIF RESULT == 1
+		PRINTFORMW "그래? 아쉽구먼..."
+		GOTO LOOP_MISSION_SHOP
+	ENDIF
+	GOTO SELECT_CAZINO
+
+;오나마스 온리
+ELSEIF RESULT == 8 && FLAG:4 == 18
+	PRINTFORML "그래? 그럼 어떤 구슬을 가져왔는지 봅세"
+	$SELECT_JUEL
+	PRINTL
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+	PRINTFORML 쾌 C의 구슬 : {JUEL:MASTER:0}개 / 쾌 V의 구슬 : {JUEL:MASTER:1}개 / 쾌 A의 구슬 : {JUEL:MASTER:2}개  / 쾌 B의 구슬 : {JUEL:MASTER:3}개
+	RESETCOLOR
+	PRINTL
+	PRINTFORML 어떤 구슬을 팔까?
+	PRINTFORML [0]쾌 C의 구슬 100000 개  > 10000원
+	PRINTFORML [1]쾌 V의 구슬 100000 개  > 10000원
+	PRINTFORML [2]쾌 A의 구슬 100000 개  > 10000원
+	PRINTFORML [3]쾌 B의 구슬 100000 개  > 10000원
+	PRINTFORML [999] 그만둔다.
+	INPUT
+	IF RESULT == 0
+		IF JUEL:MASTER:0 < 100000
+			PRINTFORML 구슬이 모자란다.
+		ELSE
+			JUEL:MASTER:0 -= 100000
+			PRINTFORML 쾌C의 구슬을 팔았다. 자금 10000증가. (현재 잔고:{MONEY}원)
+			MONEY += 10000
+		ENDIF
+	ELSEIF RESULT == 1
+		IF JUEL:MASTER:1 < 100000
+			PRINTFORML 구슬이 모자란다.
+		ELSE
+			JUEL:MASTER:1 -= 100000
+			PRINTFORML 쾌V의 구슬을 팔았다. 자금 10000증가. (현재 잔고:{MONEY}원)
+			MONEY += 10000
+		ENDIF
+	 ELSEIF RESULT == 2
+		IF JUEL:MASTER:2 < 100000
+			PRINTFORML 구슬이 모자란다.
+		ELSE
+			JUEL:MASTER:2 -= 100000
+			PRINTFORML 쾌A의 구슬을 팔았다. 자금 10000증가. (현재 잔고:{MONEY}원)
+			MONEY += 10000
+		ENDIF
+	 ELSEIF RESULT == 3
+		IF JUEL:MASTER:3 < 100000
+			PRINTFORML 구슬이 모자란다.
+		ELSE
+			JUEL:MASTER:3 -= 100000
+			PRINTFORML 쾌B의 구슬을 팔았다. 자금 10000증가. (현재 잔고:{MONEY}원)
+			MONEY += 10000
+		ENDIF
+	ELSEIF RESULT == 999
+		GOTO LOOP_MISSION_SHOP
+	ELSE
+	ENDIF
+	WAIT
+	GOTO SELECT_JUEL
+;설명을 듣는다.
+ELSEIF RESULT == 9
+	PRINTL
+	PRINTW "...설명이라? 흥, 귀찮게스리."
+	PRINTW "일은 간단해네. 의뢰서를 보고 마음에 드는 게 있으면 수락하면 되지."
+	PRINTW "그리고 납품할 물건을 가져와서 돈을 받으면 끝. 간단하지?"
+	PRINTW ".........좀 더 설명이 필요하다는 표정이구먼. 요즘 젊은 것들이란 쯧..."
+	PRINTW "그럼 노예납품부터 알려주겠네"
+	PRINTW "노예납품은 일반적인 노예의 매매와는 달리, 어디로 팔려갈지 모르는 불쌍한 것들이야"
+	PRINTW "호사가의 집에 팔려가서 시종으로 살면 좋지만, 독특한 취향을 가진 자들에게 팔려가서 심한 짓을..."
+	PRINTW ...뭐,그건 됐고. 노예를 납품하면 의뢰비와 더불어 노예의 매각가도 받을 수 있다네."
+	PRINTW "단! 매각조건이 된 경우에만 100퍼센트 지급이야"
+	PRINTW "매각조건이 안 된 경우에는 삼분의 일 밖에 안 주지."
+	PRINTW "대신 의뢰조건만 만족하면 누굴 데려와도 상관없다. 그러니 눈치를 잘 살피라고. 돈 벌 기회는 널렸으니 말이네."
+	PRINTW "킁!... 담배 한대만 마저 피고..."
+	PRINTW "........"
+	PRINTW ".... 후우~"
+	PRINTW "그리고 다음은 상품 납품이다."
+	PRINTW "노예를 조교하면서 파과혈이라든지 모유라든지를 얻어서 납품하면 되지"
+	PRINTW "무엇보다 중요한 건 기한이네. 기한이 짧을수록 보수가 세니까 말이지"
+	PRINTW "그렇지만 날짜를 못 맞추면 알지? 이 바닥은 신뢰가 중요하단 걸 잊지말게나"
+	PRINTW "마지막으로 대출에 대해서 말인데..."
+	PRINTW "돈이 궁하면 한 번쯤은 괜찮겠지. 폭리라고 생각할 수도 있다만..."
+	PRINTW "이쪽도 땅파먹고 사는게 아니니까, 그 정도는 이해하게나"
+	PRINTW "만약 상환날짜를 넘긴다면... 뒷 일은 책임 못 지네."
+	PRINTW 
+	PRINTW "콜록! 콜록!!"
+	PRINTW "크흠.... 나도 이제 늙었나..."
+	PRINTW "여튼 늙은이의 잔소리는 여기까지네. 그럼 힘내보게나"
+	PRINTW "...내 노후준비도 해야 하니까 말야..."
+	PRINTW 늙은 텐구는 귀찮다는 듯이 담뱃대를 털더니, 의자를 뒤로 돌리고 창밖으로 시선을 돌렸다...
+	GOTO LOOP_MISSION_SHOP
+;조교관으로 돌아간다
+ELSEIF RESULT == 999
+	PRINTFORMW "그럼 또 오게나..."
+ELSE
+	GOTO LOOP_MISSION_SHOP
+ENDIF
+
+
+
+;---------------------------------------------------
+; 노예납품 의뢰를 받아서 내 의뢰에 추가한다. 그리고 의뢰서를 지운다. (로직이 엉망이라, 아주 낮은 확률로 동일 의뢰를 같이 지워버릴 수도 있다...)
+; 입력 : 의뢰코드
+; 출력 : 의뢰 수락 메시지
+@ACCEPT_MISSION_SLAVE_TORIKOMODE, ARG
+;의뢰 슬롯이 1개라도 비어있다면
+IF FLAG:5021 == 0 || FLAG:5022 == 0  || FLAG:5023 == 0 
+	; 1번 슬롯이 비어있다면
+	IF  FLAG:5021 == 0
+		FLAG:5021 = ARG
+		IF  FLAG:5011 == ARG
+			FLAG:5011 = 0
+		ELSEIF FLAG:5012 == ARG
+			FLAG:5012 = 0
+		ELSEIF FLAG:5013 == ARG
+			FLAG:5013 = 0
+		ENDIF
+		PRINTL
+		PRINTFORMW 의뢰를 수락했다.
+		CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5021
+		WAIT
+	; 2번 슬롯이 비어있다면
+	ELSEIF FLAG:5022 == 0
+		FLAG:5022 = ARG
+		IF  FLAG:5011 == ARG
+			FLAG:5011 = 0
+		ELSEIF FLAG:5012 == ARG
+			FLAG:5012 = 0
+		ELSEIF FLAG:5013 == ARG
+			FLAG:5013 = 0
+		ENDIF
+		PRINTL
+		PRINTFORMW 의뢰를 수락했다.
+		CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5022
+		WAIT
+	; 3번 슬롯이 비어있다면
+	ELSEIF FLAG:5023 == 0
+		FLAG:5023 = ARG
+		IF  FLAG:5011 == ARG
+			FLAG:5011 = 0
+		ELSEIF FLAG:5012 == ARG
+			FLAG:5012 = 0
+		ELSEIF FLAG:5013 == ARG
+			FLAG:5013 = 0
+		ENDIF
+		PRINTL
+		PRINTFORMW 의뢰를 수락했다.
+		CALL DECODE_MISSION_SLAVE_TORIKOMODE, FLAG:5023
+		WAIT
+	ELSE
+		PRINTFORMW 오류발생. @ACCEPT_MISSION_SLAVE_TORIKOMODE, ARG
+	ENDIF
+; 의뢰가 꽉 차있다.
+ELSE		
+	PRINTL
+	PRINTFORMW 더 이상 의뢰를 받을 수 없다. 기존의 의뢰를 포기하거나 완수해야 한다.
+ENDIF
+
+
+;---------------------------------------------------
+; 상품납품 의뢰를 받아서 내 의뢰에 추가한다. 그리고 의뢰서를 지운다. (로직이 엉망이라, 아주 낮은 확률로 동일 의뢰를 같이 지워버릴 수도 있다...)
+; 입력 : 의뢰코드
+; 출력 : 의뢰 수락 메시지
+@ACCEPT_MISSION_DITEMTYPE_TORIKOMODE, ARG
+;의뢰 슬롯이 1개라도 비어있다면
+IF FLAG:5026 == 0 || FLAG:5027 == 0  || FLAG:5028 == 0 
+	; 6번 슬롯이 비어있다면
+	IF  FLAG:5026 == 0
+		FLAG:5026 = ARG
+		IF  FLAG:5016 == ARG
+			FLAG:5016 = 0
+		ELSEIF FLAG:5017 == ARG
+			FLAG:5017 = 0
+		ELSEIF FLAG:5018 == ARG
+			FLAG:5018 = 0
+		ENDIF
+		PRINTL
+		PRINTFORMW 의뢰를 수락했다.
+		CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5026
+		WAIT
+	; 7번 슬롯이 비어있다면
+	ELSEIF FLAG:5027 == 0
+		FLAG:5027 = ARG
+		IF  FLAG:5016 == ARG
+			FLAG:5016 = 0
+		ELSEIF FLAG:5017 == ARG
+			FLAG:5017 = 0
+		ELSEIF FLAG:5018 == ARG
+			FLAG:5018 = 0
+		ENDIF
+		PRINTL
+		PRINTFORMW 의뢰를 수락했다.
+		CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5027
+		WAIT
+	; 8번 슬롯이 비어있다면
+	ELSEIF FLAG:5028 == 0
+		FLAG:5028 = ARG
+		IF  FLAG:5016 == ARG
+			FLAG:5016 = 0
+		ELSEIF FLAG:5017 == ARG
+			FLAG:5017 = 0
+		ELSEIF FLAG:5018 == ARG
+			FLAG:5018 = 0
+		ENDIF
+		PRINTL
+		PRINTFORMW 의뢰를 수락했다.
+		CALL DECODE_MISSION_DITEMTYPE_TORIKOMODE, FLAG:5028
+		WAIT
+	ELSE
+		PRINTFORMW 오류발생. @ACCEPT_MISSION_DITEMTYPE_TORIKOMODE, ARG
+	ENDIF
+; 의뢰가 꽉 차있다.
+ELSE		
+	PRINTL
+	PRINTFORMW 더 이상 의뢰를 받을 수 없다. 기존의 의뢰를 포기하거나 완수해야 한다.
+ENDIF
+
+
+
+;---------------------------------------------------
+; 노예를 납품할지 포기할지 결정. 반복되는 부분이 많아서 함수로 뺌.
+; 입력 : 의뢰코드, 의뢰의 종류 (0 - 노예, 1 - 상품)
+; 출력 : 의뢰 수락 메시지
+@MISSION_SHOP_TORIKOMODE_DELIVER_OR_NOT, ARG:0, ARG:1
+
+;의뢰의 날짜 체크
+LOCAL:0 = (ARG %100000000)/1000000
+
+PRINTL
+PRINTFORML [1] 납품한다.
+PRINTFORML [2] 포기한다.
+PRINTFORML [999] 돌아간다.
+INPUT
+IF RESULT == 1 && LOCAL:0 > 0
+	;노예납품의뢰라면
+	SIF ARG:1 == 0
+		CALL SHOW_SLAVE_MISSION_CHAR_LIST_TORIKOMODE, ARG
+	;상품납품의뢰라면
+	SIF ARG:1 == 1
+		CALL CHECK_DELIVER_DITEMTYPE_TORIKOMODE, ARG
+ELSEIF RESULT ==1 && LOCAL:0 == 0
+	PRINTW 이 의뢰는 날짜가 지났다.
+	PRINTW 아쉽지만 포기할 수 밖에...
+	PRINTL
+	PRINTW "흥! 근성도 없는 놈 같으니..."
+	PRINTW 의뢰를 포기했다.
+	CALL DELETE_MISSION_ACCEPTED_TORIKOMODE,ARG 
+
+ELSEIF RESULT ==2
+	;의뢰을 지운다.
+	CALL DELETE_MISSION_ACCEPTED_TORIKOMODE,ARG 
+	PRINTL
+	PRINTW "흥! 근성도 없는 놈 같으니..."
+	PRINTW 의뢰를 포기했다.
+	
+ELSEIF RESULT == 999
+ELSE 
+ENDIF
+
+;-------------------------------------------------
+;노예 납품용 리스트 출력.
+; ARG = 노예납품 의뢰코드
+;-------------------------------------------------
+@SHOW_SLAVE_MISSION_CHAR_LIST_TORIKOMODE, ARG:0
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+;CHARADATA_LISTのために待避
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;主人は除外
+	SIF COUNT == MASTER
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+MARK:MASTER:98 = 1
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 납품 할 노예를 선택 해 주세요.＜page.{LOCAL+1}＞
+CALL CHARADATA_LIST_SLAVE_MISSION_TORIKOMODE, LOCAL, LOCAL:99, ARG
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001]앞페이지로\@
+PRINTLC [1000]돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:2 / 20) ? %" " * 16% # [1009]다음페이지로\@
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM
+	GOTO INPUT_LOOP_1
+ELSE
+	CALL DELIVER_SLAVE_CHECK, RESULT, ARG
+ENDIF
+
+
+
+;-------------------------------------------------
+;노예 납품용 리스트 출력에 표시될 캐릭터 정보 생성
+;-------------------------------------------------
+@CHARADATA_LIST_SLAVE_MISSION_TORIKOMODE, ARG, ARG:2, ARG:3
+LOCAL:3 = 0
+;반복자
+LOCAL:99 = 0
+;
+DO
+	LOCAL = GET_LIST((LOCAL:99) + ARG * 20)
+	;주인공과 실종 캐릭터 제외
+	IF LOCAL == 0 || CFLAG:LOCAL:4 == 1
+		;
+	ELSE
+		;상태 표시.
+		IF LOCAL == TARGET
+			PRINT ☆
+		ELSEIF LOCAL == ASSI
+			PRINT ★
+		ELSEIF CFLAG:LOCAL:4 == 4
+			PRINT ◆
+			LOCAL:3 |= 1
+		ELSEIF CFLAG:LOCAL:4 == 8
+			PRINT ▲
+			LOCAL:3 |= 2
+		ELSEIF CFLAG:LOCAL:4 == 16
+			PRINT ■
+			LOCAL:3 |= 4
+		ELSEIF CFLAG:LOCAL:4 & 1024
+			PRINT ▼
+			LOCAL:3 |= 16
+		ELSEIF CFLAG:LOCAL:4 == 2048 || CFLAG:LOCAL:4 == 4096
+			PRINT ▽
+			LOCAL:3 |= 8
+		ELSEIF ISASSI:LOCAL == 1
+			PRINT ●
+		ELSEIF CFLAG:LOCAL:1 == 2
+			PRINT ○
+		ELSE
+			PRINT 　
+		ENDIF
+		;캐러정보표시
+		CALL ARRANGE_CHARALIST, LOCAL
+		CALL CHECK_MISSION_SLAVE_OK_OR_NOT_TORIKOMODE, LOCAL, ARG:3
+		PRINTL
+	ENDIF
+	LOCAL:99 += 1
+LOOP LOCAL:99 <= 20
+
+IF ARG:2 >= 1
+	PRINT 　　　☆:조교중 ★:조수 ○:조수가 ●:전 조수
+	SIF FLAG:15 & 4096 && FLAG:75 & 32768 && LOCAL:3 & 1
+		PRINT  ◆:촉수 유폐중
+	SIF FLAG:73 & 1 && LOCAL:3 & 4
+		PRINT  ■:뇌수감중
+;	SIF FLAG:15 & 4096 && LOCAL:3 & 2
+;		PRINT  ▲:우리 유폐중
+	SIF FLAG:79 & 1 && LOCAL:3 & 8
+		PRINT  ▽:허브 작업중
+	PRINTL 　(을)를 나타내고 있습니다
+ENDIF
+
+;-------------------------------------------------
+;노예 납품시 납품 조건에 맞나 체크
+;입력 : ARG:0  = 노예번호 ARG:1 = 의뢰코드
+;반환 : RESULT:0 = 0 OR 1
+;-------------------------------------------------
+@CHECK_MISSION_SLAVE_OK_OR_NOT_TORIKOMODE, ARG:0, ARG:1
+
+;납품 가능여부 반환
+LOCAL:99 = 0
+;의뢰을 파싱한다
+;탈렌트
+LOCAL:0 = (ARG:1 %1000000)/1000
+;소질
+LOCAL:1 = (ARG:1 %1000)/10
+;소질레벨
+LOCAL:2 = (ARG:1 %10)
+
+;노예와 비교한다.
+;탈렌트 요구하지 않는 의뢰
+IF LOCAl:0 == 999
+	IF ABL:(ARG:0):(LOCAL:1) >= LOCAL:2
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+		PRINTFORM "납품가능"
+		RESETCOLOR
+		LOCAL:99 = 1
+	ELSE
+		PRINTFORM "납품불가"
+		LOCAL:99 = 0
+	ENDIF
+
+;탈렌트 요구하는 의뢰
+ELSE
+	IF TALENT:(ARG:0):(LOCAL:0) == 1    &&    ABL:(ARG:0):(LOCAL:1) >= LOCAL:2
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+		PRINTFORM "납품가능"
+		RESETCOLOR
+		LOCAL:99 = 1
+	ELSE
+		PRINTFORM "납품불가"
+		LOCAL:99 = 0
+	ENDIF
+ENDIF
+
+RESULT:0 = LOCAL:99
+RETURN RESULT:0
+
+
+
+;-------------------------------------------------
+;노예 납품확인
+;입력 : ARG:0  = 노예번호 ARG:1 = 의뢰코드
+;반환 : RESULT:0 = 0 OR 1
+;-------------------------------------------------
+@DELIVER_SLAVE_CHECK, ARG:0, ARG:1
+;납품가능여부 체크
+CALL CHECK_MISSION_SLAVE_OK_OR_NOT_TORIKOMODE, ARG:0, ARG:1
+PRINTL
+;납품 가능하다
+IF RESULT == 1
+	;납품하고 돈 올리고 의뢰을 지운다.
+	CALL SALE_CONFIRM_MISSION_TORIKOMODE, ARG, ARG:1
+;납품 불가하다
+ELSEIF RESULT == 0
+	PRINTFORMW %조사처리(CALLNAME:(ARG:0),"는")% 의뢰 조건에 맞지 않아 납품할 수 없다.
+	PRINTL
+ELSE
+ENDIF
+
+
+
+;-------------------------------------------------
+;노예 납품처리
+;ARG = 노예번호 ARG:1 = 의뢰코드
+;LOCAL:100  = 의뢰 보상액
+;LOCAL:101  = 매각상태가 되었는지
+;-------------------------------------------------
+;매각가능 상태일때는 그대로 가지만, 매각불가 상태일때는 1/3만 지급한다.
+@SALE_CONFIRM_MISSION_TORIKOMODE, ARG, ARG:1
+
+;의뢰의 보상을 계산
+LOCAL:100 = (ARG:1 %100000000000000)/100000000
+;매각 가능한지 아닌지를 판별
+IF CFLAG:ARG:1 >= 1 && CFLAG:ARG:3 == 0 && TALENT:ARG:161 == 0 && TALENT:ARG:164 == 0 && TALENT:ARG:169 == 0
+	LOCAL:101 = 1
+ELSE 
+	LOCAL:101 = 0
+ENDIF
+
+LOCAL = 0
+LOCAL:1 = TARGET
+LOCAL:2 = ASSI
+LOCAL:3 = 0
+
+;売値の計算. 토리코모드 옵션으로 분기.
+IF FLAG:5000 & 2
+	CALL SALE_CHARA_TORIKOMODE(ARG)
+ELSE 
+	CALL SALE_CHARA(ARG)
+ENDIF
+
+LOCAL = MAX(RESULT, 0)
+
+;매각가능여부에 따라 분기
+IF LOCAL:101 == 1
+	LOCAL = MAX(RESULT, 0)
+	LOCAL += LOCAL:100
+	;売却確認
+	PRINTFORM %조사처리(CALLNAME:ARG,"를")% 납품하면 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+	PRINTFORM {LOCAL}
+	RESETCOLOR
+	PRINTFORML 원을 받을 수 있을 것 같습니다.
+	;デバッグモードでは売値の基礎値・倍率補正(カンスト前の分のみ)を表示
+	PRINTFORM ※{RESULT:1}원(노예의 매각치 기본) × {RESULT:2/100}.{RESULT:2%100}(기초 구입률 보정) × α(그밖의 보정) + 의뢰 보상
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+	PRINTFORML {LOCAL:100}
+	RESETCOLOR
+ELSEIF LOCAL:101 == 0
+	LOCAL = MAX(RESULT, 0)
+	LOCAL = (LOCAL*30 /100)  + LOCAL:100
+	;売却確認
+	PRINTFORM %조사처리(CALLNAME:ARG,"를")% 납품하면 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+	PRINTFORM {LOCAL}
+	RESETCOLOR
+	PRINTFORML 원을 받을 수 있을 것 같습니다.
+	;デバッグモードでは売値の基礎値・倍率補正(カンスト前の分のみ)を表示
+	PRINTFORM ※{RESULT:1}원(노예의 매각치 기본) × {(RESULT:2)/10000} \@((RESULT:2)%10000/10 < 100) ? .0 # .\@{((RESULT:2)%10000/10)}(기초 구입률 보정) × α(그밖의 보정) × 
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINT 0.3 (매각조건불충족)
+	RESETCOLOR
+	PRINTFORM  + 의뢰 보상 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+	PRINTFORML {LOCAL:100}
+	RESETCOLOR
+ELSE
+ENDIF
+
+SIF FLAG:570 & 2
+	PRINTL ※노예상인이 없기 때문에、매각후 시간이 경과합니다
+IF NO:MASTER == 400 && (FLAG:570 & 6) == 0
+	SIF NO:ARG == 401 || NO:ARG == 403 || (NO:ARG == 1 && CFLAG:ARG:0 == 2)
+		PRINTL ※매각후 시간이 경과합니다
+ENDIF
+PRINTL
+PRINTL 납품하겠습니까？
+PRINTL [0] 예
+PRINTL [1] 아니오
+$INPUT_LOOPSALE
+INPUT
+IF RESULT == 0
+	IF TALENT:ARG:158 && EQUIP:ARG:14 == 0 && (TALENT:ARG:153 || ((TALENT:ARG:151 || TALENT:ARG:157) && TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0 && ABL:ARG:10 < 5))
+		TIMES LOCAL , 0.10
+		PRINTFORML \@(TFLAG:207) ? %CALLNAME:ARG%は수송시 파괴 폭주를 일으켜 실종했다 # 수송시 파괴 폭주를 일으켜 실종×0.10\@
+		IF TALENT:ARG:150 && TALENT:ARG:158
+			CFLAG:ARG:1 = 0
+			CFLAG:ARG:4 = 1
+			LOCAL:3 = 1
+		ENDIF
+		;狂気脱走時の口上用
+		CALL SELF_KOJO, ARG, 180
+	ELSE
+		;通常売却時の口上用
+		CALL SELF_KOJO, ARG, 130
+	ENDIF
+	LOCAL = MAX(LOCAL, 0)
+	;売却拒否パッチ追加
+	;一応、リセット
+	TFLAG:0 = 0
+
+	IF (FLAG:12 & 16384) == 0
+		CALL SELF_KOJO, ARG, TFLAG:200, LOCAL
+;	ELSEIF (TALENT:ARG:151 || TALENT:ARG:152) && TALENT:MASTER:158
+;		PRINTFORML 売却されゆく%CALLNAME:ARG%はふと振り向くと、何かを言ったように見えた
+;		PRINTFORML しかし、その言葉は%CALLNAME:MASTER%の心には届くことは無かった……
+	ENDIF
+
+	;売却拒否パッチ追加
+	IF TFLAG:0 == 1
+		;一応、掃除
+		TFLAG:0 = 0
+		RETURN 1
+	ENDIF
+
+	;売却額
+	;의뢰를 지운다. (납품했으므로)
+	CALL DELETE_MISSION_ACCEPTED_TORIKOMODE, ARG:1
+	;판매결과 출력
+	PRINTL
+	PRINTFORMW  "힛힛힛... 좋구먼. 좋아..."
+	PRINTFORMW  늙은 텐구는 만족스러운 듯이 웃고있다.
+	PRINTL
+	PRINTFORMW  납품결과, {LOCAL}원을 받았습니다.
+	MONEY += LOCAL
+	FLAG:34 += 1
+	FLAG:66 += 1
+	;--------------------------------------------------
+	;奴隷売却で稼いだ最高金額判定処理
+	MONEY:1 = LOCAL
+	SIF MONEY:1 > MONEY:997
+		CALL NEW_HIGH_INCOME_ALL, 997
+	;奴隷売却で稼いだ金額加算処理(1京圓までカウント)
+	SIF MONEY:990 < 10000000000000000
+		CALL INCOME_SLAVE_SALE, 990
+	;売値25万圓以上の高級奴隷売却で稼いだ金額加算処理(1京圓までカウント)
+	SIF MONEY:991 < 10000000000000000 && MONEY:1 >= 250000
+		CALL INCOME_SLAVE_SALE, 991
+	;--------------------------------------------------
+	;売却後エピソード登録処理
+	CALL SET_AFTERWARDS, ARG
+
+	IF FLAG:570 & 2
+		FLAG:570 |= 8
+	ELSEIF NO:MASTER == 400 && (FLAG:570 & 6) == 0
+		SIF NO:ARG == 401 || NO:ARG == 403 || (NO:ARG == 1 && CFLAG:ARG:0 == 2)
+			FLAG:570 |= 8
+	ENDIF
+
+	;刻符
+	SIF FLAG:3 == 6 || FLAG:3 == 7
+		CALL TIME_LIMIT_BONUS, ARG
+
+	IF LOCAL:3 == 0
+		;対象or助手の売却・解放による登録削除処理
+		CALL CHARA_GONE, ARG, LOCAL:1, LOCAL:2
+	ELSE
+		IF ARG == TARGET
+			TARGET -= 1
+			FLAG:996 = -1
+		ENDIF
+	ENDIF
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOPSALE
+ENDIF
+TFLAG:207 = 0
+
+
+;-------------------------------------------------
+;수행중인 납품 미션의 날짜를 1일 줄인다.
+;-------------------------------------------------
+@DEGRADE_MISSION_DATE_TORIKOMODE, ARG:0
+
+;디버그
+;CALL DECODE_MISSION_SLAVE_TORIKOMODE, ARG:0
+
+IF ARG:0 > 0
+
+	;날짜추출
+	LOCAL:0 = (ARG:0 %100000000)/1000000
+
+	;미션코드에서 날짜값을 뺀다
+	LOCAL:1 = ARG:0 -  (LOCAL:0 * 1000000)
+
+	;날짜가 1일 이상 남아있다면 날짜를 1일 줄인다.
+	SIF LOCAL:0 > 0
+		LOCAL:0 -= 1
+
+	;줄어든 날짜를, 다시 미션코드에 더해준다.
+	 LOCAL:1 +=  (LOCAL:0 * 1000000)
+
+	;값을 반환한다
+	RESULT:0 =  LOCAL:1
+	RETURN RESULT:0
+ELSE
+ENDIF
+
+
+;-------------------------------------------------
+;임의의 탈렌트를 반환하는 함수. 모든 함수가 반환되는 것은 아님.
+;입력 : 없다
+;출력 : 탈렌트번호
+;-------------------------------------------------
+;의뢰 시스템에서 필요한 탈렌트를 생성해내기 위해 사용됨.
+@GENERATE_MISSION_TALENT_TORIKOMODE
+
+;탈렌트를 요구할지 안 할지를 결정한다. 3/4 확률로 요구하지 않는다.
+LOCAL:0 = RAND:4
+IF LOCAL:0 <= 2
+	LOCAL:1 == 999
+ELSE
+	$LOOP_SELECT_TALENT
+	LOCAL:0 = RAND:200
+	;탈렌트 중 하나가 걸릴때까지 계속 돌린다.
+		;코드를 읽기 쉽게 하기위해 일부러 1칸 들여씀.
+		IF LOCAL:0 == 0
+			LOCAL:1 == 0
+		ELSEIF LOCAL:0 == 1
+			LOCAL:1 == 1
+		ELSEIF LOCAL:0 == 9
+			LOCAL:1 == 9
+		ELSEIF LOCAL:0 == 10
+			LOCAL:1 == 10
+		ELSEIF LOCAL:0 == 11
+			LOCAL:1 == 11
+		ELSEIF LOCAL:0 == 12
+			LOCAL:1 == 12
+		ELSEIF LOCAL:0 == 13
+			LOCAL:1 == 13
+		ELSEIF LOCAL:0 == 14
+			LOCAL:1 == 14
+		ELSEIF LOCAL:0 == 15
+			LOCAL:1 == 15
+		ELSEIF LOCAL:0 == 16
+			LOCAL:1 == 16
+		ELSEIF LOCAL:0 == 17
+			LOCAL:1 == 17
+		ELSEIF LOCAL:0 == 18
+			LOCAL:1 == 18
+		ELSEIF LOCAL:0 == 19
+			LOCAL:1 == 19
+		ELSEIF LOCAL:0 == 20
+			LOCAL:1 == 20
+		ELSEIF LOCAL:0 == 21
+			LOCAL:1 == 21
+		ELSEIF LOCAL:0 == 22
+			LOCAL:1 == 22
+		ELSEIF LOCAL:0 == 23
+			LOCAL:1 == 23
+		ELSEIF LOCAL:0 == 24
+			LOCAL:1 == 24
+		ELSEIF LOCAL:0 == 25
+			LOCAL:1 == 25
+		ELSEIF LOCAL:0 == 26
+			LOCAL:1 == 26
+		ELSEIF LOCAL:0 == 27
+			LOCAL:1 == 27
+		ELSEIF LOCAL:0 == 28
+			LOCAL:1 == 28
+		ELSEIF LOCAL:0 == 30
+			LOCAL:1 == 30
+		ELSEIF LOCAL:0 == 31
+			LOCAL:1 == 31
+		ELSEIF LOCAL:0 == 32
+			LOCAL:1 == 32
+		ELSEIF LOCAL:0 == 33
+			LOCAL:1 == 33
+		ELSEIF LOCAL:0 == 34
+			LOCAL:1 == 34
+		ELSEIF LOCAL:0 == 35
+			LOCAL:1 == 35
+		ELSEIF LOCAL:0 == 36
+			LOCAL:1 == 36
+		ELSEIF LOCAL:0 == 37
+			LOCAL:1 == 37
+		ELSEIF LOCAL:0 == 38
+			LOCAL:1 == 38
+		ELSEIF LOCAL:0 == 39
+			LOCAL:1 == 39
+		ELSEIF LOCAL:0 == 40
+			LOCAL:1 == 40
+		ELSEIF LOCAL:0 == 41
+			LOCAL:1 == 41
+		ELSEIF LOCAL:0 == 42
+			LOCAL:1 == 42
+		ELSEIF LOCAL:0 == 43
+			LOCAL:1 == 43
+		ELSEIF LOCAL:0 == 44
+			LOCAL:1 == 44
+		ELSEIF LOCAL:0 == 45
+			LOCAL:1 == 45
+		ELSEIF LOCAL:0 == 46
+			LOCAL:1 == 46
+		ELSEIF LOCAL:0 == 48
+			LOCAL:1 == 48
+		ELSEIF LOCAL:0 == 49
+			LOCAL:1 == 49
+		ELSEIF LOCAL:0 == 50
+			LOCAL:1 == 50
+		ELSEIF LOCAL:0 == 51
+			LOCAL:1 == 51
+		ELSEIF LOCAL:0 == 53
+			LOCAL:1 == 53
+		ELSEIF LOCAL:0 == 57
+			LOCAL:1 == 57
+		ELSEIF LOCAL:0 == 58
+			LOCAL:1 == 58
+		ELSEIF LOCAL:0 == 59
+			LOCAL:1 == 59
+		ELSEIF LOCAL:0 == 60
+			LOCAL:1 == 60
+		ELSEIF LOCAL:0 == 61
+			LOCAL:1 == 61
+		ELSEIF LOCAL:0 == 62
+			LOCAL:1 == 62
+		ELSEIF LOCAL:0 == 63
+			LOCAL:1 == 63
+		ELSEIF LOCAL:0 == 64
+			LOCAL:1 == 64
+		ELSEIF LOCAL:0 == 65
+			LOCAL:1 == 65
+		ELSEIF LOCAL:0 == 66
+			LOCAL:1 == 66
+		ELSEIF LOCAL:0 == 70
+			LOCAL:1 == 70
+		ELSEIF LOCAL:0 == 71
+			LOCAL:1 == 71
+		ELSEIF LOCAL:0 == 80
+			LOCAL:1 == 80
+		ELSEIF LOCAL:0 == 81
+			LOCAL:1 == 81
+		ELSEIF LOCAL:0 == 82
+			LOCAL:1 == 82
+		ELSEIF LOCAL:0 == 83
+			LOCAL:1 == 83
+		ELSEIF LOCAL:0 == 84
+			LOCAL:1 == 84
+		ELSEIF LOCAL:0 == 85
+			LOCAL:1 == 85
+		ELSEIF LOCAL:0 == 86
+			LOCAL:1 == 86
+		ELSEIF LOCAL:0 == 90
+			LOCAL:1 == 90
+		ELSEIF LOCAL:0 == 91
+			LOCAL:1 == 91
+		ELSEIF LOCAL:0 == 92
+			LOCAL:1 == 92
+		ELSEIF LOCAL:0 == 93
+			LOCAL:1 == 93
+		ELSEIF LOCAL:0 == 94
+			LOCAL:1 == 94
+		ELSEIF LOCAL:0 == 95
+			LOCAL:1 == 95
+		ELSEIF LOCAL:0 == 96
+			LOCAL:1 == 96
+		ELSEIF LOCAL:0 == 98
+			LOCAL:1 == 98
+		ELSEIF LOCAL:0 == 100
+			LOCAL:1 == 100
+		ELSEIF LOCAL:0 == 101
+			LOCAL:1 == 101
+		ELSEIF LOCAL:0 == 102
+			LOCAL:1 == 102
+		ELSEIF LOCAL:0 == 103
+			LOCAL:1 == 103
+		ELSEIF LOCAL:0 == 104
+			LOCAL:1 == 104
+		ELSEIF LOCAL:0 == 105
+			LOCAL:1 == 105
+		ELSEIF LOCAL:0 == 106
+			LOCAL:1 == 106
+		ELSEIF LOCAL:0 == 107
+			LOCAL:1 == 107
+		ELSEIF LOCAL:0 == 110
+			LOCAL:1 == 110
+		ELSEIF LOCAL:0 == 111
+			LOCAL:1 == 111
+		ELSEIF LOCAL:0 == 112
+			LOCAL:1 == 112
+		ELSEIF LOCAL:0 == 113
+			LOCAL:1 == 113
+		ELSEIF LOCAL:0 == 114
+			LOCAL:1 == 114
+		ELSEIF LOCAL:0 == 115
+			LOCAL:1 == 115
+		ELSEIF LOCAL:0 == 116
+			LOCAL:1 == 116
+		ELSEIF LOCAL:0 == 121
+			LOCAL:1 == 121
+		ELSEIF LOCAL:0 == 123
+			LOCAL:1 == 123
+		ELSEIF LOCAL:0 == 124
+			LOCAL:1 == 124
+		ELSEIF LOCAL:0 == 127
+			LOCAL:1 == 127
+		ELSEIF LOCAL:0 == 128
+			LOCAL:1 == 128
+		ELSEIF LOCAL:0 == 134
+			LOCAL:1 == 134
+		ELSEIF LOCAL:0 == 136
+			LOCAL:1 == 136
+		ELSEIF LOCAL:0 == 139
+			LOCAL:1 == 139
+		ELSEIF LOCAL:0 == 150
+			LOCAL:1 == 150
+		ELSEIF LOCAL:0 == 151
+			LOCAL:1 == 151
+		ELSEIF LOCAL:0 == 152
+			LOCAL:1 == 152
+		ELSEIF LOCAL:0 == 153
+			LOCAL:1 == 153
+		ELSEIF LOCAL:0 == 157
+			LOCAL:1 == 157
+		ELSEIF LOCAL:0 == 158
+			LOCAL:1 == 158
+		ELSEIF LOCAL:0 == 159
+			LOCAL:1 == 159
+		ELSEIF LOCAL:0 == 160
+			LOCAL:1 == 160
+		ELSEIF LOCAL:0 == 161
+			LOCAL:1 == 161
+		ELSEIF LOCAL:0 == 162
+			LOCAL:1 == 162
+		ELSEIF LOCAL:0 == 163
+			LOCAL:1 == 163
+		ELSEIF LOCAL:0 == 164
+			LOCAL:1 == 164
+		ELSEIF LOCAL:0 == 167
+			LOCAL:1 == 167
+		ELSEIF LOCAL:0 == 168
+			LOCAL:1 == 168
+		ELSEIF LOCAL:0 == 169
+			LOCAL:1 == 169
+		ELSEIF LOCAL:0 == 170
+			LOCAL:1 == 170
+		ELSEIF LOCAL:0 == 171
+			LOCAL:1 == 171
+		ELSEIF LOCAL:0 == 172
+			LOCAL:1 == 172
+		ELSEIF LOCAL:0 == 173
+			LOCAL:1 == 173
+		ELSEIF LOCAL:0 == 174
+			LOCAL:1 == 174
+		ELSEIF LOCAL:0 == 175
+			LOCAL:1 == 175
+		ELSEIF LOCAL:0 == 176
+			LOCAL:1 == 176
+		ELSEIF LOCAL:0 == 177
+			LOCAL:1 == 177
+		ELSEIF LOCAL:0 == 178
+			LOCAL:1 == 178
+		ELSEIF LOCAL:0 == 179
+			LOCAL:1 == 179
+		ELSEIF LOCAL:0 == 180
+			LOCAL:1 == 180
+		ELSEIF LOCAL:0 == 191
+			LOCAL:1 == 191
+		ELSEIF LOCAL:0 == 192
+			LOCAL:1 == 192
+		ELSEIF LOCAL:0 == 193
+			LOCAL:1 == 193
+		ELSEIF LOCAL:0 == 194
+			LOCAL:1 == 194
+		ELSEIF LOCAL:0 == 195
+			LOCAL:1 == 195
+		ELSE
+			GOTO LOOP_SELECT_TALENT
+		ENDIF
+ENDIF
+
+RESULT:0 = LOCAL:1
+RETURN RESULT:0
+
+
+;-------------------------------------------------
+;의뢰 시스템에서 탈렌트 보상을 만들어내기 위해 계산하는 함수.
+;입력 ARG 탈렌트번호
+;출력 LOCAL:0 탈렌트에 따른 보상값
+;-------------------------------------------------
+;ARG에는 탈렌트번호가 들어감. 
+@CALC_MISSION_REWARD_TALENT_TORIKOMODE, ARG
+	;탈렌트를 보지 않을 경우
+	SIF ARG == 999
+		LOCAL:0 = 0
+	;탈렌트를 볼 경우
+	SIF ARG == 0
+		LOCAL:0 = 4
+	SIF ARG == 1
+		LOCAL:0 = 5
+	SIF ARG == 9
+		LOCAL:0 = 5
+	SIF ARG == 10
+		LOCAL:0 = 1
+	SIF ARG == 11
+		LOCAL:0 = 1
+	SIF ARG == 12
+		LOCAL:0 = 1
+	SIF ARG == 13
+		LOCAL:0 = 1
+	SIF ARG == 14
+		LOCAL:0 = 1
+	SIF ARG == 15
+		LOCAL:0 = 1
+	SIF ARG == 16
+		LOCAL:0 = 1
+	SIF ARG == 17
+		LOCAL:0 = 1
+	SIF ARG == 18
+		LOCAL:0 = 1
+	SIF ARG == 19
+		LOCAL:0 = 1
+	SIF ARG == 20
+		LOCAL:0 = 2
+	SIF ARG == 21
+		LOCAL:0 = 2
+	SIF ARG == 22
+		LOCAL:0 = 2
+	SIF ARG == 23
+		LOCAL:0 = 2
+	SIF ARG == 24
+		LOCAL:0 = 2
+	SIF ARG == 25
+		LOCAL:0 = 2
+	SIF ARG == 26
+		LOCAL:0 = 2
+	SIF ARG == 27
+		LOCAL:0 = 2
+	SIF ARG == 28
+		LOCAL:0 = 2
+	SIF ARG == 30
+		LOCAL:0 = 3
+	SIF ARG == 31
+		LOCAL:0 = 3
+	SIF ARG == 32
+		LOCAL:0 = 3
+	SIF ARG == 33
+		LOCAL:0 = 3
+	SIF ARG == 34
+		LOCAL:0 = 3
+	SIF ARG == 35
+		LOCAL:0 = 3
+	SIF ARG == 36
+		LOCAL:0 = 3
+	SIF ARG == 37
+		LOCAL:0 = 3
+	SIF ARG == 38
+		LOCAL:0 = 3
+	SIF ARG == 39
+		LOCAL:0 = 3
+	SIF ARG == 40
+		LOCAL:0 = 1
+	SIF ARG == 41
+		LOCAL:0 = 1
+	SIF ARG == 42
+		LOCAL:0 = 1
+	SIF ARG == 43
+		LOCAL:0 = 1
+	SIF ARG == 44
+		LOCAL:0 = 4
+	SIF ARG == 45
+		LOCAL:0 = 4
+	SIF ARG == 46
+		LOCAL:0 = 4
+	SIF ARG == 48
+		LOCAL:0 = 5
+	SIF ARG == 49
+		LOCAL:0 = 5
+	SIF ARG == 50
+		LOCAL:0 = 1
+	SIF ARG == 51
+		LOCAL:0 = 1
+	SIF ARG == 53
+		LOCAL:0 = 1
+	SIF ARG == 57
+		LOCAL:0 = 4
+	SIF ARG == 58
+		LOCAL:0 = 4
+	SIF ARG == 59
+		LOCAL:0 = 4
+	SIF ARG == 60
+		LOCAL:0 = 3
+	SIF ARG == 61
+		LOCAL:0 = 1
+	SIF ARG == 62
+		LOCAL:0 = 1
+	SIF ARG == 63
+		LOCAL:0 = 4
+	SIF ARG == 64
+		LOCAL:0 = 3
+	SIF ARG == 65
+		LOCAL:0 = 3
+	SIF ARG == 66
+		LOCAL:0 = 4
+	SIF ARG == 70
+		LOCAL:0 = 3
+	SIF ARG == 71
+		LOCAL:0 = 3
+	SIF ARG == 80
+		LOCAL:0 = 4
+	SIF ARG == 81
+		LOCAL:0 = 4
+	SIF ARG == 82
+		LOCAL:0 = 4
+	SIF ARG == 83
+		LOCAL:0 = 4
+	SIF ARG == 84
+		LOCAL:0 = 4
+	SIF ARG == 85
+		LOCAL:0 = 4
+	SIF ARG == 86
+		LOCAL:0 = 4
+	SIF ARG == 90
+		LOCAL:0 = 3
+	SIF ARG == 91
+		LOCAL:0 = 3
+	SIF ARG == 92
+		LOCAL:0 = 3
+	SIF ARG == 93
+		LOCAL:0 = 3
+	SIF ARG == 94
+		LOCAL:0 = 3
+	SIF ARG == 95
+		LOCAL:0 = 3
+	SIF ARG == 96
+		LOCAL:0 = 3
+	SIF ARG == 98
+		LOCAL:0 = 3
+	SIF ARG == 100
+		LOCAL:0 = 2
+	SIF ARG == 101
+		LOCAL:0 = 2
+	SIF ARG == 102
+		LOCAL:0 = 2
+	SIF ARG == 103
+		LOCAL:0 = 2
+	SIF ARG == 104
+		LOCAL:0 = 2
+	SIF ARG == 105
+		LOCAL:0 = 2
+	SIF ARG == 106
+		LOCAL:0 = 2
+	SIF ARG == 107
+		LOCAL:0 = 0
+	SIF ARG == 110
+		LOCAL:0 = 3
+	SIF ARG == 111
+		LOCAL:0 = 3
+	SIF ARG == 112
+		LOCAL:0 = 3
+	SIF ARG == 113
+		LOCAL:0 = 3
+	SIF ARG == 114
+		LOCAL:0 = 3
+	SIF ARG == 115
+		LOCAL:0 = 3
+	SIF ARG == 116
+		LOCAL:0 = 3
+	SIF ARG == 121
+		LOCAL:0 = 4
+	SIF ARG == 123
+		LOCAL:0 = 2
+	SIF ARG == 124
+		LOCAL:0 = 2
+	SIF ARG == 127
+		LOCAL:0 = 4
+	SIF ARG == 128
+		LOCAL:0 = 4
+	SIF ARG == 134
+		LOCAL:0 = 5
+	SIF ARG == 136
+		LOCAL:0 = 5
+	SIF ARG == 139
+		LOCAL:0 = 5
+	SIF ARG == 150
+		LOCAL:0 = 5
+	SIF ARG == 151
+		LOCAL:0 = 5
+	SIF ARG == 152
+		LOCAL:0 = 5
+	SIF ARG == 153
+		LOCAL:0 = 5
+	SIF ARG == 157
+		LOCAL:0 = 5
+	SIF ARG == 158
+		LOCAL:0 = 5
+	SIF ARG == 159
+		LOCAL:0 = 5
+	SIF ARG == 160
+		LOCAL:0 = 5
+	SIF ARG == 161
+		LOCAL:0 = 5
+	SIF ARG == 162
+		LOCAL:0 = 5
+	SIF ARG == 163
+		LOCAL:0 = 5
+	SIF ARG == 164
+		LOCAL:0 = 5
+	SIF ARG == 167
+		LOCAL:0 = 5
+	SIF ARG == 168
+		LOCAL:0 = 5
+	SIF ARG == 169
+		LOCAL:0 = 5
+	SIF ARG == 170
+		LOCAL:0 = 4
+	SIF ARG == 171
+		LOCAL:0 = 4
+	SIF ARG == 172
+		LOCAL:0 = 4
+	SIF ARG == 173
+		LOCAL:0 = 4
+	SIF ARG == 174
+		LOCAL:0 = 4
+	SIF ARG == 175
+		LOCAL:0 = 4
+	SIF ARG == 176
+		LOCAL:0 = 4
+	SIF ARG == 177
+		LOCAL:0 = 4
+	SIF ARG == 178
+		LOCAL:0 = 4
+	SIF ARG == 179
+		LOCAL:0 = 4
+	SIF ARG == 180
+		LOCAL:0 = 4
+	SIF ARG == 191
+		LOCAL:0 = 2
+	SIF ARG == 192
+		LOCAL:0 = 2
+	SIF ARG == 193
+		LOCAL:0 = 2
+	SIF ARG == 194
+		LOCAL:0 = 2
+	SIF ARG == 195
+		LOCAL:0 = 2
+
+RESULT:0 = LOCAL:0 *10000
+RETURN RESULT:0
+
+
+
+;-------------------------------------------------
+;의뢰 시스템에서 현 보유 캐릭터중 한명의 번호를 뽑아내는 함수
+;입력- 없다.
+;출력- 없다
+;반환- 주인을 제외한 보유캐릭터중 1명의 캐러넘버
+@GENERATE_MISSION_CHARANUMBER_TORIKOMODE
+;보유한 캐릭터의 변수를 만들어낸다.
+$SELECT_CHARA
+RESULT:0 = RAND:CHARANUM
+;주인이면 다시 돌릴 것.
+SIF RESULT:0 == 0
+GOTO SELECT_CHARA
+RETURN  RESULT:0
+
+;------------------------------------------------
+; 의뢰 시스템에서 납품할 수집품을 뽑아내는 함수
+; 입력- 캐릭터 등록번호
+; 반환 - 캐릭터 번호, 수집품 번호
+; 엉덩이 구슬은 주인공이 캇파일때만 등장. 촉수, 모유는 해당 캐릭이 해당 특성을 가지고 있을 때만 등장.
+; 알은 밸런스상 뺀다. 피는 반복뽑기가 불가능해서 뺀다.(나중에는 반복뽑기도 가능해지겠지)
+; 처녀혈은 독특한데, 처녀상태이거나, 처녀혈이 있을 때만 요구한다.
+@CALC_MISSION_DITEMTYPE_TORIKOMODE, ARG
+LOCALS = ""
+;디버그
+;PRINTFORML 입력받은 번호. ARG = {ARG}
+$LOOP_SELECT_DITEMTYPE
+LOCAL:0 = RAND:12 +1
+;주인이 갓파가 아니라면 다시 돌릴 것.
+SIF LOCAL:0 == 1 && TALENT:MASTER:210 != 1
+	GOTO LOOP_SELECT_DITEMTYPE
+;피가 뽑혔다면 다시 돌릴 것.
+SIF LOCAL:0 == 4
+	GOTO LOOP_SELECT_DITEMTYPE
+;타겟이 이미 처녀가 아니고 처녀혈이 없으면 다시 돌림. 
+SIF LOCAL:0 == 5 && TALENT:ARG:0 != 1 &&  DITEMTYPE:((NO:ARG)+100):105 == 0
+	GOTO LOOP_SELECT_DITEMTYPE
+;타겟이 모유체질이 아니면 다시 돌릴 것.
+SIF LOCAL:0 == 9 && TALENT:ARG:134 != 1
+	GOTO LOOP_SELECT_DITEMTYPE
+;알이 뽑혔다면 다시 돌릴 것.
+SIF LOCAL:0 == 10
+	GOTO LOOP_SELECT_DITEMTYPE
+;주인이 촉수사역술이 없다면 다시 돌릴 것.
+SIF LOCAL:0 == 11 && TALENT:MASTER:149 != 1
+	GOTO LOOP_SELECT_DITEMTYPE
+;그리고, 뽑힌 숫자에 100을 더해서 아이템 타입을 결정한다.
+LOCAL:0 += 100
+;이제 무엇을 납품해야 하는지가 정해졌다.
+RESULT:0 = LOCAL:0
+RETURN RESULT:0
+
+;------------------------------------------------
+;의뢰 시스템에서 납품할 수집품의 이름을 정해주는 함수.
+; 입력- 수집품 번호
+; 반환 - 수집품 이름
+@CALC_NAME_DITEMTYPE_TORIKOMODE, ARG
+LOCALS:0 = ""
+
+SIF ARG == 101
+	LOCALS:0 = 엉덩이구슬
+SIF ARG == 102
+	LOCALS:0 = 황금수
+SIF ARG == 103
+	LOCALS:0= 애액
+SIF ARG == 104
+	LOCALS:0 = 피
+SIF ARG == 105
+	LOCALS:0 = 파과혈
+SIF ARG == 106
+	LOCALS:0 = 팬티
+SIF ARG == 107
+	LOCALS:0 = 사진
+SIF ARG == 108
+	LOCALS:0 = 비디오
+SIF ARG == 109
+	LOCALS:0 = 모유
+SIF ARG == 110
+	LOCALS:0 = 알
+SIF ARG == 111
+	LOCALS:0 = 촉수
+SIF ARG == 112
+	LOCALS:0 = 음모
+
+RESULTS:0  = %LOCALS:0%
+RETURN 0
+
+
+;------------------------------------------------
+; 의뢰 시스템에서 납품할 수집품의 가격을 정해주는 함수.
+; 입력- 수집품 번호
+; 반환 - 가격
+; 누구의 물건이냐? 는 관계없다. 약간의 랜덤 가격이 붙으며, 날짜에 따라 가격이 정해짐.
+; 1회만 뽑는 것들은 약간 비싸다. 팬티 같은 경우 매우 비쌈.
+; 반복 뽑기 가능한 것 : 황금수, 애액, 사진, 비디오, 모유, 음모, 알, 촉수
+; 반복 뽑기 불가한 것: 엉덩이구슬, 피, 파과혈, 팬티
+@CALC_PRICE_DITEMTYPE_TORIKOMODE, ARG
+;템 가격 (1천원 기준으로 약 30% 정도의 +-가 발생함.)
+LOCAL:0 = 850 + RAND:300
+
+;엉덩이구슬. 조교대상의 최대기력을 깎아먹으므로 비싸다.
+SIF ARG == 101
+	TIMES LOCAL:0 , 5.0
+;황금수. 자주 뽑을 수 있으나, 병이 필요함
+SIF ARG == 102
+	TIMES LOCAL:0 , 3.0
+;애액. 자주 뽑을 수 있으나, 병이 필요함
+SIF ARG == 103
+	TIMES LOCAL:0 , 3.0
+;피. 1회만 뽑을 수 있다. 병이 필요
+SIF ARG == 104
+	TIMES LOCAL:0 , 5.0
+;파과혈. 1회만 뽑을 수 있다. 병이 필요
+SIF ARG == 105
+	TIMES LOCAL:0 , 5.0
+;팬티. 1회(?) 만 획득가능.
+SIF ARG == 106
+	TIMES LOCAL:0 , 8.0
+;사진. 자주 만들 수 있다. 필름(700원) 필요
+SIF ARG == 107
+	TIMES LOCAL:0 , 2.5
+;비디오. 자주 만들 수 있다. 테이프(500원) 필요.
+SIF ARG == 108
+	TIMES LOCAL:0 , 2.3
+;모유. 자주 뽑을 수 있으나, 병이 필요함
+SIF ARG == 109
+	TIMES LOCAL:0 , 3.0
+;알. 글쎄 잘 모르겠다. 일단은 이건 납품의뢰가 안 뜨고있음.
+SIF ARG == 110
+	TIMES LOCAL:0 , 4.0
+;촉수. 글쎄...
+SIF ARG == 111
+	TIMES LOCAL:0 , 4.0
+;음모. 자랄 때 마다 뽑을 수 있으나, 병이 필요함
+SIF ARG == 112
+	TIMES LOCAL:0 , 3.0
+
+RESULT = LOCAL:0 
+
+RETURN RESULT 
+
+
+
+
+;---------------------------------------------------
+;상품 납품 의뢰을 생성, 출력한다.
+;입력 : 없다
+;출력 : 상품납품 코드
+@GENERATE_MISSION_DITEMTYPE_TORIKOMODE
+
+;랜덤하게 미션 날짜를 만들어낸다. (5~25)
+CALL GENERATE_MISSION_DAY_TORIKOMODE
+;미션 날짜 저장
+LOCAL:1=RESULT:0
+
+;보유 캐릭터 체크, 선택
+CALL GENERATE_MISSION_CHARANUMBER_TORIKOMODE
+;캐릭터 등록번호 저장
+LOCAL:2=RESULT:0
+;캐릭터 고유번호+100을 저장 (캐릭터 상품번호)
+LOCAL:8 =  (NO:(LOCAL:2)) +100
+
+;납품할 수집품을 뽑아내기
+CALL CALC_MISSION_DITEMTYPE_TORIKOMODE, LOCAL:2
+;수집품 번호 저장
+LOCAL:3=RESULT:0
+
+;수집품의 이름을 정한다.
+CALL CALC_NAME_DITEMTYPE_TORIKOMODE, LOCAL:3
+LOCALS:0= %RESULTS:0%
+;디버그
+
+;수집품의 가격을 정한다
+CALL CALC_PRICE_DITEMTYPE_TORIKOMODE, LOCAL:3
+LOCAL:9=RESULT:0
+
+;날짜에 따른 보상보정
+CALL CALC_MISSION_REWARD_DAY_TORIKOMODE, LOCAL:1
+;보상보정 저장
+LOCAL:10 = RESULT:0
+
+;보상계산 = 수집품 가격 * 날짜보정
+LOCAL:0 = (LOCAL:9*LOCAL:10)/100
+
+;;디버그
+;PRINTFORM 상품 납품 : 
+;CALL SETCOLOR_TORIKOMODE, "PINK", 3
+;PRINTFORM [%ITEMNAME:(LOCAL:8)%]
+;RESETCOLOR
+;PRINTFORM 의 
+;CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+;PRINTFORM %조사처리(LOCALS:0,"를")%
+;RESETCOLOR
+;PRINTFORM  납품. 기한:
+;CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+;PRINTFORM {LOCAL:1}
+;RESETCOLOR
+;PRINTFORM 일, 보수:
+;CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+;PRINTFORM {LOCAL:0}
+;RESETCOLOR
+;PRINTFORML 원.
+
+;정보 저장한다. 보수 (9999999)&날짜(99)&캐러등록번호(999)&상품번호(999)
+RESULT:0 = LOCAL:0*100000000 + LOCAL:1*1000000 + LOCAL:8*1000 + LOCAL:3
+;디버그
+;PRINTFORML {RESULT:0}
+RETURN RESULT:0
+
+;---------------------------------------------------
+;상품 납품 의뢰을 코드에서 파싱하여 다시 보여준다.
+;입력 : 상품납품 코드
+;출력 : 상품납품 상세정보
+@DECODE_MISSION_DITEMTYPE_TORIKOMODE, ARG:0
+
+IF ARG:0 == 0
+	PRINTFORML -  -  -  -  -  -  -  -  -  -의뢰가 없습니다-  -  -  -  -  -  -  -  -  -
+ELSE
+	;보수추출
+	LOCAL:0 = (ARG:0 %1000000000000000)/100000000
+	;날짜
+	LOCAL:1 = (ARG:0 %100000000)/1000000
+	;(캐릭터 상품번호)
+	LOCAL:2 = (ARG:0 %1000000)/1000
+	;상품명
+	LOCAL:3 = (ARG:0 %1000)
+
+	;수집품의 이름을 정한다.
+	CALL CALC_NAME_DITEMTYPE_TORIKOMODE, LOCAL:3
+	LOCALS:0= %RESULTS:0%
+	;디버그
+
+	PRINTFORM 상품납품 : 
+	CALL SETCOLOR_TORIKOMODE, "PINK", 3
+	PRINTFORM [%ITEMNAME:(LOCAL:2)%]
+	RESETCOLOR
+	PRINTFORM 의 
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+	PRINTFORM %조사처리(LOCALS:0,"를")%
+	RESETCOLOR
+	PRINTFORM  납품. 기한:
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+	PRINTFORM {LOCAL:1}
+	RESETCOLOR
+	PRINTFORM 일, 보수:
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+	PRINTFORM {LOCAL:0}
+	RESETCOLOR
+	PRINTFORML 원.
+ENDIF
+
+;---------------------------------------------------
+;상품 납품확인
+;입력 : ARG = 의뢰코드
+@CHECK_DELIVER_DITEMTYPE_TORIKOMODE, ARG
+;납품 가능여부를 체크한다.
+
+;의뢰코드 파싱
+;보수추출
+LOCAL:0 = (ARG:0 %1000000000000000)/100000000
+;(캐릭터 상품번호)
+LOCAL:1 = (ARG:0 %1000000)/1000
+;수집품번호
+LOCAL:2 = (ARG:0 %1000)
+;수집품의 이름을 정한다.
+CALL CALC_NAME_DITEMTYPE_TORIKOMODE, LOCAL:2
+LOCALS:4= %RESULTS:0%
+
+;납품가능할때, 납품처리.
+IF DITEMTYPE:(LOCAL:1):(LOCAL:2) > 0
+	PRINTFORML 이 수집품은 {DITEMTYPE:(LOCAL:1):(LOCAL:2)} 개 가지고 있다. 납품할까?
+	PRINTFORML [0] 납품한다.
+	PRINTFORML [1] 그만둔다.
+	$LOOP_CHECK_DELIVER_DITEMTYPE
+	INPUT
+	IF RESULT == 0
+		;수집품 차감
+		DITEMTYPE:(LOCAL:1):(LOCAL:2) -= 1
+		;보상 처리
+		MONEY += LOCAL:0
+		;미션 삭제
+		CALL DELETE_MISSION_ACCEPTED_TORIKOMODE,ARG 
+		;결과 출력
+		CALL SETCOLOR_TORIKOMODE, "PINK", 3
+		PRINTFORM [%ITEMNAME:(LOCAL:1)%]
+		RESETCOLOR
+		PRINTFORM 의 
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+		PRINTFORM %조사처리(LOCALS:4,"를")%
+		RESETCOLOR
+		PRINTFORMW 납품했다.
+		PRINTL
+		PRINTFORMW "힛힛힛... 좋구먼. 좋아..."
+		PRINTFORMW 늙은 텐구는 만족스러운 듯이 웃고있다.
+		PRINTL
+		PRINTFORMW 납품결과, {LOCAL:0}원을 받았습니다.
+	ELSEIF RESULT == 1
+		PRINTFORMW 그만두자.
+		PRINTL
+	ELSE
+		GOTO LOOP_CHECK_DELIVER_DITEMTYPE
+	ENDIF
+;납품 불가하다
+ELSE
+	PRINTFORMW 수집품이 부족하다.
+	PRINTL
+ENDIF
+
+;---------------------------------------------------
+;완수한 의뢰를 지운다. 로직이 좀 엉망이다...
+;입력 : ARG = 의뢰코드
+@DELETE_MISSION_ACCEPTED_TORIKOMODE, ARG
+;의뢰을 지운다.
+;노예납품
+IF FLAG:5011 == ARG
+	FLAG:5011 =0
+ELSEIF FLAG:5012 == ARG
+	FLAG:5012 =0
+ELSEIF FLAG:5013 == ARG
+	FLAG:5013 =0
+ELSEIF FLAG:5016 == ARG
+	FLAG:5016 =0
+ELSEIF FLAG:5017 == ARG
+	FLAG:5017 =0
+ELSEIF FLAG:5018 == ARG
+	FLAG:5018 =0
+;상품납품
+ELSEIF FLAG:5021 == ARG
+	FLAG:5021 =0
+ELSEIF FLAG:5022 == ARG
+	FLAG:5022 =0
+ELSEIF FLAG:5023 == ARG
+	FLAG:5023 =0
+ELSEIF FLAG:5026 == ARG
+	FLAG:5026 =0
+ELSEIF FLAG:5027 == ARG
+	FLAG:5027 =0
+ELSEIF FLAG:5028 == ARG
+	FLAG:5028 =0
+ENDIF
+
+;---------------------------------------------------
+;대출의 날짜를 줄이고, 필요시 빚독촉 텐구를 발동시킨다.
+;입력 : ARG = 
+;출력 : 없다
+@DEGRADE_DAY_ROAN_TORIKOMODE, ARG
+;남은 날짜
+LOCAL:0 = 0
+;날짜를 뽑아낸다
+LOCAL:0 = FLAG:5030/1000000
+;날짜가 0이라면 빚쟁이 텐구 등장. 유저의 날짜를 1일 늘려버린다.
+IF LOCAL:0  == 0
+	DRAWLINE
+	PRINTL
+	PRINTFORMW #쾅쾅쾅!#
+	PRINTFORMW ...이 늦은 시간에 대체 누가...
+	PRINTFORMW 문 앞에는 예전의 그 젊은 텐구가 서 있었다.
+	PRINTFORMW "선생님. 빚을 갚을 날짜가 지난 건 알고 계시죠?"
+	PRINTFORMW ...벌써 그렇게 됬나.
+	PRINTFORMW "그럼 계약대로, 이자로 선생님의 날짜를 하루 가져가겠습니다!"
+	PRINTFORMW 뭣? 그런 계약이 있었...!
+	PRINTFORMW #번쩍#
+	PRINTFORMW .........
+	PRINTFORMW ...
+	PRINTFORMW 정신을 차리니 텐구는 온데 간데 없다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 주위의 모습에서 이상한 위화감을 느꼈다...
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+	PRINTFORMW <이자로 하루의 시간을 징수당했습니다>
+	PRINTFORMW <하루의 시간이 흘러버렸습니다>
+	PRINTFORM 남은 날짜 : 
+	CALL SHOW_DEADLINE
+	PRINTFORM  → 
+	DAY += 1
+	CALL SHOW_DEADLINE
+	RESETCOLOR
+	PRINTL
+	DRAWLINE
+;날짜가 남았다면 날짜를 줄인다.
+ELSE
+	LOCAL:0 -= 1
+	;그리고 바뀐 날짜를 다시 넣어준다.
+	FLAG:5030 = FLAG:5030 - (FLAG:5030/1000000)*1000000 + (LOCAL:0)*1000000
+ENDIF

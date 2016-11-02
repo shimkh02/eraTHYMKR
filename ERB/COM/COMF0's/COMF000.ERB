@@ -1,0 +1,237 @@
+﻿;=============================================================================
+;애무
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE0
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:0 > 0
+	RETURN 0
+RETURN 1
+;촉수 조교 중인 경우
+;SIF TEQUIP:90 && EXCOM_ABLE680() == 0
+;	RETURN 0
+;RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM0
+;………………………………………………
+;커맨드의 파생 판정
+;………………………………………………
+;촉수 조교 중이면, 촉수 어루만지기로 파생
+;IF TEQUIP:90
+;	JUMP COM680
+;전회의 조교가 키스거나 페팅이라면 페팅으로 파생
+;ELSEIF PREVCOM == 6 || PREVCOM == 606
+;	SIF EXCOM_ABLE606() == 1
+;		JUMP COM606
+;ENDIF
+
+PRINTL 애무
+TSTR:0 = 애무
+CALL TRAIN_MESSAGE_COM000
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 100
+SOURCE:15 = 60
+SOURCE:30 = 30
+
+;ABL:Ｃ감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 20
+	SOURCE:11 = 50
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 100
+	SOURCE:11 = 100
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 500
+	SOURCE:11 = 160
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1200
+	SOURCE:11 = 200
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2000
+	SOURCE:11 = 230
+ELSE
+	SOURCE:0 = 2800
+	SOURCE:11 = 250
+ENDIF
+
+;ABL:Ｂ감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 15
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 50
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 300
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 700
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1100
+ELSE
+	SOURCE:3 = 1600
+ENDIF
+
+;노예의 입의 더러움があるときキスはない（愛液と母乳よごれはＯＫ불결무시が조교자にあれば問題なし）
+;ボールギャグ使用中や触手調教中もなし
+;고양이혀持ちの場合猫フェラパッチ機能を有効にしかつ조교자의 技巧が5以上でないとキスをしない
+IF TEQUIP:90
+	SOURCE:25 = SOURCE:11 / 4
+	SOURCE:11 = 0
+ELSEIF (STAIN:0 >= 2 && (STAIN:0 != 16 && STAIN:0 != 17) && TALENT:PLAYER:64 == 0) || TEQUIP:42 || ((FLAG:14 & 16) == 0 && TALENT:PLAYER:54 && ABL:PLAYER:12 < 5)
+	SOURCE:0 /= 2
+	SOURCE:3 /= 2
+	SOURCE:11 /= 4
+	SOURCE:30 = 0
+ELSE
+	;냄새둔감
+	IF TALENT:61
+		SOURCE:30 /= 4
+	;냄새민감
+	ELSEIF TALENT:62
+		SOURCE:30 *= 3
+	ENDIF
+	;프라이드 높음
+	SIF TALENT:16
+		SOURCE:30 *= 2
+	;연모
+	IF TALENT:150 && ASSIPLAY == 0
+		SOURCE:11 *= 2
+		SOURCE:30 /= 10
+	ENDIF
+	;조교자의 口의 더러움があると不潔150%
+	SIF STAIN:PLAYER:0
+		TIMES SOURCE:30 , 1.50
+
+	;노예의 입⇔조교자의 입의 불결이 이동
+	STAIN:0 |= STAIN:PLAYER:0
+	STAIN:PLAYER:0 |= STAIN:0
+
+	;키스 경험
+	TCVAR:23 += 1
+	TCVAR:PLAYER:23 += 1
+	CFLAG:172 += (ASSIPLAY == 0) ? 1 # 0
+ENDIF
+
+;オムツ플레이 중は快Ｃ半減
+SIF TEQUIP:58
+	SOURCE:0 /= 2
+
+IF TEQUIP:59 == 2 || TEQUIP:59 == 12 || TEQUIP:59 == 13
+	;スク水・ビキニ・危ないレオタード装着中
+	SOURCE:10 = 1200
+	SOURCE:12 += 400
+ELSEIF TEQUIP:59 == 17 || SOURCE:59 == 21
+	;褌・裸サスペンダー装着中
+	SOURCE:10 = 1400
+	SOURCE:12 += 800
+ELSEIF TFLAG:899 <= 0 && EQUIP:14 <= 0 && (TALENT:152 || TALENT:153) && (TEQUIP:59 == 1 || TEQUIP:59 == 19)
+	;친애か相愛でエプロンかウェディングドレス装着中(ただし睡眠や失神していないとき)
+	TIMES SOURCE:11 , 1.50 
+ELSEIF TEQUIP:36
+	;サラシ装着中
+	SOURCE:10 = 1200
+	TIMES SOURCE:3 , 1.80
+	TIMES SOURCE:11 , 1.40
+ENDIF
+
+IF TEQUIP:90
+	;노예의 PＶＢに触手의 더러움がつく
+	IF TALENT:120 || TALENT:121 || TALENT:1
+		STAIN:2 |= 2
+		STAIN:2 |= 4
+	ENDIF
+	IF TALENT:120 == 0
+		STAIN:3 |= 2
+		STAIN:3 |= 4
+	ENDIF
+	STAIN:5 |= 2
+	STAIN:5 |= 4
+ELSE
+	;노예의 Ｖ⇔조교자의 손가락의 불결이 이동
+	STAIN:3 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:3
+
+	;노예의 Ｂ⇔조교자의 손가락의 불결이 이동
+	STAIN:5 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:5
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM000
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+VARSET LOCALS, ""
+SPLIT "더미,앞치마,학교 수영복,여교사 코스튬,일본 전통복,메이드복,체조복,간호사 의상,차이나 드레스,세일러복,네글리제,와이셔츠,비키니 수영복,위험한 레오타드,바니 슈츠,본디지 의상,유치원복,훈도시,군복,웨딩드레스,고딕롤리타,알몸에 멜빵,무녀 의상",",",LOCALS
+PRINTL
+SIF (STAIN:0 < 2 || STAIN:0 == 16 || STAIN:0 == 17 || TALENT:PLAYER:64) && TEQUIP:42 == 0 && TEQUIP:90 == 0
+	PRINT 키스를 하면서 
+IF TEQUIP:58
+	PRINT 기저귀 위를 쓰다듬어 주듯이 
+ELSEIF TEQUIP:59
+	PRINTFORM %조사처리(LOCALS:(TEQUIP:59),"을")% 입은 
+ELSEIF TEQUIP:36
+	PRINT 사라시 위로 
+ENDIF
+PRINTFORM %CALLNAME:TARGET%의 
+SIF TALENT:128
+	PRINT 어린 
+IF TEQUIP:90
+	PRINTW 몸을 촉수가 희롱하고 있다….
+ELSEIF TEQUIP:68
+	PRINT 몸을 간질이듯이 애무했다
+	IF PALAM:0 >= (PALAMLV:4 - 1) || PALAM:3 >= (PALAMLV:4 - 1)
+		PRINTL .
+		IF PALAM:0 >= (PALAMLV:4 - 1)
+			IF TALENT:120 || TALENT:121
+				PRINT 팽창한 페니스를 문질러대자 
+			ELSE
+				PRINT 팽창한 클리토리스 주변을 만져주자 
+			ENDIF
+		ELSE
+			PRINT 뽐내듯이 솟구친 유두 주변을 간질이자 
+		ENDIF
+		IF EQUIP:14 == 0 && TFLAG:899 == 0
+			IF TALENT:150
+				PRINT 애절하게 
+			ELSEIF TALENT:16
+				PRINT 노려보듯이 
+			ELSE
+				PRINT 젖은 눈동자로 
+			ENDIF
+			PRINTW 올려다 보고 있다….
+		ELSE
+			IF EQUIP:14
+				PRINT 자면서도 
+			ELSEIF TFLAG:899 > 0
+				PRINT 기절 중이면서도 
+			ENDIF
+			IF ABL:11 > 2
+				PRINTW 꽤 느끼고 있는 듯 몸은 반응을 계속해서 보이고 있다….
+			ELSEIF MARK:9 == 3
+				PRINTW 명백히 피하는 듯한 몸짓을 되풀이 하고 있다….
+			ELSE
+				PRINTFORMW 민감한 장소를 만질 때마다 \@(TEQUIP:42) ? 몸을 부들부들 떨고 # 숨소리 속에 미약하게 교성이 섞이고 \@ 있다….
+			ENDIF
+		ENDIF
+	ELSE
+		PRINTW ….
+	ENDIF
+ELSE
+	PRINTW 몸을 열심히 애무했다….
+ENDIF

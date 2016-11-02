@@ -1,0 +1,119 @@
+﻿;=============================================================================
+;수영 기능
+;=============================================================================
+@ABLUP78
+SIF (FLAG:89 & 1) == 0
+	RETURN 0
+DRAWLINE
+SIF ABL:78 >= 5
+	JUMP ABLUP_MAX
+
+PRINTFORM [0] - %PALAMNAME:11%의 구슬×{COST78(0)}, %EXPNAME:78%{COST78(1)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN78(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN78(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:11 -= COST78(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:78 += 1
+PRINTFORMW %ABLNAME:78%의 레벨이 %조사처리(ABL:78,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP78
+SIF ABL:78 >= 5
+	RETURN 0
+
+CALLF CALC_COST78, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP78("CHECK")
+
+@COST78(ARG)
+#FUNCTION
+RETURNF CALC_COST78("GET", ARG)
+
+@CALC_COST78(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:78 == 0
+	LOCAL:0 = 75
+	LOCAL:1 = 10
+ELSEIF ABL:78 == 1
+	LOCAL:0 = (EXP:78 >= EXPLV:3) ? 250 # 500
+	LOCAL:1 = 25
+ELSEIF ABL:78 == 2
+	LOCAL:0 = (EXP:78 >= EXPLV:4) ? 1500 # 3000
+	LOCAL:1 = 50
+ELSEIF ABL:78 == 3
+	LOCAL:0 = (EXP:78 >= EXPLV:5) ? 4500 # 9000
+	LOCAL:1 = 100
+ELSEIF ABL:78 == 4
+	LOCAL:0 = (EXP:78 >= EXPLV:5) ? 12000 # 24000
+	LOCAL:1 = 250
+ENDIF
+
+;習得早い
+IF TALENT:50
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.75
+;習得遅い
+ELSEIF TALENT:51
+	TIMES LOCAL:0 , 1.20
+	TIMES LOCAL:1 , 1.10
+ENDIF
+;服従
+IF TALENT:160
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;河童
+IF TALENT:210
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;吸血鬼
+IF TALENT:205
+	TIMES LOCAL:0 , 1.20
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;動物耳
+IF TALENT:116
+	TIMES LOCAL:0 , 1.10
+	TIMES LOCAL:1 , 1.10
+ENDIF
+
+RETURNF 0
+
+@CAN78(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP78("GET", ARG)
+
+@CAN_ABLUP78(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;習得の珠で上げる
+SIF JUEL:11 < COST78(0)
+	LOCAL:0 |= 1
+;水泳経験が必要
+SIF EXP:78 < COST78(1)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

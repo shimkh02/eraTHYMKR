@@ -1,0 +1,197 @@
+﻿;=============================================================================
+;촉수풍양음향
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE595
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:595 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:95 & 256
+	RETURN 1
+;다른 향을 피우고 있을 때는 불가
+SIF TEQUIP:89 && TEQUIP:89 != 99
+	RETURN 0
+;조교자는 촉수사역LV3이상 필요
+SIF ABL:PLAYER:98 < 3
+	RETURN 0
+;触手が[MINORIKO触手]を得ていないとダメ
+SIF (FLAG:98 & 32768) == 0
+	RETURN 0
+;穣子を触手生贄に捧げていない(=穣子が何らかの形で存在している)とダメ
+SIF (FLAG:97 & 32768) == 0
+	RETURN 0
+;수면 중엔 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중엔 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM595
+PRINTL 촉수풍양음향
+TSTR:0 = 촉수풍양음향
+CALL TRAIN_MESSAGE_COM595
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 60
+
+DOWNBASE:PLAYER:0 += 25
+DOWNBASE:PLAYER:1 += 40
+
+SOURCE:16 = 250
+SOURCE:18 = 150
+
+;노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:21 = 50
+	SOURCE:22 = 100
+	SOURCE:30 = 2000
+ELSEIF ABL:14 == 1
+	SOURCE:21 = 100
+	SOURCE:22 = 200
+	SOURCE:30 = 600
+ELSEIF ABL:14 == 2
+	SOURCE:21 = 200
+	SOURCE:22 = 400
+	SOURCE:30 = 150
+ELSEIF ABL:14 == 3
+	SOURCE:21 = 300
+	SOURCE:22 = 800
+	SOURCE:30 = 30
+ELSEIF ABL:14 == 4
+	SOURCE:21 = 400
+	SOURCE:22 = 1200
+	SOURCE:30 = 0
+ELSE
+	SOURCE:21 = 500
+	SOURCE:22 = 2000
+	SOURCE:30 = 0
+ENDIF
+
+LOCAL:1 = 1200
+LOCAL:2 = 400
+LOCAL:3 = 1000
+
+;미노리코와의 궁합에 따라 보정 좌우
+LOCAL = 38
+IF RELATION:LOCAL > 0 && RELATION:LOCAL != 100
+	LOCAL:1 *= RELATION:LOCAL
+	LOCAL:1 /= 100
+	;트라우마는 강제적으로 증가
+	IF RELATION:LOCAL < 100
+		LOCAL:2 *= (200-RELATION:LOCAL)
+	ELSE
+		LOCAL:2 *= RELATION:LOCAL
+	ENDIF
+	LOCAL:2 /= 100
+	LOCAL:3 *= 100
+	LOCAL:3 /= RELATION:LOCAL
+ENDIF
+
+SOURCE:24 += LOCAL:1
+SOURCE:25 += LOCAL:2
+SOURCE:26 += LOCAL:1
+SOURCE:27 += LOCAL:1
+SOURCE:29 += LOCAL:1
+SOURCE:31 += LOCAL:3
+
+;촉수풍요음향의 ON/OFF
+IF TEQUIP:95 & 256
+	TEQUIP:95 -= 256
+ELSE
+	TEQUIP:95 |= 256
+	TEQUIP:89 = 99
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;촉수풍양음향 효과 발휘 중
+;-------------------------------------------------
+@EQUIP_COM595
+PRINTL <촉수풍양음향 효과 발휘 중>
+
+TIMES SOURCE:17 , 1.50
+TIMES SOURCE:18 , 1.50
+TIMES SOURCE:19 , 1.50
+TIMES SOURCE:40 , 1.50
+TIMES SOURCE:41 , 1.50
+TIMES SOURCE:42 , 1.50
+
+LOCAL:1 = 700
+LOCAL:2 = 200
+LOCAL:3 = 500
+
+;미노리코와의 궁합에 따라 보정 좌우
+LOCAL = 38
+IF RELATION:LOCAL > 0 && RELATION:LOCAL != 100
+	LOCAL:1 *= RELATION:LOCAL
+	LOCAL:1 /= 100
+	;트라우마는 강제적으로 증가
+	IF RELATION:LOCAL < 100
+		LOCAL:2 *= (200-RELATION:LOCAL)
+	ELSE
+		LOCAL:2 *= RELATION:LOCAL
+	ENDIF
+	LOCAL:2 /= 100
+	LOCAL:3 *= 100
+	LOCAL:3 /= RELATION:LOCAL
+ENDIF
+
+SOURCE:24 += LOCAL:1
+SOURCE:25 += LOCAL:2
+SOURCE:26 += LOCAL:1
+SOURCE:27 += LOCAL:1
+SOURCE:29 += LOCAL:1
+SOURCE:31 += LOCAL:3
+
+;미노리코의 성별상, 조교 대상이 ♀일 때만 레즈비언 경험이 들어감
+SIF TALENT:120 == 0
+	TCVAR:12 += 1
+
+;촉수 경험 플래그
+TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM595
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:95 & 256
+	PRINTFORML %CALLNAME:PLAYER%의 명령에 따라 미노리코는 %CALLNAME:TARGET%의 얼굴에 입김을 부는 것을 그만뒀다.
+	PRINTFORML 미노리코의 행동으로부터 해방되어서도 아직 %조사처리(CALLNAME:TARGET,"는")% 이상한 향기의 영향에 사로잡힌 상태이다.
+	PRINTFORMW 미노리코는 그런 %CALLNAME:TARGET%의 느슨해진 뺨을 혀 끝으로 가볍게 핥은 뒤, 그대로 육벽 너머로 떠났다….
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%의 명령에 반응하여 어디선가 선명하게 붉은 촉수가 기어나왔다.
+	PRINTFORML 촉수는 %CALLNAME:TARGET%에게 근접하자 끝이 벌어지고 안에서 하반신이 고깃덩어리에 묻힌 미노리코가 모습을 드러냈다.
+	PRINTFORML 미노리코는 %CALLNAME:MASTER%에게 가볍게 인사를 보내고 입에 옅은 미소를 띤 채 %CALLNAME:TARGET%의 눈앞에 다가가 어렴풋이 달콤한 향기를 품은 뜨거운 한숨을 %CALLNAME:TARGET%의 얼굴에 불었다.
+	PRINTFORMW 이상한 향기를 억지로 마신 %CALLNAME:TARGET%의 사고는 흐려지면서 음란한 행동에 대한 적응력이 늘어났다….
+ENDIF

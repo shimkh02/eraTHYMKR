@@ -1,0 +1,2759 @@
+﻿;=============================================================================
+;SHOP 메뉴 · 능력 확인에서의 정보
+;=============================================================================
+;-------------------------------------------------
+;소지 아이템 표시 처리
+;-------------------------------------------------
+@ARRANGE_PRINT_ITEM
+PRINT 보유아이템:
+LOCALS = 
+UNICODE 0x0020
+FOR LOCAL, 0, 90
+	SIF CHECK_ITEM_IS_VALID(LOCAL) && ITEM:LOCAL > 0
+		LOCALS = %LOCALS%%ITEMNAME:LOCAL%\@(LOCAL >= 60 && LOCAL < 90) ? ×{ITEM:LOCAL} # \@%RESULTS:0%
+NEXT
+FOR LOCAL, 600, 617
+	SIF ITEM:LOCAL > 0
+		LOCALS = %LOCALS%%ITEMNAME:LOCAL%×{ITEM:LOCAL}%RESULTS:0%
+NEXT
+
+SIF FLAG:15 & 16 && FLAG:73 & 1
+	LOCALS = %LOCALS% \@(FLAG:73 & 2) ? 삼각목마 # \@ \@(FLAG:73 & 4) ? 말뚝 # \@ \@(FLAG:73 & 8) ? 나이프 # \@ \@(FLAG:73 & 16) ? 나타 # \@ \@(FLAG:73 & 32) ? 아이언메이든 # \@ %RESULTS:0%
+
+SIF FLAG:15 & 8192 && FLAG:72 & 1
+	LOCALS = %LOCALS% \@(FLAG:72 & 2) ? 「개」 # \@ \@(FLAG:72 & 4) ? 「돼지」 # \@ \@(FLAG:72 & 8) ? 「말」 # \@ %RESULTS:0%
+
+SIF FLAG:71
+	LOCALS = %LOCALS%「정원」 \@(FLAG:71 & 2) ? 석등롱 # \@ \@(FLAG:71 & 4) ?  대나무물받이 # \@ \@(FLAG:71 & 8) ? 다실 # \@ \@(FLAG:71 & 16) ? 연못 # \@\@(FLAG:71 & 32) ?  (물고기) # \@ \@(FLAG:71 & 64) ? 분수 # \@ \@(FLAG:71 & 128) ? 석가산 # \@ \@(FLAG:71 & 256) ? (큰 나무) # \@%RESULTS:0%
+
+SIF FLAG:79
+	LOCALS = %LOCALS%「허브농장」 \@(FLAG:79 & 2) ? 허브 개발시설 # \@ \@(FLAG:79 & 4) ? 허브 생산시설 # \@ %RESULTS:0%
+
+;[プールパッチ]
+SIF FLAG:89
+	LOCALS = %LOCALS%「풀장」 \@(FLAG:89 & 2) ? 워터슬라이더 # \@ \@(FLAG:89 & 4) ? 다이빙대 # \@ %RESULTS:0%
+
+SIF ITEM:98 > 0
+	LOCALS = %LOCALS% 《%ITEMNAME:98%》%RESULTS:0%
+SIF ITEM:99 > 0
+	LOCALS = %LOCALS% 《%ITEMNAME:99%》%RESULTS:0%
+;SIF ITEM:999 > 0
+;	LOCALS = %LOCALS% 《%ITEMNAME:999%》
+PRINTFORML \@(STRLENS(LOCALS)<= 0) ? 없음 # %LOCALS%\@
+
+;………………………………………………
+;소지 아이템 표시 보조 처리
+;………………………………………………
+;컨피그를 참조해 무효한 컨피그에 대응하는 아이템은 표시하지 않게 한다
+@CHECK_ITEM_IS_VALID(ARG)
+#FUNCTION
+;전시품
+IF ARG == 81 && (FLAG:12 & 8) == 0
+	RETURNF 0
+;특수한 약품계
+ELSEIF (ARG >= 62 && ARG <= 74) && (FLAG:13 & 1) == 0
+	RETURNF 0
+;Ｃ계 확장 커맨드
+ELSEIF ((ARG >= 17 && ARG <= 19) || (ARG >= 25 && ARG <= 28)) && (FLAG:15 & 1) == 0
+	RETURNF 0
+;Ｖ계 확장 커맨드
+ELSEIF (ARG >= 5 && ARG <= 8) && (FLAG:15 & 2) == 0
+	RETURNF 0
+;Ａ계 확장 커맨드
+ELSEIF (ARG >= 10 && ARG <= 14 || ARG == 83) && (FLAG:15 & 4) == 0
+	RETURNF 0
+;Ｃ系とＡ系の両方に絡むもの
+ELSEIF ARG == 79 && (FLAG:15 & 1) == 0 && (FLAG:15 & 4) == 0
+	RETURNF 0
+;Ｖ系とＡ系の両方に絡むもの
+ELSEIF ARG == 4 && (FLAG:15 & 2) == 0 && (FLAG:15 & 4) == 0
+	RETURNF 0
+;Ｂ계 확장 커맨드
+ELSEIF (ARG >= 21 && ARG <= 24) && (FLAG:15 & 8) == 0
+	RETURNF 0
+;注射系コマンド
+ELSEIF ARG == 53 && (FLAG:15 & 64) == 0
+	RETURNF 0
+;撮影コマンド拡張
+ELSEIF (ARG == 51 || ARG == 58 || ARG == 76) && (FLAG:15 & 128) == 0
+	RETURNF 0
+;羞恥プレイ계 확장 커맨드
+ELSEIF (ARG == 40 || (ARG >= 43 && ARG <= 47) || ARG == 49 || ARG == 77 || ARG == 82) && (FLAG:15 & 512) == 0
+	RETURNF 0
+;調教者奉仕 · ウフフ계 확장 커맨드
+ELSEIF ARG == 78 && (FLAG:15 & 2048) == 0
+	RETURNF 0
+;紳士的な触手系コマンド
+ELSEIF ARG == 59 && (FLAG:15 & 4096) == 0
+	RETURNF 0
+ENDIF
+RETURNF 1
+
+;-------------------------------------------------
+;집 이름의 표시 처리
+;-------------------------------------------------
+@SHOW_HOUSE
+PRINT 거주지:
+IF FLAG:90 >= 4
+	PRINTSL SAVESTR:1
+ELSEIF FLAG:90 == 3
+	PRINTL 숨겨진 마을
+ELSEIF FLAG:90 == 2
+	PRINTL 작은 성
+ELSEIF FLAG:90 == 1
+	PRINTL 호화저택
+ELSE
+	STRLENS CSTR:MASTER:1
+	PRINTFORM \@(RESULT > 0) ? %CSTR:MASTER:1% # 숨겨진 집\@ 
+	IF TALENT:MASTER:831
+		PRINTFORML 　\@(FLAG:573 < 20) ? 채소밭：{FLAG:573}Lv # 채소밭：MAX Lv\@
+	ELSE
+		PRINTL 
+	ENDIF
+ENDIF
+
+LOCAL = CALC_SLAVE_CAPACITY() - CHARANUM
+PRINTFORML \@(LOCAL > 0) ? (최대 {LOCAL}명 노예구입가능) #  (노예의 수 최대치임) \@
+
+;-------------------------------------------------
+;캐릭터 능력 표시(종족 외)
+;-------------------------------------------------
+;能力を見る選択のとき、各キャラの横で種族、体力、気力が表示されます.
+
+;일단 완성.
+@SHOW_RACE, ARG
+PRINT 　　종족:
+IF NO:ARG == 0 && TALENT:ARG:998 && TALENT:ARG:116
+	PRINT 치터
+ELSEIF TALENT:ARG:48
+	PRINTS STR:145
+ELSEIF TALENT:ARG:200 && CFLAG:ARG:5 == 1
+	PRINTS STR:103
+ELSEIF TALENT:ARG:205 && CFLAG:ARG:5 == 2
+	PRINTS STR:106
+ELSEIF TALENT:ARG:206 && CFLAG:ARG:5 == 3
+	PRINTS STR:146
+ELSEIF TALENT:ARG:207 && CFLAG:ARG:5 == 4
+	PRINTS STR:143
+ELSEIF TALENT:ARG:208 && CFLAG:ARG:5 == 5
+	PRINTS STR:121
+ELSEIF TALENT:ARG:209 && CFLAG:ARG:5 == 6
+	PRINTS STR:104
+ELSEIF TALENT:ARG:210 && CFLAG:ARG:5 == 7
+	PRINTS STR:127
+ELSEIF TALENT:ARG:211 && CFLAG:ARG:5 == 8
+	PRINTS STR:112
+ELSEIF TALENT:ARG:212 && CFLAG:ARG:5 == 9
+	PRINTS STR:116
+ELSE
+	PRINTS CSTR:ARG:33
+ENDIF
+SIF TALENT:MASTER:998
+	PRINTFORM 　캐릭터번호:{NO:ARG, 3}
+PRINTFORML 　체력:({BASE:ARG:0, 4}/{MAXBASE:ARG:0, 4})　기력:({BASE:ARG:1, 4}/{MAXBASE:ARG:1, 4})
+;한 마디 대사 호출
+SIF ARG != MASTER && FLAG:1200 & 4
+	CALL IMPRESSION_MAIN, ARG
+IF ARG == MASTER && FLAG:12 & 4
+	CALL PRINT_MASTER_STATUS, ARG
+ELSEIF FLAG:12 & 4
+	CALL PRINT_SLAVE_STATUS, ARG
+ENDIF
+
+;-------------------------------------------------
+;주인용 스테이터스 표시 처리
+;-------------------------------------------------
+@PRINT_MASTER_STATUS, ARG
+PRINT 함락된 노예 총수　　　　　　:
+IF FLAG:30 > 9999
+	;이로 경 「니토리 박사, 사정을 설명할 수 있겠나?」
+	;니토리 박사 「현재 조금 (자위를 할) 시간과 (로터를 살) 예산을 받을 수 있으면……」
+	;에로 경「변명은 죄악임을 알도록」
+	;PRINT [에로 경의 콜렉션]
+	PRINT [만 간 전 적]
+ELSEIF FLAG:30 > 999
+	PRINT [밀레니엄]
+ELSEIF FLAG:30 > 99
+	PRINT [백인베기]
+ELSE
+	PRINTFORM {FLAG:30, 5}명
+ENDIF
+PRINTFORML 　(이번에 함락한 수:{CFLAG:ARG:98, 5}명)
+SIF FLAG:34
+	PRINTFORML 지금까지 매각한 노예 총수　 :{FLAG:34, 5}명
+SIF FLAG:31
+	PRINTFORML 이번에 낙인을 찍은 노예 수　:{FLAG:31, 5}명
+SIF FLAG:33
+	PRINTFORML 이번에 산제물로 바친 노예 수:{FLAG:33, 5}명
+;마지막으로 조교 받은 캐릭터를 표시
+IF FLAG:422 != CFLAG:MASTER:3109 && FLAG:422 != 0
+	LOCAL = SEARCH_CHARA_ID(FLAG:422 , 1)
+	SIF LOCAL > 0
+		PRINTFORML 마지막으로 조교한 것은 %CALLNAME:LOCAL%입니다.
+ENDIF
+;마지막으로 조교에서 조수를 한 캐릭터를 표시
+IF FLAG:423 != CFLAG:MASTER:3109 && FLAG:423 != 0
+	LOCAL = SEARCH_CHARA_ID(FLAG:423 , 1)
+	SIF LOCAL > 0
+		PRINTFORML 마지막 조교에서 조수를 담당한 것은 %CALLNAME:LOCAL%입니다.
+ENDIF
+
+;칭호 · 엔딩 도달 표시
+STRLENS NICKNAME:MASTER
+SIF FLAG:9 || RESULT > 0
+	CALL PRINT_MASTER_MEDAL
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;칭호 · 엔딩 도달 표시 처리
+;-------------------------------------------------
+;특정 난이도 클리어로 부가된다
+@PRINT_MASTER_MEDAL
+STRLENS NICKNAME:MASTER
+SIF RESULT > 0
+	PRINTFORM 칭호:%NICKNAME:MASTER% 
+
+;EASY
+SIF FLAG:9 & 1
+	PRINT ＞ 
+;NORMAL
+SIF FLAG:9 & 2
+	PRINT Ｇ 
+;HARD
+SIF FLAG:9 & 4
+	PRINT Ｋ 
+;LUNATIC
+SIF FLAG:9 & 8
+	PRINT ＊ 
+;PHANTASM
+SIF FLAG:9 & 16
+	PRINT α 
+;NORMAL～PHANTASM까지 전 제패
+SIF FLAG:9 & 32
+	PRINT Α 
+;겉 2주와 뒤 2주가 있어도 좋잖아
+SIF FLAG:9 & 64
+	PRINT † 
+SIF FLAG:9 & 128
+	PRINT ‡ 
+SIF CFLAG:MASTER:157 & 1
+	PRINT 수재
+SIF CFLAG:MASTER:157 & 2
+	PRINT 천재 
+SIF NICKNAME:MASTER != "『鬼畜』" && CFLAG:MASTER:157 & 8
+	PRINT 귀축
+PRINTL 
+
+;-------------------------------------------------
+;노예용 범용 스테이터스 표시 처리
+;-------------------------------------------------
+@PRINT_SLAVE_STATUS, ARG
+;토리코모드 스트레스 시스템
+IF FLAG:5000 & 64
+	PRINTFORM (주인조교경험:{EXP:ARG:98} 호감도:{CFLAG:ARG:2} 스트레스:
+	CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+	PRINTFORML  이상경험:{EXP:ARG:50})
+;일반모드
+ELSE
+	PRINTFORML (주인조교경험:{EXP:ARG:98} 호감도:{CFLAG:ARG:2} 스트레스:{CFLAG:ARG:65} 이상경험:{EXP:ARG:50})
+ENDIF
+IF FLAG:15 & 4096 && TALENT:ARG:146
+	PRINT 기생촉수성장LV:
+	BAR BASE:ARG:6, MAXBASE:ARG:6, 20
+	PRINTFORML ({BASE:ARG:6, 4}/{MAXBASE:ARG:6, 4})
+ENDIF
+
+;칭호 표시
+SIF STRLENS(NICKNAME:ARG) > 0
+	PRINTFORML 칭호:%NICKNAME:ARG% 
+;주인에 대한 호칭(으로 부르도록 명령했을 뿐이지 그렇게 불러줄지는 노예 나름)
+SIF STRLENS(MASTERNAME:ARG) > 0
+	PRINTFORML 주인을 「%MASTERNAME:ARG%」%조사만처리(MASTERNAME:ARG,"라")% 부르라고 했다.
+;스펠 카드의 상대 표시
+SIF TALENT:MASTER:998 && TALENT:ARG:833
+	PRINTFORML 스펠카드 사용자：%ITEMNAME:(100+TALENT:ARG:833)%
+;마지막으로 조교 받은 일수 표시
+SIF CFLAG:ARG:46
+	PRINTFORML 조교를 \@((DAY - CFLAG:ARG:46) <= 0) ? 받은지 얼마 안 됨 # 받고 나서 {DAY - CFLAG:ARG:46}일 정도 지났다\@.
+;마지막으로 조수에서 해임된 일수 표시
+SIF CFLAG:ARG:47 && ARG != ASSI
+	PRINTFORML 조수에서 해임\@((DAY - CFLAG:ARG:47) <= 0) ? 된지 얼마 안 됩니다 # 되고 나서 {DAY - CFLAG:ARG:47}일 정도 경과하고 있습니다\@.
+;현재 허브 개발 및 생산중이라면 그것을 표시.
+SIF CFLAG:ARG:4 == 2048
+	PRINTFORML 현재 허브 개발시설에서, 신종의 허브를 개발중입니다.
+SIF CFLAG:ARG:4 == 4096
+	PRINTFORML 현재 허브 생산시설에서, 허브를 생산중입니다.
+;수면제의 영향하에 있으면 표시
+SIF EQUIP:ARG:14 > 0
+	PRINTFORML 수면제의 영향을 받아 \@(EQUIP:ARG:14 >= 10000) ? 곤히 자고 # 자고 \@ 있다.
+;복숭아의 눈깔사탕의 영향을 받고 있다면 표시
+SIF EQUIP:ARG:0 > 0
+	PRINTFORML 신비한 복숭아색 사탕의 영향을 받고 있다.
+;감색의 눈깔사탕의 영향을 받고 있다면 표시
+SIF EQUIP:ARG:1 > 0
+	PRINTFORML 신비한 감색 사탕의 영향을 받고 있다.
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;노예 매각 정보의 표시
+;-------------------------------------------------
+@PRINT_CALCCHARA, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ %CALLNAME:ARG%의 매각 및 조교 관련 정보 # %CALLNAME:ARG%의 매각 및 조교 관련 정보:\@
+VARSET LOCALS,""
+LOCAL = 0
+LOCAL:2 = 0
+
+;난이도 PHANTASM일 때 표시 없음
+IF FLAG:3 == 5
+	TSTR:0 = ―
+	TSTR:1 = ―
+	TSTR:2 = ―
+	TSTR:3 = ―
+	RETURN 0
+;아나타는 측정 불능
+ELSEIF ARG == 0 || ARG == 400
+	TSTR:0 = \@(ARG == 400) ? 만능 # 불명\@
+	TSTR:1 = \@(ARG == 400) ? 귀중 # 불명\@
+	TSTR:2 = \@(ARG == 400) ? 무한 # 불명\@
+	TSTR:3 = \@(ARG == 400) ? 야채 # 불명\@
+	RETURN 0
+ENDIF
+;………………………………………………
+;공헌도 산출
+;………………………………………………
+LOCAL = 0
+;비대음핵
+SIF TALENT:ARG:1
+	LOCAL += 3
+;성별교체
+SIF TALENT:ARG:9
+	LOCAL += 5
+;혀놀림
+SIF TALENT:ARG:52
+	LOCAL += 2
+;바느질
+SIF TALENT:ARG:53
+	LOCAL += 1
+;고양이혀
+SIF TALENT:ARG:54
+	LOCAL -= 2
+;조합지식
+SIF TALENT:ARG:55
+	LOCAL += 4
+;금단의 지식
+SIF TALENT:ARG:56
+	LOCAL += 3
+;요정지식
+SIF TALENT:ARG:57
+	LOCAL += 1
+;음구지식
+SIF TALENT:ARG:58
+	LOCAL += 2
+;치료
+SIF TALENT:ARG:59
+	LOCAL += 5
+;냄새둔감
+SIF TALENT:ARG:61
+	LOCAL += 2
+;냄새민감
+SIF TALENT:ARG:62
+	LOCAL -= 1
+;불결무시
+SIF TALENT:ARG:64
+	LOCAL += 3
+;도착적
+SIF TALENT:ARG:80
+	LOCAL += 1
+;새드
+SIF TALENT:ARG:81
+	LOCAL += 2
+;마조
+SIF TALENT:ARG:82
+	LOCAL -= 1
+;바이
+SIF TALENT:ARG:83
+	LOCAL += 3
+;중독선동
+SIF TALENT:ARG:86
+	LOCAL += 2
+;매혹
+SIF TALENT:ARG:91
+	LOCAL += 2
+;수수께끼의 매력
+SIF TALENT:ARG:92
+	LOCAL += 2
+;소악마
+SIF TALENT:ARG:93
+	LOCAL += 2
+;고무
+SIF TALENT:ARG:95
+	LOCAL += 3
+;대유도or절벽가슴격추왕
+SIF TALENT:ARG:96 || TALENT:ARG:97
+	LOCAL += 1
+;후타나리or구현
+SIF TALENT:ARG:121 || TALENT:ARG:123
+	LOCAL += 3
+;수상한 뿌리
+SIF TALENT:ARG:122
+	LOCAL += 2
+;유아or유치
+SIF TALENT:ARG:130 || TALENT:ARG:131
+	LOCAL += 1
+;변환자재
+SIF TALENT:ARG:139
+	LOCAL += 4
+;광기
+SIF TALENT:ARG:158
+	LOCAL += 2
+;보도자
+SIF TALENT:ARG:196
+	LOCAL += 1
+;사토리(마음의 눈을 닫고 있을 경우는 제외)
+SIF TALENT:ARG:213 == 1
+	LOCAL += 3
+;악마
+SIF TALENT:ARG:209
+	LOCAL += 1
+;캇파
+SIF TALENT:ARG:210
+	LOCAL += 1
+;요호
+SIF TALENT:ARG:211
+	LOCAL += 1
+;하쿠레이의 무녀or카제하후리
+SIF TALENT:ARG:218 || TALENT:ARG:219
+	LOCAL += 1
+;음감
+SIF TALENT:ARG:191
+	LOCAL += 1
+;조리명인or요리잘함
+SIF TALENT:ARG:193 || TALENT:ARG:194
+	LOCAL += 1
+;공작명인
+SIF TALENT:ARG:195
+	LOCAL += 1
+;마술기능
+SIF TALENT:ARG:197
+	LOCAL += 1
+;둔갑너구리
+SIF TALENT:ARG:227
+	LOCAL += 1
+
+;SIF ABL:(LOCAL:1):20 >=5
+;	LOCAL += 1
+;SIF ABL:(LOCAL:1):70 >=5
+;	LOCAL += 1
+;SIF ABL:(LOCAL:1):71 >=3
+;	LOCAL += 1
+;SIF ABL:(LOCAL:1):72 >=5
+;	LOCAL += 1
+;SIF ABL:(LOCAL:1):73 >=3
+;	LOCAL += 1
+
+;개인 전용 커맨드계
+;루미아
+SIF ARG == 3
+	LOCAL += 1
+;치르노
+SIF ARG == 5
+	LOCAL += 1
+;매이링
+SIF ARG == 6
+	LOCAL += 1
+;사쿠야
+SIF ARG == 9
+	LOCAL += 2
+;레밀리아
+SIF ARG == 10
+	LOCAL += 1
+;플랑
+SIF ARG == 11
+	LOCAL += 1
+;앨리스
+SIF ARG == 14
+	LOCAL += 2
+;요우무
+SIF ARG == 19
+	LOCAL += 2
+;케이네
+SIF ARG == 26
+	LOCAL += 1
+;우동게
+SIF ARG == 28
+	LOCAL += 1
+;에이린
+SIF ARG == 29
+	LOCAL += 2
+;카구야
+SIF ARG == 30
+	LOCAL += 2
+;모코우
+SIF ARG == 31
+	LOCAL += 2
+;메디슨
+SIF ARG == 33
+	LOCAL += 2
+;유카
+SIF ARG == 34
+	LOCAL += 2
+;에이키
+SIF ARG == 36
+	LOCAL += 1
+;시즈하, 미노리코
+SIF ARG == 37 || ARG == 38
+	LOCAL += 1
+;히나
+SIF ARG == 39
+	LOCAL += 1
+;아큐
+SIF ARG == 48
+	LOCAL += 1
+;텐시
+SIF ARG == 52
+	LOCAL += 1
+;야마메
+SIF ARG == 58
+	LOCAL += 2
+;린노스케
+SIF ARG == 69
+	LOCAL += 1
+;요우키
+SIF ARG == 70
+	LOCAL +=1
+;코가사
+SIF ARG == 72
+	LOCAL += 1
+
+IF LOCAL < 0
+	TSTR:0 = Ｆ
+ELSEIF LOCAL < 2
+	TSTR:0 = Ｅ
+ELSEIF LOCAL < 4
+	TSTR:0 = Ｄ
+ELSEIF LOCAL < 7
+	TSTR:0 = Ｃ
+ELSEIF LOCAL < 10
+	TSTR:0 = Ｂ
+ELSEIF LOCAL < 14
+	TSTR:0 = Ａ
+ELSEIF LOCAL < 18
+	TSTR:0 = Ｓ
+ELSEIF LOCAL < 23
+	TSTR:0 = ＳＳ
+ELSEIF LOCAL < 27
+	TSTR:0 = ＳＳＳ
+ELSEIF LOCAL < 31
+	TSTR:0 = ＳＳＳＳ
+ELSEIF LOCAL < 36
+	TSTR:0 = ＳＳＳＳＳ
+ELSEIF LOCAL < 40
+	TSTR:0 = ＳＳＳＳＳＳ
+ELSEIF LOCAL < 44
+	TSTR:0 = ＳＳＳＳＳＳＳ
+ELSE
+	TSTR:0 = ★
+ENDIF
+
+;………………………………………………
+;난이도 산출
+;………………………………………………
+LOCAL = 0
+LOCAL:2 = 0
+
+;처녀
+SIF TALENT:ARG:0
+	LOCAL += 2
+;반항적
+SIF TALENT:ARG:11
+	LOCAL += 4
+;꿋꿋함
+SIF TALENT:ARG:12
+	LOCAL += 2
+;솔직함
+SIF TALENT:ARG:13
+	LOCAL -= 6
+;얌전함
+SIF TALENT:ARG:14
+	LOCAL -= 1
+;건방짐
+SIF TALENT:ARG:15
+	LOCAL += 3
+;프라이드가 높음
+IF TALENT:ARG:16
+	LOCAL += 2
+	LOCAL:2 += 1
+ENDIF
+;프라이드가 낮음
+SIF TALENT:ARG:17
+	LOCAL -= 2
+;자제심
+SIF TALENT:ARG:20
+	LOCAL += 2
+;무관심
+SIF TALENT:ARG:21
+	LOCAL:2 += 1
+;감정결여
+SIF TALENT:ARG:22
+	LOCAL += 3
+;호기심
+SIF TALENT:ARG:23
+	LOCAL -= 2
+;보수적
+SIF TALENT:ARG:24
+	LOCAL += 1
+;낙관적
+SIF TALENT:ARG:25
+	LOCAL -= 1
+;일선을 넘지 않음
+SIF TALENT:ARG:27
+	LOCAL += 2
+;눈에띄고 싶어함
+SIF TALENT:ARG:28
+	LOCAL -= 1
+;정조관념
+SIF TALENT:ARG:30
+	LOCAL += 2
+;정조관둔감
+SIF TALENT:ARG:31
+	LOCAL -= 1
+;억압
+IF TALENT:ARG:32
+	LOCAL += 3
+	LOCAL:2 += 2
+ENDIF
+;해방
+SIF TALENT:ARG:33
+	LOCAL -= 5
+;저항
+IF TALENT:ARG:34
+	LOCAL += 3
+	LOCAL:2 += 1
+ENDIF
+;부끄럼쟁이
+SIF TALENT:ARG:35
+	LOCAL += 1
+;부끄럼없음
+SIF TALENT:ARG:36
+	LOCAL -= 1
+;남성혐오
+IF TALENT:ARG:37 & TALENT:MASTER:120
+	LOCAL += 2
+	LOCAL:2 += 1
+ENDIF
+;여성혐오
+IF TALENT:ARG:38 & TALENT:MASTER:120 == 0
+	LOCAL += 2
+	LOCAL:2 += 1
+ENDIF
+;약점
+SIF TALENT:ARG:39
+	LOCAL -= 1
+;젖기 쉬움
+SIF TALENT:ARG:42
+	LOCAL -= 1
+;젖기 어려움
+SIF TALENT:ARG:43
+	LOCAL += 1
+;약물내성
+SIF TALENT:ARG:44
+	LOCAL += 1
+;습득빠름
+SIF TALENT:ARG:50
+	LOCAL -= 1
+;습득느림
+SIF TALENT:ARG:51
+	LOCAL += 1
+;고양이혀
+SIF TALENT:ARG:54
+	LOCAL += 1
+;자위하기 쉬움
+SIF TALENT:ARG:60
+	LOCAL -= 1
+;냄새둔감
+SIF TALENT:ARG:61
+	LOCAL -= 1
+;냄새민감
+SIF TALENT:ARG:62
+	LOCAL += 1
+;헌신적
+SIF TALENT:ARG:63
+	LOCAL -= 2
+;쾌감에 솔직
+SIF TALENT:ARG:70
+	LOCAL -= 2
+;쾌감을 부정
+IF TALENT:ARG:71
+	LOCAL += 2
+	LOCAL:2 += 1
+ENDIF
+;도착적
+SIF TALENT:ARG:83
+	LOCAL -= 1
+;남자
+IF TALENT:ARG:120
+	LOCAL += 2
+	LOCAL:2 += 1
+ENDIF
+;소인체형
+IF TALENT:ARG:127 && TALENT:MASTER:127 == 0 && TALENT:MASTER:56 == 0
+	LOCAL += 2
+	LOCAL:2 += 1
+ENDIF
+;회복빠름
+SIF TALENT:ARG:137
+	LOCAL -= 1
+;회복느림
+SIF TALENT:ARG:138
+	LOCAL += 1
+;기계
+SIF TALENT:ARG:206
+	LOCAL += 2
+;폭발물
+SIF TALENT:ARG:220 != 0 && (TALENT:ARG:220 != NO:MASTER || (TALENT:ARG:220 != 500 && NO:MASTER == 0))
+	LOCAL += 2
+;신령
+SIF TALENT:ARG:222
+	LOCAL += 1
+;거절
+IF TALENT:ARG:830
+	LOCAL += 3
+	LOCAL:2 += 3
+ENDIF
+;Spell Card
+IF TALENT:ARG:833 != 0 && (TALENT:ARG:833 != NO:MASTER || (TALENT:ARG:833 != 500 && NO:MASTER == 0))
+	LOCAL += 3
+	LOCAL:2 += 2
+ENDIF
+
+;에이키 님 특별 보정
+SIF NO:ARG == 36
+	LOCAL:2 += 3
+
+;체력
+IF MAXBASE:ARG:0 < 600
+	LOCAL += 3
+	LOCAL:2 += 2
+ELSEIF MAXBASE:ARG:1 < 800
+	LOCAL += 2
+	LOCAL:2 += 1
+ELSEIF MAXBASE:ARG:1 < 1100
+	LOCAL += 1
+ELSEIF MAXBASE:ARG:1 < 2000
+ELSEIF MAXBASE:ARG:1 < 2500
+	LOCAL -= 1
+ELSE
+	LOCAL -= 2
+ENDIF
+;기력
+IF MAXBASE:ARG:1 < 600
+	LOCAL += 2
+	LOCAL:2 += 1
+ELSEIF MAXBASE:ARG:1 < 800
+	LOCAL += 1
+ELSEIF MAXBASE:ARG:1 < 1800
+ELSE
+	LOCAL -= 1
+ENDIF
+
+;순종Lv
+LOCAL -= 8*ABL:ARG:10
+;욕망Lv
+LOCAL -= 4*ABL:ARG:11
+;기교Lv
+LOCAL -= ABL:ARG:12
+;봉사정신Lv
+LOCAL -= 3*ABL:ARG:13
+;이상경험 있음
+SIF EXP:ARG:50
+	LOCAL -= 2
+
+LOCAL:3 = LOCAL + (LOCAL:2)*12
+
+IF TFLAG:201 == 497
+	TSTR:3 = †
+ELSEIF LOCAL:3 < -20
+	TSTR:3 = Ｆ
+ELSEIF LOCAL:3 < -10
+	TSTR:3 = Ｅ
+ELSEIF LOCAL:3 < 0
+	TSTR:3 = Ｄ
+ELSEIF LOCAL:3 < 10
+	TSTR:3 = Ｃ
+ELSEIF LOCAL:3 < 20
+	TSTR:3 = Ｂ
+ELSEIF LOCAL:3 < 30
+	TSTR:3 = Ａ
+ELSEIF LOCAL:3 < 40
+	TSTR:3 = Ｓ
+ELSEIF LOCAL:3 < 50
+	TSTR:3 = ＳＳ
+ELSEIF LOCAL:3 < 60
+	TSTR:3 = ＳＳＳ
+ELSEIF LOCAL:3 < 70
+	TSTR:3 = ＳＳＳＳ
+ELSEIF LOCAL:3 < 80
+	TSTR:3 = ＳＳＳＳＳ
+ELSEIF LOCAL:3 < 90
+	TSTR:3 = ＳＳＳＳＳＳ
+ELSEIF LOCAL:3 < 100
+	TSTR:3 = ＳＳＳＳＳＳＳ
+ELSE
+	TSTR:3 = ★
+ENDIF
+
+
+;………………………………………………
+;성장도 판매 값 계산
+;………………………………………………
+;TFLAG:207를 표시 처리용으로 사용한다
+TFLAG:207 = 1
+
+
+CALL SALE_CHARA, ARG
+
+IF RESULT:2 < 10000
+	TSTR:1 = Ｆ
+ELSEIF RESULT:2 < 25000
+	TSTR:1 = Ｅ
+ELSEIF RESULT:2 < 50000
+	TSTR:1 = Ｄ
+ELSEIF RESULT:2 < 100000
+	TSTR:1 = Ｃ
+ELSEIF RESULT:2 < 200000
+	TSTR:1 = Ｂ
+ELSEIF RESULT:2 < 300000
+	TSTR:1 = Ａ
+ELSEIF RESULT:2 < 500000
+	TSTR:1 = Ｓ
+ELSEIF RESULT:2 < 750000
+	TSTR:1 = ＳＳ
+ELSEIF RESULT:2 < 1000000
+	TSTR:1 = ＳＳＳ
+ELSEIF RESULT:2 < 1500000
+	TSTR:1 = ＳＳＳＳ
+ELSEIF RESULT:2 < 1750000
+	TSTR:1 = ＳＳＳＳＳ
+ELSEIF RESULT:2 < 2000000
+	TSTR:1 = ＳＳＳＳＳＳ
+ELSE
+	TSTR:1 = ★
+ENDIF
+
+LOCAL = RESULT:2 * 10000
+
+;억지로 매각할 시의 처리를 유용해서 계산한다
+CALL SALE_CHARA, ARG
+
+;성장도 계산
+LOCAL:2 = LOCAL / RESULT:2
+
+IF LOCAL:2 < 10000
+	TSTR:2 = Ｆ
+ELSEIF LOCAL:2 < 15000
+	TSTR:2 = Ｅ
+ELSEIF LOCAL:2 < 20000
+	TSTR:2 = Ｄ
+ELSEIF LOCAL:2 < 25000
+	TSTR:2 = Ｃ
+ELSEIF LOCAL:2 < 30000
+	TSTR:2 = Ｂ
+ELSEIF LOCAL:2 < 40000
+	TSTR:2 = Ａ
+ELSEIF LOCAL:2 < 50000
+	TSTR:2 = Ｓ
+ELSEIF LOCAL:2 < 60000
+	TSTR:2 = ＳＳ
+ELSEIF LOCAL:2 < 70000
+	TSTR:2 = ＳＳＳ
+ELSEIF LOCAL:2 < 80000
+	TSTR:2 = ＳＳＳＳ
+ELSEIF LOCAL:2 < 90000
+	TSTR:2 = ＳＳＳＳＳ
+ELSEIF LOCAL:2 < 100000
+	TSTR:2 = ＳＳＳＳＳＳ
+ELSE
+	TSTR:2 = ★
+ENDIF
+
+IF TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170
+	PRINT 난이도：함락완료　
+ELSE
+	PRINTFORM 난이도：%TSTR:3%　
+ENDIF
+
+IF ABL:ARG:10 >= 5 && ABL:ARG:11 >=5 && ABL:ARG:12 >=5 && ABL:ARG:13 >=5 && ABL:ARG:14 >=5
+	PRINT 성장도：육성완료　
+ELSEIF ABL:ARG:10 >= 3 && ABL:ARG:11 >=3 && ABL:ARG:12 >=3 && ABL:ARG:13 >=3 && ABL:ARG:14 >=3
+	PRINT 성장도：최소육성완료　
+ELSE
+	PRINTFORM 성장도：육성중　
+ENDIF
+PRINTFORML 공헌도：%TSTR:0%　매각치：%TSTR:1%
+CALL NEW_DRAWLINE
+;-------------------------------------------------
+;신장  · 체중 · 3사이즈의 표시 처리
+;-------------------------------------------------
+;신장 · 체중 · 3사이즈를 표시합니다
+;BASE:10 … 신장
+;BASE:11 … 체중
+;BASE:12 … 바스트
+;BASE:13 … 웨스트
+;BASE:14 … 히프
+;LOCAL   … 변수의 일시 보존용
+@SHOW_SIZE, ARG
+;신장 · 체중 · 3사이즈의 생성 처리
+CALL MAKE_SIZE, 1, ARG
+
+PRINTFORML \@(FLAG:12 & 2) ? □ 사이즈 # 사이즈:\@
+PRINTFORM  신장:{BASE:ARG:10 / 10}. {BASE:ARG:10 % 10}cm
+;보테배상태의 경우 표시 수치 보정
+IF FLAG:1500 & 2 && (CFLAG:ARG:3502 % 1000000)
+	LOCAL:11 = BASE:ARG:11 + ((CFLAG:ARG:3502 % 1000000 ) * 10) / 34
+	PRINTFORM    체중:{LOCAL:11 / 10}. {LOCAL:11 % 10}kg
+	PRINTFORML  임신전({BASE:ARG:11 / 10}. {BASE:ARG:11 % 10}kg)
+;임신 소유의 경우 표시 수치 보정
+ELSEIF TALENT:ARG:140
+	LOCAL:11 = BASE:ARG:11 + (CFLAG:ARG:3500 * 10) / 34
+	PRINTFORM    체중:{LOCAL:11 / 10}. {LOCAL:11 % 10}kg
+	PRINTFORML  임신전({BASE:ARG:11 / 10}. {BASE:ARG:11 % 10}kg)
+ELSE
+	PRINTFORML    체중:{BASE:ARG:11 / 10}. {BASE:ARG:11 % 10}kg
+ENDIF
+;[남자]소유는 3 사이즈는 표시하지 않는다
+IF ! TALENT:ARG:120
+	PRINTFORM  B:{BASE:ARG:12 / 10}. {BASE:ARG:12 % 10}cm 
+	CALL PRINT_CUPSIZE , ARG
+	;보테배상태의 경우 표시 수치 보정
+	IF FLAG:1500 & 2 && ( CFLAG:ARG:3502 % 1000000 )
+		LOCAL:13 = BASE:ARG:13 + (CFLAG:ARG:3502 % 1000000)
+		PRINTFORM / W:{LOCAL:13 / 10}. {LOCAL:13 % 10}cm
+		PRINTFORM	임신전({BASE:ARG:13 / 10}. {BASE:ARG:13 % 10}cm) /
+	;임신 소유의 경우 표시 수치 보정
+	ELSEIF TALENT:ARG:140
+		LOCAL:13 = BASE:ARG:13 + CFLAG:ARG:3500
+		PRINTFORM / W:{LOCAL:13 / 10}. {LOCAL:13 % 10}cm
+		PRINTFORM  임신전({BASE:ARG:13 / 10}. {BASE:ARG:13 % 10}cm) /
+	ELSE
+		PRINTFORM / W:{BASE:ARG:13 / 10}. {BASE:ARG:13 % 10}cm /
+	ENDIF
+	PRINTFORML  H:{BASE:ARG:14 / 10}. {BASE:ARG:14 % 10}cm
+ENDIF
+CALL NEW_DRAWLINE
+
+;버스트의 컵 사이즈 생성 및 표시 처리
+@PRINT_CUPSIZE , ARG , ARG:1
+VARSET LOCALS,""
+SPLIT "(-) , (AAA) , (AA) , (A) , (B) , (C) , (D) , (E) , (F) , (G) , (H) , (I) , (J) , (K) , (L) , (M) , (N) , (O) , (P) , (Q) , (R) , (S) , (T) , (U) , (V) , (W) , (X) , (Y) , (Z) , (Z+) ",",", LOCALS
+LOCAL = (BASE:ARG:12 - ((((BASE:ARG:10 * 100) / 22) - ((BASE:ARG:10 * 100) / BASE:ARG:13)) / 10)) / 25
+;캐릭터 라인 변수가 약간 부자유스러워서 억지로 작성
+LOCAL = MAX(LOCAL , 1)
+LOCALS:0 = %LOCALS:(LOCAL-1)%
+
+SIF ARG:1 == 0
+	PRINTFORM %LOCALS%
+
+;=============================================================================
+;능력 확인에서의 정보 개별 함수(2페이지째)
+;=============================================================================
+;-------------------------------------------------
+;주인의00수의 표시처리
+;-------------------------------------------------
+@PRINT_MASTER_NUMBER
+LOCALS:0 = %" " * 2%
+LOCALS:1 = ○
+
+IF FLAG:32
+	PRINTS LOCALS:((FLAG:70 & 1) > 0)
+	;요정 함락 수의 표시
+	CALL PRINT_FAIRY_NUMBER
+ENDIF
+IF FLAG:401
+	PRINTS LOCALS:((FLAG:70 & 16) > 0)
+	PRINTFORML 인형으로 바꾼 인원수 합계　: {FLAG:401, 5}명
+ENDIF
+IF FLAG:402
+	PRINTS LOCALS:((FLAG:70 & 2) > 0)
+	PRINTFORML 흡혈귀화시킨 인원수의 합계 : {FLAG:402, 5}명
+ENDIF
+IF FLAG:403
+	PRINTS LOCALS:((FLAG:70 & 4) > 0)
+	PRINTFORML 기계로 개조한 인원수 합계　: {FLAG:403, 5}명
+ENDIF
+IF FLAG:404
+	PRINTS LOCALS:((FLAG:70 & 8) > 0)
+	PRINTFORML 망령화시킨 인원수 합계　　 : {FLAG:404, 5}명
+ENDIF
+IF FLAG:405
+	PRINTS LOCALS:((FLAG:70 & 32) > 0)
+	PRINTFORML 괴뢰로 만든 인원수 합계　　: {FLAG:405, 5}명
+ENDIF
+IF FLAG:406
+	PRINTS LOCALS:((FLAG:70 & 64) > 0)
+	PRINTFORML 뽑아낸 시리코다마 합계　 　: {FLAG:406, 5}개
+ENDIF
+IF FLAG:408
+	PRINTS LOCALS:((FLAG:70 & 256) > 0)
+	PRINTFORML 백택화를 본 회수　　　　 　: {FLAG:408, 5}회
+ENDIF
+IF FLAG:409
+	PRINTS LOCALS:((FLAG:70 & 512) > 0)
+	PRINTFORML 불사각인을 찍은 회수　　 　: {FLAG:409, 5}회
+ENDIF
+IF FLAG:400
+	PRINTFORM \@(FLAG:400 > 99) ?  ○ # %" " * 2%\@
+	PRINTFORML 연모 처녀를 빼앗은 인원수　　: {FLAG:400, 5}명
+ENDIF
+SIF FLAG:1300
+	CALL PRINT_REMITTANCE_NUMBER
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;요정 함락 수의 표시처리
+;-------------------------------------------------
+@PRINT_FAIRY_NUMBER
+PRINT 요정을 함락한 수　　　　　　 : 
+IF FLAG:32 > 9999
+	;All your fairy are belong to us. 라면 너무 길었으므로
+	PRINTL [All Your Fairy]
+ELSEIF FLAG:32 > 999
+	PRINTL [가리질 않음]
+ELSEIF FLAG:32 > 499
+	PRINTL [별의 수만큼]
+ELSEIF FLAG:32 > 99
+	PRINTL [헤아릴 수 없음]
+ELSE
+	PRINTFORML {FLAG:32, 5}마리
+ENDIF
+
+;-------------------------------------------------
+;송금 인원수 총수의 카운트 처리
+;-------------------------------------------------
+@PRINT_REMITTANCE_NUMBER
+LOCAL = 0
+REPEAT CHARANUM
+	SIF COUNT == 0
+		CONTINUE
+	LOCAL += CFLAG:COUNT:3002
+REND
+SIF LOCAL
+	PRINTFORML 　송금을 보내주는 인원수　　: {LOCAL, 5}명
+
+;-------------------------------------------------
+;주인의 촉수 관련의 스테이터스 표시 처리
+;-------------------------------------------------
+@PRINT_MASTER_JUEL, ARG
+SIF FLAG:12 & 2
+	PRINTL □ 촉수 관련
+
+PRINTFORML 　%ABLNAME:98% Lv: {ABL:ARG:98}　　　　　　　　　%PALAMNAME:198%의 구슬:{JUEL:ARG:198, 7}　촉수 에너지:{BASE:ARG:6, 5}τ
+PRINTFORML 　촉수 산제물:{FLAG:33, 3}명(누계:{FLAG:99, 3}명)
+PRINTFORM 　촉수능력　 :
+CALL SHOW_TENTACLE_ABL
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;기념일 표시 처리
+;-------------------------------------------------
+@PRINT_MEMORIALDAY, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 기념일 # 기념일:\@
+IF CFLAG:ARG:3110 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3110
+	PRINTFORM 생일은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3111 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3111
+	PRINTFORM 구입된 날은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3112 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3112
+	PRINTFORM 데려온 날은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3115 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3115
+	PRINTFORM 함락된 날은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3113 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3113
+	PRINTFORM 결혼기념일은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3114 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3114
+	PRINTFORM 계약기념일은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3116 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3116
+	PRINTFORM 처음으로 임신한 날은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+IF CFLAG:ARG:3117 > 0
+	CALL CALENDAR_CALC, CFLAG:ARG:3117
+	PRINTFORM 처음으로 조수가 된 날은 
+	CALL CALENDAR_PRINT, 0
+	PRINTL 입니다.
+ENDIF
+CALL CALENDAR_CALC, DAY
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;부모의 이름 표시
+;-------------------------------------------------
+;부모의 이름을 스테이터스에 표시합니다
+;사용 변수 일람
+;LOCAL:0 부친
+;LOCAL:1 모친
+;LOCAL:2 부친의 제×자
+;LOCAL:3 모친의 제×자
+;LOCAL:4 양친
+@PRINT_PARENT, ARG
+SIF FLAG:12 & 2
+	PRINTL □ 자녀관계
+LOCAL:0 = CFLAG:ARG:3103 + 100
+LOCAL:1 = CFLAG:ARG:3100 + 100
+LOCAL:2 = CFLAG:ARG:3104
+LOCAL:3 = CFLAG:ARG:3102
+
+PRINTFORML 아버지：%ITEMNAME:(LOCAL:0)%({LOCAL:2}번째 아이) 어머니：%ITEMNAME:(LOCAL:1)%({LOCAL:3}번째 아이)
+IF CFLAG:ARG:3100 != CFLAG:ARG:3101
+	LOCAL:4 = CFLAG:ARG:3101 + 100
+	PRINTFORML 키워준 부모는 %ITEMNAME:(LOCAL:4)%입니다.
+ENDIF
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;캐릭터 간의 상성 표시 처리
+;-------------------------------------------------
+@PRINT_RELATION, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 상성 # 상성:\@
+
+CALL SET_CALLNAME
+LOCAL = 0
+
+REPEAT 500
+	IF RELATION:ARG:COUNT != 0 && RELATION:ARG:COUNT != 100
+		LOCAL:1 = 11000 + COUNT
+		SIF STRLENS(STR:(LOCAL:1)) <= 0
+			CONTINUE
+      IF RELATION:ARG:COUNT >= 500
+		  CALL SETCOLOR_TORIKOMODE, "SEA", 3
+      ELSEIF RELATION:ARG:COUNT >= 300
+		  CALL SETCOLOR_TORIKOMODE, "JADE", 3
+	    ELSEIF RELATION:ARG:COUNT >= 200
+		  CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+	    ELSEIF RELATION:ARG:COUNT >= 120
+		  CALL SETCOLOR_TORIKOMODE, "GRASS", 2
+	    ELSEIF RELATION:ARG:COUNT <= 80
+		  CALL SETCOLOR_TORIKOMODE, "RED", 3
+	    ENDIF
+		PRINTFORM %STR:(LOCAL:1), 22%×{RELATION:ARG:COUNT, 3}％
+    	RESETCOLOR
+		LOCAL += 1
+		IF (LOCAL%3) == 0
+			PRINTL 
+		ELSE
+			PRINT 　
+		ENDIF
+	ENDIF
+REND
+
+IF LOCAL == 0
+	PRINTL 특별히 친한 사람 없음
+ELSEIF LOCAL%3 != 0
+	PRINTL 
+ENDIF
+
+CALL NEW_DRAWLINE
+
+;=============================================================================
+;능력 확인에서의 정보 개별 함수(3페이지째)
+;=============================================================================
+;--------------------------------------------------
+;난이도 표시 처리
+;--------------------------------------------------
+@SHOW_DIFFICULTY
+PRINTFORML \@(FLAG:12 & 2) ?  □ 현재 난이도 # 현재 난이도:\@
+VARSET LOCALS, ""
+SPLIT "UNDEFINED, EASY, NORMAL, HARD, LUNATIC, PHANTASM, PRO, ULTRA, UNDEFINED", ",", LOCALS
+LOCAL = LIMIT(FLAG:3 , 0, 8)
+PRINTSL LOCALS:LOCAL
+CALL NEW_DRAWLINE
+
+;--------------------------------------------------
+;맞이한 엔딩 표시 처리
+;--------------------------------------------------
+@SHOW_ENDING
+PRINTFORML \@(FLAG:12 & 2) ?  □ 이 주차에 본 엔딩 # 이 주차에 본 엔딩:\@
+;현상 FLAG:598은 0~：통상·하렘 엔딩, 1001~：단독 엔딩, 2001~：노예 엔딩이므로, 이것으로 분기 해 본다
+IF FLAG:598 < 1001
+	STR:0 = %STR:(1000+FLAG:598)%\@(FLAG:599 & 2) ?  Ⅱ#\@
+	PRINTFORML “Ending No. {FLAG:598, 2}\@(FLAG:599 & 1) ?  +# \@ (%STR:0%)”
+ELSEIF FLAG:598 < 2001
+	PRINTFORML “Ending No. {FLAG:598, 4} (%ITEMNAME:(FLAG:598 - 900)% 단독 엔딩)”
+ELSEIF FLAG:598 < 3001
+	PRINTFORML “Ending No. {FLAG:598 - 1000, 4} (%ITEMNAME:(FLAG:598 - 1900)% 노예 엔딩)”
+ENDIF
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;주인의 인계시에 변화 가능한 종족의 표시 처리
+;-------------------------------------------------
+@PRINT_MASTER_CHANGEABLE_RACE
+SIF FLAG:4 > 1 || FLAG:3 < 1
+	RETURN 0
+
+PRINTFORML \@(FLAG:12 & 2) ?  □ 종족 지식 # 종족 지식:\@
+
+SIF FLAG:70 & 1
+	PRINT [요정] 
+SIF FLAG:70 & 2
+	PRINT [흡혈귀] 
+SIF FLAG:70 & 4
+	PRINT [기계] 
+SIF FLAG:70 & 8
+	PRINT [망령] 
+SIF FLAG:70 & 16
+	PRINT [인형] 
+SIF FLAG:70 & 32
+	PRINT [악마] 
+SIF FLAG:70 & 64
+	PRINT [캇파] 
+SIF FLAG:70 & 128
+	PRINT [요호] 
+SIF FLAG:70 & 256
+	PRINT [백택] 
+SIF FLAG:70 & 512
+	PRINT [좀비 페어리] 
+SIF FLAG:400 > 99
+	PRINT [사람] 
+
+PRINTL 
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;인계시 조수 가능 인원수 증가 플래그의 표시 처리
+;-------------------------------------------------
+@PRINT_ASSISTANT_SUCCESSION
+;게임 모드가 eratohoYM, ABNORMAL, PROSTITUE만
+SIF FLAG:4 != 0 && FLAG:4 != 1 && FLAG:4 != 4
+	RETURN 0
+;콘피그로 강해서 뉴 게임을 ON가 아니면 안돼
+SIF (FLAG:12 & 1) == 0
+	RETURN 0
+
+PRINTFORML \@(FLAG:12 & 2) ?  □ 조수 계승 수 증가상황 # 조수 계승 수 증가상황:\@
+SIF FLAG:8 & 1
+	PRINTL 대범함 소유
+SIF FLAG:8 & 2
+	PRINTL PHANTASM 클리어
+SIF FLAG:8 & 4
+	PRINTL 조교사 Lv5 도달
+SIF FLAG:8 & 8
+	PRINTL 연모 처녀 백명 따먹기 달성
+SIF FLAG:8 & 16
+	PRINTL 노예 매각 자금 누계 2500만원 달성
+SIF FLAG:8 & 32
+	PRINTL 고급 노예 매각 자금 누계 1000만원 달성
+SIF FLAG:8 & 64
+	PRINTL 노예 매각 최고 금액 40만원 달성
+SIF FLAG:8 & 128
+	PRINTL 주인의 종족 전생 자격 전종 취득
+SIF FLAG:8 & 256
+	PRINTL 목욕탕 개장＆특수 촉수 부가 45종 이상 달성
+SIF FLAG:8 & 512
+	PRINTL 환상향 비보관 개관!
+SIF FLAG:8 & 1024
+	PRINTL 노멀 하렘 엔딩 20 달성
+SIF FLAG:8 & 2048
+	PRINTL 환상향 정ㅋ벅ㅋ 경험 있음
+SIF FLAG:8 & 4096
+	PRINTL 촉수공주 엔딩 도달
+SIF FLAG:8 & 8192
+	PRINTL 10종 이상 하렘 동시 조건 달성
+SIF FLAG:8 & 16384
+	PRINTL 요정을 다스리는 자가 되었음
+SIF FLAG:8 & 32768
+	PRINTL [지옥의 훈장]을 입수
+
+CALL NEW_DRAWLINE
+
+;--------------------------------------------------
+;수입금액의 최고 금액 일람
+;--------------------------------------------------
+;MONEY:970~998을 사용
+@INCOME_LIST
+PRINTFORML \@(FLAG:12 & 2) ?  □ 각 수입의 최고 금액 일람 # 각 수입의 최고 금액 일람:\@
+SIF MONEY:997 > 0
+	PRINTFORML 노예 매각으로 번 최고 금액　　　:{MONEY:997}원
+SIF MONEY:970 > 0
+	PRINTFORML 비디오로 번 최고 금액　　　 　　:{MONEY:970}원
+SIF MONEY:971 > 0
+	PRINTFORML 사진으로 번 최고 금액　　　 　　:{MONEY:971}원
+SIF MONEY:972 > 0
+	PRINTFORML 야외 라이브로 번 최고 금액　　　:{MONEY:972}원
+SIF MONEY:973 > 0
+	PRINTFORML 주치육륜으로 번 최고 금액　　 　:{MONEY:973}원
+SIF MONEY:974 > 0
+	PRINTFORML 육변기 플레이로 번 최고 금액　　:{MONEY:974}원
+SIF MONEY:975 > 0
+	PRINTFORML 촉수연금으로 번 최고 금액　 　　:{MONEY:975}원
+
+SIF MONEY:980 > 0
+	PRINTFORML 착유기로 번 최고 금액　　　 　　:{MONEY:980}원
+SIF MONEY:981 > 0
+	PRINTFORML 채뇨기로 번 최고 금액　　　 　　:{MONEY:981}원
+SIF MONEY:984 > 0
+	PRINTFORML 애액으로 번 최고 금액　　　 　　:{MONEY:984}원
+SIF MONEY:982 > 0
+	PRINTFORML 산란으로 번 최고 금액　　　 　　:{MONEY:982}원
+SIF MONEY:983 > 0
+	PRINTFORML 음모 부적으로 번 최고 금액　　　:{MONEY:983}원
+
+SIF MONEY:985 > 0
+	PRINTFORML 스위트 포테이토로 번 최고 금액　　:{MONEY:985}원
+SIF MONEY:986 > 0
+	PRINTFORML 와인으로 번 최고 금액　　　　 　:{MONEY:986}원
+SIF MONEY:987 > 0
+	PRINTFORML 아스파라거스로 번 최고 금액　　　 　:{MONEY:987}원
+
+SIF MONEY:995 > 0
+	PRINTFORML 도시락(주인)으로 번 최고 금액 　:{MONEY:995}원
+SIF MONEY:996 > 0
+	PRINTFORML 도시락(노예)으로 번 최고 금액 　:{MONEY:996}원
+SIF MONEY:800 > 0
+	PRINTFORML 매춘으로 번 최고 금액　　　　 　:{MONEY:800}원
+SIF MONEY:801 > 0
+	PRINTFORML 여럿이서 매춘으로 번 최고 금액　:{MONEY:801}원
+
+CUSTOMDRAWLINE =
+PRINTFORML 모든 수입 중에 최고 금액　　　　:{MONEY:998}원
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;취기 상태 표시 처리
+;-------------------------------------------------
+@PRINT_DRUNK_LIQUOR, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 취기 상태 # 취기 상태:\@
+
+CALL CALC_GAUGE8, ARG, 1
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;습득 끝난 함락계 소질 표시 처리
+;-------------------------------------------------
+@PRINT_SLAVE_TALENT_FALL, ARG
+PRINTFORML \@(FLAG:12 & 2) ? □ 취득 완료된 함락계 소질 # 취득 완료된 함락계 소질:\@
+
+;연모계 소질 색설정
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+SIF CFLAG:ARG:14 & 1
+	PRINT [연모] 
+SIF CFLAG:ARG:14 & 2
+	PRINT [망신] 
+SIF CFLAG:ARG:14 & 4
+	PRINT [친애] 
+SIF CFLAG:ARG:14 & 8
+	PRINT [상애] 
+;복종계 소질 색설정
+CALL SETCOLOR_TORIKOMODE, "ORENGE", 2
+SIF CFLAG:ARG:15 & 1
+	PRINT [복종] 
+SIF CFLAG:ARG:15 & 2
+	PRINT [낙인] 
+SIF CFLAG:ARG:15 & 4
+	PRINT [예속] 
+SIF CFLAG:ARG:15 & 8 
+	PRINTFORM [\@(NO:MASTER == 21 || NO:MASTER == 22) ? 식신 # 사역마\@] 
+;음란계 소질 색설정
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+SIF CFLAG:ARG:16 & 1
+	PRINT [음란] 
+SIF CFLAG:ARG:16 & 2
+	PRINT [음핵] 
+SIF CFLAG:ARG:16 & 4
+	PRINT [음호] 
+SIF CFLAG:ARG:16 & 8
+	PRINT [음고] 
+SIF CFLAG:ARG:16 & 16
+	PRINT [음유] 
+SIF CFLAG:ARG:16 & 32
+	PRINT [요도광] 
+SIF CFLAG:ARG:16 & 64
+	PRINT [키스마] 
+SIF CFLAG:ARG:16 & 128
+	PRINT [초S] 
+SIF CFLAG:ARG:16 & 256
+	PRINT [초M] 
+SIF CFLAG:ARG:16 & 512
+	PRINT [즉각함락] 
+SIF CFLAG:ARG:16 & 1024
+	PRINT [음마] 
+;붕괴계 소질 색설정
+CALL SETCOLOR_TORIKOMODE, "RED", 2
+SIF CFLAG:ARG:17 & 1
+	PRINT [유아퇴행] 
+SIF CFLAG:ARG:17 & 2
+	PRINT [광기] 
+SIF CFLAG:ARG:17 & 4
+	PRINT [정신붕괴] 
+SIF CFLAG:ARG:17 & 8
+	PRINT [괴뢰] 
+SIF CFLAG:ARG:17 & 16
+	PRINT [기억소거] 
+SIF CFLAG:ARG:17 & 32
+	PRINT [괴조인격] 
+;색 리셋
+RESETCOLOR
+
+PRINTL 
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;선택 캐릭터의 수집품 표시 처리
+;-------------------------------------------------
+;능력 표시로 수집품도 표시 패치를 크게 개변
+;LOCAL가 0때, 미회수. LOCAL가 1때 수집품 회수가 끝난 상태라고 표시되도록(듯이)
+;또 조교중 이외에 SHOP 메뉴로부터도 호출할 수 있도록(듯이) 변경
+;수집품의 유무는 원패치 같이, 전시실에 있는가로 판단(무명 캐릭터 등 2겹에 회수할 수 있는 것은 고려하지 않는다)
+@PRINT_COLLECTION_YN, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ %CALLNAME:ARG%로부터 입수한 수집품 # %CALLNAME:ARG%로부터 입수한 수집품:\@
+VARSET LOCALS, ""
+SPLIT " 시리코다마, 황금수　　, 애액　　　, 혈액　　　, 파과혈　　, 팬티      , 사진집　　, 비디오　　, 모유　　　, 알　　　　, 촉수　　　, 음모　　　",",", LOCALS
+LOCAL:1 = 0
+LOCAL:2 = 100 + NO:ARG
+
+FOR LOCAL, 0, 12
+	;PRINTFORM [%LOCALS:LOCAL%:\@(DITEMTYPE:(LOCAL:2):(101+LOCAL) > 0) ? 보유 # 없음 \@］
+	PRINTFORM [%LOCALS:LOCAL%:
+	;색상을 지정
+	IF DITEMTYPE:(LOCAL:2):(101+LOCAL) > 0
+		CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+	ELSE
+		CALL SETCOLOR_TORIKOMODE, "BLUE", 2
+	ENDIF
+	PRINTFORM \@(DITEMTYPE:(LOCAL:2):(101+LOCAL) > 0) ? 보유 # 없음 \@
+	RESETCOLOR
+	PRINTFORM ］
+
+	;개행 판정
+	LOCAL:1 += 1
+	IF (LOCAL:1)%4 == 0
+		PRINTL 
+	ELSE
+		PRINT  
+	ENDIF
+NEXT
+;마지막 루프로 개행하고 있지 않았으면, 여기서 개행해 둔다
+SIF LOCAL:1%4 != 0
+	PRINTL 
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;음핵 성장 상태 표시 처리
+;-------------------------------------------------
+@PRINT_GROWTH_SLAVE_CLITORIS, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 음핵 성장 상태 # 음핵 성장 상태:\@
+
+PRINTFORML \@(BASE:ARG:7 >= 250) ?  《Lv.MAX》 # 《Lv. {BASE:ARG:7 / 50}》 \@
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;음모 상태 표시 처리
+;-------------------------------------------------
+@PRINT_PUBIC_HAIR, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 음모 상태 # 음모 상태:\@
+
+;소인 체형이나 작은 몸집 체형의 경우는 데포라면 반들반들
+IF (TALENT:ARG:127 || TALENT:ARG:128) && CFLAG:ARG:36 != 2
+	PRINTFORML 음모는 나지 않았습니다. \@(CFLAG:ARG:36 == 1) ? 탈모 처리가 되었으므로, # 그리고\@ 날 낌새도 없습니다.
+;소인이나 작은 몸집 이외로 데포라면 나 있다
+ELSEIF TALENT:ARG:127 == 0 && TALENT:ARG:128 == 0 && CFLAG:ARG:36 == 0 && TALENT:ARG:65 == 0
+	PRINTL 음모가 가지런하게 나 있습니다.
+;그 이외는 BASE:5를 참조
+ELSEIF BASE:ARG:5 > 500
+	PRINTFORML 음모가 풍성하게 우거져 있습니다. \@(CFLAG:ARG:36 == 1) ? 탈모 처리는 하고 있으므로 향후 더 자라지는 않을 겁니다. # \@
+ELSEIF BASE:ARG:5 > 250
+	PRINTFORML 음모가 가지런하게 나 있습니다. \@(CFLAG:ARG:36 == 1) ? 탈모 처리는 하고 있으므로 향후 더 자라지는 않을 겁니다.  # \@
+ELSEIF BASE:ARG:5 > 125
+	PRINTFORML 음모가 꽤 자라는 중인 것 \@(CFLAG:ARG:36 == 1) ? 같지만, 탈모 처리가 되었으므로 향후 더 자라지는 않을 겁니다.  # 같습니다. \@
+ELSEIF BASE:ARG:5 > 51
+	PRINTFORML 음모가 곳곳에 자라는 중인 것 \@(CFLAG:ARG:36 == 1) ? 같지만, 탈모 처리되었으므로 향후 더 자라지는 않을 겁니다.  # 같습니다. \@
+ELSE
+	PRINTFORML 음모는 나지 않았습니다. \@(CFLAG:ARG:36 == 1) ? 탈모 처리가 되었으므로 향후 자랄 일은 없을 겁니니다. # 향후 자라게 될 겁니다. \@
+ENDIF
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;낙인 캐릭터용 특수 장비 표시 처리
+;-------------------------------------------------
+@PRINT_BRAND_SLAVE_EQUIPMENT, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 특수 장착도구 # 특수 장착도구:\@
+
+SIF CFLAG:ARG:42 & 1
+	PRINT 《클리토리스 링》 
+SIF CFLAG:ARG:42 & 2
+	PRINT 《노예 관리용 정조대》 
+SIF CFLAG:ARG:42 & 4
+	PRINT 《벨리 쥬얼》 
+SIF CFLAG:ARG:42 & 8
+	PRINT 《본디지》 
+SIF CFLAG:ARG:42 & 16
+	PRINT 《라비아피어스》 
+SIF CFLAG:ARG:42 & 32
+	PRINT 《유두피어스》 
+
+PRINTL 
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;촉수 이식 표시 처리
+;-------------------------------------------------
+@PRINT_TENTACLE_INPLANT_SLAVE, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 촉수 이식 # 촉수 이식 개소:\@
+
+SIF CFLAG:ARG:41 & 1
+	PRINT 《클리토리스》 
+SIF CFLAG:ARG:41 & 2
+	PRINT 《자궁》 
+SIF CFLAG:ARG:41 & 4
+	PRINT 《직장》 
+SIF CFLAG:ARG:41 & 8
+	PRINT 《유방》 
+SIF CFLAG:ARG:41 & 16
+	PRINT 《배꼽》 
+SIF CFLAG:ARG:41 & 32
+	PRINT 《혀》 
+SIF CFLAG:ARG:41 & 64
+	PRINT 《방광》 
+SIF CFLAG:ARG:41 & 128
+	PRINT 《심장》 
+SIF CFLAG:ARG:41 & 256
+	PRINT 《척추》 
+SIF CFLAG:ARG:41 & 512
+	PRINT 《이마》
+
+PRINTL 
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;각종 개발도 표시 처리
+;-------------------------------------------------
+@PRINT_DEVELOPMENT_LEVEL_SLAVE, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 각종 개발도 # 각종 개발도:\@
+
+LOCAL:1 = 0
+REPEAT 6
+	LOCAL = 0
+	SELECTCASE COUNT
+		CASE 0
+			SIF CFLAG:ARG:60
+				PRINTFORM 　C개발도 :{CFLAG:ARG:60, 4}
+		CASE 1
+			SIF CFLAG:ARG:61
+				PRINTFORM 　V개발도 :{CFLAG:ARG:61, 4}
+		CASE 2
+			SIF CFLAG:ARG:62
+				PRINTFORM 　A개발도 :{CFLAG:ARG:62, 4}
+		CASE 3
+			SIF CFLAG:ARG:63
+				PRINTFORM 　B개발도 :{CFLAG:ARG:63, 4}
+		CASE 4
+			SIF CFLAG:ARG:64
+				PRINTFORM 정음개발도:{CFLAG:ARG:64, 4}
+		CASE 5
+			SIF CFLAG:ARG:31
+				PRINTFORM 방뇨 레벨 :{CFLAG:ARG:31, 4}
+	ENDSELECT
+
+	;개행 판정
+	LOCAL:1 += 1
+	IF (LOCAL:1)%4 == 0
+		PRINTL 
+	ELSE
+		PRINT  
+	ENDIF
+REND
+;마지막 루프로 개행하고 있지 않았으면, 여기서 개행해 둔다
+SIF LOCAL:1%4 != 0
+	PRINTL 
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;노예 조교의 진행 상황 표시 처리
+;-------------------------------------------------
+@PRINT_SLAVE_TRAIN_PROCESS, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 노예 조교의 진행 상황 # 노예 조교의 진행 상황:\@
+
+;어떻게 여기에 왔는지?
+STRLENS CSTR:ARG:3
+PRINTFORML \@(RESULT) ? %CSTR:ARG:3% # 모종의 방법으로 데려 왔다. \@
+
+;조교했던 것은?
+FONTSTYLE (TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170) ?  1 # 0
+IF CFLAG:ARG:1610 == 0
+	PRINTL 아직 조교한 적이 없다.
+ELSEIF TALENT:ARG:150 && TALENT:ARG:160 && TALENT:ARG:170
+	PRINTL 조교 결과, 연모를 품고, 복종을 맹세하고, 색욕에 빠진 모양이다.
+ELSEIF TALENT:ARG:150 && TALENT:ARG:160
+	PRINTL 조교로 인해 복종을 맹세하면서도, 거기에 사랑이 있다고 믿는 모양이다.
+ELSEIF TALENT:ARG:150 && TALENT:ARG:170
+	PRINTL 조교로 인한 쾌락을 사랑이라고 믿고 있는 모양이다.
+ELSEIF TALENT:ARG:160 && TALENT:ARG:170
+	PRINTL 조교로 주어지는 육욕 앞에, 복종을 맹세하고 있다.
+ELSEIF TALENT:ARG:150
+	PRINTL 조교 속에서 연애적인 유대감을 찾아낸 모양이다.
+ELSEIF TALENT:ARG:160
+	PRINTL 조교로 인해 복종을 맹세할 지경이 되었다.
+ELSEIF TALENT:ARG:170
+	PRINTL 조교로 인해 음란의 꽃이 아름답게 피기 시작했다.
+ELSEIF MARK:ARG:2 > 2
+	PRINTL 조교를 꽤 받아들이게 되기 시작했다.
+ELSEIF MARK:ARG:1 > 2
+	PRINTL 조교로 얻는 쾌락에 푹 빠져 있다.
+ELSEIF MARK:ARG:4 > 2
+	PRINTL 조교로 받는 치욕에도 꽤 익숙해지기 시작한 모양이다.
+ELSEIF MARK:ARG:0 > 2
+	PRINTL 조교로 받는 고통에 반응하게 되었다.
+ELSE
+	PRINTL 현재 조교를 한창 하는 와중이다.
+ENDIF
+FONTSTYLE 0
+
+;순애모드 이벤트를 통한 소질 소거의 판정
+SIF CFLAG:ARG:13 & 1
+	PRINTL 조교에 의해 억압하고 있던 정신을 해방했다.
+SIF CFLAG:ARG:13 & 2
+	PRINTL 조교에 익숙해짐에 따라 저항을 멈췄다.
+SIF CFLAG:ARG:13 & 4
+	PRINTL 무관심했던 태도를 버리고 조교에 조금씩 관심을 가지게 된 것 같다.
+SIF CFLAG:ARG:13 & 8
+	PRINTL 애정어린 조교에 의해 반항적인 태도가 누그러졌다.
+SIF CFLAG:ARG:13 & 16
+	PRINTL 애정어린 조교에 의해 건방진 면이 누그러졌다.
+SIF CFLAG:ARG:13 & 32
+	PRINTL 조교에 의해 부정하던 쾌락을 받아들일 수 있게 된 것 같다.
+SIF CFLAG:ARG:13 & 64
+	PRINTL 선을 넘지 않으려고 하는 태도를 거둬들였다.
+SIF CFLAG:ARG:13 & 256
+	PRINTL 조교에 의해 정조에 대한 생각이 바뀌었다.
+SIF CFLAG:ARG:13 & 512
+	PRINTL 애정어린 조교에 의해 남성에 대한 거부감이 줄어든 것 같다.
+SIF CFLAG:ARG:13 & 1024
+	PRINTL 애정어린 조교에 의해 여성에 대한 거부감이 줄어든 것 같다.
+SIF CFLAG:ARG:13 & 2048
+	PRINTL 스트레스를 받아 해방하고 있던 정신을 조금씩 억누르게 된 것 같다.
+SIF CFLAG:ARG:13 & 4096
+	PRINTL 수상한 힘에 의해 체질이 바뀌어 약물에 대한 내성을 잃었다.
+
+;기타 MARK상의 이력
+IF MARK:ARG:80 == 1
+	PRINTL 현재 잿빛 사탕에 의해 성격이 반전되어 있다.
+ELSEIF MARK:ARG:80 == 2
+	PRINTL 잿빛 사탕의 효과로 반전되었던 성격이 원래대로 돌아왔다.
+ENDIF
+
+;매각 가능한가?　조수화 가능한가?
+IF TALENT:ARG:49 == 2 && CFLAG:ARG:3
+	PRINTFORML %조사처리(CALLNAME:MASTER,"과")% 영원한 시간을 걷기 위해, 봉래의 죄를 그 몸과 마음에 짊어지고 살아가게 되었다.
+ELSEIF CFLAG:ARG:1 == 2
+	PRINTFORML \@(CFLAG:ARG:3) ? 조수로 삼는 것은 가능하지만, 매각은 불가능 # 매각 및 조수로 삼는 것 둘 다 가능\@하다.
+ELSEIF CFLAG:ARG:1 == 1
+	PRINTFORML \@(CFLAG:ARG:3) ? 매각조건은 채웠지만, 매각 그 자체는 불가능 # 매각이 가능\@하다.
+ELSE
+	PRINTL 매각하는 것도 조수로 삼는 것도 불가능하다.
+ENDIF
+
+;계승했는지 어떠했는지?
+PRINTFORML \@(CFLAG:ARG:18 == 1) ? 전 주차에서 계승한 캐릭터 # 계승된 캐릭터는 아님\@.
+
+CALL NEW_DRAWLINE
+
+;=============================================================================
+;능력 확인에서의 정보 개별 함수(4 페이지눈)
+
+;=============================================================================
+;--------------------------------------------------
+;전시 총수 표시 표시 처리
+;--------------------------------------------------
+@MASTER_COLLECTION_STATUS
+PRINTFORML \@(FLAG:12 & 2) ?  □ 지금까지 모은 수집품 # 지금까지 모은 수집품:\@
+VARSET LOCALS,""
+SPLIT "손에 넣은 시리코다마 숫자 :, 손에 넣은 황금수　　 　　 :, 손에 넣은 애액　　　 　　 :, 손에 넣은 혈액의 숫자　 　:, 손에 넣은 순결의 숫자　 　:, 모은 팬티 　 　　 　　　　:, 사진의 앨범　　　 　　　　:, 촬영한 비디오　　　 　　　:, 손에 넣은 모유 숫자　　 　:, 손에 넣은 알　　　　　　　:, 낳게 한 촉수　　　　　　　:, 손에 넣은 음모　　　 　　 :",",", LOCALS
+LOCAL = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = 0
+LOCAL:5 = 0
+
+REPEAT 12
+	LOCAL:4 = 501 + COUNT
+	LOCAL:3 += FLAG:(LOCAL:4)
+
+	STR:0 = 인분
+	IF COUNT == 0 || COUNT == 8
+		STR:0 = 개
+	ELSEIF COUNT == 2 || COUNT == 10
+		STR:0 = 종
+	ELSEIF COUNT == 5
+		STR:0 = 장
+	ELSEIF COUNT == 6
+		STR:0 = 권
+	ELSEIF COUNT == 7
+		STR:0 = 시리즈
+	ENDIF
+	
+	IF FLAG:(501 + COUNT)
+		PRINTFORM %LOCALS:COUNT%{FLAG:(501 + COUNT),3}%STR:0,8,LEFT%
+		LOCAL += 1
+		SIF FLAG:(501 + COUNT) >= 30
+			LOCAL:1 += 1
+	ENDIF
+
+	IF FLAG:(LOCAL:4)
+		IF (LOCAL:5 % 2) == 1
+			PRINTL 
+		ELSE
+			PRINT 　
+		ENDIF
+		LOCAL:5 += 1
+	ENDIF
+REND
+
+IF LOCAL:5 == 0
+	PRINTL 　딱히 없음
+ELSE
+	SIF LOCAL:5 % 2 == 1
+		PRINTL 
+	CUSTOMDRAWLINE =
+	LOCAL:2 = 12 - LOCAL:1
+	SIF LOCAL:2 == 0
+		FONTBOLD
+	;PRINTFORML 조합지식 취득 조건용 수집품 수집 종류수:{LOCAL:1}종류 수집제
+	;PRINTFORML 조합지식 취득 조건을 위한 수집품 수집 조건을 \@(LOCAL:2 == 0) ?  클리어 하고 있습니다 # 채우는데 앞으로 {LOCAL:2}종류 필요합니다\@.
+	PRINTFORML 전수집품　{LOCAL}종류　{LOCAL:3}품종 수집완료
+	SIF LOCAL:2 == 0
+		FONTREGULAR
+ENDIF
+
+CALL NEW_DRAWLINE
+
+;-------------------------------------------------
+;노예로부터 본 주인의 상성 표시
+;-------------------------------------------------
+@PRINT_RERELATION, ARG
+IF FLAG:12 & 2
+	PRINTFORML □ \@(ARG == MASTER) ? 노예로부터의 역상성 # 주인 및 노예로부터의 역상성\@
+ELSE
+	PRINTFORML \@(ARG == MASTER) ?  노예로부터의 역상성 # 주인 및 노예로부터의 역상성\@:
+ENDIF
+
+CALL SET_CALLNAME
+LOCAL = 0
+REPEAT CHARANUM
+	SIF COUNT == ARG
+		CONTINUE
+	LOCAL:1 = RELATION:COUNT:(NO:ARG)
+	SIF LOCAL:1 <= 0 || LOCAL:1 == 100
+		CONTINUE
+      IF RELATION:COUNT:(NO:ARG) >= 500
+		  CALL SETCOLOR_TORIKOMODE, "SEA", 3
+      ELSEIF RELATION:COUNT:(NO:ARG) >= 300
+		  CALL SETCOLOR_TORIKOMODE, "JADE", 3
+	    ELSEIF RELATION:COUNT:(NO:ARG) >= 200
+		  CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+	    ELSEIF RELATION:COUNT:(NO:ARG) >= 120
+		  CALL SETCOLOR_TORIKOMODE, "GRASS", 2
+	    ELSEIF RELATION:COUNT:(NO:ARG) <= 80
+		  CALL SETCOLOR_TORIKOMODE, "RED", 3
+	    ENDIF
+	PRINTFORM %CALLNAME:COUNT, 22%←{LOCAL:1, 3}％
+    	RESETCOLOR
+	LOCAL += 1
+	IF (LOCAL%3) == 0
+		PRINTL 
+	ELSE
+		PRINT 　
+	ENDIF
+REND
+
+IF LOCAL == 0
+	PRINTL 딱히 없음
+ELSEIF LOCAL%3 != 0
+	PRINTL 
+ENDIF
+
+CALL NEW_DRAWLINE
+
+;--------------------------------------------------
+;노예마다의 수입금액의 최고 금액 일람
+;--------------------------------------------------
+;CFLAG:80~CFLAG:97을 사용
+@INCOME_LIST_SLAVE, ARG
+IF FLAG:12 & 2
+	PRINTL □ 노예별 각 수입의 최고 금액 목록
+ELSE
+	PRINTL 노예별 각 수입의 최고 금액 목록:
+ENDIF
+SIF CFLAG:ARG:80 > 0
+	PRINTFORML 창관으로 번 최고 금액　　　　 :{CFLAG:ARG:80}원
+SIF CFLAG:ARG:82 > 0
+	PRINTFORML 비디오로 번 최고 금액　　　　 :{CFLAG:ARG:82}원
+SIF CFLAG:ARG:83 > 0
+	PRINTFORML 사진으로 번 최고 금액　　　　 :{CFLAG:ARG:83}원
+SIF CFLAG:ARG:84 > 0
+	PRINTFORML 야외 라이브로 번 최고 금액　　:{CFLAG:ARG:84}원
+SIF CFLAG:ARG:85 > 0
+	PRINTFORML 주치육륜으로 번 최고 금액　　 :{CFLAG:ARG:85}원
+SIF CFLAG:ARG:86 > 0
+	PRINTFORML 육변기 플레이로 번 최고 금액　:{CFLAG:ARG:86}원
+
+SIF CFLAG:ARG:87 > 0
+	PRINTFORML 모유로 번 최고 금액　　　　 　:{CFLAG:ARG:87}원
+SIF CFLAG:ARG:88 > 0
+	PRINTFORML 성수로 번 최고 금액　　　　 　:{CFLAG:ARG:88}원
+SIF CFLAG:ARG:95 > 0
+	PRINTFORML 애액으로 번 최고 금액　 　　　:{CFLAG:ARG:95}원
+SIF CFLAG:ARG:89 > 0
+	PRINTFORML 산란으로 번 최고 금액　 　　　:{CFLAG:ARG:89}원
+SIF CFLAG:ARG:94 > 0
+	PRINTFORML 음모 부적으로 번 최고 금액　　:{CFLAG:ARG:94}원
+
+SIF CFLAG:ARG:92 > 0
+	PRINTFORML 스위트 포테이토로 번 최고 금액  :{CFLAG:ARG:92}원
+SIF CFLAG:ARG:91 > 0
+	PRINTFORML 와인으로 번 최고 금액　　　　:{CFLAG:ARG:91}원
+SIF CFLAG:ARG:90 > 0
+	PRINTFORML 아스파라거스로 번 최고 금액　　　:{CFLAG:ARG:90}원
+
+SIF CFLAG:ARG:93 > 0
+	PRINTFORML 도시락(노예)으로 번 최고 금액 :{CFLAG:ARG:93}원
+SIF CFLAG:ARG:80 > 0
+	PRINTFORML 매춘으로 번 최고 금액　　　  :{CFLAG:ARG:80}원
+SIF CFLAG:ARG:81 > 0
+	PRINTFORML 단체 매춘으로 번 최고 금액 　:{CFLAG:ARG:81}원
+
+CUSTOMDRAWLINE =
+PRINTFORML 모든 수입 중에 최고 금액　　 　:{CFLAG:ARG:96}원
+PRINTFORML 노예가 지금까지 번 원의 총액　 :{CFLAG:ARG:97}원
+CALL NEW_DRAWLINE
+
+;=============================================================================
+;능력 확인에서의 정보 개별 함수(5 페이지눈)
+;=============================================================================
+;--------------------------------------------------
+;현재의 전노예의 종류별의 수입 총금액 일람
+;--------------------------------------------------
+;CFLAG:80~CFLAG:97을 사용
+@PRINT_INCOME_ALLSLAVE, ARG
+IF FLAG:12 & 2
+	PRINTL □ 현재 전노예의 종류별 수입 총금액 일람
+ELSE
+	PRINTL 현재 전노예의 종류별 수입 총금액 일람:
+ENDIF
+SIF SUMCARRAY(CFLAG:ARG:80, 1, CHARANUM) > 0
+	PRINTFORML 창관으로 번 최고 금액　　　　　:{SUMCARRAY(CFLAG:ARG:80,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:82, 1, CHARANUM) > 0
+	PRINTFORML 비디오로 번 총금액　　　　　　　:{SUMCARRAY(CFLAG:ARG:82,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:83, 1, CHARANUM) > 0
+	PRINTFORML 사진으로 번 최고 금액　　　　　 :{SUMCARRAY(CFLAG:ARG:83,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:84, 1, CHARANUM) > 0
+	PRINTFORML 야외 라이브로 번 최고 금액　　　:{SUMCARRAY(CFLAG:ARG:84,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:85, 1, CHARANUM) > 0
+	PRINTFORML 주치육륜으로 번 최고 금액　　　:{SUMCARRAY(CFLAG:ARG:85,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:86, 1, CHARANUM) > 0
+	PRINTFORML 육변기 플레이로 번 최고 금액　:{SUMCARRAY(CFLAG:ARG:86,1,CHARANUM)}원
+
+SIF SUMCARRAY(CFLAG:ARG:87, 1, CHARANUM) > 0
+	PRINTFORML 모유로 번 최고 금액　　　　　:{SUMCARRAY(CFLAG:ARG:87,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:88, 1, CHARANUM) > 0
+	PRINTFORML 성수로 번 최고 금액　　　　　:{SUMCARRAY(CFLAG:ARG:88,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:95, 1, CHARANUM) > 0
+	PRINTFORML 애액으로 번 최고 금액　　　　　:{SUMCARRAY(CFLAG:ARG:95,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:89, 1, CHARANUM) > 0
+	PRINTFORML 산란으로 번 최고 금액　　　　　:{SUMCARRAY(CFLAG:ARG:89,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:94, 1, CHARANUM) > 0
+	PRINTFORML 음모 부적으로 번 최고 금액　　　:{SUMCARRAY(CFLAG:ARG:94,1,CHARANUM)}원
+
+SIF SUMCARRAY(CFLAG:ARG:92, 1, CHARANUM) > 0
+	PRINTFORML 스위트 포테이토로 번 최고 금액 :{SUMCARRAY(CFLAG:ARG:92,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:91, 1, CHARANUM) > 0
+	PRINTFORML 와인으로 번 최고 금액　　　　:{SUMCARRAY(CFLAG:ARG:91,1,CHARANUM)}원
+SIF SUMCARRAY(CFLAG:ARG:90, 1, CHARANUM) > 0
+	PRINTFORML 아스파라거스로 번 최고 금액　　　:{SUMCARRAY(CFLAG:ARG:90,1,CHARANUM)}원
+
+SIF SUMCARRAY(CFLAG:ARG:93, 1, CHARANUM) > 0
+	PRINTFORML 도시락(노예)으로 번 총금액　　　:{SUMCARRAY(CFLAG:ARG:93,1,CHARANUM)}원
+
+CUSTOMDRAWLINE =
+PRINTFORML 현노예가 지금까지 번 원의 총금액 :{SUMCARRAY(CFLAG:ARG:97,1,CHARANUM)}원
+CALL NEW_DRAWLINE
+
+;--------------------------------------------------
+;주인의 각종 플래그 관련 표시
+;--------------------------------------------------
+@PRINT_MASTER_FLAG, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 그 외 주인에 관한 정보 # 그 외 주인에 관한 정보:\@
+;디버그 모드 전용
+SIF TALENT:MASTER:998
+	PRINTFORML 　캐릭터 고유 번호:{CFLAG:ARG:3109}
+SIF MONEY:990
+	PRINTFORML 　노예 매각으로 번 수입 총합　　　:\@(MONEY:990 > 100000000) ?  1억원 이상 # {MONEY:990}원\@
+SIF MONEY:991
+	PRINTFORML 　고급 노예 매각으로 번 수입 총합 :\@(MONEY:991 > 100000000) ?  1억원 이상 # {MONEY:991}원\@
+SIF CHARANUM > 1 && SUMCARRAY(CFLAG:ARG:2, 1, CHARANUM) > 0
+	PRINTFORML 　현 보유 노예의 호감도 종합계　　:{SUMCARRAY(CFLAG:ARG:2,1,CHARANUM)}
+SIF CHARANUM > 1 && SUMCARRAY(CFLAG:ARG:65, 1, CHARANUM) > 0
+	PRINTFORML 　현 보유 노예의 스트레스 종합계　:{SUMCARRAY(CFLAG:ARG:65,1,CHARANUM)}
+SIF FLAG:39
+	PRINTFORML 　지금까지 구입한 노예의 총수　　 :{FLAG:39, 5}명
+SIF FLAG:35
+	PRINTFORML 　지금까지 상애가 된 노예의 총수　:{FLAG:35, 5}명
+SIF FLAG:36
+	PRINTFORML 　지금까지 예속시킨 노예의 총수　:{FLAG:36, 5}명
+SIF FLAG:37
+	PRINTFORML 　지금까지 인격괴조한 노예의 총수:{FLAG:37, 5}명
+SIF FLAG:38
+	PRINTFORML 　지금까지 음마가 된 노예의 총수　:{FLAG:38, 5}명
+SIF FLAG:30 > 99
+	PRINTFORML 　지금까지 {FLAG:30, 5}명의 대량의 노예를 함락했다.
+SIF FLAG:32 > 99
+	PRINTFORML 　지금까지 {FLAG:32, 5}마리 가량의 요정을 함락해서 매우 기뻐하고 있다.
+SIF CFLAG:ARG:50
+	PRINTFORML 　지금까지 {CFLAG:ARG:50, 5}회 정도, 코스프레를 했던 적이 있다.
+SIF CFLAG:ARG:55
+	PRINTFORML 　지금까지 {CFLAG:ARG:55, 5}회 정도, 조교중에 설교나 잡설을 들은 적이 있다.
+SIF CFLAG:ARG:56
+	PRINTFORML 　지금까지 {CFLAG:ARG:56, 5}회 정도, 파이즈리를 해 주었던 적이 있다.
+SIF CFLAG:ARG:57
+	PRINTFORML 　지금까지 {CFLAG:ARG:57, 5}회 정도, 파이즈리를 즐겼던 적이 있다.
+SIF CFLAG:ARG:153 & 4
+	PRINTL 　노예에게 처녀를 뺏긴 적이 있다.
+SIF CFLAG:ARG:153 & 8
+	PRINTL 　노예가 밤시중을 들러 왔을 때 처녀를 바친 적이 있다.
+SIF CFLAG:ARG:153 & 128
+	PRINTL 　노예에게 폭행당한 적이 있다.
+SIF CFLAG:ARG:153 & 512
+	PRINTL 　노예의 촉수에 의해 습격당한 적이 있다.
+SIF CFLAG:ARG:153 & 4096
+	PRINTL 　네토라레 현장을 목격한 적이 있다.
+SIF CFLAG:ARG:150 & 4096
+	PRINTL 　노예에게 도시락을 먹인 적이 있다.
+SIF CFLAG:ARG:150 & 16
+	PRINTL 　노예가 음식에 독을 타서 피해를 받은 적이 있다.
+SIF CFLAG:ARG:150 & 32
+	PRINTL 　노예가 음식에 독을 탄 것을 간파했던 적이 있다.
+SIF CFLAG:ARG:150 & 512
+	PRINTL 　노예가 사랑을 담아 만든 초콜렛을 먹어준 적이 있다.
+SIF CFLAG:ARG:150 & 1024
+	PRINTL 　노예가 사랑을 담아 만든 초콜렛을 팔았던 적이 있다.
+SIF FLAG:410
+	PRINTL 　노예를 좀비 페어리로 만든 적이 있다.
+SIF FLAG:402
+	PRINTL 　노예를 흡혈귀로 만든 적이 있다.
+SIF FLAG:403
+	PRINTL 　노예를 기계로 개조한 적이 있다.
+SIF FLAG:404
+	PRINTL 　노예를 망령으로 만든 적이 있다.
+SIF FLAG:401
+	PRINTL 　노예의 정신을 인형에 봉했던 적이 있다.
+SIF FLAG:420 & 1
+	PRINTL 　인형을 만든 적이 있다.
+SIF FLAG:420 & 2
+	PRINTL 　소악마를 소환한 적이 있다.
+SIF FLAG:421
+	PRINTL 　신체 강화의 마법으로 강화되고 있다.
+SIF CFLAG:ARG:20 & 512
+	PRINTL 　성전환 경험이 있다.
+SIF CFLAG:ARG:20 & 4096
+	PRINTL 　조교중에 caved!!!!되었던 적이 있다.
+SIF CFLAG:ARG:155 & 1
+	PRINTL 　마음껏 거하게 취했던 적이 있다.
+SIF CFLAG:ARG:155 & 2
+	PRINTL 　스트레스를 쌓아둔 적이 있다.
+SIF CFLAG:ARG:154 & 8 || CFLAG:ARG:154 & 16 || CFLAG:ARG:154 & 32 || CFLAG:ARG:154 & 512
+	PRINTL 　하루의 시작을 섹스로 시작했던 적이 있다.
+SIF CFLAG:ARG:154 & 128
+	PRINTL 　하루의 시작을 풋잡으로 시작했던 적이 있다.
+;여기로부터 일상생활 관련
+IF FLAG:12 & 64
+	SIF CFLAG:ARG:1603 > 0 && CFLAG:ARG:1603 < 50
+		PRINTL 　에이린에게 조합지식을 배우는 중
+	SIF CFLAG:ARG:1603 >= 50
+		PRINTL 　에이린으로부터 조합지식을 습득했다.
+	SIF CFLAG:ARG:1614
+		PRINTFORML 　몸 상태가 안 좋은 노예를 {CFLAG:ARG:1614}회 정도 간병했던 적이 있다.
+	SIF CFLAG:ARG:1616
+		PRINTFORML 　컨디션이 무너져, 노예들에게 {CFLAG:ARG:1616}회 정도 간병되었던 적이 있다.
+	SIF CFLAG:ARG:152 & 1
+		PRINTL 　에이키님께 설교받은 적이 있다.
+	SIF CFLAG:ARG:152 & 8
+		PRINTL 　노예에게 귀청소를 받았던 적이 있다.
+	SIF CFLAG:ARG:152 & 32
+		PRINTL 　노예가 등을 밀어준 적이 있다.
+	SIF CFLAG:ARG:1623
+		PRINTFORML 　노예로부터 {CFLAG:ARG:1623, 5}개 정도, 모자나 머플러를 선물 받은 적이 있다..
+ENDIF
+;촉수 관련
+SIF FLAG:75 || FLAG:98
+	PRINTL 　촉수에 특수한 능력을 부여해 즐기고 있다.
+;디버그 모드 전용
+SIF TALENT:MASTER:998
+	PRINTFORML 　현재 eratohoYM에 숨어 있는 버그와 싸우고 있다.
+
+CALL NEW_DRAWLINE
+
+;--------------------------------------------------
+;노예의 각종 플래그 관련 표시
+;--------------------------------------------------
+@PRINT_SLAVE_FLAG, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □ 그 외 %CALLNAME:ARG%에 관한 정보 # 그 외 %CALLNAME:ARG%에 관한 정보:\@
+VARSET LOCALS,""
+SPLIT "하쿠레이 신사, 홍마관, 명계, 죽림, 피안, 요괴의 산, 구지옥터 시외, 요정의 숲, 유정천, 태양의 밭, 달의 도시, 마계, 지옥계, 명련사, 315,316,317,318, 인간마을",",", LOCALS
+;디버그 모드 전용
+SIF TALENT:MASTER:998
+	PRINTFORML 　캐릭터 고유 번호:{CFLAG:ARG:3109}
+SIF CFLAG:ARG:50
+	PRINTFORML 　지금까지 {CFLAG:ARG:50, 5}회 정도, 코스프레를 했던 적이 있다.
+SIF CFLAG:ARG:51
+	PRINTFORML 　지금까지 {CFLAG:ARG:51, 5}회 정도, 공개 노출 라이브를 성공했다.
+SIF CFLAG:ARG:52
+	PRINTFORML 　지금까지 {CFLAG:ARG:52, 5}회 정도, 공개 노출 라이브를 실패했다.
+SIF CFLAG:ARG:53
+	PRINTFORML 　지금까지 {CFLAG:ARG:53, 5}회 정도, 공개 노출 라이브 중 윤간당했다.
+SIF CFLAG:ARG:54
+	PRINTFORML 　지금까지 {CFLAG:ARG:54, 5}회 정도, 공중 육변기로 취급받은 적이 있다.
+SIF CFLAG:ARG:58
+	PRINTFORML 　지금까지 {CFLAG:ARG:58, 5}회 정도, 주치육륜을 한 적이 있다.
+SIF CFLAG:ARG:55
+	PRINTFORML 　지금까지 {CFLAG:ARG:55, 5}회 정도, 조교중에 설교나 잡설을 들은 적이 있다.
+SIF CFLAG:ARG:56
+	PRINTFORML 　지금까지 {CFLAG:ARG:56, 5}회 정도, 파이즈리를 해 주었던 적이 있다.
+SIF CFLAG:ARG:57
+	PRINTFORML 　지금까지 {CFLAG:ARG:57, 5}회 정도, 파이즈리를 즐겼던 적이 있다.
+SIF CFLAG:ARG:161
+	PRINTFORML 　은밀하게 {CFLAG:ARG:161, 5}개 정도, 도촬한 비디오를 보관하고 있다.
+SIF CFLAG:ARG:172
+	PRINTFORML 　지금까지 {CFLAG:ARG:172, 5}회 정도, 조교중에 주인과 입맞춤을 주고 받았다.
+SIF CFLAG:ARG:173
+	PRINTFORML 　지금까지 {CFLAG:ARG:173, 5}회 정도, 조교중에 주인의 페니스를 질로 받아 들였다.
+SIF CFLAG:ARG:174
+	PRINTFORML 　지금까지 {CFLAG:ARG:174, 5}회 정도, 조교중에 주인의 페니스를 애널로 받아 들였다.
+SIF CFLAG:ARG:175
+	PRINTFORML 　지금까지 {CFLAG:ARG:175, 5}회 정도, 조교중에 주인의 질을 페니스로 맛보았다.
+SIF CFLAG:ARG:176
+	PRINTFORML 　지금까지 {CFLAG:ARG:176, 5}회 정도, 조교 중에 주인의 애널을 페니스로 맛보았다.
+SIF CFLAG:ARG:162
+	PRINTFORML 　지금까지 {CFLAG:ARG:162, 5}회 정도, 촉수가 부여한 불사각인의 힘에 의해 부활했다.
+SIF CFLAG:ARG:163
+	PRINTFORML 　지금까지 {CFLAG:ARG:163, 5}회 정도, 봉래인의 힘에 의해 부활했다.
+SIF CFLAG:ARG:164
+	PRINTFORML 　지금까지 {CFLAG:ARG:164, 5}회 정도, 좀비페어리의 힘에 의해 부활했다.
+SIF CFLAG:ARG:155 & 1
+	PRINTL 　마음껏 거하게 취했던 적이 있다.
+SIF CFLAG:ARG:155 & 2
+	PRINTL 　스트레스를 쌓아둔 적이 있다.
+SIF CFLAG:ARG:153 & 1
+	PRINTL 　주인의 처녀를 강간해 빼앗았던 적이 있다.
+SIF CFLAG:ARG:153 & 64
+	PRINTL 　주인에게 폭력을 휘두른 적이 있다.
+SIF CFLAG:ARG:153 & 256
+	PRINTL 　주인을 촉수로 습격했던 적이 있다.
+SIF CFLAG:ARG:153 & 2
+	PRINTL 　주인의 밤시중을 들어 처녀를 바쳤다.
+SIF CFLAG:ARG:153 & 16
+	PRINTL 　다른 노예에 NTR당한 적이 있다.
+SIF CFLAG:ARG:153 & 32
+	PRINTL 　다른 노예를 주인에게서 NTR한 적이 있다.
+SIF CFLAG:ARG:20 & 1
+	PRINTL 　정조를 지킬 수 있다면 엉덩이를 공략당해도 된다고 생각한 적이 있다.
+SIF CFLAG:ARG:20 & 2
+	PRINTL 　관장당한 경험 있음.
+SIF CFLAG:ARG:20 & 16
+	PRINTL 　한 번 해방되었던 적이 있다.
+;SIF CFLAG:ARG:20 & 32
+;	PRINTL 　함락된 경험 있음.
+SIF CFLAG:ARG:155 & 4
+	PRINTL 　다른 노예를 데려왔던 적이 있다.
+SIF CFLAG:ARG:20 & 64
+	PRINTL 　산란한 경험 있음.
+SIF CFLAG:ARG:20 & 128
+	PRINTL 　할례받은 경험 있음.
+SIF CFLAG:ARG:20 & 256
+	PRINTL 　강제 성장한 경험 있음.
+SIF CFLAG:ARG:20 & 512
+	PRINTL 　성전환된 적이 있다.
+SIF CFLAG:ARG:20 & 1024
+	PRINTL 　[난생]이 소거된 적이 있다.
+SIF CFLAG:ARG:20 & 2048
+	PRINTL 　어디에서 얻었는지 모를 미약을 조달했던 적이 있다.
+SIF CFLAG:ARG:20 & 4096
+	PRINTL 　조교중에 caved!!!!되었던 적이 있다.
+SIF CFLAG:ARG:20 & 8192
+	PRINTL 　조교중에 폭발했던 적이 있다.
+SIF CFLAG:ARG:20 & 16384
+	PRINTL 　지하실에 수감된 적이 있다.
+SIF CFLAG:ARG:20 & 32768
+	PRINTL 　지하실에서 교정이라는 이름의 고문을 받은 적이 있다.
+SIF CFLAG:ARG:20 & 65536
+	PRINTL 　약의 힘으로 강제로 소인체형이 된 적이 있다.
+SIF CFLAG:ARG:21 & 1
+	PRINTL 　공개 자위 경험이 있다.
+SIF CFLAG:ARG:21 & 16
+	PRINTL 　유선을 개발당해 모유체질이 된 적이 있다.
+SIF CFLAG:ARG:21 & 32 || CFLAG:ARG:21 & 64
+	PRINTL 　반형을 삽입당한 적이 있다.
+SIF CFLAG:ARG:21 & 128
+	PRINTL 　배란유발제를 먹은 적이 있다.
+SIF CFLAG:ARG:21 & 256
+	PRINTL 　인형들에게 구속당해 처녀를 빼앗길 정도로 ∇당한 경험이 있다.
+SIF CFLAG:ARG:22
+	PRINTL 　무언가 하드한 폭력 조교를 받았던 적이 있다.
+SIF CFLAG:ARG:23
+	PRINTL 　무언가 이상한 목욕탕에 들어갔던 적이 있다.
+SIF CFLAG:ARG:24
+	PRINTL 　무언가 신사적이고 특수한 촉수 체험을 했던 적이 있다.
+SIF CFLAG:ARG:25
+	PRINTL 　짐승과 성행위를 한 경험이 있다.
+SIF CFLAG:ARG:29
+	PRINTL 　다른 종족으로 전생한 경험이 있다.
+SIF CFLAG:ARG:33
+	PRINTL 　은방울꽃의 독을 사용했던 적이 있다.
+SIF CFLAG:ARG:34
+	PRINTFORML 　촉수를 {CFLAG:ARG:34}마리 출산했던 적이 있다.
+SIF CFLAG:ARG:3002
+	PRINTFORML 　돈을 보내오는 아이가 {CFLAG:ARG:3002}명 있다.
+SIF CFLAG:ARG:150 & 1
+	PRINTL 　잘 하는 요리를 선보인 적이 있다.
+SIF CFLAG:ARG:150 & 2048
+	PRINTL 　주인이 만든 도시락을 먹어본 적이 있다.
+SIF CFLAG:ARG:150 & 4
+	PRINTL 　주인에게 독을 탄 음식을 먹여 데미지를 주었다.
+SIF CFLAG:ARG:150 & 8
+	PRINTL 　주인의 음식에 독을 탔다가 들킨 적이 있다.
+SIF CFLAG:ARG:150 & 8192
+	PRINTL 　타인의 독 도시락을 먹고 데미지를 받은 적이 있다.
+SIF CFLAG:ARG:150 & 4096
+	PRINTL 　다른 노예에게 요리를 해준 적이 있다.
+SIF CFLAG:ARG:160
+	PRINTL 　새러데이 나이트 가든의 특별한 술과 요리를 대접한 적이 있다.
+SIF CFLAG:ARG:150 & 64
+	PRINTL 　사랑을 담아 자신만의 특별한 초콜릿을 만든 적이 있다.
+SIF CFLAG:ARG:150 & 128
+	PRINTL 　사랑을 담아 준 초콜릿을 주인이 먹어준 적이 있다.
+SIF CFLAG:ARG:150 & 256
+	PRINTL 　사랑을 담아 준 초콜릿이 팔려 버렸던 적이 있다.
+SIF CFLAG:ARG:151 & 1
+	PRINTL 　라이브하다 실패한 적이 있다.
+SIF CFLAG:ARG:151 & 2
+	PRINTL 　라이브에서 십팔번을 선보인 적이 있다.
+SIF CFLAG:ARG:151 & 4
+	PRINTL 　라이브가 끝나고 팬에게 선물을 받은 적이 있다.
+SIF CFLAG:ARG:151 & 8
+	PRINTL 　트리오로 라이브한 적이 있다
+SIF CFLAG:ARG:154 & 1 || CFLAG:ARG:154 & 2
+	PRINTL 　아침부터 기승위로 허슬한 적이 있다.
+SIF CFLAG:ARG:154 & 256
+	PRINTL 　아침부터 3 P로 허슬한 적이 있다.
+SIF CFLAG:ARG:154 & 4
+	PRINTL 　아침의 새댁 플레이를 했던 적이 있다.
+SIF CFLAG:ARG:154 & 64
+	PRINTL 　아침, 주인을 풋잡하면서 일으킨 적이 있다.
+;SIF CFLAG:ARG:155 & 1
+;	PRINTL 　신부로서 사랑받은 적이 있다.
+SIF CFLAG:ARG:97 > 100000000
+	PRINTL 　지금까지 잔뜩 돈을 벌어 오고 있다.
+;여기서부터 일상생활 관련
+IF FLAG:12 & 64
+	;플래그 변경
+	SIF CFLAG:ARG:1602
+		PRINTL 　에이린에게 한 번 된통 당해본 적이 있다.
+	SIF CFLAG:ARG:1605
+		PRINTL 　유카리에 경계를 만지작거려졌던 적이 있다.
+	SIF CFLAG:ARG:1606
+		PRINTL 　「꽃을 조종하는 정도의 능력」이 해방되고 있다.
+	SIF CFLAG:ARG:1607 & 1
+		PRINTL 　주인을 함정에 빠뜨리려다 들킨 적이 있다.
+	SIF CFLAG:ARG:1607 & 2
+		PRINTL 　주인을 함정에 빠뜨린 적이 있다.
+	SIF CFLAG:ARG:1608
+		PRINTL 　트레이닝을 했던 적이 있다.
+	SIF CFLAG:ARG:1609
+		PRINTL 　바스트 업 엑서사이즈를 했던 적이 있다.
+	SIF CFLAG:ARG:1612
+		PRINTL 　요리의 특훈을 했던 적이 있다.
+	SIF CFLAG:ARG:1621
+		PRINTFORML 　\@(CFLAG:ARG:1621 >= 120 && ABL:ARG:12 >= 5) ?  재봉 경험을 평소부터 제대로 쌓고 있다. # 뜨개질을 한 경험이 있다.\@
+	SIF CFLAG:ARG:1613
+		PRINTFORML 　몸 상태가 안 좋은 주인을 {CFLAG:ARG:1613}회 정도 간병했던 적이 있다.
+	SIF CFLAG:ARG:1614
+		PRINTFORML 　몸 상태가 안 좋은 다른 노예를 {CFLAG:ARG:1614}회 정도 간병했던 적이 있다.
+	SIF CFLAG:ARG:1615
+		PRINTFORML 　컨디션이 무너져 주인에게 {CFLAG:ARG:1615}회 정도 간병받았던 적이 있다.
+	SIF CFLAG:ARG:1616
+		PRINTFORML 　컨디션이 무너져 다른 노예에게 {CFLAG:ARG:1616}회 정도 간병받았던 적이 있다.
+	SIF CFLAG:ARG:152 & 1
+		PRINTL 　에이키 님에게 설교받은 적이 있다.
+	SIF CFLAG:ARG:152 & 2
+		PRINTL 　부엌에서 몰래 군것질한 적이 있다.
+	SIF CFLAG:ARG:152 & 4
+		PRINTL 　주인의 귀청소를 했던 적이 있다
+	SIF CFLAG:ARG:152 & 16
+		PRINTL 　주인의 등을 밀어준 적이 있다.
+	SIF CFLAG:ARG:152 & 64
+		PRINTL 　노예끼리 술잔치를 벌인 적이 있다.
+	SIF CFLAG:ARG:152 & 128
+		PRINTL 　오줌을 싸서 이불을 말렸던 적이 있다.
+	SIF CFLAG:ARG:152 & 256
+		PRINTL 　생활 물자를 창고에 옮기고 있는 주인을 돕지 않고 무시했던 적이 있다.
+	SIF CFLAG:ARG:152 & 512
+		PRINTL 　다른 노예를 목욕탕에 데려가서 몸을 씻어준 적이 있다.
+	SIF CFLAG:ARG:152 & 1024
+		PRINTL 　다른 노예가 목욕탕에 데리고 간 적이 있다.
+	SIF CFLAG:ARG:152 & 2048
+		PRINTL 　다른 노예가 편식을 극복하는 것을 도왔던 적이 있다.
+	SIF CFLAG:ARG:152 & 4096
+		PRINTL 　다른 노예의 응원을 받고 싫어하던 음식을 극복한 적이 있다.
+	SIF CFLAG:ARG:152 & 8192
+		PRINTL 　임시방편으로 주인이 장난감 반지를 사준 적이 있다.
+	SIF CFLAG:ARG:1604
+		PRINTL 　이따금 주인과 데이트를 하러 나가기도 한다.
+	SIF CFLAG:ARG:1617 & 16384
+		PRINTL 　주인에게 와이셔츠를 선물한 적이 있다.
+	SIF CFLAG:ARG:170
+		PRINTFORML 　주인의 속옷을 {CFLAG:ARG:170, 5}벌 정도, 슬쩍해 달아난 적이 있다.
+	SIF CFLAG:ARG:171
+		PRINTFORML 　주인으로부터 {CFLAG:ARG:171, 5}개 정도, 소품을 선물받은 적이 있다.
+	SIF CFLAG:ARG:1618
+		PRINTFORML 　주인으로부터 {CFLAG:ARG:1618, 5}개 정도, 의상이나 장식품을 선물받은 적이 있다.
+	SIF CFLAG:ARG:1623
+		PRINTFORML 　다른 노예로부터 {CFLAG:ARG:1623, 5}개 정도, 모자나 머플러를 선물받은 적이 있다.
+	SIF CFLAG:ARG:1624 && ! TALENT:ARG:49
+		PRINTFORML 　주인과 영원히 살기 위해 \@(CFLAG:ARG:1624 >= 21) ? 봉래인이 되려고 했지만 단념했다.  # 「봉래의 약」을 만들고 있다. \@
+ENDIF
+;야외 플레이 관련
+FOR LOCAL, 301, 340
+	SIF CFLAG:ARG:LOCAL
+		PRINTFORML 　\@(LOCAL >= 321) ?   %LOCALS:(LOCAL - 321)%에 조수로서 # %LOCALS:(LOCAL - 301)%에 노예로서\@ 야외 조교에 데려가졌던 적이 {CFLAG:ARG:LOCAL, 5}회 정도 있다.
+NEXT
+;촉수 관련
+SIF CFLAG:ARG:24 & 4
+	PRINTL 　촉수 방에 유폐되었던 적이 있다.
+SIF CFLAG:ARG:24 & 8
+	PRINTL 　촉수의 최면술에 걸린 적이 있다.
+;말측보다(CSTR:95~99를 사용), 말측에서 넣을 수 있던 캐릭터 라인을 그대로 표시한다
+FOR COUNT, 95, 100
+	SIF CSTR:ARG:COUNT != ""
+		PRINTFORML 　%CSTR:ARG:COUNT%
+NEXT
+CALL NEW_DRAWLINE
+
+;--------------------------------------------------
+;조수 조교 경험 표시
+;--------------------------------------------------
+@PRINT_ASSI_TRAIN, ARG
+PRINTFORML \@(FLAG:12 & 2) ?  □  # \@조수로서 %CALLNAME:ARG%의 다른 노예에 대한 조교 경험
+LOCAL = 0
+LOCAL:1 = 0
+
+REPEAT CHARANUM
+	;주인이나 본인은 패스
+	SIF COUNT == MASTER || COUNT == ARG
+		CONTINUE
+	LOCAL:1 = NO:COUNT + 1000
+	IF CFLAG:ARG:(LOCAL:1)
+		IF CFLAG:ARG:(LOCAL:1) >= 50000
+			PRINTFORM 　%조사처리(CALLNAME:COUNT,"를")% 주인보다 더 신경 쓰고 있을지도 모른다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 10000
+			PRINTFORM 　%CALLNAME:COUNT%의 성벽을 다 꿰고 있다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 5000
+			PRINTFORM 　%조사처리(CALLNAME:COUNT,"를")% 대단히 마음에 들어하고 있다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 1000
+			PRINTFORM 　%조사처리(CALLNAME:COUNT,"과")% 분명한 정을 느끼고 있다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 500
+			PRINTFORM 　%조사처리(CALLNAME:COUNT,"과")% 함께 있으면 야한 짓을 하고 싶어진다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 200
+			PRINTFORM 　%CALLNAME:COUNT%에 대한 조교의 요령을 잡기 시작하고 있다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 100
+			PRINTFORM 　%CALLNAME:COUNT%에 대한 조교를 조금 기대하고 있다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 50
+			PRINTFORM 　%조사처리(CALLNAME:COUNT,"가")% 다소 신경이 쓰이고 있다.
+		ELSEIF CFLAG:ARG:(LOCAL:1) >= 10
+			PRINTFORM 　%CALLNAME:COUNT%의 헐떡이는 소리를 듣기도 했다.
+		ELSE
+			PRINTFORM 　%CALLNAME:COUNT%의 조교에 입회한 적이 있다.
+		ENDIF
+		IF (LOCAL%2) == 1
+			PRINTL 
+		ELSE
+			PRINT 　　
+		ENDIF
+		LOCAL += 1
+	ENDIF
+REND
+
+SIF LOCAL == 0
+	PRINTL 　딱히 없음
+SIF LOCAL%2 != 0
+	PRINTL 
+
+CALL NEW_DRAWLINE
+
+;=============================================================================
+;종족 유전 관련 처리
+;=============================================================================
+;캐릭터 등록 번호를 ARG에 받아, 그 캐릭터의 종족을 판정(=가장 강하게 유전하고 있는 종족 유전자를 찾는다), STR:2에 격납한다
+;덧붙여 유전 강도35%이상의 유전자가 2개 있었을 경우, 「00으로××의 하프」라고 하는 표현이 된다
+;모든 유전자의 유전 강도가 35 미만이라면 「혼혈」이라고 표현된다
+;-------------------------------------------------
+;예외 종족 처리
+;-------------------------------------------------
+@GET_RACE , ARG
+IF NO:ARG == 0 && TALENT:ARG:998 && TALENT:ARG:116
+	STR:2 = 치터
+	RETURN 1
+ELSEIF NO:ARG == 400
+	STR:2 = 반인반채
+	RETURN 1
+ELSEIF TALENT:ARG:48
+	STR:2 = %STR:145%
+	RETURN 1
+ELSEIF TALENT:ARG:200 && CFLAG:ARG:5 == 1
+	STR:2 = %STR:103%
+	RETURN 1
+ELSEIF TALENT:ARG:205 && CFLAG:ARG:5 == 2
+	STR:2 = %STR:106%
+	RETURN 1
+ELSEIF TALENT:ARG:206 && CFLAG:ARG:5 == 3
+	STR:2 = %STR:146%
+	RETURN 1
+ELSEIF TALENT:ARG:207 && CFLAG:ARG:5 == 4
+	STR:2 = %STR:143%
+	RETURN 1
+ELSEIF TALENT:ARG:208 && CFLAG:ARG:5 == 5
+	STR:2 = %STR:121%
+	RETURN 1
+ELSEIF TALENT:ARG:209 && CFLAG:ARG:5 == 6
+	STR:2 = %STR:104%
+	RETURN 1
+ELSEIF TALENT:ARG:210 && CFLAG:ARG:5 == 7
+	STR:2 = %STR:127%
+	RETURN 1
+ELSEIF TALENT:ARG:211 && CFLAG:ARG:5 == 8
+	STR:2 = %STR:112%
+	RETURN 1
+ELSEIF TALENT:ARG:212 && CFLAG:ARG:5 == 9
+	STR:2 = %STR:116%
+	RETURN 1
+ELSEIF TALENT:ARG:833
+	STR:2 = 스펠 카드
+	RETURN 1
+ENDIF
+
+CALL FIND_RACE , ARG
+
+;결과 꺼내
+LOCAL:1 = RESULT:1
+LOCAL:2 = RESULT:2
+
+;특정의 혼혈은 특수 표현으로 한다(예：워하크타크, 기계 인형)
+IF (LOCAL:1 == 3201 && LOCAL:2 == 3253) || (LOCAL:1 == 3253 && LOCAL:2 == 3201)
+	STR:2 = 워 백택
+;이하 표준 처리
+ELSEIF LOCAL:1 && LOCAL:2
+	;다른 한쪽의 유전자가 인형이라면 「00인형」이라고 하는 표현
+	IF LOCAL:1 == 3221 || LOCAL:2 == 3221
+		STR:2 = \@(LOCAL:1 == 3221) ?  %RACENAME(LOCAL:2)% # %RACENAME(LOCAL:1)%\@ 인형
+	;그렇지 않으면 「00으로××의 하프」라고 하는 형식
+	ELSE
+		STR:2 = %조사처리(RACENAME(LOCAL:1),"과")% %RACENAME(LOCAL:2)%의 하프
+	ENDIF
+;발현한 유전자(=유전 강도35%이상)가 없으면 혼혈
+ELSEIF LOCAL:1 == 0 && LOCAL:2 == 0
+	STR:2 = 혼혈
+ELSE
+	STR:2 = %RACENAME(LOCAL:1)%
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;종족 결정 함수
+;-------------------------------------------------
+;캐릭터 등록 번호를 받아, 종족을 판정. 변수 중복이 무섭기 때문에 결과의 취득은 RESULT:X(X는 1이나 2)를 직접 참조
+@FIND_RACE , ARG
+;유전자를 검색해, 제일 강하게 유전하고 있는 것과 두번째에 강하게 유전하고 있는 것을 각각 LOCAL:1으로 LOCAL:2에 격납한다
+;유전 강도35% 미만의 유전자는 무시된다. 해당하는 것이 없으면 0이 격납된다
+;반환값과 종족의 대응에 대해서는@RACENAME를 참조
+LOCAL:1 = 0
+LOCAL:2 = 0
+VARSET RESULT
+FOR LOCAL , 3200 , 3400
+	IF CFLAG:ARG:LOCAL >= 35
+		IF CFLAG:ARG:LOCAL > CFLAG:ARG:(LOCAL:1) || LOCAL:1 == 0
+			LOCAL:2 = LOCAL:1
+			LOCAL:1 = LOCAL
+		ELSEIF CFLAG:ARG:LOCAL > CFLAG:ARG:(LOCAL:2) || LOCAL:2 == 0
+			LOCAL:2 = LOCAL
+		ENDIF
+	ENDIF
+NEXT
+RESULT:1 = LOCAL:1
+RESULT:2 = LOCAL:2
+RETURN 1
+
+;-------------------------------------------------
+;종족 일람
+;-------------------------------------------------
+@RACENAME(ARG)
+#FUNCTIONS
+RETURNF @"\@(ARG >= 3200 && ARG < 3400) ?  %STR:(ARG - 3100)% # 혼혈\@"
+
+;=============================================================================
+;정보 표시 보조 처리
+;=============================================================================
+;-------------------------------------------------
+;캐릭터 일람표시시에[]안의 숫자를 정렬시키는 처리
+;-------------------------------------------------
+@ARRANGE_CHARALIST, ARG
+IF STRLENS(CALLNAME:ARG) <= 18
+	PRINTFORM [\@(FLAG:90 >= 3 && FLAG:4 < 50) ?  {ARG, 3} # {ARG, 2}\@]%CALLNAME:ARG, 18, LEFT%
+ELSE
+	LOCALS = \@(STRLENS(SUBSTRING(CALLNAME:ARG, 0,16)) == 16) ?  %SUBSTRING(CALLNAME:ARG, 0,16)%.. # %SUBSTRING(CALLNAME:ARG, 0,15)%...\@
+	PRINTFORM [\@(FLAG:90 >= 3 && FLAG:4 < 50) ?  {ARG, 3} # {ARG, 2}\@]%LOCALS%
+ENDIF
+
+;-------------------------------------------------
+;금액 증가 표시 처리
+;-------------------------------------------------
+;증가하는 금액을 취급하는 변수로서 MONEY:1을 사용
+@SHOW_MONEY_INCREACE
+LOCALS:1 = 
+LOCALS:2 = 
+SIF MONEY:1 >= 10000
+	LOCALS:1 = {(MONEY:1)/10000}만
+SIF (MONEY:1)%10000 > 0
+	LOCALS:2 = {(MONEY:1)%10000}
+LOCALS = % LOCALS:1 + LOCALS:2 %
+PRINTFORML 소지금 %LOCALS%원 증가
+MONEY += MONEY:1
+
+;-------------------------------------------------
+;캐릭터 일람표시시에 체력·기력을 표시시키는 처리
+;토리코모드 대응용 개조. 
+;130821 BY V.K
+;-------------------------------------------------
+@ARRANGE_CHARALIFE, ARG
+
+;토리코모드 플래그 체크.
+IF FLAG:5000 & 1
+	;토리코모드
+	CALL LIFE_BAR_TORIKOMODE , ARG
+	CALL VITALITY_BAR_TORIKOMODE, ARG
+	;만약 식사 시스템 사용중이라면
+	IF FLAG:5000 & 32
+		CALL HUNGER_BAR_TORIKOMODE, ARG
+		CALL NUTRITION_BAR_TORIKOMODE,ARG
+		CALL FEEDMENU_BAR_TORIKOMODE, ARG
+		PRINTL
+		CALL STARVE_BAR_TORIKOMODE, ARG
+	ELSE
+	ENDIF
+
+	;디버그
+	;PRINTL
+	;PRINTFORML CFLAG:ARG:4000 {CFLAG:ARG:4000}
+	;PRINTFORML CFLAG:ARG:4001 {CFLAG:ARG:4001}
+	;PRINTFORML CFLAG:ARG:4002 {CFLAG:ARG:4002}
+	;PRINTFORML CFLAG:ARG:4003 {CFLAG:ARG:4003}
+	;PRINTFORML CFLAG:ARG:4004 {CFLAG:ARG:4004}
+	;PRINTL
+
+ELSE
+;일반모드
+PRINTFORM 체력
+;60%까지는 초록
+IF BASE:ARG:0 > (MAXBASE:ARG:0 * 60) / 100
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+;30%까지는 노랑
+ELSEIF BASE:ARG:0 > (MAXBASE:ARG:0 * 30) / 100
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+;그 밑으론 빨강
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+ENDIF
+PRINTFORM ({BASE:ARG:0, 4}/{MAXBASE:ARG:0, 4}) 
+RESETCOLOR
+
+PRINTFORM 기력
+;60%까지는 초록
+IF BASE:ARG:1 > (MAXBASE:ARG:1 * 60) / 100
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 4
+;30%까지는 노랑
+ELSEIF BASE:ARG:1 > (MAXBASE:ARG:1 * 30) / 100
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+;그 밑으론 빨강
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "RED", 4
+ENDIF
+PRINTFORM ({BASE:ARG:1, 4}/{MAXBASE:ARG:1, 4})
+RESETCOLOR
+
+;만약 식사 시스템 사용중이라면
+	IF FLAG:5000 & 32
+		CALL HUNGER_BAR_TORIKOMODE, ARG
+		CALL NUTRITION_BAR_TORIKOMODE,ARG
+		CALL FEEDMENU_BAR_TORIKOMODE, ARG
+		PRINTL
+		CALL STARVE_BAR_TORIKOMODE, ARG
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;캐릭터 일람표시처리
+;-------------------------------------------------
+@CHARADATA_LIST, ARG, ARG:2
+LOCAL:3 = 0
+REPEAT 20
+	LOCAL = GET_LIST(COUNT + ARG * 20)
+	SIF LOCAL == 0
+		CONTINUE
+
+	;주인공과 조수 대상과 조교중 캐릭터는 배제
+	SIF LOCAL == 0
+		CONTINUE
+	SIF CFLAG:LOCAL:4 == 1
+		CONTINUE
+	IF LOCAL == TARGET
+		PRINT ☆
+	ELSEIF LOCAL == ASSI
+		PRINT ★
+	ELSEIF CFLAG:LOCAL:4 == 4
+		PRINT ◆
+		LOCAL:3 |= 1
+	ELSEIF CFLAG:LOCAL:4 == 8
+		PRINT ▲
+		LOCAL:3 |= 2
+	ELSEIF CFLAG:LOCAL:4 == 16
+		PRINT ■
+		LOCAL:3 |= 4
+	ELSEIF CFLAG:LOCAL:4 & 1024
+		PRINT ▼
+		LOCAL:3 |= 16
+	ELSEIF CFLAG:LOCAL:4 == 2048 || CFLAG:LOCAL:4 == 4096
+		PRINT ▽
+		LOCAL:3 |= 8
+	ELSEIF ISASSI:LOCAL == 1
+		PRINT ●
+	ELSEIF CFLAG:LOCAL:1 == 2
+		PRINT ○
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL
+	CALL ARRANGE_CHARALIFE, LOCAL
+	CALL ARRANGE_CHARATALENT, LOCAL
+	PRINTL 
+	;한 마디 대사 호출
+	SIF FLAG:1200 & 4
+		CALL IMPRESSION_MAIN, LOCAL
+REND
+IF ARG:2 >= 1
+	PRINT 　　　☆:조교중 ★:조수 ○:조수가능 ●:전 조수
+	SIF FLAG:15 & 4096 && FLAG:75 & 32768 && LOCAL:3 & 1
+		PRINT  ◆:촉수 유폐중
+	SIF FLAG:73 & 1 && LOCAL:3 & 4
+		PRINT  ■:지하실 수감중
+;	SIF FLAG:15 & 4096 && LOCAL:3 & 2
+;		PRINT  ▲:우리 유폐중
+	SIF FLAG:79 & 1 && LOCAL:3 & 8
+		PRINT  ▽:허브 작업중
+	PRINTL 　(을)를 나타내고 있습니다
+ENDIF
+
+;-------------------------------------------------
+;캐릭터의 소질 간이 표시의 보조 처리
+;-------------------------------------------------
+@ARRANGE_CHARATALENT, ARG
+IF TALENT:ARG:120
+	PRINT 남자.
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 1
+	IF TALENT:ARG:0 == 1
+		PRINT 처녀.
+	ELSEIF TALENT:ARG:0
+		PRINT 재생처녀.
+	ENDIF
+	RESETCOLOR
+	IF TALENT:ARG:121
+		PRINT 후타나리.
+	ELSEIF TALENT:ARG:1
+		PRINT 후타불알.
+	ENDIF
+ENDIF
+IF TALENT:ARG:153
+	PRINT 상애.
+ELSEIF TALENT:ARG:152
+	PRINT 친애.
+ELSEIF TALENT:ARG:150
+	PRINT 연모.
+ENDIF
+IF TALENT:ARG:163
+	PRINT 흠집.
+ELSEIF TALENT:ARG:162
+	PRINT 예속.
+ELSEIF TALENT:ARG:161
+	PRINT 낙인.
+ELSEIF TALENT:ARG:160
+	PRINT 복종.
+ENDIF
+SIF TALENT:ARG:164
+	PRINT 사역마.
+IF TALENT:ARG:169
+	PRINT 괴조인격.
+ELSEIF TALENT:ARG:168
+	PRINT 괴뢰.
+ELSEIF TALENT:ARG:167
+	PRINT 정신붕괴.
+ELSEIF TALENT:ARG:158
+	PRINT 광기.
+ELSEIF TALENT:ARG:159
+	PRINT 유아퇴행.
+ENDIF
+SIF TALENT:ARG:170
+	PRINT 음란.
+IF TALENT:ARG:180
+	PRINT 음마.
+ELSEIF TALENT:ARG:171 && TALENT:ARG:172 && TALENT:ARG:173 && TALENT:ARG:174 && TALENT:ARG:175 && TALENT:ARG:176 && TALENT:ARG:177 && TALENT:ARG:178
+	PRINT 전신음란.
+ELSEIF TALENT:ARG:171
+	PRINT 음핵.
+ELSEIF TALENT:ARG:172
+	PRINT 음호.
+ELSEIF TALENT:ARG:173
+	PRINT 음고.
+ELSEIF TALENT:ARG:174
+	PRINT 음유.
+ELSEIF TALENT:ARG:175
+	PRINT 요도광.
+ELSEIF TALENT:ARG:176
+	PRINT 키스마.
+ELSEIF TALENT:ARG:177
+	PRINT 초S.
+ELSEIF TALENT:ARG:178
+	PRINT 초M.
+ENDIF
+SIF TALENT:ARG:179
+	PRINT 즉각함락.
+IF TALENT:ARG:113
+	PRINT 폭유.
+ELSEIF TALENT:ARG:112
+	PRINT 거유.
+ELSEIF TALENT:ARG:111
+	PRINT 빈유.
+ELSEIF TALENT:ARG:110
+	PRINT 절벽.
+ELSE
+	PRINT 보통.
+ENDIF
+SIF TALENT:ARG:134
+	PRINT 모유.
+IF TALENT:ARG:140
+	PRINT 임신.
+ELSEIF TALENT:ARG:143
+	PRINT 포란.
+ELSEIF TALENT:ARG:145
+	PRINT 회란.
+ENDIF
+SIF TALENT:ARG:141
+	PRINT 육아중.
+SIF TALENT:ARG:142
+	PRINT 모성.
+SIF TALENT:ARG:146
+	PRINT 기생.
+SIF CFLAG:ARG:41 > 0
+	PRINT 종.
+SIF CFLAG:ARG:0 > 0
+	PRINT EX.
+SIF TALENT:ARG:260 && FLAG:13 & 1024
+	PRINT 창부.
+SIF CFLAG:ARG:1501 == 1 && FLAG:13 & 1024
+	PRINT 소프트매춘.
+SIF CFLAG:ARG:1501 == 2 && FLAG:13 & 1024
+	PRINT BC매춘.
+SIF CFLAG:ARG:1501 == 3 && FLAG:13 & 1024
+	PRINT A매춘.
+SIF CFLAG:ARG:1501 == 4 && FLAG:13 & 1024
+	PRINT V매춘.
+SIF CFLAG:ARG:1501 == 5 && FLAG:13 & 1024
+	PRINT 집단시간.
+SIF CFLAG:ARG:1501 == 6 && FLAG:13 & 1024
+	PRINT 난교.
+SIF CFLAG:ARG:1501 == 7 && FLAG:13 & 1024
+	PRINT 세트매춘.
+SIF CFLAG:ARG:1501 == 8 && FLAG:13 & 1024
+	PRINT 처녀경매.
+SIF CFLAG:ARG:1501 == 9 && FLAG:13 & 1024
+	PRINT 입식파티.
+SIF CFLAG:ARG:1501 == 10 && FLAG:13 & 1024
+	PRINT S서당.
+SIF CFLAG:ARG:1501 == 11 && FLAG:13 & 1024
+	PRINT S병원.
+SIF CFLAG:ARG:1501 == 12 && FLAG:13 & 1024
+	PRINT S풀장.
+SIF CFLAG:ARG:1501 == 13 && FLAG:13 & 1024
+	PRINT 난교파티.
+SIF CFLAG:ARG:1501 == 14 && FLAG:13 & 1024
+	PRINT VIP봉사.
+SIF CFLAG:ARG:1501 == 15 && FLAG:13 & 1024
+	PRINT VIP초봉사.
+SIF CFLAG:ARG:1501 == 16 && FLAG:13 & 1024
+	PRINT VIP정액목욕.
+SIF CFLAG:ARG:1501 == 17 && FLAG:13 & 1024
+	PRINT SP매춘.
+IF FLAG:13 & 1024 && EXP:ARG:76 && FLAG:3000 & 2048
+	T:99 = ARG
+	CALL SPRING_DOWNCHECK
+ENDIF
+SIF FLAG:13 & 1024 && EXP:ARG:76 && FLAG:3000 & 4096 && TALENT:ARG:150 == 0
+	PRINTFORM 독:{CFLAG:ARG:1502}.
+;-------------------------------------------------
+;캐릭터명의 표시 보조 처리
+;-------------------------------------------------
+@SET_CALLNAME
+REPEAT 500
+	;아이는 제외하다
+	SIF COUNT == 148 || COUNT == 149
+		CONTINUE
+
+	SIF ITEMPRICE:(100 + COUNT) > 0
+		STR:(COUNT + 11000) = %CSVNAME(COUNT, 0)%
+REND
+
+;-------------------------------------------------
+;단락선표시 보조 처리
+;-------------------------------------------------
+@NEW_DRAWLINE
+IF FLAG:12 & 2
+	CUSTOMDRAWLINE ·
+ELSE
+	DRAWLINE
+ENDIF

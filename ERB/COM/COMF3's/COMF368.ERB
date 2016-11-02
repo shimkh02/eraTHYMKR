@@ -1,0 +1,309 @@
+﻿;=============================================================================
+;찐득이 목욕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE368
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:368 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 256) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 10
+	RETURN 1
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;入浴1回1500圓也
+SIF MONEY < 1500
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 10
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;피리 피리 근질근질……과 신체가 매우 약간 가려워집니다. 추가 소스 「가려움」(21번)을 사용.
+;길게 잠겨 있는 만큼 기력 체력의 소비가 커진다.
+;여체밥은 조교 종료후, 신사들이 맛있고 승부에서 이기는 일해 t(ry
+@COM368
+PRINTL 찐득이 목욕
+TSTR:0 = 찐득이 목욕
+CALL TRAIN_MESSAGE_COM368
+
+IF TEQUIP:55 == 10
+	DOWNBASE:0 += 10
+	DOWNBASE:1 += 50
+	TEQUIP:55 = 0
+	TFLAG:155 = 0
+	RETURN 1
+ENDIF
+;잠글 때는 아직 가렵게 안 된다
+DOWNBASE:0 += 0
+DOWNBASE:1 += 20
+
+SOURCE:32 = 500
+
+TFLAG:155 = 0
+TEQUIP:55 = 10
+MONEY -= 1500
+
+RETURN 1
+
+;--------------------------------------------------
+;트로로 목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM368
+PRINTL <끈적이 목욕탕 입욕 중>
+
+TFLAG:155 += 1
+DOWNBASE:0 += 5 * TFLAG:155
+DOWNBASE:1 += 10 * TFLAG:155
+
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = 0
+LOCAL:4 = 0
+
+LOCAL = 0
+;오나호르를 장착하고 있다
+SIF TEQUIP:30 == 2
+	LOCAL |= 1
+;바이브래이터등의 기구를 삽입하고 있다(쿠스코 제외하다)
+SIF TEQUIP:20
+	LOCAL |= 2
+;애널 바이브래이터등의 기구를 삽입하고 있다
+SIF TEQUIP:25 || TEQUIP:26
+	LOCAL |= 4
+;착유기를 장착하고 있다
+SIF TEQUIP:35 == 2
+	LOCAL |= 8
+
+;마조끼
+IF ABL:21 == 0
+	LOCAL:5 = 30
+	LOCAL:6 = 5
+	LOCAL:7 = 10
+ELSEIF ABL:21 == 1
+	LOCAL:5 = 60
+	LOCAL:6 = 100
+	LOCAL:7 = 50
+ELSEIF ABL:21 == 2
+	LOCAL:5 = 120
+	LOCAL:6 = 20
+	LOCAL:7 = 150
+ELSEIF ABL:21 == 3
+	LOCAL:5 = 240
+	LOCAL:6 = 30
+	LOCAL:7 = 500
+ELSEIF ABL:21 == 4
+	LOCAL:5 = 480
+	LOCAL:6 = 60
+	LOCAL:7 = 1000
+ELSE
+	LOCAL:5 = 960
+	LOCAL:6 = 120
+	LOCAL:7 = 1800
+ENDIF
+
+;자위 중독
+IF ABL:30 == 0
+	LOCAL:6 += 5
+	LOCAL:7 += 30
+ELSEIF ABL:30 == 1
+	LOCAL:6 += 10
+	LOCAL:7 += 100
+ELSEIF ABL:30 == 2
+	LOCAL:6 += 25
+	LOCAL:7 += 300
+ELSEIF ABL:30 == 3
+	LOCAL:6 += 50
+	LOCAL:7 += 600
+ELSEIF ABL:30 == 4
+	LOCAL:6 += 100
+	LOCAL:7 += 1000
+ELSE
+	LOCAL:6 += 200
+	LOCAL:7 += 1500
+ENDIF
+
+;C감각
+IF (LOCAL & 1) == 0
+	IF ABL:0 == 0
+		LOCAL:3 = 20
+		LOCAL:6 += 10
+	ELSEIF ABL:0 == 1
+		LOCAL:3 = 80
+		LOCAL:6 += 40
+	ELSEIF ABL:0 == 2
+		LOCAL:3 = 160
+		LOCAL:6 += 80
+	ELSEIF ABL:0 == 3
+		LOCAL:3 = 400
+		LOCAL:6 += 130
+	ELSEIF ABL:0 == 4
+		LOCAL:3 = 750
+		LOCAL:6 += 240
+	ELSE
+		LOCAL:3 = 1200
+		LOCAL:6 += 750
+	ENDIF
+	DOWNBASE:0 += 1
+	DOWNBASE:1 += 5
+ENDIF
+IF (LOCAL & 2) == 0 && TALENT:0 == 0
+	;V감각
+	IF ABL:1 == 0
+		LOCAL:4 = 10
+		LOCAL:6 += 15
+	ELSEIF ABL:1 == 1
+		LOCAL:4 = 40
+		LOCAL:6 += 25
+	ELSEIF ABL:1 == 2
+		LOCAL:4 = 120
+		LOCAL:6 += 40
+	ELSEIF ABL:1 == 3
+		LOCAL:4 = 240
+		LOCAL:6 += 70
+	ELSEIF ABL:1 == 4
+		LOCAL:4 = 420
+		LOCAL:6 += 130
+	ELSE
+		LOCAL:4 = 900
+		LOCAL:6 += 200
+	ENDIF
+	DOWNBASE:0 += 3
+	DOWNBASE:1 += 8
+ENDIF
+IF (LOCAL & 4) == 0
+	;A감각
+	IF ABL:2 == 0
+		LOCAL:1 = 5
+		LOCAL:6 += 20
+	ELSEIF ABL:2 == 1
+		LOCAL:1 = 15
+		LOCAL:6 += 35
+	ELSEIF ABL:2 == 2
+		LOCAL:1 = 60
+		LOCAL:6 += 40
+	ELSEIF ABL:2 == 3
+		LOCAL:1 = 150
+		LOCAL:6 += 65
+	ELSEIF ABL:2 == 4
+		LOCAL:1 = 220
+		LOCAL:6 += 100
+	ELSE
+		LOCAL:1 = 300
+		LOCAL:6 += 150
+	ENDIF
+	DOWNBASE:0 += 2
+	DOWNBASE:1 += 10
+ENDIF
+IF (LOCAL & 8) == 0
+	;B감각
+	IF ABL:3 == 0
+		LOCAL:2 = 10
+		LOCAL:6 += 25
+	ELSEIF ABL:3 == 1
+		LOCAL:2 = 50
+		LOCAL:6 += 50
+	ELSEIF ABL:3 == 2
+		LOCAL:2 = 180
+		LOCAL:6 += 80
+	ELSEIF ABL:3 == 3
+		LOCAL:2 = 420
+		LOCAL:6 += 130
+	ELSEIF ABL:3 == 4
+		LOCAL:2 = 800
+		LOCAL:6 += 250
+	ELSE
+		LOCAL:2 = 1400
+		LOCAL:6 += 600
+	ENDIF
+	DOWNBASE:0 += 1
+	DOWNBASE:1 += 5
+ENDIF
+
+;쿠스코
+IF TEQUIP:21
+	TIMES LOCAL:4 , 1.80
+	TIMES LOCAL:6 , 1.70
+	TIMES LOCAL:7 , 2.50
+ENDIF
+;긴박중
+IF TEQUIP:40
+	TIMES LOCAL:6 , 3.70
+	TIMES LOCAL:7 , 7.50
+ENDIF
+
+SOURCE:0 += LOCAL:3
+SOURCE:1 += LOCAL:4
+SOURCE:2 += LOCAL:1
+SOURCE:3 += LOCAL:2
+SOURCE:12 += LOCAL:5
+SOURCE:21 += LOCAL:6
+SOURCE:32 += LOCAL:7
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM368
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 10
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 끈적이 목욕탕에서 돌아왔다.
+ELSE
+	PRINTFORMW 참마를 충분하게 사용한 끈적이 목욕탕에 %조사선택(CALLNAME:TARGET, "를")% 잠기게 했다.
+ENDIF

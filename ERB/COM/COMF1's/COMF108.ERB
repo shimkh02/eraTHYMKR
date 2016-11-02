@@ -1,0 +1,405 @@
+﻿;=============================================================================
+;베이비 플레이
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE108
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:108 > 0
+	RETURN 0
+;수치 플레이계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:58
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF TEQUIP:58 == 0 && ITEM:82 == 0 && NOITEM == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;Ｕ계 장착구 사용 중에는 불가
+SIF TEQUIP:32
+	RETURN 0
+;긴박 중이면 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;幼児or幼児退行なら能力に関係なく可能
+SIF TALENT:130 || TALENT:159
+	RETURN 1
+;순종이 3이상 필요
+SIF ABL:10 < 3
+	RETURN 0
+;反抗的やプライド高いには순종이 4이상ないと使用不可(조교자가 새드またはドＳまたは새드끼Lv3이상ならＯＫ)
+IF TALENT:11 || TALENT:16
+	SIF ABL:10 < 4 && TALENT:PLAYER:81 == 0 && TALENT:PLAYER:177 == 0 && ABL:PLAYER:20 < 3
+		RETURN 0
+ENDIF
+;인어는 안됨
+SIF TALENT:229 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;옴트팟치의 커맨드를 큰폭으로 새로 고쳐
+;유아 플레이는 표기도 좋은 것 같은 생각이 들어 왔다(※명칭을 베이비 플레이로 변경)
+@COM108
+PRINTL 베이비 플레이
+TSTR:0 = 신생아 플레이
+CALL TRAIN_MESSAGE_COM108
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 100
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 = 6000
+	SOURCE:31 = 2000
+ELSEIF ABL:14 == 1
+	SOURCE:12 = 5000
+	SOURCE:31 = 1000
+ELSEIF ABL:14 == 2
+	SOURCE:12 = 4000
+	SOURCE:31 = 500
+ELSEIF ABL:14 == 3
+	SOURCE:12 = 3000
+	SOURCE:31 = 100
+ELSEIF ABL:14 == 4
+	SOURCE:12 = 2000
+	SOURCE:31 = 50
+ELSE
+	SOURCE:12 = 1000
+	SOURCE:31 = 10
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:12 , 0.80
+	SOURCE:18 = 100
+	SOURCE:19 = 100
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:12 , 1.00
+	SOURCE:18 = 200
+	SOURCE:19 = 300
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:12 , 1.20
+	SOURCE:18 = 400
+	SOURCE:19 = 700
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:12 , 1.40
+	SOURCE:18 = 700
+	SOURCE:19 = 1200
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:12 , 1.50
+	SOURCE:18 = 1100
+	SOURCE:19 = 1800
+ELSE
+	TIMES SOURCE:12 , 1.70
+	SOURCE:18 = 1500
+	SOURCE:19 = 2500
+ENDIF
+
+;야외 플레이중
+IF TEQUIP:52
+	TIMES SOURCE:31 , 2.50
+;정파리의 거울
+ELSEIF TEQUIP:56 == 2
+	TIMES SOURCE:31 , 2.00
+;수치 플레이중(흡혈귀는 제외하다)
+ELSEIF TEQUIP:56 && TALENT:205 == 0
+	TIMES SOURCE:31 , 1.50
+ENDIF
+
+LOCAL:1 = 50
+;EXP:애정 경험을 본다
+IF EXP:21 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:21 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:21 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:21 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:21 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;반항적
+SIF TALENT:11
+	TIMES LOCAL:1 , 2.00
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL:1 , 2.00
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1 , 0.80
+;억압
+SIF TALENT:32
+	TIMES LOCAL:1 , 3.00
+;저항
+SIF TALENT:34
+	TIMES LOCAL:1 , 3.00
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:1 , 3.50
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;유아, 유아 퇴행
+SIF TALENT:130 || TALENT:159
+	TIMES LOCAL:1 , 0.50
+
+SOURCE:25 += LOCAL:1 * 3
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.20
+
+SOURCE:31 += LOCAL:1 * 5
+SOURCE:32 += LOCAL:1 * 2
+
+;옴트의 착탈
+IF TEQUIP:58
+	TEQUIP:58 = 0
+ELSE
+	TEQUIP:58 = 1
+	;트나의 옴트 1개 소비
+	IF NOITEM == 0
+		ITEM:82 -= 1
+		SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:82
+			CALL FILL_PLURAL_ITEM, 82
+	ENDIF
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;옴트 장착중
+;-------------------------------------------------
+@EQUIP_COM108
+PRINTL <기저귀 장착 중>
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 70
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	LOCAL:1 = 3000
+	LOCAL:4 = 1000
+ELSEIF ABL:14 == 1
+	LOCAL:1 = 2000
+	LOCAL:4 = 500
+ELSEIF ABL:14 == 2
+	LOCAL:1 = 1500
+	LOCAL:4 = 250
+ELSEIF ABL:14 == 3
+	LOCAL:1 = 1000
+	LOCAL:4 = 100
+ELSEIF ABL:14 == 4
+	LOCAL:1 = 50
+	LOCAL:4 = 10
+ELSE
+	LOCAL:1 = 100
+	LOCAL:4 = 5
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+	LOCAL:2 = 50
+	LOCAL:3 = 50
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+	LOCAL:2 = 100
+	LOCAL:3 = 150
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.20
+	LOCAL:2 = 200
+	LOCAL:3 = 350
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.40
+	LOCAL:2 = 350
+	LOCAL:3 = 600
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.50
+	LOCAL:2 = 550
+	LOCAL:3 = 900
+ELSE
+	TIMES LOCAL:1 , 1.70
+	LOCAL:2 = 750
+	LOCAL:3 = 1250
+ENDIF
+
+;야외 플레이중
+IF TEQUIP:52
+	TIMES LOCAL:4 , 2.50
+;정파리의 거울
+ELSEIF TEQUIP:56 == 2
+	TIMES LOCAL:4 , 2.00
+;수치 플레이중(흡혈귀는 제외하다)
+ELSEIF TEQUIP:56 && TALENT:205 == 0
+	TIMES LOCAL:4 , 1.50
+ENDIF
+
+LOCAL = 25
+;EXP:애정 경험을 본다
+IF EXP:21 < EXPLV:1
+	TIMES LOCAL , 3.00
+ELSEIF EXP:21 < EXPLV:2
+	TIMES LOCAL , 2.50
+ELSEIF EXP:21 < EXPLV:3
+	TIMES LOCAL , 2.00
+ELSEIF EXP:21 < EXPLV:4
+	TIMES LOCAL , 1.00
+ELSEIF EXP:21 < EXPLV:5
+	TIMES LOCAL , 0.80
+ELSE
+	TIMES LOCAL , 0.60
+ENDIF
+
+;반항적
+SIF TALENT:11
+	TIMES LOCAL , 2.00
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL , 2.00
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL , 0.80
+ENDIF
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.60
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL , 0.80
+;억압
+SIF TALENT:32
+	TIMES LOCAL , 3.00
+;저항
+SIF TALENT:34
+	TIMES LOCAL , 3.00
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL , 3.50
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL , 0.50
+ENDIF
+;유아
+SIF TALENT:130
+	TIMES LOCAL , 0.50
+
+SOURCE:25 += LOCAL * 3
+
+;겁쟁이, 유아, 유아 퇴행
+SIF TALENT:10 || TALENT:130 || TALENT:159
+	TIMES LOCAL , 1.20
+
+SOURCE:32 += LOCAL * 2
+LOCAL:4 += LOCAL * 5
+
+SOURCE:12 += LOCAL:1
+SOURCE:18 += LOCAL:2
+SOURCE:19 += LOCAL:3
+SOURCE:31 += LOCAL:4
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM108
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:58
+	PRINTFORML %CALLNAME:TARGET%에게 착용하고 있던 기저귀를 떼어냈다.
+	PRINTL
+	PRINT 땀
+	IF PALAM:10 >= PALAMLV:2
+		PRINT 과 
+		SIF PALAM:10 >= PALAMLV:4
+			PRINT 대량의 
+		PRINT 애액
+	ENDIF
+	PRINT 으로 젖어버린 기저귀를 펼치니, 
+	IF PALAM:10 >= PALAMLV:4
+		PRINTW 음란한 향이 가득히 퍼져나간다.
+	ELSE
+		PRINTFORMW 희미하게 그 냄새가 %CALLNAME:MASTER%의 코를 찔렀다.
+	ENDIF
+ELSE
+	PRINTFORM %CALLNAME:TARGET%에게 
+	IF TALENT:127
+		PRINT 인형용 
+	ELSEIF TALENT:128
+		PRINT 어린이용 
+	ELSE
+		PRINT 어른용 
+	ENDIF
+	PRINTW 기저귀를 차게 했다. 
+ENDIF

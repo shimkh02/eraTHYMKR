@@ -1,0 +1,121 @@
+﻿;=============================================================================
+;나이프
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE244
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:244 > 0
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;まだ一度もナイフで切られたことが無い場合, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && (CFLAG:22 & 8) == 0
+	RETURN 0
+;ナイフを購入(開発?)していないとダメ
+SIF (FLAG:73 & 8) == 0
+	RETURN 0
+;순종5미만의 ASSI일 경우, 実行できない(새드 · 狂気 · 망신 · 복종のどれかがあればＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:10 < 5 && TALENT:ASSI:81 == 0 && TALENT:ASSI:158 == 0 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+;主人調教の場合, 새드か狂気을 갖고 있지 않으면 불가
+ELSE
+	SIF TALENT:MASTER:81 == 0 && TALENT:MASTER:158 == 0
+		RETURN 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;바늘보다 기력 체력을 가지고 가는·고통이 크다
+;(TODO 수족 부자유 판정의 추가)
+;지문은 현재로서는 없음
+;구상：앞치마나 학교수영복 장착중은 망해 쓸모가 있지 않게 되도록(듯이) 한다
+;(메리트는 수치 대폭 업과 시츄 정도? )
+@COM244
+PRINTL 나이프
+TSTR:0 = 나이프
+CALL TRAIN_MESSAGE_COM244
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 170
+
+SOURCE:31 = 3000
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 5000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 5300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 5600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 6000
+ELSE
+	SOURCE:20 = 6400
+ENDIF
+
+;사라시 장착하고 있는 경우 고통 소스 경감도 사라시 파손
+IF TEQUIP:36
+	SOURCE:20 -= 200
+	TEQUIP:36 = 0
+	ITEM:24 = 0
+ENDIF
+;의상을 장착하고 있는 경우 고통 소스 경감도 앞치마와 학교수영복 파손
+IF TEQUIP:59
+	SOURCE:20 -= 100
+	SIF TEQUIP:59 == 1
+		ITEM:44 = 0
+	SIF TEQUIP:59 == 2
+		ITEM:45 = 0
+	TEQUIP:59 = 0
+ENDIF
+
+;나이프로 잘리는 것은 이상 경험이므로 점을 넣는다
+IF (CFLAG:22 & 8) == 0
+	TCVAR:50 += 1
+	CFLAG:22 |= 8
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;커맨드 속성：도구(조교자)
+SIF TEQUIP:90 == 0
+	TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM244
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TEQUIP:59
+	PRINTFORM %조사선택(CALLNAME:TARGET, "가")% 입고 있던 
+	IF TEQUIP:59 == 1
+		PRINTFORM 앞치마\@ TEQUIP:36 ? 와 # 를 \@ 
+	ELSEIF TEQUIP:59 == 2
+		PRINTFORM 학교 수영복\@ TEQUIP:36 ? 과 # 을 \@ 
+	ELSE
+		PRINTFORM 의상\@ TEQUIP:36 ? 과 # 을 \@ 
+	ENDIF
+	SIF TEQUIP:36
+		PRINT 가슴에 감겨 있는 사라시를 
+ELSEIF TEQUIP:36
+	PRINTFORM %CALLNAME:TARGET%의 가슴에 감겨있는 사라시를 
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 부드러운 살갗을 
+ENDIF
+PRINTW 나이프로 갈기갈기 잘라 찢었다.

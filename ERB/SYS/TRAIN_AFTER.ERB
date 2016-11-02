@@ -1,0 +1,426 @@
+﻿;=============================================================================
+;조교 종료시의 처리
+;=============================================================================
+;--------------------------------------------------
+;조교의 뒷처리
+;--------------------------------------------------
+@EVENTEND
+#LATER
+;#ONLY
+;조교 종료 대사의 호출
+;CALL MESSAGE_TRAIN_END_MAIN
+
+PRINTL 조교를 종료했습니다.
+
+;조교 후 모드로 한다
+TFLAG:999 = 2
+
+;미약 목욕의 뒷처리
+SIF TEQUIP:55 == 5
+	CALL POTION_BATH
+
+;산란 플레이의 뒷처리
+IF TEQUIP:93 && TEQUIP:94
+	CALL DOUBLE_EGGPLAY_OUT
+ELSEIF TEQUIP:93
+	CALL EGGPLAY_OUT
+ELSEIF TEQUIP:94
+	CALL KANTYO_EGGPLAY_OUT
+ENDIF
+
+;애액 채취 이벤트
+IF FLAG:12 & 8
+	SIF TEQUIP:10 == 0 && PALAM:10 >= 30000 && PALAM:13 >= 50000 && (CFLAG:10 & 4) == 0 && (ITEM:81 > 0 || NOITEM) && TALENT:120 == 0
+		CALL SWEET_POTATO_LW
+ENDIF
+
+;조교 후 행위의 체크
+CALL SELF_CHECK_MAIN
+
+;조교 후 이벤트의 체크
+CALL EVENT_CHECK_AFTER
+PRINTL 
+
+;誰かが巨大化・縮小化していた場合
+SIF TEQUIP:75 || TEQUIP:76
+	CALL RESIZE
+
+;搾乳した母乳の売却処理
+SIF TFLAG:126
+	CALL SELL_MILK
+;採尿した聖水の売却処理
+SIF TFLAG:127
+	CALL SELL_PEE
+;採集で得た愛液の売却処理
+SIF TFLAG:129
+	CALL SELL_LOVERWATER
+;産卵で得た卵の売却処理
+SIF TFLAG:128
+	CALL SELL_EGG
+
+;調教時に録画したビデオを売却(録画してなければスキップ)
+SIF TFLAG:140 & 128 && TFLAG:121 > 0
+	CALL SELL_VIDEO
+
+;スイートポテトとワインとアスパラで素敵なディナーを作る秋姉妹
+SIF TFLAG:163 > 0
+	CALL SELL_DINNER_POTATO
+SIF TFLAG:164 > 0
+	CALL SELL_DINNER_WINE
+SIF TFLAG:165 > 0
+	CALL SELL_DINNER_ASPARAGUS
+
+;気力・体力の上昇チェック
+SIF FLAG:14 & 2
+	CALL EVENT_GROWTH
+
+;전시품 입수 이벤트의 처리--------------------------
+;入手した写真を売るかどうか選択
+SIF TFLAG:124 > 0
+	CALL GET_PICTURE
+
+;入手した陰毛を売るかどうか選択
+SIF TFLAG:996 & 64
+	CALL GET_PUBLIC_HAIR
+
+;入手したビデオを展示室に
+SIF TFLAG:996 & 32
+	CALL KEEP_VIDEO
+
+;入手した尻子玉を展示室に
+SIF TFLAG:996 & 1
+	CALL GET_SHIRIKODAMA
+
+;入手した黄金水を展示室に
+SIF TFLAG:996 & 2
+	CALL GET_GOLD_WATER
+
+;入手した愛液を展示室に
+SIF TFLAG:996 & 4
+	CALL GET_LOVE_WATER
+
+;入手した血液を展示室に
+SIF TFLAG:996 & 8
+	CALL GET_RED_BLOOD
+
+;入手した破瓜血を展示室に
+SIF TFLAG:996 & 16
+	CALL GET_VIRGIN_BLOOD
+
+;入手した母乳を展示室に
+SIF TFLAG:125
+	CALL GET_MILK
+;--------------------------------------------------
+;一定時間調教を行っていれば日常の珠取得判定をリセット
+;調教時間の経過しないEASYおよびデバッグモード時は無条件でリセット
+SIF (TFLAG:107 > 20 && FLAG:3 > 2) || (TFLAG:107 > 10 && FLAG:3 == 2) || FLAG:3 == 1 || TALENT:998
+	FLAG:997 = 0
+;[中毒扇動]判定用(一定時間調教を行っており、欲情が10000以上のときオンになる)
+SIF ASSI >= 0 && TALENT:ASSI:86 && TFLAG:107 > 20 && PALAM:13 > 9999
+	TFLAG:995 = 1
+
+;마이너스 파라미터에 따른 스트레스 가산
+CALL STRESS_CHECK
+
+;무슨 구슬을 얻었는가
+CALL JUEL_CHECK
+
+;부정의 구슬 상쇄 체크
+SIF JUEL:100 > 0
+	CALL DENIAL_CHECK
+
+;절정 회수 표시
+SIF (EX:0+EX:1+EX:2+EX:3+EX:10+EX:11+EX:12+EX:13) > 0
+	CALL PRINT_ORGASM
+
+;CONFIG에서 호감도 표시가 ＯＮ일 때만 그 조교 중에 변화한 호감도를 표시한다
+IF FLAG:12 & 4
+	PRINTFORM 이번 조교로 %CALLNAME:TARGET%의 호감도는 
+	IF TFLAG:238 == 0
+		PRINTL 변하지 않았습니다.
+	ELSE
+		PRINTFORML 합계 \@(TFLAG:238 >= 0) ? ＋{TFLAG:238} # －{-TFLAG:238}\@ 변했습니다.
+	ENDIF
+ENDIF
+
+;사용한 콘돔을 파기
+CFLAG:75 = 0
+
+BEGIN ABLUP
+
+;--------------------------------------------------
+;조교 종료시의 구슬 입수 처리
+;--------------------------------------------------
+@JUEL_CHECK
+VARSET LOCAL, 0
+REPEAT 33
+	LOCAL = CALC_JUEL(COUNT)
+	IF COUNT == 20 || COUNT == 21 || COUNT == 22
+		GOTJUEL:100 += LOCAL
+	ELSE
+		GOTJUEL:COUNT = LOCAL
+	ENDIF
+	LOCAL:1 += LOCAL
+REND
+
+DRAWLINE
+IF LOCAL:1 > 0
+	CALL SHOW_GOTJUEL
+ELSE
+	PRINTW 조교의 결과 : 아무 구슬도 얻지 못했습니다.
+ENDIF
+
+;--------------------------------------------------
+;구슬 숫자의 계산 처리(달리 비슷한 처리가 있으므로 함수 분리)
+;--------------------------------------------------
+@CALC_JUEL(ARG)
+#FUNCTION
+VARSET LOCALS,""
+SPLIT "0,1,10,100,1000,2000,3000,5000,8000,12000,18000,25000,40000,75000,99999",",",LOCALS
+GETPALAMLV PALAM:ARG, (TALENT:150 || TALENT:160 || TALENT:170) ? 14 # 13
+LOCAL = TOINT(LOCALS:RESULT)
+SIF RESULT == 1 && PALAM:ARG >= PALAMLV:1*3
+	LOCAL += 1
+SIF RESULT == 2 && PALAM:ARG >= PALAMLV:2*3
+	LOCAL += 10
+SIF RESULT == 3 && PALAM:ARG >= PALAMLV:3*2
+	LOCAL += 100
+
+IF ARG >= 0 && ARG <= 3
+	LOCAL = MIN(LOCAL + EX:ARG * 1000, 99999)
+ELSEIF ARG == 20 || ARG == 21 || ARG == 22
+	IF LOCAL > 99999 && FLAG:3 > 4
+		LOCAL = 99999
+	ELSEIF LOCAL > 10000
+		LOCAL = 10000
+	ENDIF
+ENDIF
+
+RETURNF LOCAL
+
+;--------------------------------------------------
+;조교 종료시의 구슬 표시 처리
+;--------------------------------------------------
+@SHOW_GOTJUEL
+PRINTL 조교의 결과:
+VARSET LOCALS,""
+SPLIT "0,1,2,3,11,12,13,14,15,16,17,30,31,32,100",",",LOCALS
+LOCAL = 0
+REPEAT 15
+	LOCAL = TOINT(LOCALS:COUNT)
+
+	;오버플로 대책으로 구슬 숫자 조정의 처리도 도입
+	;덧붙여, 구슬의 보유는 1000만 개 미만으로 한다(그렇게까지 쓸 일도 없을 거라 어림잡고)
+	IF JUEL:LOCAL >= 9999999
+		GOTJUEL:LOCAL = 0
+	ELSEIF (JUEL:LOCAL + GOTJUEL:LOCAL) >= 9999999
+		GOTJUEL:LOCAL = 9999999 - JUEL:LOCAL
+		;노예 이명 취득 체크
+		IF (LOCAL >= 0 && LOCAL <= 3) || LOCAL == 13
+			TFLAG:109 |= 2048
+		ELSEIF LOCAL == 100
+			TFLAG:109 |= 4096
+		ENDIF
+	ENDIF
+	GOTJUEL:LOCAL = MAX(GOTJUEL:LOCAL, 0)
+	LOCAL:1 = JUEL:LOCAL
+	JUEL:LOCAL = LIMIT(JUEL:LOCAL + GOTJUEL:LOCAL, 0, 9999999)
+
+	;기존소스
+	;SIF JUEL:LOCAL + GOTJUEL:LOCAL != 0
+	;	PRINTFORML %PALAMNAME:LOCAL%의 구슬×({JUEL:LOCAL})
+	;수정소스
+	SIF GOTJUEL:LOCAL != 0
+		PRINTFORML %PALAMNAME:LOCAL%의 구슬×({GOTJUEL:LOCAL})
+REND
+PRINTW 이상의 구슬을 얻었습니다.
+
+;--------------------------------------------------
+;부정의 구슬에 따른 상쇄 처리
+;--------------------------------------------------
+@DENIAL_CHECK
+VARSET LOCAL, 0
+;입수하는 구슬의 변수를 리셋
+VARSET GOTJUEL:TARGET:0, 0
+
+LOCAL:2 = JUEL:100
+
+;………………………………………………
+;相殺第1段階目
+;………………………………………………
+$LABEL_1
+SIF SUMARRAY(JUEL:TARGET:12, 12, 15) == SUMARRAY(GOTJUEL:TARGET:12, 12, 15)
+	GOTO LABEL_2
+LOCAL = RAND(12, 15)
+SIF JUEL:LOCAL == GOTJUEL:LOCAL
+	GOTO LABEL_1
+LOCAL:1 = LIMIT(LOCAL:2 / 2, 1, (JUEL:LOCAL - GOTJUEL:LOCAL))
+LOCAL:2 = MAX(LOCAL:2 - LOCAL:1, 0)
+;相殺・表示処理用
+GOTJUEL:LOCAL += LOCAL:1
+GOTJUEL:100 += LOCAL:1
+;《否定の珠》が無くなったなら相殺実行・表示処理へ
+IF LOCAL:2 == 0
+	GOTO LABEL_3
+;《恭順の珠》《欲情の珠》《屈服の珠》が残っていると相殺処理を繰り返す
+ELSEIF LOCAL:2 > 0
+	GOTO LABEL_1
+ENDIF
+
+;………………………………………………
+;相殺第2段階目
+;………………………………………………
+$LABEL_2
+SIF SUMARRAY(JUEL:TARGET:15, 15, 18) == SUMARRAY(GOTJUEL:TARGET:15, 15, 18)
+	GOTO LABEL_3
+LOCAL = RAND(15, 18)
+;もし選択された珠がこれ以上相殺できない場合、相殺する珠を再選択する
+SIF JUEL:LOCAL == GOTJUEL:LOCAL
+	GOTO LABEL_2
+LOCAL:1 = LIMIT(LOCAL:2 / 2, 1, (JUEL:LOCAL - GOTJUEL:LOCAL))
+LOCAL:2 = MAX(LOCAL:2 - LOCAL:1, 0)
+;相殺・表示処理用
+GOTJUEL:LOCAL += LOCAL:1
+GOTJUEL:100 += LOCAL:1
+;《否定の珠》が無くなったなら相殺実行・表示処理へ
+IF LOCAL:2 == 0
+	GOTO LABEL_3
+;《恥情の珠》《苦痛の珠》《恐怖の珠》が残っていると相殺処理を繰り返す
+ELSEIF LOCAL:2 > 0 
+	GOTO LABEL_2
+ENDIF
+
+SIF !SUMARRAY(GOTJUEL:TARGET:11, 11, 18)
+	RETURN 0
+
+;………………………………………………
+;相殺の実行と内容表示
+;………………………………………………
+$LABEL_3
+DRAWLINE
+PRINTL 부정의 구슬과 다른 구슬이 상쇄현상을 일으켰습니다.
+VARSET LOCALS,""
+SPLIT "0,1,2,3,11,12,13,14,15,16,17,30,31,32,100",",",LOCALS
+REPEAT 15
+	LOCAL = TOINT(LOCALS:COUNT)
+	SIF GOTJUEL:LOCAL <= 0
+		CONTINUE
+
+	LOCAL:1 = JUEL:LOCAL
+	JUEL:LOCAL = LIMIT(JUEL:LOCAL - GOTJUEL:LOCAL, 0, 9999999)
+	PRINTFORML %PALAMNAME:LOCAL%의 구슬×({LOCAL:1, 7} \@(GOTJUEL:LOCAL >= 0) ? － # ＋\@ {ABS(GOTJUEL:LOCAL), 7} -> {JUEL:LOCAL, 7})
+REND
+PRINTW ……이렇게 변했습니다.
+
+;--------------------------------------------------
+;ストレス加算処理
+;--------------------------------------------------
+@STRESS_CHECK
+LOCAL = (PALAM:20 + PALAM:21 + PALAM:22) / 2
+IF LOCAL < 100
+	LOCAL:1 = 0
+ELSEIF LOCAL < 200
+	LOCAL:1 = 10
+ELSEIF LOCAL < 500
+	LOCAL:1 = 25
+ELSEIF LOCAL < 1000
+	LOCAL:1 = 50
+ELSEIF LOCAL < 3000
+	LOCAL:1 = 75
+ELSEIF LOCAL < 7500
+	LOCAL:1 = 100
+ELSEIF LOCAL < 15000
+	LOCAL:1 = 250
+ELSEIF LOCAL < 50000
+	LOCAL:1 = 500
+ELSEIF LOCAL < 100000
+	LOCAL:1 = 800
+ELSEIF LOCAL < 500000
+	LOCAL:1 = 1200
+ELSEIF LOCAL < 1000000
+	LOCAL:1 = 2400
+ELSEIF LOCAL < 10000000
+	LOCAL:1 = 5000
+ELSE
+	LOCAL:1 = 10000
+ENDIF
+
+;残り体力の割合
+LOCAL = (BASE:0 / MAXBASE:0) * 100
+IF LOCAL < 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF LOCAL < 4
+	TIMES LOCAL:1 , 1.00
+ELSEIF LOCAL < 6
+	TIMES LOCAL:1 , 1.20
+ELSEIF LOCAL < 8
+	TIMES LOCAL:1 , 1.40
+ELSE
+	TIMES LOCAL:1 , 1.60
+ENDIF
+;残り気力の割合
+LOCAL = (BASE:1 / MAXBASE:1) * 100
+IF LOCAL < 2
+	TIMES LOCAL:1 , 0.75
+ELSEIF LOCAL < 4
+	TIMES LOCAL:1 , 1.00
+ELSEIF LOCAL < 6
+	TIMES LOCAL:1 , 1.25
+ELSEIF LOCAL < 8
+	TIMES LOCAL:1 , 1.50
+ELSE
+	TIMES LOCAL:1 , 1.75
+ENDIF
+
+;PALAM:恭順
+IF PALAM:12 < PALAMLV:2
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:12 < PALAMLV:4
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:12 < PALAMLV:6
+	TIMES LOCAL:1 , 0.60
+ELSE
+	TIMES LOCAL:1 , 0.40
+ENDIF
+;PALAM:恐怖
+IF PALAM:17 < PALAMLV:2
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:17 < PALAMLV:4
+	TIMES LOCAL:1 , 1.20
+ELSEIF PALAM:17 < PALAMLV:6
+	TIMES LOCAL:1 , 1.40
+ELSE
+	TIMES LOCAL:1 , 1.60
+ENDIF
+;屈服刻印
+IF MARK:2 >= 3
+	TIMES LOCAL:1 , 1.75
+ELSEIF MARK:2 == 2
+	TIMES LOCAL:1 , 1.50
+ELSEIF MARK:2 == 1
+	TIMES LOCAL:1 , 1.25
+ENDIF
+
+;[臆病]
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.50
+;[自制心]
+SIF TALENT:20
+	TIMES LOCAL:1 , 0.75
+;[悲観的]
+SIF TALENT:26
+	TIMES LOCAL:1 , 0.75
+
+CFLAG:65 += LOCAL:1
+SIF TALENT:MASTER:998 && LOCAL:1
+	PRINTFORML 스트레스＋{LOCAL:1}
+;ストレス値は100万以上にはならない
+CFLAG:65 = LIMIT(CFLAG:65, 0, 999999)
+
+;--------------------------------------------------
+;조교 종료시의 절정 표시 처리
+;--------------------------------------------------
+@PRINT_ORGASM
+DRAWLINE
+PRINTFORML %CALLNAME:TARGET%의 조교중 절정회수 등(조교 후 행위는 포함하지 않음)
+CALL SHOW_ORGASM

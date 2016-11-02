@@ -1,0 +1,357 @@
+﻿;=============================================================================
+;줄(SELECTCOM=224), 촉수 긴박(SELECTCOM=507)
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE224
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:224 > 0
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;解除は乗馬中 · 裸体盛り中以外ならいつでも可能
+SIF TEQUIP:40 && TEQUIP:40 < 5 && TEQUIP:43 == 0 && TEQUIP:60 == 0
+	RETURN 1
+;아이템を持っているか, 아이템なし設定で無いとダメ
+SIF ITEM:29 == 0 && NOITEM == 0
+	RETURN 0
+;助手は기교5でないとダメ
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 5
+		RETURN 0
+;조교자의 기교가 3無いとできない
+ELSE
+	SIF ABL:PLAYER:12 < 3
+		RETURN 0
+ENDIF
+;荊で緊縛中, 거미줄で緊縛中はダメ
+SIF TEQUIP:40 >= 5 && TEQUIP:40 <= 7
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수 긴박은 COMF500.ERB로부터 JUMP 해 온다.
+@COM224
+;촉수 조교중은 아니고, CONFIG로 고문계, 정신 조작계 커맨드가 유효해,
+;지금부터 노예를 긴박 하는 경우, 묶는 방법을 선택할 수가 있다.
+IF TEQUIP:40 == 0 && TEQUIP:90 == 0 && FLAG:15 & 16
+	TSTR:7 = 밧줄
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 29
+		CALL NAMECHECK_CUSTOMTOOL
+	ELSE
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = %TSTR:7%
+	ENDIF
+	CALL SELECT_ROPE
+	SELECTCASE RESULT
+		CASE 1
+			JUMP COM622
+		CASE 2
+			JUMP COM623
+		CASE 3
+			JUMP COM624
+	ENDSELECT
+ENDIF
+IF TEQUIP:90
+	PRINTL 촉수 결박
+	TSTR:0 = 촉수 결박
+ELSEIF TEQUIP:40
+	PRINTFORML %TSTR:8%해방
+	TSTR:0 = 밧줄해방
+ELSE
+	PRINTFORML %TSTR:8%
+	TSTR:0 = 밧줄
+ENDIF
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 100
+	DOWNBASE:1 += 150
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 80
+	DOWNBASE:1 += 120
+ELSE
+	DOWNBASE:0 += 60
+	DOWNBASE:1 += 90
+ENDIF
+CALL TRAIN_MESSAGE_COM224
+
+LOCAL:1 = 250
+SOURCE:20 = 800
+SOURCE:12 = 800
+SOURCE:22 = 500
+SOURCE:31 = 500
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL:1 , 0.40
+ELSEIF ABL:10 == 1
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:10 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:10 == 3
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:10 == 4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 2.00
+ELSE
+	TIMES LOCAL:1 , 3.00
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL:1 , 2.00
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 29
+	FLAG:1111 = 2
+	FLAG:1112 = LOCAL:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+ENDIF
+
+SOURCE:20 += LOCAL:1
+SOURCE:12 += LOCAL:1
+SOURCE:22 += LOCAL:1
+SOURCE:31 += LOCAL:1
+
+TCVAR:31 += 5
+
+;줄의 착탈
+IF TEQUIP:90
+	IF TEQUIP:40
+		TEQUIP:40 = 0
+	ELSE
+		TEQUIP:40 = 1
+		STAIN:1 |= 2
+		STAIN:1 |= 4
+		STAIN:5 |= 2
+		STAIN:5 |= 4
+	ENDIF
+ELSE
+	IF TEQUIP:40
+		TEQUIP:40 = 0
+	ELSE
+		TEQUIP:40 = 1
+		;SM교육 경험 플래그
+		SIF ASSIPLAY
+			TFLAG:55 = 2
+	ENDIF
+ENDIF
+
+;커맨드 속성：촉수
+IF TEQUIP:90
+	TFLAG:98 = 8
+;커맨드 속성：도구(조교자)
+ELSE
+	TFLAG:98 = 1
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;줄의 묶는 방법 선택
+;-------------------------------------------------
+@SELECT_ROPE
+PRINTL 묶는 방법을 결정해 주세요
+DRAWLINE
+PRINTL [0]-보통으로 묶는다.
+PRINTL [1]-사지 결박
+;조교자의 기교 Lv가 3이상 있는 경우
+SIF ABL:PLAYER:12 >= 3
+	PRINTL [2]-귀갑 묶기
+;조교자가 새드이나 왕S나 기교 Lv가 4이상 있는 경우
+SIF ABL:PLAYER:12 >= 4 || TALENT:PLAYER:81 || TALENT:PLAYER:177
+	PRINTL [3]-매달기
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	RETURN 0
+ELSEIF RESULT == 1
+	RETURN 1
+ELSEIF RESULT == 2 && ABL:PLAYER:12 >= 3
+	RETURN 2
+ELSEIF RESULT == 3 && (ABL:PLAYER:12 >= 4 || TALENT:PLAYER:81 || TALENT:PLAYER:177)
+	RETURN 3
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;-------------------------------------------------
+;줄로 긴박중
+;-------------------------------------------------
+@EQUIP_COM224
+IF TEQUIP:90
+	PRINTL <촉수 결박 중>
+ELSE
+	PRINTL <결박 중>
+ENDIF
+
+;긴박 경험이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 100
+ELSEIF EXP:31 < EXPLV:4
+	DOWNBASE:0 += 40
+	DOWNBASE:1 += 80
+ELSE
+	DOWNBASE:0 += 30
+	DOWNBASE:1 += 60
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	LOCAL = 60
+ELSEIF ABL:21 == 1
+	LOCAL = 180
+ELSEIF ABL:21 == 2
+	LOCAL = 300
+ELSEIF ABL:21 == 3
+	LOCAL = 480
+ELSEIF ABL:21 == 4
+	LOCAL = 700
+ELSE
+	LOCAL = 850
+ENDIF
+
+;도착적
+SIF TALENT:80
+	TIMES LOCAL , 2.00
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 29
+	FLAG:1111 = 3
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:20 += LOCAL
+SOURCE:12 += LOCAL
+SOURCE:22 += LOCAL
+SOURCE:31 += LOCAL
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 2
+	TFLAG:50 += 1
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+
+TCVAR:31 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM224
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:90
+	IF TEQUIP:40
+		PRINTFORMW 촉수는 %CALLNAME:TARGET%의 구속을 풀었다.
+	ELSE
+		PRINTFORMW 무수한 촉수가 %CALLNAME:TARGET%의 몸을 묶었다.
+	ENDIF
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+	IF TEQUIP:40
+		PRINTFORMW %CALLNAME:TARGET%의 %조사선택(TSTR:7, "를")% 풀어 주었다….
+	ELSE
+		;도착적이어 공포 각인이 1 이하로 반발 각인이 없을 때
+		IF TALENT:80 && MARK:8 < 2 && MARK:9 < 1
+			PRINTFORML %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 묶었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 밧줄의 감촉을 전신으로 느끼며, 쾌감을 마음껏 맛보고 있는 것 같다….
+		;반항적인가 저항을 가져 함락 하지 않는 경우
+		ELSEIF (TALENT:11 || TALENT:34) && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+			PRINTFORMW 격렬하게 바둥대는 %조사선택(CALLNAME:TARGET, "를")% 억지로 %조사선택(TSTR:9, "로")% 붙들어 매었다….
+		;겁쟁이 소유나 공포 각인 2이상으로 기장과 감정결여를 가지지 않고, 함락 하고 있지 않는 경우
+		ELSEIF  (TALENT:10 || MARK:8 >= 2) && TALENT:12 == 0 && TALENT:22 == 0 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+			PRINTFORMW 공포에 질린 %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 정중하게 묶었다….
+		;프라이드 높은가 신령해 게다가, 굴복 각인과 치욕 각인이 1 이하로, 함락 하고 있지 않는 경우
+		ELSEIF (TALENT:16 || TALENT:222) && MARK:2 < 2 && MARK:4 < 2 && TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+			PRINTFORML %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 묶었다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 속박되면서도, 그 프라이드만은 꺾이지 않는 것 같다….
+		;해방이나 쾌감에 솔직한가 봄의 사람으로 아픔에 약하지만 않고, 반발 각인이 없는 경우
+		ELSEIF (TALENT:33 || TALENT:70 || TALENT:263) && TALENT:40 == 0 && MARK:9 <= 0
+			PRINTFORMW 어딘지 즐거워 보이는 %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 정중하게 묶었다….
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 묶었다….
+		ENDIF
+	ENDIF
+ENDIF

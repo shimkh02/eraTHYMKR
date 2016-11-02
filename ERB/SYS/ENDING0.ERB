@@ -1,0 +1,425 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;엔딩 관련 처리
+;
+;여기에서는 주로 각 엔딩에의 분기 처리가 메인이 되고 있다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;엔딩 체크 처리 관련
+;=============================================================================
+;--------------------------------------------------
+;턴 종료시에 엔딩 판정을 실행하는지를 체크
+;--------------------------------------------------
+@EVENTTURNEND
+#LATER
+IF FLAG:5 == 0
+	IF FLAG:4 != 3
+		;REVERSAL 모드 이외 때, 주인의 피강간 경험과 피윤간 경험의 합계가 일정 이상을 넘고 있어, 게다가 타락도가 256이상이라면 배드 엔딩 7에
+		SIF (EXP:MASTER:81 + EXP:MASTER:82) >= EXPLV:4 && CFLAG:MASTER:66 >= 256
+			CALL BADEND_4
+	ENDIF
+	IF (FLAG:4 == 0 || FLAG:4 == 1 || FLAG:4 == 4)
+		CALL ENDING_TIMEUP
+		SIF RESULT == 1
+			CALL ENDING_CHECK_START
+	ENDIF
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;엔딩 판정 처리
+;--------------------------------------------------
+@ENDING_CONFIRM
+DRAWLINE
+PRINTL 엔딩을 볼 수 있게 되었다.
+PRINTL 엔딩을 보겠습니까?
+PRINTL [ 0] - 예
+PRINTL [ 1] - 아니오
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	RETURN 0
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP
+ENDIF
+CALL ENDING_CHECK_START
+
+;--------------------------------------------------
+;기한 판정 처리
+;--------------------------------------------------
+@ENDING_TIMEUP
+;NORMAL(남자 주인 모드), ABNORMAL 이외의 게임 모드 및 엔드리스 모드는 제외
+SIF (FLAG:4 != 0 && FLAG:4 != 1 && FLAG:4 != 4) || FLAG:5
+	RETURN 0
+;난이도：EASY는 120일 이내
+IF FLAG:3 == 1
+	LOCAL = 120
+;난이도：NORMAL는 90일 이내
+ELSEIF FLAG:3 == 2
+	LOCAL = 90
+;난이도：HARD는 99일 이내
+ELSEIF FLAG:3 == 3
+	LOCAL = 99
+;난이도：LUNATIC는 90일 이내
+ELSEIF FLAG:3 == 4
+	LOCAL = 90
+;난이도：PHANTASM는 60일 이내
+ELSEIF FLAG:3 == 5
+	LOCAL = 60
+;난이도：PRO는 30일 이내
+ELSEIF FLAG:3 == 6
+	LOCAL = 30
+;난이도：ULTRA는 14일 이내
+ELSEIF FLAG:3 == 7
+	LOCAL = 14
+ELSE
+	RETURN 0
+ENDIF
+;EASY는 1주째만 기한＋20일
+IF FLAG:3 == 1 && FLAG:6 == 1
+	LOCAL += 20
+;NORMAL는 1주째만 기한＋10일
+ELSEIF FLAG:3 == 2 && FLAG:6 == 1
+	LOCAL += 10
+ENDIF
+RETURN (LOCAL < DAY)
+
+;--------------------------------------------------
+;엔딩 판정 처리
+;--------------------------------------------------
+@ENDING_CHECK_START
+;나눈다고 한 글자 변수 사용하지 않는 한 처리를 할 수 없기 때문에, 정리해 버린다
+;소지금이 부족할 때는 배드 엔딩
+SIF MONEY < MONEY:100
+	CALL BADEND_1
+FLAG:3004 = 0
+;산제물이 일정수 넘고 있으면 촉수계 엔딩
+SIF FLAG:33 >= 10
+	JUMP ENDING_TENTACLE
+;상호 조교 엔딩
+SIF EXP:MASTER:81 >= 30
+	JUMP JUDGE_WRONGEND_1
+
+;--------------------------------------------------
+;엔딩 분기 처리
+;--------------------------------------------------
+;완전하게 기본 설계로부터 변경
+;기본적으로는 각 엔딩 마다의 판정 함수를 호출해 전부 거기서 판정
+;ENDING내에서의 세세한 분기도 돌아가 값을 바꾸는 것으로 판정내에서 분기 가능
+;자세한 것은 ENDING_JUDGE.ERB를 참조
+VARSET LOCAL, 0
+;세세한 엔딩 분기용
+TFLAG:0 = 0
+
+;엔딩수카운트
+TFLAG:1 = 1
+;노멀 엔딩
+LOCAL:1 = 1
+;그 이외
+FOR LOCAL, 2, 100
+	TRYCCALLFORM ENDING_JUDGE{LOCAL}
+		LOCAL:LOCAL = RESULT
+		SIF RESULT
+			TFLAG:1 += 1
+	CATCH
+		CONTINUE
+	ENDCATCH
+NEXT
+
+;--------------------------------------------------
+;엔딩 선택 처리
+;--------------------------------------------------
+;인계 가능 조수＋1의 조건(동시에 10종 이상의 하렘 엔딩의 조건을 채웠다)
+SIF TFLAG:1 > 10 && (FLAG:8 & 8192) == 0
+	FLAG:8 |= 8192
+
+IF TFLAG:1 == 1
+	RESULT = 1
+ELSE
+	PRINTL 어느 엔딩을 보겠습니까?
+	DRAWLINE
+
+	FOR COUNT, 1, 100, 1
+		SIF STRLENS(STR:(1000+COUNT)) < 1
+			CONTINUE
+
+		SIF LOCAL:COUNT
+			PRINTFORMLC [{COUNT}] %STR:(1000+COUNT)%
+	NEXT
+	SIF ! LINEISEMPTY()
+		PRINTL 
+
+	DRAWLINE
+	$INPUT_LOOP
+	INPUT
+	IF RESULT < 1 || RESULT > 99
+		GOTO INPUT_LOOP
+	ELSEIF LOCAL:RESULT == 0
+		GOTO INPUT_LOOP
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;엔딩 실행 처리
+;--------------------------------------------------
+;노멀·하렘 엔딩 합계 도달 회수 카운트
+SIF FLAG:(4000+RESULT) == 0
+	FLAG:4000 += 1
+DRAWLINE
+IF RESULT == 1
+	PRINTFORMW ―――소지금은 {MONEY}원. 목표 금액 돌파―――
+ELSEIF RESULT == 60 || RESULT == 61 || RESULT == 72
+	PRINTW ―――특수 엔딩 조건 달성―――
+ELSE
+	PRINTW ―――하렘 조건 달성―――
+ENDIF
+PRINTW ………………
+PRINTW …………
+PRINTW ……
+;미리 소지금으로부터 목표 금액분 (초기라면 100만원)을 감소시킨다
+MONEY -= MONEY:100
+TRYCALLFORM ENDING_{RESULT}, LOCAL:RESULT
+
+;=============================================================================
+;단체, 노예 또는 굿 이상의 엔딩을 본 직후의 처리 관련
+;=============================================================================
+;--------------------------------------------------
+;　　　　　　한사람의 가녀린 요정이 나타나 고했다
+;
+;　　　　　　　　　　**축하합니다**
+;
+;　자네들은 대국주eratoho의 시험에 합격했다. 굿 이상의
+;　엔딩을 맞이한 것에 의해, eratoho는 제군에게
+;　50,000원의 돈과 이상 경험을 준 뒤에 제군을 근위
+;　조련사에 임명했다.
+;
+;　　　자랑을 가져 계급장(＞)을 붙이도록(듯이).
+;
+;　다만, 제군은 새로운 단련을 계속하지 않으면 안 된다.
+;　eratoho는 한없이 레벨의 높은 조련사를 필요로 하고 있다.
+;　그리고 그것은……
+;　새로운 조교에의 준비라도 있다.
+;--------------------------------------------------
+@GAME_CONTINUE, ARG, ARG:1
+;단독 엔딩의 이중 호출 방지 처리
+TFLAG:201 = 0
+
+;--------------------------------------------------
+;특정 난이도 클리어 판정 추가 처리
+;--------------------------------------------------
+;판정은 FLAG:9를 이용. 비트 연산으로 1=EASY, 2=NORMAL, 4=HARD, 8=LUNATIC, 16=PAHANTASM, 32=PRO, 64=ULTRA의 난이도에 대응하고 있다
+IF FLAG:3 == 1 && (FLAG:9 & 1) == 0
+	FLAG:9 |= 1
+	MONEY += 50000
+ELSEIF FLAG:3 == 2 && (FLAG:9 & 2) == 0
+	FLAG:9 |= 2
+	MONEY += 50000
+ELSEIF FLAG:3 == 3 && (FLAG:9 & 4) == 0
+	FLAG:9 |= 4
+	MONEY += 50000
+ELSEIF FLAG:3 == 4 && (FLAG:9 & 8) == 0
+	FLAG:9 |= 8
+	MONEY += 50000
+ELSEIF FLAG:3 == 5 && (FLAG:9 & 16) == 0
+	FLAG:9 |= 16
+	MONEY += 50000
+ELSEIF FLAG:9 == 31 && (FLAG:9 & 32) == 0
+	FLAG:9 |= 32
+	MONEY += 500000
+ELSEIF FLAG:3 == 6 && (FLAG:9 & 64) == 0
+	FLAG:9 |= 64
+	MONEY += 50000
+ELSEIF FLAG:3 == 7 && (FLAG:9 & 128) == 0
+	FLAG:9 |= 128
+	MONEY += 50000
+ENDIF
+FLAG:598 = ARG:1
+
+;게임을 계속할지 어떨지의 선택
+CALL SELECT_CONTINUE_GAME, ARG, ARG:1
+RETURN 1
+
+;--------------------------------------------------
+;게임을 계속할지 어떨지의 선택
+;--------------------------------------------------
+@SELECT_CONTINUE_GAME, ARG, ARG:1
+PRINTL 게임을 계속하겠습니까?
+PRINTLC [0] 끝낸다
+PRINTLC [1] 계속한다
+SIF FLAG:4 < 50 && FLAG:12 & 1
+	PRINTLC [2] 강하게 뉴 게임
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	;노예의 에피소드를 표시
+	CALL SHOW_AFTERWARDS, ARG:1
+	QUIT
+ELSEIF RESULT == 1
+	FLAG:5 |= 1
+	FLAG:5 |= 2
+ELSEIF RESULT == 2 && FLAG:4 < 50 && FLAG:12 & 1
+	;노예의 에피소드를 표시
+	CALL SHOW_AFTERWARDS, ARG:1
+	;단독 엔딩 이외로부터 날아 왔을 경우, 목표 금액분 (초기라면 100만원)을 되돌린다
+	SIF ARG == 1
+		MONEY += MONEY:100
+	CALL START_NEWGAME
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;노예의 에피소드를 표시
+SIF TFLAG:205 == 0
+	CALL SHOW_AFTERWARDS, ARG:1
+
+;--------------------------------------------------
+;SHOP 메뉴보다 뉴 게임을 개시할까의 선택사항
+;--------------------------------------------------
+;엔딩 종료후도 언제라도 뉴 게임을 개시할 수 있도록(듯이)
+@NEWGAME_SELECT
+PRINTL 강하게 뉴 게임을 시작하겠습니까?
+PRINTLC [0] 예
+PRINTLC [1] 아니오
+PRINTL 
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	CALL START_NEWGAME
+ELSEIF RESULT == 1
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+;=============================================================================
+;엔딩시의 캐릭터범위 증설의 처리
+;=============================================================================
+;--------------------------------------------------
+;환상향 입수 처리
+;--------------------------------------------------
+@GET_GENSOUKYOU
+SIF TFLAG:994
+	RETURN 0
+;가자미체크
+LOCAL = 0
+REPEAT CHARANUM
+	SIF COUNT == 0 || CFLAG:COUNT:4 == 1
+		CONTINUE
+	SIF (TALENT:COUNT:150 || TALENT:COUNT:160) && TALENT:COUNT:170 && (NO:COUNT == 1 || NO:COUNT == 22)
+		LOCAL += 1
+REND
+SIF LOCAL < 2
+	RETURN 0
+PRINTFORML ＜%조사처리(CALLNAME:MASTER,"는")% 환상향을 빼앗는 것에 성공했습니다＞
+PRINTFORMW ＜노예 구입 가능수의 최대치가 큰 폭으로 증가했습니다＞
+SAVESTR:1 = 하쿠레이 신사
+FLAG:90 = 5
+FLAG:92 = 500
+FLAG:93 = 0
+RETURN 1
+
+;--------------------------------------------------
+;각 캐릭터의 자택 입수 처리
+;--------------------------------------------------
+@GET_HOUSE
+SIF FLAG:90 >= 4 || TFLAG:994
+	RETURN 0
+CALL GET_GENSOUKYOU
+SIF RESULT == 1
+	RETURN 0
+SAVESTR:1 = %TSTR:3%
+PRINTFORML ＜%조사처리(SAVESTR:1,"를")% 손에 넣었습니다＞
+PRINTFORMW ＜노예 구입 가능수가 증가했습니다＞
+FLAG:90 = 4
+FLAG:92 = 300
+FLAG:93 = 0
+
+;--------------------------------------------------
+;토지 대량 입수 처리
+;--------------------------------------------------
+@GET_YARD
+SIF FLAG:93 >= 20 || TFLAG:994
+	RETURN 0
+CALL GET_GENSOUKYOU
+SIF RESULT == 1
+	RETURN 0
+PRINTFORML ＜%TSTR:4%의 광대한 토지를 살 수 있는 한 손에 넣었습니다＞
+PRINTFORMW ＜노예 구입 가능수가 {20 - FLAG:93}명 증가했습니다＞
+FLAG:93 = 20
+
+;=============================================================================
+;매각 후 에피소드 관련의 함수
+;=============================================================================
+;엔딩시에 매각한 캐릭터의 에피소드를 흘린다
+;엔딩 후에 불린다. 돌아온 후에 게임 종료 OR 강해서 뉴 게임
+;-------------------------------------------------
+;엔딩 후 에피소드를 표시시킬까 선택＆표시
+;-------------------------------------------------
+@SHOW_AFTERWARDS, ARG
+;FLAG:580 = 에피소드를 표시하는 노예수
+;한사람도 에피소드가 없으면 아무것도 하지 않고 종료
+SIF FLAG:580 == 0
+	RETURN 0
+
+;선택사항
+PRINTFORML %조사처리(CALLNAME:MASTER,"가")% 조교한 노예\@(FLAG:580 > 1) ? 들 # \@의 그 후를……
+PRINTC [0] 본다
+PRINTC [1] 보지 않는다
+$INPUT_LOOP
+INPUT
+IF RESULT == 1
+	GOTO AFTERWARDS_RESET
+ELSEIF RESULT != 0
+	GOTO INPUT_LOOP
+ENDIF
+
+;말측에서 TARGET가 만져지는 위험이 높기 때문에 대피
+LOCAL:4 = TARGET
+;기록할 수 있는 인원수를 넘었을 경우, 낡은 것으로부터 순서에 표시하도록(듯이) 하고 싶었던 것 같다
+LOCAL:1 = (FLAG:580 > 10) ?  FLAG:580 % 10 # 0
+
+REPEAT (FLAG:580 > 10) ?  10 # FLAG:580
+	LOCAL = 581 + (COUNT + LOCAL:1) % 10
+	LOCAL:2 = FLAG:LOCAL % 1000
+	LOCAL:3 = FLAG:LOCAL / 1000
+	CALL SHOW_SLAVE_AFTERWARDS, LOCAL:2, LOCAL:3, ARG
+REND
+TARGET = LOCAL:4
+
+$AFTERWARDS_RESET
+;에피소드 플래그 소거
+LOCAL = 581
+REPEAT 10
+	FLAG:LOCAL = 0
+	LOCAL += 1
+REND
+;에피소드를 표시하는 노예수 리셋
+FLAG:580 = 0
+REPEAT 8
+	PRINTL 
+REND
+RETURN 0
+
+;-------------------------------------------------
+;매각시의 처리
+;-------------------------------------------------
+@SET_AFTERWARDS, ARG
+;얀데레 ON 또한 실종의 경우, 돌아오므로 매각 취급해 하지 않는다
+SIF FLAG:14 & 4 && CFLAG:ARG:4 == 1
+	RETURN 0
+;표시 캐릭터의 등록 캐릭터 번호를 TFLAG:710에 넣어 둔다(말측에서 참조할 수 있도록(듯이))
+TFLAG:710 = ARG
+;매각 캐릭터 에피소드를 세트
+CALL SET_SLAVE_AFTERWARDS, NO:ARG
+;표시하지 않는 경우는 기록하지 않는다
+SIF RESULT == 0
+	RETURN 0
+;%10+581의 의미：에피소드 관련으로 사용하는 변수가 FLAG:581에서 10 인분이니까
+LOCAL:0 = FLAG:580 % 10 + 581
+LOCAL:1 = RESULT * 1000 + NO:ARG
+FLAG:LOCAL = LOCAL:1
+;에피소드를 표시하는 노예수를 카운트
+FLAG:580 += 1
+
+RETURN 0

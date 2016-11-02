@@ -1,0 +1,540 @@
+﻿;=============================================================================
+;스케쥴 시스템 관련 함수들
+;토리코모드 사양. 
+;간단설명 : 스케쥴을 설정 해 놓으면 노예들이 알아서 그 턴에 무엇인가를 하는 시스템. (사실은 턴 종료때 일괄처리하는 거지만)
+;기존처럼 애정요리 하나 한다고 한 턴이 가버리거나 하지는 않게 됨.
+;또한 본격적으로 '휴식'을 할 수 있게 되며, 특정 캐릭터들의 기능을 풀로 뽑아낼 수 있게 된다...
+;130916~  BY VANDIT KING
+;CFLAG:4 를 사용하며, 비트연산을 함
+;0 = 조교가능, 대기중.
+;1=失踪 실종
+;2=育児室 육아실 ◇
+;4=触手部屋の中にいる 촉수유폐◆
+;8=우리유폐 ▲
+;16=투옥 ■
+;32 = 요리중	
+;64 = 청소중	
+;128 = 체력 단련중	
+;256 = 기력 단련중	
+;512 = 욕탕 사용중
+;1024=娼館に居る▼
+;2048 = 신종허브 개발중 ▽
+;4096 = 허브 생산중 ▽
+;8192 = 도시락 생산중
+;16384 = 애액 생산중
+;32768 = 황금수 생산중
+;65536 = 모유 생산중
+;131072 = 부적 생산중
+;262144 = 알 생산중
+;524288 = 정액 생산중
+;1048576 = 주치육륜 중
+;2097152 = 육변기 플레이 중
+;4194304 = 야외 라이브 공연중
+;8388608 = 조수 조교중
+;16777216 = 경호중
+;33554432 = 경비중
+;67108864 = 촬영중
+;134217728 = 모델 중
+;268435456 = 요괴찻집
+;536870912 = 데리헬
+;1073741824 = ???
+;2147483648 = 변수한계
+;=============================================================================
+
+;==========스케쥴 관리 및 공통함수들==========================
+;------------------------------------
+;스케쥴을 보고/설정한다.
+;------------------------------------
+@LIST_SCHEDULE_TORIKOMODE
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+;CHARADATA_LISTのために待避
+LOCAL:99 = GET_LIST(2)
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;主人は除外
+	SIF COUNT == MASTER
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+MARK:MASTER:98 = 1
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 스케쥴을 바꾸고 싶은 캐릭터를 선택 해 주세요.＜page.{LOCAL+1}＞
+;토리코모드
+CALL CHARADATA_LIST_TORIKOMODE, LOCAL, LOCAL:99
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001]앞페이지로\@
+PRINTLC [1000]돌아간다
+PRINTFORMLC \@(LOCAL >= LOCAL:2 / 20) ? %" " * 16% # [1009]다음페이지로\@
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP_1
+ELSE
+	CALL SET_SCHEDULE_TORIKOMODE, RESULT
+ENDIF
+
+RESTART
+
+;------------------------------------
+;스케쥴을 세팅한다.
+;ARG:캐러등록번호, ARG:0:스케쥴번호
+;------------------------------------
+@SET_SCHEDULE_TORIKOMODE, ARG:0
+;세팅할 수 없다면, 뭐가 모자라는지 알려준다.
+;세팅할 수 있다면, 세팅하고, 알려준다.
+;밤에는 변경불가
+;창관배치중이었다면, 스케쥴을 변경할 수 없다.
+IF TIME == 0
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+	PRINTFORMW (스케쥴은 밤에만 변경 가능합니다)
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4 & 1024
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+	PRINTFORMW (%조사처리(CALLNAME:ARG,"는")% 현재 창관에 있습니다. 아침에 창관에서 데려 와 주세요.)
+	RESETCOLOR
+ELSEIF CFLAG:ARG:4 & 2048 || CFLAG:ARG:4 & 4096 
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+	PRINTFORMW (%조사처리(CALLNAME:ARG,"는")% 현재 허브원에 있습니다. 허브원에서 데려 와 주세요)
+	RESETCOLOR
+ELSE
+	PRINTFORML 내일은 어떤 걸 시킬까...?
+	PRINTL 
+
+	PRINTL [0] 없음 : 조교를 받거나 쉽니다.
+	PRINTL [1] 여가시간을 준다 : 용돈을 주고 놀게 합니다 / 약 500원 필요 / 체력기력 회복, 스트레스 해소 大
+	PRINTL [2] 운동한다 : 열심히 운동해서 체력을 키웁니다. / 약 500원 필요 / 최대체력상승, 체력소비中, 스트레스 小
+	PRINTL [3] 독서한다 : 어려운 책을 읽어 기력을 키웁니다. / 약 500원 필요 / 최대기력상승, 기력소비中, 스트레스 中
+	PRINTL [4] 도시락 생산 : 도시락을 만들어 팝니다. / 소비 : 체력 中, 기력 小, 스트레스 小
+	PRINTL [5] 야외 라이브 공연 : 라이브 공연을 합니다. / 소비 : 체력 中, 기력 中, 스트레스 中
+	PRINTL [6] 애액 채집 : 애액을 모아 판매합니다. / 소비 : 체력 大, 기력 中, 스트레스 大, 각종 구슬 획득
+	PRINTL [7] 황금수 채집 : 황금수(?)를 모아 판매합니다. / 소비 : 체력 大, 기력 中, 스트레스 大, 각종 구슬 획득
+	PRINTL [8] 모유 채집 : 모유를 모아 판매합니다. / 소비 : 체력 大, 기력 中, 스트레스 大, 각종 구슬 획득
+	PRINTL [9] 하얀 잼 채집 : 하얀 잼(?)을 모아 판매합니다. / 소비 : 체력 大, 기력 中, 스트레스 大, 각종 구슬 획득
+	PRINTL [999] 선택 종료
+
+	$INPUT_LOOP
+	INPUT
+	;스케쥴 비우기
+	IF RESULT == 0
+		PRINTFORMW %CALLNAME:ARG%의 스케쥴을 비웠다.
+		CFLAG:ARG:4 = 0
+		;구속을 해제한다
+		CALL RESTRICTION_RELEASE, ARG
+	ELSEIF RESULT == 1
+		;최소 재산 500 이상 필요
+		IF MONEY < 500
+			PRINTFORMW 그런 사치스러운 행동을 하기에는 여유가 부족하다.
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%에게 하룻동안 쉬라고 명령했다.
+			CFLAG:ARG:4 = 64
+			;구속을 해제한다
+			CALL RESTRICTION_RELEASE, ARG
+		ENDIF
+	;체력단련
+	ELSEIF RESULT == 2
+		;최소 재산 500 이상 필요
+		IF MONEY < 500
+			PRINTFORMW 그런 사치스러운 행동을 하기에는 여유가 부족하다.
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%에게 운동으로 체력을 키우라고 명령했다.
+			CFLAG:ARG:4 = 128
+			;구속을 해제한다
+			CALL RESTRICTION_RELEASE, ARG
+		ENDIF
+	;기력단련
+	ELSEIF RESULT == 3
+		;최소 재산 500 이상 필요
+		IF MONEY < 500
+			PRINTFORMW 그런 사치스러운 행동을 하기에는 여유가 부족하다.
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%에게 독서를 해 기력을 키우라고 명령했다.
+			CFLAG:ARG:4 = 256
+			;구속을 해제한다
+			CALL RESTRICTION_RELEASE, ARG
+		ENDIF
+	ELSEIF RESULT == 4
+		;순종 2 이상이 필요
+		IF ABL:ARG:10 < 2
+			PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 명령을 거부했다... (순종 2 이상이 필요하다)
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%에게 도시락을 만들도록 지시했다.
+			CFLAG:ARG:4 = 8192
+			;구속을 해제한다
+			CALL RESTRICTION_RELEASE, ARG
+		ENDIF	
+	ELSEIF RESULT == 5
+		;마이크 필요
+		IF ITEM:52 == 0
+			PRINTFORMW 마이크가 없어 공연을 할 수 없다. 상점에서 사야한다. (강력아이템/커맨드 옵션을 켜야 구매가능)
+		;순종 2 이상 필요
+		ELSEIF ABL:ARG:10 < 2
+			PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 명령을 거부했다... (순종 2 이상이 필요하다)
+		;반발각인이 없어야 함
+		ELSEIF MARK:ARG:9 > 0
+			PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 명령을 거부했다... (반발각인이 없어야 한다)
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%에게 라이브 공연을 지시했다.
+			CFLAG:ARG:4 = 4194304
+			;구속을 해제한다
+			CALL RESTRICTION_RELEASE, ARG
+		ENDIF
+	ELSEIF RESULT == 6
+		;애액채집기 필요
+		IF ITEM:6 == 0
+			PRINTFORMW 애액채집기가 필요하다. 상점에서 사야한다. (강력아이템/커맨드 옵션을 켜야 구매가능)
+		ELSEIF TALENT:ARG:120 == 1
+			PRINTFORMW 남자의 애액은 팔 만한 물건이 아니다...
+		;만약 미함락 노예라면 밧줄도 있어야 돼.
+		ELSEIF TALENT:ARG:150 == 0 &&TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0  && ITEM:29 == 0
+			PRINTFORMW 이 노예에게 이런 걸 시키려면 밧줄로 묶어야만 한다. (밧줄이 필요하다.)
+		;남자는 안돼
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%의 애액을 채집하기로 했다.
+			CFLAG:ARG:4 = 16384
+			;미함락이면 구속한다. 함락이면 구속해제.
+			IF TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170
+				CALL RESTRICTION_RELEASE, ARG
+			ELSE
+				CALL RESTRICTION_BIND, ARG
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 7
+		;채뇨기 필요
+		IF ITEM:26 == 0
+			PRINTFORMW 채뇨기가 필요하다. 상점에서 사야한다. (강력아이템/커맨드 옵션을 켜야 구매가능)
+		;만약 미함락 노예라면 밧줄도 있어야 돼.
+		ELSEIF TALENT:ARG:150 == 0 &&TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0  && ITEM:29 == 0
+			PRINTFORMW 이 노예에게 이런 걸 시키려면 밧줄로 묶어야만 한다. (밧줄이 필요하다.)
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%의 황금수를 채집하기로 했다.
+			CFLAG:ARG:4 = 32768 
+			;미함락이면 구속한다. 함락이면 구속해제.
+			IF TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170
+				CALL RESTRICTION_RELEASE, ARG
+			ELSE
+				CALL RESTRICTION_BIND, ARG
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 8
+		;착유기 필요
+		IF ITEM:21 == 0
+			PRINTFORMW 착유기가 필요하다. 상점에서 사야한다. (강력아이템/커맨드 옵션을 켜야 구매가능)
+		;만약 미함락 노예라면 밧줄도 있어야 돼.
+		ELSEIF TALENT:ARG:150 == 0 &&TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0  && ITEM:29 == 0
+			PRINTFORMW 이 노예에게 이런 걸 시키려면 밧줄로 묶어야만 한다. (밧줄이 필요하다.)
+		;모유체질이 아니면 안돼
+		ELSEIF TALENT:ARG:134 == 0
+			PRINTFORMW 이 노예는 모유가 나오지 않는다.
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%의 모유를 채집하기로 했다.
+			CFLAG:ARG:4 = 65536
+			;미함락이면 구속한다. 함락이면 구속해제.
+			IF TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170
+				CALL RESTRICTION_RELEASE, ARG
+			ELSE
+				CALL RESTRICTION_BIND, ARG
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 9
+		;전극오나홀 필요
+		IF ITEM:17 == 0 
+			PRINTFORMW 전극오나홀이 필요하다. 상점에서 사야한다. (강력아이템/커맨드 옵션을 켜야 구매가능)
+		;만약 미함락 노예라면 밧줄도 있어야 돼.
+		ELSEIF TALENT:ARG:150 == 0 &&TALENT:ARG:160 == 0 && TALENT:ARG:170 == 0  && ITEM:29 == 0
+			PRINTFORMW 이 노예에게 이런 걸 시키려면 밧줄로 묶어야만 한다. (밧줄이 필요하다.)
+		;페니스가 없으면 안돼
+		ELSEIF TALENT:ARG:120 == 0 && TALENT:ARG:121 == 0 
+			PRINTFORMW 이 캐릭터는 흰 잼을 만들수가 없다...
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%의 흰 잼을 채집하기로 했다.
+			CFLAG:ARG:4 = 524288 
+			;미함락이면 구속한다. 함락이면 구속해제.
+			IF TALENT:ARG:150 || TALENT:ARG:160 || TALENT:ARG:170
+				CALL RESTRICTION_RELEASE, ARG
+			ELSE
+				CALL RESTRICTION_BIND, ARG
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 999
+		RETURN 0
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+
+	;타겟이 스케쥴을 받으면 타겟을 비운다.
+	SIF TARGET == ARG && CFLAG:ARG:4 > 0
+		TARGET == -1
+ENDIF
+
+
+;------------------------------------
+;각 캐릭터의 스케쥴을 실행한다. (메인 함수)
+;------------------------------------
+@MAIN_SCHEDULE_TORIKOMODE
+;스케쥴이 있는 캐릭터들을 캐릭터 개수만큼 돌리고 끝낸다.
+;각종 함수들을 부른다.
+;반복자
+LOCAL:99 = 0
+;
+DO
+	IF CFLAG:(LOCAL:99):4 == 64
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 여가를 보낸다>
+		RESETCOLOR
+		CALL SCHEDULE_REST_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 128
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 체력 단련>
+		RESETCOLOR
+		CALL SCHEDULE_EXERCISE_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 256
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 독서>
+		RESETCOLOR
+		CALL SCHEDULE_READBOOKS_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 8192
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 도시락 제작>
+		RESETCOLOR
+		CALL SCHEDULE_MAKEBENTO_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 16384
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 애액 채집>
+		RESETCOLOR
+		CALL SCHEDULE_MAKELOVEJUICE_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 32768 
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 황금수 채집>
+		RESETCOLOR
+		CALL SCHEDULE_MAKEGOLDWATER_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 65536 
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 모유 채집>
+		RESETCOLOR
+		CALL SCHEDULE_MAKEMILK_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 524288 
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 흰 잼 채집>
+		RESETCOLOR
+		CALL SCHEDULE_MAKESEMEN_TORIKOMODE, (LOCAL:99)
+	ELSEIF CFLAG:(LOCAL:99):4 == 4194304 
+		DRAWLINE
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+		PRINTFORML <%CALLNAME:(LOCAL:99)%의 스케쥴 : 야외 라이브 공연>
+		RESETCOLOR
+		CALL SCHEDULE_LIVE_TORIKOMODE, (LOCAL:99)
+	ENDIF
+	LOCAL:99 += 1
+LOOP LOCAL:99 < CHARANUM
+
+;------------------------------------
+;현재 이 캐릭터에게 세팅되어 있는 스케쥴을 출력한다.
+;ARG:0 캐릭터 등록번호
+;------------------------------------
+@ARRANGE_SCHEDULE_TORIKOMODE, ARG
+PRINTFORM ☏스케쥴:
+;디버그
+;PRINTFORM / CFLAG:ARG:4 = {CFLAG:ARG:4} /
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+IF CFLAG:ARG:4 == 0
+	RESETCOLOR
+	PRINTFORM 없음　
+ELSEIF CFLAG:ARG:4 == 1
+	PRINTFORM 실종　
+ELSEIF CFLAG:ARG:4 == 2
+	PRINTFORM 육아중　
+ELSEIF CFLAG:ARG:4 == 4
+	PRINTFORM 촉수유폐　
+ELSEIF CFLAG:ARG:4 == 8
+	PRINTFORM 우리유폐　
+ELSEIF CFLAG:ARG:4 == 16
+	PRINTFORM 투옥중　
+ELSEIF CFLAG:ARG:4 == 32
+	PRINTFORM 요리중　
+ELSEIF CFLAG:ARG:4 == 64
+	PRINTFORM \@ TIME==1 ? 뭘 하고 놀 지 고민중　 # 여가를 보내는 중　 \@
+ELSEIF CFLAG:ARG:4 == 128
+	PRINTFORM  \@ TIME==1 ? 준비 체조 중　 # 열심히 운동중　 \@
+ELSEIF CFLAG:ARG:4 == 256
+	PRINTFORM  \@ TIME==1 ? 읽을 책을 고르는 중　 # 독서중　 \@
+ELSEIF CFLAG:ARG:4 == 512
+	PRINTFORM 욕탕 사용중　
+ELSEIF CFLAG:ARG:4 & 1024
+	CALL SETCOLOR_TORIKOMODE, "PINK", 3
+	PRINTFORM 창관 근무중　
+ELSEIF CFLAG:ARG:4 & 2048
+	CALL SETCOLOR_TORIKOMODE, "OLIVE", 2
+	PRINTFORM 신종허브 개발중　
+ELSEIF CFLAG:ARG:4 & 4096
+	CALL SETCOLOR_TORIKOMODE, "OLIVE", 2
+	PRINTFORM 허브 생산중　
+ELSEIF CFLAG:ARG:4 == 8192
+	PRINTFORM \@ TIME==1 ? 식재료를 모으는 중　 # 도시락 제작 중　 \@
+ELSEIF CFLAG:ARG:4 == 16384
+	PRINTFORM \@ TIME==1 ? 채집 전 영양보충 중　 # 애액 채집중　 \@
+ELSEIF CFLAG:ARG:4 == 32768
+	PRINTFORM \@ TIME==1 ? 채집 전 영양보충 중　 # 황금수 채집중　 \@
+ELSEIF CFLAG:ARG:4 == 65536
+	PRINTFORM \@ TIME==1 ? 채집 전 영양보충 중　 # 모유 채집중　 \@
+ELSEIF CFLAG:ARG:4 == 131072
+	PRINTFORM 부적 생산중　
+ELSEIF CFLAG:ARG:4 == 262144
+	PRINTFORM 알 생산중　
+ELSEIF CFLAG:ARG:4 == 524288
+	PRINTFORM \@ TIME==1 ? 채집 전 영양보충 중　 # 흰 잼 채집중　 \@
+ELSEIF CFLAG:ARG:4 == 1048576
+	PRINTFORM 주치육륜 중　
+ELSEIF CFLAG:ARG:4 == 2097152
+	PRINTFORM 육변기 플레이 중　
+ELSEIF CFLAG:ARG:4 == 4194304
+	PRINTFORM \@ TIME==1 ? 공연 연습중　 # 야외 라이브 공연중　 \@
+ELSEIF CFLAG:ARG:4 == 8388608
+	PRINTFORM 조수 조교중　
+ELSEIF CFLAG:ARG:4 == 16777216
+	PRINTFORM 경호중　
+ELSEIF CFLAG:ARG:4 == 33554432
+	PRINTFORM 경비중　
+ELSEIF CFLAG:ARG:4 == 67108864
+	PRINTFORM 촬영중　
+ELSEIF CFLAG:ARG:4 == 134217728
+	PRINTFORM 모델 중　
+ELSEIF CFLAG:ARG:4 == 268435456
+	PRINTFORM 요괴찻집　
+ELSEIF CFLAG:ARG:4 == 536870912
+	PRINTFORM 데리헬　
+ELSEIF CFLAG:ARG:4 == 1073741824
+	PRINTFORM ???　
+ENDIF
+RESETCOLOR
+
+;------------------------------------
+;스케쥴을 다음 턴에도 계속할 수 있는지 체크한다.
+; ARG:캐러등록번호, ARG:0:스케쥴번호
+;------------------------------------
+@CHECK_SCHEDULE_CONTINUE_TORIKOMODE, ARG:0, ARG:1
+;계속할 수 없다면,
+;스케쥴을 0으로 돌린다.
+
+
+;------------------------------------
+;스케쥴로 인한 노예의 소모, 획득의 일괄처리 (각 함수에 두지 않고 한곳에서 모아서 처리한다. 밸런스 잡기 용이하기 위해)
+; ARG:캐러등록번호, ARG:0:스케쥴번호
+;------------------------------------
+@CALC_SCHEDULE_RESULT_TORIKOMODE,  ARG:0, ARG:1
+;체력감소
+LOCAL:0 = 0
+;기력감소
+LOCAL:1 = 0
+;스트레스 증가
+LOCAL:2 = 0
+;호감도 변화
+LOCAL:3 = 0
+
+;체력 기력 소비에 각종 탤런트를 넣을 법도 하지만, 그건 이미 판정치 계산에 들어있으니까 (성공실패,보수) 2중 계산하지 않는다.
+;여가를 보낸다. 체력 기력 소량회복. 스트레스 해소 大. 또한 최대 스트레스의 10%를 회복한다.
+IF ARG:1 == 64
+	LOCAL:0 = + (300 + RAND:10*30)
+	LOCAL:1 = + (200 + RAND:10*20)
+	LOCAL:2 = - (100 + RAND:10*5) - (CFLAG:ARG:65/10)
+;운동한다. 체력소비가 크다.
+ELSEIF ARG:1 == 128
+	LOCAL:0 = - (400 + RAND:10*40)
+	LOCAL:1 = - (100 + RAND:10*10)
+	LOCAL:2 = + (20 + RAND:10*2)
+;독서한다. 기력소비가 크다. 스트레스는 운동보다는 크다. 단, 파츄리는 예외.
+ELSEIF ARG:1 == 256
+	LOCAL:0 = - (100 + RAND:10*10)
+	LOCAL:1 = - (400 + RAND:10*40)
+	LOCAL:2 = + (30 + RAND:10*3)
+	;파츄리는 예외. 기력소비도 적고, 스트레스는 오히려 감소함. 대신 체력소비가 2배
+	IF (NO:(ARG:0)) == 8
+		PRINTFORML ※움직이는 대도서관 효과발동※
+		LOCAL:0 = - (200 + RAND:10*20)
+		LOCAL:1 = - 100
+		LOCAL:2 = - 20
+	ENDIF
+;도시락. 소비량은 전체적으로 적다. 체력소비는 조금 큼 (몸으로 뛴다는 소리)
+ELSEIF ARG:1 == 8192
+	LOCAL:0 = - (300 + RAND:10*30)
+	LOCAL:1 = - (200 + RAND:10*20)
+	LOCAL:2 = + (25 + RAND:10*2)
+;야외라이브공연	. 기력과 스트레스가 큰 편
+ELSEIF ARG:1 == 4194304
+	LOCAL:0 = - (300 + RAND:10*30)
+	LOCAL:1 = - (500 + RAND:10*50)
+	LOCAL:2 = + (30 + RAND:10*3)
+;애액채집. 체력소비가 크다. 스트레스는 많으나, 순종에 따라 떨어져간다.
+ELSEIF ARG:1 == 16384
+	LOCAL:0 = - (600 + RAND:10*30)
+	LOCAL:1 = - (200 + RAND:10*20)
+	LOCAL:2 = + (50*(6-ABL:ARG:10)) + RAND:10*5
+;황금수채집. 체력소비가 크다. 스트레스는 많으나, 순종에 따라 떨어져간다.
+ELSEIF ARG:1 == 32768
+	LOCAL:0 = - (600 + RAND:10*30)
+	LOCAL:1 = - (200 + RAND:10*20)
+	LOCAL:2 = + (50*(6-ABL:ARG:10)) + RAND:10*5
+;모유채집. 체력소비가 크다. 스트레스는 많으나, 순종에 따라 떨어져간다.
+ELSEIF ARG:1 == 65536
+	LOCAL:0 = - (600 + RAND:10*30)
+	LOCAL:1 = - (200 + RAND:10*20)
+	LOCAL:2 = + (50*(6-ABL:ARG:10)) + RAND:10*5
+;정액채집. 체력소비가 크다. 스트레스는 많으나, 순종에 따라 떨어져간다.
+ELSEIF ARG:1 == 524288
+	LOCAL:0 = - (600 + RAND:10*30)
+	LOCAL:1 = - (200 + RAND:10*20)
+	LOCAL:2 = + (50*(6-ABL:ARG:10)) + RAND:10*5
+ENDIF
+
+BASE:ARG:0 += LOCAL:0
+BASE:ARG:1 += LOCAL:1
+CFLAG:ARG:65 += LOCAL:2
+
+;체력출력
+IF  LOCAL:0 > 0
+	PRINTFORML %CALLNAME:ARG%의 체력 +{LOCAL:0}
+ELSE
+	PRINTFORML %CALLNAME:ARG%의 체력 {LOCAL:0}
+ENDIF
+;기력출력
+IF  LOCAL:1 > 0
+	PRINTFORML %CALLNAME:ARG%의 기력 +{LOCAL:1}
+ELSE
+	PRINTFORML %CALLNAME:ARG%의 기력 {LOCAL:1}
+ENDIF
+;스트레스출력
+IF  LOCAL:2 > 0
+	PRINTFORML %CALLNAME:ARG%의 스트레스 +{LOCAL:2}
+ELSE
+	PRINTFORML %CALLNAME:ARG%의 스트레스 {LOCAL:2}
+ENDIF
+
+
+

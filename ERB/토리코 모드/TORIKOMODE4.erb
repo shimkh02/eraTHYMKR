@@ -1,0 +1,686 @@
+﻿;=============================================================================
+;스트레스 컨트롤 시스템 관련 함수들
+;토리코모드 사양. 
+;간단설명 : 노예가 스트레스 받으면 자해 등의 행동을 한다. 유저가 그걸 컨트롤 해 나가는 시스템
+;=============================================================================
+
+;---------------------------------------
+; 스트레스이벤트 메인.
+; 모든 캐릭터의 스트레스를 체크한다.
+; 동일 캐릭터에 2가지 이벤트가 발생하진 않음.
+@EVENT_STRESS_TORIKOMODE
+;확률체크용 랜덤변수
+LOCAL:0 = 0
+;확률 체크용 기준변수
+LOCAL:1 = 0
+;스트레스 레벨
+LOCAL:2 = 0
+;반복자
+LOCAL:99 =0
+;
+DO
+	;주인과 실종중 캐릭터는 제외
+	IF (LOCAL:99) == MASTER || CFLAG:(LOCAL:99):4 == 1
+		;
+	ELSE
+		;스트레스 레벨 계산
+		CALL CALC_STRESS_LEVEL_TORIKOMODE, CFLAG:(LOCAL:99):65
+		LOCAL:2 = RESULT:0
+		;디버그
+		;PRINTFORML %CALLNAME:(LOCAL:99)%의 스트레스는 {CFLAG:(LOCAL:99):65} 이고, 레벨은 {LOCAL:2}LV
+		;스트레스 레벨에 따른 확률계산.스트레스 이벤트들이 발동할지 어떨지를 체크. 확률은 스트레스 레벨*5%
+		LOCAL:0 = RAND:100
+		LOCAL:1 = LOCAL:2*5
+		;디버그
+		;PRINTFORML 스트레스 이벤트가 벌어질까 어떨까?  LOCAL:0  = {LOCAL:0 }  	LOCAL:1 = {LOCAL:1}
+		;PRINTFORML CFLAG:(LOCAL:99):4 = {CFLAG:(LOCAL:99):4} , CFLAG:(LOCAL:99):4& 1024 = {CFLAG:(LOCAL:99):4& 1024}
+		;밧줄구속상태에서는 자해를 할 수 없다.
+		IF LOCAL:0 <= LOCAL:1 && (CFLAG:ARG:4010 & 2) == 0
+			; 이벤트 - 쇼핑. 친애 상애일때 1만 이상 돈이 있으면 무조건 이쪽으로 빠짐. 스트레스 범위는 1~4렙까지.
+			IF TALENT:(LOCAL:99):153 || TALENT:(LOCAL:99):152 && MONEY >= 10000 && LOCAL:2 <= 4 && LOCAL:2 >= 1
+				CALL EVENT_STRESS_SHOPPING_TORIKOMODE, (LOCAL:99)
+				CONTINUE
+			ENDIF
+			; 이벤트 - 자위. 욕망레벨*5+자위하기쉬움10 확률로 이쪽으로 빠짐. 스트레스 범위는 2~4
+			LOCAL:0 = RAND:100
+			LOCAL:1 = (ABL:(LOCAL:99):11)*5 + (TALENT:(LOCAL:99):60 )*10
+			IF LOCAL:0 <= LOCAL:1 && LOCAL:2 <= 4 && LOCAL:2 >= 2
+				CALL EVENT_STRESS_MASTERBATION_TORIKOMODE, (LOCAL:99)
+				CONTINUE
+			ENDIF
+			; 이벤트 - 창관깽판. 창관에 배치된 상태일때, 50-봉사정신*5 만큼 이쪽으로 빠짐.  스트레스 범위는 1~4
+			LOCAL:0 = RAND:100
+			LOCAL:1 = 100 - ((ABL:(LOCAL:99):13)*5)
+			IF LOCAL:0 <= LOCAL:1 && CFLAG:(LOCAL:99):4&1024 &&  LOCAL:2 <= 4 && LOCAL:2 >= 1
+				CALL EVENT_STRESS_SPRINGSHOPATTACK_TORIKOMODE, (LOCAL:99)
+				CONTINUE
+			ENDIF
+			; 이벤트 - 히스테리. 30 + 스트레스 레벨*5 만큼 이쪽으로 빠짐.  스트레스 범위는 2~4
+			LOCAL:0 = RAND:100
+			LOCAL:1 = 30 + LOCAL:2*5
+			IF LOCAL:0 <= LOCAL:1 && LOCAL:2 <= 4 && LOCAL:2 >= 2
+				CALL EVENT_STRESS_HYSTERIA_TORIKOMODE, (LOCAL:99)
+				CONTINUE
+			ENDIF
+			; 이벤트 - 자살시도. 스트레스 레벨*6 만큼 발동하며. 비관적 소질 있으면 +10, 스트레스 범위는 4이상
+			LOCAL:0 = RAND:100
+			LOCAL:1 = LOCAL:2*6 + TALENT:(LOCAL:99):36*10
+			IF LOCAL:0 <= LOCAL:1 && LOCAL:2  >= 4
+				CALL EVENT_STRESS_SUICIDE_TORIKOMODE, (LOCAL:99)
+				CONTINUE
+			ENDIF
+		ENDIF
+	ENDIF
+	LOCAL:99 += 1
+LOOP (LOCAL:99) < CHARANUM
+
+;---------------------------------------
+; 이벤트 - 쇼핑
+@EVENT_STRESS_SHOPPING_TORIKOMODE, ARG
+
+$LOOP_SELECT_ITEM
+;아이템 선택
+LOCAL:0 = 600 + RAND:16
+SIF LOCAL:0 >=606 && LOCAL:0 <610
+	GOTO LOOP_SELECT_ITEM
+;99개가 한계
+SIF ITEM:(LOCAL:0) + 1 > 99
+	GOTO LOOP_SELECT_ITEM
+;아이템 획득
+ITEM:(LOCAL:0) += 1
+;스트레스 하락
+LOCAL:1 = RAND:200 + 200
+CFLAG:ARG:65  -= LOCAL:1
+CFLAG:ARG:65 = MAX(CFLAG:ARG:65, 0)
+;돈 하락
+LOCAL:2 = RAND:2*1000 + 3000
+MONEY -= LOCAL:2
+
+DRAWLINE
+PRINTL
+PRINTFORMW "택배요오~~!"
+PRINTFORMW ...택배?!
+PRINTFORMW 문을 열어보니 택배 기사는 어디 간 건지, 종이박스만 덩그러니 놓여있다.
+PRINTFORMW 수취인은... 어디보자...[%CALLNAME:ARG%]...
+PRINTFORMW ...............또 쓸데없는 걸 산 건가...............
+PRINTFORMW 
+PRINTFORMW < %조사처리(CALLNAME:ARG,"는")% 홈쇼핑으로 스트레스를 풀었다. (그것도 바가지로) >
+PRINTFORMW %ITEMNAME:(LOCAL:0)%를 1개 얻었다.
+PRINTFORM %CALLNAME:ARG%의 스트레스가 
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3 
+PRINTFORM {LOCAL:1}
+RESETCOLOR
+PRINTFORM 만큼 하락해서 
+CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+PRINTFORMW 이 되었다.
+PRINTFORMW 
+PRINTFORMW 그리고, 쇼핑에 {LOCAL:2}만큼 돈이 들었다... (잔고:{MONEY}원)
+PRINTFORMW ...이래선 다음 달도 적자가...
+RESETCOLOR
+PRINTL
+DRAWLINE
+
+;---------------------------------------
+; 이벤트 - 자위
+@EVENT_STRESS_MASTERBATION_TORIKOMODE, ARG
+
+;어떤 자위를 할지 선택
+$LOOP_SELECT_MASTERBAITION
+LOCAL:0 = RAND:4
+IF LOCAL:0 == 0 && ABL:ARG:0 >=3
+	;
+ELSEIF LOCAL:0 == 1 && ABL:ARG:1 >=3
+	;
+ELSEIF LOCAL:0 == 2 && ABL:ARG:2 >=3
+	;
+;다 안되면 가슴자위라도 시킨다.
+ELSEIF LOCAL:0 == 3
+	;
+ELSE
+	GOTO LOOP_SELECT_MASTERBAITION
+ENDIF
+
+DRAWLINE
+PRINTL
+
+PRINTFORMW 복도를 지나치는데 %CALLNAME:ARG%의 방에서 가쁜 숨소리가 들렸다.
+PRINTFORM 문 틈으로 살짝 보니, %조사처리(CALLNAME:ARG,"는")% 
+IF LOCAL:0 == 0
+	PRINTFORM 빨갛게 발기한 클리토리스를 한 손으로는 로터로 자극하고  다른 손으로는 마치 페니스를 훑듯이 클리를 훑어대며,
+ELSEIF LOCAL:0 == 1
+	PRINTFORM 다리를 M자로 벌리고 누워, 마치 정상위로 당하듯이 허리를 떨어가며 손을 페니스 삼아 보지를 쑤셔 애액을 흩뿌리며,
+ELSEIF LOCAL:0 == 2
+	PRINTFORM 무릎을 바닥에 대고 엎드린 자세로 한 손을 엉덩이로 가져가 마치 페니스인 처럼 뾰족하게 오므리곤 애널을 힘겹게 쑤셔대며,
+ELSEIF LOCAL:0 == 3
+	PRINTFORM 발기한 유듀를 손 끝으로 집으며, 그 때 마다 고개를 뒤로 젖히고 입술을 윗니로 질끈 깨물며,
+ENDIF
+PRINTFORMW 자위에 열중하고 있다.
+PRINTFORMW 그 모습은 평소와는 달리, 어딘가 짜증이 섞인 듯 하다...
+PRINTFORMW 
+PRINTFORMW < %CALLNAME:ARG%는 자위로 스트레스를 풀었다.>
+;스트레스 하락
+LOCAL:1 = RAND:100 + 100
+CFLAG:ARG:65 -= LOCAL:1
+CFLAG:ARG:65 = MAX(CFLAG:ARG:65, 0)
+PRINTFORM %CALLNAME:ARG%의 스트레스가 
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3 
+PRINTFORM {LOCAL:1}
+RESETCOLOR
+PRINTFORM 만큼 하락해서 
+CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+PRINTFORMW 이 되었다.
+;체력 기력 하락. 스트레스의 10,5배
+BASE:ARG:0 -= (LOCAL:1*10)
+BASE:ARG:0 = MAX(BASE:ARG:0, 400)
+BASE:ARG:1 -= (LOCAL:1*5)
+BASE:ARG:1 = MAX(BASE:ARG:1, 200)
+PRINTFORMW 그리고 밤새 격렬한 자위를 계속한 결과, 체력과 기력을 크게 소비했다...
+
+PRINTL
+DRAWLINE
+
+
+;---------------------------------------
+; 이벤트 - 창관깽판
+@EVENT_STRESS_SPRINGSHOPATTACK_TORIKOMODE, ARG
+
+DRAWLINE
+PRINTL
+
+PRINTFORMW #와장창#
+PRINTFORM 창관은 잘 돌아가고 있나... 해서 가봤더니, 유리창이 깨지면서 
+LOCAL:0 = RAND:5
+IF LOCAL:0 == 0
+	PRINTFORM 나무의자가 
+ELSEIF LOCAL:0 == 1
+	PRINTFORM 눈탱이가 시퍼렇게 된 손님이 
+ELSEIF LOCAL:0 == 2
+	PRINTFORM 술병이 
+ELSEIF LOCAL:0 == 3
+	PRINTFORM 식칼이 
+ELSEIF LOCAL:0 == 4
+	PRINTFORM 흠씬 두들겨 맞은 듯 코와 입에서 피를 줄줄 흘리는 종업원이
+ENDIF
+PRINTFORMW 튀어나왔다.
+PRINTFORMW 그리고 깨진 창문 너머로 얼굴을 붉게 상기시킨채로 씩씩대고 있는 %CALLNAME:ARG%의 모습이 보였다.
+PRINTFORMW .......또 저질렀군....
+PRINTFORMW 
+PRINTFORMW %CALLNAME:MASTER%와 %조사처리(CALLNAME:ARG,"는")% 다들 떠나고 난 창관을 같이 청소했다.
+;호감도체크
+IF CFLAG:ARG:2 >= 500
+	PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 미안한 듯한 표정을 짓고 있다...
+	PRINTFORMW 그런 모습을 본  %조사처리(CALLNAME:MASTER,"는")% 괜찮다고 위로를 건넸다.
+	PRINTFORMW ...많이 쌓였겠지...
+ELSE 
+	PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 아직도 화가 안 풀린 듯이 얼굴을 찡그리고 있다.
+	PRINTFORMW ...그 동안 꽤나 스트레스가 쌓였겠지...
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 꾸짖지 않고 그대로 두기로 했다...
+ENDIF
+PRINTL
+
+PRINTFORMW < %CALLNAME:ARG%는 깽판을 치며 스트레스를 풀었다. >
+;스트레스 하락
+LOCAL:1 = RAND:200 + 300
+CFLAG:ARG:65  -= LOCAL:1
+CFLAG:ARG:65 = MAX (CFLAG:ARG:65,0)
+PRINTFORM %CALLNAME:ARG%의 스트레스가 
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3 
+PRINTFORM {LOCAL:1}
+RESETCOLOR
+PRINTFORM 만큼 하락해서 
+CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+PRINTFORMW 이 되었다.
+PRINTL
+
+;수리비는 스트레스 하락치의 10배. 
+LOCAL:2 = LOCAL:1*10
+MONEY -= LOCAL:2
+MONEY = MAX(MONEY, 0)
+;창관인기가 있을 시, 약간 하락함
+LOCAL:3 = LOCAL:1/50
+FLAG:3005  -= LOCAL:3
+FLAG:3005 = MAX(FLAG:3005,0)
+
+PRINTFORML 수리비와 손님에게 사죄금으로 {LOCAL:2}원을 지불하여, 돈이 {MONEY}가 되었다.
+PRINTFORML 그리고 %CALLNAME:ARG%의 행동으로 창관의 인기가 {LOCAL:3}만큼 하락해, {FLAG:3005}가 되었다...
+
+
+PRINTL
+DRAWLINE
+
+;---------------------------------------
+; 이벤트 - 히스테리
+@EVENT_STRESS_HYSTERIA_TORIKOMODE, ARG
+;다칠지 말지 체크
+LOCAL:0 = RAND:10
+;얼마나 부실지 체크
+LOCAL:1 = 0
+;얼마나 다칠지 체크
+LOCAL:2 = RAND:10
+;스트레스 하락치
+LOCAL:3 = 0
+;수리비 또는 치료비
+LOCAL:4 = 0
+;스킬을 잃을지 체크
+LOCAL:5 = 0
+
+DRAWLINE
+PRINTL
+
+PRINTFORMW #와장창#
+PRINTFORMW 곤히 잠들려는 찰나, %CALLNAME:ARG%의 방 쪽에서 뭔가 부서지는 소리가 났다.
+PRINTFORM 서둘러 달려가 보니, 방 안에는 
+
+LOCAL:1 = RAND:5
+SIF LOCAL:0 > 3
+	PRINTFORM 반 쯤 쪼개진 책상과 
+SIF LOCAL:0 > 2
+	PRINTFORM 부서진 거울과 
+SIF LOCAL:0 > 1
+	PRINTFORM 찢어진 매트리스와 
+SIF LOCAL:0 > 0
+	PRINTFORM 조각조각난 그릇들과 
+PRINTFORMW 깨어진 유리병이 뒹굴고 있었다.
+
+;다치지 않았다면
+IF LOCAL:0 < 7
+	PRINTFORMW 그리고 난장판 속에서 얼굴을 붉게 상기시킨 채로 씩씩대고 있는 %CALLNAME:ARG%의 모습이 보였다.
+	PRINTFORMW .......
+	PRINTFORMW 
+	PRINTFORMW 잠시 뒤, 진정한 %조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:MASTER,"과")% 함께 방을 청소했다.
+	;호감도체크
+	IF CFLAG:ARG:2 >= 500
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 미안한 듯한 표정을 짓고 있다...
+		PRINTFORMW 그런 모습을 본  %조사처리(CALLNAME:MASTER,"는")% 괜찮다고 위로를 건넸다.
+		PRINTFORMW ...많이 쌓였겠지...
+	ELSE 
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 후련하진 않은지 얼굴을 찡그리고 있다.
+		PRINTFORMW ...그 동안 꽤나 스트레스가 쌓였겠지...
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 꾸짖지 않고 그대로 두기로 했다...
+	ENDIF
+	PRINTL
+	PRINTFORMW < %CALLNAME:ARG%는 히스테리를 부리며 스트레스를 풀었다. >
+	;스트레스 하락
+	LOCAL:3 = RAND:200 + 300
+	CFLAG:ARG:65  -= LOCAL:3
+	CFLAG:ARG:65 = MAX (CFLAG:ARG:65,0)
+	PRINTFORM %CALLNAME:ARG%의 스트레스가 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3 
+	PRINTFORM {LOCAL:3}
+	RESETCOLOR
+	PRINTFORM 만큼 하락해서 
+	CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+	PRINTFORMW 이 되었다.
+	PRINTL
+	;수리비는 스트레스 하락치의 5배. 
+	LOCAL:4 = LOCAL:3*5
+	MONEY -= LOCAL:4
+	MONEY = MAX(MONEY, 0)
+	;체력 기력 하락 (스트레스 하락치의 2,1배)
+	BASE:ARG:0 -= (LOCAL:3*2)
+	BASE:ARG:0 = MAX(BASE:ARG:0, 400)
+	BASE:ARG:1 -= (LOCAL:3*1)
+	BASE:ARG:1 = MAX(BASE:ARG:1, 200)
+	PRINTFORML 수리비로 {LOCAL:4}원이 들어, 돈이 {MONEY}가 되었다.
+	PRINTFORMW 그리고 지쳐버린 %조사처리(CALLNAME:ARG,"는")%, 체력과 기력을 소비했다...
+;다쳤다면
+ELSE
+	PRINTFORMW 그리고 난장판 속에서 쓰러진 채 피를 흘리고 있는 %CALLNAME:ARG%의 모습이 보였다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 서둘러 %조사처리(CALLNAME:ARG,"를")% 의사에게 데려갔다...
+	PRINTFORMW ..........................
+	PRINTFORMW .....
+	PRINTFORMW 치료가 끝났다.
+	LOCAL:5 = RAND:10
+	;큰 부상을 입었다면 스킬을 잃는다.(40%확률)
+	IF LOCAL:5 < 4
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 큰 부상을 입어, 지금까지 익힌 기술을 잃어버렸다...
+		CALL DEGRADE_ABL_TORIKOMODE, ARG
+	ELSE
+		PRINTFORMW 다행히도 큰 부상은 입지 않은 것 같다. 간단한 치료를 받은 후, 집으로 돌아왔다.
+	ENDIF
+	;호감도체크
+	IF CFLAG:ARG:2 >= 500
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 미안한 듯한 표정을 짓고 있다...
+		PRINTFORMW 그런 모습을 본  %조사처리(CALLNAME:MASTER,"는")% 괜찮다고 위로를 건넸다.
+		PRINTFORMW ...많이 쌓였겠지...
+	ELSE 
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 억울하다는 듯이 얼굴을 찡그리고 있다.
+		PRINTFORMW ...그 동안 꽤나 스트레스가 쌓였겠지...
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 꾸짖지 않고 그대로 두기로 했다...
+	ENDIF
+	PRINTL
+	PRINTFORMW < %CALLNAME:ARG%는 히스테리를 부리며 스트레스를 풀었다. >
+	;스트레스 하락
+	LOCAL:3 = RAND:200 + 300
+	CFLAG:ARG:65  -= LOCAL:3
+	CFLAG:ARG:65 = MAX (CFLAG:ARG:65,0)
+	PRINTFORM %CALLNAME:ARG%의 스트레스가 
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3 
+	PRINTFORM {LOCAL:3}
+	RESETCOLOR
+	PRINTFORM 만큼 하락해서 
+	CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+	PRINTFORMW 이 되었다.
+	PRINTL
+	;치료비는 스트레스 하락치의 20배. 
+	LOCAL:4 = LOCAL:3*20
+	MONEY -= LOCAL:4
+	MONEY = MAX(MONEY, 0)
+	;체력 기력 하락 (스트레스 하락치의 3,2배)
+	BASE:ARG:0 -= (LOCAL:3*3)
+	BASE:ARG:0 = MAX(BASE:ARG:0, 400)
+	BASE:ARG:1 -= (LOCAL:3*2)
+	BASE:ARG:1 = MAX(BASE:ARG:1, 200)
+	PRINTFORMW 치료비로 {LOCAL:4}원이 들어, 돈이 {MONEY}가 되었다.
+	PRINTFORMW 그리고 지쳐버린 %조사처리(CALLNAME:ARG,"는")%, 체력과 기력을 소비했다.
+ENDIF
+
+PRINTL
+DRAWLINE
+
+;---------------------------------------
+; 이벤트 - 자해
+@EVENT_STRESS_SUICIDE_TORIKOMODE, ARG
+;자해행위 예상치
+LOCAL:0 = RAND:10
+;주인이 자해를 미리 알아챌 수치. 기교레벨당1. 기본3. 그리고 랜덤으로 5 (사용하지 않음)
+;LOCAL:1 = RAND:3 + (ABL:MASTER:12 *1)
+;얼마나 다칠지 체크
+LOCAL:2 = RAND:10
+;스트레스 하락치
+LOCAL:3 = 0
+;수리비 또는 치료비
+LOCAL:4 = 0
+;스킬을 잃을지 체크
+LOCAL:5 = 0
+;어떤 자해행동을 할지 체크
+LOCAL:6 = RAND:3
+;자해 행동을 막을 확률값
+LOCAL:7 = 0
+;얻게 되는 나쁜 소질
+LOCAL:8 = 0
+
+DRAWLINE
+PRINTL
+
+PRINTFORMW 다들 잘 자고 있으려나... 왠지 오늘따라 잠을 이루지 못한 %조사처리(CALLNAME:MASTER,"는")% 한 바퀴 돌아보기로 했다.
+PRINTFORMW ..............
+PRINTFORMW .....
+PRINTFORMW 음?! %CALLNAME:ARG%의 방에서 뭔가 이상한 소리가 들려왔다.
+PRINTFORM 서둘러 달려가 보니, 방 안에는 
+IF LOCAL:6 == 0
+	PRINTFORM 세숫대야에 물을 받아놓고, 깨진 사기 조각으로 손목을 그으려는 
+ELSEIF LOCAL:6 == 1
+	PRINTFORM 침대시트를 묶어 만든 끈을 천정에 달아매고, 의자위에 위태롭게 서 있는 
+ELSEIF LOCAL:6 == 2
+	PRINTFORM 금방이라도 혀를 깨물려고 하는 
+ELSE
+	PRINTFORM 알 수 없는 약을 한가득 손에 쥐고 입에 털어 넣으려는 
+ENDIF
+PRINTFORMW %CALLNAME:ARG%의 모습이 보였다.
+PRINTL
+PRINTFORMW 어떻게 하지?
+PRINTFORML [0] 힘으로 제압한다
+PRINTFORML [1] 위협하고 겁을 준다
+PRINTFORML [2] 애원하듯이 달랜다
+PRINTFORML [3] 그대로 둔다
+TINPUT 4000, 100,1
+;계산한다.
+;힘으로 제압. 대부분의 경우 효과적. 반항적,아픔에 강한 노예들에게는 역효과
+IF RESULT == 0
+	LOCAL:7 == RAND:6 + 5
+	SIF TALENT:ARG:11
+		LOCAL:7 -= 1
+	SIF TALENT:ARG:41
+		LOCAL:7 -= 1
+; 위협하고 겁을 준다. 일반적인 효과. 겁쟁이에게는 효과 큼. 프라이드 높거나 꿋꿋한 노예들에게는 역효과. 약점을 잡으면 효과큼
+ELSEIF RESULT == 1
+	LOCAL:7 == RAND:5 + 5
+	SIF TALENT:ARG:10
+		LOCAL:7 += 2
+	SIF TALENT:ARG:16
+		LOCAL:7 -= 1
+	SIF TALENT:ARG:12
+		LOCAL:7 -= 1
+	SIF TALENT:ARG:39
+		LOCAL:7 += 2
+; 애원하듯이 달랜다. 효과는 별로. 연모,친애,상애일 경우 매우 효과 큼. 눈에 띄고 싶어하면 효과큼. 프라이드 높으면 효과큼
+ELSEIF RESULT == 2
+	LOCAL:7 == RAND:4 + 5
+	SIF TALENT:ARG:150 || TALENT:ARG:152 || TALENT:ARG:153
+		LOCAL:7 += 5
+	SIF TALENT:ARG:28
+		LOCAL:7 += 2
+	SIF TALENT:ARG:16
+		LOCAL:7 += 2
+; 그대로 둔다. 효과는 낮음. (이걸 선택하고 싶을까...)
+ELSEIF RESULT == 3
+	LOCAL:7 == RAND:2 + 5
+; 시간제한 . 효과는 그대로 두기와 동일
+ELSEIF RESULT == 100
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 결정을 하지 못하고 곤란해 했다.
+	LOCAL:7 == RAND:2 + 5
+;잘못된 선택.효과는 그대로 두기와 동일
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 눈 앞의 상황에 어쩔 줄 몰라서 허둥거렸다.
+	LOCAL:7 == RAND:2 + 5
+ENDIF
+;판정한다.
+;막는데 성공
+IF LOCAL:7 >= 7
+	PRINTFORMW %CALLNAME:MASTER%의 행동이 효과가 있었는지, %조사처리(CALLNAME:ARG,"는")% 자해 행위를 그만두었다...
+	PRINTFORMW 잠시 멍한 표정으로 있던 %CALLNAME:ARG%의 눈가에 눈물이 맺히기 시작한다...
+	;호감도가 높다면
+	IF (CFLAG:ARG:2) >= 500
+		PRINTFORMW 이윽고, 눈물과 콧물로 범벅이 된 얼굴을 %CALLNAME:MASTER%의 가슴에 파묻고 오열하기 시작했다...
+		PRINTFORMW 그런 %조사처리(CALLNAME:ARG,"를")%, %조사처리(CALLNAME:MASTER,"는")% 꼭 안아주었다.
+		PRINTFORMW 그렇게 밤이 흘러갔다...
+	;호감도가 낮다면
+	ELSE
+		PRINTFORMW 잠시 우는가 싶더니, %조사처리(CALLNAME:ARG,"는")% 소리를 지르며 물건들을 집어던지기 시작했다.
+		PRINTFORMW 그런 %조사처리(CALLNAME:ARG,"를")%, %조사처리(CALLNAME:MASTER,"는")% 꼭 안아주었다.
+		PRINTFORMW 진정하라고 몇 번 말해주니, 이내 눈물을 그치고, %조사처리(CALLNAME:MASTER,"를")% 지긋이 쳐다보고 있다..
+		PRINTFORMW 다시 자해하진 않겠지... 그렇게 생각한 %조사처리(CALLNAME:MASTER,"는")% 방의 불을 끄고, 방을 나섰다...
+		PRINTFORMW 그렇게, 위태로운 밤이 흘러갔다...
+	ENDIF
+;막는데 실패
+ELSE
+	PRINTFORMW %CALLNAME:MASTER%의 행동이 역효과를 낸 건지, %조사처리(CALLNAME:ARG,"는")% 이쪽을 노려보고 있다.
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	IF LOCAL:6 == 0
+		PRINTFORMW 그리곤, 날카로운 사기조각으로 손목을 그어버렸다. 
+		PRINTFORMW 새하얀 손목에서 붉은 피가 분수처럼 솟아나온다.
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 정신을 잃고 쓰러졌다.
+	ELSEIF LOCAL:6 == 1
+		PRINTFORMW 잠시 그러더니, 결심한 듯이 이를 악물고 목을 메달아버렸다.
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 고통스러운 표정으로 몇 번 바둥거리더니, 이내 축 늘어져 버렸다.
+	ELSEIF LOCAL:6 == 2
+		PRINTFORMW 잠깐 슬픈 표정을 짓더니, 혀를 깨물어 버렸다.
+		PRINTFORMW 혀가 깨물린 입에서 선홍색의 피가 뿜어져 나와, 방 바닥을 가득 채운다...
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 정신을 잃고 쓰러졌다.
+	ELSE
+		PRINTFORMW 알 수 없는 미소를 짓고는, 알약을 입에 털어넣어 버렸다.
+		PRINTFORMW 말리려는 %CALLNAME:MASTER%의 행동도 소용없이, 이내 눈에 초점이 풀리고 축 늘어져버렸다.
+	ENDIF
+	RESETCOLOR
+	PRINTL
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 서둘러 %조사처리(CALLNAME:ARG,"를")% 의사에게 데려갔다...
+	PRINTFORMW ..........................
+	PRINTFORMW .....
+	;죽을 것인가, 살 것인가?
+	LOCAL:2 = RAND:10
+	;큰 부상을 입었다면 죽는다. (20%확률) 단 봉래인이 아니어야 함
+	IF LOCAL:2 < 2 && TALENT:ARG:49 == 0
+		PRINTFORMW ...너무 늦어버렸다...
+		CALL BADEND_14, ARG
+	;살 것이다. 스킬을 3개 잃는다. 그리고 랜덤하게 안 좋은 스킬 1개를 획득한다.
+	ELSE
+		PRINTFORMW 얼마나 시간이 흘렀을까, 수술실의 문이 열리고 지친 표정의 의사가 나왔다.
+		PRINTFORMW "다행히도, 생명에는 지장이 없을 겁니다. 운이 좋았군요"
+		PRINTFORMW "하지만 예전처럼 활동하는 건 무리일 겁니다. 환자의 상태에 각별히 주의 하고 안정을 취해 주세요."
+		PRINTFORMW %조사처리(CALLNAME:ARG,"는")% 큰 부상을 입어, 지금까지 익힌 기술들을 잃어버렸다...
+		CALL DEGRADE_ABL_TORIKOMODE, ARG
+		CALL DEGRADE_ABL_TORIKOMODE, ARG
+		CALL DEGRADE_ABL_TORIKOMODE, ARG
+		PRINTL
+		;만약 수치가 낮게 나왔다면, 안 좋은 소질도 1개 얻는다.
+		IF LOCAL:2 < 4 && TALENT:ARG:11 ==0 || TALENT:ARG:80 ==0  || TALENT:ARG:22 ==0  || TALENT:ARG:158 ==0  || TALENT:ARG:167 ==0
+			LOCAL:8 = RAND:20
+			CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+			IF LOCAL:8 < 2 && TALENT:ARG:167 ==0
+				TALENT:ARG:167 = 1
+				PRINTFORMW 그리고 정신적 충격이 트라우마가 되어, [정신붕괴]가 되어버렸다...
+			ELSEIF  LOCAL:8 < 4 && TALENT:ARG:158 == 0
+				TALENT:ARG:158 = 1
+				PRINTFORMW 그리고 정신적 충격이 트라우마가 되어, [광기]를 가져버렸다...
+			ELSEIF  LOCAL:8 < 8 && TALENT:ARG:22 ==0
+				TALENT:ARG:22 = 1
+				PRINTFORMW 그리고 정신적 충격이 트라우마가 되어, [감정결여]가 되어버렸다...
+			ELSEIF  LOCAL:8 < 13 && TALENT:ARG:80 ==0
+				TALENT:ARG:80 = 1
+				PRINTFORMW 그리고 정신적 충격이 트라우마가 되어, [도착적]이 되어버렸다...
+			ELSEIF  LOCAL:8 < 20 && TALENT:ARG:11 ==0
+				TALENT:ARG:11 = 1
+				PRINTFORMW 그리고 정신적 충격이 트라우마가 되어, [반항적]이 되어버렸다...
+			ENDIF
+			RESETCOLOR
+		ENDIF
+	ENDIF
+ENDIF
+
+
+PRINTL
+PRINTFORMW < %CALLNAME:ARG%는 스트레스에 이기지 못해 자해행위를 했다. >
+;스트레스 하락
+LOCAL:3 = RAND:500 + 1000
+CFLAG:ARG:65  -= LOCAL:3
+CFLAG:ARG:65 = MAX (CFLAG:ARG:65,0)
+PRINTFORM %CALLNAME:ARG%의 스트레스가 
+CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3 
+PRINTFORM {LOCAL:3}
+RESETCOLOR
+PRINTFORM 만큼 하락해서 
+CALL PRINT_STRESS_LEVEL_TORIKOMODE, CFLAG:ARG:65
+PRINTFORMW 이 되었다.
+PRINTL
+
+;말린 경우. 추가처리.
+IF LOCAL:7 >= 7
+	CFLAG:ARG:2 += 200
+	JUEL:ARG:12 += 1000
+	PRINTFORMW %CALLNAME:ARG%는 조금 마음을 열게 된 듯 하다... 호감도 +200. 순종의 주 +1000
+;병원에 갔을 경우
+ELSE
+	;병원비는 스트레스 하락치의 10배. 
+	LOCAL:4 = LOCAL:3*10
+	MONEY -= LOCAL:4
+	MONEY = MAX(MONEY, 0)
+	PRINTFORMW 치료비로 {LOCAL:4}원이 들었다. (잔고:{MONEY}원)
+ENDIF
+
+
+;체력 기력 하락 (스트레스 하락치 만큼)
+BASE:ARG:0 -= (LOCAL:3)
+BASE:ARG:0 = MAX(BASE:ARG:0, 200)
+BASE:ARG:1 -= (LOCAL:3)
+BASE:ARG:1 = MAX(BASE:ARG:1, 200)
+
+PRINTFORMW 그리고 %조사처리(CALLNAME:ARG,"는")% 체력과 기력을 극도로 소비했다...
+
+PRINTL
+DRAWLINE
+
+
+;---------------------------------------
+;계산_ 스트레스 레벨
+@CALC_STRESS_LEVEL_TORIKOMODE, ARG
+IF ARG <= 100
+	RESULT:0 = 0
+ELSEIF ARG <= 250
+	RESULT:0 = 1
+ELSEIF ARG <= 500
+	RESULT:0 = 2
+ELSEIF ARG <= 1000
+	RESULT:0 = 3
+ELSEIF ARG <= 3000
+	RESULT:0 = 4
+ELSEIF ARG <= 6000
+	RESULT:0 = 5
+ELSE
+	RESULT:0 = 6
+ENDIF
+;디버그
+;PRINTFORM RESULT:0={RESULT:0}
+
+RETURN RESULT:0
+
+
+
+;---------------------------------------
+;스킬 하락 처리
+@DEGRADE_ABL_TORIKOMODE, ARG
+;스킬번호
+LOCAL:0 =0
+;카운터
+LOCAL:1 =0
+
+;스킬 뽑는다. 0렙 스킬은 뽑지 않음. 100번만 돌림.
+$LOOP_SELECT_ABL
+LOCAL:0 = RAND:100
+IF ABL:ARG:(LOCAL:0) == 0 && LOCAL:1 < 100
+	LOCAL:1 +=1
+	GOTO LOOP_SELECT_ABL
+ENDIF
+
+IF LOCAL:1 < 100
+	;스킬 하락시킨다.
+	ABL:ARG:(LOCAL:0) -= 1
+	;출력한다.
+	PRINTFORM %CALLNAME:ARG%의 
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+	PRINTFORM %ABLNAME:(LOCAL:0)%
+	RESETCOLOR
+	PRINTFORM  스킬이 1레벨 하락해, 
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINTFORM {ABL:ARG:(LOCAL:0)}LV
+	RESETCOLOR
+	PRINTFORM 이 되었다.
+	PRINTL
+ENDIF
+
+
+;---------------------------------------
+;출력 : 스트레스 레벨을 문자로 출력
+@PRINT_STRESS_LEVEL_TORIKOMODE, ARG
+;스트레스 레벨 계산
+CALL CALC_STRESS_LEVEL_TORIKOMODE, ARG
+;결과에 따른 출력
+IF RESULT:0 == 0
+	PRINT 없음
+ELSEIF  RESULT:0 == 1
+	CALL SETCOLOR_TORIKOMODE, "PINK", 1
+	PRINT 약간
+	RESETCOLOR
+ELSEIF RESULT:0 == 2
+	CALL SETCOLOR_TORIKOMODE, "PINK", 2
+	PRINT 짜증
+	RESETCOLOR
+ELSEIF RESULT:0 == 3
+	CALL SETCOLOR_TORIKOMODE, "PINK", 3
+	PRINT 매우 짜증
+	RESETCOLOR
+ELSEIF RESULT:0 == 4
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	PRINT 짜증 폭발
+	RESETCOLOR
+ELSEIF RESULT:0 == 6
+	CALL SETCOLOR_TORIKOMODE, "RED", 5
+	PRINT !!짜증 폭발!!
+	RESETCOLOR
+ELSE
+	FONTBOLD
+	CALL SETCOLOR_TORIKOMODE, "RED", 5
+	PRINT !!!짜증 대폭발!!!
+	RESETCOLOR
+	FONTREGULAR
+ENDIF

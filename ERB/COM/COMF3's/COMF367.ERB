@@ -1,0 +1,379 @@
+﻿;=============================================================================
+;술목욕탕
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE367
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:367 > 0
+	RETURN 0
+;特殊風呂系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1024) == 0
+	RETURN 0
+;風呂を改装していないとダメ
+SIF (FLAG:74 & 128) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 9
+	RETURN 1
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;貧乏人には扱えないシロモノです
+SIF MONEY < 150000
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:30 == 6 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이中じゃ無いとダメ
+SIF TEQUIP:53 != 1
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 9
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;외계의 술을 충분하게 사용한 브르죠와인 커맨드.
+;조교의 소스의 디메리트가 적은＋다른 목욕탕과의 차별화를 위해, 돈소비형에
+;첫회에 150000원, 효과 유지에 매턴 1000원필요(이 값은 아무렇지도 않게 eratohoJ의 선물을 참고로 하고 있습니다)
+@COM367
+IF (NO:TARGET >= 37 && NO:TARGET <= 39) || NO:TARGET == 43 || NO:TARGET == 44 || NO:TARGET == 119
+	PRINTL 술 목욕탕
+	TSTR:0 = 술 목욕탕
+ELSEIF NO:TARGET == 23 || NO:TARGET == 60 || NO:TARGET == 181 || NO:TARGET == 182
+	PRINTL 오니고로시
+	TSTR:0 = 오니고로시
+ELSEIF NO:TARGET == 32 || NO:TARGET == 41 || NO:TARGET == 174 || NO:TARGET == 175
+	PRINTL 텐구의 목욕물
+	TSTR:0 = 텐구의 목욕물
+ELSEIF TALENT:210
+	PRINTL 오이 리큐르
+	TSTR:0 = 오이 리큐르
+ELSE
+	PRINTL 술 목욕탕
+	TSTR:0 = 술 목욕탕
+ENDIF
+CALL TRAIN_MESSAGE_COM367
+
+IF TEQUIP:55 == 9
+	DOWNBASE:0 += 10
+	DOWNBASE:1 += 20
+	SIF ABL:10 >= 3
+		SOURCE:32 = 100
+	TEQUIP:55 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 40
+
+SOURCE:24 = 300
+SOURCE:19 = 1000
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:32 = 500
+	SOURCE:17 = 0
+ELSEIF ABL:10 == 1
+	SOURCE:32 = 250
+	SOURCE:17 = 20
+ELSEIF ABL:10 == 2
+	SOURCE:32 = 100
+	SOURCE:17 = 100
+ELSEIF ABL:10 == 3
+	SOURCE:32 = 10
+	SOURCE:17 = 250
+ELSEIF ABL:10 == 4
+	SOURCE:32 = 5
+	SOURCE:17 = 500
+ELSE
+	SOURCE:32 = 0
+	SOURCE:17 = 800
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 = 20
+	TIMES SOURCE:32 , 2.20
+	TIMES SOURCE:17 , 0.70
+ELSEIF ABL:14 == 1
+	SOURCE:12 = 40
+	TIMES SOURCE:32 , 1.50
+	TIMES SOURCE:17 , 0.80
+ELSEIF ABL:14 == 2
+	SOURCE:12 = 80
+	TIMES SOURCE:32 , 1.00
+	TIMES SOURCE:17 , 0.90
+ELSEIF ABL:14 == 3
+	SOURCE:12 = 140
+	TIMES SOURCE:32 , 0.80
+	TIMES SOURCE:17 , 1.00
+ELSEIF ABL:14 == 4
+	SOURCE:12 = 280
+	TIMES SOURCE:32 , 0.40
+	TIMES SOURCE:17 , 1.10
+ELSE
+	SOURCE:12 = 500
+	TIMES SOURCE:32 , 0.20
+	TIMES SOURCE:17 , 1.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:18 = 10
+	TIMES SOURCE:24 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:18 = 75
+	TIMES SOURCE:24 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:18 = 150
+	TIMES SOURCE:24 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:18 = 300
+	TIMES SOURCE:24 , 1.20
+ELSE
+	SOURCE:18 = 750
+	TIMES SOURCE:24 , 1.40
+ENDIF
+
+;개개로 설정하는 것이 귀찮아서 대략적으로 신령(반신), 귀신(황혼의 괴물), 텐구, 갓빠의 4 종족에만 효과를 붙이는 것에
+;신령·반신
+IF TALENT:222 || TALENT:223
+	TIMES SOURCE:18 , 2.25
+	TIMES SOURCE:32 , 0.75
+	TIMES SOURCE:20 , 1.75
+;귀신·황혼의 괴물
+ELSEIF TALENT:214 || TALENT:221
+	TIMES SOURCE:18 , 1.80
+	TIMES SOURCE:12 , 1.20
+	TIMES SOURCE:32 , 0.70
+	TIMES SOURCE:20 , 1.80
+;텐구
+ELSEIF TALENT:215
+	TIMES SOURCE:18 , 1.50
+	TIMES SOURCE:32 , 0.80
+	TIMES SOURCE:20 , 1.50
+;갓빠
+ELSEIF TALENT:210
+	TIMES SOURCE:18 , 1.30
+	TIMES SOURCE:32 , 0.90
+	TIMES SOURCE:20 , 1.30
+ENDIF
+
+;ABL:순종을 보는(술에 취함 소스만) 더 조수 플레이가 아니어서 복종과 사용해 마가 없고 연모계 소질을 가지는 대상은 별취급
+IF (TALENT:150 || TALENT:152 || TALENT:153) && TALENT:160 == 0 && TALENT:164 == 0 && ASSIPLAY == 0
+	SOURCE:40 = 1200
+ELSEIF ABL:10 >= 5
+	SOURCE:40 = 1000
+ELSEIF ABL:10 == 4
+	SOURCE:40 = 500
+ELSEIF ABL:10 == 3
+	SOURCE:40 = 100
+ELSEIF ABL:10 == 2
+	SOURCE:40 = 50
+ELSEIF ABL:10 == 1
+	SOURCE:40 = 10
+ENDIF
+
+MONEY -= 150000
+TEQUIP:55 = 9
+
+RETURN 1
+
+;--------------------------------------------------
+;술목욕탕 입욕중
+;--------------------------------------------------
+@EQUIP_COM367
+PRINTL <술 목욕탕 입욕 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 20
+
+SOURCE:24 += 90
+SOURCE:19 += 100
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:32 += 600
+	SOURCE:17 += 5
+ELSEIF ABL:10 == 1
+	SOURCE:32 += 300
+	SOURCE:17 += 15
+ELSEIF ABL:10 == 2
+	SOURCE:32 += 150
+	SOURCE:17 += 80
+ELSEIF ABL:10 == 3
+	SOURCE:32 += 30
+	SOURCE:17 += 150
+ELSEIF ABL:10 == 4
+	SOURCE:32 += 10
+	SOURCE:17 += 300
+ELSE
+	SOURCE:32 += 0
+	SOURCE:17 += 600
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 += 5
+	TIMES SOURCE:32 , 2.20
+	TIMES SOURCE:17 , 0.70
+ELSEIF ABL:14 == 1
+	SOURCE:12 += 10
+	TIMES SOURCE:32 , 1.50
+	TIMES SOURCE:17 , 0.80
+ELSEIF ABL:14 == 2
+	SOURCE:12 += 30
+	TIMES SOURCE:32 , 1.00
+	TIMES SOURCE:17 , 0.90
+ELSEIF ABL:14 == 3
+	SOURCE:12 += 60
+	TIMES SOURCE:32 , 0.80
+	TIMES SOURCE:17 , 1.00
+ELSEIF ABL:14 == 4
+	SOURCE:12 += 100
+	TIMES SOURCE:32 , 0.40
+	TIMES SOURCE:17 , 1.10
+ELSE
+	SOURCE:12 += 150
+	TIMES SOURCE:32 , 0.20
+	TIMES SOURCE:17 , 1.20
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:18 += 5
+	TIMES SOURCE:24 , 0.60
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:18 += 25
+	TIMES SOURCE:24 , 0.80
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:18 += 50
+	TIMES SOURCE:24 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:18 += 75
+	TIMES SOURCE:24 , 1.20
+ELSE
+	SOURCE:18 += 100
+	TIMES SOURCE:24 , 1.40
+ENDIF
+
+;신령·반신
+IF TALENT:222 || TALENT:223
+	TIMES SOURCE:18 , 2.25
+	TIMES SOURCE:32 , 0.75
+	TIMES SOURCE:20 , 1.75
+;귀신·황혼의 괴물
+ELSEIF TALENT:214 || TALENT:221
+	TIMES SOURCE:18 , 1.80
+	TIMES SOURCE:12 , 1.20
+	TIMES SOURCE:32 , 0.70
+	TIMES SOURCE:20 , 1.80
+;텐구
+ELSEIF TALENT:215
+	TIMES SOURCE:18 , 1.50
+	TIMES SOURCE:32 , 0.80
+	TIMES SOURCE:20 , 1.50
+;갓빠
+ELSEIF TALENT:210
+	TIMES SOURCE:18 , 1.30
+	TIMES SOURCE:32 , 0.90
+	TIMES SOURCE:20 , 1.30
+ENDIF
+
+;취기가 돈다
+SOURCE:40 += 500
+
+;돈을 소비
+MONEY -= 1000
+IF MONEY < 1000
+	PRINTL 목욕탕에 술을 채우기 위한 돈이 부족해졌다….
+	PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 어쩔 수 없이 %조사선택(CALLNAME:TARGET, "를")% 탕에서 꺼냈다.
+	IF ABL:10 >= 3
+		PRINTFORML 아마도 %조사선택(CALLNAME:TARGET, "는")% 술이 떨어진 것을 유감스러워 하는 것 같다.
+		SOURCE:32 += 500
+		SIF TALENT:214 || TALENT:221
+			SOURCE:32 += 2500
+	ENDIF
+	TEQUIP:55 = 0
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM367
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 9
+	PRINTFORML 술로 채워진 목욕탕에서 %조사선택(CALLNAME:TARGET, "를")% 꺼냈다.
+	SIF ABL:10 >= 3
+		PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 조금 유감스러운 얼굴을 하고 있다….
+	PRINTW
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 술로 채워진 목욕탕에 잠기게 했다.
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF (TALENT:150 || TALENT:152 || TALENT:153) && TALENT:160 == 0 && TALENT:164 == 0 && ASSIPLAY == 0
+		PRINTFORMW %CALLNAME:MASTER%에게 함께 들어와 마시자고 권해왔다.
+	ELSEIF ABL:10 >= 5
+		PRINTW 머리 끝까지 목욕통에 잠겨, 사양 않고 술을 마시고 있다….
+	ELSEIF ABL:10 == 4
+		PRINTW 달콤한 향기를 맡자, 더는 참을 수 없다는 듯이 꿀꺽꿀꺽 목욕통의 액체를 마시기 시작했다.
+	ELSEIF ABL:10 == 3
+		PRINTW 술의 마력에 굴했는지, 잠시 주저한 것 같은 행동을 한 후 조용히 목욕탕의 술에 손을 가져가기 시작했다.
+	ELSEIF ABL:10 == 2
+		PRINTL 꺼림칙한 기분이 남아 있는지, 몰래 술을 입에 흘려 넣으며,
+		PRINTFORMW 때때로 %CALLNAME:PLAYER% 쪽을 흘낏흘낏 훔쳐보고 있다….
+	ELSEIF ABL:10 == 1
+		PRINTL 술의 유혹에 이길 수 없었던 것일까,
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 보지 않는 틈을 타 한입 가득 들이마셨다.
+	ELSE
+		PRINTW 술의 유혹보다 경계심이 강했는지, 방심하지 않으려고 이쪽을 지긋이 보고 있다.
+	ENDIF
+ENDIF

@@ -1,0 +1,187 @@
+﻿;=============================================================================
+;사정 기능 개발
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE137
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:137 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4
+	RETURN 0
+;고문계, 정신조작계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16) == 0
+	RETURN 0
+;약품계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 32) == 0
+	RETURN 0
+;주사계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 64) == 0
+	RETURN 0
+;注射セットを持っているか, 아이템なし設定でないとダメ
+SIF ITEM:53 == 0 && NOITEM == 0
+	RETURN 0
+;조교자의 기교가 4이상이 아니면 불가
+SIF ABL:PLAYER:12 < 4
+	RETURN 0
+;기교4이하의 ASSI일 경우注射できない(針さばきならＯＫ)
+IF ASSIPLAY
+	SIF ABL:ASSI:12 <= 4 && TALENT:ASSI:53 == 0
+		RETURN 0
+ENDIF
+;肥大陰核じゃないとダメ
+SIF TALENT:1 == 0
+	RETURN 0
+;남자 또는 후타나리면 불가
+SIF EXIST_PENIS(TARGET)
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;クリトリスリングをはめているとダメ
+SIF CFLAG:42 & 1
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30 || TEQUIP:31
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合はダメ
+SIF TEQUIP:59 == 19 || TEQUIP:59 == 20
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM137
+PRINTL 사정기능개발
+TSTR:0 = 사정 기능 개발
+
+;조제 지식이 있으면 소비를 억제한다
+LOCAL:3 = (TALENT:MASTER:55) ?  1 # 0
+SIF ASSI >= 0 && TALENT:ASSI:55
+	LOCAL:3 = 1
+
+LOCAL:1 = (LOCAL:3) ?  750 # 1000
+LOCAL:2 = (LOCAL:3) ?  600 # 800
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:2
+
+SOURCE:24 = 500
+SOURCE:30 = 10000
+SOURCE:31 = 20000
+
+;ABL:조교자의 기교를 본다
+IF ABL:PLAYER:12 == 4
+	SOURCE:0 = 5000
+ELSEIF ABL:PLAYER:12 >= 5
+	SOURCE:0 = 2000
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:0 == 0
+	SOURCE:31 += 10000
+ELSEIF ABL:0 == 1
+	SOURCE:31 += 8000
+ELSEIF ABL:0 == 2
+	SOURCE:31 += 6000
+ELSEIF ABL:0 == 3
+	SOURCE:31 += 4000
+ELSEIF ABL:0 == 4
+	SOURCE:31 += 2000
+ELSE
+	SOURCE:31 += 500
+ENDIF
+
+;음핵/음경판정
+SIF TALENT:171
+	SOURCE:18 = 300
+
+IF (ABL:PLAYER:12 >= 5 || ABL:10 >= 5) 
+	IF TALENT:100
+		LOCAL:4 = RAND:2
+	ELSEIF TALENT:101
+		LOCAL:4 = RAND:8
+	ELSE
+		LOCAL:4 = RAND:4
+	ENDIF
+	SIF TALENT:171 && LOCAL:4 > 0
+		LOCAL:4 = RAND:2
+ELSE
+	LOCAL:4 = RAND:6
+ENDIF
+;말용
+TFLAG:99 = (LOCAL:4 == 0) ?  1 # 0
+CALL TRAIN_MESSAGE_COM137
+IF TFLAG:99 == 1
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% [후타나리]가 되었다.
+	CALL EVENT_FUTA_PLUS_COMMON, TARGET
+	IF (CFLAG:37 & 8) == 0
+		TCVAR:50 += 1
+		CFLAG:37 |= 8
+	ENDIF
+ENDIF
+
+;약물 경험
+TCVAR:40 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM137
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 이상한 물약이 들어간 주사기로
+PRINTFORMW %CALLNAME:TARGET%의 클리토리스로부터 정액이 나오게 했다….
+PRINTL
+IF TFLAG:99 == 1
+	PRINTFORMW 이상한 약이 효과가 있었는지 %CALLNAME:TARGET%의 클리토리스로부터 정액이 나오게 되었다.
+ELSE
+	PRINTFORMW 기교가 부족한 것인지, %CALLNAME:TARGET%의 음핵을 개발 할 수 없었다….
+ENDIF

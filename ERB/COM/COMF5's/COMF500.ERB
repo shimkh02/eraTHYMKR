@@ -1,0 +1,578 @@
+﻿;=============================================================================
+;촉수 소환
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE500
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:500 > 0
+	RETURN 0
+SIF NO:TARGET == 401 && (FLAG:570 & 48) == 0
+	RETURN 0
+;조교자가 금단의 지식을 갖고 있지 않으면 불가
+SIF TALENT:PLAYER:56 == 0
+	RETURN 0
+;조교자가 촉수사역술을 갖고 있지 않으면 불가
+SIF TALENT:PLAYER:149 == 0
+	RETURN 0
+;촉수경험이 0일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:53 == 0
+	RETURN 0
+;도구 사용 중에는 불가
+SIF TEQUIP:90 == 0 && (TEQUIP:20 || TEQUIP:21 || TEQUIP:25 || TEQUIP:26 || TEQUIP:30 || TEQUIP:31 || TEQUIP:32 || TEQUIP:35 || TEQUIP:36 || TEQUIP:40 || TEQUIP:41 > 1 || TEQUIP:42 > 1 || TEQUIP:44 > 1)
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;비디오 감상 중에는 불가
+SIF TEQUIP:51
+	RETURN 0
+;야외 플레이 중에는 불가
+SIF TEQUIP:52
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;수치 플레이 중에는 불가
+SIF TEQUIP:56
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 코스프레 중에는 불가
+SIF ASSI >= 0 && TEQUIP:ASSI:59 > 1
+	RETURN 0
+;알몸에이프런,학교수영복,코스프레중이면 안됨
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;사정막기 중엔 안됨
+SIF TEQUIP:69
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM500
+IF TEQUIP:90
+	PRINTL 촉수 소환
+	TSTR:0 = 촉수 소환
+ELSE
+	PRINTL 촉수 소환
+	TSTR:0 = 촉수 소환
+ENDIF
+CALL TRAIN_MESSAGE_COM500
+
+;촉수 경험 플래그
+TFLAG:90 = 0
+IF TEQUIP:90
+	TEQUIP:90 = 0
+
+	IF TEQUIP:93 && TEQUIP:94
+		CALL DOUBLE_EGGPLAY_OUT
+	ELSEIF TEQUIP:93
+		CALL EGGPLAY_OUT
+	ELSEIF TEQUIP:94
+		CALL KANTYO_EGGPLAY_OUT
+	ENDIF
+
+	;촉수 삽입(바이브래이터외)
+	TEQUIP:20 = 0
+	TEQUIP:21 = 0
+	;어널 촉수(어널 바이브래이터외)
+	TEQUIP:25 = 0
+	;촉수 구리 꾸짖고(클리캡외)
+	TEQUIP:30 = 0
+
+	;촉수 카테터(카테터외)
+	TEQUIP:32 = 0
+	;촉수 유두 꾸짖고(유두캡외)
+	TEQUIP:35 = 0
+	;촉수 긴박(줄)
+	TEQUIP:40 = 0
+	;촉수구욕(재갈)
+	SIF TEQUIP:42 == 2 || TEQUIP:42 == 4
+		TEQUIP:42 = 0
+	;촉수비혈삽입(코훅)
+	SIF TEQUIP:44 == 2
+		TEQUIP:44 = 0
+	;촉수이혈삽입(이전)
+	SIF TEQUIP:45 == 2
+		TEQUIP:45 = 0
+
+	;촉수 강제 회복
+	TEQUIP:91 = 0
+	;촉수 최면
+	TEQUIP:92 = 0
+	;촉수질내 산란
+	TEQUIP:93 = 0
+	;촉수장내 산란
+	TEQUIP:94 = 0
+	;촉수 치키치키
+	TEQUIP:96 = 0
+
+	;촉수 독심 고문
+	TEQUIP:74 = 0
+	;
+	TEQUIP:77 = 0
+	;캐릭터 촉수 범용
+	TEQUIP:95 = 0
+
+	;촉수 사정 게이지 리셋
+	TFLAG:997 = 0
+	TFLAG:998 = 0
+	RETURN 1
+ENDIF
+TEQUIP:90 = 1
+
+LOCAL:1 = 100
+;EXP:촉수 경험을 본다
+IF EXP:53 < EXPLV:1
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:53 < EXPLV:2
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:53 < EXPLV:3
+	TIMES LOCAL:1 , 1.50
+ELSEIF EXP:53 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:53 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 0.70
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 0.60
+ELSE
+	TIMES LOCAL:1 , 0.50
+ENDIF
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;기생
+SIF TALENT:146
+	TIMES LOCAL:1 , 0.70
+;회란
+SIF TALENT:145
+	TIMES LOCAL:1 , 0.80
+;촉수 이식
+SIF CFLAG:41
+	TIMES LOCAL:1 , 0.75
+
+LOCAL:2 = LOCAL:1
+TIMES LOCAL:2 , 0.75
+
+DOWNBASE:0 += LOCAL:2
+DOWNBASE:1 += LOCAL:2 * 2
+SOURCE:25 += LOCAL:1 * 10
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:31 += LOCAL:1 * 5
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+RETURN 1
+
+;-------------------------------------------------
+;촉수 조교중
+;-------------------------------------------------
+@EQUIP_COM500
+PRINTL <촉수 조교 중>
+
+LOCAL:1 = 100
+;EXP:촉수 경험을 본다
+IF EXP:53 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:53 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:53 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:53 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:53 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.90
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 0.70
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 0.60
+ELSE
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;기생
+SIF TALENT:146
+	TIMES LOCAL:1 , 0.70
+;회란
+SIF TALENT:145
+	TIMES LOCAL:1 , 0.80
+;촉수 이식
+SIF CFLAG:41
+	TIMES LOCAL:1 , 0.75
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1 * 2
+SOURCE:25 += LOCAL:1 * 10
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 2.00
+
+SOURCE:19 += 2000
+SOURCE:27 += LOCAL:1 * 2
+SOURCE:30 += LOCAL:1 * 10
+SOURCE:31 += LOCAL:1 * 5
+
+TIMES SOURCE:0 , 2.00
+TIMES SOURCE:1 , 2.00
+TIMES SOURCE:2 , 2.00
+TIMES SOURCE:3 , 2.00
+TIMES SOURCE:22 , 1.80
+
+CALL ADD_SOURCE_27
+
+;-------------------------------------------------
+;촉수 사정 체크
+;-------------------------------------------------
+IF TFLAG:998 != 0
+	LOCAL = 0
+	;ABL:기교를 본다
+	IF ABL:12 == 0
+		LOCAL = 500
+	ELSEIF ABL:12 == 1
+		LOCAL = 600
+	ELSEIF ABL:12 == 2
+		LOCAL = 800
+	ELSEIF ABL:12 == 3
+		LOCAL = 1000
+	ELSEIF ABL:12 == 4
+		LOCAL = 1400
+	ELSE
+		LOCAL = 2000
+	ENDIF
+
+	;ABL:순종을 본다
+	IF ABL:10 == 0
+		TIMES LOCAL , 0.80
+	ELSEIF ABL:10 == 1
+		TIMES LOCAL , 0.90
+	ELSEIF ABL:10 == 2
+		TIMES LOCAL , 1.00
+	ELSEIF ABL:10 == 3
+		TIMES LOCAL , 1.10
+	ELSEIF ABL:10 == 4
+		TIMES LOCAL , 1.20
+	ELSE
+		TIMES LOCAL , 1.30
+	ENDIF
+
+	;PALAM:욕정을 본다
+	IF PALAM:13 < PALAMLV:1
+		TIMES LOCAL , 1.00
+	ELSEIF PALAM:13 < PALAMLV:2
+		TIMES LOCAL , 1.10
+	ELSEIF PALAM:13 < PALAMLV:3
+		TIMES LOCAL , 1.20
+	ELSEIF PALAM:13 < PALAMLV:4
+		TIMES LOCAL , 1.30
+	ELSEIF PALAM:13 < PALAMLV:5
+		TIMES LOCAL , 1.40
+	ELSE
+		TIMES LOCAL , 1.50
+	ENDIF
+
+	;촉수 삽입외
+	SIF TEQUIP:20
+		TIMES LOCAL , 1.50
+	;촉수 관통
+	IF TEQUIP:25 == 3
+		TIMES LOCAL , 1.20
+	;촉수 관장
+	ELSEIF TEQUIP:25 == 7
+		TIMES LOCAL , 1.30
+	;촉수 어널 삽입
+	ELSEIF TEQUIP:25 == 1
+		TIMES LOCAL , 1.50
+	ENDIF
+	;촉수 페니스 고문
+	IF TEQUIP:30 == 2
+		TIMES LOCAL , 1.10
+	;촉수 방전 페니스 고문
+	ELSEIF TEQUIP:30 == 6
+		TIMES LOCAL , 1.50
+	;촉수 클리 고문외
+	ELSEIF TEQUIP:30
+		TIMES LOCAL , 1.20
+	ENDIF
+	;촉수 착유
+	IF TEQUIP:35 == 2
+		TIMES LOCAL , 1.30
+	;촉수 유두 고문
+	ELSEIF TEQUIP:35 == 1
+		TIMES LOCAL , 1.20
+	ENDIF
+	;촉수 카테터
+	SIF TEQUIP:32
+		TIMES LOCAL , 1.30
+	;촉수 긴박
+	SIF TEQUIP:40
+		TIMES LOCAL , 1.20
+	;촉수구욕
+	SIF TEQUIP:42
+		TIMES LOCAL , 1.50
+	;촉수 최면
+	SIF TEQUIP:92
+		TIMES LOCAL , 1.10
+	;촉수[정액 방출량 강화]
+	SIF FLAG:15 & 4096 && FLAG:75 & 16384
+		TIMES LOCAL , 1.80
+
+	TFLAG:997 += LOCAL
+	SOURCE:27 += LOCAL / 100
+
+	EJAC = TFLAG:998
+
+	IF  TFLAG:997 > EJAC * 4 && FLAG:15 & 4096 && FLAG:75 & 16384
+		TFLAG:91 = 3
+	ELSEIF  TFLAG:997 > EJAC * 2
+		TFLAG:91 = 2
+	ELSEIF TFLAG:997 > EJAC
+		TFLAG:91 = 1
+	ELSE
+		TFLAG:91 = 0
+	ENDIF
+
+	;초대형량 사정
+	IF TFLAG:91 == 3
+		TCVAR:4 += 7
+		SOURCE:27 += 1000
+		PRINTL 촉수 초 대량 사정
+		TFLAG:90 += 1
+
+		TFLAG:997 -= EJAC*4
+	;대량 사정
+	ELSEIF TFLAG:91 == 2
+		TCVAR:4 += 3
+		SOURCE:27 += 500
+		PRINTL 촉수 대량 사정
+
+		TFLAG:997 -= EJAC*2
+	;통상의 사정
+	ELSEIF TFLAG:91 == 1
+		TCVAR:4 += 1
+		SOURCE:27 += 100
+		PRINTL 촉수 사정
+
+		TFLAG:997 -= EJAC
+	ENDIF
+	;촉수가 사정한 플래그
+	TFLAG:37 = TFLAG:91
+	;입에 정액을 마신 플래그
+	SIF TEQUIP:42
+		TFLAG:3 += TFLAG:91
+	IF TFLAG:91
+		TFLAG:90 += 1
+		SIF TFLAG:997 >= EJAC
+			TFLAG:997 = EJAC-1
+	ENDIF
+ENDIF
+
+SIF EXP:53 == 0
+	TCVAR:50 += 1
+
+TFLAG:90 += 1
+TCVAR:53 += TFLAG:90
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM500
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:90
+	PRINTFORMW 촉수를 돌려보내, %CALLNAME:TARGET%의 몸을 해방했다….
+ELSE
+	;[ALICE 촉수]를 취득하고 있으면(자) 지문이 변화
+	IF FLAG:97 & 16 && FLAG:98 & 16
+		LOCALS = 칠색에 물들여진 기분 나쁜 
+	ELSE
+		LOCALS = 이형의 
+	ENDIF
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 호출한 %LOCALS%촉수가, %CALLNAME:TARGET%의 몸을 휘감았다….
+ENDIF
+
+;-------------------------------------------------
+;촉수 조교에 있어서의 촉수 오염의 소스 계산 처리
+;-------------------------------------------------
+@ADD_SOURCE_27
+LOCAL = 0
+
+;촉수 이식(촉수 성장 LV의 한계 확장 처리를 유용)
+SIF CFLAG:41
+	LOCAL = PARASITIC_TENTACLE_INPLANT(LOCAL)
+
+;그 턴으로 사용한 촉수 커맨드
+IF (SELECTCOM >= 500 && SELECTCOM < 510)
+	LOCAL += 100
+ELSEIF (SELECTCOM >= 510 && SELECTCOM < 600)
+	LOCAL += 200
+ENDIF
+
+;촉수 피임막·촉수 배란제
+SIF TEQUIP:16 == 2 || TEQUIP:17 == 2
+	LOCAL += 50
+;촉수 삽입·촉수 애액 채취
+SIF TEQUIP:20
+	LOCAL += 100
+;촉수 G스포 꾸짖고·촉수 자궁 고문
+SIF TEQUIP:20 == 2 || TEQUIP:20 == 3
+	LOCAL += 100
+;어널 촉수·촉수 관장
+SIF TEQUIP:25
+	LOCAL += 100
+;촉수 관통
+SIF TEQUIP:25 == 3
+	LOCAL += 250
+;촉수 구리 꾸짖고·촉수 페니스 꾸짖고·촉수 방전 페니스 고문
+SIF TEQUIP:30
+	LOCAL += 100
+;촉수 카테터
+SIF TEQUIP:32
+	LOCAL += 100
+;촉수 유두 꾸짖고·촉수 착유
+SIF TEQUIP:35
+	LOCAL += 100
+;촉수 긴박
+SIF TEQUIP:40
+	LOCAL += 50
+;촉수구욕
+SIF TEQUIP:42 == 2
+	LOCAL += 50
+;촉수비혈삽입
+SIF TEQUIP:44 == 2
+	LOCAL += 50
+;촉수이혈삽입
+SIF TEQUIP:45 == 2
+	LOCAL += 50
+;촉수 독심 고문
+SIF TEQUIP:74 == 2
+	LOCAL += 300
+;촉수 강제 회복
+SIF TEQUIP:91
+	LOCAL += 300
+;촉수 최면
+SIF TEQUIP:92
+	LOCAL += 250
+;촉수질내 산란
+SIF TEQUIP:93
+	LOCAL += 200
+;촉수장내 산란
+SIF TEQUIP:94
+	LOCAL += 200
+;촉수 치키치키
+SIF TEQUIP:96
+	LOCAL += 350
+
+;촉수 독심 고문
+SIF TEQUIP:74 == 2
+	LOCAL += 400
+;촉수 유령질경
+SIF TEQUIP:21
+	LOCAL += 400
+;촉수 강제 음주
+SIF TEQUIP:42 == 4
+	LOCAL += 400
+;촉수 정신 제어
+SIF TEQUIP:77 == 2
+	LOCAL += 400
+;촉수장내 촬영
+SIF TEQUIP:25 == 4
+	LOCAL += 400
+;촉수 요정 안마
+SIF TEQUIP:30 == 7
+	LOCAL += 400
+;촉수빙정자위
+SIF TEQUIP:30 == 8
+	LOCAL += 400
+;촉수 조개 잡이
+SIF TEQUIP:95 & 1
+	LOCAL += 400
+;촉수 액땜
+SIF TEQUIP:95 & 2
+	LOCAL += 400
+;촉수 말고문
+SIF TEQUIP:95 & 4
+	LOCAL += 400
+;촉수 은방울꽃미약
+SIF TEQUIP:95 & 8
+	LOCAL += 400
+;촉수 관능 도서
+SIF TEQUIP:95 & 16
+	LOCAL += 400
+;촉수음맥탐사
+SIF TEQUIP:95 & 32
+	LOCAL += 400
+;촉수 최종 심판
+SIF TEQUIP:95 & 64
+	LOCAL += 400
+;촉수백렬단풍
+SIF TEQUIP:95 & 128
+	LOCAL += 400
+;촉수풍양음향
+SIF TEQUIP:95 & 256
+	LOCAL += 400
+
+;기생
+SIF TALENT:146
+	TIMES LOCAL , 1.50
+;회란
+SIF TALENT:145
+	TIMES LOCAL , 1.80
+
+SOURCE:27 += LOCAL

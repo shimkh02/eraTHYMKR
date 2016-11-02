@@ -1,0 +1,305 @@
+﻿;=============================================================================
+;요도 주사
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE84
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:84 > 0
+	RETURN 0
+;강력 아이템·커맨드 무효시는 안 됨
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;주사계 커맨드를 유효하게 하지 않으면 안 됨
+SIF (FLAG:15 & 64) == 0
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;기교 3 이하의 ASSI의 경우 주사할 수 없다(바늘 다루기라면 OK)
+IF ASSIPLAY
+	SIF ABL:ASSI:12 <= 3 && TALENT:ASSI:53 == 0
+		RETURN 0
+ENDIF
+;주사 세트와 미약을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF (ITEM:53 == 0 || ITEM:61 == 0) && NOITEM == 0
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;다른 U계 장착도구 사용중은 불가
+SIF TEQUIP:32
+	RETURN 0
+;남자의 경우, C계 장착도구 사용중은 불가
+SIF (TEQUIP:30 || TEQUIP:31) && TALENT:120
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;웨딩 드레스·고스로리 착용중의 경우는 안 됨
+SIF TEQUIP:59 == 19 || TEQUIP:59 == 20
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;통상의 요도 주사군요(땀), 요도 그 자체에 바늘 찌르면 즉사감이에요?
+@COM84
+PRINTL 요도 주사
+TSTR:0 = 요도 주사
+CALL TRAIN_MESSAGE_COM084
+
+;조제 지식이 있으면 소비를 억제한다
+LOCAL:3 = (TALENT:MASTER:55) ?  1 # 0
+SIF ASSI >= 0 && TALENT:ASSI:55
+	LOCAL:3 = 1
+
+;조교 대상으로 미약중독이 있으면 소비를 억제한다
+IF LOCAL:3
+	LOCAL:1 = (TALENT:46) ?  412 # 825
+	LOCAL:2 = (TALENT:46) ?  330 # 660
+ELSE
+	LOCAL:1 = (TALENT:46) ?  550 # 1100
+	LOCAL:2 = (TALENT:46) ?  440 # 880
+ENDIF
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:2
+
+SOURCE:0 = 800
+SOURCE:24 = 500
+SOURCE:26 = 3000
+SOURCE:31 = 3500
+
+;촉수가 아닌 경우는 미약을 1개 사용
+IF TEQUIP:90
+	TFLAG:90 = 1
+ELSEIF NOITEM == 0
+	ITEM:61 -= 1
+	SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+		CALL FILL_PLURAL_ITEM, 61
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	TIMES SOURCE:0 , 0.50
+ELSEIF ABL:0 == 1
+	TIMES SOURCE:0 , 1.00
+ELSEIF ABL:0 == 2
+	TIMES SOURCE:0 , 1.50
+ELSEIF ABL:0 == 3
+	TIMES SOURCE:0 , 2.00
+	EX:0 += RAND:2
+ELSEIF ABL:0 == 4
+	TIMES SOURCE:0 , 2.50
+	EX:0 += 1
+ELSE
+	TIMES SOURCE:0 , 3.00
+	EX:0 += 2
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:31 , 3.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:31 , 2.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:31 , 2.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:31 , 1.00
+ELSE
+	TIMES SOURCE:31 , 0.80
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:24 , 0.80
+	TIMES DOWNBASE:0 , 1.20
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:24 , 1.10
+	TIMES DOWNBASE:0 , 1.10
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:24 , 1.30
+	TIMES DOWNBASE:0 , 1.00
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:24 , 1.50
+	TIMES DOWNBASE:0 , 0.90
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:24 , 1.70
+	TIMES DOWNBASE:0 , 0.80
+ELSE
+	TIMES SOURCE:24 , 2.10
+	TIMES DOWNBASE:0 , 0.70
+ENDIF
+
+;PALAM:고통을 본다
+IF PALAM:16 < PALAMLV:1
+	SOURCE:20 = 3000
+ELSEIF PALAM:16 < PALAMLV:2
+	SOURCE:20 = 3300
+ELSEIF PALAM:16 < PALAMLV:3
+	SOURCE:20 = 3600
+ELSEIF PALAM:16 < PALAMLV:4
+	SOURCE:20 = 4000
+ELSE
+	SOURCE:20 = 4500
+ENDIF
+
+;EXP:요도 개발 경험을 본다
+IF EXP:46 < EXPLV:1
+	TIMES SOURCE:0 , 0.20
+	TIMES SOURCE:20 , 1.20
+ELSEIF EXP:46 < EXPLV:2
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:20 , 1.10
+ELSEIF EXP:46 < EXPLV:3
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:20 , 1.00
+ELSEIF EXP:46 < EXPLV:4
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:20 , 1.00
+ELSEIF EXP:46 < EXPLV:5
+	TIMES SOURCE:0 , 1.60
+	TIMES SOURCE:20 , 0.80
+ELSE
+	TIMES SOURCE:0 , 1.80
+	TIMES SOURCE:20 , 0.70
+ENDIF
+
+;아양 약효과를 발휘
+TEQUIP:11 = 1
+
+;반항적
+SIF TALENT:11
+	TIMES SOURCE:20 , 1.10
+;저항
+SIF TALENT:34
+	TIMES SOURCE:20 , 1.10
+;미약중독
+IF TALENT:46
+	SOURCE:24 += 500
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:31 , 1.50
+	SOURCE:42 = 300
+ELSE
+	SOURCE:42 = 2 + RAND:5
+ENDIF
+;요도광
+SIF TALENT:175
+	TIMES SOURCE:0 , 1.20
+;C민감
+IF TALENT:100
+	IF ABL:0 <= 3
+		TIMES SOURCE:0 , 1.80
+	ELSEIF ABL:0 == 4
+		TIMES SOURCE:0 , 2.00
+		EX:0 += RAND:2
+	ELSE
+		TIMES SOURCE:0 , 2.20
+		EX:0 += RAND:3
+	ENDIF
+;C둔감
+ELSEIF TALENT:101
+	IF ABL:0 <= 3
+		TIMES SOURCE:0 , 0.70
+		EX:0 -= (EX:0 > 1) ?  1 # 0
+	ELSEIF ABL:0 == 4
+		TIMES SOURCE:0 , 0.75
+		EX:0 -= (EX:0 > 1) ?  1 # 0
+	ELSE
+		TIMES SOURCE:0 , 0.80
+	ENDIF
+ENDIF
+
+;촉수 보정
+IF TEQUIP:90
+	TIMES SOURCE:20 , 0.30
+	TIMES SOURCE:31 , 0.80
+	LOCAL:1 -= 300
+	DOWNBASE:0 -= LOCAL:1
+	DOWNBASE:1 -= 400
+ENDIF
+
+;조교자에게 바늘 다루기
+SIF TALENT:PLAYER:53
+	TIMES SOURCE:20 , 0.90
+;조교자에게 유치
+SIF TALENT:PLAYER:131
+	TIMES SOURCE:20 , 1.20
+
+;레이센이나 에이린에 의한 사용
+IF TEQUIP:90 == 0
+	SIF NO:PLAYER == 28
+		TIMES SOURCE:20 , 0.70
+	SIF NO:PLAYER == 29
+		TIMES SOURCE:20 , 0.50
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 2
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 2
+ENDIF
+
+;약물 경험
+TCVAR:40 += 2
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 2
+
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM084
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF EXP:46 >= EXPLV:4
+	PRINT 적당히 개발된 
+ELSEIF EXP:46 < EXPLV:2
+	PRINT 아직 개발되지 않은 
+ENDIF
+PRINTL 요도 주변의 귀여운 살갗에 주사를 놓았다….
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+SIF TFLAG:899 >= 1
+	PRINT 실신한 상태임에도 불구하고 
+PRINT 하반신에서 부자연스럽게 들어오는 쾌감에 
+IF PALAM:10 >= PALAMLV:5 || TALENT:100
+	PRINT 오줌과 애액을 망가진 수도꼭지처럼 분출하면서 
+ELSEIF PALAM:10 >= PALAMLV:3
+	PRINT 오줌과 애액을 방울방울 떨어뜨리며 
+ELSE
+	PRINT 허리와 엉덩이를 흔들면서 
+ENDIF
+SIF TFLAG:899 >= 1
+	PRINT 무의식 중에 
+PRINTW 반응하고 있다….

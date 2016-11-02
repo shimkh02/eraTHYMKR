@@ -1,0 +1,1736 @@
+﻿;=============================================================================
+;무명 캐릭터 스테이터스 생성 처리
+;=============================================================================
+;여기서는 무명 캐릭터의 체력 · 기력 · 소질 · 경험 · 능력 등을 랜덤으로 결정.
+;-----------------------------------------------
+;노예용 랜덤 스테이터스 생성 처리
+;-----------------------------------------------
+;그 이름대로 노예용의 처리. SHOP2 또는 SYSTEM에서 호출된다.
+@CHARA_RANDOM_STATE
+;성별
+;무명 캐릭터 성별 랜덤이 유효할 때, 앨리스의 인형이나 마계인 외의 경우, 랜덤으로 [남자]가 된다
+IF FLAG:12 & 2048 && RAND:4 == 0 && (FLAG:570 & 8) == 0
+	SIF NO:TARGET != 172 && NO:TARGET != 173
+		CALL RANDOM_CHARA_MALE_SET, TARGET
+ENDIF
+
+;디폴트 이름 관리
+CALL CHARA_RANDOM_NAME_DEFAULT
+
+;소질
+;흑요정 판정
+SIF NO:TARGET >= 160 && NO:TARGET < 170
+	CFLAG:0 = 1
+FOR LOCAL, 0, 28
+	CALLFORM RANDOM_CHARA_TALENT_SET_{LOCAL}, TARGET
+NEXT
+;음란계 소질(악마 전용)
+SIF NO:TARGET == 176 && RAND:32 == 0
+	CALL STATE_LITTLE_DEAMON_RANDOM
+;폭발물(앨리스의 인형 전용)
+SIF NO:TARGET == 172 && RAND:32 == 0
+	TALENT:220 = 14
+;능력
+FOR LOCAL, 0, 9
+	CALLFORM RANDOM_CHARA_ABL_SET_{LOCAL}, TARGET
+NEXT
+;경험
+FOR LOCAL, 0, 9
+	CALLFORM RANDOM_CHARA_EXP_SET_{LOCAL}, TARGET
+NEXT
+;반발각인(흑요정만)
+IF CFLAG:0 == 1 && RAND:4 == 0
+	MARK:9 += RAND:2
+	MARK:97 = MARK:9
+ENDIF
+
+;Ｖ경험が有り、異常경험が有るなら低確率で被強姦경험や被輪姦경험が入る.
+;攫われる前からあったのか、攫われてくる最中に襲われたのかはご想像に.
+IF RAND:20 == 0 && EXP:0 > 0 && EXP:4 > 0 && EXP:50 > 0
+	IF RAND:2 == 0 && EXP:0 > 1
+		EXP:82 += 1
+	ELSE
+		EXP:81 += 1 + RAND:(EXP:0)
+		EXP:81 = MIN(EXP:81, EXP:4)
+	ENDIF
+;むしろ強姦していた場合.
+;犯罪率からいえば、本来は遥かに低いわけだが、そういう奴が[周囲からはぶられて奴隷に身を落とした]的な解釈で.
+ELSEIF RAND:50 == 0 && (TALENT:120 || TALENT:121) && EXP:3 > 0 && EXP:50 > 0
+	EXP:80 += 1 + RAND:(EXP:3)
+	EXP:80 = MIN(EXP:80, EXP:3)
+ENDIF
+
+;랜덤 첫경험 판정
+CALL RANDOM_VIRGIN, TARGET
+
+;마지막으로 체력과 기력을 전쾌시키고, 흑요정 판정을 해제하는 처리를 깔작입니다
+CALL RANDOM_CHARA_FINISH, TARGET
+
+;이름 랜덤 생성
+IF FLAG:4 >= 50
+	CALL CHARA_RANDOM_NAME_C
+ELSE
+	CALL CHARA_RANDOM_NAME
+ENDIF
+RETURN 1
+
+;-----------------------------------------------
+;음란계 소질 초기 추가 처리
+;-----------------------------------------------
+;현재 코코아 전용란
+;ごく稀に生まれながらにしてえっちな素質持ちの코코아が出ますって解釈の元に
+;淫乱系の素質が始めから付いている(引き継ぎも有効)
+@STATE_LITTLE_DEAMON_RANDOM
+TALENT:170 = 1
+CFLAG:16 |= 1
+LOCAL = RAND:100
+IF LOCAL < 10
+	;淫核／淫茎
+	TALENT:171 = 1
+	CFLAG:16 |= 2
+ELSEIF LOCAL < 20
+	;[남자]持ちは弾く
+	SIF TALENT:120
+		RESTART
+	;淫壷
+	TALENT:172 = 1
+	CFLAG:16 |= 4
+ELSEIF LOCAL < 30
+	;尻穴狂い
+	TALENT:173 = 1
+	CFLAG:16 |= 8
+ELSEIF LOCAL < 40
+	;淫乳
+	TALENT:174 = 1
+	CFLAG:16 |= 16
+ELSEIF LOCAL < 45
+	;尿道狂
+	TALENT:175 = 1
+	CFLAG:16 |= 32
+ELSEIF LOCAL < 50
+	;キス魔
+	TALENT:176 = 1
+	CFLAG:16 |= 64
+ELSEIF LOCAL < 60
+	;ドＳ
+	TALENT:177 = 1
+	CFLAG:16 |= 128
+ELSEIF LOCAL < 70
+	;ドＭ
+	TALENT:178 = 1
+	CFLAG:16 |= 256
+ELSEIF LOCAL == 99
+	;즉각함락
+	TALENT:179 = 1
+	CFLAG:16 |= 512
+ENDIF
+
+;-----------------------------------------------
+;주인용 랜덤 스테이터스 생성 처리
+;-----------------------------------------------
+;SYSTEM.ERB에서 호출된다
+;EXモードで主人を名無しキャラに設定した場合、ここでその処理を行う
+;大まかな処理は奴隷用と変わりはないが、[快感の否定]など一部の素質を取得しないようになっている
+@CHARA_RANDOM_STATE_M
+;サイズ縮小のため、主人＝調教対象にする
+;능력生成中は対象と主人の登録番号は一致しているため、NO:MASTERの処理は変更しないことに(だって、めんどくさいかｒ(ry
+
+LOCAL:1 = TARGET
+TARGET = MASTER
+
+;성별
+;앨리스의 인형, 마계인 말고는 성별 선택이 가능
+IF NO:MASTER != 172 && NO:MASTER != 173
+	PRINTFORML %CALLNAME:MASTER%의 성별을 선택해 주세요.
+	PRINTL [0] ♂
+	PRINTL [1] ♀
+	PRINTL 
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		CALL RANDOM_CHARA_MALE_SET, TARGET
+		PRINTW 성별:♂으로 시작합니다.
+	ELSEIF RESULT == 1
+		CALL RANDOM_CHARA_FEMALE_SET, TARGET
+		PRINTW 성별:♀로 시작합니다.
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ENDIF
+
+;디폴트 이름 관리
+CALL CHARA_RANDOM_NAME_DEFAULT
+
+;소질
+;흑요정 판정
+SIF NO:MASTER >= 160 && NO:MASTER < 170
+	CFLAG:0 = 1
+FOR LOCAL, 0, 23
+	SELECTCASE LOCAL
+		CASE 0 TO 20
+			CALLFORM RANDOM_CHARA_TALENT_SET_{LOCAL}, TARGET
+		CASE 21
+			CALLFORM RANDOM_MASTER_TALENT_SET_{LOCAL}, TARGET
+	ENDSELECT
+NEXT
+;능력
+FOR LOCAL, 1, 9
+	SIF LOCAL == 3 || LOCAL == 4
+		CONTINUE
+	CALLFORM RANDOM_CHARA_ABL_SET_{LOCAL}, TARGET
+NEXT
+;경험
+FOR LOCAL, 0, 5
+	CALLFORM RANDOM_CHARA_EXP_SET_{LOCAL}, TARGET
+NEXT
+
+;最後に体力と気力を全快させ、黒요정判定を解除する処理を噛ます
+CALL RANDOM_CHARA_FINISH, TARGET
+
+;이름 랜덤 생성
+CALL CHARA_RANDOM_NAME_M
+
+;조교 대상 해제 처리
+TARGET = LOCAL:1 
+RETURN 1
+
+;-----------------------------------------------
+;디폴트 이름 관리
+;-----------------------------------------------
+@CHARA_RANDOM_NAME_DEFAULT
+;性別♂の名無しキャラのデフォルト名
+IF TALENT:120
+	;ひまわり요정
+	SIF NO:TARGET == 150
+		CALLNAME:TARGET = 리노
+	;メイド요정
+	IF NO:TARGET == 151
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 어빙
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 러틀랜드
+		ELSE
+			CALLNAME:TARGET = 길버트
+		ENDIF
+	ENDIF
+	;赤요정
+	SIF NO:TARGET == 152
+		CALLNAME:TARGET = 글렌
+	;青요정
+	SIF NO:TARGET == 153
+		CALLNAME:TARGET = 아오바
+	;緑요정
+	SIF NO:TARGET == 154
+		CALLNAME:TARGET = 아사기
+	;黄요정
+	SIF NO:TARGET == 155
+		CALLNAME:TARGET = 오렌
+	;ゾンビフェアリー
+	IF NO:TARGET == 156
+		IF RAND:100 == 0
+			CALLNAME:TARGET = 린느
+		ELSE
+			CALLNAME:TARGET = 니비
+		ENDIF
+	ENDIF
+	;黒ひまわり요정
+	SIF NO:TARGET == 160
+		CALLNAME:TARGET = 레이
+	;黒メイド요정
+	SIF NO:TARGET == 161
+		CALLNAME:TARGET = 브라니
+	;朱요정
+	SIF NO:TARGET == 162
+		CALLNAME:TARGET = 크림슨
+	;蒼요정
+	SIF NO:TARGET == 163
+		CALLNAME:TARGET = 시안
+	;翠요정
+	SIF NO:TARGET == 164
+		CALLNAME:TARGET = 제이드
+	;金요정
+	SIF NO:TARGET == 165
+		CALLNAME:TARGET = 골드
+	;黒呪精
+	SIF NO:TARGET == 166
+		CALLNAME:TARGET = 아슈레이
+	;地上の兎
+	SIF NO:TARGET == 170
+		CALLNAME:TARGET = 이나바
+	;里の인간
+	IF NO:TARGET == 171
+		NAME:TARGET = 마을청년
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 아키타카
+		ELSE
+			CALLNAME:TARGET = 곤베에
+		ENDIF
+	ENDIF
+	;鴉텐구
+	SIF NO:TARGET == 174
+		CALLNAME:TARGET = 쿠로
+	;白狼텐구
+	SIF NO:TARGET == 175
+		CALLNAME:TARGET = 하쿠
+	;코코아
+	SIF NO:TARGET == 176
+		CALLNAME:TARGET = 몰렉
+	;夜雀
+	SIF NO:TARGET == 177
+		CALLNAME:TARGET = 오오시라가
+	;地獄鴉
+	SIF NO:TARGET == 178
+		CALLNAME:TARGET = 쿠마노
+	;망령
+	SIF NO:TARGET == 179
+		CALLNAME:TARGET = 유겐
+	;캇파
+	IF NO:TARGET == 180
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 키쿠조
+		ELSE
+			CALLNAME:TARGET = 류노스케
+		ENDIF
+	ENDIF
+	;旧都鬼
+	SIF NO:TARGET == 181
+		CALLNAME:TARGET = 우두
+	;地獄鬼
+	SIF NO:TARGET == 182
+		CALLNAME:TARGET = 백목귀
+	;死神
+	IF NO:TARGET == 183
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 데스
+		ELSE
+			CALLNAME:TARGET = 야스
+		ENDIF
+	ENDIF
+	;玉兎
+	IF NO:TARGET == 184
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 효지
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 아리아케
+		ELSE
+			CALLNAME:TARGET = 야하리
+		ENDIF
+	ENDIF
+	;天人
+	IF NO:TARGET == 185
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 시젠죠
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 코지
+		ELSE
+			CALLNAME:TARGET = 슈와이
+		ENDIF
+	ENDIF
+	;化け猫
+	SIF NO:TARGET == 186
+		CALLNAME:TARGET = 보스
+	;化け狐
+	SIF NO:TARGET == 187
+		CALLNAME:TARGET = 겐
+	;化け鼠
+	SIF NO:TARGET == 188
+		CALLNAME:TARGET = 쿠로가네
+	;仙人
+	IF NO:TARGET == 189
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 무메이
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 곤죠
+		ELSE
+			CALLNAME:TARGET = 이후
+		ENDIF
+	ENDIF
+	;흡혈귀
+	IF NO:TARGET == 190
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 아카드
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 프레딕
+		ELSE
+			CALLNAME:TARGET = 더글라스
+		ENDIF
+	ENDIF
+;性別♀の名無しキャラのデフォルト名
+ELSE
+	;ひまわり요정
+	SIF NO:TARGET == 150
+		CALLNAME:TARGET = 히마와리
+	;メイド요정
+	SIF NO:TARGET == 151
+		CALLNAME:TARGET = 메이
+	;赤요정
+	SIF NO:TARGET == 152
+		CALLNAME:TARGET = 아카네
+	;青요정
+	SIF NO:TARGET == 153
+		CALLNAME:TARGET = 루리네
+	;緑요정
+	SIF NO:TARGET == 154
+		CALLNAME:TARGET = 미도리
+	;黄요정
+	SIF NO:TARGET == 155
+		CALLNAME:TARGET = 키히로
+	;ゾンビフェアリー
+	SIF NO:TARGET == 156
+		CALLNAME:TARGET = 훼아
+	;黒ひまわり요정
+	SIF NO:TARGET == 160
+		CALLNAME:TARGET = 쿠로히마와리
+	;黒メイド요정
+	SIF NO:TARGET == 161
+		CALLNAME:TARGET = 브로네
+	;朱요정
+	SIF NO:TARGET == 162
+		CALLNAME:TARGET = 카마인
+	;蒼요정
+	SIF NO:TARGET == 163
+		CALLNAME:TARGET = 애쥬어
+	;翠요정
+	SIF NO:TARGET == 164
+		CALLNAME:TARGET = 에메랄드
+	;金요정
+	SIF NO:TARGET == 165
+		CALLNAME:TARGET = 아울룸
+	;黒呪精
+	SIF NO:TARGET == 166
+		CALLNAME:TARGET = 애슐리
+	;地上の兎
+	SIF NO:TARGET == 170
+		CALLNAME:TARGET = 이나바
+	;里の인간
+	IF NO:TARGET == 171
+		NAME:TARGET = 마을처녀
+		CALLNAME:TARGET = 메이
+	ENDIF
+	;アリスの人形
+	IF NO:TARGET == 172
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 파살리나
+		ELSE
+			CALLNAME:TARGET = 클라리사
+		ENDIF
+	ENDIF
+	;마계인
+	IF NO:TARGET == 173
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 로기안나
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 앙펠로이
+		ELSE
+			CALLNAME:TARGET = 듀메이
+		ENDIF
+	ENDIF
+	;鴉텐구
+	SIF NO:TARGET == 174
+		CALLNAME:TARGET = 누레하
+	;白狼텐구
+	SIF NO:TARGET == 175
+		CALLNAME:TARGET = 츠키시로
+	;코코아
+	SIF NO:TARGET == 176
+		CALLNAME:TARGET = 코코아
+	;夜雀
+	SIF NO:TARGET == 177
+		CALLNAME:TARGET = 욧쨩
+	;地獄鴉
+	SIF NO:TARGET == 178
+		CALLNAME:TARGET = 헤루
+	;망령
+	IF NO:TARGET == 179
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 미타마
+		ELSE
+			CALLNAME:TARGET = 유우
+		ENDIF
+	ENDIF
+	;캇파
+	IF NO:TARGET == 180
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 마고메
+		ELSE
+			CALLNAME:TARGET = 요츠바
+		ENDIF
+	ENDIF
+	;旧都鬼
+	SIF NO:TARGET == 181
+		CALLNAME:TARGET = 아노
+	;地獄鬼
+	SIF NO:TARGET == 182
+		CALLNAME:TARGET = 니마
+	;死神
+	IF NO:TARGET == 183
+		IF RAND:2 == 0
+			CALLNAME:TARGET = 텐바쿠
+		ELSE
+			CALLNAME:TARGET = 노탄
+		ENDIF
+	ENDIF
+	;玉兎
+	IF NO:TARGET == 184
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 겟카
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 아사즈키
+		ELSE
+			CALLNAME:TARGET = 노조무
+		ENDIF
+	ENDIF
+	;天人
+	IF NO:TARGET == 185
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 무시키
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 카이
+		ELSE
+			CALLNAME:TARGET = 후라쿠
+		ENDIF
+	ENDIF
+	;化け猫
+	IF NO:TARGET == 186
+		IF RAND:3 ==0
+			CALLNAME:TARGET = 미케
+		ELSEIF RAND:2 ==0
+			CALLNAME:TARGET = 카체
+		ELSE
+			CALLNAME:TARGET = 마오
+		ENDIF
+	ENDIF
+	;化け狐
+	IF NO:TARGET == 187
+		IF RAND:3 ==0
+			CALLNAME:TARGET = 우이
+		ELSEIF RAND:2 ==0
+			CALLNAME:TARGET = 텐
+		ELSE
+			CALLNAME:TARGET = 긴
+		ENDIF
+	ENDIF
+	;化け鼠
+	IF NO:TARGET == 188
+		IF RAND:3 ==0
+			CALLNAME:TARGET = 하츠네
+		ELSEIF RAND:2 ==0
+			CALLNAME:TARGET = 무스
+		ELSE
+			CALLNAME:TARGET = 코기쿠
+		ENDIF
+	ENDIF
+	;仙人
+	IF NO:TARGET == 189
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 광선
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 몽선
+		ELSE
+			CALLNAME:TARGET = 무선
+		ENDIF
+	ENDIF
+	;흡혈귀
+	IF NO:TARGET == 190
+		IF RAND:3 == 0
+			CALLNAME:TARGET = 아르크
+		ELSEIF RAND:2 == 0
+			CALLNAME:TARGET = 마리아
+		ELSE
+			CALLNAME:TARGET = 모라
+		ENDIF
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;남자가 됐을 경우
+;-----------------------------------------------
+@RANDOM_CHARA_MALE_SET, ARG
+TALENT:ARG:0 = 0
+TALENT:ARG:110 = 0
+TALENT:ARG:111 = 0
+TALENT:ARG:112 = 0
+TALENT:ARG:113 = 0
+TALENT:ARG:120 = 1
+TALENT:ARG:121 = 0
+ABL:ARG:22 = 0
+ABL:ARG:32 = 0
+EXP:ARG:0 = 0
+EXP:ARG:12 = 0
+EXP:ARG:32 = 0
+EXP:ARG:42 = 0
+EXP:ARG:45 = 0
+EXP:ARG:51 = 0
+EXP:ARG:52 = 0
+MAXBASE:ARG:2 = CALC_GAUGE2_COMMON(ARG)
+
+;-----------------------------------------------
+;여자가 됐을 경우
+;-----------------------------------------------
+@RANDOM_CHARA_FEMALE_SET, ARG
+TALENT:ARG:120 = 0
+TALENT:ARG:121 = 0
+ABL:ARG:23 = 0
+ABL:ARG:33 = 0
+EXP:ARG:13 = 0
+MAXBASE:ARG:2 = 0
+
+;-----------------------------------------------
+;체력 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_0, ARG
+MAXBASE:ARG:0 += (TALENT:ARG:120) ? 100 * RAND:11 + 100 # 100 * RAND:11
+
+;-----------------------------------------------
+;기력 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_1, ARG
+MAXBASE:ARG:1 += (TALENT:ARG:120) ? 100 * RAND:10 # 100 * RAND:11
+
+;-----------------------------------------------
+;처녀인지 아닌지 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_2, ARG
+SIF TALENT:ARG:120
+	RETURN 0
+;人形は処女膜が作られないことが多い
+LOCAL = (TALENT:ARG:208) ? RAND:100 # RAND:4
+SIF LOCAL < 3
+	TALENT:0 = 1
+
+;-----------------------------------------------
+;臆病および気丈의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_3, ARG
+IF NO:ARG == 180
+	;캇파의 경우
+	LOCAL = RAND:8
+	IF LOCAL <= 1 && TALENT:ARG:12 == 0
+		TALENT:ARG:10 = 1
+	ELSEIF LOCAL == 3 && TALENT:ARG:10 == 0
+		TALENT:ARG:12 = 1
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:12 == 0
+		TALENT:ARG:10 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:10 == 0
+		TALENT:ARG:12 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;好奇心・楽観的・悲観的의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_4, ARG
+IF NO:ARG == 185 || NO:ARG == 189
+	;天人・仙人의 경우
+	SIF RAND:16 == 0
+		TALENT:ARG:23 = 1
+	LOCAL = RAND:16
+	IF LOCAL < 5 && TALENT:ARG:26 == 0
+		TALENT:ARG:25 = 1
+	ELSEIF LOCAL == 7 && TALENT:ARG:25 == 0
+		TALENT:ARG:26 = 1
+	ENDIF
+ELSE
+	;그 외의 경우
+	SIF RAND:4 == 0
+		TALENT:ARG:23 = 1
+	LOCAL = RAND:12
+	SIF CFLAG:ARG:0 == 1 && LOCAL < 1
+		LOCAL = 5
+	IF LOCAL < 2 && TALENT:ARG:26 == 0
+		TALENT:ARG:25 = 1
+	ELSEIF LOCAL == 5 && TALENT:ARG:25 == 0
+		TALENT:ARG:26 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;恥じらい・恥薄い의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_5, ARG
+IF NO:ARG == 176 && ARG != MASTER
+	;코코아의 경우
+	LOCAL = RAND:16
+	IF (LOCAL == 0 || LOCAL == 1) && TALENT:ARG:36 == 0
+		TALENT:ARG:35 = 1
+	ELSEIF LOCAL <= 4 && TALENT:ARG:35 == 0
+		TALENT:ARG:36 = 1
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:36 == 0
+		TALENT:ARG:35 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:35 == 0
+		TALENT:ARG:36 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;痛みに弱い/強い・サド/マゾ의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_6, ARG
+;痛みに弱い/強い
+IF NO:ARG == 181 || NO:ARG == 182
+	;오니들
+	LOCAL = RAND:12
+	IF LOCAL == 0 && TALENT:ARG:41 == 0
+		TALENT:ARG:40 = 1
+	ELSEIF LOCAL >= 3 && TALENT:ARG:40 == 0
+		TALENT:ARG:41 = 1
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:41 == 0
+		TALENT:ARG:40 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:40 == 0
+		TALENT:ARG:41 = 1
+	ENDIF
+ENDIF
+;サド/マゾ
+LOCAL = RAND:10
+IF LOCAL <= 2 && (NO:ARG == 174 || NO:ARG == 175)
+	;텐구의 경우
+	TALENT:ARG:81 = 1
+ELSEIF LOCAL <= 1 && (NO:ARG == 176 || NO:ARG == 190) && ARG != MASTER
+	;코코아・흡혈귀의 경우
+	TALENT:ARG:81 = 1
+ELSEIF LOCAL == 0
+	;그 외의 경우
+	TALENT:ARG:81 = 1
+ENDIF
+LOCAL = (ARG == MASTER) ? RAND:16 # RAND:8
+SIF LOCAL == 0
+	TALENT:ARG:82 = 1
+
+;-----------------------------------------------
+;濡れやすい・濡れにくい의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_7, ARG
+IF NO:ARG == 179 || TALENT:ARG:120
+	;망령・남자의 경우
+	LOCAL = RAND:16
+	IF LOCAL == 0 && TALENT:ARG:43 == 0
+		TALENT:ARG:42 = 1
+	ELSEIF LOCAL >= 3 && TALENT:ARG:42 == 0
+		TALENT:ARG:43 = 1
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:43 == 0
+		TALENT:ARG:42 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:42 == 0
+		TALENT:ARG:43 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;習得早い・習得遅い의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_8, ARG
+LOCAL = RAND:8
+IF LOCAL == 0 && TALENT:ARG:51 == 0
+	TALENT:ARG:50 = 1
+ELSEIF LOCAL == 1 && TALENT:ARG:50 == 0
+	TALENT:ARG:51 = 1
+ENDIF
+
+;-----------------------------------------------
+;汚臭둔감・汚臭민감・汚れ無視의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_9, ARG
+;汚臭둔감・汚臭민감
+LOCAL = RAND:8
+IF LOCAL == 0 && TALENT:ARG:62 == 0
+	TALENT:ARG:61 = 1
+ELSEIF LOCAL == 1 && TALENT:ARG:61 == 0
+	TALENT:ARG:62 = 1
+ENDIF
+SIF TALENT:ARG:62 || ARG == MASTER
+	RETURN 0
+;汚れ無視
+LOCAL = (TALENT:ARG:61) ? RAND:50 # RAND:120
+SIF LOCAL == 0
+	TALENT:ARG:64 = 1
+
+;-----------------------------------------------
+;自慰しやすい・中毒しやすい・献身的의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_10, ARG
+;自慰しやすい
+LOCAL = (CFLAG:ARG:0 == 1) ? RAND:6 # RAND:3
+SIF LOCAL == 0
+	TALENT:ARG:60 = 1
+;献身的
+LOCAL = (CFLAG:ARG:0 == 1) ? RAND:6 # RAND:3
+SIF LOCAL == 0
+	TALENT:ARG:63 = 1
+;中毒しやすい
+LOCAL = (CFLAG:ARG:0 == 1) ? RAND:6 # RAND:3
+SIF LOCAL == 0
+	TALENT:ARG:84 = 1
+;中毒しにくい
+LOCAL = (CFLAG:ARG:0 == 1) ? RAND:18 # RAND:9
+SIF LOCAL == 0 && TALENT:ARG:84 == 0
+	TALENT:ARG:85 = 1
+
+;-----------------------------------------------
+;Ｃ둔감・Ｃ민감의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_11, ARG
+IF NO:ARG == 181 || NO:ARG == 182
+	;鬼(きゅうしょに　あたった！)
+	LOCAL = RAND:10
+	IF LOCAL == 0 && TALENT:ARG:100 == 0
+		TALENT:ARG:101 = 1
+	ELSEIF LOCAL >= 5 && TALENT:ARG:101 == 0
+		TALENT:ARG:100 = 1
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:100 == 0
+		TALENT:ARG:101 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:101 == 0
+		TALENT:ARG:100 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;Ｖ둔감・Ｖ민감의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_12, ARG
+IF TALENT:ARG:120
+	;남자의 경우
+	TALENT:ARG:103 = 0
+	TALENT:ARG:102 = 0
+ELSEIF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:10
+	IF LOCAL == 0
+		TALENT:ARG:103 = 1
+		TALENT:ARG:102 = 0
+	ELSEIF LOCAL == 1 || LOCAL == 2
+		TALENT:ARG:102 = 0
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:102 == 0
+		TALENT:ARG:103 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:103 == 0
+		TALENT:ARG:102 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;Ａ둔감・Ａ민감의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_13, ARG
+IF NO:ARG == 180
+	;캇파의 경우
+	LOCAL = RAND:10
+	IF LOCAL == 0
+		TALENT:ARG:105 = 1
+		TALENT:ARG:104 = 0
+	ELSEIF LOCAL == 1 || LOCAL == 2
+		TALENT:ARG:104 = 0
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0 && TALENT:ARG:104 == 0
+		TALENT:ARG:105 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:105 == 0
+		TALENT:ARG:104 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;Ｂ둔감・Ｂ민감의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_14, ARG
+IF TALENT:ARG:120
+	;남자はあまり민감じゃない
+	IF NO:ARG == 181 || NO:ARG == 182
+		;鬼(こうかは　ばつぐんだ！)
+		LOCAL = RAND:8
+		IF LOCAL >= 4 && TALENT:ARG:106 == 0
+			TALENT:ARG:107 = 1
+		ELSEIF LOCAL == 0 && TALENT:ARG:107 == 0
+			TALENT:ARG:106 = 1
+		ENDIF
+	ELSE
+		;その他（남자）의 경우
+		LOCAL = RAND:16
+		IF LOCAL >= 8 && TALENT:ARG:106 == 0
+			TALENT:ARG:107 = 1
+		ELSEIF LOCAL == 0 && TALENT:ARG:107 == 0
+			TALENT:ARG:106 = 1
+		ENDIF
+	ENDIF
+ELSE
+	;オンナ의 경우
+	IF NO:ARG == 181 || NO:ARG == 182
+		;鬼(こうかは　ばつぐんだ！)
+		LOCAL = RAND:10
+		IF LOCAL == 0 && TALENT:ARG:106 == 0
+			TALENT:ARG:107 = 1
+		ELSEIF LOCAL >= 5 && TALENT:ARG:107 == 0
+			TALENT:ARG:106 = 1
+		ENDIF
+	ELSE
+		;その他（オンナ）의 경우
+		LOCAL = RAND:8
+		IF LOCAL == 0 && TALENT:ARG:106 == 0
+			TALENT:ARG:107 = 1
+		ELSEIF LOCAL == 1 && TALENT:ARG:107 == 0
+			TALENT:ARG:106 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;おっぱいの大きさ의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_15, ARG
+LOCAL = RAND:20
+IF TALENT:ARG:120
+	;남자의 경우
+	TALENT:ARG:110 = 0
+	TALENT:ARG:111 = 0
+	TALENT:ARG:112 = 0
+	TALENT:ARG:113 = 0
+ELSEIF LOCAL < 5
+	;貧乳
+	TALENT:ARG:110 = 0
+	TALENT:ARG:111 = 1
+	TALENT:ARG:112 = 0
+	TALENT:ARG:113 = 0
+ELSEIF LOCAL < 10
+	;巨乳
+	TALENT:ARG:110 = 0
+	TALENT:ARG:111 = 0
+	TALENT:ARG:112 = 1
+	TALENT:ARG:113 = 0
+ELSEIF LOCAL == 17 || LOCAL == 18
+	;絶壁
+	TALENT:ARG:110 = 1
+	TALENT:ARG:111 = 0
+	TALENT:ARG:112 = 0
+	TALENT:ARG:113 = 0
+ELSEIF LOCAL == 19
+	;爆乳
+	TALENT:ARG:110 = 0
+	TALENT:ARG:111 = 0
+	TALENT:ARG:112 = 0
+	TALENT:ARG:113 = 1
+ENDIF
+
+;-----------------------------------------------
+;回復早い・回復遅い의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_16, ARG
+IF NO:ARG >= 150 && NO:ARG < 170
+	;요정의 경우
+	LOCAL = RAND:5
+	IF LOCAL > 0
+		IF TALENT:ARG:138
+			TALENT:ARG:138 = 0
+		ELSE
+			TALENT:ARG:137 = 1
+		ENDIF
+	ENDIF
+ELSEIF NO:ARG == 171 || NO:ARG == 189
+	;인간의 경우
+	LOCAL = RAND:10
+	IF LOCAL < 2
+		IF TALENT:ARG:138
+			TALENT:ARG:138 = 0
+		ELSE
+			TALENT:ARG:137 = 1
+		ENDIF
+	ELSEIF LOCAL > 6
+		IF TALENT:ARG:137
+			TALENT:ARG:137 = 0
+		ELSE
+			TALENT:ARG:138 = 1
+		ENDIF
+	ENDIF
+ELSEIF NO:ARG == 170 || NO:ARG == 174 || NO:ARG == 175 || NO:ARG == 177 || NO:ARG == 178 || NO:ARG == 184 || NO:ARG == 186 || NO:ARG == 187 || NO:ARG == 188
+	;妖怪兎・텐구・夜雀・地獄鴉・玉兎・化け猫・化け狐・化け鼠의 경우
+	LOCAL = RAND:10
+	IF LOCAL < 4
+		IF TALENT:ARG:138
+			TALENT:ARG:138 = 0
+		ELSE
+			TALENT:ARG:137 = 1
+		ENDIF
+	ELSEIF LOCAL > 7
+		IF TALENT:ARG:137
+			TALENT:ARG:137 = 0
+		ELSE
+			TALENT:ARG:138 = 1
+		ENDIF
+	ENDIF
+ELSEIF NO:ARG == 172 || NO:ARG == 179
+	;人形・망령의 경우
+	LOCAL = RAND:10
+	IF LOCAL < 1
+		IF TALENT:ARG:138
+			TALENT:ARG:138 = 0
+		ELSE
+			TALENT:ARG:137 = 1
+		ENDIF
+	ELSEIF LOCAL > 5
+		IF TALENT:ARG:137
+			TALENT:ARG:137 = 0
+		ELSE
+			TALENT:ARG:138 = 1
+		ENDIF
+	ENDIF
+ELSEIF NO:ARG == 173 || NO:ARG == 176 || NO:ARG == 190
+	;마계인・코코아・흡혈귀의 경우
+	LOCAL = RAND:10
+	IF LOCAL < 3
+		IF TALENT:ARG:138
+			TALENT:ARG:138 = 0
+		ELSE
+			TALENT:ARG:137 = 1
+		ENDIF
+	ELSEIF LOCAL > 6
+		IF TALENT:ARG:137
+			TALENT:ARG:137 = 0
+		ELSE
+			TALENT:ARG:138 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;両刀・魅力의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_17, ARG
+;両刀
+LOCAL = RAND:16
+IF LOCAL <= 3 && (NO:ARG == 174 || NO:ARG == 175)
+	;텐구의 경우
+	TALENT:ARG:83 = 1
+ELSEIF LOCAL <= 1 && (NO:ARG == 170 || NO:ARG == 184)
+	;妖怪兎・玉兎의 경우
+	TALENT:ARG:83 = 1
+ELSEIF LOCAL == 0
+	;그 외의 경우
+	TALENT:ARG:83 = 1
+ENDIF
+;魅力
+SIF RAND:4 > 1
+	TALENT:ARG:90 = 1
+
+;-----------------------------------------------
+;日光浴・月光浴의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_18, ARG
+IF NO:ARG >= 150 && NO:ARG < 170
+	;요정의 경우
+	LOCAL = RAND:4
+	IF LOCAL == 0
+		TALENT:ARG:114 = 1
+	ELSEIF LOCAL == 1
+		TALENT:ARG:115 = 1
+	ENDIF
+ELSEIF NO:ARG == 171 || NO:ARG == 172 || NO:ARG == 189
+	;인간、人形의 경우
+	LOCAL = RAND:16
+	IF LOCAL == 0
+		TALENT:ARG:114 = 1
+	ELSEIF LOCAL == 1
+		TALENT:ARG:115 = 1
+	ENDIF
+ELSEIF NO:ARG == 170 || NO:ARG == 174 || NO:ARG == 175 || NO:ARG == 178 || NO:ARG == 184 || NO:ARG == 186 || NO:ARG == 187 || NO:ARG == 188
+	;妖怪兎・텐구・地獄鴉・玉兎・化け猫・化け狐・化け鼠의 경우
+	LOCAL = RAND:8
+	IF LOCAL == 0
+		TALENT:ARG:114 = 1
+	ELSEIF LOCAL == 1
+		TALENT:ARG:115 = 1
+	ENDIF
+ELSEIF NO:ARG == 173
+	;마계인의 경우
+	LOCAL = RAND:6
+	IF LOCAL == 0
+		TALENT:ARG:114 = 1
+	ELSEIF LOCAL <= 3
+		TALENT:ARG:115 = 1
+	ENDIF
+ELSEIF NO:ARG == 177
+	;夜雀의 경우
+	LOCAL = RAND:16
+	IF LOCAL == 0
+		TALENT:ARG:114 = 1
+	ELSEIF LOCAL >= 8
+		TALENT:ARG:115 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;鼓舞의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_19, ARG
+SIF RAND:8 == 0
+	TALENT:ARG:95 = 1
+
+;-----------------------------------------------
+;幼稚・小悪魔의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_20, ARG
+;幼稚
+IF NO:ARG >= 150 && NO:ARG < 170
+	;요정의 경우
+	LOCAL = RAND:8
+	SIF LOCAL == 0
+		TALENT:ARG:131 = 1
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:100
+	SIF LOCAL == 0
+		TALENT:ARG:131 = 1
+ENDIF
+;小悪魔
+LOCAL = RAND:8
+SIF LOCAL == 1
+	TALENT:ARG:93 = 1
+
+;-----------------------------------------------
+;プライド高い・プライド低い의 설정(노예 전용)
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_21, ARG
+LOCAL = RAND:6
+;黒요정의 경우
+SIF CFLAG:ARG:0 == 1
+	LOCAL = 0
+IF LOCAL == 0
+	TALENT:ARG:16 = 1
+	TALENT:ARG:17 = 0
+ELSEIF LOCAL == 1
+	TALENT:ARG:16 = 0
+	TALENT:ARG:17 = 1
+ENDIF
+
+;-----------------------------------------------
+;貞操観念・貞操無頓着의 설정(노예 전용)
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_22, ARG
+IF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:10
+	IF LOCAL == 0 && TALENT:ARG:31 == 0
+		TALENT:ARG:30 = 1
+	ELSEIF LOCAL <= 2 && TALENT:ARG:30 == 0
+		TALENT:ARG:31 = 1
+	ENDIF
+ELSEIF CFLAG:ARG:0 == 1
+	;黒요정의 경우
+	LOCAL = RAND:4
+	IF LOCAL == 0
+		TALENT:ARG:30 = 1
+		TALENT:ARG:31 = 0
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:5
+	IF LOCAL == 0 && TALENT:ARG:31 == 0
+		TALENT:ARG:30 = 1
+	ELSEIF LOCAL == 1 && TALENT:ARG:30 == 0
+		TALENT:ARG:31 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;츤데레의 설정(노예 전용)
+;-----------------------------------------------
+;ツンデレが付加する場合、反抗的も付加し、素直は削除される
+@RANDOM_CHARA_TALENT_SET_23, ARG
+LOCAL = RAND:10
+;黒요정의 경우
+SIF CFLAG:ARG:0 == 1
+	LOCAL = 0
+IF LOCAL == 0 || TALENT:ARG:18
+	TALENT:ARG:11 = 1
+	TALENT:ARG:13 = 0
+	TALENT:ARG:18 = 1
+ENDIF
+
+;-----------------------------------------------
+;マイナス素質各種設定(노예 전용)
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_24, ARG
+LOCAL = (CFLAG:ARG:0 == 1) ? 0 # RAND:2
+IF LOCAL == 0
+	;男嫌い
+	SIF RAND:12 < 3
+		TALENT:ARG:37 = 1
+	;女嫌い
+	SIF RAND:12 < 3
+		TALENT:ARG:38 = 1
+	;嫉妬しやすい
+	SIF RAND:6 == 0
+		TALENT:ARG:19 = 1
+	;快感の否定・一線越えない
+	LOCAL = RAND:16
+	SIF LOCAL < 2
+		TALENT:ARG:71 = 1
+	SIF LOCAL >= 1 && LOCAL <= 3
+		TALENT:ARG:27 = 1
+	;抑圧
+	SIF RAND:8 == 0
+		TALENT:ARG:32 = 1
+	;保守的
+	SIF RAND:8 == 0
+		TALENT:ARG:24 = 1
+	;抵抗
+	SIF RAND:8 == 0
+		TALENT:ARG:34 = 1
+	;反抗的
+	LOCAL = RAND:8
+	SIF LOCAL == 0 && TALENT:ARG:13 == 0
+		TALENT:ARG:11 = 1
+	IF CFLAG:ARG:0 == 1
+		;感情乏しい(黒요정のみ)
+		LOCAL = RAND:4
+		SIF LOCAL == 0 && TALENT:ARG:22 == 0
+			TALENT:ARG:22 = 1
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;プラス素質各種設定(노예 전용)
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_25, ARG
+;舌使い
+IF NO:ARG == 177
+	;夜雀의 경우
+	LOCAL = RAND:5
+ELSEIF CFLAG:ARG:0 == 1
+	;黒요정의 경우
+	LOCAL = RAND:14
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:12
+ENDIF
+SIF LOCAL == 0
+	TALENT:ARG:52 = 1
+;針さばき
+LOCAL = RAND:12
+IF CFLAG:ARG:0 == 1 && LOCAL < 4
+	;黒요정의 경우
+	LOCAL = 0
+ELSEIF NO:ARG == 182 && LOCAL < 4
+	;地獄鬼의 경우
+	LOCAL = 0
+ENDIF
+SIF LOCAL == 0
+	TALENT:ARG:53 = 1
+;倒錯的
+SIF RAND:14 == 0
+	TALENT:ARG:80 = 1
+;不思議な根
+IF (NO:ARG >= 150 && NO:ARG < 170) || NO:ARG == 173 || NO:ARG == 176
+	;요정・마계인・코코아의 경우
+	LOCAL = RAND:16
+	SIF LOCAL == 0 && TALENT:ARG:120 == 0
+		TALENT:ARG:122 = 1
+ENDIF
+;調合知識、禁断の知識
+IF NO:ARG == 150 || NO:ARG == 160
+	;(独断と偏見により)ひまわり・黒ひまわりは恐るべきポテンシャルを秘めています
+	IF TALENT:ARG:16 && TALENT:ARG:24 && TALENT:ARG:26 && TALENT:ARG:30 && TALENT:ARG:32 && TALENT:ARG:34 && TALENT:ARG:62
+		LOCAL = RAND:4
+	ELSE
+		LOCAL = RAND:100
+	ENDIF
+	SIF LOCAL <= 1 && TALENT:ARG:55 == 0
+		TALENT:ARG:55 = 1
+	SIF LOCAL == 0 && TALENT:ARG:56 == 0
+		TALENT:ARG:56 = 1
+ELSE
+	;その他の無名キャラでも禁断の知識持ちが現れるように
+	LOCAL = RAND:255
+	SIF LOCAL == 0 && TALENT:ARG:56 == 0
+		TALENT:ARG:56 = 1
+ENDIF
+;料理苦手・料理得意
+IF NO:ARG == 151 || NO:ARG == 161 || NO:ARG == 171 || NO:ARG == 189
+	;メイド요정・黒メイド요정・인간의 경우
+	LOCAL = RAND:15
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:10
+ENDIF
+IF LOCAL <= 3 && TALENT:ARG:192 == 0 && TALENT:ARG:193 == 0 && TALENT:ARG:194 == 0
+	TALENT:ARG:192 = 1
+ELSEIF LOCAL >= 12 && TALENT:ARG:192 == 0 && TALENT:ARG:193 == 0 && TALENT:ARG:194 == 0
+	TALENT:ARG:193 = 1
+ENDIF
+
+;-----------------------------------------------
+;おちんちん関連素質設定(노예 전용)
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_26, ARG
+IF TALENT:ARG:120 || TALENT:ARG:121
+	LOCAL = RAND:16
+	IF LOCAL <= 2
+		TALENT:ARG:132 = 1
+		TALENT:ARG:133 = 0
+	ELSEIF LOCAL >= 10
+		TALENT:ARG:132 = 0
+		TALENT:ARG:133 = 1
+	ENDIF
+	MAXBASE:ARG:2 = CALC_GAUGE2_COMMON(ARG)
+ENDIF
+
+;-----------------------------------------------
+;레어 소질 각종 설정(노예 전용)
+;-----------------------------------------------
+@RANDOM_CHARA_TALENT_SET_27, ARG
+;魔術技能
+SIF RAND:60 < 1
+	TALENT:ARG:197 = 1
+;報道者
+SIF RAND:60 < 1
+	TALENT:ARG:196 = 1
+;工作名人
+SIF RAND:60 < 1
+	TALENT:ARG:195 = 1
+;音痴or音感
+LOCAL = RAND:30
+IF LOCAL <= 1
+	TALENT:ARG:190 = 1
+	TALENT:ARG:191 = 0
+ELSEIF LOCAL >= 28
+	TALENT:ARG:190 = 0
+	TALENT:ARG:191 = 1
+ENDIF
+;大乳導orつるぺた堕し
+LOCAL = RAND:120
+IF LOCAL <= 1
+	TALENT:ARG:96 = 1
+	TALENT:ARG:97 = 0
+ELSEIF LOCAL >= 118
+	TALENT:ARG:96 = 0
+	TALENT:ARG:97 = 1
+ENDIF
+;大甲斐性(意味がｗ)
+SIF RAND:150 == 0
+	TALENT:ARG:98 = 1
+;喘息
+SIF RAND:60 < 1
+	TALENT:ARG:47 = 1
+;淫具知識
+SIF RAND:120 == 0
+	TALENT:ARG:58 = 1
+;狂気
+SIF RAND:666 == 0
+	TALENT:ARG:158 = 1
+
+;-----------------------------------------------
+;プラス素質各種設定(主人専用)
+;-----------------------------------------------
+@RANDOM_MASTER_TALENT_SET_21, ARG
+;舌使い
+IF NO:ARG == 177
+	;夜雀의 경우
+	LOCAL = RAND:5
+ELSEIF CFLAG:ARG:0 == 1
+	;黒요정의 경우
+	LOCAL = RAND:14
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:10
+ENDIF
+SIF LOCAL == 0
+	TALENT:ARG:52 = 1
+;針さばき
+LOCAL = RAND:10
+IF CFLAG:ARG:0 == 1 && LOCAL < 4
+	;黒요정의 경우
+	LOCAL = 0
+ELSEIF NO:ARG == 182 && LOCAL < 4
+	;地獄鬼의 경우
+	LOCAL = 0
+ENDIF
+SIF LOCAL == 0
+	TALENT:ARG:53 = 1
+;倒錯的
+SIF RAND:12 == 0
+	TALENT:ARG:80 = 1
+;不思議な根
+IF (NO:ARG >= 150 && NO:ARG < 170) || NO:ARG == 173 || NO:ARG == 176
+	;요정・마계인・코코아의 경우
+	LOCAL = RAND:16
+	SIF LOCAL == 0 && TALENT:ARG:120 == 0
+		TALENT:ARG:122 = 1
+ENDIF
+;料理苦手・料理得意
+;メイド요정・黒メイド요정・인간의 경우は多少確率が違う
+LOCAL = (NO:ARG == 151 || NO:ARG == 161 || NO:ARG == 171 || NO:ARG == 189) ? RAND:15 # RAND:10
+IF LOCAL <= 3 && TALENT:ARG:192 == 0 && TALENT:ARG:193 == 0 && TALENT:ARG:194 == 0
+	TALENT:ARG:192 = 1
+ELSEIF LOCAL >= 12 && TALENT:ARG:192 == 0 && TALENT:ARG:193 == 0 && TALENT:ARG:194 == 0
+	TALENT:ARG:193 = 1
+ENDIF
+
+;-----------------------------------------------
+;レア素質各種設定(主人専用)
+;-----------------------------------------------
+@RANDOM_MASTER_TALENT_SET_22, ARG
+;淫具知識
+SIF RAND:200 == 0
+	TALENT:ARG:58 = 1
+;中毒扇動(意味ないけどｗ)
+SIF RAND:200 == 0
+	TALENT:ARG:86 = 1
+;工作名人
+SIF RAND:200 == 0
+	TALENT:ARG:195 = 1
+;報道者
+SIF RAND:200 == 0
+	TALENT:ARG:196 = 1
+;魔術技能
+SIF RAND:200 == 0
+	TALENT:ARG:197 = 1
+;超常目算(死神のみ)
+SIF NO:ARG == 183 && RAND:200 == 0
+	TALENT:ARG:198 = 1
+
+;-----------------------------------------------
+;従順Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_0, ARG
+;黒요정의 경우は確率が違う
+LOCAL = (CFLAG:ARG:0 == 1) ? RAND:4 # RAND:2
+SIF LOCAL > 0
+	ABL:ARG:10 += RAND:2
+
+;-----------------------------------------------
+;欲望Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_1, ARG
+IF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:3
+	SIF LOCAL > 0
+		ABL:ARG:11 += RAND:2
+ELSEIF NO:ARG == 185
+	;天人의 경우
+	LOCAL = RAND:6
+	SIF LOCAL == 0
+		ABL:ARG:11 += RAND:2
+ELSE
+	;黒요정의 경우
+	LOCAL = (CFLAG:0 == 1 && ARG != MASTER) ? RAND:6 # RAND:3
+	SIF LOCAL == 0
+		ABL:ARG:11 += RAND:2
+ENDIF
+
+;-----------------------------------------------
+;技巧Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_2, ARG
+IF CFLAG:ARG:0 == 1
+	;黒요정의 경우
+	LOCAL = RAND:8
+ELSEIF NO:ARG == 180
+	;캇파의 경우
+	LOCAL = RAND:2
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:4
+ENDIF
+SIF LOCAL == 0
+	ABL:ARG:12 += 1 + RAND:2
+
+;-----------------------------------------------
+;奉仕精神Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_3, ARG
+;소질에 따라서는 패스
+SIF TALENT:ARG:13 == 0 && TALENT:ARG:17 == 0 && TALENT:ARG:33 == 0 && TALENT:ARG:63 == 0 && TALENT:ARG:86 == 0 && TALENT:ARG:93 == 0 && TALENT:ARG:95 == 0
+	RETURN 0
+IF NO:ARG == 151 || NO:ARG == 161 || NO:ARG == 189
+	;メイド요정・仙人의 경우
+	LOCAL = RAND:48
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:96
+ENDIF
+SIF LOCAL == 0
+	ABL:ARG:13 += 1 + RAND:2
+
+;-----------------------------------------------
+;露出癖Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_4, ARG
+;소질에 따라서는 패스
+SIF TALENT:ARG:17 == 0 && TALENT:ARG:28 == 0 && TALENT:ARG:31 == 0 && TALENT:ARG:33 == 0 && TALENT:ARG:36 == 0 && TALENT:ARG:80 == 0 && TALENT:ARG:94 == 0 && TALENT:ARG:158 == 0
+	RETURN 0
+LOCAL = RAND:64
+SIF LOCAL == 0
+	ABL:ARG:14 += 1 + RAND:2
+
+;-----------------------------------------------
+;レズっ気・BLっ気Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_5, ARG
+LOCAL = RAND:16
+IF NO:ARG == 176
+	;코코아의 경우
+	IF LOCAL > 2 && TALENT:ARG:120 == 0
+		ABL:ARG:22 += RAND:3
+	ELSEIF LOCAL > 2 && TALENT:ARG:120
+		ABL:ARG:23 += RAND:3
+	ENDIF
+ELSEIF NO:ARG == 184
+	;玉兎의 경우
+	IF LOCAL > 7 && TALENT:ARG:120 == 0
+		ABL:ARG:22 += RAND:3
+	ELSEIF LOCAL > 7 && TALENT:ARG:120
+		ABL:ARG:23 += RAND:3
+	ENDIF
+ELSE
+	;그 외의 경우
+	IF LOCAL > 11 && TALENT:ARG:120 == 0
+		ABL:ARG:22 += RAND:3
+	ELSEIF LOCAL > 11 && TALENT:ARG:120
+		ABL:ARG:23 += RAND:3
+	ENDIF
+ENDIF
+
+;-----------------------------------------------
+;マゾっ気Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_6, ARG
+IF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:16
+	IF LOCAL == 0
+		ABL:ARG:21 = 4+RAND:2
+	ELSEIF LOCAL < 6
+		ABL:ARG:21 += RAND:3
+	ENDIF
+ELSE
+	LOCAL = RAND:16
+	SIF LOCAL > 11
+		ABL:ARG:21 += RAND:3
+ENDIF
+
+;-----------------------------------------------
+;サドっ気Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_7, ARG
+IF NO:ARG == 176 || NO:ARG == 190
+	;코코아・흡혈귀의 경우
+	LOCAL = RAND:16
+	IF LOCAL == 0
+		ABL:ARG:20 = 4+RAND:2
+	ELSEIF LOCAL < 6
+		ABL:ARG:20 += RAND:3
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:16
+	SIF LOCAL > 11
+		ABL:ARG:20 += RAND:3
+ENDIF
+
+;-----------------------------------------------
+;工作技能Lv의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_ABL_SET_8, ARG
+IF NO:ARG == 180 || TALENT:ARG:195
+	;캇파or工作名人의 경우
+	LOCAL = RAND:16
+	IF LOCAL == 0
+		ABL:ARG:73 = 4+RAND:2
+	ELSEIF LOCAL < 6
+		ABL:ARG:73 += RAND:3
+	ENDIF
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:16
+	SIF LOCAL > 11
+		ABL:ARG:73 += RAND:3
+ENDIF
+
+;-----------------------------------------------
+;Ｖ경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_0, ARG
+;処女か남자はＶ경험はない(処女でＶ경험持ちはユニークキャラのみ)
+SIF TALENT:ARG:0 || TALENT:ARG:120
+	RETURN 0
+IF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:8
+	SIF LOCAL > 0
+		EXP:ARG:0 += 1 + RAND:5
+ELSEIF NO:ARG == 170 && ARG != MASTER
+	;妖怪兎의 경우
+	LOCAL = RAND:6
+	SIF LOCAL > 0
+		EXP:ARG:0 += 1 + RAND:4
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:4
+	SIF LOCAL > 0
+		EXP:ARG:0 += 1 + RAND:2
+ENDIF
+
+;-----------------------------------------------
+;Ａ경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_1, ARG
+;캇파의 경우は確率が違う
+LOCAL = (NO:ARG == 180) ? RAND:12 # RAND:8
+SIF LOCAL > 3
+	EXP:ARG:1 += RAND:4
+
+;-----------------------------------------------
+;절정경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_2, ARG
+IF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:4
+	SIF LOCAL > 0
+		EXP:ARG:2 += 1 + RAND:10
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:4
+	SIF LOCAL > 1
+		EXP:ARG:2 += RAND:5
+ENDIF
+
+;-----------------------------------------------
+;自慰경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_3, ARG
+IF NO:ARG == 176
+	;코코아의 경우
+	LOCAL = RAND:4
+	SIF LOCAL > 0
+		EXP:ARG:10 += RAND:7
+ELSE
+	;그 외의 경우
+	LOCAL = RAND:4
+	SIF LOCAL > 1
+		EXP:ARG:10 += RAND:4
+ENDIF
+
+;-----------------------------------------------
+;異常경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_4, ARG
+LOCAL = RAND:4
+SIF LOCAL == 0
+	EXP:ARG:50 += RAND:2
+
+;-----------------------------------------------
+;キス경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_5, ARG
+LOCAL = RAND:6
+SIF LOCAL == 0
+	EXP:ARG:23 += RAND:3
+
+;-----------------------------------------------
+;薬物경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_6, ARG
+LOCAL = RAND:8
+SIF LOCAL == 0
+	EXP:ARG:40 += RAND:2
+
+;-----------------------------------------------
+;射精경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_7, ARG
+;남자かふたなりである必要あり、また절정경험も必要(ええと、自慰경험は要らないよねｗ)
+SIF EXP:ARG:2 == 0 || (TALENT:ARG:120 == 0 && TALENT:ARG:121 == 0)
+	RETURN 0
+LOCAL = RAND:12
+IF LOCAL == 0
+	LOCAL:1 = RAND:5 + 1
+	LOCAL:1 = LIMIT(LOCAL:1, 1,EXP:ARG:2)
+	EXP:ARG:3 += LOCAL:1
+ENDIF
+
+;-----------------------------------------------
+;精液경험의 설정
+;-----------------------------------------------
+@RANDOM_CHARA_EXP_SET_8, ARG
+;Ａ경험かＶ경험もしくは射精경험（自分が発射する場合）2以上が必要である
+SIF EXP:ARG:0 == 0 && EXP:ARG:1 == 0 && EXP:ARG:3 < 2
+	RETURN 0
+LOCAL = RAND:12
+IF LOCAL == 0
+	LOCAL:1 = RAND:5 + 1
+	LOCAL:2 = MAX(EXP:ARG:0 , EXP:ARG:1, EXP:ARG:3)
+	LOCAL:1 = LIMIT(LOCAL:1, 1, LOCAL:2)
+	EXP:ARG:4 += LOCAL:1
+ENDIF
+
+;-----------------------------------------------
+;캐릭터 제작의 뒤처리를 실행한다
+;-----------------------------------------------
+@RANDOM_CHARA_FINISH, ARG
+;남자의 경우はＶ系のものをリセット
+IF TALENT:ARG:120
+	ABL:ARG:1 = 0
+	EXP:ARG:0 = 0
+ENDIF
+;体力・気力を全快させる
+BASE:ARG:0 = MAXBASE:ARG:0
+BASE:ARG:1 = MAXBASE:ARG:1
+;黒요정判定の解除
+CFLAG:ARG:0 = 0
+;主人が自分に従順というのも変なのでここで0にする処理を加える
+SIF ARG == MASTER
+	ABL:ARG:10 = 0
+;特殊な素質があることによるフラグ設定
+;恋慕系素質
+REPEAT 4
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	SIF TALENT:ARG:(150+COUNT)
+		CFLAG:ARG:14 |= LOCAL
+REND
+;服従系素質
+REPEAT 3
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	SIF TALENT:ARG:(160+COUNT)
+		CFLAG:ARG:15 |= LOCAL
+REND
+;淫乱系素質
+REPEAT 11
+	LOCAL = 1
+	POWER LOCAL, 2, COUNT
+	SIF TALENT:ARG:(170+COUNT)
+		CFLAG:ARG:16 |= LOCAL
+REND
+;崩壊系素質（ただし、狂気に関してはフラグ設定しない＝有名キャラの処理を参考にした）
+SIF TALENT:ARG:159
+	CFLAG:ARG:17 |= 1
+SIF TALENT:ARG:167
+	CFLAG:ARG:17 |= 4
+SIF TALENT:ARG:168
+	CFLAG:ARG:17 |= 8
+SIF TALENT:ARG:169
+	CFLAG:ARG:17 |= 32

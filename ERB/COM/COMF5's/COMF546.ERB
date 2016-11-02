@@ -1,0 +1,565 @@
+﻿;=============================================================================
+;촉수 구멍 전부 세정
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE546
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:546 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;Ａ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 2
+	RETURN 0
+;촉수가 [特殊ホルモン分泌]を得ていないとダメ
+SIF (FLAG:75 & 1024) == 0
+	RETURN 0
+;조교자는 촉수사역LV4이상 필요
+SIF ABL:PLAYER:98 < 4
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;妊娠中はダメ
+SIF TALENT:140
+	RETURN 0
+;懐卵中はダメ
+SIF TALENT:145
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;촉수強制回復中(口内)はダメ
+SIF TEQUIP:91 == 1
+	RETURN 0
+;촉수口辱中じゃないとダメ
+SIF TEQUIP:42 != 2
+	RETURN 0
+;촉수삽입中じゃないとダメ
+SIF TEQUIP:20 == 0
+	RETURN 0
+;촉수가 邪魔で膣内洗浄できない
+SIF TEQUIP:20 == 3
+	RETURN 0
+;それ以外の촉수삽입系は設定していないので排除
+SIF TEQUIP:20 >= 4
+	RETURN 0
+;幽霊膣鏡삽입中は不可
+SIF TEQUIP:21
+	RETURN 0
+;卵が邪魔で膣内洗浄できない
+SIF TEQUIP:93
+	RETURN 0
+;애널촉수中じゃないとダメ
+SIF TEQUIP:25 == 0
+	RETURN 0
+;그밖의 Ａ계 촉수責め中は不可
+SIF TEQUIP:25 > 2
+	RETURN 0
+;卵が邪魔で腸内洗浄できない
+SIF TEQUIP:94
+	RETURN 0
+;촉수카테터中じゃないとダメ
+SIF TEQUIP:32 != 1
+	RETURN 0
+;鼻フック装着中だとダメ
+SIF TEQUIP:44 == 1
+	RETURN 0
+;촉수鼻穴삽입中じゃないとダメ
+SIF TEQUIP:44 != 2
+	RETURN 0
+;耳栓中だとダメ
+SIF TEQUIP:45 == 1
+	RETURN 0
+;촉수耳穴責め中じゃないとダメ
+SIF TEQUIP:45 != 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM546
+PRINTL 촉수 구멍 전부 세정
+TSTR:0 = 촉수전혈세정
+CALL TRAIN_MESSAGE_COM546
+
+LOCAL:1 = 310
+
+;EXP:31이 높으면 소비 감소
+IF EXP:31 < EXPLV:3
+	LOCAL:1 += 60
+ELSEIF EXP:31 < EXPLV:4
+	LOCAL:1 += 30
+ELSE
+	LOCAL:1 += 20
+ENDIF
+
+;ABL:촉수 중독을 본다
+IF ABL:35 == 0
+	TIMES LOCAL:1 , 1.00
+	LOCAL:2 = 340
+ELSEIF ABL:35 == 1
+	TIMES LOCAL:1 , 0.90
+	LOCAL:2 = 570
+ELSEIF ABL:35 == 2
+	TIMES LOCAL:1 , 0.80
+	LOCAL:2 = 1070
+ELSEIF ABL:35 == 3
+	TIMES LOCAL:1 , 0.70
+	LOCAL:2 = 1840
+ELSEIF ABL:35 == 4
+	TIMES LOCAL:1 , 0.60
+	LOCAL:2 = 2840
+ELSE
+	TIMES LOCAL:1 , 0.50
+	LOCAL:2 = 4400
+ENDIF
+
+DOWNBASE:0 += LOCAL:1 *2
+DOWNBASE:1 += LOCAL:1 *2
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+
+LOCAL:3 = 0
+SIF STAIN:3 & 1
+	LOCAL:3 += 1
+SIF STAIN:3 & 2
+	LOCAL:3 += 1
+SIF STAIN:3 & 4
+	LOCAL:3 += 1
+SIF STAIN:3 & 8
+	LOCAL:3 += 1
+SIF STAIN:3 & 16
+	LOCAL:3 += 1
+
+SOURCE:16 = LOCAL:2
+SOURCE:30 = 7000-(600*LOCAL:3)
+SOURCE:19 = 5600
+SOURCE:31 = 22000
+SOURCE:23 = 13000
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 60
+	SOURCE:24 = 150
+	SOURCE:22 = 150
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 180
+	SOURCE:24 = 250
+	SOURCE:22 = 300
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 420
+	SOURCE:24 = 350
+	SOURCE:22 = 600
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 900
+	SOURCE:24 = 500
+	SOURCE:22 = 1000
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1600
+	SOURCE:24 = 700
+	SOURCE:22 = 1800
+ELSE
+	SOURCE:0 = 2000
+	SOURCE:24 = 1000
+	SOURCE:22 = 2300
+ENDIF
+
+;EXP:요도 경험을 본다
+IF EXP:46 < EXPLV:2
+	TIMES SOURCE:0 , 0.60
+	SOURCE:20 = 400
+ELSEIF EXP:46 < EXPLV:3
+	TIMES SOURCE:0 , 1.00
+	SOURCE:20 = 60
+ELSEIF EXP:46 < EXPLV:4
+	TIMES SOURCE:0 , 1.20
+	SOURCE:20 = 12
+ELSEIF EXP:46 < EXPLV:5
+	TIMES SOURCE:0 , 1.30
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:0 , 1.80
+	SOURCE:20 = 0
+ENDIF
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 60
+	SOURCE:15 = 150
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 180
+	SOURCE:15 = 250
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 420
+	SOURCE:15 = 350
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 900
+	SOURCE:15 = 500
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 1600
+	SOURCE:15 = 700
+ELSE
+	SOURCE:1 = 2000
+	SOURCE:15 = 1000
+ENDIF
+
+;EXP:V경험을 본다(처녀는 있을 수  없다)
+IF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.60
+	SOURCE:20 += 450
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	SOURCE:20 += 75
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	SOURCE:20 += 15
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.30
+	SOURCE:20 += 0
+ELSE
+	TIMES SOURCE:1 , 1.80
+	SOURCE:20 += 0
+ENDIF
+
+;ABL:A감각을 본다
+IF ABL:1 == 0
+	SOURCE:2 = 60
+	SOURCE:15 += 150
+	SOURCE:22 += 150
+ELSEIF ABL:1 == 1
+	SOURCE:2 = 180
+	SOURCE:15 += 250
+	SOURCE:22 += 300
+ELSEIF ABL:1 == 2
+	SOURCE:2 = 420
+	SOURCE:15 += 350
+	SOURCE:22 += 600
+ELSEIF ABL:1 == 3
+	SOURCE:2 = 900
+	SOURCE:15 += 500
+	SOURCE:22 += 1000
+ELSEIF ABL:1 == 4
+	SOURCE:2 = 1600
+	SOURCE:15 += 700
+	SOURCE:22 += 1800
+ELSE
+	SOURCE:2 = 2000
+	SOURCE:15 += 1000
+	SOURCE:22 += 2300
+ENDIF
+
+;EXP:A경험을 본다
+IF EXP:1 < EXPLV:2
+	TIMES SOURCE:2 , 0.60
+	SOURCE:20 += 400
+ELSEIF EXP:1 < EXPLV:3
+	TIMES SOURCE:2 , 1.00
+	SOURCE:20 += 60
+ELSEIF EXP:1 < EXPLV:4
+	TIMES SOURCE:2 , 1.20
+	SOURCE:20 += 12
+ELSEIF EXP:1 < EXPLV:5
+	TIMES SOURCE:2 , 1.30
+	SOURCE:20 += 0
+ELSE
+	TIMES SOURCE:2 , 1.80
+	SOURCE:20 += 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:0 , 0.10
+	TIMES SOURCE:1 , 0.10
+	TIMES SOURCE:2 , 0.10
+	SOURCE:20 += 3000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:0 , 0.40
+	TIMES SOURCE:1 , 0.40
+	TIMES SOURCE:2 , 0.40
+	SOURCE:20 += 900
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:0 , 1.40
+	TIMES SOURCE:1 , 1.40
+	TIMES SOURCE:2 , 1.40
+	TIMES SOURCE:20 , 0.20
+ELSE
+	TIMES SOURCE:0 , 1.80
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:2 , 1.80
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;작은 몸집 체형
+SIF TALENT:128
+	TIMES SOURCE:20 , 2.00
+
+;정조관념
+IF TALENT:30
+	TIMES SOURCE:15 , 0.60
+	TIMES SOURCE:24 , 0.60
+	SOURCE:32 = 3000
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:15 , 0.50
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:16 , 1.50
+ELSE
+	TIMES SOURCE:15 , 2.00
+	TIMES SOURCE:16 , 2.00
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.60
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:15 , 0.30
+	TIMES SOURCE:24 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:15 , 0.60
+	TIMES SOURCE:24 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:24 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:2 , 1.20
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:24 , 1.50
+ELSE
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:1 , 1.50
+	TIMES SOURCE:2 , 1.50
+	TIMES SOURCE:15 , 1.80
+	TIMES SOURCE:24 , 1.80
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:2 , 0.50
+	TIMES SOURCE:15 , 0.60
+	TIMES SOURCE:24 , 0.60
+	TIMES SOURCE:32 , 2.00
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:1 , 0.80
+	TIMES SOURCE:2 , 0.80
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:24 , 0.80
+	TIMES SOURCE:32 , 1.50
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:32 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:0 , 1.30
+	TIMES SOURCE:1 , 1.30
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:24 , 1.20
+	TIMES SOURCE:32 , 0.80
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:0 , 1.60
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:2 , 1.60
+	TIMES SOURCE:15 , 1.40
+	TIMES SOURCE:24 , 1.40
+	TIMES SOURCE:32 , 0.60
+ELSE
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:2 , 2.00
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:24 , 1.60
+	TIMES SOURCE:32 , 0.30
+ENDIF
+
+SOURCE:22 += LOCAL:2*3
+SOURCE:17 += LOCAL:2*3
+SOURCE:24 += LOCAL:2
+
+TCVAR:0 += 1
+
+;질내의 더러움이 리셋
+STAIN:3 = 0
+TFLAG:103 = 0
+
+TCVAR:1 += 1
+
+;장내(어널)의 더러움이 리셋
+STAIN:4 = 8
+
+;방광 내압력 상승(방뇨 레벨 증가/뇨의가 재촉 되는 것으로 이뇨제 효과)
+IF TALENT:45 == 0
+	LOCAL:5 = 1 + (EXP:6 / 10)
+	SIF LOCAL:5 > 10
+		LOCAL:5 = 10
+	IF TEQUIP:12
+		CFLAG:31 += LOCAL:5*2
+	ELSE
+		CFLAG:31 += LOCAL:5
+	ENDIF
+ENDIF
+IF TEQUIP:12 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 급격하게 요의에 사로잡혔다. 
+	TEQUIP:12 = 1
+ENDIF
+
+TCVAR:46 += 1
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 2
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM546
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:11 == 3
+	PRINTFORML %CALLNAME:TARGET%의 자궁에 눌러 앉고 있던 촉수는 갑자기 끄트머리에서 세정액을 방출했다.
+	PRINTFORMW 대량의 세정액이 쏟아져 %CALLNAME:TARGET%의 하복부는 이상하리만치 크게 부풀어 오르고 있다….
+ELSE
+	PRINTFORML %CALLNAME:TARGET%의 질에 자리잡고 있던 촉수의 끄트머리에서 세정액이 뿌려졌다.
+	PRINTFORMW 힘차게 발사된 세정액은 자궁구를 따라, %CALLNAME:TARGET%의 자궁 안까지 흘러 들었다.
+ENDIF
+IF STAIN:3 & 4
+	PRINTL 그 후 촉수는 격렬하게 몸을 구부리더니,
+	IF TEQUIP:11 == 3
+		IF TEQUIP:87 == 2
+			PRINT 칠해져 있던 피임막과 
+			TEQUIP:87 = 0
+		ENDIF
+		PRINTL 질과 자궁 내에 모여 있던 정액을 전부 긁어냈다.
+	ELSE
+		PRINTL 질 내에 남아 있던 정액을 빨아냈다.
+	ENDIF
+	PRINTL
+	PRINTFORML 세정액과 함께 아랫입에서 토해내지는 것들을 본 %조사선택(CALLNAME:TARGET, "는")%
+ELSE
+	PRINTL 그 후 촉수는 격렬하게 몸을 구부리더니,
+	IF TEQUIP:11 == 3
+		PRINT 자궁내의 
+	ELSE
+		PRINT 질 내의 
+	ENDIF
+	PRINTL 주름을 하나하나 빨아내듯이 하여 더러움을 없애갔다.
+	PRINTL
+	PRINTFORML 대량의 세정액과 함께 아랫입에서 토해내지는 것들을 본 %조사선택(CALLNAME:TARGET, "는")%
+ENDIF
+IF STAIN:3 & 4 && ABL:31 >= 4
+	PRINTW 노골적으로 실망 한 표정을 짓고 있다….
+ELSEIF TALENT:172
+	PRINTW 좀 더 질 내를 휘저어줬으면 좋겠다고 졸라 왔다….
+ELSEIF TALENT:170
+	PRINTW 어딘지 모르게 유감스러운 표정을 짓고 있다….
+ELSEIF CFLAG:2 < 500
+	PRINTW 혐오감으로 가득 찬 표정으로 고개를 돌렸다….
+ELSE
+	PRINTW 완전히 굳어버렸다….
+ENDIF
+PRINTL
+PRINTFORML 한편, %CALLNAME:TARGET%의 애널로 미끄러져 들어가고 있던 촉수는 가볍게 몸부림 하더니,
+PRINTL 끄트머리에서 대량의 세정액을 토해냈다.
+PRINTFORML 힘차게 발사된 세정액은 %CALLNAME:TARGET%의 장내에 차 올랐다.
+SIF STAIN:4 & 4
+	PRINT 정액과 
+PRINTW 오물을 들어내, 장내의 더러움을 일소했다.
+PRINTFORML 대량의 세정액이 장내를 씻어대는 감촉에 %조사선택(CALLNAME:TARGET, "는")% 
+IF TALENT:173 && ABL:2 >= 5
+	PRINTW 쾌락에 무심코 교성을 질러버렸다….
+ELSEIF ABL:2 >= 5
+	PRINTW 쾌락으로 가득 찬 웃는 얼굴을 짓고 있다….
+ELSEIF ABL:2 >= 3
+	PRINTW 기분이 좋은지 몸부림을 쳤다….
+ELSEIF ABL:2 >= 1
+	PRINTW 자신이 이런 것에 쾌락을 느낀다는 것을 알고 곤혹스러워한다….
+ELSE
+	PRINTW 혐오감으로 가득 찬 표정으로 외면했다….
+ENDIF
+PRINTL
+PRINTFORML 또한, 촉수의 끄트머리에서 액체가 %CALLNAME:TARGET%의 콧구멍에 흘려 넣어져,
+PRINTW 강제적으로 코 안을 헹구었다.
+PRINTFORML 그리고 촉수의 끄트머리에서 액체가 %CALLNAME:TARGET%의 귀 안에 흘려 넣어져,
+PRINTW 강제적으로 귀 안을 헹구었다.
+PRINTL
+PRINTFORML 마지막으로, 촉수를 통해서 %CALLNAME:TARGET%의 방광에 세정액을 집어넣었다.
+PRINTW 그리고 방광이 한계까지 부풀어 오른 순간, 이번은 반대로 안의 용액을 빨아냈다….
+PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 세정액을 몇 번이나 방광 내에 넣고 빼는 동안에,
+PRINTW 마치 방뇨하고 있는 것 같은 착각에 사로잡혔다….
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF TALENT:175 && ABL:21 >= 5
+	PRINTL 하복부의 둔통과 요의를 기뻐하고 있다….
+	PRINTW 방광 내에 세정액이 들락날락 할 때마다, 새된 소리를 지르며 허리를 흔들고 있다….
+ELSEIF ABL:21 >= 5
+	PRINTL 대량의 세정액을 방광 내에 흘려 넣는 고문에도 지지 않고,
+	PRINTW 쾌락으로 가득 찬 웃는 얼굴을 짓고 있다….
+ELSEIF ABL:21 >= 3
+	PRINTL 강제적으로 요의를 느끼게 되었지만,
+	PRINTW 그것조차 쾌락인지 안타까운듯한 소리를 내며 몸부림 치고 있다….
+ELSEIF ABL:21 >= 1
+	PRINTL 간신히 쾌락을 느끼게 되어,
+	PRINTW 음란한 신음소리를 내고 있다….
+ELSE
+	PRINTL 격렬한 요의와 하복부의 격통에 얼굴을 찡그리고,
+	PRINTW 이마에는 굵은 비지땀을 흘리고 있다….
+ENDIF
+PRINTL

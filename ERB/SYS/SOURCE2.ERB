@@ -1,0 +1,741 @@
+﻿;=============================================================================
+;절정 처리
+;=============================================================================
+;焦らしプレイ→絶頂→欲望LV上昇の順番で処理を行う
+;強精神薬が効果を発揮している場合は読み込まれない
+@ORGASM_PROCESS
+TFLAG:180 = 0
+TFLAG:181 = 0
+TFLAG:182 = 0
+TFLAG:183 = 0
+
+;強精神薬の反動を適用する
+SIF TEQUIP:13 == 1
+	CALL REACT_DRUG
+
+;-------------------------------------------------
+;焦らしプレイの処理
+;-------------------------------------------------
+NOWEX:20 = 0
+NOWEX:21 = 0
+NOWEX:22 = 0
+NOWEX:23 = 0
+NOWEX:30 = 0
+NOWEX:31 = 0
+NOWEX:32 = 0
+NOWEX:40 = 0
+NOWEX:41 = 0
+NOWEX:42 = 0
+NOWEX:43 = 0
+
+SIF TEQUIP:68
+	CALL IRRITATING_PLAY
+
+;-------------------------------------------------
+;通常の絶頂処理
+;-------------------------------------------------
+;絶頂カウント用
+TFLAG:180 = 0
+TFLAG:181 = 0
+TFLAG:182 = 0
+TFLAG:183 = 0
+;表示用
+LOCALS:0 = 절정Ｃ
+LOCALS:1 = 절정Ｖ
+LOCALS:2 = 절정Ａ
+LOCALS:3 = 절정Ｂ
+LOCALS:9 = 
+
+;絶頂
+REPEAT 4
+	LOCAL:COUNT = 0
+	LOCAL:99 = UP:COUNT + PALAM:COUNT
+	IF LOCAL:99 >= PALAMLV:4
+		LOCAL:98 = PALAMLV:4 * 2
+		IF LOCAL:99 >= 1000000
+			LOCAL:COUNT = 9
+			LOCALS:8 = 최강
+		ELSEIF LOCAL:99 >= 200000
+			LOCAL:COUNT = 4
+			LOCALS:8 = 극강
+		ELSEIF LOCAL:99 >= PALAMLV:4 * 2
+			LOCAL:COUNT = 2
+			LOCALS:8 = 강
+		ELSE
+			LOCAL:COUNT = 1
+			LOCALS:8 = 
+			LOCAL:98 = PALAMLV:4
+		ENDIF
+		LOCALS:9 = %LOCALS:9 + LOCALS:8 + LOCALS:COUNT%　
+		DOWN:COUNT = (LOCAL:98 - 1000)
+		;DOWNで下げても絶頂以上なら
+		;その値-1になるように調整(10000で絶頂なら9999)
+		SIF LOCAL:99 - DOWN:COUNT >= PALAMLV:4
+			DOWN:COUNT = LOCAL:99 - PALAMLV:4 + 1
+	ENDIF
+REND
+SIF STRLENS(LOCALS:9) > 0
+	PRINTFORML %CALLNAME:TARGET%：%LOCALS:9%
+
+TFLAG:180 = LOCAL:0
+TFLAG:181 = LOCAL:1
+TFLAG:182 = LOCAL:2
+TFLAG:183 = LOCAL:3
+
+;[卵生]か[産卵体質]で[妊娠]及び[懐卵]ではない、かつ産卵促進剤使用中で強絶頂Ｖ以上のとき産卵判定
+SIF (TALENT:135 || TALENT:136) && TALENT:140 == 0 && TALENT:145 == 0 && TEQUIP:9 && TFLAG:181 >= 2
+	CALL EQUIP_COM68
+
+;絶頂すると好感度にボーナスが入る処理
+TFLAG:51 = TFLAG:180 + TFLAG:181 + TFLAG:182 + TFLAG:183
+
+;焦らし失敗時は焦らしプレイが終了する
+SIF TFLAG:51 && TEQUIP:68
+	TEQUIP:68 = 0
+
+;絶頂補助処理
+SIF (TFLAG:180 +TFLAG:181 + TFLAG:182 + TFLAG:183) > 0
+	CALL DISPLAY_SLAVE_ORGASM
+
+;-------------------------------------------------
+;絶頂することで変動するソースや体力気力の消耗
+;-------------------------------------------------
+;絶頂時の消耗を感覚Lvが高い場合は体力気力の消費が軽減される
+;Ｃ絶頂
+IF TFLAG:180
+	SOURCE:12 += 500 * TFLAG:180
+	SOURCE:22 += 200 * TFLAG:180
+
+	DOWNBASE:0 += (ABL:0 < 5) ? 20 # 15
+	DOWNBASE:1 += (ABL:0 < 5) ? 10 # 10
+ENDIF
+
+;Ｖ絶頂
+IF TFLAG:181
+	SOURCE:12 += 700 * TFLAG:181
+	SOURCE:16 += 500 * TFLAG:181
+	SOURCE:18 += 800 * TFLAG:181
+	SOURCE:22 += 400 * TFLAG:181
+
+	LOCAL:9 = (ABL:1 < 5) ? 40 # 20
+	
+	;PALAM:潤滑をみる(Ｖ快感は潤滑で消耗を軽減できる)
+	IF PALAM:10 < PALAMLV:3
+		TIMES LOCAL:9 , 1.00
+	ELSEIF PALAM:10 < PALAMLV:4
+		TIMES LOCAL:9 , 0.90
+	ELSEIF PALAM:10 < PALAMLV:5
+		TIMES LOCAL:9 , 0.80
+	ELSEIF PALAM:10 < PALAMLV:6
+		TIMES LOCAL:9 , 0.75
+	ELSE
+		TIMES LOCAL:9 , 0.70
+	ENDIF
+
+	DOWNBASE:0 += LOCAL:9
+	DOWNBASE:1 += LOCAL:9 / 2
+ENDIF
+
+;Ａ絶頂
+IF TFLAG:182
+	SOURCE:12 += 600 * TFLAG:182
+	SOURCE:17 += 700 * TFLAG:182
+	SOURCE:18 += 900 * TFLAG:182
+	SOURCE:22 += 1200 * TFLAG:182
+
+	LOCAL:9 = (ABL:2 < 5) ? 60 # 30
+
+	;PALAM:潤滑をみる(Ａ快感は潤滑で消耗を軽減できる)
+	IF PALAM:10 < PALAMLV:3
+		TIMES LOCAL:9 , 1.00
+	ELSEIF PALAM:10 < PALAMLV:4
+		TIMES LOCAL:9 , 0.90
+	ELSEIF PALAM:10 < PALAMLV:5
+		TIMES LOCAL:9 , 0.80
+	ELSEIF PALAM:10 < PALAMLV:6
+		TIMES LOCAL:9 , 0.75
+	ELSE
+		TIMES LOCAL:9 , 0.70
+	ENDIF
+
+	DOWNBASE:0 += LOCAL:9
+	DOWNBASE:1 += LOCAL:9 / 2
+ENDIF
+
+;Ｂ絶頂
+IF TFLAG:183
+	SOURCE:12 += 500 * TFLAG:183
+	SOURCE:22 += 200 * TFLAG:183
+	
+	DOWNBASE:0 += (ABL:3 < 5) ? 20 # 10
+	DOWNBASE:1 += (ABL:3 < 5) ? 10 # 5
+ENDIF
+
+;-------------------------------------------------
+;絶頂による欲望ＬＶアップ処理
+;-------------------------------------------------
+CALL YOKUBO_UP_EX
+
+;-------------------------------------------------
+;絶頂経験追加処理
+;-------------------------------------------------
+;NOWEXにデータを入れる（絶頂時口上に使う）
+NOWEX:0 = TFLAG:180
+NOWEX:1 = TFLAG:181
+NOWEX:2 = TFLAG:182
+NOWEX:3 = TFLAG:183
+
+;絶頂回数を増やす
+EX:0 += TFLAG:180
+EX:1 += TFLAG:181
+EX:2 += TFLAG:182
+EX:3 += TFLAG:183
+
+;絶頂経験を増やす
+TCVAR:2 += TFLAG:180 + TFLAG:181 + TFLAG:182 + TFLAG:183
+
+SIF TFLAG:450 & 1
+	LOCAL:30 = 4
+SIF TFLAG:450 & 2
+	LOCAL:31 = 4
+
+CALL TROPHY_CHECK_201, LOCAL:30, LOCAL:31
+
+;=============================================================================
+;焦らしプレイ関連の処理
+;=============================================================================
+;-------------------------------------------------
+;焦らしプレイの処理
+;-------------------------------------------------
+@IRRITATING_PLAY
+;表示用
+LOCALS:0 = 절정직전 멈추기Ｃ
+LOCALS:1 = 절정직전 멈추기Ｖ
+LOCALS:2 = 절정직전 멈추기Ａ
+LOCALS:3 = 절정직전 멈추기Ｂ
+LOCALS:9 = 
+
+;絶頂寸止め
+REPEAT 4
+	LOCAL:99 = UP:COUNT + PALAM:COUNT
+	IF LOCAL:99 >= 1000000
+		NOWEX:(20 + COUNT) = 9
+	ELSEIF LOCAL:99 >= 200000
+		NOWEX:(20 + COUNT) = 4
+	ELSEIF LOCAL:99 >= PALAMLV:4 * 2
+		NOWEX:(20 + COUNT) = 2
+	ELSEIF LOCAL:99 >= PALAMLV:4
+		NOWEX:(20 + COUNT) = 1
+	ENDIF
+REND
+
+IF (NOWEX:20 || NOWEX:21 || NOWEX:22 || NOWEX:23) && NOWEX:41 == 0
+	;焦らし中自慰の判定を各部位ごとに行う
+	TFLAG:180 = 0
+	TFLAG:181 = 0
+	TFLAG:182 = 0
+	TFLAG:183 = 0
+	LOCAL = -20
+	;自慰が我慢できない素質
+	;プライド低い
+	SIF TALENT:17
+		LOCAL += 5
+	;自慰しやすい
+	SIF TALENT:60
+		LOCAL += 10
+	;快感に素直
+	SIF TALENT:70
+		LOCAL += 2
+	;淫核／淫茎
+	SIF TALENT:171
+		TFLAG:180 += 5
+	;淫壷
+	SIF TALENT:172
+		TFLAG:181 += 5
+	;淫尻
+	SIF TALENT:173
+		TFLAG:182 += 5
+	;淫乳
+	SIF TALENT:174
+		TFLAG:183 += 5
+	;Ｃ敏感
+	SIF TALENT:100
+		TFLAG:180 += 3
+	;Ｖ敏感
+	SIF TALENT:102
+		TFLAG:181 += 3
+	;Ａ敏感
+	SIF TALENT:104
+		TFLAG:182 += 3
+	;Ｂ敏感
+	SIF TALENT:106
+		TFLAG:183 += 3
+	;幼稚
+	SIF TALENT:131
+		LOCAL += 3
+
+	;サドっ気
+	LOCAL -= ABL:20
+
+	;むしろ我慢するのが好きだったりする素質
+	;気丈
+	SIF TALENT:12
+		LOCAL -= 3
+	;プライド高い
+	SIF TALENT:16
+		LOCAL -= 5
+	;好奇心
+	SIF TALENT:23
+		LOCAL -= 5
+	;快感の否定
+	SIF TALENT:71
+		LOCAL += 5
+	;倒錯的
+	SIF TALENT:80
+		LOCAL -= 5
+	;中毒しやすい
+	SIF TALENT:84
+		LOCAL += 5
+
+	;マゾっ気
+	LOCAL -= ABL:21 * 2
+	;従順
+	LOCAL -= ABL:10 * 2
+	;自慰中毒
+	LOCAL += ABL:30 * 10
+
+	;欲情
+	IF PALAM:13 >= PALAMLV:9
+		LOCAL += 20
+	ELSEIF PALAM:13 >= PALAMLV:8
+		LOCAL += 16
+	ELSEIF PALAM:13 >= PALAMLV:7
+		LOCAL += 14
+	ELSEIF PALAM:13 >= PALAMLV:6
+		LOCAL += 12
+	ELSEIF PALAM:13 >= PALAMLV:5
+		LOCAL += 10
+	ELSEIF PALAM:13 >= PALAMLV:4
+		LOCAL += 8
+	ELSEIF PALAM:13 >= PALAMLV:3
+		LOCAL += 5
+	ELSEIF PALAM:13 >= PALAMLV:2
+		LOCAL += 2
+	ENDIF
+
+	;寸止め継続回数
+	TFLAG:180 += EX:20 * 5 + LOCAL
+	TFLAG:181 += EX:21 * 5 + LOCAL
+	TFLAG:182 += EX:22 * 5 + LOCAL
+	TFLAG:183 += EX:23 * 5 + LOCAL
+
+	;拘束中は無条件にクリア
+	IF TEQUIP:40 || TEQUIP:71
+		TFLAG:180 = 0
+		TFLAG:181 = 0
+		TFLAG:182 = 0
+		TFLAG:183 = 0
+	ENDIF
+
+	LOCAL:0 = TFLAG:180
+	LOCAL:1 = TFLAG:181
+	LOCAL:2 = TFLAG:182
+	LOCAL:3 = TFLAG:183
+
+	;絶頂寸止め判定
+	REPEAT 4
+		SIF NOWEX:(20+COUNT) < 1
+			CONTINUE
+		IF NOWEX:(20+COUNT) == 9
+			TIMES TFLAG:180 , 3.00
+			LOCALS:8 = 최강
+		ELSEIF NOWEX:(20+COUNT) == 4
+			TIMES TFLAG:180 , 2.00
+			LOCALS:8 = 초강
+		ELSEIF NOWEX:(20+COUNT) == 2
+			TIMES TFLAG:180 , 1.50
+			LOCALS:8 = 강
+		ELSE
+			NOWEX:(20+COUNT) = 1
+			LOCALS:8 = 
+		ENDIF
+		LOCAL:90 = RAND:100
+		IF LOCAL:COUNT > LOCAL:90
+			NOWEX:42 += NOWEX:(20+COUNT)
+		ELSE
+			EX:(20+COUNT) += NOWEX:(20+COUNT)
+			UP:COUNT = 0
+			PALAM:COUNT = PALAMLV:4 - 1
+			LOCALS:9 = %LOCALS:9 + LOCALS:8 + LOCALS:COUNT%　
+		ENDIF
+	REND
+ENDIF
+SIF STRLENS(LOCALS:9) > 0
+	PRINTFORML %CALLNAME:TARGET%：%LOCALS:9%
+
+;=============================================================================
+;その他の絶頂関連の補助処理
+;=============================================================================
+;-------------------------------------------------
+;絶頂時の表示・珠追加補助処理
+;-------------------------------------------------
+@DISPLAY_SLAVE_ORGASM
+;珠の補正用
+LOCAL:0 = 0
+;絶頂個所カウント用
+LOCAL:1 = 0
+;表示用
+LOCALS:0 = Ｃ
+LOCALS:1 = Ｖ
+LOCALS:2 = Ａ
+LOCALS:3 = Ｂ
+LOCALS:10 = ＆
+LOCALS:11 = 
+IF TFLAG:180
+	LOCALS:11 = %LOCALS:0%
+	LOCAL:1 += 1
+ENDIF
+IF TFLAG:181
+	SIF LOCAL:1
+		LOCALS:11 = %LOCALS:11 + LOCALS:10%
+	LOCALS:11 = %LOCALS:11 + LOCALS:1%
+	LOCAL:1 += 1
+ENDIF
+IF TFLAG:182
+	SIF LOCAL:1
+		LOCALS:11 = %LOCALS:11 + LOCALS:10%
+	LOCALS:11 = %LOCALS:11 + LOCALS:2%
+	LOCAL:1 += 1
+ENDIF
+IF TFLAG:183
+	SIF LOCAL:1
+		LOCALS:11 = %LOCALS:11 + LOCALS:10%
+	LOCALS:11 = %LOCALS:11 + LOCALS:3%
+	LOCAL:1 += 1
+ENDIF
+
+SELECTCASE LOCAL:1
+	CASE 4
+		IF TFLAG:180 >= 8 && TFLAG:183 >= 8 && TFLAG:181 >= 8 && TFLAG:182 >= 8
+			IF RAND:8 == 0
+				LOCALS:11 = 테크노 브레이크 !
+			ELSEIF RAND:4 == 0
+				LOCALS:11 = <<헤븐 상태 ! >>
+			ELSE
+				LOCALS:11 = 최강 사중 절정
+			ENDIF
+			TFLAG:450 += 3
+		ELSEIF TFLAG:180 >= 4 && TFLAG:183 >= 4 && TFLAG:181 >= 4 && TFLAG:182 >= 4
+			IF RAND:4 == 0
+				LOCALS:11 = 피버 !
+			ELSE
+				LOCALS:11 = 극락 사중 절정
+			ENDIF
+			TFLAG:450 += 1
+		ELSE
+			LOCALS:11 = 사 중 절 정
+			TFLAG:450 += 1
+		ENDIF
+		PRINTFORML 　%LOCALS:11%　(각각 4배의 구슬을 얻을 수 있습니다)
+		LOCAL = 4
+		TCVAR:97 += 1
+	CASE 3
+		PRINTFORML 　%LOCALS:11%절정　(각각 3배의 구슬을 얻을 수 있습니다)
+		LOCAL = 3
+	CASE 2
+		PRINTFORML 　%LOCALS:11%절정　(각각 2배의 구슬을 얻을 수 있습니다)
+		LOCAL = 2
+	CASE 1
+		LOCAL = 1
+	CASEELSE
+		RETURN 0
+ENDSELECT
+
+SIF TFLAG:180
+	TFLAG:180 *= LOCAL
+SIF TFLAG:181
+	TFLAG:181 *= LOCAL
+SIF TFLAG:182
+	TFLAG:182 *= LOCAL
+SIF TFLAG:183
+	TFLAG:183 *= LOCAL
+
+;-------------------------------------------------
+;絶頂による欲望ＬＶアップ処理
+;-------------------------------------------------
+@YOKUBO_UP_EX
+LOCAL = 0
+SIF TFLAG:180 || TFLAG:183
+	LOCAL = 1
+SIF TFLAG:181 || TFLAG:182 || (TFLAG:180 && TFLAG:183)
+	LOCAL = 2
+SIF TFLAG:181 && TFLAG:182
+	LOCAL = 2
+SIF (TFLAG:180 >= 4 || TFLAG:183 >= 4) && (TFLAG:181 >= 4 || TFLAG:182 >= 4) && LOCAL < 3
+	LOCAL = 3
+SIF (TFLAG:180 >= 4 && TFLAG:183 >= 4) && (TFLAG:181 || TFLAG:182) && LOCAL < 3
+	LOCAL = 3
+SIF TFLAG:181 >= 4 && TFLAG:182 >= 4 && LOCAL < 3
+	LOCAL = 3
+SIF TFLAG:180 >= 8 && TFLAG:183 >= 8 && TFLAG:181 >= 8 && TFLAG:182 >= 8
+	LOCAL = 4
+;[抑圧]があると1下がる
+SIF TALENT:32 && LOCAL
+	LOCAL -= 1
+;[快楽の否定]があると1下がる
+SIF TALENT:71 && LOCAL
+	LOCAL -= 1
+;レベルアップ補正が3以上のとき[自制心]があると1下がる
+SIF TALENT:20 && LOCAL >= 3
+	LOCAL -= 1
+;難易度HARDの場合はＡ絶頂しているとさらに1下がる(四重絶頂は除く)
+IF FLAG:3 == 3 && TFLAG:182 && (TFLAG:183 == 0 || TFLAG:180 == 0 || TFLAG:181 == 0) && LOCAL
+	LOCAL -= 1
+;難易度LUNATICは絶頂にＡ絶頂が含まれていると欲望LVが上がらなくなる(四重絶頂は除く)
+ELSEIF (FLAG:3 == 4 || FLAG:3 == 6) && TFLAG:182 && (TFLAG:183 == 0 || TFLAG:180 == 0 || TFLAG:181 == 0) && LOCAL
+	LOCAL = 0
+;難易度PHANTASMは欲望LVが全く上がらなくなる(四重絶頂は除く)
+ELSEIF FLAG:3 >= 5 && (TFLAG:182 == 0 || TFLAG:183 == 0 || TFLAG:180 == 0 || TFLAG:181 == 0) && LOCAL
+	LOCAL = 0
+ENDIF
+LOCAL = MAX(LOCAL, 0)
+;四重最強絶頂のとき欲望Lv5になる(頑張った人へのご褒美？ってことで)
+SIF TFLAG:182 >= 72 && TFLAG:183 >= 72 && TFLAG:180 >= 72 && TFLAG:181 >= 72
+	LOCAL = 5
+
+;媚薬に漬けていると絶頂で欲望が上がらない上、不潔と反感追加のソースまで入る
+IF (TEQUIP:55 == 5 || TEQUIP:55 == 6) && LOCAL > 0
+	LOCAL = (LOCAL + TFLAG:180 + TFLAG:181 + TFLAG:182 + TFLAG:183)*2 / LOCAL
+	LOCAL = MAX(LOCAL, 1)
+	SOURCE:30 += 1500 * LOCAL
+	SOURCE:32 += 1000 * LOCAL
+	LOCAL = 0
+ENDIF
+;睡眠中は上昇しない
+SIF EQUIP:14
+	LOCAL = 0
+
+IF ABL:11 < LOCAL
+	ABL:11 = LOCAL
+	PRINTFORML 그리고 %ABLNAME:11%이(가) LV{LOCAL}이 되었다.
+	;欲望の上昇による[抑圧][抵抗]の消滅をチェック
+	SIF ABL:11 >= 3 && (TALENT:32 || TALENT:34)
+		CALL YOKUBO_UP_CHECK
+ENDIF
+
+;=============================================================================
+;同じコマンド連続実行処理関係
+;=============================================================================
+;-------------------------------------------------
+;同じコマンドの連続実行による上下の処理(快感系)
+;-------------------------------------------------
+;UP:0～3は絶頂に絡むので先に処理してある
+@SEQUENCE_COM_ECSTASY
+;[淫乱]を持っている状態でセックス系コマンドとアナルセックス系コマンドを連続実行すると効果アップ
+IF TALENT:170 && ((SELECTCOM >= 20 && SELECTCOM < 40) || SELECTCOM == 307 || SELECTCOM == 308 || (SELECTCOM >= 323 && SELECTCOM < 326) || (SELECTCOM >= 332 && SELECTCOM < 334) || SELECTCOM == 430 || (SELECTCOM >= 600 && SELECTCOM < 620) || SELECTCOM == 630 || SELECTCOM == 651 || SELECTCOM == 652 || SELECTCOM == 655 || SELECTCOM == 656 || SELECTCOM == 657)
+	REPEAT 4
+		TIMES UP:COUNT , 1.20
+	REND
+ELSE
+	REPEAT 4
+		UP:COUNT /= 2
+	REND
+ENDIF
+
+;-------------------------------------------------
+;同じコマンドの連続実行による上下の処理
+;-------------------------------------------------
+@SEQUENCE_COM_OTHERPALAM
+;[淫乱]を持っている状態でセックス系コマンドとアナルセックス系コマンドを連続実行するとペナルティ軽減
+IF TALENT:170 && ((SELECTCOM >= 20 && SELECTCOM < 40) || SELECTCOM == 307 || SELECTCOM == 308 || (SELECTCOM >= 323 && SELECTCOM < 326) || (SELECTCOM >= 332 && SELECTCOM < 334) || SELECTCOM == 430 || (SELECTCOM >= 600 && SELECTCOM < 620) || SELECTCOM == 630 || SELECTCOM == 651 || SELECTCOM == 652 || SELECTCOM == 655 || SELECTCOM == 656 || SELECTCOM == 657)
+	TIMES UP:11 , 0.75
+	TIMES UP:12 , 0.50
+	TIMES UP:14 , 0.75
+	TIMES UP:17 , 0.50
+;[親愛]か[相愛]を持っている状態で奉仕系コマンドを連続実行するとペナルティ軽減
+ELSEIF (TALENT:152 || TALENT:153) && ((SELECTCOM >= 40 && SELECTCOM < 60) || (SELECTCOM >= 303 && SELECTCOM < 307) || (SELECTCOM >= 601 && SELECTCOM < 605) || SELECTCOM == 629)
+	TIMES UP:11 , 0.75
+	TIMES UP:13 , 0.75
+	TIMES UP:14 , 0.50
+	TIMES UP:15 , 0.75
+	TIMES UP:17 , 0.50
+ELSE
+	LOCAL = (FLAG:3 >= 4) ? 10 # 2
+	REPEAT 5
+		UP:(COUNT+11) /= LOCAL
+	REND
+	UP:17 /= LOCAL
+ENDIF
+
+;=============================================================================
+;ルーチンワーク処理関係
+;=============================================================================
+;-------------------------------------------------
+;過去の調教コマンドを記録する
+;-------------------------------------------------
+@RECORD_TRAIN_ROUTE
+PREVCOM:4 = PREVCOM:3
+PREVCOM:3 = PREVCOM:2
+PREVCOM:2 = PREVCOM:1
+PREVCOM:1 = PREVCOM
+
+;-------------------------------------------------
+;ルーチンワークな調教に奴隷が不満をぶちまける
+;-------------------------------------------------
+;主人と助手の交代は考慮しない。純粋にコマンドの種類で見ている
+@CRITICISM_ROUTINE_WORK
+;今回絶頂もしくは射精に達しておれば満足する
+SIF NOWEX:0 + NOWEX:1 + NOWEX:2 + NOWEX:3 + NOWEX:11
+	RETURN 0
+;寝てる、気絶の時、触手調教、じらしプレイ、○○風呂入浴中、乗馬中、時止め中は不満を述べられない
+SIF EQUIP:14 || TFLAG:899 > 0 || TEQUIP:90 || TEQUIP:68 || TEQUIP:55 || TEQUIP:80 || TEQUIP:43 || TEQUIP:71
+	RETURN 0
+;調教開始してまだ回数少ないときは帰る
+SIF PREVCOM:3 == -1 
+	RETURN 0
+LOCAL = 0
+;TYPE1 A→A→A→A→A
+IF SELECTCOM == PREVCOM && PREVCOM == PREVCOM:1 && PREVCOM:1 == PREVCOM:2 && PREVCOM:2 == PREVCOM:3
+	LOCAL |= 1
+;TYPE2 A→B→A→B→A→B
+ELSEIF SELECTCOM == PREVCOM:1 && PREVCOM == PREVCOM:2 && PREVCOM:1 == PREVCOM:3 && PREVCOM:2 == PREVCOM:4
+	LOCAL |= 2
+;TYPE3 A→B→C→A→B→C
+ELSEIF SELECTCOM == PREVCOM:2 && PREVCOM == PREVCOM:3 && PREVCOM:1 == PREVCOM:4
+	LOCAL |= 4
+;TYPE4 A→A→B→B→A→A
+ELSEIF SELECTCOM == PREVCOM && PREVCOM:1 == PREVCOM:2 && PREVCOM == PREVCOM:3 && PREVCOM == PREVCOM:4
+	LOCAL |= 8
+ENDIF
+;メッセージ表示
+IF CFLAG:99 == 0 && LOCAL
+	IF LOCAL & 1
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 같은 것의 반복에 마음 속으로부터 진절머리 나고 있는 것 같다…….
+	ELSEIF LOCAL & 2
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 조교가 한 가지 패턴이라  \@((TALENT:150 + TALENT:160) == 0) ? 모멸의 시선을 던지고 있는 # 불만이 있는 것 같다\@…….
+	ELSEIF LOCAL & 4
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 비슷한 반복의 조교가 신경이 쓰이는 것 같다…….
+	ELSEIF LOCAL & 8
+		PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 조교가 한 가지 패턴인걸 눈치챘다.
+	ENDIF
+ENDIF
+
+;反感と不快上昇、恭順低下
+IF LOCAL
+	TIMES UP:12 , 0.90
+	TIMES UP:20 , 1.20
+	TIMES UP:21 , 1.20
+ENDIF
+
+;=============================================================================
+;奴隷の異名取得処理
+;=============================================================================
+;なお異名は一人一つのみで上書きされる。すなわち新たな異名取得で以前のは消える。
+;-------------------------------------------------
+;その調教により奴隷が異名を取得チェック
+;-------------------------------------------------
+;注意、パラメータカンスト処理のところにも奴隷称号取得処理でTFLAG:109変動あり。
+@NICK_SLAVE_CHECK
+;ローションと媚薬と利尿剤と興奮剤を使わずにお風呂プレイやシャワーでなくて潤滑が250000を越えたとき
+SIF TEQUIP:10 == 0 && TEQUIP:11 == 0 && TEQUIP:12 == 0 && TEQUIP:14 == 0 && TEQUIP:53 == 0 && TEQUIP:54 == 0 && TEQUIP:55 == 0 && PALAM:10 > PALAMLV:9
+	TFLAG:109 |= 1
+;利尿剤使わずに放尿20回以上
+SIF TEQUIP:12 == 0 && EX:12 >= 20
+	TFLAG:109 |= 2
+
+;助手なしでくＣＶＡ絶頂がないままＢ絶頂だけ20回以上
+SIF ASSI < 0 && EX:0 + EX:1 + EX:2 == 0 && EX:3 >= 20
+	TFLAG:109 |= 8
+;助手なしでＣＡＢ絶頂がないままＶ絶頂だけ20回以上
+SIF ASSI < 0 && EX:0 + EX:2 + EX:3 == 0 && EX:1 >= 20
+	TFLAG:109 |= 16
+;助手なしでＣＶＢ絶頂がないままＡ絶頂だけ20回以上
+SIF ASSI < 0 && EX:0 + EX:1 + EX:3 == 0 && EX:2 >= 20
+	TFLAG:109 |= 32
+;ＣＶＡＢ絶頂＋精飲絶頂が全部で200回以上
+SIF EX:0 + EX:1 + EX:2 + EX:3 + EX:13 >= 200
+	TFLAG:109 |= 64
+;苦痛と恐怖が共に200000を越えて、なおかつ欲情と屈服が100000以下のとき
+SIF PALAM:16 > 200000 && PALAM:17 > 200000 && PALAM:13 <= PALAMLV:7 && PALAM:14 <= PALAMLV:7
+	TFLAG:109 |= 128
+;オトコでなく処女（乙女可）で恥情が100000以上で
+SIF TALENT:120 == 0 && TALENT:0 > 0 && PALAM:15 >= PALAMLV:7
+	TFLAG:109 |= 256
+;先導と習得が共に60000以上で
+SIF PALAM:32 >= PALAMLV:6 && PALAM:11 >= PALAMLV:6
+	TFLAG:109 |= 512
+;媚薬なしで最強四重絶頂すれば
+SIF TEQUIP:11 == 0 && TFLAG:180 >= 8 && TFLAG:183 >= 8 && TFLAG:181 >= 8 && TFLAG:182 >= 8
+	TFLAG:109 |= 1024
+;処女(乙女不可)で強以上のＶ絶頂すれば
+SIF TALENT:0 == 1 && TFLAG:181 >= 2
+	TFLAG:109 |= 8192
+;相愛、親愛、恋慕持ちで、Ａ経験と異常経験が初期値から変動せず、即落ち、壊造人格、嫉妬、烙印、使い魔、媚薬中毒、寄生、産卵体質なしで、
+;記憶消去薬を飲ませていない、薬物刻印恐怖刻印反発刻印反発刻印取得履歴不死刻印ストレス嫉妬ポイントが全て0で
+;調教排泄経験、調教失神経験、動物性愛経験、売春経験、強姦経験、被強姦経験、被輪姦経験がなくて、
+;従順が5以上、奉仕精神が5以上、屈服刻印が3以上、好感度が80万以上で、調教を終わらせた場合
+SIF TALENT:153 && TALENT:152 && TALENT:150 && (CFLAG:11 & 2) == 0 && (CFLAG:11 & 4) == 0 && TALENT:179 == 0 && TALENT:169 == 0 && TALENT:157 == 0 && TALENT:161 == 0 && TALENT:164 == 0 && TALENT:46 == 0 && TALENT:146 == 0 && TALENT:136 == 0 && (CFLAG:17 & 16) == 0 && MARK:3 <= 0 && MARK:8 <= 0 && MARK:9 <= 0 && MARK:10 <= 0 && MARK:97 <= 0 && CFLAG:65 <= 0 && CFLAG:30 <= 0 && EXP:7 <= 0 && EXP:55 <= 0 && EXP:56 <= 0 && EXP:76 <= 0 && EXP:80 <= 0 && EXP:81 <= 0 && EXP:82 <= 0 && ABL:10 >= 5 && ABL:13 >= 5 && MARK:2 >= 3 && CFLAG:2 >= 800000
+	TFLAG:109 |= 16384
+;助手がいて、助手調教で、対象の苦痛と恭順と屈服と欲情が全て100000以上にした場合に、助手に付く
+SIF ASSI >= 0 && ASSIPLAY && PALAM:16 >= PALAMLV:7 && PALAM:12 >= PALAMLV:7 && PALAM:14 >= PALAMLV:7 && PALAM:13 >= PALAMLV:7
+	TFLAG:109 |= 32768
+;助手なしで、対象の反感と不快と抑鬱と屈服と苦痛と恐怖が全て10000以下で、恭順が100000以上にした場合
+SIF ASSI < 0 && PALAM:20 <= PALAMLV:4 && PALAM:21 <= PALAMLV:4 && PALAM:22 <= PALAMLV:4 && PALAM:14 <= PALAMLV:4 && PALAM:16 <= PALAMLV:4 && PALAM:17 <= PALAMLV:4 && PALAM:12 >= PALAMLV:7
+	TFLAG:109 |= 65536
+
+;-------------------------------------------------
+;奴隷の異名取得
+;-------------------------------------------------
+;取得できたということは報告されない（あとでステータスで知る羽目になる）
+@NICK_SLAVE
+SIF TFLAG:109 & 1
+	NICKNAME:TARGET = \@(TALENT:120) ? 『촉촉한 상남자』 # 『가랑비 공주』\@
+SIF TFLAG:109 & 2
+	NICKNAME:TARGET = \@(TALENT:120) ? 『쉬야 대왕』 # 『못된 실금소녀』\@
+
+SIF TFLAG:109 & 8
+	NICKNAME:TARGET = \@(TALENT:120) ? 『가슴으로 느끼는 변태남』 # 『주인님 전용 가슴 공주』\@
+SIF TFLAG:109 & 16
+	NICKNAME:TARGET = \@(TALENT:120) ? 『말이 되냐 ㅋㅋㅋ』 # 『주인님 전용 꿀단지 공주』\@
+SIF TFLAG:109 & 32
+	NICKNAME:TARGET = \@(TALENT:120) ? 『주인님 전용 애널』 # 『주인님 전용 애널 공주』\@
+SIF TFLAG:109 & 64
+	NICKNAME:TARGET = \@(TALENT:120) ? 『성의 정점을 통달한 신사』 # 『성의 정점을 통달한 숙녀』\@
+SIF TFLAG:109 & 128
+	NICKNAME:TARGET = \@(TALENT:120) ? 『불굴의 용사』 # 『불굴의 공주』\@
+IF TFLAG:109 & 256
+	IF TALENT:120
+		NICKNAME:TARGET = 『성전환하자구!』
+	ELSEIF TALENT:0 == 1
+		NICKNAME:TARGET = 『처녀니까 부끄럽지 않은걸!』
+	ELSE
+		NICKNAME:TARGET = 『재생처녀니까 부끄럽지 않은걸!』
+	ENDIF
+ENDIF
+SIF TFLAG:109 & 512
+	NICKNAME:TARGET = \@(TALENT:120) ? 『야한 짓을 탐구하는 선구자』 # 『야한 짓 연구를 사랑하는 여자』\@
+SIF TFLAG:109 & 1024
+	NICKNAME:TARGET = \@(TALENT:120) ? 『천국을 보고 온 남자』 # 『헤븐 피버!』\@
+;快ＣＶＡＢもしくは欲情のパラもしくは入手珠が天元突破した場合
+SIF TFLAG:109 & 2048
+	NICKNAME:TARGET = \@(TALENT:120) ? 『성욕을 주체 못하는』 # 『성욕을 주제 못하는』\@
+;否定系のパラもしくは入手珠が天元突破した場合
+SIF TFLAG:109 & 4096
+	NICKNAME:TARGET = \@(TALENT:120) ? 『모든 것을 부정하는 남자』 # 『모든 것을 용서 못하는 여자』\@
+SIF TFLAG:109 & 8192
+	NICKNAME:TARGET = \@(TALENT:120) ? 『성전환해야할진저』 # 『처녀라도 갈 수 있어!』\@
+IF TFLAG:109 & 16384
+	CFLAG:156 |= 1
+	NICKNAME:TARGET = \@(TALENT:120) ? 『운명과 정으로 맺어진 남편』 # 『정과 운명으로 맺어진 아내』\@
+ENDIF
+SIF TFLAG:109 & 32768
+	NICKNAME:ASSI = \@(TALENT:ASSI:120) ? 『멋진 SM 신사님』 # 『무적의 SM 여왕님』\@
+SIF TFLAG:109 & 65536
+	NICKNAME:TARGET = \@(TALENT:120) ? 『사랑에 감싸인 왕자님』 # 『다정하게 사랑받은 공주님』\@
+;[精愛味覚]取得フラグ
+SIF TFLAG:106 & 16
+	NICKNAME:TARGET = 『정액 소믈리에』
+
+;デバッグモード専用取得報告(さすがにデバッグではこれがないと辛い)
+SIF TALENT:MASTER:998 && TFLAG:109
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% %NICKNAME:TARGET%의 칭호를 얻었다.

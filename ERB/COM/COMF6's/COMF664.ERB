@@ -1,0 +1,178 @@
+﻿;=============================================================================
+;꼬리파묻히기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE664
+;개별 설정 커멘드 필터
+SIF DITEMTYPE:999:664 > 0
+	RETURN 0
+;동물귀 이외 불가
+SIF TALENT:116 == 0
+	RETURN 0
+;순종 4 미만·레즈비언기분(BL기분) 3 미만의 ASSI의 경우, 조교 대상이 동성이라면 실행할 수 없다(망신이나 복종이라면 OK)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;실신중은 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;줄사용중은 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마중은 안 됨
+SIF TEQUIP:43
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕중은 안 됨
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;나체정식안은 안 됨
+SIF TEQUIP:60
+	RETURN 0
+;때 멈춤중은 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교중은 안 됨
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM664
+
+;전회의 조교가 꼬리베개 한편, 플레이어의 기교 3이상 한편, 반발 각인 없음 한편, 호감도 500이상
+;또는 전회의 조교가 꼬리베개, 라면 꼬리베개에
+IF PREVCOM == 670 && ABL:PLAYER:12 >= 3 && MARK:9 == 0 && CFLAG:2 >= 500
+	CALL EXCOM_ABLE672
+	SIF RESULT == 1
+		JUMP COM672
+ENDIF
+
+PRINTL 꼬리 파묻히기
+TSTR:0 = 꼬리 파묻히기
+CALL TRAIN_MESSAGE_COM664
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 5
+DOWNBASE:1 += 30
+
+SOURCE:10 = 90
+SOURCE:11 = 110
+
+;봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:10 = 30
+	SOURCE:11 = 45
+ELSEIF ABL:13 == 1
+	SOURCE:10 = 70
+	SOURCE:11 = 90
+ELSEIF ABL:13 == 2
+	SOURCE:10 = 120
+	SOURCE:11 = 155
+ELSEIF ABL:13 == 3
+	SOURCE:10 = 250
+	SOURCE:11 = 400
+ELSEIF ABL:13 == 4
+	SOURCE:10 = 350
+	SOURCE:11 = 500
+ELSE
+	SOURCE:10 = 550
+	SOURCE:11 = 700
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:10 , 0.80
+	TIMES SOURCE:11 , 0.80
+	SOURCE:18 = 10
+	SOURCE:19 = 10
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:10 , 1.00
+	TIMES SOURCE:11 , 1.00
+	SOURCE:18 = 60
+	SOURCE:19 = 40
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:10 , 1.20
+	TIMES SOURCE:11 , 1.30
+	SOURCE:18 = 120
+	SOURCE:19 = 80
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:10 , 1.40
+	TIMES SOURCE:11 , 1.40
+	SOURCE:18 = 240
+	SOURCE:19 = 140
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:10 , 1.50
+	TIMES SOURCE:11 , 1.70
+	SOURCE:18 = 360
+	SOURCE:19 = 220
+ELSE
+	SOURCE:10 = SOURCE:10 * (ABL:10 * 10 + 120) / 100
+	SOURCE:11 = SOURCE:11 * (ABL:10 * 15 + 125) / 100
+	SOURCE:18 = 150 + (ABL:10 * 35)
+	SOURCE:19 = 100 + (ABL:10 * 20)
+ENDIF
+
+;[괴뢰]와[정신 붕괴]와[괴조인격]을 가지지 않고,[연모]소유라면 애정 경험이 가산
+SIF TALENT:150 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	TCVAR:21 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM664
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 꼬리를 
+IF TALENT:150 == 1
+	PRINTFORML 만지고 있다.
+ELSEIF TALENT:160 == 1
+	PRINTFORML 마음대로 가지고 놀았다.
+ELSE
+	PRINTFORML 만지고 있다.
+ENDIF
+IF TALENT:150 && RAND:4 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 상냥하게 %CALLNAME:PLAYER%의 머리를 어루만지고 있다….
+ELSEIF TALENT:150 && RAND:3 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 사랑에 빠진 눈으로 %CALLNAME:PLAYER%에게 기대왔다….
+ELSEIF TALENT:150
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%에게 눈을 마주치고 있다….
+ELSEIF ABL:10 >= 4 && EXP:20 >= 250 && RAND:4 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 듯도 하지만, 동시에 즐거움도 느끼고 있는 것 같다….
+ELSEIF ABL:10 >= 4 && EXP:20 >= 250 && RAND:3 == 0
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 있어, %조사선택(CALLNAME:TARGET, "가")% 안심하고 있는 것처럼 보였다….
+ELSEIF ABL:10 >= 4 && EXP:20 >= 250 && RAND:2 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 기분이 좋은지 그대로 있다….
+ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+	PRINTFORMW %CALLNAME:TARGET%도 적극적으로 몸을 문지르고 있다….
+ELSEIF ABL:10 >= 2 && EXP:20 <= 150 && RAND:2 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 무서운 것처럼 자신의 몸을 꼭 껴안고 있다….
+ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼굴을 새빨갛게 해, 도리도리 고개를 저었다.
+ELSEIF RAND:3 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 날뛰면서 %조사선택(CALLNAME:PLAYER, "를")% 멀리 밀어냈다.
+ELSEIF RAND:2 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 노골적으로 싫은 얼굴을 하고, %조사처리(CALLNAME:PLAYER, "로")%부터 거리를 취했다….
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "를")% 밀어냈다….
+ENDIF

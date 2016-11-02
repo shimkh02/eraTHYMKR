@@ -1,0 +1,370 @@
+﻿;=============================================================================
+;채뇨기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE142
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:142 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;요도개발경험이 1이하일 경우, 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:46 <= 1
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:32 == 2
+	RETURN 1
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:26 == 0 && NOITEM == 0
+	RETURN 0
+;남자일 경우, 기교3이상이 아니면 쓸 수 없다
+SIF TALENT:120 && ABL:12 < 3
+	RETURN 0
+;소인체형 보유자는, 쌍방이 조교자와 조교 대상이라면 OK
+;그 외의 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && (TALENT:MASTER:56 == 0 && TALENT:PLAYER:127 == 0)
+	RETURN 0
+;ASSI일 경우, 기교4이상이 아니면 쓸 수 없다。
+IF ASSIPLAY
+	SIF ABL:ASSI:12 < 4
+		RETURN 0
+ENDIF
+;요도개발경험이 10미만이면 불가
+SIF EXP:46 < 10
+	RETURN 0
+;그밖의 Ｕ계 장착구 사용 중에는 불가
+SIF (TEQUIP:32 && TEQUIP:32 != 2)
+	RETURN 0
+;남자일 경우, Ｃ계 장착구 사용 중에는 불가
+SIF (TEQUIP:30 || TEQUIP:31) && TALENT:120
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수 채뇨는 COMF500.ERB로부터 JUMP 해 온다.
+@COM142
+IF TEQUIP:90
+	PRINTL 촉수 채뇨
+	TSTR:0 = 촉수 채뇨
+ELSE
+	TSTR:7 = 채뇨기
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 26
+		CALL NAMECHECK_CUSTOMTOOL
+	ELSE
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = %TSTR:7%
+	ENDIF
+	PRINTFORML %TSTR:8%
+	TSTR:0 = 채뇨기
+ENDIF
+
+DOWNBASE:0 += 75
+DOWNBASE:1 += 150
+
+SOURCE:12 = 200
+SOURCE:16 = 200
+SOURCE:18 = 100
+SOURCE:20 = 300
+SOURCE:22 = 500
+SOURCE:24 = 300
+SOURCE:31 = 400
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL:1 = 200
+ELSEIF ABL:0 == 1
+	LOCAL:1 = 400
+ELSEIF ABL:0 == 2
+	LOCAL:1 = 900
+ELSEIF ABL:0 == 3
+	LOCAL:1 = 1600
+ELSEIF ABL:0 == 4
+	LOCAL:1 = 2400
+ELSE
+	LOCAL:1 = 3000
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	TIMES LOCAL:1 , 1.00
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 60
+	TIMES LOCAL:1 , 1.10
+	TIMES SOURCE:31 , 1.10
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 120
+	TIMES LOCAL:1 , 1.15
+	TIMES SOURCE:31 , 1.25
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 240
+	TIMES LOCAL:1 , 1.25
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 480
+	TIMES LOCAL:1 , 1.30
+	TIMES SOURCE:31 , 1.75
+ELSE
+	SOURCE:24 += 960
+	TIMES LOCAL:1 , 1.50
+	TIMES SOURCE:31 , 2.00
+ENDIF
+
+;주되들 해 버릇
+IF TALENT:45
+	TIMES LOCAL:1 , 1.50
+	TIMES SOURCE:20 , 1.75
+ENDIF
+;C민감과 C둔감
+IF TALENT:106
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:107
+	TIMES LOCAL:1 , 0.60
+ENDIF
+;남자
+SIF TALENT:120
+	TIMES SOURCE:20 , 3.50
+;요도광
+SIF TALENT:175
+	TIMES LOCAL:1 , 1.20
+
+SOURCE:0 += LOCAL:1
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 26
+	FLAG:1111 = 1
+	FLAG:1112 = SOURCE:0
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:0 = FLAG:1120
+	FLAG:1112 = SOURCE:22
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:22 = FLAG:1120
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+CALL TRAIN_MESSAGE_COM142
+
+;채뇨기의 착탈
+IF TEQUIP:32 == 2
+	TEQUIP:32 = 0
+	TCVAR:46 += 2
+ELSE
+	IF TEQUIP:90
+		STAIN:2 |= 2
+		STAIN:2 |= 4
+		STAIN:2 |= 64
+	ENDIF
+	TCVAR:34 += 1
+	TCVAR:46 += 1
+	TEQUIP:32 = 2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;커맨드 속성：촉수
+IF TEQUIP:90
+	TFLAG:98 = 8
+;커맨드 속성：도구(조교자)
+ELSE
+	TFLAG:98 = 1
+ENDIF
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;채뇨기 장비중
+;-------------------------------------------------
+@EQUIP_COM142
+IF TEQUIP:90
+	PRINTL <촉수 채뇨 중>
+ELSE
+	TSTR:7 = 채뇨기
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 26
+		CALL NAMECHECK_CUSTOMTOOL
+	ENDIF
+	PRINTFORML <%TSTR:7% 장비 중>
+ENDIF
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 50
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL = 40
+ELSEIF ABL:0 == 1
+	LOCAL = 120
+ELSEIF ABL:0 == 2
+	LOCAL = 250
+ELSEIF ABL:0 == 3
+	LOCAL = 450
+ELSEIF ABL:0 == 4
+	LOCAL = 600
+ELSE
+	LOCAL = 750
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;EXP:6을 본다
+IF EXP:6 <= EXPLV:0
+	TIMES LOCAL , 1.00
+ELSEIF EXP:6 <= EXPLV:1
+	TIMES LOCAL , 1.20
+ELSEIF EXP:6 <= EXPLV:2
+	TIMES LOCAL , 1.40
+ELSEIF EXP:6 <= EXPLV:3
+	TIMES LOCAL , 1.80
+ELSEIF EXP:6 <= EXPLV:4
+	TIMES LOCAL , 2.25
+ELSE
+	TIMES LOCAL , 4.00
+ENDIF
+
+;C민감과 C둔감
+IF TALENT:100
+	TIMES LOCAL , 1.40
+ELSEIF TALENT:101
+	TIMES LOCAL , 0.60
+ENDIF
+
+;주되들 해 버릇
+SIF TALENT:45
+	TIMES LOCAL , 1.30
+;요도광
+SIF TALENT:175
+	TIMES LOCAL , 1.50
+
+LOCAL:1 = 50
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 26
+	FLAG:1111 = 1
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+	FLAG:1112 = LOCAL:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+ENDIF
+
+SOURCE:0 += LOCAL
+SOURCE:12 += 50
+SOURCE:16 += 150
+SOURCE:18 += 75
+SOURCE:20 += 100
+SOURCE:22 += LOCAL:1
+SOURCE:24 += 100
+SOURCE:31 += 50
+
+;남자
+SIF TALENT:120
+	SOURCE:20 += 300
+
+TCVAR:46 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM142
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:32 == 2
+	IF TEQUIP:90
+		PRINTFORMW 촉수는 %CALLNAME:TARGET%의 요도를 해방했다.
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "로")%부터 %조사선택(TSTR:7, "를")% 떼어냈다.
+	ENDIF
+ELSE
+	IF TEQUIP:90
+		PRINTFORMW 빨판이 달린 촉수가 %CALLNAME:TARGET%의 요도에 달라붙어 오줌을 빨아대기 시작했다.
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%의 요도에 카테터를 통해 %조사선택(TSTR:9, "를")% 설치했다.
+	ENDIF
+ENDIF

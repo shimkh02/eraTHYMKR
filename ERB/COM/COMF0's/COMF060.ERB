@@ -1,0 +1,150 @@
+﻿;=============================================================================
+;로션
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE60
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:60 > 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+IF TALENT:PLAYER:831
+	SIF FLAG:574 == 0 && ITEM:60 == 0 && NOITEM == 0
+		RETURN 0
+ELSEIF ITEM:60 == 0 && NOITEM == 0
+	RETURN 0
+ENDIF
+;윤활이 20000이상때는 사용할 수 없다
+SIF PALAM:10 > 20000
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;샤워중, 00목욕탕 입욕 중에는 불가
+SIF TEQUIP:54 || TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;나체정식 중에는 안 됨
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM60
+
+;調教対象が小人体型かつ特定の条件を満たした場合ローションプレイに変化
+IF TALENT:127
+	CALL EXCOM_ABLE625
+	SIF RESULT == 1
+		JUMP COM625
+ENDIF
+
+IF TALENT:PLAYER:831 && FLAG:574 > 0
+	PRINTL 소비한 야채의 수만큼, 윤활을 늘릴 수 있습니다.
+	PRINT 야채를 몇 개 소비하겠습니까? (1-
+	PRINTV FLAG:574
+	IF ITEM:60 == 0 && NOITEM == 0
+		PRINTL , 0으로 캔슬)
+		PRINTLC [0] 캔슬
+	ELSE
+		PRINTL , 0으로 로션 소비)
+		PRINTLC [0] 로션 소비
+	ENDIF
+	SIF FLAG:574 > 10000
+		PRINTLC [10000] 10000 소비
+	PRINTFORMLC [{FLAG:574}] {FLAG:574} 소비
+
+	$INPUT_LOOP
+	INPUT
+
+	IF RESULT == 0
+		IF ITEM:60 == 0 && NOITEM == 0
+			RETURN 0
+		ELSE
+			PRINTL 로션
+			TSTR:0 = 로션
+			CALL TRAIN_MESSAGE_COM060
+			SOURCE:19 = 10000
+			IF NOITEM == 0
+				ITEM:60 -= 1
+				SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:60
+					CALL FILL_PLURAL_ITEM, 60
+			ENDIF
+		ENDIF
+	ELSE
+		SIF RESULT < 0 || RESULT > FLAG:574
+			GOTO INPUT_LOOP
+		PRINTL 로션 연성
+		TSTR:0 = 로션 연성
+		IF FLAG:10
+			PRINTL
+			PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% 채소로 로션을 연성했다.
+		ENDIF
+		SOURCE:19 = RESULT
+		FLAG:574 -= RESULT
+	ENDIF
+ELSE
+	PRINTL 로션
+	TSTR:0 = 로션
+	CALL TRAIN_MESSAGE_COM060
+	SOURCE:19 = 10000
+	IF NOITEM == 0
+		ITEM:60 -= 1
+		SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:60
+			CALL FILL_PLURAL_ITEM, 60
+	ENDIF
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 0
+
+SOURCE:12 = 300
+
+;潤滑が5000以上の時は効果減衰
+SIF PALAM:10 > 20000
+	TIMES SOURCE:19 , 0.75
+
+LOCAL:1 = 0
+;既に塗られている場合は効果減衰
+IF TEQUIP:10
+	TIMES SOURCE:12 , 0.60
+	TIMES SOURCE:19 , 0.75
+	;陥落してない奴隷は既に効果あるのに塗られると反感をおぼえる
+	SIF TALENT:150 == 0 && TALENT:160 == 0 && TALENT:170 == 0
+		LOCAL:1 = 100
+ENDIF
+;조교자의 手に汚れが付いている
+SIF STAIN:PLAYER:1
+	LOCAL:1 += 100
+;반발각인持ち奴隷は反感をおぼえる
+LOCAL:1 += 50 * MARK:9
+
+SOURCE:32 = LOCAL:1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+TEQUIP:10 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM060
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "가")% 
+SIF TEQUIP:10
+	PRINT 질퍽하게 
+PRINTFORMW %CALLNAME:TARGET%의 신체에 로션을 마구 칠했다….

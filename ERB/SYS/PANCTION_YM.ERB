@@ -1,0 +1,4298 @@
+﻿;=============================================================================
+;펑션 중 YM의 시스템에 깊이 의존해버린 것을 이쪽으로 이동
+;=============================================================================
+;--------------------------------------------------
+;대사 표시 전환 함수@KOJO_SWITCH
+;FLAG:11의 값을 보존해서 일시적으로 -1로 함으로써, 대사를 표시시키지 않는 함수
+;인수：ARG　0으로 비표시로, 0 이외로 표시하게
+;--------------------------------------------------
+@KOJO_SWITCH, ARG
+SIF LOCAL == 0
+	LOCAL = -1
+SIF ARG == 0 && (FLAG:11 < 1 || FLAG:11 > 2)
+	RETURN 0
+SIF ARG != 0 && LOCAL == -1
+	RETURN 0
+
+SWAP LOCAL, FLAG:11
+
+;--------------------------------------------------
+;욕정 세트 함수@LUSTSET1, 2
+;欲情判定値を인수の値に設定する. 인수省略で使うと, 参照のみ行う
+;--------------------------------------------------
+@LUSTSET1(ARG)
+#FUNCTION
+SIF ARG
+	LOCAL = ARG
+RETURNF LOCAL
+
+@LUSTSET2(ARG)
+#FUNCTION
+SIF ARG
+	LOCAL = ARG
+RETURNF LOCAL
+
+;--------------------------------------------------
+;욕정 판정 함수@LUST
+;파루플릿で指定した欲情判定値を使用して
+;인수省略の場合, 戻り値0なら平常心, 1なら軽く欲情, 2なら激しく欲情
+;1か2の場合それぞれ, 軽く欲情か, 激しく欲情のときのみ真とする
+;口上主をTARGETにして調教しているときしか使えない
+;--------------------------------------------------
+@LUST(ARG)
+#FUNCTION
+SIF !LUSTSET1() || !LUSTSET2()
+	RETURNF 0
+LOCAL = PALAM:13 >= LUSTSET1()
+LOCAL += PALAM:13 >= LUSTSET2()
+RETURNF ARG ? LOCAL == ARG # LOCAL
+
+;--------------------------------------------------
+;장비품 대사 보완 함수@EQUIPTEXT
+;@KOJO_MESSAGE_COM_X1の後, コマンド口上（애무）の手前に
+;TRYCALL KOJO_MESSAGE_COM_X1_2
+;TRYCALL EQUIPTEXT
+;RETURN 0
+;@KOJO_MESSAGE_COM_X1_2
+;の４行を追加でＯＫ
+;装備品に応じた補完メッセージを口上の後に表示して, 臨場感を心持ち高めます. 
+;--------------------------------------------------
+@EQUIPTEXT
+;약품류(미약 · 이뇨제 ·곤충 채집 세트 약)
+SIF (TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:19 && SELECTCOM != 421)
+	PRINTFORM 약물에 의한 욕정
+SIF ((TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:19 && SELECTCOM != 421)) && (TEQUIP:12 && SELECTCOM != 62)
+	PRINTFORM 과 
+SIF TEQUIP:12 && SELECTCOM != 62
+	PRINTFORM 저항하기 어려운 뇨의
+SIF (TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:19 && SELECTCOM != 421) || (TEQUIP:12 && SELECTCOM != 62)
+	PRINTFORM 에 몰아붙여진 
+;공통
+SIF (TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:12 && SELECTCOM != 62) || (TEQUIP:19 && SELECTCOM != 421) || (TEQUIP:20 == 1 && SELECTCOM != 12 && SELECTCOM != 501) || (TEQUIP:20 == 2 && SELECTCOM != 437 && SELECTCOM != 520) || (TEQUIP:20 == 3 && SELECTCOM != 151 && SELECTCOM != 521) || (TEQUIP:20 == 4 && SELECTCOM != 155) || (TEQUIP:20 == 5 && SELECTCOM != 156) || (TEQUIP:20 == 6 && SELECTCOM != 157) || (TEQUIP:20 == 7 && SELECTCOM != 153 && SELECTCOM != 535) || (TEQUIP:20 == 9 && SELECTCOM != 403) || (TEQUIP:21 && SELECTCOM != 150 && SELECTCOM != 582) || (TEQUIP:25 == 1 && SELECTCOM != 13 && SELECTCOM != 502) || (TEQUIP:25 == 2 && SELECTCOM != 438 && SELECTCOM != 523) || (TEQUIP:25 == 3 && SELECTCOM != 170) || (TEQUIP:25 == 4 && SELECTCOM != 171 && SELECTCOM != 586) || (TEQUIP:25 == 5 && SELECTCOM != 172) || (TEQUIP:25 == 6 && SELECTCOM != 173) || (TEQUIP:25 == 7 && SELECTCOM != 174 && SELECTCOM != 522) || (TEQUIP:25 == 8 && SELECTCOM != 175) || (TEQUIP:25 == 9 && SELECTCOM != 404) || (TEQUIP:25 == 10 && SELECTCOM != 179) || (TEQUIP:26 && SELECTCOM != 432) || (TEQUIP:30 == 1 && SELECTCOM != 14 && SELECTCOM != 503) || (TEQUIP:30 == 2 && SELECTCOM != 16 && SELECTCOM != 505) || (TEQUIP:30 == 4 && SELECTCOM != 131) || (TEQUIP:30 == 5 && SELECTCOM != 130) || (TEQUIP:30 == 6 && SELECTCOM != 17 && SELECTCOM != 515) || (TEQUIP:35 == 1 && SELECTCOM != 15 && SELECTCOM != 504) || (TEQUIP:35 == 2 && SELECTCOM != 191 && SELECTCOM != 525) || (TEQUIP:35 == 4 && SELECTCOM != 193) || (TEQUIP:35 == 5 && SELECTCOM != 195) || (TEQUIP:35 == 6 && SELECTCOM != 196) || (TEQUIP:36 && SELECTCOM != 72) || (TEQUIP:54 && SELECTCOM != 351) || (TEQUIP:59 == 1 && SELECTCOM != 90) || (TEQUIP:59 == 2 && SELECTCOM != 91) || (TEQUIP:59 > 2 && SELECTCOM != 93) 
+	PRINTFORM %CALLNAME:TARGET%
+;삽입물 없음
+IF ((TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:19 && SELECTCOM != 421) || (TEQUIP:12 && SELECTCOM != 62)) && ((TEQUIP:25 == 1 && (SELECTCOM == 13 || SELECTCOM == 502)) || (TEQUIP:20 == 1 && (SELECTCOM == 12 || SELECTCOM == 501)) || (TEQUIP:20 == 2 && (SELECTCOM == 437 || SELECTCOM == 520)) || (TEQUIP:20 == 3 && (SELECTCOM == 151 || SELECTCOM == 521)) || (TEQUIP:20 == 4 && SELECTCOM == 155) || (TEQUIP:20 == 5 && SELECTCOM == 156) || (TEQUIP:20 == 6 && SELECTCOM == 157) || (TEQUIP:20 == 7 && (SELECTCOM == 153 || SELECTCOM == 535)) || (TEQUIP:20 == 9 && SELECTCOM == 403) || (TEQUIP:21 && (SELECTCOM == 150 || SELECTCOM == 582)) || (TEQUIP:25 == 2 && (SELECTCOM == 438 || SELECTCOM == 523)) || (TEQUIP:25 == 3 && SELECTCOM == 170) || (TEQUIP:25 == 4 && (SELECTCOM == 171 || SELECTCOM == 586)) || (TEQUIP:25 == 5 && SELECTCOM == 172) || (TEQUIP:25 == 6 && SELECTCOM == 173) || (TEQUIP:25 == 7 && (SELECTCOM == 174 || SELECTCOM == 522)) || (TEQUIP:25 == 8 && SELECTCOM == 175) || (TEQUIP:25 == 9 && SELECTCOM == 404) || (TEQUIP:25 == 10 && SELECTCOM == 179) || (TEQUIP:26 && SELECTCOM == 432) || (TEQUIP:20 == 0 && TEQUIP:21 == 0 && TEQUIP:20 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:26 == 0))
+	PRINTFORM %조사만처리(CALLNAME:TARGET,"는")% 
+	SIF TEQUIP:12 && SELECTCOM != 62
+		PRINTFORM 몸을 작게 떨고 
+	SIF ((TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:19 && SELECTCOM != 421)) && (TEQUIP:12 && SELECTCOM != 62)
+		PRINTFORM , 
+	SIF (TEQUIP:11 && SELECTCOM != 61 && (SELECTCOM < 511 || SELECTCOM > 514)) || (TEQUIP:19 && SELECTCOM != 421)
+		PRINTFORM 젖은 눈동자로 욕정을 참아내고
+	PRINTFORMW 있다……. 
+ENDIF
+;삽입물계
+SIF  (TEQUIP:20 == 1 && SELECTCOM != 12 && SELECTCOM != 501) || (TEQUIP:20 == 2 && SELECTCOM != 437 && SELECTCOM != 520) || (TEQUIP:20 == 3 && SELECTCOM != 151 && SELECTCOM != 521) || (TEQUIP:20 == 4 && SELECTCOM != 155) || (TEQUIP:20 == 5 && SELECTCOM != 156) || (TEQUIP:20 == 6 && SELECTCOM != 157) || (TEQUIP:20 == 7 && SELECTCOM != 153 && SELECTCOM != 535) || (TEQUIP:20 == 9 && SELECTCOM != 403) || (TEQUIP:21 && SELECTCOM != 150 && SELECTCOM != 582) || (TEQUIP:25 == 1 && SELECTCOM != 13 && SELECTCOM != 502) || (TEQUIP:25 == 2 && SELECTCOM != 438 && SELECTCOM != 523) || (TEQUIP:25 == 3 && SELECTCOM != 170) || (TEQUIP:25 == 4 && SELECTCOM != 171 && SELECTCOM != 586)  || (TEQUIP:25 == 5 && SELECTCOM != 172) || (TEQUIP:25 == 6 && SELECTCOM != 173) || (TEQUIP:25 == 7 && SELECTCOM != 174 && SELECTCOM != 522) || (TEQUIP:25 == 8 && SELECTCOM != 175) || (TEQUIP:25 == 9 && SELECTCOM != 404) || (TEQUIP:25 == 10 && SELECTCOM != 179) || (TEQUIP:26 && SELECTCOM != 432)
+	PRINTFORM 의 
+;Ｖ계（바이브・바기나요석・촉수삽입・바기나전극・군고구마・쿠스코 등）
+IF (TEQUIP:20 == 1 && SELECTCOM != 12 && SELECTCOM != 501) || (TEQUIP:20 == 2 && SELECTCOM != 437 && SELECTCOM != 520) || (TEQUIP:20 == 3 && SELECTCOM != 151 && SELECTCOM != 521) || (TEQUIP:20 == 4 && SELECTCOM != 155) || (TEQUIP:20 == 5 && SELECTCOM != 156) || (TEQUIP:20 == 6 && SELECTCOM != 157) || (TEQUIP:20 == 7 && SELECTCOM != 153 && SELECTCOM != 535) || (TEQUIP:20 == 9 && SELECTCOM != 403) || (TEQUIP:21 && SELECTCOM != 150 && SELECTCOM != 582) 
+	PRINTFORM 바기나에서는 
+	;바이브
+	IF TEQUIP:20 == 1 && SELECTCOM != 12 && TEQUIP:90 == 0
+		PRINTFORM 바이브가 질벽을 세게 긁고 
+	;촉수삽입
+	ELSEIF TEQUIP:20 == 1 && SELECTCOM != 501 && TEQUIP:90
+		PRINTFORM 미끈거리는 촉수가 꾸불꾸불해서 
+	;바기나요석
+	ELSEIF TEQUIP:20 == 2 && SELECTCOM != 437 && TEQUIP:90 == 0
+		PRINTFORM 요석이 저릿거리는 신체를 진정시키고 
+	;촉수Ｇスポ責め
+	ELSEIF TEQUIP:20 == 2 && SELECTCOM != 520 && TEQUIP:90
+		PRINTFORM 촉수가 집요하게 Ｇ스폿을 희롱하고 
+	;바기나로터
+	ELSEIF TEQUIP:20 == 3 && SELECTCOM != 151 && TEQUIP:90 == 0
+		PRINTFORM 로터가 울리는 소리가 질에서 들리고 
+	;촉수子宮責め
+	ELSEIF TEQUIP:20 == 3 && SELECTCOM != 521 && TEQUIP:90
+		PRINTFORM 촉수가 집요하게 자궁을 도려내고 
+	;바기나전극
+	ELSEIF TEQUIP:20 == 4 && SELECTCOM != 155
+		PRINTFORM 전류에 의한 인외의 쾌감이 미쳐 날뛰고 
+	;바기나바벨
+	ELSEIF TEQUIP:20 == 5 && SELECTCOM != 156
+		PRINTFORM 바벨이 질내를 계속 누르고 
+	;바기나벌룬
+	ELSEIF TEQUIP:20 == 6 && SELECTCOM != 157
+		PRINTFORM 풍선이 질을 확대하고 
+	;애액채집기
+	ELSEIF TEQUIP:20 == 7 && SELECTCOM != 153 && TEQUIP:90 == 0
+		PRINTFORM 무기질인 기구가 애액을 탐내 짜고 
+	;촉수愛液採集
+	ELSEIF TEQUIP:20 == 7 && SELECTCOM != 535 && TEQUIP:90
+		PRINTFORM 촉수가 보지로부터 애액을 탐취하고 
+	;군고구마
+	ELSEIF TEQUIP:20 == 9 && SELECTCOM != 403
+		PRINTFORM 군고구마가 질벽을 쬐고 
+	;쿠스코
+	ELSEIF TEQUIP:21 && SELECTCOM != 150 && TEQUIP:90 == 0
+		PRINTFORM 금속의 기구가 안쪽까지 붉은 미육을 훤히 드러내고 
+	;촉수幽霊膣鏡
+	ELSEIF TEQUIP:21 && SELECTCOM != 582 && TEQUIP:90
+		PRINTFORM 굵은 촉수에 질내가 자세히 비쳐지고 
+	ENDIF
+	IF (TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:25 == 0 && TEQUIP:26 == 0) || ((TEQUIP:25 == 1 && (SELECTCOM == 13 || SELECTCOM == 502)) || (TEQUIP:25 == 2 && (SELECTCOM == 438 || SELECTCOM == 523)) || (TEQUIP:25 == 3 && SELECTCOM == 170) || (TEQUIP:25 == 4 && SELECTCOM == 171) || (TEQUIP:25 == 5 && SELECTCOM == 172) || (TEQUIP:25 == 6 && SELECTCOM == 173) || (TEQUIP:25 == 7 && (SELECTCOM == 174 || SELECTCOM == 522)) || (TEQUIP:25 == 8 && SELECTCOM == 175) || (TEQUIP:25 == 9 && SELECTCOM == 404) || (TEQUIP:25 == 10 && SELECTCOM == 179) || (TEQUIP:26 && SELECTCOM == 432)) 
+		PRINTFORMW 있다……. 
+	ELSEIF (TEQUIP:25 == 1 && SELECTCOM != 13 && SELECTCOM != 502) || (TEQUIP:25 == 2 && SELECTCOM != 438 && SELECTCOM != 523) || (TEQUIP:25 == 3 && SELECTCOM != 170)  || (TEQUIP:25 == 4 && SELECTCOM != 171 && SELECTCOM != 586) || (TEQUIP:25 == 5 && SELECTCOM != 172) || (TEQUIP:25 == 6 && SELECTCOM != 173) || (TEQUIP:25 == 7 && SELECTCOM != 174 && SELECTCOM != 522) || (TEQUIP:25 == 8 && SELECTCOM != 175) || (TEQUIP:25 == 9 && SELECTCOM != 404) || (TEQUIP:25 == 10 && SELECTCOM != 179) || (TEQUIP:26 && SELECTCOM != 432) 
+		PRINTFORML 있으며, 
+	ENDIF
+ENDIF
+;Ａ계（애널바이브・애널요석・애널촉수・애널비즈・관장플러그・촉수관장・空気관장・확장벌룬・애널전극・巨峰攻め・氷柱攻め）
+IF (TEQUIP:25 == 1 && SELECTCOM != 13 && SELECTCOM != 502) || (TEQUIP:25 == 2 && SELECTCOM != 438 && SELECTCOM != 523) || (TEQUIP:25 == 3 && SELECTCOM != 170) || (TEQUIP:25 == 4 && SELECTCOM != 171 && SELECTCOM != 586) || (TEQUIP:25 == 5 && SELECTCOM != 172) || (TEQUIP:25 == 6 && SELECTCOM != 173)  || (TEQUIP:25 == 7 && SELECTCOM != 174 && SELECTCOM != 522) || (TEQUIP:25 == 8 && SELECTCOM != 175) || (TEQUIP:25 == 9 && SELECTCOM != 404) || (TEQUIP:25 == 10 && SELECTCOM != 179) || (TEQUIP:26 && SELECTCOM != 432)
+	PRINTFORM 애널에선 
+	;애널바이브
+	IF TEQUIP:25 == 1 && SELECTCOM != 13 && TEQUIP:90 == 0
+		PRINTFORM 애널바이브가 낮은 진동음을 내고 
+	;애널촉수
+	ELSEIF TEQUIP:25 == 1 && SELECTCOM != 502 && TEQUIP:90
+		PRINTFORM 가는 촉수가 국문을 탐하고 
+	;애널요석
+	ELSEIF TEQUIP:25 == 2 && SELECTCOM != 438 && TEQUIP:90 == 0
+		PRINTFORM 요석이 보기에도 끔찍하게 파묻혀 
+	;촉수小腸삽입中
+	ELSEIF TEQUIP:25 == 2 && SELECTCOM != 523 && TEQUIP:90
+		PRINTFORM 촉수가 소장 안에서 마구 날뛰어 
+	;애널로터
+	ELSEIF TEQUIP:25 == 3 && SELECTCOM != 170 && TEQUIP:90 == 0
+		PRINTFORM 로타가 울리는 소리가 항문에서 울려퍼지고 
+	;애널전극
+	ELSEIF TEQUIP:25 == 4 && SELECTCOM != 171
+		PRINTFORM 전류에 의한 인외의 쾌감이 마구 날뛰고 
+	;촉수腸内撮影
+	ELSEIF TEQUIP:25 == 4 && SELECTCOM != 586 && TEQUIP:90
+		PRINTFORM 장내를 촉수에 의해 빠짐없이 촬영되고 
+	;애널비즈
+	ELSEIF TEQUIP:25 == 5 && SELECTCOM != 172
+		PRINTFORM 구슬이 빈틈없이 꽉 들어차 
+	;확장벌룬
+	ELSEIF TEQUIP:25 == 6 && SELECTCOM != 173
+		PRINTFORM 풍선이 국문을 절대 불가능할 크기까지 확장시키고 
+	;관장플러그
+	ELSEIF TEQUIP:25 == 7 && SELECTCOM != 174 && TEQUIP:90 == 0
+		PRINTFORM 참기 힘든 배설의 욕구가 휘몰아치고 
+	;촉수관장
+	ELSEIF TEQUIP:25 == 7 && SELECTCOM != 522 && TEQUIP:90
+		PRINTFORM 배설의 욕구를 부채질하는 촉수가 꿈틀대고 
+	;空気관장
+	ELSEIF TEQUIP:25 == 8 && SELECTCOM != 175
+		PRINTFORM 공기의 압박이 몸을 안절부절 못하게 만들고 
+	;巨峰
+	ELSEIF TEQUIP:25 == 9 && SELECTCOM != 404
+		PRINTFORM 아주 큰 입자의 포도가 달콤한 즙을 흘리고 
+	;애널바벨
+	ELSEIF TEQUIP:25 == 10 && SELECTCOM != 179
+		PRINTFORM 바벨이 장벽을 계속 누르고 
+	;고드름
+	ELSEIF TEQUIP:26 && SELECTCOM != 432
+		PRINTFORM 실로 차갑기 그지없는 느낌이 항문의 감각을 마비시키고 
+	ENDIF
+	PRINTFORMW 있다…….
+ENDIF
+;착의・Ｂ계（유두캡・촉수유두자극・搾乳器・촉수搾乳・乳房전극・新妻プレイ・サラシ・スク水プレイ）
+IF (TEQUIP:35 == 1 && SELECTCOM != 15 && SELECTCOM != 504) || (TEQUIP:35 == 2 && SELECTCOM != 191 && SELECTCOM != 525) || (TEQUIP:59 == 1 && SELECTCOM != 90) || (TEQUIP:36 && SELECTCOM != 194) || (TEQUIP:59 == 2 && SELECTCOM != 91) || (TEQUIP:59 > 2 && SELECTCOM != 93) || (TEQUIP:35 == 4 && SELECTCOM != 193) || (TEQUIP:35 == 5 && SELECTCOM != 195) || (TEQUIP:35 == 6 && SELECTCOM != 196)
+	IF ((TEQUIP:35 == 1 && SELECTCOM != 15 && SELECTCOM != 504) || (TEQUIP:35 == 2 && SELECTCOM != 191 && SELECTCOM != 525) || (TEQUIP:59 == 1 && SELECTCOM != 90) || (TEQUIP:36 && SELECTCOM != 194) || (TEQUIP:59 == 2 && SELECTCOM != 91) || (TEQUIP:59 > 2 && SELECTCOM != 93) || (TEQUIP:35 == 4 && SELECTCOM != 193) || (TEQUIP:35 == 5 && SELECTCOM != 195 ) || (TEQUIP:35 == 6 && SELECTCOM != 196) || (TEQUIP:30 == 1 && SELECTCOM != 14 && SELECTCOM != 503) || (TEQUIP:30 == 2 && SELECTCOM != 16 && SELECTCOM != 505) || (TEQUIP:30 == 6 && SELECTCOM != 17 && SELECTCOM != 515) || (TEQUIP:54 && SELECTCOM != 351) || (TEQUIP:30 == 4 && SELECTCOM != 131) || (TEQUIP:30 == 5 && SELECTCOM != 130)) && ((TEQUIP:25 == 1 && SELECTCOM != 13 && SELECTCOM != 502) || (TEQUIP:25 == 5 && SELECTCOM != 172) || (TEQUIP:25 == 7 && SELECTCOM != 174 && SELECTCOM != 522) || (TEQUIP:25 == 8 && SELECTCOM != 175) || (TEQUIP:25 == 6 && SELECTCOM != 173) || (TEQUIP:25 == 4 && SELECTCOM != 171) || (TEQUIP:25 == 9 && SELECTCOM != 404) || (TEQUIP:25 == 3 && SELECTCOM != 170) || (TEQUIP:25 == 10 && SELECTCOM != 179) || (TEQUIP:26 && SELECTCOM != 432) || (TEQUIP:20 == 1 && SELECTCOM != 12 && SELECTCOM != 501) || (TEQUIP:21 && SELECTCOM != 150 && SELECTCOM != 582) || (TEQUIP:20 == 9 && SELECTCOM != 403)) || (TEQUIP:20 == 2 && SELECTCOM != 437 && SELECTCOM != 520) || (TEQUIP:20 == 4 && SELECTCOM != 155) || (TEQUIP:20 == 5 && SELECTCOM != 156) || (TEQUIP:20 == 3 && SELECTCOM != 151 && SELECTCOM != 521) || (TEQUIP:20 == 6 && SELECTCOM != 157) ||  (TEQUIP:20 == 7 && SELECTCOM != 153 && SELECTCOM != 535) 
+		PRINTFORM 거기에다 
+	ELSE
+		PRINTFORM 는 
+	ENDIF
+	;촉수유두자극
+	IF TEQUIP:35 == 1 && SELECTCOM != 504 && TEQUIP:90
+		PRINTFORM 촉수의 입이 유두를 빨고 돌리며, 
+	;유두캡
+	ELSEIF TEQUIP:35 == 1 && SELECTCOM != 15
+		PRINTFORM 유두에는 로터가 딱 붙어서, 
+	;搾乳器
+	ELSEIF TEQUIP:35 == 2 && SELECTCOM != 191 && TEQUIP:90 == 0
+		PRINTFORM 빨면 빠는대로 모유가 짜내져, 
+	;촉수搾乳
+	ELSEIF TEQUIP:35 == 2 && SELECTCOM != 525 && TEQUIP:90
+		PRINTFORM 실과 같은 촉수에 의해 젖이 짜내져, 
+	;乳房전극
+	ELSEIF TEQUIP:35 == 4 && SELECTCOM != 193
+		PRINTFORM 전류에 의한 인외의 쾌감이 가슴을 격렬히 진동시켜, 
+	;유두クリップ
+	ELSEIF TEQUIP:35 == 5 && SELECTCOM != 195
+		PRINTFORM 유두가 빨래집게에 찝혀, 
+	;新妻プレイ
+	ELSEIF TEQUIP:59 == 1 && SELECTCOM != 90
+		PRINTFORM 부끄럽다는 듯이 맨살에 에이프런을 입은 것이, 
+	;サラシ
+	ELSEIF TEQUIP:36 && SELECTCOM != 194
+		PRINTFORM 가슴을 사라시로 압박당하는 것이, 
+	;スク水
+	ELSEIF TEQUIP:59 == 2 && SELECTCOM != 91
+		PRINTFORM 어린 디자인의 수영복을 전신에 감싼 것이, 
+	;女教師
+	ELSEIF TEQUIP:59 == 3 && SELECTCOM != 93
+		PRINTFORM 늠름해 보이는 여교사 옷을 몸에 두르고, 
+	;和服
+	ELSEIF TEQUIP:59 == 4 && SELECTCOM != 93
+		PRINTFORM 청초한 기모노를 몸에 두르고, 
+	;メイド服
+	ELSEIF TEQUIP:59 == 5 && SELECTCOM != 93
+		PRINTFORM 귀여운 느낌의 메이드복을 몸에 두르고, 
+	;体操服＋ブルマー
+	ELSEIF TEQUIP:59 == 6 && SELECTCOM != 93
+		PRINTFORM 기운차 보이는 체육복과 블루머를 입고, 
+	;ナース服
+	ELSEIF TEQUIP:59 == 7 && SELECTCOM != 93
+		PRINTFORM 박애정신이 흘러 넘치는 간호사복을 두르고, 
+	;チャイナ服
+	ELSEIF TEQUIP:59 == 8 && SELECTCOM != 93
+		PRINTFORM 대담하게 트인 슬릿이 매력적인 차이나드레스를 입고, 
+	;セーラー服
+	ELSEIF TEQUIP:59 == 9 && SELECTCOM != 93
+		PRINTFORM 분위기 팍 사는 세라복을 몸에 두르고, 
+	;ネグリジェ
+	ELSEIF TEQUIP:59 == 10 && SELECTCOM != 93
+		PRINTFORM 선정적인 네글리제를 입고, 
+	;裸Ｙシャツ
+	ELSEIF TEQUIP:59 == 11 && SELECTCOM != 93
+		PRINTFORM 맨살 위에 Ｙ셔츠만을 입고, 
+	;ビキニ
+	ELSEIF TEQUIP:59 == 12 && SELECTCOM != 93
+		PRINTFORM 대담하게 가슴을 강조한 비키니 수영복을 입고, 
+	;危ないレオタード
+	ELSEIF TEQUIP:59 == 13 && SELECTCOM != 93
+		PRINTFORM 거기가 보일랑말랑 할 정도로 아슬아슬한 레오타드를 입고, 
+	;バニースーツ
+	ELSEIF TEQUIP:59 == 14 && SELECTCOM != 93
+		PRINTFORM 신사의 사교장에 있을 법한 바니걸 옷을 입고, 
+	;ボンデージ
+	ELSEIF TEQUIP:59 == 15 && SELECTCOM != 93
+		PRINTFORM 음란하지만 늠름한 여왕님풍의 옷을 몸에 두르고, 
+	;園児服
+	ELSEIF TEQUIP:59 == 16 && SELECTCOM != 93
+		PRINTFORM 귀여운 느낌의 유치원 병아리옷을 입고선, 
+	;褌だけ
+	ELSEIF TEQUIP:59 == 17 && SELECTCOM != 93
+		PRINTFORM 알몸에 잠방이 뿐이라는 대담한 옷차림으로, 
+	;軍服
+	ELSEIF TEQUIP:59 == 18 && SELECTCOM != 93
+		PRINTFORM 바짝 죄어진 느낌의 군복 차림으로, 
+	;ウェディングドレス
+	ELSEIF TEQUIP:59 == 19 && SELECTCOM != 93
+		PRINTFORM 아름답고 그리고 요염하기까지 한 웨딩드레스를 몸에 두르고, 
+	;ゴスロリ衣装
+	ELSEIF TEQUIP:59 == 20 && SELECTCOM != 93
+		PRINTFORM 마치 서양인형같이 미려한 의상을 입고선, 
+	;裸にサスペンダーだけ
+	ELSEIF TEQUIP:59 == 21 && SELECTCOM != 93
+		PRINTFORM 맨살에 가슴 끝만 멜빵으로 가린 차림으로, 
+	;巫女衣装
+	ELSEIF TEQUIP:59 == 22 && SELECTCOM != 93
+		PRINTFORM 신을 모시는 무녀가 입을 법한 의상을 몸에 두르고, 
+	ENDIF
+	SIF (TEQUIP:30 == 1 && (SELECTCOM == 14 || SELECTCOM == 503)) || (TEQUIP:30 == 2 && (SELECTCOM == 16 || SELECTCOM == 505)) || (TEQUIP:30 == 6 && (SELECTCOM == 17 || SELECTCOM == 515)) || (TEQUIP:54 && SELECTCOM == 351) || (TEQUIP:30 == 4 && SELECTCOM == 131) || (TEQUIP:30 == 5 && SELECTCOM == 130) || (TEQUIP:30 == 0 && TEQUIP:54 == 0)
+		PRINTFORMW 색기를 발하고 있다……. 
+ELSEIF (TEQUIP:30 == 1 && SELECTCOM != 14 && SELECTCOM != 503) || (TEQUIP:30 == 2 && SELECTCOM != 16 && SELECTCOM != 505) || (TEQUIP:54 && SELECTCOM != 351) || (TEQUIP:30 == 6 && SELECTCOM != 17 && SELECTCOM != 515) || (TEQUIP:30 == 4 && SELECTCOM != 131) || (TEQUIP:30 == 5 && SELECTCOM != 130)
+	IF ((TEQUIP:35 == 1 && SELECTCOM != 15 && SELECTCOM != 504) || (TEQUIP:35 == 2 && SELECTCOM != 191 && SELECTCOM != 525) || (TEQUIP:36 && SELECTCOM != 194) || (TEQUIP:59 == 1 && SELECTCOM != 90) || (TEQUIP:59 == 2 && SELECTCOM != 91) || (TEQUIP:59 > 2 && SELECTCOM != 93) || (TEQUIP:30 == 1 && SELECTCOM != 14 && SELECTCOM != 503) || (TEQUIP:30 == 2 && SELECTCOM != 16 && SELECTCOM != 505) || (TEQUIP:30 == 4 && SELECTCOM != 131) || (TEQUIP:30 == 5 && SELECTCOM != 130) || (TEQUIP:54 && SELECTCOM != 351)) && ((TEQUIP:25 == 1 && SELECTCOM != 13 && SELECTCOM != 502) || (TEQUIP:25 == 2 && SELECTCOM != 438 && SELECTCOM != 523) || (TEQUIP:25 == 3 && SELECTCOM != 170)  || (TEQUIP:25 == 4 && SELECTCOM != 171) || (TEQUIP:25 == 5 && SELECTCOM != 172) || (TEQUIP:25 == 6 && SELECTCOM != 173) || (TEQUIP:25 == 7 && SELECTCOM != 174 && SELECTCOM != 522) || (TEQUIP:25 == 8 && SELECTCOM != 175) || (TEQUIP:25 == 9 && SELECTCOM != 404) || (TEQUIP:25 == 10 && SELECTCOM != 179) || (TEQUIP:26 && SELECTCOM != 432) || (TEQUIP:20 == 1 && SELECTCOM != 12 && SELECTCOM != 501) || (TEQUIP:20 == 2 && SELECTCOM != 437 && SELECTCOM != 520) || (TEQUIP:20 == 3 && SELECTCOM != 151 && SELECTCOM != 521) || (TEQUIP:20 == 4 && SELECTCOM != 155) || (TEQUIP:20 == 5 && SELECTCOM != 156) || (TEQUIP:20 == 6 && SELECTCOM != 157) || (TEQUIP:20 == 7 && SELECTCOM != 153 && SELECTCOM != 535) || (TEQUIP:21 && SELECTCOM != 110 && SELECTCOM != 582) || (TEQUIP:20 == 9 && SELECTCOM != 403)) 
+		PRINTFORM 그에 더하여, 
+	ELSE
+		PRINTFORM 는 
+	ENDIF
+ENDIF
+;Ｃ・Ｐ계（클리캡・촉수クリ責め・오나홀・촉수ペニス責め・샤워・Ｃ전극）
+IF (TEQUIP:30 == 1 && SELECTCOM != 14 && SELECTCOM != 503) || (TEQUIP:30 == 2 && SELECTCOM != 16 && SELECTCOM != 505) || (TEQUIP:30 == 4 && SELECTCOM != 131) || (TEQUIP:30 == 5 && SELECTCOM != 130) || (TEQUIP:30 == 6 && SELECTCOM != 17 && SELECTCOM != 515) || (TEQUIP:54 && SELECTCOM != 351)
+	;클리캡
+	IF TEQUIP:30 == 1 && SELECTCOM != 14 && TEQUIP:90 == 0
+		PRINTFORM 음핵을 도구로 팽창당하여 
+	;촉수クリ責め
+	ELSEIF TEQUIP:30 == 1 && SELECTCOM != 503 && TEQUIP:90
+		PRINTFORM 촉수 끝에 집요하게 음핵을 범해져 
+	;오나홀
+	ELSEIF TEQUIP:30 == 2 && SELECTCOM != 16 && TEQUIP:90 == 0
+		PRINTFORM 내부가 끈적이는 대롱에 페니스가 감싸여 
+	;촉수ペニス責め
+	ELSEIF TEQUIP:30 == 2 && SELECTCOM != 505 && TEQUIP:90
+		PRINTFORM 촉수가 페니스를 꽉 잡고 압박하여 
+	;陰核전극
+	ELSEIF TEQUIP:30 == 4 && SELECTCOM != 131
+		PRINTFORM 전류에 의한 인외의 쾌감으로 음핵이 자극당해 
+	;陰核クリップ
+	ELSEIF TEQUIP:30 == 5 && SELECTCOM != 130
+		PRINTFORM 음핵을 빨래집게로 찝혀 
+	;전극오나홀
+	ELSEIF TEQUIP:30 == 6 && SELECTCOM != 17 && TEQUIP:90 == 0
+		PRINTFORM 끈적한 대롱에 페니스가 감싸여, 전류에 의한 쾌감으로 자극당해 
+	;촉수放電ペニス責め
+	ELSEIF TEQUIP:30 == 6 && SELECTCOM != 515 && TEQUIP:90
+		PRINTFORM 촉수를 페니스가 꽉 잡고 압박하며, 거기에 방전에 의한 쾌감으로 자극받아 
+	;冷水샤워
+	ELSEIF TEQUIP:54 == 2 && SELECTCOM != 351
+		PRINTFORM 조용히 더러움을 차가운 물로 씻어내며 
+	;熱湯샤워
+	ELSEIF TEQUIP:54 == 3 && SELECTCOM != 351
+		PRINTFORM 더러움을 뜨거운 물로 씻어내며 
+	;샤워
+	ELSEIF TEQUIP:54 && SELECTCOM != 351
+		PRINTFORM 조용히 더러움을 씻어내며 
+	ENDIF
+	SIF (TEQUIP:35 == 0 && TEQUIP:35 == 0 && TEQUIP:59 == 0 && TEQUIP:36 == 0 && TEQUIP:59 == 0) || (TEQUIP:35 == 1 && (SELECTCOM == 15 || SELECTCOM == 504)) || (TEQUIP:35 == 2 && (SELECTCOM == 191 || SELECTCOM == 525)) || (TEQUIP:59 == 1 && SELECTCOM == 90) || (TEQUIP:36 && SELECTCOM == 194) || (TEQUIP:59 == 2 && SELECTCOM == 91) || (TEQUIP:59 > 2 && SELECTCOM == 93) 
+	PRINTFORM 쾌감에 떠는 
+	PRINTFORMW 쾌감에 떨고 있다……. 
+ENDIF
+;시추에이션계 (수치 플레이, 비디오 촬영)
+IF (TEQUIP:56 && SELECTCOM != 103 && SELECTCOM != 650) || (TEQUIP:50 && SELECTCOM != 100)
+	PRINTFORM 그 모습은 
+	;수치 플레이
+	SIF TEQUIP:56 && SELECTCOM != 103 && SELECTCOM != 650
+		PRINTFORM 거울에 훤히 비쳐, %조사처리(CALLNAME:TARGET,"를")% 유혹하고 
+	SIF TEQUIP:50 && SELECTCOM != 100 && TEQUIP:56 && SELECTCOM != 103 && SELECTCOM != 650
+		PRINTFORM 있으며 
+	;비디오
+	SIF TEQUIP:50 && SELECTCOM != 100
+		PRINTFORM 모두 다 담담히 테이프에 녹화되고 
+	PRINTFORMW 있다……. 
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;뽑지 않고 우후후 함수@COMBOPLAY
+;인수 ARG에 옵션을 넣어 콤보 대사 바로 위에서 TRYCALL. 
+;
+;옵션의 내용은
+;0=일단 뽑고 플레이(삽입 관련 패러미터 발생시키지 않고)
+;1=삽입한 채로 하는 플레이(삽입 관련 패러미터 발생)
+;2=뽑고 플레이+콤보명 비표시
+;3=삽입해서 플레이+콤보명 비표시
+;
+;自動的にコンボ名を生成して, 入れっぱなしなら入れっぱなし함수とコマンド整理함수を呼びます. 
+;対応できていないコマンドもあります. 
+;抜かずにウフフモードの際, 挿しっぱなしフラグと体位の確認　CFLAG 5220とSELECTCOM:1を使用
+;体位判定のため, SELECTCOMを継続中の体位のコマンドに偽造します. 
+;また, 選んだコマンドが裏SELECTCOM（SELECTCOM:1）と一致した場合, 同一コマンド連続実行ペナルティのため
+;体位判定のために偽造されているPREVCOMを裏SELECTCOMに差し戻します. 
+;
+;※難易度変化を伴うのでエキストラ構文での利用を推奨します※
+;--------------------------------------------------
+@COMBOPLAY, ARG
+LOCAL = 0
+
+;서포트 플레이可能な場合CFLAG:5220に足してある2000を引いて戻し, Kを1にする
+IF CFLAG:5220 >= 2000
+	CFLAG:5220 -= 2000
+	LOCAL = 1
+ENDIF
+
+PRINT ＜
+
+;전반부
+
+;삽입계 커맨드군
+SIF CFLAG:5220 == 20
+	PRINT 정상위
+SIF CFLAG:5220 == 21
+	PRINT 후배위
+SIF CFLAG:5220 == 22
+	PRINT 대면좌위
+SIF CFLAG:5220 == 23 && TEQUIP:56 == 0
+	PRINT 배면좌위
+SIF (CFLAG:5220 == 23 && TEQUIP:56) || CFLAG:5220 == 612
+	PRINT 거울좌위
+SIF CFLAG:5220 == 24
+	PRINT 기승위
+SIF CFLAG:5220 == 25
+	PRINT 역강간
+SIF CFLAG:5220 == 27
+	PRINT 대면입위
+SIF CFLAG:5220 == 28
+	PRINT 배면입위
+SIF CFLAG:5220 == 26 || CFLAG:5220 == 307
+	PRINT 조수섹스
+SIF CFLAG:5220 == 30
+	PRINT Ａ정상위
+SIF CFLAG:5220 == 31
+	PRINT Ａ후배위
+SIF CFLAG:5220 == 32
+	PRINT Ａ대면좌위
+SIF CFLAG:5220 == 33
+	PRINT Ａ배면좌위
+SIF CFLAG:5220 == 37
+	PRINT Ａ대면입위
+SIF CFLAG:5220 == 38
+	PRINT Ａ배면입위
+SIF CFLAG:5220 == 34
+	PRINT Ａ기승위
+SIF CFLAG:5220 == 35
+	PRINT 역Ａ강간
+SIF CFLAG:5220 == 36 || CFLAG:5220 == 308
+	PRINT 조수Ａ섹스
+SIF CFLAG:5220 == 610
+	PRINT ３Ｐ
+
+;삽입계 외
+SIF CFLAG:5220 == 500
+	PRINT 애무
+SIF CFLAG:5220 == 501 || CFLAG:5220 == 126
+	PRINT 커닐링구스
+SIF CFLAG:5220 == 502
+	PRINT Ａ애무
+SIF CFLAG:5220 == 186
+	PRINT 엉덩이애무
+SIF CFLAG:5220 == 7
+	PRINT 자위
+SIF CFLAG:5220 == 5 || CFLAG:5220 == 41 || CFLAG:5220 == 331 || CFLAG:5220 == 604
+	PRINT 펠라
+SIF CFLAG:5220 == 3
+	PRINT 가슴애무
+SIF CFLAG:5220 == 6
+	PRINT 키스
+SIF CFLAG:5220 == 9
+	PRINT 아무것도 안한다
+SIF CFLAG:5220 == 4
+	PRINT 손가락삽입
+SIF CFLAG:5220 == 600
+	PRINT Ｇ스폿자극
+SIF CFLAG:5220 == 180 || CFLAG:5220 == 187
+	PRINT Ａ핥기
+SIF CFLAG:5220 == 188
+	PRINT Ａ주름세기
+SIF CFLAG:5220 == 10
+	PRINT 로터
+SIF CFLAG:5220 == 12 && TEQUIP:20 == 1
+	PRINT 바이브
+SIF CFLAG:5220 == 12 && TEQUIP:20 == 0
+	PRINT 바이브해제
+SIF CFLAG:5220 == 155 && TEQUIP:20 == 4
+	PRINT Ｖ전극
+SIF CFLAG:5220 == 155 && TEQUIP:20 == 0
+	PRINT Ｖ전극해제
+SIF CFLAG:5220 == 156 && TEQUIP:20 == 5
+	PRINT Ｖ바벨
+SIF CFLAG:5220 == 156 && TEQUIP:20 == 0
+	PRINT Ｖ바벨해제
+SIF CFLAG:5220 == 157 && TEQUIP:20 == 6
+	PRINT Ｖ확장
+SIF CFLAG:5220 == 157 && TEQUIP:20 == 0
+	PRINT Ｖ확장해제
+SIF CFLAG:5220 == 153 && TEQUIP:20 == 7
+	PRINT 애액채집기
+SIF CFLAG:5220 == 153 && TEQUIP:20 == 0
+	PRINT 애액채집기해제
+SIF CFLAG:5220 == 11
+	PRINT 전기안마
+SIF CFLAG:5220 == 124
+	PRINT 로터자위
+SIF CFLAG:5220 == 125
+	PRINT 전기안마자위
+SIF CFLAG:5220 == 13 && TEQUIP:25 == 1
+	PRINT Ａ바이브
+SIF CFLAG:5220 == 13 && TEQUIP:25 == 0
+	PRINT Ａ바이브해제
+SIF CFLAG:5220 == 14 && TEQUIP:30 == 1
+	PRINT 클리캡
+SIF CFLAG:5220 == 14 && TEQUIP:30 == 0
+	PRINT 클리캡해제
+SIF CFLAG:5220 == 131 && TEQUIP:30 == 4
+	PRINT Ｃ전극
+SIF CFLAG:5220 == 131 && TEQUIP:30 == 0
+	PRINT Ｃ전극해제
+SIF CFLAG:5220 == 15 && TEQUIP:35 == 1
+	PRINT 유두캡
+SIF CFLAG:5220 == 15 && TEQUIP:35 == 0
+	PRINT 유두캡해제
+SIF CFLAG:5220 == 191 && TEQUIP:35 == 2
+	PRINT 착유기장비
+SIF CFLAG:5220 == 191 && TEQUIP:35 == 0
+	PRINT 착유기해제
+SIF CFLAG:5220 == 193 && TEQUIP:35 == 4
+	PRINT Ｂ전극
+SIF CFLAG:5220 == 193 && TEQUIP:35 == 0
+	PRINT Ｂ전극해제
+SIF CFLAG:5220 == 16 && TEQUIP:30 == 2
+	PRINT 오나홀
+SIF CFLAG:5220 == 16 && TEQUIP:30 == 0
+	PRINT 오나홀해제
+SIF CFLAG:5220 == 17 && TEQUIP:30 == 6
+	PRINT 전극오나홀
+SIF CFLAG:5220 == 17 && TEQUIP:30 == 0
+	PRINT 전극오나홀해제
+SIF CFLAG:5220 == 351 && TEQUIP:53
+	PRINT 샤워
+SIF CFLAG:5220 == 351 && TEQUIP:53 == 0
+	PRINT 샤워종료
+SIF CFLAG:5220 == 172 && TEQUIP:25 == 5
+	PRINT Ａ비즈
+SIF CFLAG:5220 == 172 && TEQUIP:25 == 0
+	PRINT Ａ비즈해제
+SIF CFLAG:5220 == 25
+	PRINT 역강간
+SIF CFLAG:5220 == 40 || CFLAG:5220 == 321
+	PRINT 수음
+SIF CFLAG:5220 == 42 || CFLAG:5220 == 322
+	PRINT 파이즈리
+SIF CFLAG:5220 == 209 || CFLAG:5220 == 335
+	PRINT 파이즈리펠라
+SIF CFLAG:5220 == 43
+	PRINT 스마타
+SIF CFLAG:5220 == 352
+	PRINT 거품씻기
+SIF CFLAG:5220 == 354
+	PRINT 다리에부비기
+SIF CFLAG:5220 == 353
+	PRINT 역거품씻기
+SIF CFLAG:5220 == 220
+	PRINT 스팽킹
+SIF CFLAG:5220 == 221
+	PRINT 채찍질
+SIF CFLAG:5220 == 222
+	PRINT 바늘고문
+SIF CFLAG:5220 == 225 && TEQUIP:41 == 1
+	PRINT 눈가리개
+SIF CFLAG:5220 == 224 && TEQUIP:40
+	PRINT 긴박
+SIF CFLAG:5220 == 226 && TEQUIP:42 == 1
+	PRINT 개구기
+SIF CFLAG:5220 == 174 && TEQUIP:25 == 7
+	PRINT 관장
+SIF CFLAG:5220 == 174 && TEQUIP:25 == 0
+	PRINT 배설
+SIF CFLAG:5220 == 176 && TEQUIP:25 == 7
+	PRINT 미약관장
+SIF CFLAG:5220 == 176 && TEQUIP:25 == 0
+	PRINT 배설
+SIF CFLAG:5220 == 173 && TEQUIP:25 == 6
+	PRINT Ａ확장
+SIF CFLAG:5220 == 173 && TEQUIP:25 == 0
+	PRINT Ａ확장해제
+SIF CFLAG:5220 == 171 && TEQUIP:25 == 4
+	PRINT Ａ전극
+SIF CFLAG:5220 == 171 && TEQUIP:25 == 0
+	PRINT Ａ전극해제
+SIF CFLAG:5220 == 179 && TEQUIP:25 == 10
+	PRINT Ａ바벨
+SIF CFLAG:5220 == 179 && TEQUIP:25 == 0
+	PRINT Ａ바벨해제
+SIF CFLAG:5220 == 60
+	PRINT 로션플레이
+SIF CFLAG:5220 == 61 && ABL:PLAYER:12 >= 3
+	PRINT 미약키스
+SIF CFLAG:5220 == 62 && ABL:PLAYER:12 >= 3
+	PRINT 이뇨제키스
+SIF CFLAG:5220 == 61 && ABL:PLAYER:12 < 3
+	PRINT 미약
+SIF CFLAG:5220 == 62 && ABL:PLAYER:12 < 3
+	PRINT 이뇨제
+SIF CFLAG:5220 == 100 && TEQUIP:50
+	PRINT 촬영
+SIF CFLAG:5220 == 301
+	PRINT 조개비비기
+SIF CFLAG:5220 == 302 || CFLAG:5220 == 47
+	PRINT 풋잡
+SIF CFLAG:5220 == 602
+	PRINT ６９
+SIF CFLAG:5220 == 227
+	PRINT 매도
+SIF CFLAG:5220 == 110
+	PRINT 보지벌리기
+SIF CFLAG:5220 == 101
+	PRINT 비디오감상
+SIF CFLAG:5220 == 230
+	PRINT 이라마치오
+SIF CFLAG:5220 == 231
+	PRINT 피스트
+SIF CFLAG:5220 == 232
+	PRINT Ａ피스트
+SIF CFLAG:5220 == 233
+	PRINT 양구멍피스트
+SIF CFLAG:5220 == 312
+	PRINT 더블피스트
+SIF CFLAG:5220 == 313
+	PRINT 더블Ａ피스트
+IF CFLAG:5220 == 620 || (CFLAG:5220 == 111 && SOURCE:0)
+	PRINT 강제방뇨
+ELSEIF CFLAG:5220 == 111 || CFLAG:5220 == 145
+	PRINT 방뇨
+ENDIF
+SIF CFLAG:5220 == 44
+	PRINT Ａ봉사강제
+SIF CFLAG:5220 == 80
+	PRINT Ｃ주사
+SIF CFLAG:5220 == 81
+	PRINT Ｖ주사
+SIF CFLAG:5220 == 82
+	PRINT Ａ주사
+SIF CFLAG:5220 == 83
+	PRINT Ｂ주사
+SIF CFLAG:5220 == 84
+	PRINT Ｕ주사
+SIF CFLAG:5220 == 88
+	PRINT 채혈
+SIF CFLAG:5220 == 92
+	PRINT 진찰
+SIF CFLAG:5220 == 200
+	PRINT 가슴주무르기
+SIF CFLAG:5220 == 122
+	PRINT 클리자극
+SIF CFLAG:5220 == 123
+	PRINT 클리꼬집기
+SIF CFLAG:5220 == 128
+	PRINT 귀두자극
+SIF CFLAG:5220 == 132
+	PRINT Ｐ로터
+SIF CFLAG:5220 == 133
+	PRINT Ｐ전기안마
+SIF CFLAG:5220 == 152
+	PRINT 음순만지기
+SIF CFLAG:5220 == 201
+	PRINT 유두자극
+SIF CFLAG:5220 == 202
+	PRINT 유두빨기
+SIF CFLAG:5220 == 205
+	PRINT 유방자위
+SIF CFLAG:5220 == 208
+	PRINT 세로파이즈리
+SIF CFLAG:5220 == 210 || CFLAG:5220 == 211
+	PRINT 가슴비비기
+SIF CFLAG:5220 == 342
+	PRINT 젖맞대기
+SIF CFLAG:5220 == 340
+	PRINT 파후파후
+SIF CFLAG:5220 == 190
+	PRINT 유두로터
+SIF CFLAG:5220 == 204
+	PRINT 모유마시기
+SIF CFLAG:5220 == 626
+	PRINT 착유
+;고유 커맨드
+SIF CFLAG:5220 == 400
+	PRINT 흡혈
+SIF CFLAG:5220 == 401 && TEQUIP:70
+	PRINT 암흑
+SIF CFLAG:5220 == 440
+	PRINT 반령강간
+SIF CFLAG:5220 == 402
+	PRINT 시리코다마뽑기
+SIF CFLAG:5220 == 403 && TEQUIP:20 == 9
+	PRINT 군고구마공격
+SIF CFLAG:5220 == 403 && TEQUIP:20 == 0
+	PRINT 군고구마해제
+SIF CFLAG:5220 == 404 && TEQUIP:25 == 9
+	PRINT 거봉공격
+SIF CFLAG:5220 == 404 && TEQUIP:25 == 0
+	PRINT 거봉해제
+SIF CFLAG:5220 == 406 && TEQUIP:40 == 5
+	PRINT 가시나무긴박
+SIF CFLAG:5220 == 411
+	PRINT 인형애무
+SIF CFLAG:5220 == 408 && TEQUIP:40 == 6
+	PRINT 거미줄긴박
+SIF CFLAG:5220 == 410
+	PRINT 거미다리공격
+SIF CFLAG:5220 == 420
+	PRINT 은방울꽃독
+SIF CFLAG:5220 == 421
+	PRINT 곤충채집세트약
+SIF CFLAG:5220 == 424
+	PRINT 계곡주
+SIF CFLAG:5220 == 417
+	PRINT 붓자극
+SIF CFLAG:5220 == 432 && TEQUIP:26
+	PRINT 고드름공격
+SIF CFLAG:5220 == 434
+	PRINT 뿔애무
+SIF CFLAG:5220 == 435
+	PRINT 뿔삽입
+SIF CFLAG:5220 == 436
+	PRINT 뿔Ａ삽입
+SIF CFLAG:5220 == 413
+	PRINT 콩알굽기
+SIF CFLAG:5220 == 433
+	PRINT Ａ솔도파
+SIF CFLAG:5220 == 415
+	PRINT 독심
+
+
+;후반부
+
+;체위 변경계
+IF ((TFLAG:133 && ASSIPLAY) || (TFLAG:133 == 0 && ASSIPLAY == 0)) && LOCAL == 0
+SIF SELECTCOM == 20
+	PRINT →정상위
+SIF SELECTCOM == 21
+	PRINT →후배위
+SIF SELECTCOM == 30
+	PRINT →Ａ섹스
+SIF SELECTCOM == 22
+	PRINT →대면좌위
+SIF SELECTCOM == 23 && TEQUIP:56 == 0
+	PRINT →배면좌위
+SIF (SELECTCOM == 23 && TEQUIP:56) || SELECTCOM == 612
+	PRINT →노니는 모란
+SIF SELECTCOM == 27
+	PRINT →대면입위
+SIF SELECTCOM == 28
+	PRINT →배면입위
+SIF SELECTCOM == 30
+	PRINT →Ａ정상위
+SIF SELECTCOM == 31
+	PRINT →Ａ후배위
+SIF SELECTCOM == 32
+	PRINT →Ａ대면좌위
+SIF SELECTCOM == 33
+	PRINT →Ａ배면좌위
+SIF SELECTCOM == 37
+	PRINT →Ａ대면입위
+SIF SELECTCOM == 38
+	PRINT →Ａ배면입위
+SIF SELECTCOM == 24
+	PRINT →기승위
+SIF SELECTCOM == 34
+	PRINT →Ａ기승위
+SIF SELECTCOM == 610
+	PRINT →３Ｐ
+SIF SELECTCOM == 430
+	PRINT →수레치기
+;３Ｐ계
+;말도 안 되는 체위로 불리지 않도록. 이쪽은 책임지지 않습니다
+ELSEIF SELECTCOM == 20 && ARG == 1
+	PRINT →정상위３Ｐ
+ELSEIF SELECTCOM == 21 && ARG == 1
+	PRINT →후배위３Ｐ
+ELSEIF SELECTCOM == 30 && ARG == 1
+	PRINT →Ａ섹스３Ｐ
+ELSEIF SELECTCOM == 22 && ARG == 1
+	PRINT →대면좌위３Ｐ
+ELSEIF SELECTCOM == 23 && TEQUIP:56 == 0 && ARG == 1
+	PRINT →배면좌위３Ｐ
+ELSEIF ((SELECTCOM == 23 && TEQUIP:56) || SELECTCOM == 88) && ARG == 1
+	PRINT →노니는 모란３Ｐ
+ELSEIF SELECTCOM == 30 && ARG == 1
+	PRINT →Ａ정상위３Ｐ
+ELSEIF SELECTCOM == 31 && ARG == 1
+	PRINT →Ａ후배위３Ｐ
+ELSEIF SELECTCOM == 32 && ARG == 1
+	PRINT →Ａ대면좌위３Ｐ
+ELSEIF SELECTCOM == 33 && ARG == 1
+	PRINT →Ａ배면좌위３Ｐ
+ELSEIF SELECTCOM == 24 && ARG == 1
+	PRINT →기승위３Ｐ
+ELSEIF SELECTCOM == 34 && ARG == 1
+	PRINT →Ａ기승위３Ｐ
+ELSEIF SELECTCOM == 430 && ARG == 1
+	PRINT →수레치기３Ｐ
+;윤간계
+ELSEIF SELECTCOM == 20
+	PRINT →윤간정상위
+ELSEIF SELECTCOM == 21
+	PRINT →윤간후배위
+ELSEIF SELECTCOM == 30
+	PRINT →윤간Ａ섹스
+ELSEIF SELECTCOM == 22
+	PRINT →윤간대면좌위
+ELSEIF SELECTCOM == 23 && TEQUIP:56 == 0
+	PRINT →윤간배면좌위
+ELSEIF SELECTCOM == 27
+	PRINT →윤간대면입위
+ELSEIF SELECTCOM == 28
+	PRINT →윤간배면입위
+ELSEIF (SELECTCOM == 23 && TEQUIP:56) || SELECTCOM == 612
+	PRINT →윤간노니는 모란
+ELSEIF SELECTCOM == 30
+	PRINT →윤간Ａ정상위
+ELSEIF SELECTCOM == 31
+	PRINT →윤간Ａ후배위
+ELSEIF SELECTCOM == 32
+	PRINT →윤간Ａ대면좌위
+ELSEIF SELECTCOM == 33
+	PRINT →윤간Ａ배면좌위
+ELSEIF SELECTCOM == 37
+	PRINT →윤간Ａ대면입위
+ELSEIF SELECTCOM == 38
+	PRINT →윤간Ａ배면입위
+ELSEIF SELECTCOM == 24
+	PRINT →윤간기승위
+ELSEIF SELECTCOM == 34
+	PRINT →윤간Ａ기승위
+ELSEIF SELECTCOM == 430
+	PRINT →윤간수레치기
+;서포트 플레이
+ELSEIF LOCAL == 1 && SELECTCOM != 3 && SELECTCOM != 7 && SELECTCOM != 134 && SELECTCOM != 120
+	PRINT 서포트
+ENDIF
+
+
+;애무계 외
+SIF SELECTCOM == 0
+	PRINT 애무
+IF SELECTCOM == 300 && LOCAL == 1 && CFLAG:5220 == 20 || SELECTCOM == 126
+	PRINT 안면기승
+ELSEIF SELECTCOM == 1 || SELECTCOM == 300
+	PRINT 커닐링구스
+ENDIF
+SIF SELECTCOM == 2
+	PRINT Ａ애무
+IF SELECTCOM == 7 && TEQUIP:54 == 0
+	PRINT 자위
+	SIF ARG == 1
+		PRINT 시간
+ELSEIF SELECTCOM == 7 && TEQUIP:54
+	PRINT 샤워기 자위
+	SIF ARG == 1
+		PRINT 시간
+ENDIF
+SIF SELECTCOM == 5 || SELECTCOM == 41 || SELECTCOM == 331 || SELECTCOM == 604
+	PRINT 펠라
+SIF SELECTCOM == 3
+	PRINT 가슴애무
+SIF SELECTCOM == 6
+	PRINT 키스
+IF SELECTCOM == 9 && (LOCAL == 0 || CFLAG:5220 == 56)
+	PRINT 안
+ELSEIF SELECTCOM == 9
+	PRINT 시간
+ENDIF
+SIF SELECTCOM == 4 || SELECTCOM == 605
+	PRINT 손가락삽입
+SIF SELECTCOM == 600
+	PRINT Ｇ스팟자극
+SIF SELECTCOM == 180
+	PRINT Ａ핥기
+SIF SELECTCOM == 187
+	PRINT 안면기승Ａ
+SIF SELECTCOM == 188
+	PRINT Ａ주름세기
+SIF SELECTCOM == 50
+	PRINT 로터
+SIF SELECTCOM == 12 && TEQUIP:20 == 1
+	PRINT 바이브
+SIF SELECTCOM == 12 && TEQUIP:20 == 0
+	PRINT 바이브해제
+SIF SELECTCOM == 155 && TEQUIP:20 == 4
+	PRINT Ｖ전극
+SIF SELECTCOM == 155 && TEQUIP:20 == 0
+	PRINT Ｖ전극해제
+SIF SELECTCOM == 156 && TEQUIP:20 == 5
+	PRINT Ｖ바벨
+SIF SELECTCOM == 156 && TEQUIP:20 == 0
+	PRINT Ｖ바벨해제
+SIF SELECTCOM == 157 && TEQUIP:20 == 6
+	PRINT Ｖ확장
+SIF SELECTCOM == 157 && TEQUIP:20 == 0
+	PRINT Ｖ확장해제
+SIF SELECTCOM == 153 && TEQUIP:20 == 7
+	PRINT 애액채집기
+SIF SELECTCOM == 153 && TEQUIP:20 == 0
+	PRINT 애액채집기해제
+SIF SELECTCOM == 11
+	PRINT 전기안마
+SIF SELECTCOM == 13 && TEQUIP:25 == 1
+	PRINT Ａ바이브
+SIF SELECTCOM == 13 && TEQUIP:25 == 0
+	PRINT Ａ바이브해제
+SIF SELECTCOM == 14 && TEQUIP:30 == 1
+	PRINT 클리캡
+SIF SELECTCOM == 14 && TEQUIP:30 == 0
+	PRINT 클리캡해제
+SIF SELECTCOM == 131 && TEQUIP:30 == 4
+	PRINT Ｃ전극
+SIF SELECTCOM == 131 && TEQUIP:30 == 0
+	PRINT Ｃ전극해제
+SIF SELECTCOM == 15 && TEQUIP:35 == 1
+	PRINT 유두캡
+SIF SELECTCOM == 15 && TEQUIP:35 == 0
+	PRINT 유두캡해제
+SIF SELECTCOM == 191 && TEQUIP:35 == 2
+	PRINT 착유기장비
+SIF SELECTCOM == 191 && TEQUIP:35 == 0
+	PRINT 착유기해제
+SIF SELECTCOM == 193 && TEQUIP:35 == 4
+	PRINT Ｂ전극
+SIF SELECTCOM == 193 && TEQUIP:35 == 0
+	PRINT Ｂ전극해제
+SIF SELECTCOM == 16 && TEQUIP:30 == 2
+	PRINT 오나홀
+SIF SELECTCOM == 16 && TEQUIP:30 == 0
+	PRINT 오나홀해제
+SIF SELECTCOM == 17 && TEQUIP:30 == 6
+	PRINT 전극오나홀
+SIF SELECTCOM == 17 && TEQUIP:30 == 0
+	PRINT 전극오나홀해제
+SIF SELECTCOM == 351 && TEQUIP:54
+	PRINT 샤워
+SIF SELECTCOM == 351 && TEQUIP:54 == 0
+	PRINT 샤워해제
+SIF SELECTCOM == 172 && TEQUIP:25 == 5
+	PRINT Ａ비즈
+SIF SELECTCOM == 172 && TEQUIP:25 == 0
+	PRINT Ａ비즈해제
+SIF SELECTCOM == 25
+	PRINT 역강간
+SIF SELECTCOM == 35
+	PRINT 역Ａ강간
+SIF SELECTCOM == 40 || SELECTCOM == 321
+	PRINT 수음
+SIF SELECTCOM == 42 || SELECTCOM == 322
+	PRINT 파이즈리
+SIF SELECTCOM == 209 || SELECTCOM == 335
+	PRINT 파이즈리펠라
+SIF SELECTCOM == 43
+	PRINT 스마타
+SIF SELECTCOM == 352
+	PRINT 거품비비기
+SIF SELECTCOM == 354
+	PRINT 수세미씻기
+SIF SELECTCOM == 353
+	PRINT 역거품비비기
+SIF SELECTCOM == 220
+	PRINT 스팽킹
+SIF SELECTCOM == 251
+	PRINT 따귀
+SIF SELECTCOM == 221
+	PRINT 채찍치기
+SIF SELECTCOM == 222
+	PRINT 침찌르기
+SIF SELECTCOM == 225 && TEQUIP:41 == 1
+	PRINT 눈가리개
+SIF SELECTCOM == 224 && TEQUIP:40
+	PRINT 긴박
+SIF SELECTCOM == 226 && TEQUIP:42 == 1
+	PRINT 재갈
+SIF SELECTCOM == 174 && TEQUIP:25 == 7
+	PRINT 관장
+SIF SELECTCOM == 174 && TEQUIP:25 == 0
+	PRINT 배설
+SIF SELECTCOM == 175 && TEQUIP:25 == 8
+	PRINT 공기관장
+SIF SELECTCOM == 175 && TEQUIP:25 == 0
+	PRINT 방귀
+SIF SELECTCOM == 173 && TEQUIP:25 == 6
+	PRINT Ａ확장
+SIF SELECTCOM == 173 && TEQUIP:25 == 0
+	PRINT Ａ확장해제
+SIF SELECTCOM == 171 && TEQUIP:25 == 4
+	PRINT Ａ전극
+SIF SELECTCOM == 171 && TEQUIP:25  == 0
+	PRINT Ａ전극해제
+SIF SELECTCOM == 179 && TEQUIP:25 == 10
+	PRINT Ａ바벨
+SIF SELECTCOM == 179 && TEQUIP:25 == 0
+	PRINT Ａ바벨해제
+SIF SELECTCOM == 60
+	PRINT 로션 플레이
+SIF SELECTCOM == 61 && ABL:PLAYER:12 >= 3
+	PRINT 미약 키스
+SIF SELECTCOM == 62 && ABL:PLAYER:12 >= 3
+	PRINT 이뇨제 키스
+SIF SELECTCOM == 61 && ABL:PLAYER:12 < 3
+	PRINT 미약
+SIF SELECTCOM == 62 && ABL:PLAYER:12 < 3
+	PRINT 이뇨제
+SIF SELECTCOM == 100 && TEQUIP:50
+	PRINT 섹스촬영
+SIF SELECTCOM == 301
+	PRINT 보지비비기
+SIF SELECTCOM == 307 || SELECTCOM == 26
+	PRINT 난교
+SIF SELECTCOM == 302 || SELECTCOM == 47
+	PRINT 풋잡
+SIF SELECTCOM == 602
+	PRINT ６９
+SIF SELECTCOM == 227
+	PRINT 매도
+SIF SELECTCOM == 110
+	PRINT 보지벌리기
+SIF SELECTCOM == 101
+	PRINT 바디오감상
+SIF SELECTCOM == 230
+	PRINT 이라마치오
+SIF SELECTCOM == 231
+	PRINT 피스트
+SIF SELECTCOM == 232
+	PRINT Ａ피스트
+SIF SELECTCOM == 233
+	PRINT 양구멍피스트
+SIF SELECTCOM == 312
+	PRINT 더블피스트
+SIF SELECTCOM == 313
+	PRINT 더블Ａ피스트
+IF SELECTCOM == 620 || (SELECTCOM == 111 && SOURCE:0)
+	PRINT 강제방뇨
+ELSEIF SELECTCOM == 111 || SELECTCOM == 145
+	PRINT 방뇨
+ENDIF
+SIF SELECTCOM == 44
+	PRINT Ａ봉사강제
+SIF SELECTCOM == 80
+	PRINT Ｃ주사
+SIF SELECTCOM == 81
+	PRINT Ｖ주사
+SIF SELECTCOM == 82
+	PRINT Ａ주사
+SIF SELECTCOM == 83
+	PRINT Ｂ주사
+SIF SELECTCOM == 84
+	PRINT Ｕ주사
+SIF SELECTCOM == 88
+	PRINT 채혈
+SIF SELECTCOM == 92
+	PRINT 진찰
+SIF SELECTCOM == 122
+	PRINT 클리자극
+SIF SELECTCOM == 123
+	PRINT 클리꼬집기
+SIF SELECTCOM == 128
+	PRINT 귀두자극
+SIF SELECTCOM == 132
+	PRINT Ｐ로터
+SIF SELECTCOM == 133
+	PRINT Ｐ전기안마
+SIF SELECTCOM == 152
+	PRINT 음순만지기
+SIF SELECTCOM == 200
+	PRINT 가슴주무르기
+SIF SELECTCOM == 201
+	PRINT 유두자극
+SIF SELECTCOM == 202
+	PRINT 유두빨기
+SIF SELECTCOM == 205
+	PRINT 유방자극
+SIF SELECTCOM == 210 || SELECTCOM == 211
+	PRINT 가슴비비기
+SIF SELECTCOM == 208
+	PRINT 세로파이즈리
+SIF SELECTCOM == 342
+	PRINT 젖맞대기
+SIF SELECTCOM == 340
+	PRINT 파후파후
+SIF SELECTCOM == 190
+	PRINT 유두로터
+SIF SELECTCOM == 204
+	PRINT 모유마시기
+SIF SELECTCOM == 626
+	PRINT 착유
+
+;고유 커맨드
+SIF SELECTCOM == 400
+	PRINT 흡혈
+SIF SELECTCOM == 401 && TEQUIP:70
+	PRINT 암흑
+SIF SELECTCOM == 440
+	PRINT 반령강간
+SIF SELECTCOM == 402
+	PRINT 시리코다마뽑기
+SIF SELECTCOM == 403 && TEQUIP:20 == 9
+	PRINT 군고구마공격
+SIF SELECTCOM == 403 && TEQUIP:20 == 0
+	PRINT 군고구마해제
+SIF SELECTCOM == 404 && TEQUIP:25 == 9
+	PRINT 거봉공격
+SIF SELECTCOM == 404 && TEQUIP:25 == 0
+	PRINT 거봉해제
+SIF SELECTCOM == 406 && TEQUIP:40 == 5
+	PRINT 가시나무긴박
+SIF SELECTCOM == 411
+	PRINT 인형애무
+SIF SELECTCOM == 408 && TEQUIP:40 == 6
+	PRINT 거미줄긴박
+SIF SELECTCOM == 410 && SELECTCOM:1 != 159
+	PRINT 거미다리애무
+;？
+SIF SELECTCOM == 409 && SELECTCOM:1 == 159 && TEQUIP:20 == 1 && TEQUIP:25 == 1 && TEQUIP:30 == 1 && TEQUIP:35 == 1 && TEQUIP:35 == 2 && TEQUIP:25 == 5 && TEQUIP:25 == 7 && TEQUIP:25 == 8 && TEQUIP:25 == 6 && TEQUIP:25 == 4 && TEQUIP:21 == 0 && TEQUIP:25 == 9 && TEQUIP:20 == 9 && TEQUIP:26 == 0
+	PRINT 거미다리육연공격
+SIF SELECTCOM == 420
+	PRINT 은방울꽃독
+SIF SELECTCOM == 421
+	PRINT 곤충채집세트약
+SIF SELECTCOM == 424
+	PRINT 계곡주
+SIF SELECTCOM == 417
+	PRINT 붓자극
+SIF SELECTCOM == 432 && TEQUIP:26
+	PRINT 고드름공격
+SIF SELECTCOM == 434
+	PRINT 뿔애무
+SIF SELECTCOM == 435
+	PRINT 뿔삽입
+SIF SELECTCOM == 436
+	PRINT 뿔Ａ삽입
+SIF SELECTCOM == 413
+	PRINT 콩알굽기
+SIF SELECTCOM == 433
+	PRINT Ａ솔도파
+SIF SELECTCOM == 415
+	PRINT 독심
+
+PRINTL ＞
+
+
+
+;뽑는 플레이 · ３Ｐ라면 돌아간다
+SIF ARG != 1 || SELECTCOM == 610
+	RETURN 0
+
+;소스 계산
+;조수를 범하고 있다
+IF CFLAG:5220 == 26
+	TRYCALL COMBOASSIPLAY, 0
+ELSEIF CFLAG:5220 == 36
+	TRYCALL COMBOASSIPLAY, 1
+;서포트 플레이
+ELSEIF LOCAL == 1 && CFLAG:5220 > 29 && CFLAG:5220 < 39
+	TRYCALL COMBOPLAY_A, 1
+ELSEIF LOCAL == 1
+	TRYCALL COMBOPLAY_V, 1
+;콤보 플레이
+ELSEIF CFLAG:5220 > 29 && CFLAG:5220 < 39
+	TRYCALL COMBOPLAY_A, 0
+ELSE
+	TRYCALL COMBOPLAY_V, 0
+ENDIF
+
+;SELECTCOM偽造の流れ
+;同一コマンド連続実行対策
+IF SELECTCOM:1 == SELECTCOM
+	PREVCOM = SELECTCOM:1
+ELSE
+	;裏SELECTCOMにSELECTCOMを保存
+	SELECTCOM:1 = SELECTCOM
+ENDIF
+
+;서포트 플레이
+IF LOCAL == 1
+	;サポート発生判定のためにCFLAG220に2000を足す
+	CFLAG:5220 += 2000
+;コンボプレイ
+ELSEIF (CFLAG:5220 & 1p9) == 0
+	;SELECTCOMを継続中の体位に偽造
+		SELECTCOM = CFLAG:5220
+	;コンボ発生判定のためにCFLAG220に1000を足す
+	CFLAG:5220 += 1000
+ELSE
+	;コンボ発生判定のためにCFLAG220に1000を足す
+	CFLAG:5220 += 1000
+ENDIF
+RETURN 1
+
+
+;--------------------------------------------------
+;뽑지 않고 판정 함수@COMBOPLAY_2
+;エキストラ構文で抜かずにウフフ判定をしている口上ファイルの, @KOJO_MESSAGE_PALAMCNG_X1の下でTRYCALL
+;抜かずにウフフモードの際, 挿しっぱなしフラグと体位の確認　CFLAG 220とSELECTCOM:1を使用
+;SELECTCOMを体位判定に利用するため, コンボ時に実際に選んだコマンドはSELECTCOM:1に保存
+;SELECTCOMとPREVCOMは体位判定のために偽造されます. 
+;コンボ時にも同一コマンド連続実行ペナルティを適用するため, SELECTCOM:1は裏のSELECTCOMとして使用
+;--------------------------------------------------
+@COMBOPLAY_2
+SIF CFLAG:5220 >= 2000
+	RETURN 0
+
+;コンボ発生時
+IF CFLAG:5220 >= 1000
+	;SELECTCOMを継続中の体位に偽造
+	SELECTCOM = CFLAG:5220
+	;入れっぱなしフラグ
+	SIF TFLAG:9 == 0 || TFLAG:10 == 0 || PALAM:13 >= PALAMLV:4
+		TFLAG:102 = 1
+	;CFLAG220（体位）の数字を元に戻す
+	;コンボ発生判定のために1000足されているのでそれを引く
+	CFLAG:5220 -= 1000
+ELSEIF CFLAG:5220 > 1
+	;CFLAG220に体位判定用に選んだコマンドを入れる
+	CFLAG:5220 = SELECTCOM
+	;애무・クンニ・애널애무は500を足す
+	SIF SELECTCOM < 3
+		CFLAG:5220 += 500
+	;騎乗유방자극は기승위に偽造する
+	SIF SELECTCOM == 547
+		CFLAG:5220 = 34
+	;삽입責め系はもとの体位に偽造する
+	SIF SELECTCOM == 614 || SELECTCOM == 615
+		CFLAG:5220 = PREVCOM
+ENDIF
+RETURN 0
+
+
+;--------------------------------------------------
+;서포트 판정 함수@COMBOPLAY_3
+;エキストラ構文で抜かずにウフフ判定をしている口上ファイルの, @EVENTCOMの下でTRYCALL
+;口上主が調教対象で助手がいることが条件
+;抜かずにウフフモードの際, 助手に交代したときサポート判定と体位の確認　CFLAG 210, 220を使用
+;また, 서포트 플레이から主人に戻った際, 挿れっぱなしフラグ, 助手調教フラグを偽造します
+;--------------------------------------------------
+@COMBOPLAY_3
+;主人から助手に交代した場合, CFLAG:5220に2000を足して서포트 플레이判定を立てる
+IF CFLAG:5220 > 1 && CFLAG:5220 < 2000 && ASSIPLAY && TFLAG:133 == 0
+	CFLAG:5220 += 2000
+;서포트 플레이中に主人と交代した場合, CFLAG:5220を元に戻す
+ELSEIF CFLAG:5220 >= 2000 && ASSIPLAY == 0 && TFLAG:133
+	CFLAG:5220 -= 2000
+	;CFLAG220に섹스系コマンドが入っていた場合, 挿れっぱなしフラグをオン, 助手調教フラグをオフにする
+	IF (CFLAG:5220 > 19 && CFLAG:5220 < 39) || CFLAG:5220 == 610 || CFLAG:5220 == 571 || SELECTCOM == 614 || SELECTCOM == 615
+		TFLAG:102 = 1
+		TFLAG:133 = 0
+	ENDIF
+ENDIF
+RETURN 0
+
+
+
+;--------------------------------------------------
+;계속 넣은 상태 함수@COMBOPLAY_V
+;※注意・これを導入すると調教結果が変化し, 難易度に変化が出ます※
+;つまりエキストラモード推奨. 
+;삽입したまま애무などの口上変化を実装している場合, コマンド口上内でTRYCALL
+;実行したコマンドに快Ｖなどのソースを追加しますが, 体力気力も相応に消耗します
+;바이브を主に参考にしています
+;もともと射精を伴うコマンドである스마타や파이즈리などへの派生では呼ばないでください. 
+;あくまでも「Ｖに入れっぱなし」でプレイを行うコマンドのときに. （배면좌위→애무等）
+;入れっぱなしフラグの管理などは파루플릿では対応していますが, 複雑なのでこちらには入っていません. 
+;@COMBOASSIPLAY_Vを統合. 인수ARG = 0で既存の@COMBOPLAY_V, 0以外で@COMBOASSIPLAY_Vの処理
+;--------------------------------------------------
+@COMBOPLAY_V, ARG
+;Ｖ경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+LOCAL:3 = (ARG == 0) ? PLAYER # MASTER
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:12를 본다
+IF ABL:12 == 0
+	LOCAL = 100
+ELSEIF ABL:12 == 1
+	LOCAL = 200
+ELSEIF ABL:12 == 2
+	LOCAL = 300
+ELSEIF ABL:12 == 3
+	LOCAL = 400
+ELSEIF ABL:12 == 4
+	LOCAL = 500
+ELSE
+	LOCAL = 600
+ENDIF
+
+;자위의 경우 사정 게이지 대증량
+IF ARG == 0 && CHECK_COM_MASTURBATION(SELECTCOM)
+	TIMES LOCAL , 3.00
+ELSE
+	TIMES LOCAL , 2.00
+ENDIF
+
+;ABL:10를 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;ABL:11를 본다
+IF ABL:11 == 0
+	TIMES LOCAL , 1.00
+ELSEIF ABL:11 == 1
+	TIMES LOCAL , 1.10
+ELSEIF ABL:11 == 2
+	TIMES LOCAL , 1.20
+ELSEIF ABL:11 == 3
+	TIMES LOCAL , 1.30
+ELSEIF ABL:11 == 4
+	TIMES LOCAL , 1.40
+ELSE
+	TIMES LOCAL , 1.50
+ENDIF
+
+;PALAM:10를 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.60
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.20
+ELSEIF PALAM:10 >= PALAMLV:4
+	TIMES LOCAL , 1.40
+ENDIF
+
+;플레이어의 ABL:0를 본다
+IF ABL:(LOCAL:3):0 == 0
+	TIMES LOCAL , 1.00
+ELSEIF ABL:(LOCAL:3):0 == 1
+	TIMES LOCAL , 1.50
+ELSEIF ABL:(LOCAL:3):0 == 2
+	TIMES LOCAL , 2.00
+ELSEIF ABL:(LOCAL:3):0 == 3
+	TIMES LOCAL , 2.50
+ELSEIF ABL:(LOCAL:3):0 == 4
+	TIMES LOCAL , 3.50
+ELSE
+	TIMES LOCAL , 5.00
+ENDIF
+
+SIF PENIS(LOCAL:3)
+	BASE:(LOCAL:3):2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 20
+DOWNBASE:1 += 70
+
+;ABL:1를 본다
+IF ABL:1 == 0
+	LOCAL = 20
+	LOCAL:2 = 100
+ELSEIF ABL:1 == 1
+	LOCAL = 60
+	LOCAL:2 = 200
+ELSEIF ABL:1 == 2
+	LOCAL = 150
+	LOCAL:2 = 300
+ELSEIF ABL:1 == 3
+	LOCAL = 400
+	LOCAL:2 = 400
+ELSEIF ABL:1 == 4
+	LOCAL = 600
+	LOCAL:2 = 600
+ELSE
+	LOCAL = 800
+	LOCAL:2 = 800
+ENDIF
+
+;自慰の場合快Ｖ増量
+SIF ARG == 1 || CHECK_COM_MASTURBATION(SELECTCOM)
+	TIMES LOCAL , 2.00
+
+;EXP:0를 본다
+;処女はありえない
+IF EXP:0 < EXPLV:2
+	TIMES LOCAL , 0.60
+	LOCAL:1 = 150
+ELSEIF EXP:0 < EXPLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:1 = 20
+ELSEIF EXP:0 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:1 = 0
+ELSEIF EXP:0 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:1 = 0
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:10를 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.10
+	LOCAL:1 += 400
+	TIMES LOCAL:1 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.40
+	LOCAL:1 += 150
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 0.50
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	TIMES LOCAL:1 , 0.20
+ELSEIF PALAM:10 >= PALAMLV:4
+	TIMES LOCAL , 1.80
+	TIMES LOCAL:1 , 0.10
+ENDIF
+
+;調教者がふたなり
+SIF TALENT:(LOCAL:3):121 && (ARG == 0 || (ARG == 1 && ASSIPLAY))
+	TIMES LOCAL , 2.50
+
+;小柄体型
+SIF TALENT:128
+	TIMES LOCAL:1 , 2.00
+
+;貞操観念
+IF TALENT:30
+	TIMES LOCAL:2 , 0.60
+	SOURCE:32 += 500
+ENDIF
+
+;PALAM:13를 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:2 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:2 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:2 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:2 , 1.50
+ELSEIF PALAM:13 >= PALAMLV:4
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:2 , 1.80
+ENDIF
+
+;ABL:10를 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:2 , 0.60
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:2 , 0.80
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:2 , 1.20
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:2 , 1.40
+ELSE
+	TIMES LOCAL , 1.30
+	TIMES LOCAL:2 , 1.60
+ENDIF
+
+SOURCE:1 += LOCAL
+IF ARG == 1
+	SOURCE:16 += LOCAL:1
+ELSE
+	SOURCE:20 += LOCAL:1
+ENDIF
+SOURCE:11 += LOCAL:2
+
+;自慰実行時は경험＋１
+IF CHECK_COM_MASTURBATION(SELECTCOM)
+	TCVAR:0 += 3
+ELSE
+	TCVAR:0 += 2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:(LOCAL:3):120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:(LOCAL:3):120
+	TCVAR:13 += 1
+ENDIF
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(LOCAL:3)
+
+SIF TFLAG:91 >= 1 && ABL:10 >= 3 && ABL:11 >= 3 && FLAG:6
+	LOCAL:4 = 1
+
+IF (TFLAG:91 >= 1 && ARG == 0 && LOCAL:4 == 1) || (TFLAG:91 >= 1 && ARG == 1)
+	PRINTFORML 꿰뚫린 채로의 질벽은 정액을 짜내듯이 음란하게 꾸물대고 있다….
+
+	;사정시의 처리
+	IF ARG == 1
+		;일시적으로 조교자가 주인이 된다
+		LOCAL = PLAYER
+		LOCAL:1 = ASSIPLAY
+		PLAYER = MASTER
+		ASSIPLAY = 0
+		;파루플릿 사용의 경우
+		IF CFLAG:5220 & 1p9
+			;서포트 플레이で騎乗射精フラグ
+			;서포트 플레이でＶ射精フラグ
+			CFLAG:5204 = (CFLAG:5220 == 23) ? (TFLAG:91 + 2) # TFLAG:91
+			;射精箇所フラグを保存
+			CFLAG:5230 = CFLAG:5106
+		ENDIF
+	ENDIF
+
+	;射精先タイプの設定
+	TFLAG:703 = 1
+	;射精先選択の可・不可
+	TFLAG:704 = 1
+	;汎用的な処理はこの함수で行う
+	;（射精ゲージの再計算や射精경험の上昇と共通部分の表示）
+	TRYCALL SAMEN_SHOOT
+
+	IF ARG == 1
+		;조교자를 원래대로 되돌린다
+		PLAYER = LOCAL
+		ASSIPLAY = LOCAL:1
+	ENDIF
+ENDIF
+
+;奴隷のＶ⇔調教者のＰの汚れが移動
+STAIN:3 |= STAIN:(LOCAL:3):2
+STAIN:(LOCAL:3):2 |= STAIN:3
+
+;LUNATIC以上は射精するたびに体力が減少
+TRYCALL EXHAUST_EJAC, LOCAL:3, TFLAG:91
+
+SIF TALENT:120 == 0 && TALENT:(LOCAL:3):120 == 0
+	TCVAR:12 += 4
+
+SIF (ARG == 0 && ASSIPLAY == 0) || ARG == 1
+	TFLAG:50 += (ABL:1 >= 3) ? 2 # 1
+RETURN 0
+
+;--------------------------------------------------
+;Ａ 계속 넣은 상태 함수@COMBOPLAY_A
+;※注意・これを導入すると調教結果が変化し, 難易度に変化が出ます※
+;つまりエキストラモード推奨. 
+;삽입したまま애무などの口上変化を実装している場合, コマンド口上内でTRYCALL
+;実行したコマンドに快Ａなどのソースを追加しますが, 体力気力も相応に消耗します
+;애널바이브を主に参考にしています
+;もともと射精を伴うコマンドである스마타や파이즈리などへの派生では呼ばないでください. 
+;あくまでも「Ａに入れっぱなし」でプレイを行うコマンドのときに. （애널섹스→로터等）
+;入れっぱなしフラグの管理などは파루플릿では対応していますが, 複雑なのでこちらには入っていません. 
+;@COMBOASSIPLAY_Aを統合. 인수ARG = 0で既存のCOMBOPLAY_V, 0以外で@COMBOASSIPLAY_Vの処理
+;--------------------------------------------------
+@COMBOPLAY_A, ARG
+
+LOCAL:3 = (ARG == 0) ? PLAYER # MASTER
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:12를 본다
+IF ABL:12 == 0
+	LOCAL = 100
+ELSEIF ABL:12 == 1
+	LOCAL = 200
+ELSEIF ABL:12 == 2
+	LOCAL = 300
+ELSEIF ABL:12 == 3
+	LOCAL = 400
+ELSEIF ABL:12 == 4
+	LOCAL = 500
+ELSE
+	LOCAL = 600
+ENDIF
+
+;自慰の場合射精ゲージ大増量
+IF ARG == 1 
+	TIMES LOCAL , 2.00
+ELSEIF CHECK_COM_MASTURBATION(SELECTCOM)
+	TIMES LOCAL , 3.00
+ENDIF
+
+;ABL:10를 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;ABL:11를 본다
+IF ABL:11 == 0
+	TIMES LOCAL , 1.00
+ELSEIF ABL:11 == 1
+	TIMES LOCAL , 1.10
+ELSEIF ABL:11 == 2
+	TIMES LOCAL , 1.20
+ELSEIF ABL:11 == 3
+	TIMES LOCAL , 1.30
+ELSEIF ABL:11 == 4
+	TIMES LOCAL , 1.40
+ELSE
+	TIMES LOCAL , 1.50
+ENDIF
+
+;PALAM:10를 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.60
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.40
+ENDIF
+
+;プレイヤーのABL:0를 본다
+IF ABL:PLAYER:0 == 0
+	TIMES LOCAL , 1.00
+ELSEIF ABL:PLAYER:0 == 1
+	TIMES LOCAL , 1.50
+ELSEIF ABL:PLAYER:0 == 2
+	TIMES LOCAL , 2.00
+ELSEIF ABL:PLAYER:0 == 3
+	TIMES LOCAL , 2.50
+ELSEIF ABL:PLAYER:0 == 4
+	TIMES LOCAL , 3.50
+ELSE
+	TIMES LOCAL , 5.00
+ENDIF
+
+SIF PENIS(LOCAL:3)
+	BASE:(LOCAL:3):2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 50
+DOWNBASE:1 += 100
+
+;ABL:2를 본다
+IF ABL:2 == 0
+	LOCAL = 10
+	LOCAL:1 = 150
+ELSEIF ABL:2 == 1
+	LOCAL = 20
+	LOCAL:1 = 400
+ELSEIF ABL:2 == 2
+	LOCAL = 150
+	LOCAL:1 = 700
+ELSEIF ABL:2 == 3
+	LOCAL = 250
+	LOCAL:1 = 900
+ELSEIF ABL:2 == 4
+	LOCAL = 350
+	LOCAL:1 = 1000
+ELSE
+	LOCAL = 500
+	LOCAL:1 = 1200
+ENDIF
+
+;自慰の場合快Ａ増量
+SIF ARG == 1 || CHECK_COM_MASTURBATION(SELECTCOM)
+	TIMES LOCAL , 2.00
+
+;EXP:1를 본다
+IF EXP:1 < EXPLV:1
+	TIMES LOCAL , 0.50
+	LOCAL:2 = 1000
+ELSEIF EXP:1 < EXPLV:2
+	TIMES LOCAL , 1.00
+	LOCAL:2 = 150
+ELSEIF EXP:1 < EXPLV:3
+	TIMES LOCAL , 1.10
+	LOCAL:2 = 20
+ELSEIF EXP:1 < EXPLV:4
+	TIMES LOCAL , 1.20
+	LOCAL:2 = 0
+ELSEIF EXP:1 < EXPLV:5
+	TIMES LOCAL , 1.40
+	LOCAL:2 = 0
+ELSE
+	TIMES LOCAL , 1.60
+	LOCAL:2 = 0
+ENDIF
+
+;PALAM:10를 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES LOCAL , 0.40
+	LOCAL:2 += 400
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES LOCAL , 0.80
+	LOCAL:2 += 250
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	LOCAL:2 += 150
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES LOCAL , 1.40
+	LOCAL:2 += 60
+ELSE
+	TIMES LOCAL , 1.80
+	LOCAL:2 += 50
+ENDIF
+
+;PALAM:13를 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;조교자가 후타나리
+SIF TALENT:(LOCAL:3):121 && (ARG == 0 || (ARG == 1 && ASSIPLAY))
+	TIMES LOCAL , 2.50
+
+;ABL:10를 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;小柄体型
+SIF TALENT:128
+	TIMES LOCAL:2 , 2.00
+
+;Ａ敏感, 鈍感를 본다
+;快Ａ自体のチェックは後でまとめてやる
+IF TALENT:105
+	TIMES LOCAL:2 , 1.50
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:104
+	TIMES LOCAL:2 , 0.60
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;処女で貞操観念
+SIF EXP:0 == 0 && TALENT:30
+	LOCAL:1 /= 3
+
+SOURCE:2 += LOCAL
+SOURCE:22 += LOCAL:1
+SOURCE:20 += LOCAL:2
+
+;自慰実行時は경험＋1
+IF CHECK_COM_MASTURBATION(SELECTCOM)
+	TCVAR:1 += 2
+ELSE
+	TCVAR:1 += 1
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:(LOCAL:3):120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:(LOCAL:3):120
+	TCVAR:13 += 1
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(LOCAL:3)
+
+SIF TFLAG:91 >= 1 && ABL:10 >= 3 && ABL:11 >= 3 && FLAG:6
+	PRINTFORML %CALLNAME:TARGET%의 장은 꿈틀꿈틀하고 유동치며 정액을 삼켜가고 있다….
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	IF ARG == 1
+		LOCAL = PLAYER
+		LOCAL:1 = ASSIPLAY
+		PLAYER = MASTER
+		ASSIPLAY = 0
+		;파루플릿使用の場合
+		IF CFLAG:5220 & 1p9
+			;서포트 플레이でＡ騎乗射精フラグ
+			;서포트 플레이でＡ射精フラグ
+			CFLAG:5204 = (CFLAG:5220 == 34) ? (TFLAG:91 + 6) # (TFLAG:91 + 4)
+			;射精箇所フラグを保存
+			CFLAG:5230 = CFLAG:5106
+		ENDIF
+	ENDIF
+
+	;射精先タイプの設定
+	TFLAG:703 = 2
+	;射精先選択の可・不可
+	TFLAG:704 = 1
+	;汎用的な処理はこの함수で行う
+	;（射精ゲージの再計算や射精경험の上昇と共通部分の表示）
+	TRYCALL SAMEN_SHOOT
+
+	IF ARG == 1
+		;조교자를 원래대로 되돌린다
+		PLAYER = LOCAL
+		ASSIPLAY = LOCAL:1
+	ENDIF
+ENDIF
+
+;奴隷のＡ⇔調教者のＰの汚れが移動
+STAIN:4 |= STAIN:(LOCAL:3):2
+STAIN:(LOCAL:3):2 |= STAIN:4
+
+;LUNATIC以上は射精するたびに体力が減少
+TRYCALL EXHAUST_EJAC, LOCAL:3, TFLAG:91
+
+IF TALENT:120 == 0 && TALENT:(LOCAL:3):120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:(LOCAL:3):120
+	TCVAR:13 += 10
+ENDIF
+
+SIF (ARG == 0 && ASSIPLAY == 0) || ARG == 1
+	TFLAG:50 += (ABL:2 >= 3) ? 2 # 1
+RETURN 0
+
+;--------------------------------------------------
+;대 조수 사정 함수@COMBOASSIPLAY
+;※注意・これを導入すると調教結果が変化し, 難易度に変化が出ます※
+;つまりエキストラモード推奨. 
+;主人が助手に삽입したままプレイする場合の口上変化を実装している場合, コマンド口上内でTRYCALL
+;もともと射精を伴うコマンドである助手を犯す, 펠라チオなどへの派生では呼ばないでください. 
+;@COMBOASSIPLAY_A2を統合：인수ARG=0でV, それ以外でA
+;--------------------------------------------------
+@COMBOASSIPLAY, ARG
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:12를 본다
+IF ABL:ASSI:12 == 0
+	LOCAL = 50
+ELSEIF ABL:ASSI:12 == 1
+	LOCAL = 300
+ELSEIF ABL:ASSI:12 == 2
+	LOCAL = 800
+ELSEIF ABL:ASSI:12 == 3
+	LOCAL = 1500
+ELSEIF ABL:ASSI:12 == 4
+	LOCAL = 2000
+ELSE
+	LOCAL = 3200
+ENDIF
+
+;ABL:10를 본다
+IF ABL:ASSI:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:ASSI:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:ASSI:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:ASSI:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:ASSI:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;ABL:13를 본다
+IF ABL:ASSI:13 == 0
+	TIMES LOCAL , 0.50
+ELSEIF ABL:ASSI:13 == 1
+	TIMES LOCAL , 0.80
+ELSEIF ABL:ASSI:13 == 2
+	TIMES LOCAL , 1.20
+ELSEIF ABL:ASSI:13 == 3
+	TIMES LOCAL , 1.50
+ELSEIF ABL:ASSI:13 == 4
+	TIMES LOCAL , 1.80
+ELSE
+	TIMES LOCAL , 2.40
+ENDIF
+
+LOCAL:3 = (ARG == 0) ? ABL:ASSI:1 # ABL:ASSI:2
+LOCAL:4 = (ARG == 0) ? EXP:ASSI:0 # EXP:ASSI:1
+
+;조수의 ABL:V감각orA감각을 본다
+IF LOCAL:3 == 0
+	TIMES LOCAL , 0.50
+ELSEIF LOCAL:3 == 1
+	TIMES LOCAL , 0.80
+ELSEIF LOCAL:3 == 2
+	TIMES LOCAL , 1.00
+ELSEIF LOCAL:3 == 3
+	TIMES LOCAL , 1.20
+ELSEIF LOCAL:3 == 4
+	TIMES LOCAL , 1.50
+ELSE
+	TIMES LOCAL , 2.00
+ENDIF
+
+;조수의 EXP:0orA경험을 본다
+IF LOCAL:4 < EXPLV:1
+	TIMES LOCAL , 0.20
+ELSEIF LOCAL:4 < EXPLV:2
+	TIMES LOCAL , 0.50
+ELSEIF LOCAL:4 < EXPLV:3
+	TIMES LOCAL , 0.80
+ELSEIF LOCAL:4 < EXPLV:4
+	TIMES LOCAL , 1.00
+ELSEIF LOCAL:4 < EXPLV:5
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.40
+ENDIF
+
+;ABL:0를 본다
+IF ABL:MASTER:0 == 0
+	TIMES LOCAL , 1.00
+ELSEIF ABL:MASTER:0 == 1
+	TIMES LOCAL , 1.50
+ELSEIF ABL:MASTER:0 == 2
+	TIMES LOCAL , 2.00
+ELSEIF ABL:MASTER:0 == 3
+	TIMES LOCAL , 2.50
+ELSEIF ABL:MASTER:0 == 4
+	TIMES LOCAL , 3.50
+ELSE
+	TIMES LOCAL , 5.00
+ENDIF
+
+SIF PENIS(MASTER)
+	BASE:MASTER:2 += LOCAL
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(MASTER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;コマンドごとに固有の処理はこの下に書く
+	;ABL:31를 본다
+	IF ABL:31 == 0
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 1
+		TIMES SOURCE:22, 1.20
+	ELSEIF ABL:31 == 2
+		TIMES SOURCE:22, 1.50
+	ELSEIF ABL:31 == 3
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 4
+		TIMES SOURCE:22, 2.50
+	ELSE
+		TIMES SOURCE:22, 3.00
+	ENDIF
+
+	;일시적으로 조교자가 주인이 된다
+	LOCAL = PLAYER
+	LOCAL:1 = ASSIPLAY
+	PLAYER = MASTER
+	ASSIPLAY = 0
+
+	;射精先タイプの設定
+	TFLAG:703 = (ARG == 0) ? 6 # 15
+	;射精先選択の可・不可
+	TFLAG:704 = 0
+	;汎用的な処理はこの함수で行う
+	;（射精ゲージの再計算や射精경험の上昇と共通部分の表示）
+	TRYCALL SAMEN_SHOOT
+
+	;조교자를 원래대로 되돌린다
+	PLAYER = LOCAL
+	ASSIPLAY = LOCAL:1
+ENDIF
+
+IF PENIS(MASTER)
+	;주인의 Ｐ⇔조수의 ＶorＡの汚れが移動
+	STAIN:MASTER:2 |= (ARG == 0) ? STAIN:ASSI:3 # STAIN:ASSI:4
+	STAIN:ASSI:(3 + (ARG != 0)) |= STAIN:MASTER:2
+ENDIF
+
+;LUNATIC以上は射精するたびに体力が減少
+TRYCALL EXHAUST_EJAC, MASTER, TFLAG:91
+
+IF TALENT:MASTER:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:ASSI:12 += 5
+ELSEIF TALENT:MASTER:120 == 1 && TALENT:ASSI:120 == 1
+	TCVAR:ASSI:13 += 5
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;부재 캐릭터 이름 획득 함수@LOSTNAME
+;서식：LOSTNAME <대상의 캐릭터 번호>, <SP 캐릭터인가 아닌가>(생략하면 비 SP)
+;この場にいないキャラの番号から名前と, そのキャラの種族を獲得します. 
+;獲得した名前はSTR:200, 呼び名は201, 大雑把な種族名が202, 細かい種族名が203に格納されます. 
+;詳細な対応をする場合は素質やキャラ番号を参照して分岐してください（河童限定で…等）
+;CSTRを使ってコードを簡略化種族値のRETURNは廃止
+;--------------------------------------------------
+@LOSTNAME, ARG, ARG:1
+;호환성을 위해, 개조 후 처리를 위한 에이리어스로서 남긴다
+;단, 종족 수치만은 폐지(종족 등이나 STR을 직접 보면 대응할 수 있기 때문)
+TSTR:240 = %CSVNAME(ARG, ARG:1)%
+TSTR:241 = %CSVCSTR(ARG, 31, ARG:1)%
+TSTR:242 = %CSVCSTR(ARG, 32, ARG:1)%
+TSTR:243 = %CSVCSTR(ARG, 33, ARG:1)%
+
+;--------------------------------------------------
+;시추에이션 문자열 함수
+;状態・装備品に応じてSTR:214～251の中身を変える
+;--------------------------------------------------
+@EVENTCOM
+#PRI
+;調教対象・助手・主人にペニスがあるかどうかによって中身を変える
+REPEAT 4
+	SELECTCASE COUNT
+		CASE 0
+			LOCAL = MASTER
+		CASE 1
+			LOCAL = TARGET
+		CASE 2
+			LOCAL = ASSI
+		CASE 3
+			LOCAL = PLAYER
+	ENDSELECT
+	IF LOCAL >= 0
+		IF PENIS(LOCAL)
+			TSTR:(200 + COUNT * 10) = 페니스
+			TSTR:(201 + COUNT * 10) = 자지
+			TSTR:(202 + COUNT * 10) = 음경
+			TSTR:(203 + COUNT * 10) = 좆
+			TSTR:(204 + COUNT * 10) = 페니스
+			TSTR:(205 + COUNT * 10) = 음경
+		ELSE
+			TSTR:(200 + COUNT * 10) = 클리토리스
+			TSTR:(201 + COUNT * 10) = 콩알
+			TSTR:(202 + COUNT * 10) = 음핵
+			TSTR:(203 + COUNT * 10) = 클리
+			TSTR:(204 + COUNT * 10) = 페니스밴드
+			TSTR:(205 + COUNT * 10) = 딜도
+		ENDIF
+	ENDIF
+REND
+;お風呂場
+IF TEQUIP:53 || (TEQUIP:53 == 0 && SELECTCOM == 58)
+	TSTR:245 = 플레이매트
+	TSTR:246 = 타일
+;野外
+ELSEIF TEQUIP:52 || (TEQUIP:52 == 0 && SELECTCOM == 54)
+	TSTR:245 = 벤치
+	TSTR:246 = 지면
+ELSE
+	TSTR:245 = 침대
+	TSTR:246 = 마루
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;자동 신음성 함수@TRAINVOICE
+;및 그 자식 함수
+;좋아하는 대사 파일의
+;@KOJO_MESSAGE_COM_X1
+;아래에
+;TRYCALL TRAINVOICE, 1
+;RETURN 0
+;이 2행을 더하기만 하면 간이 신음성을 어느 정도 시추에이션에 맞춰 자동 생성
+;現在, 調整不足のためネタ機能の域を出ないと思います
+;口上未実装のキャラに自動で喘ぎ声を付けるようにしてもいいですが
+;その場合素質を見て性格分岐させたいところ. 要改良
+;※인수が正だと汎用口上をすっ飛ばして喘ぎのみ出力するようになりました. また人形でも喋る. 
+;--------------------------------------------------
+@TRAINVOICE(ARG)
+;REVERSALモードのときは汎用逆口上を呼び出す
+SIF FLAG:4 == 3 && !ARG
+	TRYCALL LES_MESSAGE_COM_K0_MX
+;口枷中は喋らない
+SIF TEQUIP:42 && SELECTCOM != 226 && SELECTCOM != 506 && SELECTCOM != 229
+	RETURN 0
+;眠ってる・気絶中も喋らない
+SIF EQUIP:14 || TFLAG:899 >= 1
+	RETURN 0
+;オトコと, メディとメディの娘以外の人形は喋らない
+SIF (TALENT:120 || TALENT:208 == 1) && !ARG
+	RETURN 0
+
+;汎用口上の存在を確認
+RESULT = 0
+SIF CFLAG:5000 & 2 && !ARG
+	TRYCALL KOJO_MESSAGE_COM_X
+;表示したら戻る
+SIF RESULT == 1
+	RETURN 0
+TRYCALL JINKAKU
+
+;LOCALに喘ぎ回数を入れる処理
+;LOCAL:1に行為レベルをとりあえず0～3で規定
+
+LOCAL = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+
+;コマンドごとの喘ぎ数・基本行為レベル（激しさ数値）を設定
+;애무・성고계
+;最も軽い　애무, 胸애무, 애널애무, 애널舐め, 스마타, 母乳飲み, 더블스마타, 玉애무, 玉を舐める, 角애무, 尻애무, 乳合わせ
+IF SELECTCOM == 0 || SELECTCOM == 3 || SELECTCOM == 2 || SELECTCOM == 180 || SELECTCOM == 187 || SELECTCOM == 188 || SELECTCOM == 43 || SELECTCOM == 204 || SELECTCOM == 305 || SELECTCOM == 329 || SELECTCOM == 330 || SELECTCOM == 434 || SELECTCOM == 186 || SELECTCOM == 447 || SELECTCOM == 210 || SELECTCOM == 183 
+	LOCAL = 1
+	LOCAL:1 = 0
+;軽め　クンニ・로터・指삽입れ・펠라する・거품비비기・수세미씻기・거품비비기する・岩清水・自慰, アナニー, 유두로터, 착유기, 가슴주무르기, 유두攻め, 유두なめ, 유두吸い, 胸自慰, 乳ファック, 貝合わせ, 수음する, 파이즈리する, 首筋耳裏舐め, 乳の揉みあい, 豆責め, 小陰唇指애무
+ELSEIF (SELECTCOM < 11 && SELECTCOM != 9 && SELECTCOM != 6 && SELECTCOM != 11) || SELECTCOM == 10 || SELECTCOM == 4 || SELECTCOM == 5 || SELECTCOM == 122 || SELECTCOM == 126 || SELECTCOM == 132 || SELECTCOM == 152 || SELECTCOM == 352 || SELECTCOM == 353 || SELECTCOM == 354 || SELECTCOM == 611 || SELECTCOM == 7 || SELECTCOM == 182 || SELECTCOM ==190 || SELECTCOM == 191 || SELECTCOM == 200 || SELECTCOM == 201 || SELECTCOM == 202 || SELECTCOM == 203 || SELECTCOM == 205 || SELECTCOM == 207 || SELECTCOM == 301 || SELECTCOM == 321 || SELECTCOM == 322 || SELECTCOM == 328 || SELECTCOM == 331 || SELECTCOM == 335 || SELECTCOM == 337 || SELECTCOM == 344 || SELECTCOM == 380 || SELECTCOM == 410 || SELECTCOM == 411 || SELECTCOM == 417 || SELECTCOM == 435 || SELECTCOM == 436 || SELECTCOM == 605 || SELECTCOM == 611 || SELECTCOM == 613 || SELECTCOM == 616 || SELECTCOM == 617 || SELECTCOM == 618 || SELECTCOM == 619 || SELECTCOM == 626 || SELECTCOM == 627
+	LOCAL = 2
+	LOCAL:1 = 1
+;ちょい重め　Ｇスポット刺激・전기안마・애널전극・애널비즈해제, 乳腺開発, 로터自慰, 전기안마自慰
+ELSEIF SELECTCOM == 600 || SELECTCOM == 11 || SELECTCOM == 124 || SELECTCOM == 125 || SELECTCOM == 133 || (SELECTCOM == 172 && TEQUIP:25 == 0) || SELECTCOM == 192 || SELECTCOM == 441 || SELECTCOM == 442 || SELECTCOM == 654
+	LOCAL = 3
+	LOCAL:1 = 2
+;실전　섹스계 전부
+ELSEIF (SELECTCOM > 19 && SELECTCOM < 40) || SELECTCOM == 610 || SELECTCOM == 614 || SELECTCOM == 615 || (SELECTCOM > 322 && SELECTCOM < 327) || SELECTCOM == 430 || SELECTCOM == 431 || SELECTCOM == 440 || SELECTCOM == 610 || SELECTCOM == 612 || SELECTCOM == 616 || SELECTCOM == 617 || SELECTCOM == 618 || SELECTCOM == 619 || SELECTCOM == 630 || SELECTCOM == 651 || SELECTCOM == 652 || SELECTCOM == 655 || SELECTCOM == 656 || SELECTCOM == 657 || SELECTCOM == 658 || SELECTCOM == 402 || SELECTCOM == 307 || SELECTCOM == 381 || SELECTCOM == 383 || SELECTCOM == 146 || SELECTCOM == 308 || SELECTCOM == 332 || SELECTCOM == 333 || SELECTCOM == 334 || SELECTCOM == 338 || SELECTCOM == 382 || SELECTCOM == 384
+	LOCAL = 3
+	LOCAL:1 = 3
+ENDIF
+
+;애무・性交系は欲情が大きいと喘ぎ数が+3まで増えます
+;どれくらい感じてるかチェック
+;ソースに対応した감각が2以上なら1, 4以上なら2. 高い方を優先
+IF LOCAL
+	SIF PALAM:13 > PALAMLV:1
+		LOCAL += 1
+	SIF PALAM:13 > PALAMLV:2
+		LOCAL += 1
+	SIF PALAM:13 > PALAMLV:4
+		LOCAL += 1
+
+	SIF SOURCE:0 && ABL:0 > 1
+		LOCAL:2 = 1
+	SIF SOURCE:0 && ABL:0 > 3
+		LOCAL:2 = 2
+	SIF SOURCE:1 && ABL:1 > 1 && LOCAL:2 == 0
+		LOCAL:2 = 1
+	SIF SOURCE:1 && ABL:1 > 3
+		LOCAL:2 = 2
+	SIF SOURCE:2 && ABL:2 > 1 && LOCAL:2 == 0
+		LOCAL:2 = 1
+	SIF SOURCE:2 && ABL:2 > 3
+		LOCAL:2 = 2
+	SIF SOURCE:3 && ABL:3 > 1 && LOCAL:2 == 0
+		LOCAL:2 = 1
+	SIF SOURCE:3 && ABL:3 > 3
+		LOCAL:2 = 2
+	;感じていない口上へ
+	IF LOCAL:2 == 0
+		TRYCALL VOICE_B, LOCAL, LOCAL:1
+	;감각4以上だと激しさ+1
+	ELSE
+		SIF LOCAL:2 == 2
+			LOCAL:1 += 1
+		TRYCALL VOICE_A, LOCAL, LOCAL:1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;玩具装備・해제系
+;軽め系　클리캡・유두캡・애널비즈装着, 쿠스코, 座薬, フリスク
+IF SELECTCOM == 14 || SELECTCOM == 15 || (SELECTCOM == 172 && TEQUIP:25) || SELECTCOM == 150 || SELECTCOM == 63 || SELECTCOM == 64 || SELECTCOM == 184
+	LOCAL = 1
+	LOCAL:1 = 1
+;重め系　착유기・애널비즈해제・오나홀・전극오나홀・陰核전극・애널전극・바기나전극・胸전극
+ELSEIF SELECTCOM == 191 || SELECTCOM == 16 || SELECTCOM == 17 || (SELECTCOM == 172 && TEQUIP:25 == 0) || SELECTCOM == 131 || SELECTCOM == 155 || SELECTCOM == 171 || SELECTCOM == 193
+	LOCAL = 2
+	LOCAL:1 = 3
+;삽입系　바이브・애널바이브
+ELSEIF SELECTCOM == 12 || SELECTCOM == 13 || SELECTCOM == 151 || SELECTCOM == 170 || SELECTCOM == 403 || SELECTCOM == 404 || SELECTCOM == 432 || SELECTCOM == 437 || SELECTCOM == 438 || SELECTCOM == 439
+	LOCAL = 1
+	LOCAL:1 = 2
+ENDIF
+
+;どれくらい感じてるかチェック
+;ソースに対応した감각が2以上なら1, 4以上なら2. 高い方を優先
+IF LOCAL
+	SIF SOURCE:0 && ABL:0 > 1
+		LOCAL:2 = 1
+	SIF SOURCE:0 && ABL:0 > 3
+		LOCAL:2 = 2
+	SIF SOURCE:1 && ABL:1 > 1 && LOCAL:2 == 0
+		LOCAL:2 = 1
+	SIF SOURCE:1 && ABL:1 > 3
+		LOCAL:2 = 2
+	SIF SOURCE:2 && ABL:2 > 1 && LOCAL:2 == 0
+		LOCAL:2 = 1
+	SIF SOURCE:2 && ABL:2 > 3
+		LOCAL:2 = 2
+	SIF SOURCE:3 && ABL:3 > 1 && LOCAL:2 == 0
+		LOCAL:2 = 1
+	SIF SOURCE:3 && ABL:3 > 3
+		LOCAL:2 = 2
+	;感じていない口上へ
+	IF LOCAL:2 == 0
+		TRYCALL VOICE_B, LOCAL, LOCAL:1
+	ELSE
+		;감각4以上だと激しさ+1
+		SIF LOCAL:2 == 2
+			LOCAL:1 += 1
+		TRYCALL VOICE_A, LOCAL, LOCAL:1
+	ENDIF
+	RETURN 0
+ENDIF
+
+;奉仕系
+;キスする, 애널舐め強制, 足舐め強制, 指チュパ, 玉舐め強制, クンニ強制
+IF SELECTCOM == 6 || SELECTCOM == 44 || SELECTCOM == 46 || SELECTCOM == 327 || SELECTCOM == 54 || SELECTCOM == 300 || SELECTCOM == 387 || SELECTCOM == 388
+	LOCAL = 6
+	LOCAL:1 = 3
+;애널애무強制, 玉揉み強制, 
+ELSEIF SELECTCOM == 53 || SELECTCOM == 55
+	LOCAL = 4
+	LOCAL:1 = 4
+;수음, 足こき, 髪こき, 全身こき, 尻こき, 竿こき
+ELSEIF SELECTCOM == 40 || SELECTCOM == 47 || SELECTCOM == 48 || SELECTCOM == 49 || SELECTCOM == 50 || SELECTCOM == 51 || SELECTCOM == 52
+	LOCAL = 3
+	LOCAL:1 = 0
+;파이즈리
+ELSEIF SELECTCOM == 42 || SELECTCOM == 208 || SELECTCOM == 306 || SELECTCOM == 603
+	LOCAL = 4
+	LOCAL:1 = 1
+;펠라・シックスナイン・Ｗ펠라
+ELSEIF SELECTCOM == 41 || SELECTCOM == 602 ||SELECTCOM == 303 || SELECTCOM == 304 || SELECTCOM == 209 || SELECTCOM == 601 || SELECTCOM == 604 || SELECTCOM == 385
+	LOCAL = 6
+	LOCAL:1 = 2
+ENDIF
+;奉仕系口上へ
+IF LOCAL
+	TRYCALL VOICE_C, LOCAL, LOCAL:1
+	RETURN 0
+ENDIF
+
+;苦痛系
+;痛いの
+IF SELECTCOM == 80 || SELECTCOM == 81 || SELECTCOM == 82 || SELECTCOM == 83 || SELECTCOM == 84 || SELECTCOM == 85 || SELECTCOM == 86 || SELECTCOM == 123 || SELECTCOM == 220 || SELECTCOM == 221 || SELECTCOM == 222 || SELECTCOM == 243 || SELECTCOM == 244 || SELECTCOM == 245 || SELECTCOM == 252 || SELECTCOM == 310 || SELECTCOM == 311 || SELECTCOM == 400
+	LOCAL = 3
+	LOCAL:1 = 1
+	SIF SELECTCOM == 222 || SELECTCOM == 243 || SELECTCOM == 244 || SELECTCOM == 245 || SELECTCOM == 252
+		LOCAL:1 += 1
+;苦しいの
+ELSEIF SELECTCOM == 173 || SELECTCOM == 174 || SELECTCOM == 175 || SELECTCOM == 230 || SELECTCOM == 238 || SELECTCOM == 241 || SELECTCOM == 386
+	LOCAL = 2
+	LOCAL:1 = 3
+ENDIF
+;苦痛系口上へ
+SIF LOCAL
+	TRYCALL VOICE_D, LOCAL, LOCAL:1
+
+RETURN 0
+
+;………………………………………………
+;連続禁止用処理
+;………………………………………………
+@VOICE_RENZOKU, ARG, ARG:1
+#FUNCTION
+$RETRY
+LOCAL = RAND:ARG
+SIF ARG:1 >= 0 && LOCAL == ARG:1
+	GOTO RETRY
+RETURNF LOCAL
+
+;………………………………………………
+;개발되어 있는 아이
+;………………………………………………
+@VOICE_A, ARG, ARG:1
+PRINT 「
+
+LOCAL = -1
+IF TALENT:16 || CFLAG:3005 == 2 || CFLAG:3005 == 3
+	;엉덩이 판정
+	IF SOURCE:2 && SELECTCOM != 7
+		PRINTDATA
+			DATA 그쪽은…
+			DATA 뒤? 
+			DATA 우…
+		ENDDATA
+	ENDIF
+
+	IF ARG:1 < 2
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(10, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 앗, 
+				CASE 2
+					PRINT 아……
+				CASE 3
+					PRINT 응, 
+				CASE 4
+					PRINT 읏, 
+				CASE 5
+					PRINT 응……
+				CASE 6
+					PRINT 으응, 
+				CASE 7
+					PRINT 아, 
+				CASE 8
+					PRINT 우웃……
+				CASE 9
+					PRINT 끄우웃, 
+			ENDSELECT
+		REND
+		SIF LOCAL == 0
+			PRINT 읏, 
+	ELSEIF ARG:1 > 1
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(10, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT 아앗, 
+				CASE 1
+					PRINT 으긋, 
+				CASE 2
+					PRINT 하, 
+				CASE 3
+					PRINT 끄읏, 
+				CASE 4
+					PRINT 하앗, 
+				CASE 5
+					PRINT 읏! 
+				CASE 6
+					PRINT 잇, 
+				CASE 7
+					PRINT 그거, 
+				CASE 8
+					PRINT 꺗 거기, 
+				CASE 9
+					PRINT 아, 
+			ENDSELECT
+		REND
+	ENDIF
+	;대사 마무리
+	IF ARG:1 < 2
+		PRINTDATA
+			DATA 하아아앙♪
+			DATA 기분 좋아……
+			DATA 끗!
+			DATA 후앗♪
+			DATA 하……
+			DATA 으응
+			DATA 으흣……
+			DATA 후후……
+			DATA 아……
+			DATA 우으응♪
+		ENDDATA
+	ELSE
+		PRINTDATA
+			DATA 끄우!
+			DATA 아, 그거!
+			DATA 아아아앗!!
+			DATA 으으응…… 읏!
+			DATA 읏! 끄읏……
+			DATA ……하아, 하아
+			DATA 끄하앗♪
+			DATA 이, 잇!!
+			DATA 앗아아앗앗, 아……!
+			DATA 끄, 끄아앗!
+		ENDDATA
+	ENDIF
+ELSE
+	;お尻判定
+	IF SOURCE:2 && SELECTCOM != 7
+		PRINTDATA
+			DATA 뒤……? 
+			DATA 그, 그쪽은, , 
+			DATA 어, 엉덩잇, 
+		ENDDATA
+	ENDIF
+
+	IF ARG:1 < 2
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(10, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 앗, 
+				CASE 2
+					PRINT 아……
+				CASE 3
+					PRINT 응, 
+				CASE 4
+					PRINT 으읏, 
+				CASE 5
+					PRINT 응……
+				CASE 6
+					PRINT 후아, 
+				CASE 7
+					PRINT 아앙, 
+				CASE 8
+					PRINT 히익……
+				CASE 9
+					PRINT 끄윽, 
+			ENDSELECT
+		REND
+		SIF LOCAL == 0
+			PRINT 읏, 
+	ELSEIF ARG:1 > 1
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(10, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT 아앗, 
+				CASE 1
+					PRINT 으끗, 
+				CASE 2
+					PRINT 하, 
+				CASE 3
+					PRINT 기, 기분, 
+				CASE 4
+					PRINT 좋앗, 
+				CASE 5
+					PRINT 읏! 
+				CASE 6
+					PRINT 조, 
+				CASE 7
+					PRINT 좋아, 
+				CASE 8
+					PRINT 으끄응, 
+				CASE 9
+					PRINT 앗아, 
+			ENDSELECT
+		REND
+	ENDIF
+	;대사 마무리
+	IF ARG:1 < 2
+		PRINTDATA
+			DATA 후아아……♪
+			DATA 응……
+			DATA 읏!
+			DATA 후아앗♪
+			DATA 하……
+			DATA 응응
+			DATA 으흣……
+			DATA 꺄앙……
+			DATA 아……앙
+			DATA 읏……？
+		ENDDATA
+	ELSE
+		PRINTDATA
+			DATA 끄웃!
+			DATA 조, 좋아앗!
+			DATA 아아아앗!
+			DATA 으으응…… 읏!!
+			DATA 끗! 끄우……
+			DATA 하아…… 하아……♪
+			DATA 으꾸읏!
+			DATA 조, 꺄읏!!
+			DATA 아앗아, 아아앗♪
+			DATA 끄, 끄우으응♪
+		ENDDATA
+	ENDIF
+ENDIF
+PRINTW 」
+RETURN 0
+
+;………………………………………………
+;개발되지 않은 아이
+;………………………………………………
+@VOICE_B, ARG, ARG:1
+LOCAL = -1
+PRINT 「
+
+IF TALENT:16 || CFLAG:3005 == 2 || CFLAG:3005 == 3
+	;엉덩이 판정
+	IF SOURCE:2 && SELECTCOM != 7
+		PRINTDATA
+			DATA 뭐얏, 
+			DATA 끗, 그쪽은……
+			DATA 끄으윽, 
+		ENDDATA
+	ENDIF
+	ARG = (ARG > 2) ? ARG - 2 # 1
+	REPEAT ARG
+		LOCAL = VOICE_RENZOKU(5, LOCAL)
+		SELECTCASE LOCAL
+			CASE 0
+				PRINT ……
+			CASE 1
+				PRINT 끄, 
+			CASE 2
+				PRINT 으으……
+			CASE 3
+				PRINT 후우……
+			CASE 4 
+				PRINTFORM \@(SOURCE:20) ? 아팟,  # 히……\@
+		ENDSELECT
+		SIF LOCAL == 0
+			PRINT 윽, 
+	REND
+	;대사 마무리
+	PRINTDATA
+		DATA 이럴수가……
+		DATA 어째서……
+		DATA 끄……
+		DATAFORM \@(ARG > 2) ? 크, 으…… # 히익\@
+		DATAFORM \@(SOURCE:20) ? 이거, 아파…… # 으끄윽……\@
+	ENDDATA
+ELSE
+	;お尻判定
+	IF SOURCE:2 && SELECTCOM != 7
+		PRINTDATA
+			DATA 그, 그쪽은 아냣, 
+			DATA 거짓말, 엉덩이!?
+			DATA 시, 싫엇, 
+		ENDDATA
+	ENDIF
+	ARG = (ARG > 2) ? ARG - 2 # 1
+	REPEAT ARG
+		LOCAL =  VOICE_RENZOKU(5, LOCAL)
+		SELECTCASE LOCAL
+			CASE 0
+				PRINT ……
+			CASE 1
+				PRINT 끄, 
+			CASE 2
+				PRINT 아……
+			CASE 3
+				PRINT 응……
+			CASE 4
+				PRINTFORM \@(SOURCE:20) ? 아팟…… # 히……\@
+		ENDSELECT
+	REND
+	SIF LOCAL == 0
+		PRINT 응, 
+	;대사 마무리
+	PRINTDATA
+		DATA 우으……
+		DATA 싫어……
+		DATA 으윽……?
+		DATAFORM \@(ARG > 2) ? 아직……? # 읏\@
+		DATAFORM \@(SOURCE:20) ? 응, 아, 아팟 # 그만해……\@
+	ENDDATA
+ENDIF
+PRINTW 」
+RETURN 0
+
+;………………………………………………
+;봉사계
+;………………………………………………
+@VOICE_C, ARG, ARG:1
+PRINT 「
+
+LOCAL = -1
+IF TALENT:16 || CFLAG:3005 == 2 || CFLAG:3005 == 3
+	;손으로 한다
+	IF ARG:1 == 0
+		REPEAT ARG
+			LOCAL =  VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 자아, 
+				CASE 2
+					PRINT 후후, 
+				CASE 3
+					PRINT 여기? 
+				CASE 4
+					PRINT 딱딱해……
+			ENDSELECT
+		REND
+	;애무한다
+	ELSEIF ARG:1 == 4
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 이거, 
+				CASE 2
+					PRINT 딴딴해……
+				CASE 3
+					PRINT 후후훗, 
+				CASE 4
+					PRINT 자아아, 
+			ENDSELECT
+		REND
+	;가슴으로 한다
+	ELSEIF ARG:1 == 1
+		PRINT 가슴 말이구나. 
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 이거, 
+				CASE 2
+					PRINT 쭉쭈욱……
+				CASE 3
+					PRINT 후훗, 
+				CASE 4
+					PRINT 좋아? 
+			ENDSELECT
+		REND
+	;입으로 한다
+	ELSEIF ARG:1 > 1
+		PRINTFORM \@(ARG:1 == 2) ? 하움, 낼름,  # 쮸웃, \@
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 츄붑, 
+				CASE 2
+					PRINT 쬬옥……
+				CASE 3
+					PRINT 쮸우웁, 
+				CASE 4
+					PRINT 우움……
+			ENDSELECT
+		REND
+	ENDIF
+	;대사 마무리
+	SIF LOCAL == 0
+		PRINT 응, 
+		;손
+	IF ARG:1 == 0
+		PRINTDATA
+			DATA 귀여어……♪
+			DATA 자아, 꾸우욱
+			DATA 못 참겠어?
+			DATA 이런 야한 짓……
+			DATA 좋은가봐?
+		ENDDATA
+	;애무
+	ELSEIF ARG:1 == 4
+		PRINTDATA
+			DATA 꿈틀꿈틀거려……
+			DATA 이런 게, 좋은 거구나
+			DATA 신기하네……
+		ENDDATA
+	;키스
+	ELSEIF ARG:1 == 3
+		PRINTDATA
+			DATA ……푸아
+			DATA ……후훗
+		ENDDATA
+	;가슴 · 펠라
+	ELSEIF ARG:1 > 0
+		PRINTDATA
+			DATA 귀여워라……♪
+			DATA 낼름……읍♪
+			DATA ……싸고 싶어?
+			DATA 자아, 나한테 말해봐
+			DATA 뜨거워……
+		ENDDATA
+	ENDIF
+ELSE
+	;손으로 한다
+	IF ARG:1 == 0
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 꽈악, 
+				CASE 2
+					PRINT 이렇게? 
+				CASE 3
+					PRINT 탁, 탁……
+				CASE 4
+					PRINT 탁탁탁, 
+			ENDSELECT
+		REND
+	;애무한다
+	ELSEIF ARG:1 == 4
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 꾸욱꾸욱, 
+				CASE 2
+					PRINT 이렇게? 
+				CASE 3
+					PRINT 어떠려나……
+				CASE 4
+					PRINT 문질문질……
+			ENDSELECT
+		REND
+	;가슴으로 한다
+	ELSEIF ARG:1 == 1
+		PRINT 끼울게……
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 아, 
+				CASE 2
+					PRINT 우읏……
+				CASE 3
+					PRINT 문질, 
+				CASE 4
+					PRINT 후아앗, 
+			ENDSELECT
+		REND
+	;口でする
+	ELSEIF ARG:1 > 1
+		PRINTFORM \@(ARG:1 == 2) ? 아우움, 움,  # 음, 쮸웁……\@
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT ……
+				CASE 1
+					PRINT 츄붑, 
+				CASE 2
+					PRINT 낼름……
+				CASE 3
+					PRINT 쪼오옥, 
+				CASE 4
+					PRINT 우움……
+			ENDSELECT
+		REND
+	ENDIF
+	SIF LOCAL == 0
+		PRINT 읏, 
+	;대사 마무리
+	;손
+	IF ARG:1 == 0
+		PRINTDATA
+			DATA 햑, 꿈틀거렸어……
+			DATA 빳빳……
+			DATA 어때, 기분 좋아……?
+			DATA 끈적한 게 나왔어……
+			DATA 아, 여기구나？
+		ENDDATA
+	;애무
+	ELSEIF ARG:1 == 4
+		PRINTDATA
+			DATA 따뜻해……
+			DATA 좋, 아?
+			DATA 이상해……
+		ENDDATA
+	;키스
+	ELSEIF ARG:1 == 3
+		PRINTDATA
+			DATA ……푸아
+			DATA ……하웁
+		ENDDATA
+	;가슴 · 펠라
+	ELSEIF ARG:1 >= 1
+		PRINTDATA
+			DATA ……하아……♪
+			DATA 후후, 귀여워라
+			DATA ……쪽
+			DATA 기분 좋아?
+			DATA 딱딱해……
+		ENDDATA
+	ENDIF
+ENDIF
+PRINTW 」
+RETURN 0
+
+;………………………………………………
+;고통계
+;………………………………………………
+@VOICE_D, ARG, ARG:1
+PRINT 「
+
+LOCAL = -1
+IF TALENT:16 || CFLAG:3005 == 2 || CFLAG:3005 == 3
+	;아픈 거
+	IF ARG:1 < 3
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT 끅, 
+				CASE 1
+					PRINT 그만, 
+				CASE 2
+					PRINT 요, 용서안, 
+				CASE 3
+					PRINT 끄아악! 
+				CASE 4
+					PRINT 히익
+			ENDSELECT
+		REND
+	;괴로운 거
+	ELSEIF ARG:1 == 3
+		PRINT 읏, 
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(3, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT 끄우, 
+				CASE 1
+					PRINT 우윽, 
+				CASE 2
+					PRINT 우극……
+			ENDSELECT
+		REND
+	ENDIF
+	;대사 마무리
+	;아프다
+	IF ARG:1 == 1
+		PRINTDATA
+			DATA 히기약!
+			DATA 아, 아파악!!
+			DATA 그만둬……!
+			DATA 어째서……
+			DATA 끄으욱……
+		ENDDATA
+	;바늘
+	ELSEIF ARG:1 == 2
+		PRINTDATA
+			DATA 끄……!
+			DATA 이, 이런 짓을……
+		ENDDATA
+	ENDIF
+ELSE
+	;아픈 거
+	IF ARG:1 < 3
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(5, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT 아파악! 
+				CASE 1
+					PRINT 아파, 
+				CASE 2
+					PRINT 시, 싫어, 
+				CASE 3
+					PRINT 끄으악! 
+				CASE 4
+					PRINT 히익
+			ENDSELECT
+		REND
+	;괴로운 거
+	ELSEIF ARG:1 == 3
+		PRINT 윽, 
+		REPEAT ARG
+			LOCAL = VOICE_RENZOKU(3, LOCAL)
+			SELECTCASE LOCAL
+				CASE 0
+					PRINT 끄우, 
+				CASE 1
+					PRINT 으으, 
+				CASE 2
+					PRINT 으극……
+			ENDSELECT
+		REND
+	ENDIF
+	;대사 마무리
+	;아프다
+	IF ARG:1 == 1
+		PRINTDATA
+			DATA 히이이이익!!
+			DATA 아파아악!!
+			DATA ……너무해……
+			DATA 훌쩍……
+			DATA 끄으으으……
+		ENDDATA
+	;바늘
+	ELSEIF ARG:1 == 2
+		PRINTDATA
+			DATA 피, 피가……
+			DATA 히기이익, 더, 더는……
+		ENDDATA
+	ENDIF
+ENDIF
+PRINTW 」
+RETURN 0
+
+;--------------------------------------------------
+;이하, 파루플릿 탑재 기능의 처리를 위한 함수군.
+;다른 데에 유용할 경우에는 좀 이용가치가 낮을 거라 생각됩니다.
+;CFLAG 등 독특하게 잡아먹기 때문에, 대충 유용할 수 있는 모양으로 만들어져 있지 않습니다. 죄송합니다.
+;주로 파루플릿의 주목상품?이 되는 「면식 관리 기능」「금딸 기능」에서 사용합니다.
+;--------------------------------------------------
+;면식 검색 함수@MENSIKI
+;검색 대상의 캐릭터 번호를 인수로 TRYCALL MENSIKI, <번호>
+;전 캐릭터와의 면식을 검색해, 가장 깊은 관계가 있는 상대의 등록번호를 변수 M에 반환합니다.
+;동등한 면식의 캐릭터가 있을 경우에는 랜덤으로 １명 선택됩니다.
+;면식의 내용을 RESULT:1로 반환하므로, 그것을 이용해 대사의 분기가 가능합니다.
+;대사 주의 5800대 CFLAG를 사용합니다. 캐릭터 숫자 늘어나면 기능하지 않을지도 모릅니다.
+;800대 CFLAG와 같은 표기로, N 값이(1원작에서 면식, 2노예끼리 면식, 3대사 주가 상대를 조교했다, 
+;4상대가 대사 주를 조교했다, 5서로 조교했다, 6대사 주가 조교해서 처녀를 빼앗았다, 7처녀를 빼앗고 조교도 당했다)의 뜻.
+;숫자가 높은 쪽이 남기 쉬워집니다. 면식도 1의 캐릭터는 이 장소에 없는 경우가 많으므로, 있는 사람을 우선합니다.
+;최종적으로 선택 받은 상대가 이 장소에 없을 경우에는 RESULT:2에 -1을 반환합니다.
+;면식도 1의 캐릭터밖에 없었을 경우를 제외하면, RESULT:2 < 0은 대상 캐릭터가 팔렸다는 의미가 됩니다(현재로선)
+;면식도 1의 캐릭터밖에 없었을 경우에는 RESULT:1 = 1, RESULT:2 < 0이 됩니다.
+;어느 경우에도 캐릭터 이름은 TSTR:240, 부르는 이름은 TSTR:241에 격납됩니다.
+;--------------------------------------------------
+;반환값 M을 RESULT:2, N을 RESULT:1로 반환합니다
+;--------------------------------------------------
+@MENSIKI, ARG
+LOCAL:2 = 0
+RESULT:1 = 0
+;검색 대상의 등록번호를 추출
+LOCAL = GETCHARA(ARG, 1)
+;면식 판정을 총 검색해 캐릭터 번호와 면식도를 추출
+;↓100은 잠정. 향후 캐릭터 숫자가 늘면 더 늘려도 ＯＫ?
+REPEAT 149
+	LOCAL:1 = CFLAG:LOCAL:(5800+COUNT)
+	;같은 면식도의 상대 뽑았다
+	;그 ２명의 면식도가 １(원작 면식 or 질투 이벤트)
+	;상성이 좋은 쪽을 보존. 동일하면 1/2로 남긴다
+	IF RESULT:1 == LOCAL:1 && LOCAL:1 == 1
+		LOCAL:3 = RELATION:LOCAL:(LOCAL:2)
+		LOCAL:4 = RELATION:LOCAL:COUNT
+		SIF LOCAL:3 == 0
+			LOCAL:3 = 100
+		SIF LOCAL:4 == 0
+			LOCAL:4 = 100
+		SIF (LOCAL:3 == LOCAL:4 && RAND:2 == 0) || LOCAL:4 > LOCAL:3
+			LOCAL:2 = COUNT
+	;２이상으로 같은 값일 경우 1/2로 남긴다
+	ELSEIF RESULT:1 == LOCAL:1 && RAND:2 == 0
+		LOCAL:2 = COUNT
+	;면식도가 높은 상대 뽑았다면 3/4로 남긴다
+	ELSEIF LOCAL:1 > RESULT:1 && RAND:4 == 0
+		LOCAL:2 = COUNT
+		RESULT:1 = LOCAL:1
+	ENDIF
+REND
+
+;등록번호로 컨버트
+RESULT:2 = GETCHARA(LOCAL:2, 1)
+
+;부재 캐릭터 이름 취득 함수를 콜
+;캐릭터 번호는 L, 이름은 TSTR:240, 부르는 이름은 TSTR:241로 출력
+TRYCALL LOSTNAME, LOCAL:2
+
+;RESULT=0으로 부재 캐릭터를 뽑은 걸 판별 가능
+RETURN (RESULT:2 >= 0)
+
+;--------------------------------------------------
+;자위 참기 함수@SELFPLAY
+;서식：TRYCALL SELFPLAY, <대상 캐릭터 NO>, <확률 보정>, <확률 상한>
+;예) 파르시로, 확률 +5％, 상한 40％의 인내 시추일 경우
+;SELFPLAY(59, 5, 40)
+;인내할 수 있었으면 0 · 못 했으면 1을 RESULTF합니다
+;「파루플릿」의 금딸 기능용으로 설계했으며,
+;대사 주의  CFLAG208을 「현재의 글땀 지속 일수(0이라면 금딸하지 않았음)」으로서 사용합니다.
+;조교 후 자위 외의 금딸 판정은 이곳을 사용하는 느낌으로 합니다
+;--------------------------------------------------
+@SELFPLAY, ARG, ARG:1, ARG:2
+;(날짜*3)+(자위중독 Lv*10)-(순종*5)％의 확률로 인내하지 못하고 금딸 실패
+;従順4自慰中毒3で3日目なら19％　これに各素質補正と呼び出し元の補正を加える
+;ただし上限50％まで. 調整適当
+
+LOCAL = GETCHARA(ARG, 1)
+
+;기초 확률
+LOCAL:1 = (CFLAG:LOCAL:5208 * 3) + (ABL:LOCAL:10 * 10) - (ABL:LOCAL:0 * 5)
+;補正値Sを加える（どれだけ我慢できない状況だったか）
+LOCAL:1 += ARG:1
+
+;自慰しやすい持ちなら+10％
+SIF TALENT:LOCAL:60
+	LOCAL:1 += 10
+;淫乱なら+5％
+SIF TALENT:LOCAL:170
+	LOCAL:1 += 5
+;恥薄い・解放・ふたなり・中毒しやすい持ちなら+2％
+SIF TALENT:LOCAL:36
+	LOCAL:1 += 2
+SIF TALENT:LOCAL:33
+	LOCAL:1 += 2
+SIF TALENT:LOCAL:121
+	LOCAL:1 += 2
+SIF TALENT:LOCAL:84
+	LOCAL:1 += 2
+;恥じらい・自制心・抑圧持ちなら-5％
+SIF TALENT:LOCAL:35
+	LOCAL:1 -= 5
+SIF TALENT:LOCAL:20
+	LOCAL:1 -= 5
+SIF TALENT:LOCAL:32
+	LOCAL:1 -= 5
+;Ｃ敏感（鈍感）なら+2％（-2％）
+SIF TALENT:LOCAL:100
+	LOCAL:1 += 2
+SIF TALENT:LOCAL:101
+	LOCAL:1 -= 2
+;上限を超えたら切り捨てる
+LOCAL:1 = MIN(LOCAL:1, ARG:2)
+
+;我慢できたら0, できなければ1を返して戻る
+RETURN (LOCAL:1 > RAND:100)
+
+;--------------------------------------------------
+;조교 후 자위 함수@SELFPLAY_2
+;調教後自慰は計算式が↑のと別なので独立させました. 
+;事前にRに口上主のキャラ番号を入力してTRYCALL. 
+;예) 파르시의 경우
+;@SELF_KOJO_K59の下のIF TFLAG:200 == 1の中のどこかで
+;SELFPLAY_2(59)
+;現状の仕様では, 確率補正と上限の指定はできません. 
+;我慢できたら0・できなければ1をRESULTに返します
+;「파루플릿」のオナ禁機能用に設計してあり, 
+;口上主のCFLAG5208を「現在のオナ禁継続日数（０ならオナ禁していない）」として使用します. 
+;調教後自慰以外のオナ禁判定はここを使う感じにします
+;--------------------------------------------------
+@SELFPLAY_2, ARG
+;調教後自慰のオナ禁判定は通常と違う形式を使います
+;(今回の調教後自慰回数*10)+(自慰中毒レベル*10)+(オナ禁日数*3)-(従順*5)
+;の確率でイってしまいオナ禁失敗となる
+;3回自慰・自慰中毒2・3日目・従順4なら39％. ただし最低10％・最大で75％. 
+LOCAL = GETCHARA(ARG, 1)
+
+;このAはEVENT_SELF.ERB由来…どうしたものやら
+LOCAL:2 = (CFLAG:LOCAL:5208 * 3) + ((TFLAG:99 + ABL:LOCAL:30) * 10) - (ABL:LOCAL:10 * 5)
+;自慰しやすい持ちなら+15％
+SIF TALENT:LOCAL:60
+	LOCAL:2 += 15
+;淫乱なら+10％
+SIF TALENT:LOCAL:170
+	LOCAL:2 += 10
+;恥薄い・解放・ふたなり・中毒しやすい持ちなら+5％
+SIF TALENT:LOCAL:36
+	LOCAL:2 += 5
+SIF TALENT:LOCAL:33
+	LOCAL:2 += 5
+SIF TALENT:LOCAL:121
+	LOCAL:2 += 5
+SIF TALENT:LOCAL:84
+	LOCAL:2 += 5
+;恥じらい・自制心・抑圧持ちなら-10％
+SIF TALENT:LOCAL:35
+	LOCAL:2 -= 10
+SIF TALENT:LOCAL:20
+	LOCAL:2 -= 10
+SIF TALENT:LOCAL:32
+	LOCAL:2 -= 10
+;Ｃ敏感（鈍感）なら+5％（-5％）
+SIF TALENT:LOCAL:100
+	LOCAL:2 += 5
+SIF TALENT:LOCAL:101
+	LOCAL:2 -= 5
+;最大値の処理
+;初日は計算結果に-15％し, かつ最大20％, それ以降は最大50％. 最低10％
+LOCAL:2 = (CFLAG:LOCAL:5208 == 1) ? MIN(LOCAL:2 - 15, 20) # LIMIT(LOCAL:2, 10, 50)
+
+;我慢できたら0, できなければ1を返して戻る
+RETURN (LOCAL:2 > RAND:100)
+
+;--------------------------------------------------
+;자위 판정 함수@SELFPLAY_3
+;SELFPLAY(<대상 캐릭터의 NO>)
+;ただし@EVENTTURNEND, #PRIの下に置くこと
+;日付変更時のオナ禁判定を行い, 我慢できたらRESULT0, できなければ1を返して戻ります
+;処理されなかったときは2を返します. 
+;--------------------------------------------------
+@SELFPLAY_3, ARG
+;夜しか処理しない
+SIF TIME == 1
+	RETURN 2
+
+;口上主の登録番号を抽出
+LOCAL = GETCHARA(ARG, 1)
+
+;口上主が居ない場合処理しない
+SIF LOCAL < 1
+	RETURN 2
+;口上主がオナ禁していない場合処理しない
+SIF CFLAG:LOCAL:5208 == 0
+	RETURN 2
+;口上主を調教していた場合処理しない
+IF TARGET >= 0 && NO:TARGET == ARG && CFLAG:LOCAL:5207 < 2
+	;オナ禁日数カウントを＋１する
+	CFLAG:LOCAL:5208 += 1
+	TRYCALL SELFPLAY_4, ARG, 3
+	DRAWLINE
+	RETURN 2
+ENDIF
+
+;대사 주의 이름을 추출
+TRYCALL LOSTNAME, ARG
+
+;調教対象ではないか休憩した場合, 夜ならオナ禁失敗判定へ
+;基本確率に+5％の補正
+LOCAL:1 = 5
+;確率上限50％
+LOCAL:2 = 50
+;自分が助手をしていた場合, 補正+20上限60に変更される
+;調教シーンを思い出してシちゃうイメージで
+IF ASSI > 0 && FLAG:0 == 0
+	IF NO:ASSI == LOCAL
+		LOCAL:1 = 20
+		LOCAL:2 = 60
+	ENDIF
+ENDIF
+TRYCALL SELFPLAY, ARG, LOCAL:1, LOCAL:2
+SIF RESULT == 1
+	RETURN 1
+;オナ禁日数カウントを＋１する
+CFLAG:LOCAL:5208 += 1
+RETURN 0
+
+;--------------------------------------------------
+;자위 결과 함수@SELFPLAY_4
+;인수 ARG에 대사 주의 캐릭터 번호, 인수 ARG:1에 금딸의 성부(0으로 성공, 1로 실패, 2로 중단, 3으로 웨이트 없음 성공, 4로 금딸 개시)를 설정해서 TRYCALL. 
+;금딸의 결과를 표시한다.
+;--------------------------------------------------
+@SELFPLAY_4, ARG, ARG:1
+LOCAL = GETCHARA(ARG, 1)
+PRINTL 　
+SIF ARG:1 < 3
+	WAIT
+IF ARG:1 == 0 || ARG:1 == 3
+	SIF CFLAG:LOCAL:5208 > CFLAG:LOCAL:5207
+		CFLAG:LOCAL:5207 = CFLAG:LOCAL:5208
+	PRINTFORML (%CALLNAME:LOCAL%의 자위 금지:{CFLAG:LOCAL:5208}일째)
+	PRINTFORMW (현재 기록:{CFLAG:LOCAL:5207}일)
+ELSEIF ARG:1 == 4
+	CFLAG:LOCAL:5208 = 1
+	PRINTFORMW (%조사처리(CALLNAME:LOCAL,"가")% 자위 금지를 시작했습니다)
+ELSE
+	SIF CFLAG:LOCAL:5208 > CFLAG:LOCAL:5207
+		CFLAG:LOCAL:5207 = CFLAG:LOCAL:5208
+	PRINTFORM (%CALLNAME:LOCAL%의 자위금지:{CFLAG:LOCAL:5208}일째에서
+	IF ARG:1 == 1
+		PRINTFORMW 종료)
+	ELSEIF ARG:1 == 2
+		PRINTFORMW 중단)
+	ENDIF
+	PRINTFORMW (현재 기록:{CFLAG:LOCAL:5207}일)
+	CFLAG:LOCAL:5208 = 0
+ENDIF
+PRINTL 　
+RETURN 0
+
+;--------------------------------------------------------
+;견학 자위 함수@SELFPLAY_5
+;@KOJO_MESSAGE_COM_ASSI_X1の下で인수に口上主のキャラ番号を入れてTRYCALL
+;見学時（助手として付いているが, 調教者が主人であるとき）に行われるオナ禁判定. 
+;コマンドに応じた補正値と最大値を持ってオナ禁함수を呼びに行きます
+;要するに, 見せつけられて我慢できなくなっちゃう判定
+;我慢できたらRESULT0, できなければ1を返して戻ります
+;オナ禁していない場合もやや数値を緩めて判定を行います. 
+;奴隷と주인의 行為に嫉妬する助手を演出するなどにどうぞ. 心底パルスィ用の機能. 
+;--------------------------------------------------------
+@SELFPLAY_5, ARG
+RESULT = 0
+IF ASSIPLAY == 0 && NO:MASTER != ARG && SELECTCOM != 7
+	;上限30　補正10のコマンド群（自慰誘発　高）
+	;대면좌위・배면좌위・自慰・주사系・삽입責め系
+	IF SELECTCOM == 22 || SELECTCOM == 23 || SELECTCOM == 7 || SELECTCOM == 511 || SELECTCOM == 512 || SELECTCOM == 513 || SELECTCOM == 514 || SELECTCOM == 614 || SELECTCOM == 615
+		LOCAL = (CFLAG:ASSI:5208 >= 1) ? 10 # 20
+		LOCAL:1 = (CFLAG:ASSI:5208 >= 1) ? 30 # 50
+		TRYCALL SELFPLAY, ARG, LOCAL, LOCAL:1
+	;上限20　補正0のコマンド群（自慰誘発　中）
+	;로터～배면좌위애널・기승위～기승위애널・관장～전극・媚薬
+	ELSEIF (SELECTCOM >= 10 && SELECTCOM <= 29) || (SELECTCOM >= 34 && SELECTCOM <= 39) || (SELECTCOM >= 46 && SELECTCOM <= 49) || SELECTCOM == 61
+		LOCAL = (CFLAG:ASSI:5208 >= 1) ? 0 # 20
+		LOCAL:1 = (CFLAG:ASSI:5208 >= 1) ? 10 # 40
+		TRYCALL SELFPLAY, ARG, LOCAL, LOCAL:1
+	;上限15　補正-10のコマンド群（自慰誘発　低）
+	;残る大半
+	ELSEIF SELECTCOM <= 33 || SELECTCOM == 230 || SELECTCOM == 111 || SELECTCOM == 145 || SELECTCOM >= 130
+		LOCAL = (CFLAG:ASSI:5208 >= 1) ? -10 # 15
+		LOCAL:1 = (CFLAG:ASSI:5208 >= 1) ? 0 # 25
+		TRYCALL SELFPLAY, ARG, LOCAL, LOCAL:1
+	ENDIF
+ENDIF
+RETURN RESULT
+
+;--------------------------------------------------------
+;금딸 구슬 취득 함수@SELFPLAY_6
+;인수ARGにキャラ番号, 인수ARG:1にプレイ内容を入れてTRYCALL. 内容に応じてパラメータや珠を取得する. 
+;ARG:1=0プレイ中（何もしない時）我慢, 1プレイ中自慰, 2夜我慢, 3夜自慰, 4空欄（助手中我慢）, 5助手中自慰
+;他, 인수ARG:2が0ならＣで, 1なら対象の好きな性感帯で自慰を行う. 
+;--------------------------------------------------------
+@SELFPLAY_6, ARG, ARG:1, ARG:2
+LOCAL:2 = GETCHARA(ARG, 1)
+
+;プレイ中我慢
+IF ARG:1 == 0 && LOCAL:2 == TARGET
+	DOWNBASE:0 += 0
+	DOWNBASE:1 += 30
+
+	SOURCE:22 += 100
+
+	;PALAM:13를 본다
+	IF PALAM:13 < PALAMLV:1
+		SOURCE:18 += 10
+		SOURCE:12 += 50
+	ELSEIF PALAM:13 < PALAMLV:2
+		SOURCE:18 += 30
+		SOURCE:12 += 80
+	ELSEIF PALAM:13 < PALAMLV:3
+		SOURCE:18 += 60
+		SOURCE:12 += 150
+	ELSEIF PALAM:13 < PALAMLV:4
+		SOURCE:18 += 100
+		SOURCE:12 += 300
+	ELSEIF PALAM:13 >= PALAMLV:4
+		SOURCE:18 += 150
+		SOURCE:12 += 700
+	ENDIF
+
+	;ABL:21를 본다
+	IF ABL:21 == 0
+		TIMES SOURCE:18 , 0.80
+		SOURCE:10 += 10
+		SOURCE:19 += 10
+	ELSEIF ABL:21 == 1
+		TIMES SOURCE:18 , 1.00
+		SOURCE:10 += 20
+		SOURCE:19 += 30
+	ELSEIF ABL:21 == 2
+		TIMES SOURCE:18 , 1.20
+		SOURCE:10 += 40
+		SOURCE:19 += 70
+	ELSEIF ABL:21 == 3
+		TIMES SOURCE:18 , 1.40
+		SOURCE:10 += 70
+		SOURCE:19 += 120
+	ELSEIF ABL:21 == 4
+		TIMES SOURCE:18 , 1.50
+		SOURCE:10 += 110
+		SOURCE:19 += 180
+	ELSE
+		TIMES SOURCE:18 , 1.70
+		SOURCE:10 += 150
+		SOURCE:19 += 250
+	ENDIF
+
+	;ABL:30를 본다
+	;自慰中毒０で呼ばれることはないが一応
+	IF ABL:30 == 0
+		TIMES SOURCE:10 , 0.80
+		TIMES SOURCE:19 , 0.80
+		TIMES SOURCE:12 , 0.80
+	ELSEIF ABL:30 == 1
+		TIMES SOURCE:10 , 1.00
+		TIMES SOURCE:19 , 1.00
+		TIMES SOURCE:12 , 1.00
+	ELSEIF ABL:30 == 2
+		TIMES SOURCE:10 , 1.30
+		TIMES SOURCE:19 , 1.30
+		TIMES SOURCE:12 , 1.30
+	ELSEIF ABL:30 == 3
+		TIMES SOURCE:10 , 1.70
+		TIMES SOURCE:19 , 1.70
+		TIMES SOURCE:12 , 1.70
+	ELSEIF ABL:30 == 4
+		TIMES SOURCE:10 , 2.00
+		TIMES SOURCE:19 , 2.00
+		TIMES SOURCE:12 , 2.00
+	ELSE
+		TIMES SOURCE:10 , 3.00
+		TIMES SOURCE:19 , 3.00
+		TIMES SOURCE:12 , 3.00
+	ENDIF
+;プレイ中自慰
+ELSEIF ARG:1 == 1 && LOCAL:2 == TARGET
+	DOWNBASE:0 += 5
+	DOWNBASE:1 += 40
+
+	SOURCE:22 += 150
+
+	;ABL:0를 본다
+	IF ABL:0 == 0
+		SOURCE:0 += 10
+	ELSEIF ABL:0 == 1
+		SOURCE:0 += 30
+	ELSEIF ABL:0 == 2
+		SOURCE:0 += 200
+	ELSEIF ABL:0 == 3
+		SOURCE:0 += 500
+	ELSEIF ABL:0 == 4
+		SOURCE:0 += 700
+	ELSE
+		SOURCE:0 += 1000
+	ENDIF
+
+	;ABL:3를 본다
+	IF ABL:3 == 0
+		SOURCE:3 += 10
+	ELSEIF ABL:3 == 1
+		SOURCE:3 += 30
+	ELSEIF ABL:3 == 2
+		SOURCE:3 += 200
+	ELSEIF ABL:3 == 3
+		SOURCE:3 += 500
+	ELSEIF ABL:3 == 4
+		SOURCE:3 += 700
+	ELSE
+		SOURCE:3 += 1000
+	ENDIF
+
+	;性感帯判定
+	LOCAL = FAV_FEEL()
+	;Ｃの場合
+	IF LOCAL == 1 || ARG:2 != 1
+		TIMES SOURCE:0 , 2.00
+		;ABL:0를 본다
+		IF ABL:0 == 0
+			SOURCE:18 += 2000
+			SOURCE:12 += 500
+		ELSEIF ABL:0 == 1
+			SOURCE:18 += 2300
+			SOURCE:12 += 800
+		ELSEIF ABL:0 == 2
+			SOURCE:18 += 2600
+			SOURCE:12 += 1200
+		ELSEIF ABL:0 == 3
+			SOURCE:18 += 2900
+			SOURCE:12 += 1900
+		ELSEIF ABL:0 == 4
+			SOURCE:18 += 3200
+			SOURCE:12 += 2500
+		ELSE
+			SOURCE:18 += 3500
+			SOURCE:12 += 3000
+		ENDIF
+	;Ｂの場合
+	ELSEIF LOCAL == 4
+		TIMES SOURCE:3 , 2.00
+		;ABL:3를 본다
+		IF ABL:3 == 0
+			SOURCE:18 += 2000
+			SOURCE:12 += 500
+		ELSEIF ABL:3 == 1
+			SOURCE:18 += 2300
+			SOURCE:12 += 800
+		ELSEIF ABL:3 == 2
+			SOURCE:18 += 2600
+			SOURCE:12 += 1200
+		ELSEIF ABL:3 == 3
+			SOURCE:18 += 2900
+			SOURCE:12 += 1900
+		ELSEIF ABL:3 == 4
+			SOURCE:18 += 3200
+			SOURCE:12 += 2500
+		ELSE
+			SOURCE:18 += 3500
+			SOURCE:12 += 3000
+		ENDIF
+	;Ｖの場合
+	ELSEIF LOCAL == 2
+		;ABL:1를 본다
+		IF ABL:1 == 0
+			SOURCE:1 += 20
+			SOURCE:18 += 2000
+			SOURCE:12 += 500
+		ELSEIF ABL:1 == 1
+			SOURCE:1 += 60
+			SOURCE:18 += 2300
+			SOURCE:12 += 800
+		ELSEIF ABL:1 == 2
+			SOURCE:1 += 400
+			SOURCE:18 += 2600
+			SOURCE:12 += 1200
+		ELSEIF ABL:1 == 3
+			SOURCE:1 += 1000
+			SOURCE:18 += 2900
+			SOURCE:12 += 1900
+		ELSEIF ABL:1 == 4
+			SOURCE:1 += 1400
+			SOURCE:18 += 3200
+			SOURCE:12 += 2500
+		ELSE
+			SOURCE:1 += 2000
+			SOURCE:18 += 3500
+			SOURCE:12 += 3000
+		ENDIF
+	;Ａの場合
+	ELSEIF LOCAL == 3
+		;ABL:2를 본다
+		IF ABL:2 == 0
+			SOURCE:2 += 20
+			SOURCE:18 += 2000
+			SOURCE:12 += 500
+		ELSEIF ABL:2 == 1
+			SOURCE:2 += 60
+			SOURCE:18 += 2300
+			SOURCE:12 += 800
+		ELSEIF ABL:2 == 2
+			SOURCE:2 += 400
+			SOURCE:18 += 2600
+			SOURCE:12 += 1200
+		ELSEIF ABL:2 == 3
+			SOURCE:2 += 1000
+			SOURCE:18 += 2900
+			SOURCE:12 += 1900
+		ELSEIF ABL:2 == 4
+			SOURCE:2 += 1400
+			SOURCE:18 += 3200
+			SOURCE:12 += 2500
+		ELSE
+			SOURCE:2 += 2000
+			SOURCE:18 += 3500
+			SOURCE:12 += 3000
+		ENDIF
+	ENDIF
+
+	;ABL:12를 본다
+	IF ABL:12 == 0
+		SOURCE:11 += 100
+		TIMES SOURCE:0 , 0.30
+		TIMES SOURCE:3 , 0.30
+		TIMES SOURCE:1 , 0.30
+		TIMES SOURCE:2 , 0.30
+	ELSEIF ABL:12 == 1
+		SOURCE:11 += 160
+		TIMES SOURCE:0 , 0.70
+		TIMES SOURCE:3 , 0.70
+		TIMES SOURCE:1 , 0.70
+		TIMES SOURCE:2 , 0.70
+	ELSEIF ABL:12 == 2
+		SOURCE:11 += 220
+		TIMES SOURCE:0 , 1.00
+		TIMES SOURCE:3 , 1.00
+		TIMES SOURCE:1 , 1.00
+		TIMES SOURCE:2 , 1.00
+	ELSEIF ABL:12 == 3
+		SOURCE:11 += 280
+		TIMES SOURCE:0 , 1.20
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:1 , 1.20
+		TIMES SOURCE:2 , 1.20
+	ELSEIF ABL:12 == 4
+		SOURCE:11 += 340
+		TIMES SOURCE:0 , 1.40
+		TIMES SOURCE:3 , 1.40
+		TIMES SOURCE:1 , 1.40
+		TIMES SOURCE:2 , 1.40
+	ELSE
+		SOURCE:11 += 400
+		TIMES SOURCE:0 , 1.60
+		TIMES SOURCE:3 , 1.60
+		TIMES SOURCE:1 , 1.60
+		TIMES SOURCE:2 , 1.60
+	ENDIF
+
+	;ABL:30를 본다
+	IF ABL:30 == 0
+		SOURCE:20 += 300
+		TIMES SOURCE:0 , 1.00
+		TIMES SOURCE:3 , 1.00
+		TIMES SOURCE:1 , 1.00
+		TIMES SOURCE:2 , 1.00
+		TIMES SOURCE:12 , 1.00
+	ELSEIF ABL:30 == 1
+		SOURCE:20 += 600
+		TIMES SOURCE:0 , 1.10
+		TIMES SOURCE:3 , 1.10
+		TIMES SOURCE:1 , 1.10
+		TIMES SOURCE:2 , 1.10
+		TIMES SOURCE:12 , 1.10
+	ELSEIF ABL:30 == 2
+		SOURCE:20 += 900
+		TIMES SOURCE:0 , 1.20
+		TIMES SOURCE:3 , 1.20
+		TIMES SOURCE:1 , 1.20
+		TIMES SOURCE:2 , 1.20
+		TIMES SOURCE:12 , 1.20
+	ELSEIF ABL:30 == 3
+		SOURCE:20 += 1500
+		TIMES SOURCE:0 , 1.30
+		TIMES SOURCE:3 , 1.30
+		TIMES SOURCE:1 , 1.30
+		TIMES SOURCE:2 , 1.30
+		TIMES SOURCE:12 , 1.30
+	ELSEIF ABL:30 == 4
+		SOURCE:20 += 2500
+		TIMES SOURCE:0 , 1.50
+		TIMES SOURCE:3 , 1.50
+		TIMES SOURCE:1 , 1.50
+		TIMES SOURCE:2 , 1.50
+		TIMES SOURCE:12 , 1.50
+	ELSE
+		SOURCE:20 += 3800
+		TIMES SOURCE:0 , 1.70
+		TIMES SOURCE:3 , 1.70
+		TIMES SOURCE:1 , 1.70
+		TIMES SOURCE:2 , 1.70
+		TIMES SOURCE:12 , 1.70
+	ENDIF
+;夜我慢
+ELSEIF ARG:1 == 2
+	PRINTL 　
+	PRINTFORML 자위경험 ＋1
+	EXP:10 += 1
+	;性感帯判定
+	LOCAL = FAV_FEEL()
+	;Ｃの場合
+	IF LOCAL == 1 || ARG:2 != 1
+		PRINTFORML 쾌C의 구슬＋{ABL:30*200}
+		JUEL:0 += ABL:30*200
+	;Ｂの場合
+	ELSEIF LOCAL == 4
+		PRINTFORML 쾌B의 구슬＋{ABL:30*200}
+		JUEL:3 += ABL:30*200
+	;Ｖの場合
+	ELSEIF LOCAL == 2
+		PRINTFORML 쾌V의 구슬＋{ABL:30*200}
+		JUEL:1 += ABL:30*200
+	;Ａの場合
+	ELSEIF LOCAL:1 == 3
+		PRINTFORML 쾌A의 구슬＋{ABL:30*200}
+		JUEL:2 += ABL:30*200
+	ENDIF
+	PRINTFORMW 욕정의 구슬＋{ABL:30*300}
+	JUEL:13 += ABL:30*300
+	PRINTL 　
+;夜自慰
+ELSEIF ARG:1 == 3
+	PRINTL 　
+	PRINTFORML 자위경험＋{ABL:30}
+	EXP:10 += ABL:30
+	PRINTFORML 절정경험＋{ABL:30}
+	EXP:2 += ABL:30
+	;ペニスがある場合
+	IF PENIS(TARGET)
+		PRINTFORML %EXPNAME:3%＋{ABL:30}
+		;ふたなり初射精の処理
+		IF EXP:3 == 0 && TALENT:120 == 0
+			CFLAG:11 |= 1p2
+			EXP:50 += 1
+			PRINTL 이상경험 ＋1
+		ENDIF
+		EXP:3 += ABL:30
+		;LUNATIC以上は射精するたびに体力が減少
+		TRYCALL EXHAUST_EJAC, TARGET, ABL:30
+	ENDIF
+	;性感帯判定
+	LOCAL = FAV_FEEL()
+	;Ｃの場合
+	IF LOCAL == 1 || ARG:2 != 1
+		PRINTFORML 쾌C의 구슬＋{ABL:30*500}
+		JUEL:0 += ABL:30*500
+	;Ｂの場合
+	ELSEIF LOCAL == 4
+		PRINTFORML 쾌B의 구슬＋{ABL:30*500}
+		JUEL:3 += ABL:30*500
+	;Ｖの場合
+	ELSEIF LOCAL == 2
+		PRINTFORML 쾌V의 구슬＋{ABL:30*500}
+		JUEL:1 += ABL:30*500
+	;Ａの場合
+	ELSEIF LOCAL == 3
+		PRINTFORML 쾌A의 구슬＋{ABL:30*500}
+		JUEL:2 += ABL:30*500
+	ENDIF
+	PRINTFORML 욕정의 구슬＋{ABL:30*300}
+	JUEL:13 += ABL:30*300
+	PRINTFORMW 굴복의 구슬＋{ABL:30*500}
+	JUEL:14 += ABL:30*500
+	PRINTL 　
+;助手中自慰
+ELSEIF ARG:1 == 5
+	PRINTL 　
+	PRINTFORML 자위경험(%CALLNAME:TARGET%)＋1
+	EXP:10 += 1
+	PRINTFORML 절정경험(%CALLNAME:TARGET%)＋1
+	EXP:2 += 1
+	;性感帯判定
+	LOCAL = FAV_FEEL()
+	;Ｃの場合
+	IF LOCAL == 1 || ARG:2 != 1
+		PRINTFORML %CALLNAME:TARGET%의 쾌C의 구슬＋{ABL:30*300}
+		JUEL:0 += ABL:30*300
+	;Ｂの場合
+	ELSEIF LOCAL == 4
+		PRINTFORML %CALLNAME:TARGET%의 쾌B의 구슬＋{ABL:30*300}
+		JUEL:3 += ABL:30*300
+	;Ｖの場合
+	ELSEIF LOCAL == 2
+		PRINTFORML %CALLNAME:TARGET%의 쾌V의 구슬＋{ABL:30*300}
+		JUEL:1 += ABL:30*300
+	;Ａの場合
+	ELSEIF LOCAL == 3
+		PRINTFORML %CALLNAME:TARGET%의 쾌A의 구슬＋{ABL:30*300}
+		JUEL:2 += ABL:30*300
+	ENDIF
+	PRINTFORML %CALLNAME:TARGET%의 욕정의 구슬＋{ABL:30*200}
+	JUEL:13 += ABL:30*200
+	PRINTFORML %CALLNAME:TARGET%의 굴복의 구슬＋{ABL:30*500}
+	JUEL:14 += ABL:30*500
+	PRINTFORMW %CALLNAME:TARGET%의 치정의 구슬＋{ABL:30*300}
+	JUEL:15 += ABL:30*300
+	PRINTL 　
+	;ペニスがある場合
+	IF PENIS(TARGET)
+		;-------------------------------------------------
+		;射精ゲージチェック
+		;-------------------------------------------------
+		LOCAL:1 = 0
+		;ABL:12를 본다
+		IF ABL:12 == 0
+			LOCAL:1 = 500
+		ELSEIF ABL:12 == 1
+			LOCAL:1 = 600
+		ELSEIF ABL:12 == 2
+			LOCAL:1 = 700
+		ELSEIF ABL:12 == 3
+			LOCAL:1 = 800
+		ELSEIF ABL:12 == 4
+			LOCAL:1 = 1000
+		ELSE
+			LOCAL:1 = 1100
+		ENDIF
+
+		;ABL:30를 본다
+		IF ABL:30 == 0
+			TIMES LOCAL:1 , 0.80
+		ELSEIF ABL:30 == 1
+			TIMES LOCAL:1 , 0.90
+		ELSEIF ABL:30 == 2
+			TIMES LOCAL:1 , 1.00
+		ELSEIF ABL:30 == 3
+			TIMES LOCAL:1 , 1.10
+		ELSEIF ABL:30 == 4
+			TIMES LOCAL:1 , 1.20
+		ELSE
+			TIMES LOCAL:1 , 1.30
+		ENDIF
+
+		;ABL:11를 본다
+		IF ABL:11 == 0
+			TIMES LOCAL:1 , 1.00
+		ELSEIF ABL:11 == 1
+			TIMES LOCAL:1 , 1.10
+		ELSEIF ABL:11 == 2
+			TIMES LOCAL:1 , 1.20
+		ELSEIF ABL:11 == 3
+			TIMES LOCAL:1 , 1.30
+		ELSEIF ABL:11 == 4
+			TIMES LOCAL:1 , 1.40
+		ELSE
+			TIMES LOCAL:1 , 1.50
+		ENDIF
+
+		;Ｃ自慰の場合３倍にする
+		SIF LOCAL == 1 || ARG:2 != 1
+			LOCAL:1 *= 3
+		
+		BASE:TARGET:2 += LOCAL:1
+	ENDIF
+
+	;-------------------------------------------------
+	;사정 체크
+	;-------------------------------------------------
+	TFLAG:91 = SAMEN_CHECK(TARGET)
+
+	;大量射精
+	IF TFLAG:91 == 2
+		EXP:3 += 2
+		EXP:4 += 1
+		PRINTFORML %CALLNAME:TARGET% 대량사정
+		;Ｐに精液汚れ
+		STAIN:TARGET:2 |= 1p2
+
+		BASE:TARGET:2 = MIN(BASE:TARGET:2 - EJAC*2, EJAC-1)
+		;助手が射精フラグ
+		TFLAG:36 = 4
+		PRINTL 　
+	;通常の射精
+	ELSEIF TFLAG:91 == 1
+		EXP:3 += 1
+		PRINTFORML %CALLNAME:TARGET% 사정
+		;Ｐに精液汚れ
+		STAIN:TARGET:2 |= 1p2
+
+		BASE:TARGET:2 = MIN(BASE:TARGET:2 - EJAC, EJAC-1)
+		;助手が射精フラグ
+		TFLAG:36 = 3
+	ENDIF
+	;LUNATIC以上は射精するたびに体力が減少
+	TRYCALL EXHAUST_EJAC, ASSI, TFLAG:91
+	;ふたなり初射精の処理
+	IF EXP:3 == 0 && TALENT:120 == 0 && TFLAG:91 > 0
+		CFLAG:11 |= 1p2
+		EXP:50 += 1
+		PRINTFORML 이상경험 (%CALLNAME:TARGET%)＋1
+	ENDIF
+	SIF TFLAG:91 > 0
+		WAIT
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;조교 대상 보존 함수@TARGETSAVE
+;인수に口上主のキャラ番号を入れ, 主に@EVENTENDの下でTRYCALL
+;対象のCFLAG:5217に前回調教した相手のキャラ番号を保存します. 
+;また, 「口上主（調教対象）→助手」と「口上主（助手）→調教対象」の面識判定も更新, 口上主のCFLAG:5800台を使用
+;--------------------------------------------------
+@TARGETSAVE, ARG
+LOCAL = GETCHARA(ARG, 1)
+;口上主がいる場合
+IF LOCAL > 0
+	;調教したキャラを保存
+	CFLAG:LOCAL:5219 = NO:TARGET
+	;口上主が助手として前回調教したキャラ番号をリセット
+	;助手として入った直後でなく間を空けても口上を変える場合は↓の行をコメントアウト
+	CFLAG:LOCAL:5217 = 0
+ENDIF
+;助手がいる場合面識判定を更新
+IF ASSI > 0
+	;口上主が조수의 場合
+	IF NO:ASSI == ARG
+		LOCAL:1 = 5800+NO:TARGET
+		SIF CFLAG:ASSI:(LOCAL:1) <= 1
+			CFLAG:ASSI:(LOCAL:1) = 2
+		;口上主が助手として前回調教したキャラ番号として保存
+		CFLAG:ASSI:5217 = NO:TARGET
+	;口上主が調教対象の場合
+	ELSEIF NO:TARGET == ARG
+		LOCAL:1 = 5800+NO:ASSI
+		SIF CFLAG:(LOCAL:1) <= 1
+			CFLAG:(LOCAL:1) = 2
+	ENDIF
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;조수 플레이 내용 보존 함수@ASSIDATA
+;대상의 @KOJO_MESSAGE_COM_ASSI_X1 아래에서 TRYCALL
+;対象が助手として調教にどの程度関わったかをCFLAG:5211～215に保存します. 
+;211（前回の調教で調教者として一度以上調教コマンドを実行した）
+;212（1=助手として奴隷の処女を奪った, 2=加えてその奴隷が恋慕, 3と4はそれぞれ1と2と同じで, 口上主がペニスを使用）
+;213（口上主が助手として処女を奪った数の累計）
+;214（1=助手であった口上主の処女を主人が奪った, 2=奴隷に奪わせた）
+;215（助手としての仕事がどの程度あったか. 
+;	0は一切出番なし, 1はカメラのみ, 2は軽い行為参加, 3は奴隷同士の行為, 4は主人との行為, 5はそもそも奴隷がオトコ）
+;また, 「口上主（助手）→調教対象」の面識判定も更新, 口上主のCFLAG:5800台を使用
+;--------------------------------------------------
+@ASSIDATA
+;主人が選択するコマンドで조수의 出番があったか記録
+;逆강간・助手（の애널を）を犯させる・３Ｐ（奴隷同士の行為）
+IF SELECTCOM == 25 || SELECTCOM == 35 || SELECTCOM == 307 || SELECTCOM == 308 || SELECTCOM == 338 || SELECTCOM == 610
+	;プレイ内容更新
+	SIF CFLAG:ASSI:5215 <= 2
+		CFLAG:ASSI:5215 = 3
+	;相手がオトコ
+	SIF TALENT:120
+		CFLAG:ASSI:5215 = 5
+	;助手（口上主）が処女でＶ삽입（奴隷に奪われた）
+	SIF TALENT:ASSI:0 && EXP:ASSI:0 == 0 && (SELECTCOM == 25 || SELECTCOM == 65)
+		CFLAG:ASSI:5214 = 2
+;助手（の애널を）を犯す（主人との行為）
+ELSEIF SELECTCOM == 26 || SELECTCOM == 36
+	;プレイ内容更新
+	SIF CFLAG:ASSI:5215 <= 3
+		CFLAG:ASSI:5215 = 4
+	;助手（口上主）が処女でＶ삽입（主人に捧げた）
+	SIF TALENT:ASSI:0 && EXP:ASSI:0 == 0 && SELECTCOM == 26
+		CFLAG:ASSI:5214 = 1
+;助手にキス・裸体盛り・二本펠라・二人펠라・더블스마타・더블파이즈리・더블스팽킹・Ｗ스팽킹（軽めの行為）
+ELSEIF SELECTCOM == 6 || SELECTCOM == 107 || SELECTCOM == 303 || SELECTCOM == 304 || SELECTCOM == 305 || SELECTCOM == 306 || SELECTCOM == 309 || SELECTCOM == 310 || SELECTCOM == 311
+	;プレイ内容更新
+	SIF CFLAG:ASSI:5215 <= 1
+		CFLAG:ASSI:5215 = 2
+;ビデオカメラ（撮影担当やらされていると解釈）
+ELSEIF SELECTCOM == 100
+	;プレイ内容更新
+	SIF CFLAG:ASSI:5215 == 0
+		CFLAG:ASSI:5215 = 1
+ENDIF
+;処女喪失の記録
+IF TALENT:0 && EXP:0 == 1
+	;정상위・후배위・기승위（ペニス使用）
+	IF (SELECTCOM == 20 || SELECTCOM == 21 || SELECTCOM == 24) && PENIS(ASSI)
+		SIF TALENT:150
+			CFLAG:ASSI:5212 = 4
+		SIF TALENT:150 == 0
+			CFLAG:ASSI:5212 = 3
+		CFLAG:ASSI:5213 += 1
+		LOCAL = 5800+NO:TARGET
+		IF CFLAG:ASSI:LOCAL == 5
+			CFLAG:ASSI:LOCAL = 7
+		ELSEIF CFLAG:ASSI:LOCAL <= 4
+			CFLAG:ASSI:LOCAL = 6
+		ENDIF
+	;指삽입れ・바이브・정상위・후배위・蜘蛛脚六点責め
+	ELSEIF SELECTCOM == 4 || SELECTCOM == 12 || SELECTCOM == 20 || SELECTCOM == 21 || (SELECTCOM == 654 && PREVCOM == 654)
+		SIF TALENT:150
+			CFLAG:ASSI:5212 = 2
+		SIF TALENT:150 == 0
+			CFLAG:ASSI:5212 = 1
+		CFLAG:ASSI:5213 += 1
+		LOCAL = 5800+NO:TARGET
+		IF CFLAG:ASSI:LOCAL == 5
+			CFLAG:ASSI:LOCAL = 7
+		ELSEIF CFLAG:ASSI:LOCAL <= 4
+			CFLAG:ASSI:LOCAL = 6
+		ENDIF
+	;秘貝開帳（処女喪失しなくなった）
+;	ELSEIF SELECTCOM == 110 && B == 0 && ABL:14 >= 4
+;		SIF TALENT:150
+;			CFLAG:ASSI:5212 = 2
+;		SIF TALENT:150 == 0
+;			CFLAG:ASSI:5212 = 1
+;		CFLAG:ASSI:5213 += 1
+;		A = 5800+NO:TARGET
+;		IF CFLAG:ASSI:5A == 5
+;			CFLAG:ASSI:5A = 7
+;		ELSEIF CFLAG:ASSI:5A <= 4
+;			CFLAG:ASSI:5A = 6
+;		ENDIF
+	ENDIF
+ENDIF
+;面識判定の更新
+IF ASSIPLAY
+	CFLAG:5211 = 1
+	LOCAL = 5800+NO:TARGET
+	IF CFLAG:ASSI:LOCAL == 4
+		CFLAG:ASSI:LOCAL = 5
+	ELSEIF CFLAG:ASSI:LOCAL <= 2
+		CFLAG:ASSI:LOCAL = 3
+	ENDIF
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;조수 플레이 면식 보존 함수@ASSIDATA_2
+;대상의 @KOJO_MESSAGE_COM_X1 아래에서 TRYCALL
+;対象が助手に調教された際, その助手との面識判定を更新します. 
+;「口上主（調教対象）→助手」の面識判定を更新, 口上主のCFLAG:5800台を使用
+;--------------------------------------------------
+@ASSIDATA_2
+IF ASSI > 0
+	IF ASSIPLAY
+		LOCAL = 5800+NO:ASSI
+		IF CFLAG:LOCAL == 3
+			CFLAG:LOCAL = 5
+		ELSEIF CFLAG:LOCAL == 6
+			CFLAG:LOCAL = 7
+		ELSEIF CFLAG:LOCAL <= 2
+			CFLAG:LOCAL = 4
+		ENDIF
+	ENDIF
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 첫회 판정 관리 함수@COM_FLAG계
+;파루플릿用. 各コマンドの初回判定フラグを更新します
+;CFLAG9000がCOM0番台（애무系コマンド）, 9001が10番台…といったように対応. 
+;COM番号:CFLAGの数字で
+;0:1 1:2 2:4 3:8 4:16 5:32 6:64 7:128 8:256 9:512 それ以上は各種派生コマンドにでも手動で設定可能. 
+;以上の法則の二進管理で対応. 初回だった場合, RESULT:1に1を返す
+;派生コマンドにも対応（クンニをする前に岩清水を行った場合など）
+;自慰はコマンド番号が変わらずに派生するため, 初めて派生したらRESULT:2が1になる. 
+;（自慰をしたことないのに双穴바이브オナニーをやると3, 現状他になし）
+;--------------------------------------------------
+@COM_FLAG
+;コマンド番号の一の位を求める
+LOCAL:1 = SELECTCOM%10
+;フラグ番号を求める
+LOCAL = SELECTCOM/10+9000
+RESULT:1 = 0
+
+IF LOCAL:1 == 0 && (CFLAG:LOCAL & 1p0) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p0
+ELSEIF LOCAL:1 == 1 && (CFLAG:LOCAL & 1p1) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p1
+ELSEIF LOCAL:1 == 2 && (CFLAG:LOCAL & 1p2) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p2
+ELSEIF LOCAL:1 == 3 && (CFLAG:LOCAL & 1p3) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p3
+ELSEIF LOCAL:1 == 4 && (CFLAG:LOCAL & 1p4) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p4
+ELSEIF LOCAL:1 == 5 && (CFLAG:LOCAL & 1p5) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p5
+ELSEIF LOCAL:1 == 6 && (CFLAG:LOCAL & 1p6) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p6
+ELSEIF LOCAL:1 == 7 && (CFLAG:LOCAL & 1p7) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p7
+ELSEIF LOCAL:1 == 8 && (CFLAG:LOCAL & 1p8) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p8
+ELSEIF LOCAL:1 == 9 && (CFLAG:LOCAL & 1p9) == 0
+	RESULT:1 = 1
+	CFLAG:LOCAL |= 1p9
+ENDIF
+
+;自慰系派生
+;1p10読心 11公開 12바이브 13애널바이브 14양구멍
+IF SELECTCOM == 7
+	;読心
+	IF TEQUIP:74 && (CFLAG:9000 & 1p10) == 0
+		RESULT:2 = 1
+		CFLAG:9000 |= 1p10
+	ENDIF
+	;公開
+	IF TEQUIP:50 && (CFLAG:9000 & 1p11) == 0
+		RESULT:2 = 1
+		CFLAG:9000 |= 1p11
+	ENDIF
+	;바이브
+	IF TEQUIP:20 == 1 && (CFLAG:9000 & 1p12) == 0
+		RESULT:2 = 1
+		CFLAG:9000 |= 1p12
+	ENDIF
+	;애널바이브
+	IF TEQUIP:25 == 1 && (CFLAG:9000 & 1p13) == 0
+		RESULT:2 = 1
+		CFLAG:9000 |= 1p13
+	ENDIF
+	;양구멍바이브
+	IF TEQUIP:20 == 1 && TEQUIP:25 == 1 && (CFLAG:9000 & 1p14) == 0
+		RESULT:2 = 1
+		CFLAG:9000 |= 1p14
+	ENDIF
+ENDIF
+RETURN 0
+
+@COM_FLAG2
+++CFLAG:(7000+SELECTCOM) 
+
+;自慰系派生
+IF SELECTCOM == 7
+	;読心
+	IF TEQUIP:74
+		++CFLAG:8900
+	ENDIF
+	;公開
+	IF TEQUIP:50
+		++CFLAG:8901
+	ENDIF
+	;바이브
+	IF TEQUIP:20 == 1
+		++CFLAG:8902
+	ENDIF
+	;애널바이브
+	IF TEQUIP:25 == 1
+		++CFLAG:8903
+	ENDIF
+	;양구멍바이브
+	IF TEQUIP:20 == 1 && TEQUIP:25 == 1
+		++CFLAG:8904
+	ENDIF
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;각인 판정 식중함수@MARK_PA(각인 번호)
+;現在実行中のコマンドで刻印を取得するかどうかを判定し, 取得レベルを返します
+;返り値0の場合取得しなかったとみなされ, 1～3ならその数値を取得したことを表します
+;--------------------------------------------------
+@MARK_PA(ARG)
+#FUNCTION
+
+;反発刻印
+IF ARG == 9
+	LOCAL = UP:20 + UP:21
+	IF LOCAL >= 500 && LOCAL < 2000
+		LOCAL:1 = 1
+	ELSEIF LOCAL >= 2000 && LOCAL < 4000
+		LOCAL:1 = 2
+	ELSEIF LOCAL >= 4000
+		LOCAL:1 = 3
+	ELSE
+		LOCAL:1 = 0
+	ENDIF
+	SIF MARK:9 < LOCAL:1 && MARK:97 < LOCAL:1 && TFLAG:105 == 0
+		RETURNF LOCAL:1
+;苦痛刻印
+ELSEIF ARG == 0
+	LOCAL = UP:16
+	IF LOCAL >= 500 && LOCAL < 1500
+		LOCAL:1 = 1
+	ELSEIF LOCAL >= 1500 && LOCAL < 3000
+		LOCAL:1 = 2
+	ELSEIF LOCAL >= 3000
+		LOCAL:1 = 3
+	ELSE
+		LOCAL:1 = 0
+	ENDIF
+	SIF MARK:0 < LOCAL:1
+		RETURNF LOCAL:1
+;快楽刻印
+ELSEIF ARG == 1
+	LOCAL = UP:0 + UP:1 + UP:2 + UP:3
+	IF LOCAL >= 1000 && LOCAL < 3000
+		LOCAL:1 = 1
+	ELSEIF LOCAL >= 3000 && LOCAL < 6000
+		LOCAL:1 = 2
+	ELSEIF LOCAL >= 6000
+		LOCAL:1 = 3
+	ELSE
+		LOCAL:1 = 0
+	ENDIF
+	SIF MARK:1 < LOCAL:1
+		RETURNF LOCAL:1
+;屈服刻印
+ELSEIF ARG == 2
+	LOCAL = UP:14 + UP:15 / 20 + UP:16 / 20 + UP:17 / 5
+	IF LOCAL >= 1000 && LOCAL < 2500
+		LOCAL:1 = 1
+	ELSEIF LOCAL >= 2500 && LOCAL < 5000
+		LOCAL:1 = 2
+	ELSEIF LOCAL >= 5000
+		LOCAL:1 = 3
+	ELSE
+		LOCAL:1 = 0
+	ENDIF
+	SIF MARK:2 < LOCAL:1
+		RETURNF LOCAL:1
+;恐怖刻印
+ELSEIF ARG == 8
+	LOCAL = UP:17 + UP:16 / 50
+	IF LOCAL >= 1000 && LOCAL < 2500
+		LOCAL:1 = 1
+	ELSEIF LOCAL >= 2500 && LOCAL < 5000
+		LOCAL:1 = 2
+	ELSEIF LOCAL >= 5000
+		LOCAL:1 = 3
+	ELSE
+		LOCAL:1 = 0
+	ENDIF
+	SIF MARK:8 < LOCAL:1 && MARK:96 < LOCAL:1
+		RETURNF LOCAL:1
+ENDIF
+RETURNF 0
+
+;--------------------------------------------------
+;질내 판정 식중함수@V_PA(0=소유자 판정,1=물건 판정)
+;現在TARGETの膣内に何が入っているかを判定. TARGETがいないと-1を返す. 
+;섹스系コマンドの場合, 入れっぱなしフラグの有無はあえてチェックしない. 
+;인수0の場合, 返り値
+;（0=膣内は空っぽ,1=바이브等無所属の物,2=주인의 身体,3=조수의 身体,4=촉수・民間人等）
+;인수1の場合, 返り値
+;（0=膣内は空っぽ,1=ペニス,2=ペニスバンド,3=指,4=바이브,5=로터,6=쿠스코,7=전극,8=腕,9=벌룬,10=座薬
+;　11=角,12=요석,13=군고구마,14=蜘蛛の脚,15=全身（ダイビング系）,16=半幽霊,　21=鰻,22=スライム,23=촉수,24=吸引機,25=바벨）
+;--------------------------------------------------
+@V_PA(ARG)
+#FUNCTION
+SIF TARGET < 0
+	RETURNF -1
+
+;TEQUIPでいつでも判別できるもの
+;촉수
+IF (TEQUIP:20 || TEQUIP:21) && TEQUIP:90
+	IF ARG
+		RETURNF 23
+	ELSE
+		RETURNF 4
+	ENDIF
+;바이브
+ELSEIF TEQUIP:20 == 1
+	IF ARG
+		RETURNF 4
+	ELSE
+		RETURNF 1
+	ENDIF
+;요석
+ELSEIF TEQUIP:20 == 2
+	IF ARG
+		RETURNF 12
+	ELSE
+		RETURNF 1
+	ENDIF
+;로터
+ELSEIF TEQUIP:20 == 3
+	IF ARG
+		RETURNF 5
+	ELSE
+		RETURNF 1
+	ENDIF
+;전극
+ELSEIF TEQUIP:20 == 4
+	IF ARG
+		RETURNF 7
+	ELSE
+		RETURNF 1
+	ENDIF
+;바벨
+ELSEIF TEQUIP:20 == 5
+	IF ARG
+		RETURNF 25
+	ELSE
+		RETURNF 1
+	ENDIF
+;벌룬
+ELSEIF TEQUIP:20 == 6
+	IF ARG
+		RETURNF 9
+	ELSE
+		RETURNF 1
+	ENDIF
+;吸引機
+ELSEIF TEQUIP:20 == 7
+	IF ARG
+		RETURNF 24
+	ELSE
+		RETURNF 1
+	ENDIF
+;군고구마
+ELSEIF TEQUIP:20 == 9
+	IF ARG
+		RETURNF 13
+	ELSE
+		RETURNF 1
+	ENDIF
+;座薬
+ELSEIF TEQUIP:15 & 2
+	IF ARG
+		RETURNF 10
+	ELSE
+		RETURNF 1
+	ENDIF
+;쿠스코
+ELSEIF TEQUIP:21 == 1
+	IF ARG
+		RETURNF 6
+	ELSE
+		RETURNF 1
+	ENDIF
+;鰻
+ELSEIF TEQUIP:55 == 2
+	IF ARG
+		RETURNF 21
+	ELSE
+		RETURNF 1
+	ENDIF
+;スライム
+ELSEIF TEQUIP:55 == 4
+	IF ARG
+		RETURNF 22
+	ELSE
+		RETURNF 1
+	ENDIF
+ENDIF
+;以下未完成
+;파루플릿専用
+;IF CFLAG:5000 == 1
+
+;--------------------------------------------------
+;파루플릿 컨피그 함수@KOJO_CONFIG계
+;--------------------------------------------------
+@KOJO_CONFIG_A(ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9)
+;機能群Ａ　CFLAG 5221
+IF ARG:1 == 1
+	CFLAG:5221 |= 1p0
+ELSEIF ARG:1 == 0 && CFLAG:5221 & 1p0
+	CFLAG:5221 -= 1p0
+ENDIF
+
+IF ARG:2 == 1
+	CFLAG:5221 |= 1p1
+	CFLAG:5221 &= ~(1p2 + 1p3)
+ELSEIF ARG:2 == 2
+	SIF (CFLAG:5221 & 1p2) == 0
+		CFLAG:5221 |= 1p2
+	SIF CFLAG:5221 & 1p1 && (CFLAG:5221 & 1p3) == 0
+		CFLAG:5221 -= 1p1
+ELSEIF ARG:2 == 0
+	CFLAG:5221 = 0
+ENDIF
+
+IF ARG:3 == 1
+	CFLAG:5221 |= 1p4
+ELSEIF ARG:3 == 0
+	CFLAG:5221 &= ~1p4
+ENDIF
+
+IF ARG:4 == 1
+	CFLAG:5221 |= 1p5
+ELSEIF ARG:4 == 0
+	CFLAG:5221 &= ~1p5
+ENDIF
+
+IF ARG:5 == 2
+	CFLAG:5221 |= 1p6
+	CFLAG:5221 &= ~(1p7 + 1p8)
+ELSEIF ARG:5 == 1
+	CFLAG:5221 |= 1p7
+	CFLAG:5221 &= ~(1p6 + 1p8)
+ELSEIF ARG:5 == 0
+	CFLAG:5221 |= 1p8
+	CFLAG:5221 &= ~(1p6 + 1p7)
+ENDIF
+
+
+@KOJO_CONFIG_B(ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9)
+;機能群Ｂ　CFLAG 222
+IF ARG:1 == 1
+	CFLAG:5222 |= 1p0
+ELSEIF ARG:1 == 0
+	ARG:2 = 0
+	ARG:3 = 0
+	ARG:4 = 0
+	CFLAG:5222 = 0
+ENDIF
+
+IF ARG:2 == 1
+	CFLAG:5222 |= 1p1
+ELSEIF ARG:2 == 0
+	CFLAG:5222 &= ~1p1
+ENDIF
+
+IF ARG:3 == 2
+	CFLAG:5222 |= 1p2
+	CFLAG:5222 &= ~1p3
+ELSEIF ARG:3 == 1
+	CFLAG:5222 |= 1p3
+	CFLAG:5222 &= ~1p2
+ELSEIF ARG:2 == 0 && ((CFLAG:5222 & 1p2) || (CFLAG:5222 & 1p3))
+	CFLAG:5222 &= ~(1p2 + 1p3)
+ENDIF
+
+IF ARG:4 == 1
+	CFLAG:5222 |= 1p4
+ELSEIF ARG:4 == 0
+	CFLAG:5222 &= ~1p4
+ENDIF
+
+@KOJO_CONFIG_C(ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9)
+;機能群Ｃ　CFLAG 223
+IF ARG:1 == 1
+	CFLAG:5223 |= 1p0
+ELSEIF ARG:1 == 0
+	ARG:2 = 0
+	CFLAG:5223 = 0
+ENDIF
+
+IF ARG:2 == 2
+	CFLAG:5223 |= 1p2
+	CFLAG:5223 |= 1p3
+ELSEIF ARG:2 == 1
+	CFLAG:5223 |= 1p3
+	CFLAG:5223 &= ~1p2
+ELSEIF ARG:2 == 0
+	CFLAG:5223 &= 1p0
+ENDIF
+
+@KOJO_CONFIG_D(ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9)
+;機能群Ｄ　CFLAG 224
+;メモ（1：有効, 2：サポート有効）
+IF ARG:1 == 1 && CFLAG:5220 == 0
+	CFLAG:5224 |= 1p0
+ELSEIF ARG:1 == 0
+	ARG:2 = 0
+	CFLAG:5224 = 0
+	CFLAG:5220 = 0
+ENDIF
+
+IF ARG:2 == 1
+	CFLAG:5224 |= 1p1
+ELSEIF ARG:2 == 0
+	CFLAG:5224 &= ~1p1
+ENDIF
+
+@KOJO_CONFIG_E(ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8, ARG:9)
+;機能群Ｅ　CFLAG 225
+;メモ（1：有効）
+IF ARG:1 == 1
+	CFLAG:5225 |= 1p0
+ELSEIF ARG:1 == 0
+	CFLAG:5225 = 0
+ENDIF
+
+
+;--------------------------------------------------
+;커맨드 판정 함수@COM_TRY
+;NEXTCOMの中身のコマンドが実行可能かどうかを判定. NEXTCOMを使いたいが不自然な動作が嫌な場合の確認に. 
+;RESULT = (0=実行可, 1=実行判定で拒否される, 2=コマンド使用不可（アイテムがない, コンフィグで不許可等）)
+;인수ARGは判定を表示するか非表示か（表示）
+;--------------------------------------------------
+@COM_TRY, ARG
+SIF NEXTCOM < 0
+	RETURN 0
+
+TRYCALLFORM COM_ABLE{NEXTCOM}
+SIF RESULT == 0
+	RETURN 2
+
+CALL COM_ORDER, NEXTCOM,  ARG, 1
+
+RETURN (RESULT != 1)

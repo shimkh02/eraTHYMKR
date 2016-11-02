@@ -1,0 +1,1649 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;이 파일에는 조교 개시시 · 종료시 · 조교 중 이벤트 · 엔딩 대사용 함수 등이 마련되어 있습니다.
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;==================================================
+;YM-Mk3改7용 히나 대사
+;---여기서부터----
+;初めまして、口上の公開を挑戦させていただきましたMarpheと申します。
+;この口上の作成に当たって、RR大妖精口上の構文を参考にさせて頂きました。この場にてお礼申し上げます。
+;見返すと３点リーダーだらけで凹むorz
+;---여기까지 이식처 본래 코멘트---
+;移植にあたってのなんやかんやは基本的に付属txtを参照して下さい。
+;==================================================
+;엑스트라 모드 관련 플래그 추가(2014/3/25)
+;CFLAG:7899	엑스트라 모드
+;CFLAG:7900	대사 타입 (0: 우울한 액신님 타입, 1: 순종의 극치 타입)
+;==================================================
+;대사 파일의 존재 판정
+;==================================================
+;대사의 존재 판정(YM판)
+@TRY_39
+RETURN 1
+
+;==================================================
+;엑스트라 모드 구문
+;본인의 이상 속 색시를 표현하는데 쓴다
+;==================================================
+@SET_CHARA_KOJO_EXTRA_K39
+IF CFLAG:7899 == 0
+	PRINTL 우울한 전개는 좋아하십니까?
+	PRINTL [0] 예　　 (※통상 타입 대사)
+	PRINTL [1] 아니오 (※순종의 극치 타입 대사)
+	$INPUT_TYPELOOP
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―액신님 타입으로 개시합니다―
+	ELSEIF RESULT == 1
+		PRINTFORMW ―순종의 극치 타입으로 개시합니다―
+		CFLAG:7900 = 1
+	ELSE
+		GOTO INPUT_TYPELOOP
+	ENDIF
+	;액신님 타입 컨피그
+	IF CFLAG:7900 == 0
+		;당신 or 레이무 or 마리사 or 사쿠야 or 모코우 or 사나에 or 아큐 or 렌코 or 메리… 모코우는 원래 인간이지 현재는 다른 것 같기도 하다. 그리고 애초에 「당신」 말고는 쓰는 경우 자체가 적은 것 같기도 함.
+		;마을의 인간은 인간이 아녀!
+		;라는 건 아니지만, 뭐 쓰일 만한 것만 커버되고 있으면 괜찮을까 싶어 딱히 대상 변경 없음.
+		;약점은 꽤 중요한 요소이므로 선택식으로 변경해봤습니다.
+		;코스즈도 추가(2014/3/25)
+		PRINTL 처녀 모드로 이행하겠습니까?
+		PRINTL [0] 예
+		PRINTL [1] 아니오
+		$INPUT_LOOP_V
+		INPUT
+		IF RESULT == 0
+			PRINTFORMW ―처녀 모드로 소질, 능력을 변경합니다―
+			TALENT:0 = 1
+			ABL:1 = 0
+		EXP:0 = 0
+		ELSEIF RESULT == 1
+			PRINTFORMW ―통상 모드로 조교를 개시합니다―
+		ELSE
+			GOTO INPUT_LOOP_V
+		ENDIF
+		IF NO:MASTER == 0 || NO:MASTER == 1 || NO:MASTER == 2 || NO:MASTER == 9 || NO:MASTER == 31 || NO:MASTER == 42 || NO:MASTER == 48 || NO:MASTER == 49 || NO:MASTER == 50 || NO:MASTER == 88
+			PRINTFORML 히나는 인간을 생각해주는 신님이다.
+			PRINTL [0] 예　　 (약점 획득)
+			PRINTL [1] 아니오 (변화 없음)
+			$INPUT_LOOP_1
+			INPUT
+			IF RESULT == 0
+				PRINTFORMW 히나는 사전 정보대로, 인간을 생각해주는 신님인 것 같다.
+				PRINTFORMW …그건 곧 이 쪽이 인간이라는 점을 이용할 수 있다는 거겠지.
+				PRINTFORMW 히나의 【약점】을 잡았다.
+				TALENT:39 = 1
+			ELSEIF RESULT == 1
+				PRINTFORMW 통상 모드로 조교를 시작합니다.
+			ELSE
+				GOTO INPUT_LOOP_1
+			ENDIF
+		ENDIF
+	ENDIF
+	CFLAG:7899 = 1
+ENDIF
+
+;==================================================
+;조교 개시 대사 부분
+;==================================================
+@EVENTTRAIN
+;대사 표시를 OFF했을 경우에는 돌아온다
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 39
+	RETURN 0
+;2주차 이후, 조교 개시시에 엑스트라 모드의 설정을 시행하지 않으면 설정 이벤트를 CALL
+SIF CFLAG:7899 == 0
+	CALL SET_CHARA_KOJO_EXTRA_K39
+;자고 있을 경우에는 돌아온다
+;문장에 따라서는 자고 있더라도 관계 없겠지만 역시 귀찮으니 패스
+SIF EQUIP:14
+	RETURN 0
+;재갈이 있을 경우에도 돌아온다
+SIF TEQUIP:42
+	RETURN 0
+;기절 중에도 돌아온다
+SIF TFLAG:899 >= 1
+	RETURN 0
+;정신붕괴인 경우에는 돌아온다
+SIF TALENT:167
+	RETURN 0
+DRAWLINE
+
+;조교 개시 대사 분기
+IF CFLAG:7900 == 1
+	;순종적인 히나 호출
+	CALL K39_START_OBEY
+	RETURN 0
+ELSE
+	IF CFLAG:5201 == 0
+		TRYCALL K39_MESSAGE_START_1
+	ELSE
+		TRYCALL K39_MESSAGE_START_2
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;첫조교시
+;-------------------------------------------------
+@K39_MESSAGE_START_1
+	DRAWLINE
+	PRINTFORMW 「……마을에서 제 소문 정도는 들은 적이 있겠죠？
+	PRINTFORMW 　저는 사람들의 액운을 모으는 액신。제 곁에 있다가는 재액을 겪을 거에요」
+	PRINTFORMW 앞으로 뭘 하게 될 건지는 이해하고 있는 것 같다
+	PRINTFORMW 다만 입장을 이해하고 있진 못한 것 같다
+	CFLAG:5201 = 1
+
+;-------------------------------------------------
+;조교 개시시
+;-------------------------------------------------
+@K39_MESSAGE_START_2
+IF CFLAG:5201 < 2 && MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 두둥실…
+	PRINTFORMW 히나는 방을 왕복하며 빙글빙글 돌고 있다。
+	PRINTFORMW 잠시 넋을 잃고 보고 있던 %조사처리(CALLNAME:MASTER,"를")%, 히나가 알아 챈 것 같다
+	PRINTFORMW 「춤을 추고 있는 건 아니에요…저기, 당신도 보이죠？제게 모이고 있는 것들…
+	PRINTFORMW 　…이게『액』, 지금까지 제가 했던 일도 이걸 모으기 위해서에요
+	PRINTFORMW 　제발 빨리 저에게서 떠나주세요……당신을 위해서라도」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 히나의 말을 흘려듣고, 히나의 어깨에 손을 올린다……
+	CFLAG:5201 = 2
+	RETURN 1
+
+;屈服刻印Lv2
+ELSEIF CFLAG:5201 < 3 && MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 평소같았으면 히나는 액을 모으는 중이었겠지만
+	PRINTFORMW 아무래도 오늘은 쉬는 것 같다
+	PRINTFORMW 문이 열리는 것을 알아챈 듯, 바닥에서 고개를 수그리고 앉아있던 히나가 고개를 든다
+	PRINTFORMW 그 표정은 지금까지 봤던 어떤 표정보다도 얼빠져있었고
+	PRINTFORMW 마치 생기가 없는 듯한 눈동자가 이 쪽을 바라봤다…
+	PRINTFORMW 「…여기에서는……저의 능력으로 『액』을 흘리지 못해요
+	PRINTFORMW 　부탁이니 제게서 떠나주세요……」
+	PRINTFORMW 이 쪽엔 그럴 의사가 없다는 걸 눈치 챈 듯 히나는 슬픈 표정을 지었다
+	PRINTFORMW 그 뺨에 한 줄기 눈물이 굴러떨어졌다……
+	CFLAG:5201 = 3
+	RETURN 1
+
+;屈服刻印Lv3
+;恋慕口上につながるようなので「恋慕じゃない」条件は削除
+ELSEIF CFLAG:5201 < 4 && MARK:2 == 3
+	DRAWLINE
+	PRINTFORMW 사르르……
+	PRINTFORMW 문에 손을 댔을 때 소매에서 무언가 떨어졌다
+	PRINTFORMW 주워보니 아무래도 까마귀의 깃털 같았다
+	PRINTFORMW 약간 섬뜩함을 느꼈지만 그걸 뿌리치고, 문을 열었다
+	PRINTFORMW 요 며칠간, 히나는 액을 모으지 않았다
+	PRINTFORMW 그건 흘려보낼 수 있는 양이 요괴의 산에 있을 때에 비교해서
+	PRINTFORMW 크게 감소하고 있기 때문이라고도 했다
+	PRINTFORMW 앞서 본 까마귀의 깃털이 뇌리에 스쳤다…
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 히나를 향해 걸음을 옮기는 순간
+	PRINTFORMW 히나의 절규가 울려퍼졌고, 놀라서 걸음을 멈췄다
+	PRINTFORMW 직후, 뭔가가 눈 앞을 지나 발 아래에서 불쾌한 소리를 냈다
+	PRINTFORMW 천장에 매달아놨던 램프가 떨어진 것이다
+	PRINTFORMW 황급히 불을 끈 후에, 다시 히나에게 다가갔다
+	PRINTFORMW 히나는 덜덜 떨면서 자기 스스로를 꽉 껴안고 있었다
+	PRINTFORMW 그 어깨에 손을 올리자, 흠칫하고 유달리 어깨를 크게 떨고 히나는 고개를 들었다
+	PRINTFORMW 핏기가 가신 표정。공포와 절망에 물든 눈동자……
+	PRINTFORMW 소리가 되지 않는 간청을 들어줄 리도 없었기에…히나는 체념한 듯 옷을 풀어헤쳤다
+	CFLAG:5201 = 4
+	RETURN 1
+;恋慕
+;屈服3からつながるようなので「屈服3」条件追加
+ELSEIF CFLAG:5201 < 5 && TALENT:TARGET:150 == 1 && MARK:2 == 3
+;＼なげえ！／
+	DRAWLINE
+	PRINTFORMW 돌아가는 길에, 검은 고양이를 보았다
+	PRINTFORMW 가만히 이 쪽을 바라보던 그 눈동자는 뭘 말하려던 걸까…
+	PRINTFORMW ………
+	PRINTFORMW 언제였을까…까마귀의 깃털을 본 게
+	PRINTFORMW 그 때의 히나의 행동을 다시 떠올린다
+	PRINTFORMW 히나가 아무것도 하지 않았다면, 어쩌면 램프가 내게 맞았을 지도 모른다
+	PRINTFORMW 그렇게 되면 히나에게는 천재일우의 기회였을 것이다
+	PRINTFORMW 큰 부상을 입진 않았어도 화상 정도는 충분히 입었을 테지
+	PRINTFORMW 조교를 기대하고 있는 모습으로는 도저히 보이지 않았다
+	PRINTFORMW 수도 없이 모욕당한 히나에게는 증오의 감정밖에 없었을 터였다
+	PRINTFORMW 마을에서 들은 이야기 중에는 이런 것도 있었다
+	PRINTFORMW 가라사대, 어떻게 되던 간에 결코 타인을 상처입히는 일은 하지 않는다
+	PRINTFORMW 그것은 이런 모욕을 받았다고 해도 성립되는 것일까
+	PRINTFORMW 그게 신이고 그녀의 모습일까…
+	PRINTFORMW 그리고 그런 그녀에게 내가 해온 일은 무엇일까……
+	PRINTW 
+	PRINTFORMW 문을 연다。여전히 바닥에 주저앉아 고개를 수그리고 있는 히나의 모습에 눈에 비쳤다……
+	PRINTFORMW 표정에선 이미 의사같은 건 보이지 않는다
+	PRINTFORMW 하지만 그래도 이 쪽을 확인하자 일어나 고개를 숙였다
+	PRINTFORMW 「……주, 인…님……어서…히나를……좋, 좋을대…로, 아무쪼록……」
+	PRINTFORMW …？이전에 가르친 조교의 인사인가……
+	PRINTFORMW …또, 그런 인사를 강요했던 일이 매우 어리석다고 느껴진다
+	PRINTFORMW 옷을 벗기 시작한 히나의 손을 쥐고, 끌어안았다
+	PRINTFORMW 누가 봐도 마음의 미혹이나 자기 만족을 위한 행동이다
+	PRINTFORMW 이제 와서 이런 일로 그녀의 마음을 구할 수 있다고 생각하지도 않는다
+	PRINTFORMW 그래도, 뭔가…무엇이든 좋으니 그녀의 마음에 보답하고 싶었다……
+	PRINTFORMW 결국 나란 존재는 그 정도의 능력밖에 없단 걸 드러낸 것이라 해도
+	PRINTFORMW 적어도 이 마음만이라도…
+	PRINTFORMW 그녀에 대한 감정을 가지고 대한다고…그걸 알리고 싶었다
+	PRINTFORMW 쿵
+	PRINTW 
+	PRINTFORMW ……뭐가 일어났는지 이해할 때까지 몇 초의 시간이 소요됐다
+	PRINTFORMW 결론부터 말하자면 히나에게 냅다 밀쳐진 것이다
+	PRINTFORMW 지금껏 해온 일에 비추어 보면 당연한 것이다
+	PRINTFORMW ……단순히 마을에서 들은 소문에 편승한 것 뿐이다。벌레의 선행이란 말이다
+	PRINTFORMW 히나의 기분도 염두에 두지 않고
+	PRINTFORMW 미안하다고, 생각하기도 전에 사과의 말이 먼저 입에서 나왔다
+	PRINTFORMW 불편한 마음에 방을 나가자고 생각하고, 돌아섰다
+	PRINTFORMW 방문에 손을 댔을 때, 등 너머로 들려온 것은 히나의…통곡
+	PRINTFORMW 서둘러 히나를 돌아보았다
+	PRINTFORMW 마치 땅 속에서부터 울려오는 것 같은…지척에 있는 그녀가 발하는 목소리라고는
+	PRINTFORMW 도저히 믿을 수 없었다
+	PRINTFORMW 왜 히나가 울고 있는 지는 모른다
+	PRINTFORMW 그러나, 이런 상태의 히나를 혼자 놔둘 수 있을 리 없다
+	PRINTFORMW 그녀의 손이나 어깨를 부여잡아, 다시 끌어안으려 했다
+	PRINTFORMW 히나는 그 때마다 절레절레 고개를 흔들며, 이 쪽에게서 달아나려고만 했다…
+	PRINTFORMW 잠시 그런 상태를 되풀이하곤
+	PRINTFORMW 이윽고, 불쑥…히나의 입에서 말이 뽑아져나왔다…
+	PRINTFORMW ―――주인님에게 재앙이 쏟아지기 전에, 저를……해주세요―――
+	PRINTFORMW ……안 들려。들으면 안된다……그 소망이 이루어져서는 안 된다
+	PRINTFORMW …그건 너무나도 슬픈, 그녀의 간청이었다……
+	PRINTW 
+	PRINTFORMW 히나는 【A민감】【C민감】을 잃었다.
+	PRINTFORMW 히나는 【쾌감 부정】【A둔감】【B둔감】【C둔감】【V둔감】【일선을 넘지 않음】【젖기 어려움】을 얻었다.
+	;ぱっと見無理ゲー化ですが一応実行値自体に変化はない…はずです。濡れにくくなってるのでAやVいじる時に注意してもらうくらいでしょうか。
+	;いっそ反発刻印3もつけようぜとか
+	TALENT:104 = 0
+	TALENT:100 = 0
+	TALENT:71 = 1
+	TALENT:105 = 1
+	TALENT:107 = 1
+	TALENT:101 = 1
+	TALENT:103 = 1
+	TALENT:27 = 1
+	TALENT:43 = 1
+	CFLAG:5201 = 5
+	RETURN 1
+
+;친애
+ELSEIF CFLAG:5201 < 6 && TALENT:TARGET:152 == 1
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 히나에게 일어났던 「이변」을 가만히 곱씹고 있었다
+	PRINTFORMW 액신을 갈망하게 된 결과는 지금까지 이 곳에 일어났던 불길한 징조를 통해서 몸으로 잘 느끼고 있다
+	PRINTFORMW 하지만 %CALLNAME:MASTER%에게 그런 건 결코 문제가 되지 않는다
+	PRINTFORMW 비단 그것은 환상향 소녀들의 이능력에 면역을 지닌 이 알 수 없는 체질 때문만은 아니다
+	PRINTFORMW 그 사실을 히나에게는 말하지 않았지만, 히나가 아무리 액을 끌어들이더라도 자신만은 멀쩡할 수 있다
+	PRINTFORMW 전에 램프가 떨어졌을 때를 떠올린다. 그 때는 히나를 걱정하기 바빴기에 자신의 체질조차도 자각하지 못했다
+	PRINTFORMW 굳이 히나가 자신을 구해주지 않았더라도, %조사처리(CALLNAME:MASTER,"는")% 는 무사할 수 있었다
+	PRINTFORMW 하지만 그것을 말하는 것은 늘 자신을 걱정해주는 걸로 모자라 자신을 내던지듯 하는 히나의 헌신에 대한 배신이 될지 모른다
+	PRINTFORMW 그렇기에 히나의 앞에서 %조사처리(CALLNAME:MASTER,"는")% 그 기묘한 체질에 대한 이야기를 꺼내지 않은 것이다
+	PRINTFORMW 무엇보다도 그것만으로는 히나를 사랑한다고 말할 주제가 되지 못한다
+	PRINTFORMW 만약에 액을 받아들일 수 없는 몸이었다고 하면 %조사처리(CALLNAME:MASTER,"는")% 히나를 그대로 내쳤을 것인가?
+	PRINTFORMW 그렇지 않다. 그렇기에 그렇지 않다는 것을 증명해야 한다. 그렇지 않으면 히나를 볼 면목이 없다.
+	PRINTFORMW 방으로 들어가자 방 한 구석에 주저앉은 히나가 있었다.
+	PRINTFORMW 그 근처에는 액의 영향으로 깨져버린 유리창의 파편이 있었다.
+	PRINTFORMW 풀린 채 바닥에 널브러진, 본래는 히나의 손목에 묶여 있었을 리본과, 히나의 손에서 빛나는 물체를 본 %조사처리(CALLNAME:MASTER,"는")% 반사적으로 움직였다
+	PRINTFORMW 당장에 히나에게 달려가서 그녀의 손에 쥐여진 유리조각을 낚아채고 그녀의 팔을 잡아 상태를 확인한다
+	PRINTFORMW 히나의 희끄무레한 손목에서 검붉은 피…… 아니, 피보다 진한 액이 걸쭉한 액체가 되어 흘러내린다
+	PRINTFORMW 상처를 들킨 히나는 그 자리에서 굳어지더니 갑작스럽게 %조사처리(CALLNAME:MASTER,"를")% 밀쳐내려 몸부림친다
+	PRINTFORMW 날아드는 까마귀의 깃털, 치직치직 하다 쓰러져버린 램프, 검은 고양이의 불길하게 갸르랑거리는 울음소리…
+	PRINTFORMW 동요하는 히나를 따라 수많은 흉조들이 방 안으로 모이기 시작한다
+	PRINTFORMW 「놔 주세요……! 놔…주세… 묻으면…!」
+	PRINTFORMW 히나의 강한 거부 의사에 아랑곳하지 않고 %조사처리(CALLNAME:MASTER,"는")% 자신의 옷으로 히나의 손목의 피를 닦는다
+	PRINTFORMW 강한 액의 기운에 옷이 부식되어가지만 지금은 일단 그녀의 팔을 지혈하는 게 먼저다
+	PRINTFORMW 더 이상 피가 흘러내리지 않을 때까지 옷가지를 뭉쳐 팔을 꾹 누른 후 그녀의 리본으로 팔을 다시 감아주었다
+	PRINTFORMW 그리고 히나의 떨리는 손을 꼭 잡아주었다
+	PRINTFORMW 「주인…님…?」
+	PRINTFORMW 버리지 않아. 떠나지도 않아.
+	PRINTFORMW 액신 카기야마 히나의 액을 받아들일 준비는 전부 되었다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 신의 액 따위는 견딜 수 없을 정도의 미물일지 모른다.
+	PRINTFORMW 하지만 그 사실이 그녀를 향한 마음, 그리고 그녀를 사랑해가겠다는 각오를 꺾을 수는 없다.
+	PRINTFORMW 우연히 얻은 능력은 그저 핑계일 뿐이다. 그렇게 생각하며 그녀의 능력으로부터 자신을 보호하던 방벽 역시도 내렸다
+	PRINTFORMW 「주인님…! 안 돼요!」
+	PRINTFORMW 하지만 괜찮아. 너를 사랑하기 때문에.
+	PRINTFORMW 어떠한 말보다 그것이 강하게 와닿도록, %조사처리(CALLNAME:MASTER,"는")% 히나를 꼭 끌어안는다……
+	PRINTFORMW 그러자 순간, 방을 감돌던 모든 불길한 징조들이 뚝 하고 멈췄다
+	PRINTFORMW 그리고 폭풍 후의 고요함마냥 싸늘해진 방에는 움직이지 않고 하염없이 울고 있는 히나와, 그녀를 껴안은 %CALLNAME:MASTER% 사이의 온기 뿐이었다.
+	PRINTFORMW 「주… 주인님…히나는… 어째서……」
+	PRINTFORMW 「주인님을… 사랑해버린 걸까요…」
+	PRINTFORMW 그녀는 그녀의 입으로 %CALLNAME:MASTER%에게 「사랑한다」고 말한 것이다
+	PRINTFORMW 「주인님… 히나는 주인님의…」
+	PRINTFORMW 그 뒤의 말을 잇지 못하고, 히나는 그저 소리내어 크게 울며 자신의 팔을 %CALLNAME:MASTER%에게 강하게 두르고, 똑같이 껴안는 것으로 대답했다
+	PRINTFORMW 모든 것을 받아들이기로 결정한 히나에게 변화가 왔다……
+	PRINTFORMW 히나는 【쾌감 부정】【약물내성】【A둔감】【B둔감】【C둔감】【V둔감】【일선을 넘지 않음】【젖기 어려움】을 잃었다
+	PRINTFORMW 히나는 【솔직함】【A민감】【B민감】【C민감】【V민감】【중독되기 쉬움】을 얻었다
+	TALENT:44 = 0
+	TALENT:71 = 0
+	TALENT:101 = 0
+	TALENT:103 = 0
+	TALENT:105 = 0
+	TALENT:107 = 0
+	TALENT:27 = 0
+	TALENT:43 = 0
+	TALENT:13 = 1
+	TALENT:84 = 1
+	TALENT:100 = 1
+	TALENT:102 = 1
+	TALENT:104 = 1
+	TALENT:106 = 1
+	CFLAG:5201 = 6
+	RETURN 1
+
+;調教開始2回目以降
+ELSEIF MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「이젠, 이런 일은 그만 둬 주세요」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"를")% 정면으로 응시하며, 히나는 단언했다
+	PRINTFORMW 하지만, %CALLNAME:MASTER%의 손이 히나에게 닿자 그 눈동자가 흔들리고 몸을 움찔하더니, 가늘게 떨기 시작했다
+	RETURN 1
+ELSEIF MARK:2 == 0
+	DRAWLINE
+	PRINTFORMW 문을 닫는 소리가 울린다
+	PRINTFORMW 바닥에 주저앉고선 고개를 떨구고 있던 히나는 튕겨나듯 이 쪽에게서 멀어지려고 한다。하지만, 좁은 밀실에선 그것도 무의미한 저항이다
+	RETURN 1
+ELSEIF MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 문을 연다
+	PRINTFORMW 액을 모으고 있던 중이었던듯 하다。움직임을 멈추고, 그 자세 그대로 이 쪽으로 얼굴을 기울였다。
+	PRINTFORMW 그 얼굴에 나타난 표정은, 슬픔일까 체념일까…
+	RETURN 1
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	IF RAND:3 == 0
+		PRINTFORMW 히나의 조교를 하기 위해 자리에서 일어났다。
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 반쯤 미지근해진 커피를 들이켜고 찻잔을 들어올렸다
+		PRINTFORMW 핏…쨍그랑
+		PRINTFORMW 컵은 손잡이만 남기고 바닥에 떨어져 산산조각이 나버렸다……
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 히나를 감금하고 있는 방으로 다가가다, 문득 바깥의 경치를 보았다
+		PRINTFORMW 바깥의 담에 까마귀 떼가 빽빽하게 몰려있다
+		PRINTFORMW 녀석들에겐 뭔가 보이는 걸까……
+	ELSE
+		PRINTFORMW 문을 닫는 소리가 울린다
+		PRINTFORMW 히나는 얼굴을 이 쪽으로 돌렸지만, 과연 그 눈동자가 이 쪽을 바라보고 있긴 한걸까…
+	ENDIF
+	RETURN 1
+ELSEIF MARK:2 == 3 && TALENT:TARGET:150 == 0
+	DRAWLINE
+	IF RAND:4 == 0
+		PRINTFORMW 까마귀와 검은 고양이。깨진 그릇에 끊어진 부츠의 끈。불행을 알린다는 징크스는 대강 거의 다 만난 것 같다
+		PRINTFORMW 익숙해져보면 의외로 사소한 것이라 오늘도 히나의 조교에 발걸음을 옮긴다
+		PRINTFORMW 최근에 가장 놀랐던 것은 복도에 개의 시체가 뒹굴고 있던 일일까
+		PRINTFORMW 게다가 쥐들이 한창 식사 중이었으니, 정신적으로 상당히 충격받았었다
+	ELSEIF RAND:3 == 0
+		PRINTFORMW 「……당신이 무엇을 떠올리고 있는지…저에겐 이해되지 않……지만……
+		PRINTFORMW 　저를 가까이에 두는 건, 당신에게 불행밖에 가져오지 않아요。……저는…그것이 무엇보다……힘들어요……」
+		PRINTFORMW 간신히 들릴 정도로 작은 목소리。히나는 주저하면서도 스스로 옷을 벗는다…
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「무슨 일이 있어도……무슨 일이 있어도 저는 당신의 곁에 없어서는 안되는 걸까요……」
+		PRINTFORMW 실오라기 하나 걸치지 않은 모습으로, 스스로를 껴안고서 히나는 떨고 있다…
+	ELSE
+		IF TIME == 0
+			PRINTFORMW 「응…우응……아……안, 녕, 하세…요」
+			PRINTFORMW 잠든 얼굴을 보였던 것이 부끄러운지 아주 가냘픈 목소리로 히나는 인사를 해온다
+			PRINTFORML ―――싫…어……보지 마세요
+			PRINTFORML ―――싫어…나 때문에 누군가 상처입는 건 이제 싫어어어어어어엇
+			PRINTFORMW 히나의 잠꼬대가 언제까지나 귀에서 떠나지 않았다……
+		ELSE
+			PRINTFORMW 「……당신 주변에도 이제 『액』이 넘치고 있어요
+			PRINTFORMW 　돌이킬 수 없는 일이 되기 전에…부탁이니 저를……」
+			PRINTFORMW 이어지는 말은 잘 알아듣지 못했지만……이 한기는…뭘까？
+		ENDIF
+	ENDIF
+	RETURN 1
+ELSEIF TALENT:TARGET:150 == 1
+	DRAWLINE
+	IF RAND:3 == 0
+		PRINTFORMW 문을 열자 눈 앞에 히나가 서 있었다
+		PRINTFORMW 슬픈 표정을 지은 채 히나는 고개를 숙여 %조사처리(CALLNAME:MASTER,"를")% 방에 들였다
+		PRINTFORMW 「…왜……」
+		PRINTFORMW 불쑥 중얼거리는 히나。이어지는 말은 듣지 못 했다……
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 방에 들어가자마자 히나가 안겨왔다
+		PRINTFORMW 펑펑 울어대는 히나를 %조사처리(CALLNAME:MASTER,"는")% 부드럽게 끌어안았다
+		PRINTFORMW 히나가 잠잠해질 때까지 %조사처리(CALLNAME:MASTER,"는")% 아무것도 하지 않고 그저 껴안고 있었다……
+	ELSE
+		PRINTFORMW 방으로 들어간 %조사처리(CALLNAME:MASTER,"는")% 히나가 자는 것을 깨닫고 조용히 그 옆에 앉았다
+		PRINTFORMW 그냥 히나를 바라보고 있던 %CALLNAME:MASTER%의 귀에 히나의 잠꼬대가 들렸다
+		PRINTFORMW 「…떠나지 않으면……큰 일이……주인님……」
+		PRINTFORMW ……왜。왜, 내가 눈물을 흘리고 있는 걸까……히나가 일어날 때까지 답을 찾아두자……
+	ENDIF
+	RETURN 1
+;恋慕＋反発刻印Lv3
+;恋慕イベントで変化する素質を考えると無理ゲーにしか見えない
+ELSEIF MARK:9 == 3 && TALENT:TARGET:150 == 1
+	DRAWLINE
+	IF RAND:3 == 0
+		PRINTFORMW 「……아직, 저를 계속 곁에 두고 싶으신건가요」
+		PRINTFORMW 슬픈 듯한 표정을 짓는 히나……감정을 다시 보이게는 되었으나…
+		PRINTFORMW …내가 바라던 히나는 과연 여기 있는 걸까？
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「…저……기……아니…아무것도…아닙…니……다……」
+		PRINTFORMW 무엇인가 말하려던 것이겠지만 이쪽과 눈이 마주친 직후 히나는 고개를 푹 숙인채 몸을 떨었다
+	ELSE
+		PRINTFORMW 「……무슨 일이 있어도 저를 옆에 두겠다면……
+		PRINTFORMW  지독한 일은 하지 않아주셨으면 좋겠어요……이제……아픈 것은…싫으니……」
+		PRINTFORMW ……내가 하고 싶은 일은…뭐지？……내가, 할 일은……？
+	ENDIF
+	RETURN 1
+ENDIF
+
+;==================================================
+;조교 종료시의 대사
+;==================================================
+@EVENTEND
+;대사 표시를 OFF했을 경우에는 돌아온다
+SIF FLAG:11 <= 0
+	RETURN 0
+SIF NO:TARGET != 39
+	RETURN 0
+;순종적인 히나 호출
+IF CFLAG:7900 == 1
+	CALL K39_END_OBEY
+	RETURN 0
+ENDIF
+;자고 있을 경우에는 돌아온다
+SIF EQUIP:14
+	RETURN 0
+;재갈이 있을 경우에도 돌아온다
+SIF TEQUIP:42
+	RETURN 0
+;기절 중에도 돌아온다
+SIF TFLAG:899 >= 1
+	RETURN 0
+;정신붕괴인 경우에는 돌아온다
+SIF TALENT:167
+	RETURN 0
+DRAWLINE
+TRYCALL K39_MESSAGE_END
+
+;--------------------------------------------------
+;조교 종료시의 대사
+;--------------------------------------------------
+@K39_MESSAGE_END
+IF MARK:9 == 3
+	DRAWLINE
+	PRINTFORMW 「우…아아아아……」
+	PRINTFORMW 조교를 끝내자 히나는 자신의 몸을 껴안고 울음을 터뜨리고 말았다
+	RETURN 1
+
+ELSEIF MARK:2 == 0
+	DRAWLINE
+	IF RAND:2 == 0
+		PRINTFORMW ……조교를 마치고 문을 닫으려고 했을 때, 히나와 눈이 마주쳤다
+		PRINTFORMW 걱정스레 이 쪽을 바라보고 있던 것은 기분 탓일까……
+	ELSE
+		PRINTFORMW 「…잘도……이렇게……」
+		PRINTFORMW ――용서하지 않겠어。말로 나오려던 저주를 억누르며, 히나는 이 쪽을 쳐다보았다
+	ENDIF
+	RETURN 1
+ELSEIF MARK:2 == 1
+	DRAWLINE
+	PRINTFORMW 「…어떨지…조심하세요……항상 주위를 경계하는 거 잊지 마시고」
+	PRINTFORMW 이 쪽이 아직 석방할 뜻을 보이지 않았기 때문일까, 히나는 이 쪽의 몸을 걱정해왔다
+	PRINTFORMW …위협일까, 아니면 진심…？히나의 눈동자에서도 얼굴에서도 그 진의는 알 수 없었다
+	PRINTFORMW 예의『액』에 관련된 이야기겠지만……공교롭게도 풀어 줄 만큼 호인은 아니다
+	PRINTFORMW %CALLNAME:MASTER%은 히나의 말을 흘려들으며 방을 나섰다
+	RETURN 1
+ELSEIF MARK:2 >= 2 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「무서워……당신이 방을 나가면……이, 젠…여기…엔…흐윽…흐흑……」
+	PRINTFORMW 툭, 하고 중얼거리던 말은 도중에 오열로 바뀌었다。문 너머로 히나의 울음소리가 들려왔다……
+	RETURN 1
+;屈服3で恋慕で体力500未満
+ELSEIF MARK:2 == 3 && TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「…하앗……주…주…주인, 니…임……」
+	PRINTFORMW 조금 지나쳤을 수도 있다…숨을 헐떡거리면서 히나는 전신을 덜덜 떨고 있다
+	RETURN 1
+ELSEIF TALENT:150 == 1
+	DRAWLINE
+	IF RAND:3 == 0
+		PRINTFORMW 끝이라고 말하자, 히나는 몸에 묻은 더러운 것들을 수건으로 닦고 있다…
+		PRINTFORMW 깔끔하게 닦아내면서도 히나의 몸은 붉게 물들고 호흡도 거칠어져 갔다…
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 끝이라고 말하곤, 마지막으로 히나를 껴안자 히나도 팔을 둘러왔다
+		PRINTFORMW 잠시 그대로 껴안 고 있자 히나의 눈에서 눈물이 넘쳐 흘렀다……
+	ELSE
+		PRINTFORMW 히나의 손이 %CALLNAME:MASTER%의 팔을 만지고, 붙들었다
+		PRINTFORMW 조금 힘을 줘서 밀어내는 그 손을 %조사처리(CALLNAME:MASTER,"는")% 빤히 쳐다보았다
+		PRINTFORMW 「……그만……떨어지지 않으면……」
+		PRINTFORMW 불쑥 중얼거린 후 히나는 스스로 그 손을 떼고, %CALLNAME:MASTER%에게서 멀리 떨어졌다
+		PRINTFORMW 방을 나오는 %CALLNAME:MASTER%의 귀에 문 너머로부터 히나의 울음소리가 들렸다……
+	ENDIF
+	RETURN 1
+ELSEIF MARK:9 == 3 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「주인님……」
+	PRINTFORMW 히나가 말을 걸어왔다。돌아보자, 히나가 쳐다보고 있었다
+	PRINTFORMW 하지만 히나는 천천히 고개를 흔들고, 슬픈 표정 그대로 침묵했다…
+	RETURN 1
+ENDIF
+
+;==================================================
+;@KOJO_MESSAGE_PALAMCNG 관계
+;패러미터 변동이 방아쇠인 대사
+;패러미터 변동 후에 대사를 발동합니다
+;==================================================
+@KOJO_MESSAGE_PALAMCNG_39
+;순종적인 히나 호출
+IF CFLAG:7900 == 1
+	CALL KOJO_MESSAGE_PALAMCNG_39_OBEY
+	RETURN 0
+ENDIF
+;자고 있을 경우에는 돌아온다
+SIF EQUIP:14
+	RETURN 0
+;재갈이 있을 경우에도 돌아온다
+SIF TEQUIP:42
+	RETURN 0
+;失神中・失神回復時も戻る
+SIF TFLAG:899 >= 1 || TFLAG:898 == 1
+	RETURN 0
+;정신붕괴인 경우에는 돌아온다
+SIF TALENT:167
+	RETURN 0
+;처음으로 PALAM이 LV2 넘었을 때의 대사 호출
+FOR LOCAL, 0, 35
+	SIF PALAM:LOCAL + UP:LOCAL > PALAMLV:2 && CFLAG:(5320 + LOCAL) == 0
+		TRYCALLFORM K39_MESSAGE_OVERLV2_{LOCAL}
+NEXT
+;절정시의 대사 호출
+FOR LOCAL, 0, 50
+	SIF NOWEX:LOCAL
+		TRYCALLFORM K39_MESSAGE_ORGASM_{LOCAL}
+NEXT
+;사정시켰다
+FOR LOCAL, 8, 30
+	SIF TFLAG:LOCAL
+		TRYCALLFORM K39_MESSAGE_EJAC_PLAYER_{LOCAL}
+NEXT
+
+;==================================================
+;처음으로 PALAM이 LV2 넘었을 때의 대사 CFLAG 5320～5355을 사용
+;==================================================
+;-------------------------------------------------
+;처음으로 윤활이 LV2 넘었다 CFLAG:5330
+;-------------------------------------------------
+@K39_MESSAGE_OVERLV2_10
+CFLAG:5330 = 1
+
+;ローション
+IF SELECTCOM == 60
+		IF TALENT:150 == 1
+		;「初めて潤滑が超えた」で「恋慕の時」って狙ってもきつい気がするのだがどうだろうか
+			PRINTFORMW 히나의 피부에 점성의 액체를 흘리자 차가운 지 움찔 떨었다
+			PRINTFORMW 쉽게 익숙해지도록 %CALLNAME:MASTER%의 손이 히나의 피부를 타고 흐른다……
+		ELSE
+			PRINTFORMW 「…그건？」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 가진 병을 히나는 궁금한 듯 바라보았다。%조사처리(CALLNAME:MASTER,"는")% 말 없이 그 내용물을 히나에게 뿌렸다
+			PRINTFORMW 「아……미끈미끈하네요……」
+		ENDIF
+ELSE
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「……아…으」
+			PRINTFORMW 겨우 히나가 신음하고, %조사처리(CALLNAME:MASTER,"를")% 바라보던 시선이 요동쳤다
+		ELSE
+			PRINTFORMW 「……아……잠시만」
+			PRINTFORMW 히나는 뺨을 붉게 물들이고 고개를 휙 돌렸다
+			PRINTFORMW 중얼 중얼 뭔가 말하는 것 같았지만 들릴 정도의 성량은 아니었다
+		ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 욕정이 LV2 넘었다 CFLAG:5333
+;-------------------------------------------------
+@K39_MESSAGE_OVERLV2_13
+CFLAG:5333 = 1
+
+IF TALENT:150 == 1
+	;媚薬
+	IF SELECTCOM == 61
+;薬毒耐性あったね……すっかり忘れてましたよorz
+;とありましたが別に、アレを消してしまっても構わんのだよ？ということでコメアウトは外しておきます。
+;いや、なかなか難しいと思うけど。
+		PRINTFORMW 히나의 호흡이 흐트러지고, 살짝 땀에 젖은 피부가 연분홍색으로 물둘었다
+		PRINTFORMW 자신을 끌어안으며, 아니야 하고 고개를 흔드는 히나。어깨를 만지기만 해도 그녀는 흠칫 놀랐다
+	ELSE
+		PRINTFORMW 히나의 호흡이 흐트러지고, 살짝 땀에 젖은 피부가 연분홍색으로 물둘었다
+		PRINTFORMW 부들부들 떠는 손가락 끝은 %조사처리(CALLNAME:MASTER,"를")% 갈구하고 있다
+	ENDIF
+ELSE
+	IF SELECTCOM == 61
+		PRINTFORMW 히나의 호흡이 흐트러지고, 살짝 땀에 젖은 피부가 연분홍색으로 물둘었다
+		PRINTFORMW 자신을 끌어안으며, 아니야 하고 고개를 흔드는 히나。등허리를 따라 손가락을 그어내리자 튕기듯이 고개를 젖혔다
+		PRINTFORMW 「아…아앗！……몸이, 이상해…앳……」
+		PRINTFORMW 움찔움찔 간헐적으로 경련을 반복하면서, 자신의 변화에 당황해하고 있다
+	ELSE
+		PRINTFORMW 히나의 호흡이 흐트러지고, 살짝 땀에 젖은 피부가 연분홍색으로 물둘었다
+		PRINTFORMW 멍하니 이쪽을 바라보던 시선에 눈을 마주치자 그 눈동자는 동요로 흔들렸다
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;처음으로 치정이 LV2 넘었다 CFLAG:5335
+;-------------------------------------------------
+@K39_MESSAGE_OVERLV2_15
+CFLAG:5335 = 1
+
+IF TALENT:150 == 1
+		PRINTFORMW 「아……」
+		PRINTFORMW 히나의 시선이 살짝 움직여, %조사처리(CALLNAME:MASTER,"를")% 피했다
+		PRINTFORMW 히나는 떨리는 두 팔로 음부와 가슴을 가렸다
+ELSE
+		PRINTFORMW 「싫어……」
+		PRINTFORMW 히나의 뺨이 붉게 물들고, 그대로 고개를 푹 수그렸다
+ENDIF
+
+;-------------------------------------------------
+;처음으로 공포가 LV2 넘었다 CFLAG:5335
+;-------------------------------------------------
+@K39_MESSAGE_OVERLV2_17
+CFLAG:5337 = 1
+
+IF TALENT:150 == 1
+		PRINTFORMW 「……그……그만…」
+		PRINTFORMW 히나의 눈동자가 흔들리고, %CALLNAME:MASTER%에게서 떨어지려고 한다
+		PRINTFORMW 다가가려 하면 더욱 두려워할 것이다。%조사처리(CALLNAME:MASTER,"는")% 히나가 진정할 때까지 그대로 기다렸다
+ELSE
+		PRINTFORMW 「힉…싫어……제발……오지 마세,요……」
+		PRINTFORMW 조금씩 히나는 %CALLNAME:MASTER%와의 거리를 벌리려 했다
+		PRINTFORMW 그 거리를 좁힌 순간, 히나는 몸을 떨더니 그 자리에 주저앉아 울음을 터뜨리고 말았다
+ENDIF
+
+;==================================================
+;절정시의 대사 CFLAG 5300～을 사용
+;==================================================
+;-------------------------------------------------
+;Ｃ절정 CFLAG:5300
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_0
+;처음
+IF CFLAG:5300 == 0
+	;この辺のは１～２行で済ませたかったんですが長いのは４行とかありますorz
+	CFLAG:5300 = 1
+
+	IF TALENT:150 == 1
+		PRINTFORMW 「……아…아」
+		PRINTFORMW 히나의 눈동자가 흔들렸다。시선을 피하더니, 아니 하고 고개를 젓기 시작했다
+		PRINTFORMW 기댈 장소를 찾으며 방황하는 손을 잡아, 히나를 절정으로 이끌었다
+	ELSE
+		PRINTFORMW 「힛……아……우아아아아앗」
+		PRINTFORMW 이 쪽으로 손을 뻗었지만 닿는 일은 없었고, 히나는 허공에 손을 휘젓다 절정에 몸을 떨었다
+	ENDIF
+;2회째 이후
+ELSE
+	;Ｃ절정 50 이상
+	IF EX:0 >= 50
+		;PRINTFORMW 「Ｃ절정 50 이상시의 대사입니다」
+	ELSE
+		;PRINTFORMW 「Ｃ절정시의 대사입니다」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ절정 CFLAG:5301
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_1
+;처음
+IF CFLAG:5301 == 0
+	CFLAG:5301 = 1
+	IF TALENT:150 == 1
+		PRINTFORMW 히나의 질내가 몹시 조인다
+		PRINTFORMW 그대로 히나는 부들부들 몸을 떤 뒤, 그대로 녹초가 되어 늘어졌다
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 히나의 호흡이 돌아올 때까지 히나를 부드럽게 껴안고 있었다
+		;これでバイブだったらなんかオモシロイ状況ですね（ぇ
+	ELSE
+		PRINTFORMW 「아…앗…안 돼에」
+		PRINTFORMW 한층 더 큰 교성을 내지른 히나는 부들부들 몸을 떨었다
+		PRINTFORMW 흐트러진 숨을 고른 히나의 피부는 분홍색으로 물들어 있고, 약간 땀을 흘리는 그 모습은 요염하다
+		PRINTFORMW ……아직 %CALLNAME:MASTER%의 성욕은 줄어들 기미가 보이지 않는다
+	ENDIF
+;2회째 이후
+ELSE
+	;Ｖ절정 50 이상
+	IF EX:1 >= 50
+		;PRINTFORMW 「Ｖ절정 50 이상시의 대사입니다」
+	ELSE
+		;PRINTFORMW 「Ｖ절정시의 대사입니다」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ절정 CFLAG:5302
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_2
+;처음
+IF CFLAG:5302 == 0
+	CFLAG:5302 = 1
+	IF TALENT:150 == 1
+		PRINTFORMW 「…우…아아」
+		PRINTFORMW 부들부들거리며 히나는 연약하게 고개를 돌리고, 몸을 웅크리며, 벌벌 떨면서 경련하기 시작했다 
+		PRINTFORMW 절정의 파도가 지나간 히나의 뺨에, 한 줄기 눈물이 흘러내렸다……
+	ELSE
+		PRINTFORMW 「…야……아아아아앗？」
+		PRINTFORMW 히나의 교성과 표정에 당황이 섞이면서 다만 벌벌 떨고 있다
+		PRINTFORMW 절정의 파도가 가라앉은 히나는 깜짝 놀란 표정 그대로 움직이지 않았다
+	ENDIF
+;2회째 이후
+ELSE
+	;Ａ절정 50 이상
+	IF EX:2 >= 50
+		;PRINTFORMW 「Ａ절정 50 이상시의 대사입니다」
+	ELSE
+		;PRINTFORMW 「Ａ절정시의 대사입니다」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｂ절정 CFLAG:5303
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_3
+;처음
+IF CFLAG:5303 == 0
+	CFLAG:5303 = 1
+	IF TALENT:150 == 1
+		PRINTFORMW 히나가 눈을 감고, 고개를 숙이고 있다。자기자신을 안고 있는 듯한 자세 그대로 히나는 경련을 반복했다
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 떨리는 히나의 몸을 살며시 붙잡고, 그녀가 진정하기를 기다렸다
+	ELSE
+		PRINTFORMW 「아…아…가슴이잇」
+		PRINTFORMW 히나의 턱이 하늘을 향해 들렸다。허둥대며 휘적거리던 손이 %CALLNAME:MASTER%의 팔을 잡았다
+		PRINTFORMW 절정에 달한 교성과 함께 히나는%CALLNAME:MASTER%의 팔에 손톱 자국을 새겼다
+	ENDIF
+;2회째 이후
+ELSE
+	;Ｂ절정 50 이상
+	IF EX:3 >= 50
+		;PRINTFORMW 「Ｂ절정 50 이상시의 대사입니다」
+	ELSE
+		;PRINTFORMW 「Ｂ절정시의 대사입니다」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;분유 CFLAG:5304
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_10
+;처음
+IF CFLAG:5304 == 0
+	;PRINTFORMW 「첫분유시의 대사입니다」
+	;CFLAG:5304 = 1
+;2회째 이후
+ELSE
+	;PRINTFORMW 「분유시의 대사입니다」
+ENDIF
+
+;-------------------------------------------------
+;사정 CFLAG:5305
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_11
+;처음
+IF CFLAG:5305 == 0
+	;PRINTFORMW 「첫사정시의 대사입니다」
+	;CFLAG:5305 = 1
+;2회째 이후
+ELSE
+	;PRINTFORMW 「사정시의 대사입니다」
+ENDIF
+
+;-------------------------------------------------
+;방뇨 CFLAG:5306
+;방뇨 또는 강제방뇨 커맨드시에는 호출되지 않는다
+;-------------------------------------------------
+@K39_MESSAGE_ORGASM_12
+SIF SELECTCOM == 111 || SELECTCOM == 620
+	RETURN 0
+;처음
+IF CFLAG:5306 == 0
+	;PRINTFORMW 「첫방뇨시의 대사입니다」
+	;CFLAG:5306 = 1
+;2회째 이후
+ELSE
+	;PRINTFORMW 「방뇨시의 대사입니다」
+ENDIF
+
+;-------------------------------------------------
+;질내 사정 시늉(엉덩이, 균열)으로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_8
+;PRINTFORMW 「질내 사정 시늉으로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;애널 섹스로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_9
+;주인의 페니스
+IF TFLAG:35
+	IF TALENT:150 == 1 && MARK:9 == 3 && (CFLAG:7790 < 4 || (CFLAG:7790 == 4 && RAND:2 == 0))
+		PRINTFORMW 「아아…주인님……어째서……세상에」
+		CFLAG:7790 = 4
+	ELSEIF TALENT:150 == 1 && (CFLAG:7790 < 3 || (CFLAG:7790 == 3 && RAND:2 == 0))
+		PRINTFORMW 「아……아……」
+		CFLAG:7790 = 3
+	ELSEIF MARK:2 >= 1 && (CFLAG:7790 < 2 || (CFLAG:7790 == 2 && RAND:2 == 0))
+		PRINTFORMW 「……뭐야……뭐에요오」
+		CFLAG:7790 = 2
+	ELSEIF 1 && (CFLAG:7790 < 1 || (CFLAG:7790 == 1 && RAND:2 == 0))
+		PRINTFORMW 「거……거짓말이죠……」
+		CFLAG:7790 = 1
+	ENDIF
+;그 외
+ELSE
+	;PRINTFORMW 「주인 말고 다른 사람이 애널 섹스로 사정했을 시의 대사입니다」
+ENDIF
+
+;-------------------------------------------------
+;섹스로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_10
+;주인의 페니스
+IF TFLAG:35
+	;対面or正常
+	;派生コマンドまでは面倒見切れないわー
+	IF SELECTCOM == 20 || SELECTCOM == 22
+		IF TALENT:150 == 1 && MARK:9 == 3 && (CFLAG:7780 < 4 || (CFLAG:7780 == 4 && RAND:2 == 0))
+			;毎回毎回表示されると嫌病が発症したので。
+			;ああ、またバグが出そうな書き方を…
+			PRINTFORML 「……으응」
+			PRINTFORMW 히나를 강하게 끌어안으며 %조사처리(CALLNAME:MASTER,"는")% 정액을 쌌다
+			CFLAG:7780 = 4
+		ELSEIF TALENT:150 == 1 && (CFLAG:7780 < 3 || (CFLAG:7780 == 3 && RAND:2 == 0))
+			PRINTFORML 「……아……응」
+			PRINTFORMW 히나와 %조사처리(CALLNAME:MASTER,"를")% 끌어안곤 팔에 힘을 담은 채 사정을 받아들였다
+			CFLAG:7780 = 3
+		ELSEIF MARK:2 >= 1 && (CFLAG:7780 < 2 || (CFLAG:7780 == 2 && RAND:2 == 0))
+			PRINTFORML 「……뭐야……앗！」
+			PRINTFORMW 히나는 아연실색한 표정으로 땅을 바라보았다
+			CFLAG:7780 = 2
+		ELSEIF 1 && (CFLAG:7780 < 1 || (CFLAG:7780 == 1 && RAND:2 == 0))
+			PRINTFORML 「……너무해……최저」
+			PRINTFORML 히나의 표정은 험악했다
+			PRINTFORMW ……그 감정도 언제까지 유지되려나
+			CFLAG:7780 = 1
+		ENDIF
+	;対面or正常以外(騎乗、背面、後背、派生系もこっちか？）
+	ELSE
+		IF TALENT:150 == 1 && MARK:9 == 3 && (CFLAG:7780 < 4 || (CFLAG:7780 == 4 && RAND:2 == 0))
+			PRINTFORML 「아……주인님……」
+			PRINTFORMW 히나는 사정하는 동안 이 쪽에 닿으려고 하는지 열심히 손을 뻗어왔다
+			CFLAG:7780 = 4
+		ELSEIF TALENT:150 == 1 && (CFLAG:7780 < 3 || (CFLAG:7780 == 3 && RAND:2 == 0))
+			PRINTFORML 「……아」
+			PRINTFORMW 이 쪽을 보는 히나의 눈동자에서 눈물이 흘러내려 뺨을 적셨다
+			CFLAG:7780 = 3
+		ELSEIF MARK:2 >= 1 && (CFLAG:7780 < 2 || (CFLAG:7780 == 2 && RAND:2 == 0))
+			PRINTFORML 「……뭐야……앗！」
+			PRINTFORMW 히나는 아연실색한 표정으로 땅을 바라보았다
+			CFLAG:7780 = 2
+		ELSEIF 1 && (CFLAG:7780 < 1 || (CFLAG:7780 == 1 && RAND:2 == 0))
+			PRINTFORML 「……너무해……최저」
+			PRINTFORML 히나의 표정은 험악했다
+			PRINTFORMW ……그 감정도 언제까지 유지되려나
+			CFLAG:7780 = 1
+		ENDIF
+	ENDIF
+;그 외
+ELSE
+	;PRINTFORMW 「주인 말고 다른 사람이 섹스로 사정했을 시의 대사입니다」
+ENDIF
+
+;-------------------------------------------------
+;입으로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_11
+;펠라, 이라마치오 경우
+IF SELECTCOM == 41 || SELECTCOM == 230
+	IF TALENT:150 == 1 && MARK:9 == 3 && (CFLAG:7782 < 4 || (CFLAG:7782 == 4 && RAND:2 == 0))
+		PRINTFORML 「……응……으읏……」
+		PRINTFORML 히나는 입 속에 정액을 머금은 채 이쪽의 기색을 살피고 있다
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 재촉하자 히나는 그것을 삼켰다
+		CFLAG:7782 = 4
+	ELSEIF TALENT:150 == 1 && (CFLAG:7782 < 3 || (CFLAG:7782 == 3 && RAND:2 == 0))
+		PRINTFORML 「…응…후……꿀꺽……」
+		PRINTFORMW 히나는 싫어하는 기색도 보이지 않고 삼켰다
+		CFLAG:7782 = 3
+	ELSEIF MARK:2 >= 1 && (CFLAG:7782 < 2 || (CFLAG:7782 == 2 && RAND:2 == 0))
+		PRINTFORML 「……우……우으……」
+		PRINTFORMW 삼키도록 지시했지만, 견디지 못한 히나가 뱉어냈다
+		CFLAG:7782 = 2
+	ELSEIF 1 && (CFLAG:7782 < 1 || (CFLAG:7782 == 1 && RAND:2 == 0))
+		PRINTFORML 「…삼키라니…엉뚱한 소리 하지 마세요」
+		PRINTFORML 입을 팔로 닦으며 히나는 중얼거렸다
+		PRINTFORMW 침대에는 히나가 토해낸 정액이 얼룩을 만들고 있었다
+		CFLAG:7782 = 1
+	ENDIF
+;파이즈리 경우(CFLAG:7789)
+ELSEIF SELECTCOM == 42
+	IF TALENT:150 == 1 && MARK:9 == 3 && (CFLAG:7789 < 4 || (CFLAG:7789 == 4 && RAND:2 == 0))
+		PRINTFORML 「……으응……주인님……기분 좋으신가요？」
+		PRINTFORMW 가슴에 묻은 정액보다 이 쪽의 기분이 궁금한 모양이다
+		CFLAG:7789 = 4
+	ELSEIF TALENT:150 == 1 && (CFLAG:7789 < 3 || (CFLAG:7789 == 3 && RAND:2 == 0))
+		PRINTFORMW 히나의 가슴이나 얼굴, 머리를 정액이 더럽히고 있지만 히나는 개의치 않고 이쪽을 바라보고 있다
+		CFLAG:7789 = 3
+	ELSEIF MARK:2 >= 1 && (CFLAG:7789 < 2 || (CFLAG:7789 == 2 && RAND:2 == 0))
+		PRINTFORML 「……뜨거워……」
+		PRINTFORMW 몸에 쏟아지는 정액의 감촉에 몸부림치면서 히나는 눈을 감았다
+		CFLAG:7789 = 2
+	ELSEIF 1 && (CFLAG:7789 < 1 || (CFLAG:7789 == 1 && RAND:2 == 0))
+		PRINTFORML 「…더……더러워」
+		PRINTFORMW 히나는 얼굴에 묻은 정액이 신경쓰이는 것 같다
+		CFLAG:7789 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;손으로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_12
+IF TALENT:150 == 1 && MARK:9 == 3 && (CFLAG:7781 < 4 || (CFLAG:7781 == 4 && RAND:2 == 0))
+	PRINTFORML 「……아……주인님……기분 좋으신가요？」
+	PRINTFORMW %CALLNAME:MASTER%의 사정을 확인하고 안심했는지 히나의 표정에서 긴장이 풀렸다
+	CFLAG:7781 = 4
+ELSEIF TALENT:150 == 1 && (CFLAG:7781 < 3 || (CFLAG:7781 == 3 && RAND:2 == 0))
+	PRINTFORMW 히나는 손에 묻은 %CALLNAME:MASTER%의 정액을 실눈을 뜨고 살펴보았다
+	CFLAG:7781 = 3
+ELSEIF MARK:2 >= 1 && (CFLAG:7781 < 2 || (CFLAG:7781 == 2 && RAND:2 == 0))
+	PRINTFORML 「……아……뜨거워……」
+	PRINTFORMW 황홀한 표정을 한 채 히나는 눈을 감았다
+	CFLAG:7781 = 2
+ELSEIF 1 && (CFLAG:7781 < 1 || (CFLAG:7781 == 1 && RAND:2 == 0))
+	PRINTFORML 「…뭔가 이상한 기분」
+	PRINTFORMW 히나는 손에 묻은 정액을 물끄러미 바라보며 중얼거린다
+	CFLAG:7781 = 1
+ENDIF
+
+;-------------------------------------------------
+;커닐링구스 강제로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_13
+;PRINTFORMW 「커닐링구스 강제로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;키스로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_14
+;PRINTFORMW 「키스로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;스마타로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_15
+;PRINTFORMW 「스마타로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;머리카락으로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_16
+;PRINTFORMW 「머리카락으로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;조수를 범한다로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_17
+;PRINTFORMW 「조수를 범한다로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;역강간으로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_18
+;PRINTFORMW 「역강간으로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;발로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_19
+;PRINTFORMW 「발로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;겨드랑이로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_20
+;PRINTFORMW 「겨드랑이로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;펠라로 사정 후, 불결을 핥아낼 때
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_21
+;PRINTFORMW 「펠라로 사정 후, 불결을 핥아낼 시의 대사입니다」
+
+;-------------------------------------------------
+;좆대로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_22
+;PRINTFORMW 「좆대로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;요도로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_23
+;PRINTFORMW 「요도로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;육변기로 사정
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_24
+;PRINTFORMW 「육변기로 사정시켰을 시의 대사입니다」
+
+;-------------------------------------------------
+;가슴으로 조교자가 사정(핥지 못함)
+;-------------------------------------------------
+@K39_MESSAGE_EJAC_PLAYER_29
+;PRINTFORMW 「가슴으로 조교자가 사정했을 시의 대사입니다」
+
+;==================================================
+;@KOJO_MESSAGE_MARKCNG 관계
+;각인 변동이 방아쇠인 대사
+;각인 변동 후에 대사를 발동합니다.
+;==================================================
+@KOJO_MESSAGE_MARKCNG_39
+;순종적인 히나 호출
+IF CFLAG:7900 == 1
+	CALL KOJO_MESSAGE_MARKCNG_39_OBEY
+	RETURN 0
+ENDIF
+;자고 있을 경우에는 돌아온다
+SIF EQUIP:14
+	RETURN 0
+;재갈이 있을 경우에도 돌아온다
+SIF TEQUIP:42
+	RETURN 0
+;失神中・失神回復時も戻る
+SIF TFLAG:899 >= 1 || TFLAG:898 == 1
+	RETURN 0
+;정신붕괴인 경우에는 돌아온다
+SIF TALENT:167
+	RETURN 0
+;각인 취득 대사 호출
+FOR LOCAL, 0, 7
+	FOR LOCAL:1, 1, 4
+		SIF TFLAG:(LOCAL + 40) == LOCAL:1 && CFLAG:(LOCAL + 5310) < LOCAL:1
+			TRYCALLFORM K39_MESSAGE_MARK{LOCAL}_{LOCAL:1}
+	NEXT
+NEXT
+
+;==================================================
+;각인 취득시의 대사 CFLAG 5310～을 사용
+;==================================================
+;-------------------------------------------------
+;고통각인 취득 CFLAG:5310
+;-------------------------------------------------
+@K39_MESSAGE_MARK0_1
+;PRINTFORMW 「고통각인１을 취득했을 시의 대사입니다」
+;CFLAG:5310 = 1
+
+@K39_MESSAGE_MARK0_2
+;PRINTFORMW 「고통각인２를 취득했을 시의 대사입니다」
+;CFLAG:5310 = 2
+
+@K39_MESSAGE_MARK0_3
+CFLAG:5310 = 3
+IF TALENT:150 == 1
+		PRINTFORMW 「……싫어」
+		PRINTFORMW 툭, 하고 히나의 입에서 말이 튀어나왔다。놓칠 뻔할 정도로 작은 목소리로…
+		PRINTFORMW 「……아픈 건, 싫어…」
+		PRINTFORMW 히나는 자신을 껴안듯 웅크리곤, 혼잣말을 중얼거리고 있다……
+ELSE
+		PRINTFORMW 「…이제……아픈 건 그만……」
+		PRINTFORMW 히나의 뺨을 눈물이 타고 흘렀고, 이 쪽을 바라보는 눈동자엔 공포가 서려있다……
+ENDIF
+
+;-------------------------------------------------
+;쾌락각인 취득 CFLAG:5311
+;-------------------------------------------------
+@K39_MESSAGE_MARK1_1
+;PRINTFORMW 「쾌락각인１을 취득했을 시의 대사입니다」
+;CFLAG:5311 = 1
+
+@K39_MESSAGE_MARK1_2
+;PRINTFORMW 「쾌락각인２를 취득했을 시의 대사입니다」
+;CFLAG:5311 = 2
+
+@K39_MESSAGE_MARK1_3
+	CFLAG:5311 = 3
+	IF TALENT:150 == 1
+		PRINTFORMW 「……아…후……」
+		PRINTFORMW 히나는 허덕이며, 텅 빈 눈동자로 이 쪽을 물끄러미 바라본다
+		PRINTFORMW 그 뺨은 상기해있고, 탈진한 몸은 %CALLNAME:MASTER%에게 기대있다
+		PRINTFORMW 그러나 곧 표정이 변하고 %CALLNAME:MASTER%에게서 몸을 떼냈다
+	ELSE
+		PRINTFORMW 「……그만……이 이상은」
+		PRINTFORMW 히나의 손이 %조사처리(CALLNAME:MASTER,"를")% 밀어낸다
+		PRINTFORMW 「제가 빠지게 되어서……당신을 떠날 수가 없게 되어요……」
+		PRINTFORMW 슬픈 표정을 지으며, 히나는 이쪽의 시선을 피한다
+	ENDIF
+
+;-------------------------------------------------
+;굴복각인 취득 CFLAG:5312
+;-------------------------------------------------
+@K39_MESSAGE_MARK2_1
+;PRINTFORMW 「굴복각인１을 취득했을 시의 대사입니다」
+;CFLAG:5312 = 1
+
+@K39_MESSAGE_MARK2_2
+;PRINTFORMW 「굴복각인２를 취득했을 시의 대사입니다」
+;CFLAG:5312 = 2
+
+@K39_MESSAGE_MARK2_3
+IF TALENT:150 == 1
+		PRINTFORMW 추욱. 히나의 몸에 미약하게나마 남아있던 힘이 빠지면서, %CALLNAME:MASTER%에게로 쓰러졌다
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 끌어안고 가슴에 손을 올린다
+		PRINTFORMW 그러나, 예전처럼 밀치는 일도 없었고, 그렇다고 그 손을 내리지도 않았다…
+		PRINTFORMW 그 눈에서 흘러내리는 눈물만이, 그녀의 뜻을 나타내고 있었다
+	ELSE
+		PRINTFORMW 「……저는 액신인데… 같이 있어서는 안 되는데」
+		PRINTFORMW 어물어물 히나는 중얼거린다
+		PRINTFORMW 그건 마치 히나 자신을 타이르고 있는 것처럼 보였다
+	ENDIF
+	CFLAG:5312 = 3
+
+;-------------------------------------------------
+;공포각인 취득 CFLAG:5313
+;-------------------------------------------------
+@K39_MESSAGE_MARK3_1
+;PRINTFORMW 「공포각인１을 취득했을 시의 대사입니다」
+;CFLAG:5313 = 1
+
+@K39_MESSAGE_MARK3_2
+;PRINTFORMW 「공포각인２를 취득했을 시의 대사입니다」
+;CFLAG:5313 = 2
+
+@K39_MESSAGE_MARK3_3
+;PRINTFORMW 「공포각인３을 취득했을 시의 대사입니다」
+;CFLAG:5313 = 3
+
+;-------------------------------------------------
+;반발각인 취득 CFLAG:5314
+;-------------------------------------------------
+@K39_MESSAGE_MARK4_1
+;PRINTFORMW 「반발각인１을 취득했을 시의 대사입니다」
+;CFLAG:5314 = 1
+
+@K39_MESSAGE_MARK4_2
+;PRINTFORMW 「반발각인２를 취득했을 시의 대사입니다」
+;CFLAG:5314 = 2
+
+@K39_MESSAGE_MARK4_3
+	IF TALENT:150 == 1
+		PRINTFORMW 텅 비어있던 히나의 눈동자에 의사가 커져갔다. %조사처리(CALLNAME:MASTER,"를")% 알아채고, 떨리고 있었다.
+		PRINTFORMW 
+		PRINTFORMW 「……아……우」
+		PRINTFORMW 히나는 이 쪽을 바라보며 입으로 무언가를 말하려 하고 있었다.
+		PRINTFORMW 하지만 %조사처리(CALLNAME:MASTER,"가")% 히나를 바라본 순간, 시선을 돌리곤 입을 다물어 버렸다.
+	;それ以外
+	ELSE
+		PRINTFORMW ……히나는 자신을 껴안은 듯한 자세로 앉아 고개를 수그리고 있었다.
+		PRINTFORMW 지금은, 내가 조금이라도 움직이면 아마 울겠지.
+		PRINTFORMW 히나는 열심히, 위태로운 마음의 균형을 유지하려는 데에 필사적으로 된 것이 곁에서 보아도 손에 잡힐 듯이 나타났다.
+		PRINTFORMW …이걸로 히나의 마음은 부러졌다. 냉혹한 미소를 띤 %조사처리(CALLNAME:MASTER,"는")% 히나를 향해 발걸음을 내디뎠다…….
+	ENDIF
+	CFLAG:5314 = 3
+
+;-------------------------------------------------
+;치욕각인 취득 CFLAG:5316
+;-------------------------------------------------
+@K39_MESSAGE_MARK6_1
+;PRINTFORMW 「치욕각인１을 취득했을 시의 대사입니다」
+;CFLAG:5316 = 1
+
+@K39_MESSAGE_MARK6_2
+;PRINTFORMW 「치욕각인２를 취득했을 시의 대사입니다」
+;CFLAG:5316 = 2
+
+@K39_MESSAGE_MARK6_3
+;PRINTFORMW 「치욕각인３을 취득했을 시의 대사입니다」
+;CFLAG:5316 = 3
+
+;==================================================
+;@KOJO_MESSAGE_COM 관계
+;커맨드 대사 판정 처리
+;커맨드 실행시에 출력됩니다
+;==================================================
+@KOJO_MESSAGE_COM_39
+;순종적인 히나 호출
+IF CFLAG:7900 == 1
+	CALL KOJO_MESSAGE_COM_39_OBEY
+	RETURN 0
+ENDIF
+;자고 있을 경우에는 돌아온다
+SIF EQUIP:14
+	RETURN 0
+;재갈이 있고, 재갈을 채우는 커맨드가 아닐 경우에도 돌아온다
+SIF (TEQUIP:42 && (SELECTCOM != 226 && SELECTCOM != 229 && SELECTCOM != 506 && SELECTCOM != 509 && SELECTCOM != 583))
+	RETURN 0
+;기절 중에도 돌아온다
+SIF TFLAG:899 >= 1
+	RETURN 0
+
+;커맨드 첫회 판정을 갱신
+CALL COM_FLAG
+;PANCTION 내의 장비품 대사 보완 함수를 사용한다
+SIF FLAG:10 == 1
+	TRYCALL EQUIPTEXT
+;처녀 상실시의 메시지 호출
+SIF TALENT:0 && TFLAG:1
+	TRYCALL K39_MESSAGE_LOST_VIRGIN
+;커맨드 대사 호출
+TRYCALLFORM K39_MESSAGE_COM_{SELECTCOM}
+
+;-------------------------------------------------
+;처녀 상실
+;-------------------------------------------------
+@K39_MESSAGE_LOST_VIRGIN
+;연모시에다 주인의 페니스
+IF TFLAG:2
+	;PRINTFORMW 「주인의 페니스로 처녀 상실했을 때의 대사입니다」
+;그 외
+ELSE
+	;PRINTFORMW 「처녀 상실했을 때의 대사입니다」
+ENDIF
+
+;==================================================
+;@SELF_KOJO 관계
+;이벤트 대사 판정 처리
+;SELF_KOJO 실행시에 출력됩니다
+;==================================================
+@SELF_KOJO_K39
+;순종적인 히나 호출
+IF CFLAG:7900 == 1
+	CALL SELF_KOJO_K39_OBEY
+	RETURN 0
+ENDIF
+;자고 있을 경우에는 돌아온다
+SIF EQUIP:14
+	RETURN 0
+;조교 중에다 재갈을 물렸을 때에도 돌아온다
+SIF TFLAG:999 && TEQUIP:42
+	RETURN 0
+;조교 중에다 기절 중일 때에도 돌아온다
+SIF TFLAG:999 && (TFLAG:899 >= 1 && TFLAG:200 != 12)
+	RETURN 0
+
+;이벤트 대사 호출
+TRYCALLFORM K39_MESSAGE_EVENT_{(TFLAG:200)}
+
+;==================================================
+;@LOOK_VIDEO_KOJO 관계
+;비디오를 함께 감상할 시의 대사
+;==================================================
+@LOOK_VIDEO_KOJO_K39
+;PRINTFORMW 「비디오를 함께 감상할 시의 대사입니다」
+
+;==================================================
+;@DAILY_LIFE_MASSAGE 관계
+;휴식 대사
+;일상생활 이벤트ＯＮ이며 휴식 실행시에 출력됩니다
+;==================================================
+@DAILY_MESSAGE_39, ARG
+;PRINTFORMW 「휴식시의 대사입니다」
+
+;==================================================
+;@IMPRESSION_MAIN 관계
+;스테이터스 화면을 볼 시에 출력됩니다
+;한 마디 표시이므로 한 줄로 정리할 것
+;==================================================
+@IMPRESSION_K39,ARG
+;PRINTFORML 「한 마디 패치의 대사입니다」
+
+;=============================================================================
+;엔딩 대사의 처리
+;=============================================================================
+;-------------------------------------------------
+;@SINGLE_ENDING 관계
+;단독 엔딩
+;-------------------------------------------------
+@SINGLE_ENDING_K39
+;순종적인 히나 호출
+IF CFLAG:7900 == 1
+	CALL SINGLE_ENDING_K39_OBEY
+	RETURN 0
+ENDIF
+;なんだこの長さ(汗
+;ED後も継続プレイされる方はこの口上は避けた方がいいかもしれません。時間軸ループとか夢オチ等の脳内補完必須になります
+;なお、ここでのみ%CALLNAME:MASTER%（≒あなた）が喋ります。ご了承下さい
+;指輪／キス分岐はRR大妖精口上EDを参考にさせて頂きました。ありがとうございます
+
+;避けた方がいいなら選択式にすればいいじゃない
+PRINTFORMW 엔딩입니다만, 엔들리스 에이트 같은 타임 루프나 꿈이라는 결말로 뇌내보완하는 게 필수입니다.
+PRINTFORMW 계속 플레이하실 분은 피하는 게 나을지도 모릅니다.
+PRINTFORMW 엔딩을 보시겠습니까?
+PRINTL [0] 예
+PRINTL [1] 아니오
+$INPUT_LOOP_SINGLE_ENDING
+INPUT
+IF RESULT == 0
+ELSEIF RESULT == 1
+	PRINTFORMW 엔딩은 날려버립니다.
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP_SINGLE_ENDING
+ENDIF
+
+DRAWLINE
+PRINTFORMW ―――단독 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 환상향 외곽의 숲. %CALLNAME:MASTER%의 가슴 속에서 액신, 카기야마 히나는 그 생애를 끝내려 했다……
+PRINTFORMW 
+PRINTFORMW 갈수록 히나의 정신은 여기에서 멀어졌다……
+PRINTFORMW 히나의 마음이 망가지지 않도록 %조사처리(CALLNAME:MASTER,"는")% 히나와 여기에 왔지만………
+PRINTFORML 
+PRINTFORML 
+PRINTFORMW 뒤를 따라오는 히나를 향해 말을 던졌다
+PRINTFORMW 『……나는, 노예상이었지…아니, 정확히는 아직 노예상이다』
+PRINTFORMW 히나는 아무런 대답도 하지 않는다。%조사처리(CALLNAME:MASTER,"는")% 말을 이었다
+PRINTFORMW 『그런…구제할 수 없는 쓰레기에게도 목표가 있었다……하지만 그것도 이루어지지 않았지……』
+PRINTFORMW 돌아서서, 히나를 바라본다。그 눈동자에 의사는 없다……마치…인형과도 같이……
+PRINTFORMW 『……히나……이제, 오늘부터 너는 자유다……나같은 놈의 자기만족에 어울리게 해서……정말 미안했다』
+PRINTFORMW 가능한 최대한의 사죄……용서 받지 못해도……용서 받을 때까지 몇 번이라도……
+PRINTFORMW 히나에게 아무것도 해주지 못했던 무력감을 곱씹으며……무력하다면, 적어도 성의만이라도……
+PRINTFORMW ……땅바닥에 이마를 찧으며 %조사처리(CALLNAME:MASTER,"는")% 히나에게 몇 번이나 사과했다
+PRINTFORMW 「……ㅈㅏ……ㅇㅠ？……자, 유……주인님을…저를？」
+PRINTFORMW 히나의 눈동자에 급속히 의사가 돌아오고 있었다……
+PRINTFORMW ……찌직……찌지직……
+PRINTFORMW ……히나의 눈동자에 생긴 변화에 정신이 팔려 %조사처리(CALLNAME:MASTER,"는")% 『그것』에 대한 반응이 늦었다
+PRINTFORMW ……우직…빠직우직우드드드드득
+PRINTFORMW 소리를 깨달은 것은 히나 쪽이 빨랐다。돌아보는 히나의 시선을 %CALLNAME:MASTER%도, 쫒았다
+PRINTFORMW 나무가 부러져서, 이 쪽으로 쓰러지고 있었다。그걸 깨달았을 땐 이미 눈 앞에 다다라 있었다……
+PRINTFORMW 쿵
+PRINTW 
+PRINTFORMW 눈 앞에 나무가 쓰러져 있었다……하지만, 그것보다도…
+PRINTFORMW 지금, 자신을 밀친 것은……눈 앞의 나무 밑에 살짝 보이는 붉은 리본은……무엇보다, 리본이 감겨있는 그 왼손은……
+PRINTFORMW 『히나아아아아아아아아아아아아아아아아앗！！』
+PRINTFORMW 조용한 숲 속에, 끝까지 무력했던 불쌍한 남자의 절규가 울려퍼졌다……
+PRINTFORML 
+PRINTFORML 
+PRINTFORMW 어떻게 히나를 쓰러진 나무 밑에서 꺼낼 수는 있었지만…이미 그 생명은 빠른 속도로 끝을 향해 가고 있단 걸 이해할 수 있었다……
+PRINTFORMW 「무사……하셨…군요……다……행이에요」
+PRINTFORMW ……다행일 리가 없잖은가。이런 남자 때문에 그 목숨을 버리면 어쩌자는 말인가……
+PRINTFORMW 생각은 말이 되지 못했다…오히려 말로써 내뱉었다고 해도 그건 그녀에게 상처를 줄 뿐…
+PRINTFORMW 팔 속에서 꺼져가는 생명
+IF CFLAG:7800 == 1
+	PRINTFORMW …툭
+	PRINTFORMW 무언가가 떨어진건지, 히나의 허리 근처에서 작게 울린 소리에 눈을 돌리니 작은 상자가 있었다……
+	PRINTFORMW 엉겁결에 그것을 잡았다。내용물은 알고 있다。그 때, 히나에게 넘기지 않은 것。지금이라면, 혹시……
+	PRINTFORMW 『히나……나의, 내 억지를 들어줘……
+	PRINTFORMW 　계속……너의 곁에 있고 싶어。그 곳을 내가 있을 장소로 해주지 않겠어？』
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 히나의 왼손을 잡고, 그 손가락에…그 때 전해주지 못했던 반지를 끼웠다……
+	PRINTFORMW 히나는 왼손을 바라보았다…온화한 표정으로 그 손가락에서 빛나는 반지를 바라보는 눈동자에서, 눈물이 쏟아졌다……
+ELSE
+	PRINTFORMW 뭔가…뭔가 해줄 말이 한 마디도 없단 건가……
+	PRINTFORMW 히나는 %CALLNAME:MASTER%의 등에 팔을 둘러, 안겨 왔다……
+	PRINTFORMW 「……이 곳을 마지막에 있을 곳으로 해주세요……」
+	PRINTFORMW ……%조사처리(CALLNAME:MASTER,"는")% 생각하기 전에 말에 마음을 나타내고 있었다
+	PRINTFORMW 『히나……나의, 내 억지를 들어줘……
+	PRINTFORMW 　쭉 함께했지……그리고, 히나의 상냥함과…마음의 강함을 볼 수 있었다……
+	PRINTFORMW 　……하지만…그 마음과 생각에 히나는 몇 번이나 배신당해서……히나는 손상되어만 갔다……
+	PRINTFORMW 　그러니까……나는 히나를 돕겠어……인간 따위가 무슨 오만한 짓을, 라고 나 자신도 생각하지만……
+	PRINTFORMW 　무엇보다 나 자신이 히나의 마음을 다치게 했다……그래도……이 마음을 받아주겠어』
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 히나를 바라보며 그 입술에 자신의 입술을 포갰다……
+	PRINTFORMW 말의 의미를 이해했는지, 히나는 놀라움에 눈을 떴다…그래도, 그 입술을 받아들였다……
+ENDIF
+PRINTFORMW 「…기뻐요……그런 식으로 절 생각해주는 사람이 여기에……최후의 때에 함께 있어주다니……」
+PRINTFORMW 거기서, 히나는 일단 말을 멈추고 심호흡을 했다…힘든 듯한 표정。이렇게 대화를 한다는 것도 고통스러울 것이 분명하다
+PRINTFORMW 「……저는 신으로써, 당신의 마음에 부응할 순 없어요……」
+PRINTFORMW 눈 앞이 깜깜해진다。……내가 해온 일은 결코 용서받을 수 없는 일이다。알고 있었을텐데……
+PRINTFORMW 히나는 아직 말을 계속하고 있었다。숨소리는 희미해져 갔고, 한번 되찾았던 의사의 빛도 그 눈동자에서 이미 멀어졌다……
+PRINTFORMW ……그래도 히나는 말을 이었다。…다름 아닌, 죄 많은 나 때문에……
+PRINTFORMW 「…그렇지만……영겁의 윤회의 끝에서, 다시금 저와 당신의 운명이 교차할 때………그 때는 서로 그저 남녀로서……
+PRINTFORMW  ……그……때에……는, 당신의……」
+PRINTFORMW 한바탕 부는 바람。히나와 나의 볼을 스치고……바람과 함께 히나가 모아둔『액』이 찢어진다……
+PRINTFORMW 히나는 한 번 눈을 감고, 다시금 숨을 들어마신 뒤 눈을 뜨고, 확실히 이 쪽을 바라봤다……
+PRINTFORMW 「당신의 마음에 응하게 해주세요」
+PRINTFORMW 그리고…잠시간의……이별의 키스를 끝으로 히나는 숨을 거두었다……
+PRINTFORML 
+PRINTFORML 
+PRINTFORMW 그 날을 경계로, 나는 노예상으로서의 일에 손을 씻었다
+PRINTFORMW 직장동료들에게는 「기회주의자」라고 조롱당했지만, 그래도 이제 더 이상 죄를 거듭하는 일을 하는 건 절대로 싫었다
+PRINTFORML ―――영겁의 윤회의 끝에서, 다시금 저와 당신의 운명이 교차할 때
+PRINTFORML ―――그 때는 서로 그저 남녀로서……그……때에……는, 당신의……
+PRINTFORMW ―――당신의 마음에 응하게 해주세요」
+PRINTFORMW 히나의 마지막 말。그것에 의지하여 지금 나는 살고 있다。액신이었던 그녀의 『예언』
+PRINTFORMW 얼마나 뒤의 이야기가 될 지는 모르겠지만, 그렇다고 해도 그 말만큼은 이 혼에 새겨두고 나날을 보내자………
+PRINTFORMW 마당의 한 쪽에 세운 히나의 무덤。합장을 하고 그녀에게 인사한 후, 직장으로 발걸음을 옮겼다
+PRINTFORML 
+PRINTFORML 
+PRINTFORML 
+;여기부터 아래는 가뜩이나 긴 이야기의 후일담. 다 넣으면 행수가 바보 같은게 되므로 디포에서는 아웃하고 있습니다。
+;PRINTFORMW 끼이…끼이…
+;PRINTFORMW 큰 강을 가로지르는 배를 타고, 강 건너로 향했습니다。그 앞은……피안。죽어버린 영혼들의 잠시간의 안식처。
+;PRINTFORMW 『하지만, 나도 꽤 오래 이 일을 해왔지만……당신같은 사망자는 처음이네』
+;PRINTFORMW 사공씨가 이야기를 걸어온다…그래, 저는 신이지만 벌을 받게 됩니다。신이면서 죄를 지었기 때문에……
+;PRINTW 
+;PRINTFORMW 거대한 문이 열렸습니다……그래도 그 앞의 재판소장은 생각했던 것보단 훨씬 작은……
+;PRINTFORMW ……무례한 말이지만 소녀와도 같은 모습을 한 분이셨습니다。
+;PRINTW 
+;PRINTFORMW 『액신, 카기야마 히나입니까』
+;PRINTFORMW 「…네」
+;PRINTFORMW 『왜 당신이 여기에 왔는 지는 알고 계시겠죠』
+;PRINTFORMW 「신이면서……벌을 받을만한 일을 저질렀기 때문입니다……」
+;PRINTFORMW 겉보기와는 다른, 그녀의 말의 무게에 저는 달아나고 싶어졌습니다…
+;PRINTFORMW 모두 내던지고 달아날 수 있다면 얼마나 편했을지……
+;PRINTFORMW 하지만……심판을 받고, 그 죄를 속죄하는 것。그것이 윤회에의 첫 걸음이니까……
+;PRINTFORMW 도망치는 것은 용서되지 않아요……그 분과의 맹세를……배신하는 일은 하고 싶지 않으니………
+;PRINTFORML
+;PRINTFORML
+;PRINTFORMW 『……이상으로 심판을 끝냅니다만, 무슨 남길 말이라도 있습니까』
+;PRINTFORMW 「……심판에 따라, 저지른 죄를 속죄하겠습니다。이지만……하나만……저…어……」
+;PRINTFORMW 말을 잇지 못했습니다。소리가 나오지 않아……무서워서……울고 싶어진 자신을 필사적으로 달랬습니다
+;PRINTFORMW 뇌리에 떠오른 것은, 나를 사랑해준 한 남자……서로 울기만 했었죠……
+;PRINTFORMW 「…저의 최후를 지켜봐준 사람이 있습니다……수없이 죄를 거듭한 분입니다」
+;PRINTFORMW 술술 말이 나왔습니다。지금은…아직 상상으로밖엔 그릴 수 없는 당신의 웃음을 제대로 이 눈으로 보고 싶었으니까
+;PRINTFORMW 저의 웃음을 보여주고 싶어서……이번에는, 서로 마주 보며 웃음짓는 나날을 보내고 싶어서……
+;PRINTFORMW 「그의 죄에, 온정을 베풀어 주세요」
+;PRINTFORMW 똑바로…염마님에게 시선을 피하지 않고……마음을 부딪혔습니다
+;PRINTFORMW 『……제정신이라고는 생각할 수 없네요。그 부탁을 들어줘 온정을 베풀어 준다 하더라도 그 자는 앞으로도 같은 죄를 반복할텐데요』
+;PRINTFORMW …분명 그 때, 전 웃고 있었겠죠。염마님도 사공씨도…아무도 모르겠죠。그가 다시는 죄를 거듭하지 않을 거란 것을……저만이 알고 있었으니
+;PRINTFORML 
+;PRINTFORML 
+;PRINTFORML 
+;PRINTFORMW 「―――순경, 갑자기 들은 적도 없는 장소로의 전근에 많이 놀랄 거라고 생각하지만, 제대로 힘내주라고」
+;PRINTFORMW 상사에게 어깨를 두드려지고, 나는 놀라면서도 대답했다。
+;PRINTFORMW 조사해보니 수도권에서 편도로 20시간 정도 걸리는 벽지……아무래도 그 쪽에서도 일손이 부족하다던가……
+;PRINTFORMW 숙소에 혼자 살고 있단 걸 구실 삼아서, 내가 걸린 것 같다
+;PRINTFORMW 뭐어 정들면 고향이라고 하고 거절할 이유도 없어서 좋았지만……
+;PRINTFORML 
+;PRINTFORML 
+;PRINTFORMW 긴 산길을 끝없이 차로 달리자, 네비게이션의 끝에 겨우 목적지의 이름이 보였다……
+;PRINTFORMW 하지만, 앞의 터널은 아무래도 바로 목적지로 이어지는 것 같진 않다。길을 우회할 필요가 있을까……
+;PRINTFORMW 문득, 보도에 양산을 쓴 여자가 보인다。팔랑팔랑한…프릴이던가？그걸로 장식된 드레스를 입고 있는 것 같다
+;PRINTFORMW ……이 근처에선 유행하고 있는 걸까
+;PRINTFORMW 아가씨도 이 쪽을 의식한 것 같고, 어쩐지 손을 흔들고 있다。…아는 사람 중엔 저런 기묘한 의상을 입은 사람은 없을텐데……
+;PRINTFORMW 아가씨의 근처에 정차해, 창을 내렸다。창이 다 내려가는 것을 기다리지 않고 아가씨가 상냥하게 말을 걸어왔다
+;PRINTFORMW 「새로 오신 순경님이신가요？그럼 저 쪽의 터널 앞에 내리막길이 있으니까 그 쪽으로 가는게 빠를 거에요」
+;PRINTFORMW 어떻게 그런 걸 아냐고 물어보니 작은 마을이라 소문이 빨리 퍼진다고 했다
+;PRINTFORMW 즉 내가, 새로운 순경으로 마을에 온다는 건 미리 알려져 있는 것 같았다
+;PRINTFORMW 지름길을 알려준 것에 감사를 표하고, 나는 들은 대로, 내리막길을 향해 차를 몰았다……
+;PRINTFORMW 왠지, 그 내리막길로 접어들면서 주변에서 엄청난 시선을 느낀 것 같았다…
+;PRINTW 
+;PRINTFORMW 내리막길은 좋게 말해도 도로라고 하긴 어렵고, 운전을 조금만 잘못해도 바퀴가 엇나가 굴러떨어질지도 모른다
+;PRINTFORMW 어찌어찌 운전을 계속하다가, 이상한 감촉이 나를 덮쳤다……
+;PRINTFORMW ……강한, 기시감。나는 여길 알고 있다…？그럴 리가 없다는 걸 머리로는 이해하고 있다…하지만
+;PRINTFORMW ……그 불안을 떨쳐버리지 못하고……나는 차에서 내렸다
+;PRINTFORMW 주변을 둘러본다。그렇다고 이런 숲길을 살펴본다고 해서 알고 있을지 어떨지 같은걸 판별할 수 있을리가 없다。……그런데
+;PRINTFORMW ―――나무가 쓰러져, 다가오는 이미지。그래, 분명히, 이 자리에서……
+;PRINTFORMW 자기자신의 기억력이 심하게 안 좋다고 생각되어, 나는 차에 탔다。숨이 차기 시작했고, 구역질과 현기증이 괴롭혀왔다……
+;PRINTFORMW 가라앉을 때까지 기다린 뒤……다시 차를 몰았다。커브를 돌자 시야가 트였다
+;PRINTFORMW 이상한 도시, 아니, 이상한 마을이었다。상당히 옛날 풍경처럼 보이고……그리고 무엇보다……또, 그 기시감에 사로잡혔다
+;PRINTFORMW …나(僕)는…왜 여길 알고 있는 거지？…나(僕)…？……『나(俺)』。아냐, 달라, 그런 식으로 자신을 부른 적은 없어……
+;PRINTFORMW 심한 현기증이 몰려와 어쩔 수 없이 민가 옆에 차를 멈췄다。욱신욱신 아파오는 머리를 움켜쥐고, 차에서 내렸다……
+;PRINTW 
+;PRINTFORMW ……민가의 문을 지나친다。……그래。여기에 오면 무엇보다 먼저 할 일이 있다
+;PRINTFORMW 이 집 마당에『나(俺)』는 용무가 있다……
+;PRINTFORMW 마당의 한 쪽에 세워진 하나의 무덤。상당히 열화되어있었지만 손질이 잘 된 무덤
+;PRINTFORMW 이름도, 아무것도 보이지 않는 무덤이었지만 나는 이게 누구의 무덤인지 알고 있다
+;PRINTFORMW 무덤의 앞에 서서, 조용히 합장을 했다。뇌리에 한 여자가 떠올랐다……
+;PRINTFORMW 뒤에서 인기척을 느껴 돌아보았다。집의 문간에 누군가가 서 있었다
+;PRINTFORMW …서로에게 다가간다。한 걸음, 두 걸음…세 걸음째에는 서로 달리기 시작했다
+;PRINTFORMW 말 없이 껴안는다。나는 오늘, 이 날을 위해 지금까지 살아온 것이다
+;PRINTFORMW ……그녀도 그랬으면 좋겠다고, 마음 한 구석에 약간 제멋대로인 소원을 빌면서……
+;PRINTFORMW 「……주인님……어서오세요」
+;PRINTFORMW 『히나』의 목소리에 무심코 눈물을 흘릴 뻔 했다。그 날, 엇갈려있던 우리 둘의 시계바늘은, 다시금 하나의 시간을 새기기 시작했다…
+;PRINTFORMW 하지만……재회의 눈물을 흘리기 전에, 먼저
+;PRINTFORMW 「히나……나는 이제,『주인님』이 아니야…… 나도 히나를, 더 이상 그때의 히나라고 생각하지 않아……내 이름은―――」
+PRINTW 
+PRINTFORMW 　　　　　　　　―― Ending No.1039 (히나 엔딩　『액신님의 예언』)
+;長々とお付き合いいただきましてありがとうございました。もう少し短く…と何度も読み返してましたが増える一方でしたorz
+;とりあえず仕様上では普通にプレイ続行されるはずですが……違和感ヤバイので続行される場合はこのED自体が夢オチとでも思ってくださいorz
+
+RETURN 0
+;-------------------------------------------------
+;@SINGLE_ENDING_AFTER 관계
+;단독 엔딩 후에 「계속한다」를 선택했을 때에 출력합니다
+;-------------------------------------------------
+@SINGLE_ENDING_AFTER_K39
+;PRINTFORMW 「단독 엔딩 종료 후의 대사입니다」
+RETURN 0
+
+;-------------------------------------------------
+;@SLAVE_ENDING 관계
+;노예 엔딩
+;-------------------------------------------------
+@SLAVE_ENDING_K39
+DRAWLINE
+PRINTFORMW ―――노예 엔딩 조건 달성―――
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+;PRINTFORMW 「노예 엔딩 달성시의 대사입니다」
+PRINTFORMW  
+PRINTFORMW 　　　　　　　　―― Ending No.{1000+NO:TARGET}i (%CALLNAME:TARGET% 노예 엔딩)
+RETURN 0
+;-------------------------------------------------
+;@SLAVE_ENDING_AFTER 관계
+;노예 엔딩 후에 「계속한다」를 선택했을 때에 출력합니다
+;-------------------------------------------------
+@SLAVE_ENDING_AFTER_K39
+;PRINTFORMW 「노예 엔딩 종료 후의 대사입니다」
+RETURN 0
+
+;=============================================================================
+;매각 후 에피소드
+;자세하게 쓰려고 생각했더니 YM에 동봉된 YM용 패치의 대사 템플릿.ERB를 쓰는 편이 나을지도
+;일단 채워넣기만 하면 충분하게 해두겠음
+;=============================================================================
+;-------------------------------------------------
+;매각 후 에피소드 관계
+;-------------------------------------------------
+;@SET_SLAVE_AFTERWARDS_K39
+;에피소드 번호 결정 등
+;대상을 퇴피해서 TFLAG:710를 대상으로 삼는다.
+;LOCAL = TARGET
+;TARGET = TFLAG:710
+
+;음란
+;IF TALENT:170
+;	LOCAL:1 = 1
+;에피소드 없음
+;ELSE
+;	LOCAL:1 = 0
+;ENDIF
+
+;퇴피한 대상을 원래대로 되돌린다
+;TARGET = LOCAL
+;RETURN LOCAL:1
+
+;@SHOW_SLAVE_AFTERWARDS_K39, ARG, ARG:1
+;에피소드 표시
+;DRAWLINE
+;PRINTFORMW 　%CSVCALLNAME(39,0)%의 그 이후
+;DRAWLINE
+;IF ARG == 1
+	;PRINTFORMW 음란 에피소드
+;ENDIF
+;DRAWLINE
+;RETURN 0
+
+;=============================================================================
+;eratohoYM용 프롤로그(및 그에 대응한 에필로그)의 예시
+;프롤로그 No.39 -(부제 입력란)-
+;=============================================================================
+;--------------------------------------------------
+;프롤로그 No.39의 존재 판정
+;--------------------------------------------------
+;「RETURN 0」을 「RETURN 1」로 고치면 읽기 가능해진다
+@EXIST_PROLOGUE_YM_39
+RETURN 0
+
+;--------------------------------------------------
+;프롤로그 No.39의 표시
+;--------------------------------------------------
+;선택 화면에서 제목을 기입할 경우에는 이곳에서
+@SHOW_PROLOGUE_YM_39
+PRINTL [39] 프롤로그 No.39 -(부제 입력란)-
+
+;--------------------------------------------------
+;프롤로그 No.39 -(부제 입력란)-본문
+;--------------------------------------------------
+@EXE_PROLOGUE_YM_39
+PRINTW 　　　　　　　　―― Prologue No.39 -(부제 입력란)- (eratohoYM)
+PRINTW  
+DRAWLINE
+PRINTL -------------------------------------GOODLUCK------------------------------------
+DRAWLINE
+PRINTW 
+
+;=============================================================================
+;프롤로그 No.39에 대응한 에필로그
+;=============================================================================
+;표시시킨 프롤로그에 대응하는 에필로그를 노멀 엔딩 대신에 표시시키는 것이 가능
+;더해서, 시스템 상 프롤로그를 작성하지 않으면 표시되지 않는다
+;--------------------------------------------------
+;프롤로그 No.39에 대응한 에필로그의 존재 판정
+;--------------------------------------------------
+;「RETURN 0」을 「RETURN 1」로 고치면 읽기 가능해진다
+@EXIST_EPILOGUE_YM_39
+RETURN 0
+
+;--------------------------------------------------
+;프롤로그 No.39에 대응한 에필로그 본문
+;--------------------------------------------------
+@EXE_EPILOGUE_YM_39
+PRINTW  
+PRINTW 　　　　　　　　―― Ending No.01 (노멀 엔딩)
+
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■　　　　　　　　　　　　　 이하 EXTRA 모드용　　　　　　　　　　　　　　　　　　■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;EXTRA 모드에서는 주인이 된 캐릭터의 대사를 읽어들입니다
+;eratohoYM용와는 다르게 표시 가능한 건 디폴트거나 주인 대사 중 한쪽뿐이므로, 선택지 표시용의 함수는 존재하지 않습니다
+;
+;예)○○는 예전부터 사모하고 있던 ××을 수중에 넣고자, 행동을 개시했다…… 같은 느낌?
+;
+;추가로 프롤로그에서 캐릭터를 추가하고 싶을 경우, 캐릭터 ID 관계상 직접 「ADDCHARA Ｘ」를 쓰는 것보다
+;「CALL CHARA_STATE_BASIC, Ｘ」를 쓰는 편이 바람직하다.
+;그때, 자동적으로 가입한 캐릭터가 조교 대상으로서 설정된다.
+;또, 「CALL CHARA_STATE_BASIC, Ｘ」 뒤에 「CSTR:3 = ～～～～」를 입력하면,
+;어떠한 방법으로 끌려왔는지 기억하게 할 수 있다.
+;=============================================================================
+;프롤로그 No.39 -(부제 입력란)-
+;=============================================================================
+;--------------------------------------------------
+;프롤로그 No.39의 존재 판정
+;--------------------------------------------------
+;「RETURN 0」을 「RETURN 1」로 고치면 읽기 가능(존재하고 있다고 판단)해진다
+@EXIST_PROLOGUE_EXTRA_39
+RETURN 0
+
+;--------------------------------------------------
+;프롤로그 No.39 -(부제 입력란)-본문
+;--------------------------------------------------
+@EXE_PROLOGUE_EXTRA_39
+
+;………………………………………………
+;캐릭터 추가 이벤트를 삽입할 경우
+;………………………………………………
+;제작자 각자의 판단으로 프롤로그에서 캐릭터를 추가하는 것이 가능합니다.
+;단, 초기 금액 이상의 가격인 캐릭터를 추가할 경우,
+;최악으론 게임 밸런스가 붕괴할 가능성이 있습니다. 그 점을 감안하여 이벤트를 추가해 주십시오.
+;
+;특정 캐릭터를 추가할 경우(Ｘ에는 캐릭터 번호를 입력)
+;CALL CHARA_STATE_BASIC, Ｘ
+;어떻게 끌려왔는지를 기억(예: CSTR:3 = 유괴했다.)
+;※지나치게 길면 표시가 삐뚤어질 가능성 있음
+;CSTR:3 = 
+;이하의 행을 해금하면 위에서 추가한 캐릭터를 구입한 걸로 할 수 있음(＝소지금이 준다. 단, 0 미만은 되지 않음)
+;MONEY = MIN(MONEY - ITEMPRICE:(NO:TARGET), 0)
+;………………………………………………
+
+PRINTW 　　　　　　　　―― EXTRA Prologue No.39 -(부제 입력란)-
+PRINTW  
+DRAWLINE
+PRINTL ------------------------------------LET’S ENJOY----------------------------------
+DRAWLINE
+PRINTW 

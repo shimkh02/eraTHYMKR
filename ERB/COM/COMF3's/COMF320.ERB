@@ -1,0 +1,382 @@
+﻿;=============================================================================
+;상냥하게 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE320
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:320 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼)3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM320
+PRINTL 상냥하게 한다
+TSTR:0 = 상냥하게 한다
+CALL TRAIN_MESSAGE_COM320
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 30
+
+SOURCE:15 = 100
+SOURCE:10 = 80
+
+;봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:11 = 10
+ELSEIF ABL:13 == 1
+	SOURCE:11 = 30
+ELSEIF ABL:13 == 2
+	SOURCE:11 = 80
+ELSEIF ABL:13 == 3
+	SOURCE:11 = 150
+ELSEIF ABL:13 == 4
+	SOURCE:11 = 230
+ELSE
+	SOURCE:11 = 200 + (ABL:13 * 20)
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:10 , 0.80
+	TIMES SOURCE:11 , 0.80
+	SOURCE:18 = 10
+	SOURCE:19 = 10
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:10 , 1.00
+	TIMES SOURCE:11 , 1.00
+	SOURCE:18 = 60
+	SOURCE:19 = 40
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:10 , 1.20
+	TIMES SOURCE:11 , 1.30
+	SOURCE:18 = 120
+	SOURCE:19 = 80
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:10 , 1.40
+	TIMES SOURCE:11 , 1.40
+	SOURCE:18 = 240
+	SOURCE:19 = 140
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:10 , 1.50
+	TIMES SOURCE:11 , 1.70
+	SOURCE:18 = 360
+	SOURCE:19 = 220
+ELSE
+	SOURCE:10 = SOURCE:10 * (ABL:21 * 10 + 120) / 100
+	SOURCE:11 = SOURCE:11 * (ABL:21 * 15 + 125) / 100
+	SOURCE:18 = 150 + (ABL:21 * 35)
+	SOURCE:19 = 100 + (ABL:21 * 20)
+ENDIF
+
+;[괴뢰]와[정신 붕괴]와[괴조인격]을 가지지 않고,[연모]소유라면 애정 경험이 가산
+SIF TALENT:150 && TALENT:167 == 0 && TALENT:168 == 0 && TALENT:169 == 0
+	TCVAR:21 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM320
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;말용 플래그
+TFLAG:144 = 0
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF RAND:17 == 0
+	TFLAG:144 = 17
+	PRINTFORML %CALLNAME:TARGET%의 머리를 어루만졌다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈을 쳐 뜨고 %조사선택(CALLNAME:PLAYER, "를")% 응시하며 뜨거운 숨을 내쉬고 있다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 조금 기쁜 듯이 몸을 기대고 있다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 새빨개진 얼굴을 숙이고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "로")%부터 멀어지려 한다….
+	ENDIF
+	;대상의 머리카락의 더러운⇔조교자의 손가락의 더러움이 서로 이동
+	STAIN:7 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:7
+ELSEIF RAND:16 == 0
+	TFLAG:144 = 16
+	PRINTFORML %CALLNAME:TARGET%의 방을 정리하기 시작했다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 적극적으로 %조사선택(CALLNAME:PLAYER, "를")% 도왔다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 당황한 모습으로 %조사선택(CALLNAME:PLAYER, "를")% 도왔다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 어쩔 수 없다는 듯이 %조사선택(CALLNAME:PLAYER, "를")% 도왔다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 아무것도 하지 않고 있다….
+	ENDIF
+ELSEIF RAND:15 == 0 && TEQUIP:56 == 1
+	TFLAG:144 = 15
+	PRINTFORML %CALLNAME:TARGET%의 눈을 손으로 가려 주었다….
+	IF TALENT:150 && TALENT:205 == 0 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 손을 살그머니 치우고, 거울을 보며 환히 미소 지었다.
+	ELSEIF MARK:3 >= 1 && TALENT:205 == 0
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거울을 보지 않을 수 있게 되어 조금 안심하고 있는 것 같다….
+	ELSEIF TALENT:150 && TALENT:205
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 보일 리 없는 거울을 향해, 상냥하게 미소 지었다.
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈이 가려진 그대로 아무것도 하지 않는다….
+	ENDIF
+ELSEIF RAND:14 == 0 && TEQUIP:56 == 1 && TALENT:205 == 0
+	TFLAG:144 = 14
+	PRINTFORML 거울 안의 %조사선택(CALLNAME:TARGET, "를")% 가만히 응시했다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 조금 토라진 듯한 표정으로, %CALLNAME:PLAYER%의 얼굴을 돌려 자신을 바라보게 했다.
+	ELSEIF ABL:10 >= 3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 듯이 눈을 돌렸다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 매섭게 노려보고 있다….
+	ENDIF
+ELSEIF RAND:13 == 0 && TEQUIP:56 == 1 && TALENT:205 == 0
+	TFLAG:144 = 13
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 뒤로부터 꼭 껴안았다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거울에 비친 자신과 %CALLNAME:PLAYER%의 모습을 행복하게 바라보고 있다….
+	ELSEIF ABL:10 >= 3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼굴을 홍당무같이 하고서, 살짝 거울을 바라보았다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거울로부터 눈을 돌려버렸다….
+	ENDIF
+ELSEIF RAND:12 == 0
+	TFLAG:144 = 12
+	PRINTFORML %CALLNAME:TARGET%의 눈을 핥았다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW 답례로 %CALLNAME:TARGET%도 %CALLNAME:PLAYER%의 눈에 키스를 해 왔다….
+		EXP:23 += 1
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈을 살짝 만졌다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 작게 비명을 질렀다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 고개를 젖히며 %조사선택(CALLNAME:PLAYER, "로")%부터 멀어지려 한다….
+	ENDIF
+ELSEIF RAND:11 == 0
+	TFLAG:144 = 11
+	PRINTFORML %CALLNAME:TARGET%의 배꼽을 혀로 빨았다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 상냥하게 %CALLNAME:PLAYER%의 머리를 어루만지고 있다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 배까지 새빨갛게 수줍어하고 있다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 익숙해지지 않는 감각에 신음하며 소리를 지르고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "를")% 어떻게든 떼내려 하고 있다….
+	ENDIF
+ELSEIF RAND:10 == 0
+	TFLAG:144 = 10
+	PRINTFORML %CALLNAME:TARGET%의 등줄기를 핥았다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 몸의 긴장을 풀고, %CALLNAME:PLAYER%에게 기대왔다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %CALLNAME:TARGET%의 입에서 요염한 한숨이 새어나 온다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 몸을 움츠리고 이를 악물고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 날뛰면서 %조사선택(CALLNAME:PLAYER, "로")%부터 멀어지려 한다….
+	ENDIF
+ELSEIF RAND:9 == 0
+	TFLAG:144 = 9
+	PRINTFORML %CALLNAME:TARGET%의 겨드랑이에 혀를 가져갔다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 머리카락에 얼굴을 묻었다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 것 같지만, 동시에 즐거움도 느끼고 있는 것 같다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 필사적으로 %조사선택(CALLNAME:PLAYER, "로")%부터 도망치려 하고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 팔꿈치를 내려 %조사선택(CALLNAME:PLAYER, "를")% 밀어내려 한다….
+	ENDIF
+ELSEIF RAND:8 == 0
+	TFLAG:144 = 8
+	PRINTFORML %CALLNAME:TARGET%에게 무릎 베개를 해 주었다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %조사선택(CALLNAME:PLAYER, "를")% 올려보며, 생긋 미소 지었다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 허벅지의 감각을 확인하듯이 스륵스륵 머리를 비벼대고 있다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 점잔 빼고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 얼굴을 보지 않으려 한다….
+	ENDIF
+ELSEIF RAND:7 == 0
+	TFLAG:144 = 7
+	PRINTFORML %CALLNAME:TARGET%의 목덜미에 혀를 가져갔다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 뒤로 손을 돌려, %CALLNAME:PLAYER%의 머리를 껴안았다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 몸을 %CALLNAME:PLAYER%에게 맡기고 있다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼굴을 새빨갛게 하고 도리도리 고개를 저었다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 도망칠 기회를 살피고 있는 것 같다….
+	ENDIF
+ELSEIF RAND:6 == 0
+	TFLAG:144 = 6
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 뒤에서 껴안고 머리카락의 향기를 맡았다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 앞에 감겨진 %CALLNAME:PLAYER%의 손을 잡고 가슴에 대게 한다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%에게 안겨서 조금 안심한 모양이다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 조금 떨고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 싫은 듯이 이마를 찌푸리고 있다….
+	ENDIF
+ELSEIF RAND:5 == 0
+	TFLAG:144 = 5
+	PRINTFORMW %CALLNAME:TARGET%의 귓전으로 사랑을 속삭였다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 눈의 힘이 풀린 채로, 넋을 잃은 듯이 %CALLNAME:PLAYER%에게 기대고 있다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 아무것도 말하지 않고, %CALLNAME:PLAYER%에게 꼭 안겼다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 얼굴을 새빨갛게 하고 있다. 싫지만은 않은 것 같다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 하얗게 질린 얼굴로 %CALLNAME:PLAYER%의 이야기를 못들은 척 하고 있다….
+	ENDIF
+ELSEIF RAND:4 == 0
+	TFLAG:144 = 4
+	PRINTFORML %CALLNAME:TARGET%의 귀에 입김을 내뿜어 가볍게 빨고 나서 귓불을 달콤하게 깨물어주었다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 머리를 어루만지며, 그대로 키스를 해 왔다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %CALLNAME:TARGET%에게 있어, 이 감각은 불쾌하지 않는 것 같다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %CALLNAME:PLAYER%의 혀가 움직일 때 마다, %조사선택(CALLNAME:TARGET, "는")% 작게 몸을 진동시켰다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 불쾌하다고 말하고 싶은 듯, %조사선택(CALLNAME:PLAYER, "를")% 째려보고 있다….
+	ENDIF
+ELSEIF RAND:3 == 0
+	TFLAG:144 = 3
+	PRINTFORM %CALLNAME:TARGET%의 전신을 
+	IF PALAM:10 >= PALAMLV:4 && (ITEM:60 > 0 || NOITEM)
+		PRINT 로션 투성이로 해, 
+		IF NOITEM == 0
+			ITEM:60 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:60
+				CALL FILL_PLURAL_ITEM, 60
+		ENDIF
+		SOURCE:19 += 10000
+	ENDIF
+	PRINTFORML 상냥하게 어루만지고 문질렀다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 사랑에 빠진 표정으로, %CALLNAME:PLAYER%에게 안겨왔다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 기분이 좋은 것 같다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 무서워 하듯이 자신의 몸을 껴안고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 손을 물리쳤다….
+	ENDIF
+	;대상의 손의 더러운⇔조교자의 손가락의 더러움이 서로 이동
+	STAIN:1 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:1
+	;대상의 가슴의 더러운⇔조교자의 손가락의 더러움이 서로 이동
+	STAIN:5 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:5
+	;대상의 다리의 더러운⇔조교자의 손가락의 더러움이 서로 이동
+	STAIN:6 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:6
+	;대상의 머리카락의 더러운⇔조교자의 손가락의 더러움이 서로 이동
+	STAIN:7 |= STAIN:PLAYER:1
+	STAIN:PLAYER:1 |= STAIN:7
+ELSEIF RAND:2 == 0
+	TFLAG:144 = 2
+	PRINTFORM %CALLNAME:TARGET%의 몸에 
+	IF PALAM:10 >= PALAMLV:4 && (ITEM:60 > 0 || NOITEM)
+		PRINT 로션을 바르고, 
+		IF NOITEM == 0
+			ITEM:60 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:60
+				CALL FILL_PLURAL_ITEM, 60
+		ENDIF
+		SOURCE:19 += 10000
+	ENDIF
+	PRINTFORM 자신의 몸을 문질렀다. 
+	SIF PALAM:10 >= PALAMLV:4
+		PRINT 그리고 함께 미끌미끌하게 되었다.
+	PRINTL
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% %CALLNAME:PLAYER%의 목에 손을 감고, 그대로 입술을 마주쳤다….
+		;대상의 입의 더러운⇔조교자의 입의 더러움이 서로 이동
+		STAIN:0 |= STAIN:PLAYER:0
+		STAIN:PLAYER:0 |= STAIN:0
+		TCVAR:23 += 1
+		TCVAR:PLAYER:23 += 1
+		CFLAG:172 += (ASSIPLAY == 0) ?  1 # 0
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %CALLNAME:TARGET%도 적극적으로 몸을 문지르고 있다….
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 돌과 같이 경직되어 있었지만, 이윽고 흠칫 흠칫 %CALLNAME:PLAYER%의 몸에 다가 온다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 바둥바둥 날뛰며 %조사선택(CALLNAME:PLAYER, "를")% 뿌리쳤다….
+	ENDIF
+	;대상의 가슴의 더러운⇔조교자의 가슴의 더러움이 서로 이동
+	STAIN:5 |= STAIN:PLAYER:5
+	STAIN:PLAYER:5 |= STAIN:5
+ELSE
+	TFLAG:144 = 1
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 간질였다….
+	IF TALENT:150 && RAND:3 >= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 즐거운 듯이 키득거리며 웃고 있다….
+	ELSEIF ABL:10 >= 4 && EXP:20 >= 250
+		PRINTFORMW %CALLNAME:TARGET%도 %조사선택(CALLNAME:TARGET, "를")% 간질이기 시작했다.
+	ELSEIF ABL:10 >= 2 && EXP:20 <= 150
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 필사적으로 웃음을 참고 있는지, 얼굴을 찡그리고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 노골적으로 싫은 것 같은 얼굴을 하며, %조사선택(CALLNAME:PLAYER, "로")%부터 멀어졌다….
+	ENDIF
+ENDIF

@@ -1,0 +1,113 @@
+﻿;=============================================================================
+;콘돔정음(조수)
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE292
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:292 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;それまでの調教でゴム射してないとダメ
+SIF CFLAG:75 == 0
+	RETURN 0
+;조수가 순종4이상かつ욕망4이상かつ奉仕精神3이상かつ精液中毒が3이상 없으면 안 됨
+SIF ABL:ASSI:10 < 4 || ABL:ASSI:11 < 4 || ABL:ASSI:13 < 3 || ABL:ASSI:31 < 3
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM292
+PRINTL 콘돔정액 마시기(조수)
+TSTR:0 = 콘돔정액 마시기(조수)
+CALL TRAIN_MESSAGE_COM292
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 0
+DOWNBASE:1 += 30
+
+SOURCE:18 = 500
+
+;ABL:욕정을 본다
+IF ABL:11 == 0
+	TIMES SOURCE:18 , 0.25
+ELSEIF ABL:11 == 1
+	TIMES SOURCE:18 , 0.50
+ELSEIF ABL:11 == 2
+	TIMES SOURCE:18 , 0.75
+ELSEIF ABL:11 == 3
+	TIMES SOURCE:18 , 1.00
+ELSEIF ABL:11 == 4
+	TIMES SOURCE:18 , 1.25
+ELSE
+	TIMES SOURCE:18 , 1.50
+ENDIF
+
+;ABL:정액 중독을 본다
+IF ABL:31 == 0
+	TIMES SOURCE:18 , 0.10
+ELSEIF ABL:31 == 1
+	TIMES SOURCE:18 , 0.40
+ELSEIF ABL:31 == 2
+	TIMES SOURCE:18 , 0.70
+ELSEIF ABL:31 == 3
+	TIMES SOURCE:18 , 1.00
+ELSEIF ABL:31 == 4
+	TIMES SOURCE:18 , 1.30
+ELSE
+	TIMES SOURCE:18 , 1.60
+ENDIF
+
+;조수의 입에 정액 더러움
+STAIN:ASSI:0 |= 4
+
+;콘돔의 정액을 초기화
+CFLAG:75 = 0
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM292
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:ASSI%에게 사용이 끝난 콘돔을 건넸다….
+IF TALENT:ASSI:81
+	PRINTFORM %조사선택(CALLNAME:ASSI, "는")% %조사선택(CALLNAME:TARGET, "가")% 혀를 뻗으면 닿을 것 같은 정도의 거리에서, 
+ELSE
+	PRINTFORM %조사선택(CALLNAME:ASSI, "는")% %CALLNAME:TARGET%에게 과시하듯이 
+ENDIF
+IF ABL:ASSI:31 == 5
+	PRINTL 황홀한 표정으로 정액을 맛보고 있다….
+ELSE
+	PRINTL 맛있게도 정액을 빨아먹고 있다….
+ENDIF
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+IF ABL:31 == 0
+	PRINTW 그 광경에 기가 막힌 얼굴을 하고 있다….
+ELSEIF ABL:31 < 3
+	PRINTW 필사적으로 눈을 감으려 하고 있지만, 그 눈은 눈앞의 광경에 못박힌 듯이 고정되어 있다….
+ELSEIF ABL:31 < 5
+	PRINTW 부러운듯한 표정으로 가만히 그 광경을 보고 있다….
+ELSE
+	PRINTW 참을 수 없게 된 건지, 군침을 늘어뜨리면서 그 광경을 지켜보고 있다….
+ENDIF

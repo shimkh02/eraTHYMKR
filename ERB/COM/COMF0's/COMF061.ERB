@@ -1,0 +1,123 @@
+﻿;=============================================================================
+;미약
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE61
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:61 > 0
+	RETURN 0
+SIF TEQUIP:78 == 2 && TALENT:PLAYER:831 && PALAM:10 >= 5000 && TEQUIP:90 == 0
+	RETURN 1
+;아이템을 가지고 있는지, 아이템 없음 설정이나 촉수 조교중이 아니면 안 됨
+SIF ITEM:61 == 0 && NOITEM == 0 && TEQUIP:90 == 0
+	RETURN 0
+;약물내성이라면 안 됨
+SIF TALENT:44
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM61
+IF TEQUIP:90
+	PRINTL 촉수 미약 전개
+	TSTR:0 = 촉수 미약 전개
+ELSEIF TEQUIP:78 == 2 && TALENT:PLAYER:831 && PALAM:10 >= 5000
+	PRINTL 야채식 체액 미약 변환
+	TSTR:0 = 야채식 체액 미약 변환
+ELSE
+	PRINTL 미약
+	TSTR:0 = 미약
+ENDIF
+CALL TRAIN_MESSAGE_COM061
+
+;調合知識があれば消費を抑える
+LOCAL:1 = 300
+SIF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	LOCAL:1 /= 2
+
+;調教対象に媚薬中毒があれば消費を抑える
+SIF TALENT:46
+	LOCAL:1 /= 2
+SIF TEQUIP:78 == 2 && TALENT:PLAYER:831 && PALAM:10 >= 5000 && TEQUIP:90 == 0
+	LOCAL:1 /= 10
+
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:1
+
+;媚薬効果で욕정のアップが2倍になるので実際には+10000
+SOURCE:18 = 5000
+SOURCE:26 = 2000
+SOURCE:31 = 2000
+
+;媚薬中毒
+IF TALENT:46
+	SOURCE:24 = 500
+	TIMES SOURCE:18 , 1.50
+	TIMES SOURCE:31 , 1.50
+	SOURCE:42 = 100
+ELSE
+	SOURCE:42 = 1 + RAND:3
+ENDIF
+
+IF TEQUIP:90 == 0
+	IF TEQUIP:78 == 2 && TALENT:PLAYER:831 && PALAM:10 >= 5000
+		SOURCE:18 = PALAM:10
+		PALAM:10 = 0
+		SOURCE:31 = 0
+	ELSE
+		IF NOITEM == 0
+			ITEM:61 -= 1
+			SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+				CALL FILL_PLURAL_ITEM, 61
+		ENDIF
+	ENDIF
+ENDIF
+
+TEQUIP:11 = 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;약물경험
+TCVAR:40 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM061
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:90
+	PRINTL 최음효과가 있는 액체가 촉수로부터 나오고 있다.
+ELSEIF TEQUIP:78 == 2 && TALENT:PLAYER:831 && PALAM:10 >= 5000
+	PRINTFORML %조사선택(CALLNAME:MASTER, "는")% %CALLNAME:TARGET%의 몸에 붙은 액체를 미약으로 바꾸었다.
+ELSE
+	PRINTFORM %CALLNAME:TARGET%에게 
+	SIF ABL:PLAYER:12 >= 3
+		PRINT 입으로 
+	SIF ABL:10 == 0
+		PRINT 억지로 
+	PRINTL 미약을 먹였다.
+ENDIF
+PRINTFORMW \@ (TFLAG:899) ? # %조사선택(CALLNAME:TARGET, "는")% 난폭한 숨을 쉬면서 얼굴이 빨갛게 되기 시작한다. \@

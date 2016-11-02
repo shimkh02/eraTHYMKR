@@ -1,0 +1,245 @@
+﻿;=============================================================================
+;강제 방뇨
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE620
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM620
+PRINTL 강제 방뇨
+TSTR:0 = 강제 방뇨
+SELECTCOM = 620
+CALL TRAIN_MESSAGE_COM620
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 150
+
+SOURCE:31 = 5000
+SOURCE:32 = 500
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 10
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 120
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 500
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1200
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2000
+ELSE
+	SOURCE:0 = 3000
+ENDIF
+
+;ABL:플레이어의 기교를 본다
+IF ABL:PLAYER:12 == 0
+	SOURCE:16 = 30
+ELSEIF ABL:PLAYER:12 == 1
+	SOURCE:16 = 100
+ELSEIF ABL:PLAYER:12 == 2
+	SOURCE:16 = 300
+ELSEIF ABL:PLAYER:12 == 3
+	SOURCE:16 = 700
+ELSEIF ABL:PLAYER:12 == 4
+	SOURCE:16 = 1500
+ELSE
+	SOURCE:16 = 2400
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:12 = 1800
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:12 = 2000
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:12 = 2400
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:12 = 2800
+ELSE
+	SOURCE:12 = 3600
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:22 = 6000
+	SOURCE:30 = 1000
+ELSEIF ABL:14 == 1
+	SOURCE:22 = 5000
+	SOURCE:30 = 800
+ELSEIF ABL:14 == 2
+	SOURCE:22 = 4000
+	SOURCE:30 = 600
+ELSEIF ABL:14 == 3
+	SOURCE:22 = 3000
+	SOURCE:30 = 400
+ELSEIF ABL:14 == 4
+	SOURCE:22 = 2000
+	SOURCE:30 = 200
+ELSE
+	SOURCE:22 = 1000
+	SOURCE:30 = 50
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:12 , 0.80
+	SOURCE:18 = 100
+	SOURCE:19 = 100
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:12 , 1.00
+	SOURCE:18 = 300
+	SOURCE:19 = 200
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:12 , 1.20
+	SOURCE:18 = 700
+	SOURCE:19 = 400
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:12 , 1.40
+	SOURCE:19 = 700
+	SOURCE:18 = 1200
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:12 , 1.50
+	SOURCE:18 = 1800
+	SOURCE:19 = 1100
+ELSE
+	TIMES SOURCE:12 , 1.70
+	SOURCE:18 = 2500
+	SOURCE:19 = 1500
+ENDIF
+
+;장소를 본다
+IF TEQUIP:52
+	TIMES SOURCE:31 , 2.50
+ELSEIF TEQUIP:53
+	TIMES SOURCE:31 , 0.50
+ELSEIF TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0)
+	TIMES SOURCE:31 , 1.50
+ELSEIF TEQUIP:56 == 1
+	TIMES SOURCE:31 , 1.20
+ENDIF
+
+LOCAL:1 = 100
+;EXP:6을 본다
+IF EXP:6 < EXPLV:1
+	TIMES LOCAL:1, 3.00
+ELSEIF EXP:6 < EXPLV:2
+	TIMES LOCAL:1, 2.50
+ELSEIF EXP:6 < EXPLV:3
+	TIMES LOCAL:1, 2.00
+ELSEIF EXP:6 < EXPLV:4
+	TIMES LOCAL:1, 1.00
+ELSEIF EXP:6 < EXPLV:5
+	TIMES LOCAL:1, 0.80
+ELSE
+	TIMES LOCAL:1, 0.60
+ENDIF
+
+;반항적
+SIF TALENT:11
+	TIMES LOCAL:1, 2.00
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL:1, 2.00
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL:1, 0.80
+ENDIF
+;자제심
+SIF TALENT:20
+	TIMES LOCAL:1, 1.50
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1, 0.60
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1, 0.80
+;억압
+SIF TALENT:32
+	TIMES LOCAL:1, 3.00
+;저항
+SIF TALENT:34
+	TIMES LOCAL:1, 3.00
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:1, 3.50
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL:1, 0.50
+ENDIF
+
+SOURCE:25 += LOCAL:1 * 3
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1, 1.20
+
+SOURCE:32 += LOCAL:1 * 2
+SOURCE:16 += 3000
+SOURCE:31 += LOCAL:1 * 5
+
+;수집품 이벤트(황금수 입수)
+SIF FLAG:12 & 8 && BASE:4 > 3000
+	CALL SWEET_POTATO_GW
+
+TCVAR:6 += 2
+;방뇨 레벨 증가
+IF TALENT:45 == 0
+	LOCAL:2 = 1 + (EXP:6 / 10)
+	LOCAL:2 = MIN(LOCAL:2 *2, 10)
+	CFLAG:31 += LOCAL:2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+
+TEQUIP:12 = 0
+
+TFLAG:32 = 1
+EX:12 += 1
+NOWEX:12 += 1
+BASE:4 = 0
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM620
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;전회와 이번 조교자가 같아, 조교 대상이 여성으로 전회의 조교가 안면기승위 혹은 안면기승위 어널인 경우
+IF TALENT:120 == 0 && (PREVCOM == 126 || PREVCOM == 187) && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0))
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 가까이 보이는 요도구를 입으로 자극했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 참지 못하고, 그대로 오줌을 %CALLNAME:PLAYER%에게 뿌려 버렸다….
+ELSEIF TEQUIP:52
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 다리를 들어 올려 요도구를 자극했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 참지 못하고, 개와 같은 모습으로 오줌을 내뿜어 버렸다….
+ELSEIF TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0) || TEQUIP:57
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 성기에 입맞추고 요도구를 훌쩍이며 빨았다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 참지 못하고 %CALLNAME:PLAYER%의 입에 오줌을 뿜어버렸다….
+ELSEIF (TALENT:127 || TALENT:128) && (TALENT:110 || TALENT:111)
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 양 다리를 움켜 쥐고 요도구를 손가락 끝으로 간질였다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 작은 몸을 진동하며 오줌을 내뿜어 버린다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 요도구를 손가락 끝으로 자극했다.
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 참지 못하고 오줌을 내뿜어 버렸다….
+ENDIF

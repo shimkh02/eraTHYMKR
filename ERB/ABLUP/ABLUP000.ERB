@@ -1,0 +1,119 @@
+﻿;=============================================================================
+;Ｃ감각
+;=============================================================================
+@ABLUP0
+DRAWLINE
+SIF ABL:0 >= 5
+	JUMP ABLUP_MAX
+
+PRINTFORM [0] - %PALAMNAME:0%의 구슬×{COST0(0)}
+SIF COST0(1) > 0
+	PRINTFORM , %EXPNAME:41% {COST0(1)} 이상
+PRINT ……
+CALL SHOW_ISABLUP_COMMON, CAN0(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN0(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:0 -= COST0(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:0 += 1
+PRINTFORMW %ABLNAME:0%의 레벨이 %조사처리(ABL:0,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップ可能かの判定
+;--------------------------------------------------
+@ISABLUP0
+SIF ABL:0 >= 5
+	RETURN 0
+
+CALLF CALC_COST0, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP0("CHECK")
+
+@COST0(ARG)
+#FUNCTION
+RETURNF CALC_COST0("GET", ARG)
+
+@CALC_COST0(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:0 == 0
+	LOCAL:0 = 1
+	LOCAL:1 = 0
+ELSEIF ABL:0 == 1
+	LOCAL:0 = 20
+	LOCAL:1 = 0
+ELSEIF ABL:0 == 2
+	LOCAL:0 = 400
+	LOCAL:1 = 10
+ELSEIF ABL:0 == 3
+	LOCAL:0 = 5000
+	LOCAL:1 = 25
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 1.50
+		TIMES LOCAL:1 , 1.20
+	ENDIF
+ELSEIF ABL:0 == 4
+	LOCAL:0 = 20000
+	LOCAL:1 = 50
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.50
+		TIMES LOCAL:1 , 2.00
+	ENDIF
+ENDIF
+
+;Ｃ敏感
+IF TALENT:100
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.70
+;Ｃ鈍感
+ELSEIF TALENT:101
+	TIMES LOCAL:0 , 1.20
+	TIMES LOCAL:1 , 1.10
+ENDIF
+;淫乱
+IF TALENT:170
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.80
+ENDIF
+
+;淫乱無しかつ必要珠数が0以下の場合修正
+SIF TALENT:170 == 0 && LOCAL:0 < 1
+	LOCAL:0 = 1
+
+RETURNF 0
+
+@CAN0(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP0("GET", ARG)
+
+@CAN_ABLUP0(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;快Ｃ의 구슬で上げる
+SIF JUEL:0 < COST0(0)
+	LOCAL:0 |= 1
+;Ｃ調律経験が必要
+SIF EXP:41 < COST0(1)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

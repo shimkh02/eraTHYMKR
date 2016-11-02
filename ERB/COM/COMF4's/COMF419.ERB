@@ -1,0 +1,134 @@
+﻿;=============================================================================
+;광기의 눈
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE419
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:419 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 [狂気の目]を持っていないとダメ
+SIF TALENT:PLAYER:125 == 0
+	RETURN 0
+;狂人には通用しない
+SIF TALENT:158
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;アイマスク, 暗闇展開中は不可能
+SIF TEQUIP:41 || TEQUIP:70
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM419
+PRINTL 광기의 눈
+TSTR:0 = 광기의 눈
+CALL TRAIN_MESSAGE_COM419
+
+;발동중이면 발동 정지
+IF TEQUIP:73
+	TEQUIP:73 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 40
+
+SOURCE:24 = 700
+SOURCE:31 = 4500
+SOURCE:23 = 500
+
+TEQUIP:73 = 1
+RETURN 1
+
+;-------------------------------------------------
+;광기의 눈발동중
+;-------------------------------------------------
+;파라미터 변화. CVAB의 쾌감치를 랜덤으로 바꾸어 넣고
+;가산될 가능성을 두고 있는 것은 카오스 같아지기 때문에
+;또 카오스를 증강시키기 (위해)때문에, 한층 더 파라미터(parameter)에 가산되는 값이 상하에 변화하도록(듯이)
+@EQUIP_COM419
+PRINTL <광기의 눈 발동 중>
+;텐포라리에 배치해, 원래의 SOURCE치를 리셋
+LOCAL:1 = SOURCE:0
+LOCAL:2 = SOURCE:1
+LOCAL:3 = SOURCE:2
+LOCAL:4 = SOURCE:3
+SOURCE:0 = 0
+SOURCE:1 = 0
+SOURCE:2 = 0
+SOURCE:3 = 0
+
+;재계산
+REPEAT 4
+	IF COUNT == 0
+		LOCAL:5 = LOCAL:1
+	ELSEIF COUNT == 1
+		SIF TALENT:120
+			CONTINUE
+		LOCAL:5 = LOCAL:2
+	ELSEIF COUNT == 2
+		LOCAL:5 = LOCAL:3
+	ELSE
+		LOCAL:5 = LOCAL:4
+	ENDIF
+	IF RAND:3 == 0
+		TIMES LOCAL:5 , 0.80
+	ELSEIF RAND:2 == 0
+		TIMES LOCAL:5 , 1.20
+	ENDIF
+	LOCAL:6 = RAND:100
+	;남자의 경우
+	IF TALENT:120
+		LOCAL:6 %= 3
+	ELSE
+		LOCAL:6 %= 4
+	ENDIF
+	IF LOCAL:6 == 0
+		SOURCE:0 += LOCAL:5
+	ELSEIF LOCAL:6 == 1
+		SOURCE:3 += LOCAL:5
+	ELSEIF LOCAL:6 == 2
+		SOURCE:2 += LOCAL:5
+	ELSE
+		SOURCE:1 += LOCAL:5
+	ENDIF
+REND
+
+LOCAL = RAND:5
+IF LOCAL == 0
+	;통각이 욕정에 추가
+	LOCAL:7 = SOURCE:20 / 10 * 7
+	SOURCE:18 += LOCAL:7
+ELSEIF LOCAL == 1
+	;욕정이 통각에 추가
+	LOCAL:7 = SOURCE:18 / 10 * 7
+	SOURCE:20 += LOCAL:7
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM419
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:73
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 눈동자를 들여다 보는 것을 그만두었다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 눈동자의 안쪽을 들여다보았다.
+ENDIF

@@ -1,0 +1,205 @@
+﻿;=============================================================================
+;엉덩이 애무
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE186
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:186 > 0
+	RETURN 0
+;Ａ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4) == 0
+	RETURN 0
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;애널 목적이 아니라 어디까지나 엉덩이를 어루만지고 돌린다
+@COM186
+PRINTL 엉덩이 애무
+TSTR:0 = 엉덩이 애무
+CALL TRAIN_MESSAGE_COM186
+
+DOWNBASE:0 += 15
+DOWNBASE:1 += 80
+
+SOURCE:12 = 700
+SOURCE:15 = 30
+SOURCE:31 = 300
+SOURCE:10 = 300
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 10
+	SOURCE:11 = 10
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 50
+	SOURCE:11 = 20
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 200
+	SOURCE:11 = 32
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 400
+	SOURCE:11 = 40
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 650
+	SOURCE:11 = 46
+ELSE
+	SOURCE:0 = 950
+	SOURCE:11 = 50
+ENDIF
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 10
+	SOURCE:22 = 200
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 50
+	SOURCE:22 = 250
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 200
+	SOURCE:22 = 300
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 400
+	SOURCE:22 = 550
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 650
+	SOURCE:22 = 900
+ELSE
+	SOURCE:2 = 950
+	SOURCE:22 = 1400
+ENDIF
+
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:2 , 0.30
+	TIMES SOURCE:22 , 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:22 , 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:2 , 1.30
+	TIMES SOURCE:22 , 1.30
+ELSE
+	TIMES SOURCE:2 , 1.60
+	TIMES SOURCE:22 , 1.60
+ENDIF
+
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:105
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:104
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+IF TEQUIP:59 == 2
+	;학교수영복 장착중
+	TIMES SOURCE:10 , 3.00
+	TIMES SOURCE:12 , 0.80
+ENDIF
+
+
+;처녀로 정조관념
+IF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+ELSEIF TALENT:0 && TALENT:30
+	SOURCE:22 /= 2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM186
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+;촉수 소환중일 경우
+IF TEQUIP:90
+	IF TEQUIP:25 == 4
+		PRINTFORML %조사선택(CALLNAME:TARGET, "가")% 장내를 절찬리 실황중계당하는 와중에
+	ELSE
+		PRINTFORML 촉수에 유린당하는 %CALLNAME:TARGET%의 엉덩이를 바라보면서
+	ENDIF
+ELSE
+	IF TEQUIP:25 == 1
+		PRINTL 조금씩 떨고 있는 애널 바이브를 바라보면서
+	ELSEIF TEQUIP:25 == 2
+		PRINTL 항문에 박혀있는 요석을 바라보면서
+	ELSEIF TEQUIP:25 == 3
+		PRINTL 소리를 내며 진동하고 있는 로터를 바라보면서
+	ELSEIF TEQUIP:25 == 4
+		PRINTL 희미하게 소리를 내는 전극을 바라보면서
+	ELSEIF TEQUIP:25 == 5
+		PRINTL 비즈의 끈을 바라보면서
+	ELSEIF TEQUIP:25 == 6
+		PRINTL 애널을 한계까지 넓히고 있는 벌룬을 바라보면서
+	ELSEIF TEQUIP:25 == 7
+		PRINTL 배설감에 떨리는 국 구멍을 바라보면서
+	ELSEIF TEQUIP:25 == 8
+		PRINTL 팽만감에 떨리는 엉덩이를 바라보면서
+	ELSEIF TEQUIP:25 == 9
+		PRINTL 항문에 조용히 비집고 들어가고 있는 포도의 만을 바라보면서
+	ELSEIF TEQUIP:26 >= 4
+		PRINTL 엉덩이에 아주 크게 자리잡는 거대한 얼음의 덩어리를 바라보면서
+	ELSEIF TEQUIP:26 == 3
+		PRINTL 항문에서 나와 있는 굵은 고드름을 바라보면서
+	ELSEIF TEQUIP:26
+		PRINTL 항문에 박혀있는 고드름을 바라보면서
+	ENDIF
+ENDIF
+IF TEQUIP:68
+	PRINTFORMW %CALLNAME:TARGET%의 엉덩이를 가볍게 손대어 보거나 했다….
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%의 엉덩이를 어루만지고 돌리거나 비비거나 했다….
+ENDIF

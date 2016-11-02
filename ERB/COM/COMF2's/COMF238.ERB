@@ -1,0 +1,120 @@
+﻿;=============================================================================
+;스턴건
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE238
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:238 > 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;失神パッチ無効時もダメ
+SIF FLAG:3999 == 0
+	RETURN 0
+;スタンガンを持っているか, 아이템なし設定でないとダメ
+SIF ITEM:37 == 0 && NOITEM == 0
+	RETURN 0
+;助手の場合, 순종5か새드かドＳか狂気でないとダメ
+IF ASSIPLAY
+	SIF ABL:PLAYER:10 < 5 || (TALENT:PLAYER:81 == 0 && TALENT:PLAYER:177 == 0 && TALENT:PLAYER:158 == 0)
+		RETURN 0
+ENDIF
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;시체는 안됨
+SIF TALENT:226 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;기절시킬 뿐. 또한 기절중이라든지는 사용할 수 없다(라고 할까 효과를 알 수 있지 않아)
+@COM238
+TSTR:7 = 스턴건
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 37
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 스턴건
+CALL TRAIN_MESSAGE_COM238
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 10
+
+SOURCE:20 = 800
+SOURCE:31 = 1000
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 37
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:21 >= 3
+	TFLAG:50 += 1
+;SM교육 경험 플래그
+SIF ASSIPLAY
+	TFLAG:55 = 1
+
+;이번 전기쇼크건 사용한 플래그
+TFLAG:159 = 1
+
+;커맨드 속성：도구(조교자)
+SIF TEQUIP:90 == 0
+	TFLAG:98 = 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM238
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "를")% %조사선택(TSTR:9, "로")% 쐈다….

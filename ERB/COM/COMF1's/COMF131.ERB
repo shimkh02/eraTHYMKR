@@ -1,0 +1,311 @@
+﻿;=============================================================================
+;음핵 전극
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE131
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:131 > 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:30 == 4
+	RETURN 1
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:18 == 0 && NOITEM == 0
+	RETURN 0
+;남자 또는 후타나리면 불가
+SIF EXIST_PENIS(TARGET)
+	RETURN 0
+;그밖의 Ｃ계 장착구 사용 중에는 불가
+SIF (TEQUIP:30 && TEQUIP:30 != 4) || TEQUIP:31
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중, ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:53 || TEQUIP:55
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 1 || TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM131
+TSTR:7 = 전극
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 18
+	CALL NAMECHECK_CUSTOMTOOL
+	IF (TSTR:8 != "전극") && (TSTR:8 != ITEMNAME:18)
+		PRINTFORML 음핵 %TSTR:8%
+	ELSE
+		PRINTL 음핵 전극
+	ENDIF 
+ELSE
+	TSTR:9 = %TSTR:7%
+	PRINTL 음핵 전극
+ENDIF
+TSTR:0 = 음핵 전극
+CALL TRAIN_MESSAGE_COM131
+
+DOWNBASE:0 += 80
+DOWNBASE:1 += 140
+
+SOURCE:31 = 650
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 150
+	SOURCE:20 = 600
+	SOURCE:22 = 800
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 350
+	SOURCE:20 = 600
+	SOURCE:22 = 1400
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 600
+	SOURCE:20 = 600
+	SOURCE:22 = 2300
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1500
+	SOURCE:20 = 800
+	SOURCE:22 = 3500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2100
+	SOURCE:20 = 1000
+	SOURCE:22 = 6000
+ELSE
+	SOURCE:0 = 3000
+	SOURCE:20 = 1200
+	SOURCE:22 = 9000
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES SOURCE:0 , 0.80
+ELSEIF ABL:10 == 1
+	TIMES SOURCE:0 , 0.90
+ELSEIF ABL:10 == 2
+	TIMES SOURCE:0 , 1.00
+ELSEIF ABL:10 == 3
+	TIMES SOURCE:0 , 1.10
+ELSEIF ABL:10 == 4
+	TIMES SOURCE:0 , 1.20
+ELSE
+	TIMES SOURCE:0 , 1.30
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:0 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:0 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:0 , 1.10
+ELSE
+	TIMES SOURCE:0 , 1.20
+ENDIF
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:101
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:100
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 18
+	FLAG:1111 = 1
+	FLAG:1112 = SOURCE:0
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:0 = FLAG:1120
+	FLAG:1112 = SOURCE:22
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:22 = FLAG:1120
+	FLAG:1111 = 2
+	FLAG:1112 = SOURCE:20
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:20 = FLAG:1120
+ENDIF
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+
+;전극의 착탈
+IF TEQUIP:30 == 4
+	TEQUIP:30 = 0
+ELSE
+	TEQUIP:30 = 4
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;음핵 전극 장착중
+;--------------------------------------------------
+@EQUIP_COM131
+TSTR:7 = 음핵 전극
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 18
+	CALL NAMECHECK_CUSTOMTOOL
+ENDIF
+PRINTFORML <%TSTR:7% 장착 중>
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 100
+
+LOCAL:2 = 1000
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	LOCAL = 250
+	LOCAL:1 = 1000
+ELSEIF ABL:0 == 1
+	LOCAL = 600
+	LOCAL:1 = 2000
+ELSEIF ABL:0 == 2
+	LOCAL = 1200
+	LOCAL:1 = 3000
+ELSEIF ABL:0 == 3
+	LOCAL = 1900
+	LOCAL:1 = 5000
+ELSEIF ABL:0 == 4
+	LOCAL = 2500
+	LOCAL:1 = 8000
+ELSE
+	LOCAL = 3900
+	LOCAL:1 = 12000
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:101
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ELSEIF TALENT:100
+	TIMES LOCAL , 0.60
+	TIMES LOCAL:1 , 0.60
+	TIMES LOCAL:2 , 0.60
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 18
+	FLAG:1111 = 1
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+	FLAG:1112 = LOCAL:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:1 = FLAG:1120
+	FLAG:1111 = 3
+	FLAG:1112 = LOCAL:2
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL:2 = FLAG:1120
+ENDIF
+
+SOURCE:0 += LOCAL
+SOURCE:22 += LOCAL:1
+SOURCE:20 += LOCAL:2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM131
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:30 == 4
+	IF MARK:9 > 1
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 미처 손을 쓰기도 전에, %조사선택(CALLNAME:TARGET, "는")% 음핵에서 %조사선택(TSTR:7, "를")% 벗어 던져버렸다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 음핵에서 %조사선택(TSTR:7, "를")% 벗겨 주었다….
+	ENDIF
+ELSE
+	IF MARK:9 > 1
+		PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 싫어서 버둥대는 %조사선택(CALLNAME:TARGET, "를")% 억눌렀다.
+		PRINTFORMW 그리고, %CALLNAME:TARGET%의\@(TALENT:100) ? 민감한 # \@음핵에 %조사선택(TSTR:9, "를")% 붙이고 스위치를 넣었다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의\@(TALENT:100) ? 민감한 # \@음핵에 %조사선택(TSTR:9, "를")% 붙이고 스위치를 넣었다….
+	ENDIF
+ENDIF

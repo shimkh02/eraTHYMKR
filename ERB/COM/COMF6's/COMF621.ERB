@@ -1,0 +1,587 @@
+﻿;=============================================================================
+;구전
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE621
+RETURN 0
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;특정의 목욕탕에 잠기고 있을까 개순애 모드 유효의 경우, 키스를 사용하는 곳의 커맨드에
+;순애인가 제발 꽤 미묘하기도 하지만
+@COM621
+IF TEQUIP:55 == 3
+	LOCALS = 구전(로션)
+	TFLAG:148 = 1
+ELSEIF TEQUIP:55 == 5 || TEQUIP:55 == 6
+	LOCALS = 구전(미약)
+	TFLAG:148 = 2
+ELSEIF TEQUIP:55 == 8
+	LOCALS = 구전(정액)
+	TFLAG:148 = 3
+ELSEIF TEQUIP:55 == 9 || TEQUIP:55 == 17
+	LOCALS = 구전(술)
+	TFLAG:148 = 4
+ELSEIF TEQUIP:55 == 10
+	LOCALS = 구전(트로로)
+	TFLAG:148 = 5
+ELSEIF TEQUIP:55 == 13
+	LOCALS = 구전(국사 무쌍의 약)
+	TFLAG:148 = 6
+ELSEIF TEQUIP:55 == 14
+	LOCALS = 구전(액독)
+	TFLAG:148 = 7
+ELSE
+	LOCALS = 구전
+	TFLAG:148 =0
+ENDIF
+PRINTFORML %LOCALS%
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER, 621
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = %LOCALS%
+SELECTCASE TFLAG:148
+	CASE 1
+		DOWNBASE:0 += 25
+		DOWNBASE:1 += 100
+	CASE 2
+		DOWNBASE:0 += 30
+		DOWNBASE:1 += 120
+	CASE 3
+		DOWNBASE:0 += 40
+		DOWNBASE:1 += 160
+	CASE 4
+		DOWNBASE:0 += 20
+		DOWNBASE:1 += 80
+	CASE 5
+		DOWNBASE:0 += 30
+		DOWNBASE:1 += 90
+	CASE 6
+		DOWNBASE:0 += 40
+		DOWNBASE:1 += 120
+	CASE 7
+		DOWNBASE:0 += 60
+		DOWNBASE:1 += 150
+	CASEELSE
+		DOWNBASE:0 += 10
+		DOWNBASE:1 += 40
+ENDSELECT
+SELECTCOM = 621
+CALL TRAIN_MESSAGE_COM621
+
+;-------------------------------------------------
+;사정 게이지 체크(후타나리·남자의 경우)
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 50
+ELSEIF ABL:12 == 1
+	LOCAL = 100
+ELSEIF ABL:12 == 2
+	LOCAL = 150
+ELSEIF ABL:12 == 3
+	LOCAL = 250
+ELSEIF ABL:12 == 4
+	LOCAL = 380
+ELSE
+	LOCAL = 500
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL)
+
+;TALENT:혀사용을 본다
+SIF TALENT:52
+	TIMES LOCAL , 2.00
+;고양이혀을 본다
+SIF TALENT:54
+	TIMES LOCAL , 0.70
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+SELECTCASE TFLAG:148
+	CASE 1
+		;로션
+		SOURCE:15 = 100
+		SOURCE:12 = 300
+		SOURCE:31 = 500
+		;조수 조교의 경우
+		IF ASSIPLAY
+			JUEL:ASSI:4 += 20
+			JUEL:ASSI:7 += 20
+			JUEL:ASSI:100 += 10
+		ENDIF
+	CASE 2
+		;미약
+		SOURCE:18 = 2000
+		SOURCE:31 = 3000
+		;미약중독
+		IF TALENT:46
+			SOURCE:24 = 500
+			TIMES SOURCE:18 , 1.50
+			TIMES SOURCE:31 , 1.50
+			SOURCE:42 = 50
+		ELSE
+			SOURCE:42 = 1 + RAND:3
+		ENDIF
+		;조수 조교의 경우
+		IF ASSIPLAY
+			JUEL:ASSI:5 += 20
+			JUEL:ASSI:100 += 100
+			;미약중독
+			IF TALENT:ASSI:46
+				JUEL:ASSI:4 += 10
+				JUEL:ASSI:5 += 30
+				JUEL:ASSI:100 -= 50
+				SOURCE:ASSI:42 = 50
+			ELSE
+				SOURCE:ASSI:42 = 1 + RAND:3
+			ENDIF
+		ENDIF
+		;구전 되는 (분)편의 약물 경험
+		TCVAR:PLAYER:40 += 1
+	CASE 3
+		;정액
+		;ABL:정액 중독을 본다
+		IF ABL:31 == 0
+			TFLAG:242 += 12
+			SOURCE:24 = 0
+			SOURCE:22 = 9000
+			SOURCE:31 = 15000
+		ELSEIF ABL:31 == 1
+			TFLAG:242 += 8
+			SOURCE:24 = 300
+			SOURCE:22 = 6000
+			SOURCE:31 = 9000
+		ELSEIF ABL:31 == 2
+			TFLAG:242 += 5
+			SOURCE:24 = 900
+			SOURCE:22 = 3000
+			SOURCE:31 = 4000
+		ELSEIF ABL:31 == 3
+			TFLAG:242 += 3
+			SOURCE:24 = 1800
+			SOURCE:22 = 1500
+			SOURCE:31 = 2000
+		ELSEIF ABL:31 == 4
+			TFLAG:242 += 2
+			SOURCE:24 = 3800
+			SOURCE:22 = 800
+			SOURCE:31 = 1000
+		ELSE
+			TFLAG:242 += 1
+			SOURCE:24 = 8200
+			SOURCE:22 = 400
+			SOURCE:31 = 500
+		ENDIF
+		;조수 조교의 경우
+		IF ASSIPLAY
+			LOCAL:2 = ABL:11
+			JUEL:ASSI:5 += LOCAL:2 * 20
+			JUEL:ASSI:6 += (8 - LOCAL:2) * 20
+			JUEL:ASSI:100 += (6 - LOCAL:2) * 50
+		ENDIF
+		;정액을 마신 플래그
+		TFLAG:3 += 1
+	CASE 4
+		;술
+		SOURCE:18 = 500
+		SOURCE:12 = 500
+		SOURCE:32 = 400 * (1 + MARK:9)
+		SOURCE:17 = 800
+		;조수 조교의 경우
+		IF ASSIPLAY
+			IF TALENT:120 && TALENT:ASSI:120
+				LOCAL:2 = ABL:33
+			ELSEIF TALENT:120 == 0 && TALENT:ASSI:120 == 0
+				LOCAL:2 = ABL:32
+			ELSE
+				LOCAL:2 = 0
+			ENDIF
+			IF LOCAL:2 > 0
+				JUEL:ASSI:12 += LOCAL:2 * 30
+				JUEL:ASSI:15 += (8 - LOCAL:2) * 40
+			ENDIF
+			JUEL:ASSI:100 += (5 - LOCAL:2 + MARK:ASSI:9) * 50
+		ENDIF
+	CASE 5
+		;트로로
+		SOURCE:12 = 1000
+		SOURCE:32 = 150 * (1 + MARK:9)
+		SOURCE:21 = 500
+		;조수 조교의 경우
+		IF ASSIPLAY
+			IF TALENT:120 && TALENT:ASSI:120
+				LOCAL:2 = ABL:33
+			ELSEIF TALENT:120 == 0 && TALENT:ASSI:120 == 0
+				LOCAL:2 = ABL:32
+			ELSE
+				LOCAL:2 = 0
+			ENDIF
+			IF LOCAL:2 > 0
+				JUEL:ASSI:12 += LOCAL:2 * 30
+				JUEL:ASSI:15 += (8 - LOCAL:2) * 40
+			ENDIF
+			JUEL:ASSI:100 += (5 - LOCAL:2 + MARK:ASSI:9) * 50
+		ENDIF
+	CASE 6
+		;국사 무쌍의 약
+		SOURCE:24 = 500
+		SOURCE:19 = 1200
+		SOURCE:18 = 750
+		SOURCE:31 = 900
+		;구전 되는 (분)편의 약물 경험
+		TCVAR:PLAYER:40 += 3
+	CASE 7
+		;액독
+		SOURCE:24 = 1300
+		SOURCE:19 = 200
+		SOURCE:31 = 1800
+		SOURCE:23 = 500
+		SOURCE:21 = 1700
+		TFLAG:242 += 10
+ENDSELECT
+
+;위 쪽으로 계산한 더러운 데이터
+SOURCE:30 = TFLAG:242*20 + 10
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 += 30
+	SOURCE:16 = 0
+	TIMES SOURCE:30 , 4.00
+ELSEIF ABL:13 == 1
+	SOURCE:15 += 100
+	SOURCE:16 = 30
+	TIMES SOURCE:30 , 2.50
+ELSEIF ABL:13 == 2
+	SOURCE:15 += 250
+	SOURCE:16 = 80
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:13 == 3
+	SOURCE:15 += 200
+	SOURCE:16 = 150
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:13 == 4
+	SOURCE:15 += 280
+	SOURCE:16 = 240
+	TIMES SOURCE:30 , 0.50
+ELSE
+	SOURCE:15 += 350
+	SOURCE:16 = 480
+	TIMES SOURCE:30 , 0.10
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.50
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.80
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.50
+	TIMES SOURCE:16 , 1.50
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 2.50
+	TIMES SOURCE:16 , 2.50
+ELSE
+	TIMES SOURCE:15 , 4.00
+	TIMES SOURCE:16 , 4.00
+ENDIF
+
+;키스마
+IF TALENT:176
+	TIMES SOURCE:15 , 2.50
+	TIMES SOURCE:16 , 2.50
+ENDIF
+;조교자가 조수로 키스마라면 기교에 응해 욕망을 습득의 주가 불과에 들어간다
+IF TALENT:PLAYER:176
+	TIMES SOURCE:15 , 2.50
+	TIMES SOURCE:16 , 2.50
+	IF ASSIPLAY
+		LOCAL:1 = ABL:PLAYER:12 + 1
+		JUEL:PLAYER:11 += LOCAL:1 * 25
+		JUEL:PLAYER:13 += LOCAL:1 * 25
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(PLAYER)
+
+IF TFLAG:91
+;사정하고 있다
+	TIMES SOURCE:15 , 3.00
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 += 0
+		TIMES SOURCE:16 , 2.00
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 1
+		SOURCE:24 += 100
+		TIMES SOURCE:16 , 2.50
+		TIMES SOURCE:22, 1.60
+	ELSEIF ABL:31 == 2
+		SOURCE:24 += 300
+		TIMES SOURCE:16 , 3.00
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 3
+		SOURCE:24 += 700
+		TIMES SOURCE:16 , 4.00
+		TIMES SOURCE:22, 0.70
+	ELSEIF ABL:31 == 4
+		SOURCE:24 += 1500
+		TIMES SOURCE:16 , 5.00
+		TIMES SOURCE:22, 0.40
+	ELSE
+		SOURCE:24 += 6000
+		TIMES SOURCE:16 , 6.00
+		TIMES SOURCE:22, 0.10
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 22
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;노예의 입⇔조교자의 입의 불결이 이동
+STAIN:0 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:0
+
+;키스 경험
+TCVAR:23 += 1
+TCVAR:PLAYER:23 += 1
+CFLAG:172 += (ASSIPLAY == 0) ?  1 # 0
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;국사 무쌍의 약은 폭발의 체크가 있다
+IF TFLAG:148 == 6
+	IF ASSIPLAY
+		TFLAG:162 += 10
+		SIF TFLAG:162 > 30
+			CALL DOPING8556_BURST_ASSI
+	ELSE
+		TFLAG:161 += 10
+		SIF TFLAG:161 > 30
+			CALL DOPING8556_BURST_MASTER
+	ENDIF
+ENDIF
+;주인 경험 플래그
+SIF ASSIPLAY == 0
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM621
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 욕조내의 
+SELECTCASE TFLAG:148
+	CASE 1
+		PRINT 로션을 
+	CASE 2
+		PRINT 미약을 
+	CASE 3
+		PRINT 정액을 
+	CASE 4
+		PRINT 술을 
+	CASE 5
+		PRINT 끈적이를 
+	CASE 6
+		PRINT 국사무쌍의 약을 
+	CASE 7
+		PRINT 액화한 액(厄)을 
+	CASEELSE
+		PRINT 액체를 
+ENDSELECT
+PRINTFORMW 입에 넣고는, %CALLNAME:PLAYER%의 입 안에 흘려 넣었다….
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_621, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %ABLNAME:11%LV{LOCAL:99}({LOCAL:99})
+ENDIF
+;ABL:봉사 정신
+IF ABL:13
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:13
+	TFLAG:240 += LOCAL:99 * 4
+	RESULTS = %RESULTS% %ABLNAME:13%LV{LOCAL:99}({LOCAL:99 * 4})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %MARKNAME:1%LV{LOCAL:99}({LOCAL:99 * 2})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:35
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:35%({LOCAL:99})
+ENDIF
+;악취 둔감
+IF TALENT:61
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 1
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:61%({LOCAL:99})
+;악취 민감
+ELSEIF TALENT:62
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:62%({LOCAL:99})
+ENDIF
+;헌신적
+IF TALENT:63
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 6
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:63%({LOCAL:99})
+ENDIF
+;쾌감의 부정
+IF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 1
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+;연모
+IF TALENT:150 && ASSIPLAY == 0
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 5
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:150%({LOCAL:99})
+ENDIF
+;키스마
+IF TALENT:176
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 10
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:176%({LOCAL:99})
+ENDIF
+
+;조교자의 입의 더러움
+TFLAG:242 = COMORDER_STAIN_CALC(0, 1)
+;정액의 구전 이외는 더러움이 그만큼 영향을 주지 않는다
+SIF TFLAG:148 != 3
+	TFLAG:242 /= 2
+
+;서로 불결
+IF TFLAG:242
+	RESULTS = %RESULTS% - 
+	TFLAG:240 -= TFLAG:242
+	RESULTS = %RESULTS% 서로 불결
+	;악취 둔감
+	IF TALENT:61
+		RESULTS = %RESULTS%, %TALENTNAME:61%
+	ELSEIF TALENT:62
+		RESULTS = %RESULTS%, %TALENTNAME:62%
+	ENDIF
+	RESULTS = %RESULTS%({TFLAG:242})
+	LOCAL:99 = 1
+ENDIF
+
+SELECTCASE TFLAG:148
+	CASE 1
+		;로션
+		TFLAG:241 = 25
+	CASE 2
+		;미약
+		TFLAG:241 = 40
+	CASE 3
+		;정액
+		TFLAG:241 = 60
+	CASE 4
+		;술
+		TFLAG:241 = 20
+	CASE 5
+		;트로로
+		TFLAG:241 = 30
+	CASE 6
+		;국사 무쌍의 약
+		TFLAG:241 = 25
+	CASE 7
+		;액독
+		TFLAG:241 = 35
+	CASEELSE
+		TFLAG:241 = 15
+ENDSELECT

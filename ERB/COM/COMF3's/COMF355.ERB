@@ -1,0 +1,412 @@
+﻿;=============================================================================
+;풀장 플레이
+;=============================================================================
+;殆どお風呂場プレイからの移植。
+;TEQUIP:53 == 2をプール中とする。
+;プールは風呂場に隣接しているイメージ。
+;基本水着を着ていることを想定してる。脱ぐと恥ずかしさ・消費気力がUP。
+;
+
+;--------------------------------------------------
+;풀장 플레이 실행 판정
+;--------------------------------------------------
+@COM_ABLE355
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:355 > 0
+	RETURN 0
+;풀장을 소유하고 있지 않으면 불가
+SIF (FLAG:89 & 1) == 0
+	RETURN 0
+;羞恥プレイ中は移動はできない（鏡の前から離れないと)
+SIF TEQUIP:56
+	RETURN 0
+;羞恥プレイおよび風呂コマンドを使っている場合を除き、解除はいつでも可能
+SIF TEQUIP:53 == 2 && TEQUIP:55 == 0 && TEQUIP:56 == 0
+	RETURN 1
+;助手調教で[妄信][服従]もなく、調教対象と同性の場合、どちらかもしくは両方が脱いでいて《従順》3未満または《レズっ気》(《ＢＬっ気》)2未満だと実行できない
+IF ASSIPLAY && !(TALENT:PLAYER:120 ^^ TALENT:120) && TALENT:PLAYER:151 == 0 && TALENT:PLAYER:160 == 0
+	SIF ABL:PLAYER:10 < 3 || ABL:PLAYER:(22 + TALENT:120) < 2 && !(TEQUIP:59 && TEQUIP:ASSI:59)
+		RETURN 0
+ENDIF
+;対象の従順が1以上ないとダメ
+SIF ABL:10 < 1
+	RETURN 0
+;対象か助手が動物耳で、従順が3未満だとダメ
+SIF TALENT:116 && ABL:10 < 3
+	RETURN 0
+SIF ASSI >= 0 && TALENT:ASSI:116 && ABL:ASSI:10 < 3
+	RETURN 0
+;睡眠中は不可
+SIF EQUIP:14
+	RETURN 0
+;失神中は不可
+SIF TFLAG:899 > 0
+	RETURN 0
+;蜘蛛の巣にかけているときは移動できない
+SIF TEQUIP:40 == 7
+	RETURN 0
+;乗馬中はダメ
+SIF TEQUIP:43
+	RETURN 0
+;野外プレイ中はダメ
+SIF TEQUIP:52
+	RETURN 0
+;特殊風呂入浴中はダメ
+SIF TEQUIP:55
+	RETURN 0
+;お医者さんプレイ中はダメ
+SIF TEQUIP:57
+	RETURN 0
+;オムツプレイ中はダメ
+SIF TEQUIP:58
+	RETURN 0
+;裸エプロン中はダメ
+SIF TEQUIP:59 == 1
+	RETURN 0
+;助手がスク水とビキニと褌以外のコスプレ中はだめ
+SIF ASSIPLAY && TEQUIP:PLAYER:59 > 1 && TEQUIP:PLAYER:59 != 2 && TEQUIP:PLAYER:59 != 12 && TEQUIP:PLAYER:59 != 17
+	RETURN 0
+;ビキニと褌以外のコスプレ中はだめ
+SIF TEQUIP:59 > 2 && TEQUIP:59 != 12 && TEQUIP:59 != 17
+	RETURN 0
+;対象か助手がすっぽんぽんで露出癖3未満だとダメ(上と合わせてスク水・ビキニ・褌履いてればOKということ
+SIF TEQUIP:59 == 0 && ABL:14 < 3
+	RETURN 0
+SIF ASSI >= 0 && TEQUIP:ASSI:59 == 0 && ABL:ASSI:14 < 3
+	RETURN 0
+;時止め中は無理
+SIF TEQUIP:71
+	RETURN 0
+;触手調教中はダメ
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM355
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+PRINTL 풀장 플레이
+TSTR:0 = 풀장 플레이
+CALL TRAIN_MESSAGE_COM355
+
+;プールへの出入り(終了時は修正なし)
+;シャワーは強制的に止められる
+IF TEQUIP:53 == 2
+	TEQUIP:54 = 0
+	TEQUIP:53 = 0
+	RETURN 1
+;風呂場→プール
+;シャワーは強制的に止められる
+ELSEIF TEQUIP:53 == 1
+	TEQUIP:54 = 0
+	TEQUIP:53 = 2
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 10
+;裸(水着着てない)で露出癖3未満
+SIF TEQUIP:59 == 0 && ABL:14 < 3
+	TIMES DOWNBASE:1 , 2.00
+
+LOCAL:1 = 100
+LOCAL:2 = 50
+
+;目立ちたがり
+SIF TALENT:28
+	TIMES LOCAL:1 , 1.50
+;解放
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;河童
+SIF TALENT:210
+	TIMES LOCAL:2 , 0.20
+;恥じらい
+SIF TALENT:35
+	TIMES LOCAL:2 , 1.20
+;臆病
+SIF TALENT:10
+	TIMES LOCAL:2 , 1.20
+	
+;PALAM:欲情をみる
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.10
+ELSE
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;PALAM:恐怖をみる
+IF PALAM:17 < PALAMLV:1
+	TIMES LOCAL:1 , 1.20
+	TIMES LOCAL:2 , 0.80
+	TIMES DOWNBASE:1 , 1.00
+ELSEIF PALAM:17 < PALAMLV:2
+	TIMES LOCAL:1 , 1.10
+	TIMES LOCAL:2 , 0.90
+	TIMES DOWNBASE:1 , 1.10
+ELSEIF PALAM:17 < PALAMLV:3
+	TIMES LOCAL:1 , 1.00
+	TIMES LOCAL:2 , 1.00
+	TIMES DOWNBASE:1 , 1.30
+ELSEIF PALAM:17 < PALAMLV:4
+	TIMES LOCAL:1 , 0.90
+	TIMES LOCAL:2 , 1.10
+	TIMES DOWNBASE:1 , 1.60
+ELSE
+	TIMES LOCAL:1 , 0.80
+	TIMES LOCAL:2 , 1.20
+	TIMES DOWNBASE:1 , 2.00
+ENDIF
+;ABL:水泳技能をみる
+IF ABL:74 == 0
+	TIMES LOCAL:2 , 1.20
+ELSEIF ABL:74 == 1
+	TIMES LOCAL:2 , 1.00
+ELSEIF ABL:74 == 2
+	TIMES LOCAL:2 , 0.80
+ELSEIF ABL:74 == 3
+	TIMES LOCAL:2 , 0.60
+ELSEIF ABL:74 == 4
+	TIMES LOCAL:2 , 0.40
+ELSE
+	TIMES LOCAL:2 , 0.20
+ENDIF
+
+;一度代入
+SOURCE:10 += LOCAL:1
+SOURCE:12 += LOCAL:1
+SOURCE:25 += LOCAL:2
+SOURCE:28 += LOCAL:2 /2
+SOURCE:31 += LOCAL:2 /2
+
+;ABL:露出癖をみる
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES SOURCE:12, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 20
+	SOURCE:19 += 20
+	TIMES SOURCE:12, 1.10
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 40
+	SOURCE:19 += 40
+	TIMES SOURCE:12, 1.20
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 60
+	SOURCE:19 += 60
+	TIMES SOURCE:12, 1.30
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 80
+	SOURCE:19 += 80
+	TIMES SOURCE:12, 1.40
+ELSE
+	SOURCE:24 += 100
+	SOURCE:19 += 100
+	TIMES SOURCE:12, 1.50
+ENDIF
+;ABL:従順をみる
+;接触のソース増加
+IF ABL:74 == 0
+	TIMES SOURCE:10 , 1.00
+ELSEIF ABL:74 == 1
+	TIMES SOURCE:10 , 1.10
+ELSEIF ABL:74 == 2
+	TIMES SOURCE:10 , 1.20
+ELSEIF ABL:74 == 3
+	TIMES SOURCE:10 , 1.30
+ELSEIF ABL:74 == 4
+	TIMES SOURCE:10 , 1.40
+ELSE
+	TIMES SOURCE:10 , 1.50
+ENDIF
+
+;裸(水着着てない)
+IF TEQUIP:59 == 0
+	TIMES SOURCE:10 , 1.20
+	TIMES SOURCE:12 , 5.00
+	TIMES SOURCE:25 , 2.00
+	TIMES SOURCE:28 , 5.00
+	TIMES SOURCE:31 , 5.00
+ENDIF
+
+TEQUIP:53 = 2
+RETURN 1
+
+;-------------------------------------------------
+;풀장 플레이中
+;-------------------------------------------------
+@EQUIP_COM355
+PRINTL ＜풀장 플레이 중＞
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 30
+;裸(水着着てない)で露出癖3未満
+SIF TEQUIP:59 == 0 && ABL:14 < 3
+	TIMES DOWNBASE:1 , 2.00
+
+LOCAL = 70
+LOCAL:1 = 50
+
+;目立ちたがり
+SIF TALENT:28
+	TIMES LOCAL , 1.50
+;解放
+SIF TALENT:33
+	TIMES LOCAL , 1.50
+;河童
+SIF TALENT:210
+	TIMES LOCAL:1 , 0.20
+;恥じらい
+SIF TALENT:35
+	TIMES LOCAL:1 , 1.20
+;臆病
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.20
+	
+;PALAM:欲情をみる
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+;PALAM:恐怖をみる
+IF PALAM:17 < PALAMLV:1
+	TIMES LOCAL , 1.20
+	TIMES LOCAL:1 , 0.80
+	TIMES DOWNBASE:1 , 1.00
+ELSEIF PALAM:17 < PALAMLV:2
+	TIMES LOCAL , 1.10
+	TIMES LOCAL:1 , 0.90
+	TIMES DOWNBASE:1 , 1.10
+ELSEIF PALAM:17 < PALAMLV:3
+	TIMES LOCAL , 1.00
+	TIMES LOCAL:1 , 1.00
+	TIMES DOWNBASE:1 , 1.30
+ELSEIF PALAM:17 < PALAMLV:4
+	TIMES LOCAL , 0.90
+	TIMES LOCAL:1 , 1.10
+	TIMES DOWNBASE:1 , 1.60
+ELSE
+	TIMES LOCAL , 0.80
+	TIMES LOCAL:1 , 1.20
+	TIMES DOWNBASE:1 , 2.00
+ENDIF
+;ABL:水泳技能をみる
+;マイナスがごっそり減る　予定
+IF ABL:74 == 0
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:74 == 1
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:74 == 2
+	TIMES LOCAL:1 , 0.80
+ELSEIF ABL:74 == 3
+	TIMES LOCAL:1 , 0.60
+ELSEIF ABL:74 == 4
+	TIMES LOCAL:1 , 0.40
+ELSE
+	TIMES LOCAL:1 , 0.20
+ENDIF
+
+;一度代入
+SOURCE:10 += LOCAL
+SOURCE:12 += LOCAL
+SOURCE:25 += LOCAL:1
+SOURCE:28 += LOCAL:1 /2
+SOURCE:31 += LOCAL:1 /2
+
+;ABL:露出癖をみる
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	TIMES SOURCE:12, 1.00
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 20
+	SOURCE:19 += 20
+	TIMES SOURCE:12, 1.10
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 40
+	SOURCE:19 += 40
+	TIMES SOURCE:12, 1.20
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 60
+	SOURCE:19 += 60
+	TIMES SOURCE:12, 1.30
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 80
+	SOURCE:19 += 80
+	TIMES SOURCE:12, 1.40
+ELSE
+	SOURCE:24 += 100
+	SOURCE:19 += 100
+	TIMES SOURCE:12, 1.50
+ENDIF
+;ABL:従順をみる
+;接触のソース増加
+IF ABL:74 == 0
+	TIMES SOURCE:10 , 1.00
+ELSEIF ABL:74 == 1
+	TIMES SOURCE:10 , 1.10
+ELSEIF ABL:74 == 2
+	TIMES SOURCE:10 , 1.20
+ELSEIF ABL:74 == 3
+	TIMES SOURCE:10 , 1.30
+ELSEIF ABL:74 == 4
+	TIMES SOURCE:10 , 1.40
+ELSE
+	TIMES SOURCE:10 , 1.50
+ENDIF
+
+;裸(水着着てない)
+IF TEQUIP:59 == 0
+	TIMES SOURCE:10 , 1.20
+	TIMES SOURCE:12 , 5.00
+	TIMES SOURCE:25 , 2.00
+	TIMES SOURCE:28 , 5.00
+	TIMES SOURCE:31 , 5.00
+ENDIF
+
+;レズＢＬ経験
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;主人経験フラグ
+SIF ASSIPLAY == 0 && ABL:10 >= 1
+	TFLAG:50 += 1
+SIF ASSIPLAY == 0 && ABL:13 >= 3
+	TFLAG:50 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM355
+CALL KOJO_TRAIN_MESSAGE_COM
+IF TEQUIP:53 == 2
+	PRINTFORMW 풀장을 나와 조교실로 돌아왔다….
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"를")% 풀장으로 데리고 왔다….
+ENDIF

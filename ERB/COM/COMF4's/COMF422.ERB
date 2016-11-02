@@ -1,0 +1,244 @@
+﻿;=============================================================================
+;미약 절이기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE422
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:422 > 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:55 == 6
+	RETURN 1
+;特殊風呂커맨드有効でないとダメ
+SIF (FLAG:15 & 512) == 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교 대상이 キスメじゃないとダメ
+IF NO:TARGET == 57
+	;조교자가 주인이 아니면 불가
+	SIF ASSIPLAY
+		RETURN 0
+	;조교자가 새드もしくはキスメの마조끼がLv2이상になってないとダメ
+	SIF ABL:21 < 2 && TALENT:PLAYER:81 == 0
+		RETURN 0
+;もしくは조교자가 キスメじゃないとダメ
+ELSEIF NO:PLAYER == 57
+	;キスメが새드を持っているもしくは기교가 Lv2이상になってないとダメ
+	SIF ABL:12 < 2 && TALENT:PLAYER:81 == 0
+		RETURN 0
+ELSE
+	RETURN 0
+ENDIF
+;対象が작은 체형か소인체형でないとダメ
+SIF TALENT:127 == 0 && TALENT:128 == 0
+	RETURN 0
+;薬毒耐性だとダメ
+SIF TALENT:44
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;媚薬を5つ이상持っているか, アイテムなし設定でないとダメ
+SIF ITEM:61 < 5 && NOITEM == 0
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;전극사용 중에는 불가
+SIF TEQUIP:20 == 4 || TEQUIP:25 == 4 || TEQUIP:30 == 4 || TEQUIP:32 == 4 || TEQUIP:35 == 4
+	RETURN 0
+;緊縛中じゃないとダメ
+SIF TEQUIP:40 == 0
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;야외면 안 됨
+SIF TEQUIP:52
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;그밖의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 6
+	RETURN 0
+;의사 선생님 플레이 중에는 불가
+SIF TEQUIP:57
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;미약목욕탕과 처리적으로는 거의 동등. 다른 것은 목욕탕의 개장이 필요없는 것과 키스메 전용인 것.
+;일시적으로 쾌감에 솔직와 해방이 부가. 다만 소모가 격렬하고, 반감도 꽤 모인다
+;또, 효과가 발휘하고 있는 동안은 절정시에 욕망이 오르는 일도 없어진다(억압의 처리가 귀찮게 되기 (위해)때문에)
+;TFLAG:156은 소질의 보존에 사용(1:억압 소멸 기억, 2:해방 소멸 보호, 4:쾌감의 부정 소멸 기억, 8:쾌감에 솔직 소멸 보호)
+@COM422
+PRINTL 미약 절이기
+TSTR:0 = 미약 절이기
+CALL TRAIN_MESSAGE_COM422
+
+IF TEQUIP:55 == 6
+	DOWNBASE:0 += 25
+	DOWNBASE:1 += 50
+	TEQUIP:55 = 0
+	RETURN 1
+ENDIF
+
+LOCAL:2 = (FLAG:3 >= 3) ?  300 # 175
+LOCAL:3 = (FLAG:3 >= 3) ?  800 # 400
+
+;조제 지식이 있으면 소비를 억제한다
+IF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	TIMES LOCAL:2 , 0.75
+	TIMES LOCAL:3 , 0.75
+ENDIF
+;조교 대상으로 미약중독이 있으면 소비를 억제한다
+IF TALENT:46
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+ENDIF
+DOWNBASE:0 += LOCAL:2
+DOWNBASE:1 += LOCAL:3
+
+TFLAG:156 = 0
+IF NOITEM == 0
+	ITEM:61 -= 5
+	SIF FLAG:13 & 4 && MONEY:0 >= (5 * ITEMPRICE:61)
+		CALL FILL_PLURAL_ITEM, 61, 5
+ENDIF
+IF TEQUIP:11 == 0
+	LOCAL:1 = (TALENT:46) ?  4 + RAND:7 # 4 + RAND:5
+	TEQUIP:11 = LOCAL:1
+ENDIF
+
+SOURCE:18 = 20000
+SOURCE:20 = 200
+SOURCE:26 = 2500
+SOURCE:31 = 250000
+
+;미약중독
+IF TALENT:46
+	SOURCE:24 = 500
+	TIMES SOURCE:18 , 1.50
+	TIMES SOURCE:31 , 1.50
+	SOURCE:42 = 300
+ELSE
+	SOURCE:42 = 12 + RAND:12
+ENDIF
+
+IF TALENT:33 && TALENT:70
+	SOURCE:18 += 20000
+ELSE
+	;즉 이 근처의 처리도 완전하게 미약목욕탕과 같다
+	CALL POTION_MESSAGE_COM364
+ENDIF
+
+;억압 기억, 일시 소멸
+IF TALENT:32
+	TFLAG:156 |= 1
+	TALENT:32 = 0
+ENDIF
+;해방 소지 보존, 일시 부가
+IF TALENT:33
+	TFLAG:156 |= 2
+ELSE
+	TALENT:33 = 1
+ENDIF
+;쾌감의 부정 기억, 일시 소멸
+IF TALENT:71
+	TFLAG:156 |= 4
+	TALENT:71 = 0
+ENDIF
+;쾌감에 솔직 소지 보존, 일시 부가
+IF TALENT:70
+	TFLAG:156 |= 8
+ELSE
+	TALENT:70 = 1
+ENDIF
+
+;약물 경험
+TCVAR:40 += 2
+
+TEQUIP:55 = 6
+RETURN 1
+
+;--------------------------------------------------
+;미약 담그고 안
+;--------------------------------------------------
+@EQUIP_COM422
+PRINTL <미약 절이기 중>
+
+;조제 지식이 있으면 소비를 억제한다
+LOCAL:1 = 75
+LOCAL:2 = 200
+IF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+ENDIF
+;조교 대상으로 미약중독이 있으면 소비를 억제한다
+IF TALENT:46
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+ENDIF
+DOWNBASE:0 += LOCAL:1
+DOWNBASE:1 += LOCAL:2
+
+SOURCE:18 += 10000
+SOURCE:20 += 1500
+SOURCE:22 += 3000
+SOURCE:24 += 5000
+SOURCE:26 += 500
+SOURCE:30 += 21000
+SOURCE:31 += 100000
+;미약중독
+SOURCE:42 += (TALENT:46) ?  30 # RAND:2
+
+;약물 경험
+TCVAR:40 += 1
+
+IF TEQUIP:11 > 1
+	TEQUIP:11 -= 1
+	SIF TEQUIP:11 == 1
+		CALL POTION_BATH
+ENDIF
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM422
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:55 == 6
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "를")% 미약이 채워진 통에서 꺼냈다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 미약이 채워진 통에 넣어 주었다.
+	PRINTFORML 액체 안에서 발버둥 치는 동안에, %CALLNAME:TARGET%의 피부 속으로 미약이 차례차례로 흡수되어 간다….
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 자신의 의지와는 관계없이, %CALLNAME:PLAYER%의 몸을 갖고 싶다고 생각하게 되었다.
+	PRINTL
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")%\@(TALENT:33 && TALENT:70) ? 강한 욕망에 사로잡혀 몸을 비틀면서# 액체가 가져온 강렬한 자극에 미친 듯이 몸을 떨어대며\@ 신음을 흘리고 있다.
+ENDIF

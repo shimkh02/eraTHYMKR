@@ -1,0 +1,439 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;조교 커맨드 커스텀 메뉴 관련
+;
+;능력 표시 및 조교자 교대 등의 조교 커맨드 외의 커맨드를 표시 · 실행하는 것이 중심
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;커스텀 메뉴 표시 처리
+;=============================================================================
+@SHOW_USERCOM
+;조교 메뉴 실행 중에는 커맨드 표시를 생략한다
+
+IF TFLAG:224 != 555
+	PRINTC 능력표시(노예)[700]
+	PRINTC 능력표시(조교자)[701]
+	IF FLAG:15 & 4096 && TEQUIP:90
+		PRINTC 능력표시(촉수)[702]
+	ELSEIF ASSI >= 0 && TEQUIP:59 == 0 && TEQUIP:90 == 0 && TEQUIP:ASSI:59 == 0 
+		PRINTFORMC \@(ASSIPLAY) ? 주인 # 조수\@와 교대[800]
+	ENDIF
+	PRINTC 불결표시[801]
+	IF TALENT:MASTER:120 == 0 && (CFLAG:MASTER:42 & 1) == 0 && (FLAG:14 & 128) == 0
+		;[구현]을 가지고 있다
+		IF TALENT:MASTER:121 == 0 && TALENT:MASTER:123
+			PRINTC 구현화(주인)[810]
+		;구현으로 [후타나리]를 가지고 있다
+		ELSEIF TALENT:MASTER:121 && TALENT:MASTER:124 & 2
+			PRINTC 구현화 해제(주인)[810]
+		ENDIF
+	ENDIF
+	IF ASSI >= 0 && TALENT:ASSI:120 == 0 && (ABL:ASSI:11 >= 5 || ABL:ASSI:22 >= 4) && (CFLAG:ASSI:42 & 1) == 0 && (FLAG:14 & 128) == 0
+		;[구현]을 가지고, 욕망 LV5거나 레즈끼 LV4 이상
+		IF TALENT:ASSI:121 == 0 && TALENT:ASSI:123
+			PRINTC 구현화(조수)[811]
+		;구현으로 [후타나리]를 가지고, 욕망 LV5거나 레즈끼 LV4 이상
+		ELSEIF TALENT:ASSI:121 && TALENT:ASSI:124 & 2
+			PRINTC 구현화 해제(조수)[811]
+		ENDIF
+	ENDIF
+	SIF TALENT:PLAYER:831 && TEQUIP:78 < 1 && FLAG:574 >= 10000
+		PRINTC Ex모드화[830]
+	SIF NO:PLAYER == 400 && TALENT:PLAYER:831 && TEQUIP:78 < 2 && FLAG:574 >= 1000000
+		PRINTC Ph모드화[831]
+	SIF TEQUIP:89 == 0 && TEQUIP:52 == 0 && TEQUIP:53 == 0 && TEQUIP:55 == 0 && (ITEM:610 + ITEM:611 + ITEM:612 + ITEM:613 +ITEM:614 + ITEM:615)
+		PRINTC 향기를 뿌린다[850]
+	PRINTC 표시형식변경[876]
+	PRINTC 커맨드확장[888]
+	PRINTC 커맨드 필터링[889]
+	IF FLAG:14 & 1
+		;별명：博麗の貞操を守るためのフィルター
+		PRINTFORMC Ｖ계 조교필터:\@(FLAG:2 & 1) ? 해제 # 적용\@[890]
+		;별명：厄い調教コマンド防止フィルター
+		PRINTFORMC Ａ계 조교필터:\@(FLAG:2 & 2) ? 해제 # 적용\@[891]
+		;별명：紳士的なコマンド限定フィルター
+		PRINTFORMC 이상경험 필터:\@(FLAG:2 & 4) ? 해제 # 적용\@[892]
+	ENDIF
+	SIF FLAG:18 & 1
+		PRINTC 자동 사정 장소 변경[893]
+	;토리코모드. 만복도 시스템이 켜져있고, 노예가 만복도 최대가 아닐때만.
+	SIF (FLAG:5000 & 32) && (CFLAG:TARGET:4001) < (CFLAG:TARGET:4002)
+			PRINTC 밥을 먹인다[899]
+	;[원격정밀제어]를 가지고 있으면 기생 중에 회복이 가능
+	SIF FLAG:15 & 4096 && FLAG:75 & 512 && TALENT:146 && BASE:6
+		PRINTC 기생촉수 영양방출[900]
+	;변환자재를 가지고 있으면 축소화 · 거대화가 가능
+	;調教対象が変幻自在のときは従順が3以上かつ何らかの道具を身につけてなくて、緊縛中や乗馬中や裸体盛り中や特殊風呂적용浴中でないことが条件
+	SIF TALENT:139 && TFLAG:899 <= 0 && EQUIP:14 == 0 && ABL:10 > 2 && TEQUIP:20 == 0 && TEQUIP:21 == 0 && TEQUIP:25 == 0 && TEQUIP:26 == 0 && TEQUIP:30 == 0 && TEQUIP:31 == 0 && TEQUIP:32 == 0 && TEQUIP:35 == 0 && TEQUIP:36 == 0 && TEQUIP:40 == 0 && TEQUIP:41 == 0 && TEQUIP:42 == 0 && TEQUIP:43 == 0 && TEQUIP:44 == 0 && TEQUIP:45 == 0 && TEQUIP:55 == 0 && TEQUIP:58 == 0 && TEQUIP:59 == 0 && TEQUIP:60 == 0 && TEQUIP:69 == 0
+		PRINTC 거대/축소화(노예)[901]
+	;主人はコンドームをつけていたら体格変化できない.
+	SIF TALENT:MASTER:139 && TEQUIP:MASTER:31 == 0
+		PRINTC 거대/축소화(주인)[902]
+	;助手コスプレ中もしくはコンドーム装着中は体格変化できない.
+	SIF ASSI >= 0 && TALENT:ASSI:139 && TEQUIP:ASSI:31 == 0 && TEQUIP:ASSI:59 == 0
+		PRINTC 거대/축소화(조수)[903]
+	;자웅가변을 가지고 있으면 성별변화가 가능
+	;調教対象が雌雄可変のときは従順が3以上かつ何らかの道具を身につけてなくて、緊縛中や乗馬中や裸体盛り中や特殊風呂적용浴中でなくて、触手召還もしていないことが条件
+	SIF TALENT:9 && TFLAG:899 <= 0 && EQUIP:14 == 0 && ABL:10 > 2 && TEQUIP:20 == 0 && TEQUIP:21 == 0 && TEQUIP:25 == 0 && TEQUIP:26 == 0 && TEQUIP:30 == 0 && TEQUIP:31 == 0 && TEQUIP:32 == 0 && TEQUIP:35 == 0 && TEQUIP:36 == 0 && TEQUIP:40 == 0 && TEQUIP:41 == 0 && TEQUIP:42 == 0 && TEQUIP:43 == 0 && TEQUIP:44 == 0 && TEQUIP:45 == 0 && TEQUIP:55 == 0 && TEQUIP:58 == 0 && TEQUIP:59 == 0 && TEQUIP:60 == 0 && TEQUIP:69 == 0 && TEQUIP:90 == 0
+		PRINTC 성별변경(노예)[911]
+	;主人はコンドームをつけていたら雌雄可変できない.
+	SIF TALENT:MASTER:9 && TEQUIP:MASTER:31 == 0
+		PRINTC 성별변경(주인)[912]
+	;助手コスプレ中もしくはコンドーム装着中は雌雄可変できない.
+	SIF ASSI >= 0 && TALENT:ASSI:9 && TEQUIP:ASSI:31 == 0 && TEQUIP:ASSI:59 == 0
+		PRINTC 성별변경(조수)[913]
+	IF FLAG:14 & 64
+		PRINTC 조교 메뉴 등록[990]
+		IF FLAG:550 > 0
+			PRINTC 조교 메뉴 표시[991]
+			PRINTC 조교 메뉴 실행[992]
+		ENDIF
+	ENDIF
+	SIF ASSI >= 0 && ASSIPLAY 
+		PRINTC 조수에게 고르게함[994]
+	PRINTC 동방조교전[997]
+	SIF TALENT:MASTER:998
+		PRINTC 디버그메뉴[998]
+	SIF TEQUIP:71 == 0
+		PRINTC 조교종료[999]
+ENDIF
+IF PREVCOM >= 0
+	PRINTL 
+	PRINTFORML ＜전회 조교 커맨드:%TSTR:0%\@(TFLAG:133) ? (조수) # \@＞
+ENDIF
+
+;=============================================================================
+;커스텀 메뉴 적용력 · 실행 처리
+;=============================================================================
+@USERCOM
+
+IF RESULT == 700 || RESULT == 701
+	LOCAL = (RESULT == 700) ? TARGET # PLAYER
+	CALL SHOW_INFO_TRAIN_MAIN, LOCAL
+	RETURN 1
+ELSEIF RESULT == 702 && FLAG:15 & 4096 && TEQUIP:90
+	SIF FLAG:48 > 0
+		PRINT 신사적인 
+	PRINTL 촉수
+	CALL SHOW_INFO_TENTACLE
+	WAIT
+	RETURN 1
+ELSEIF RESULT == 800 && ASSI >= 0 && TEQUIP:59 == 0 && TEQUIP:90 == 0 && TEQUIP:ASSI:59 == 0
+	CALL KOJO_MESSAGE_CHANGEASSI
+	CALL KOJO_MESSAGE_PLAYERCHANGE
+	PLAYER = (ASSIPLAY) ? MASTER # ASSI
+	ASSIPLAY = (ASSIPLAY) ? 0 # 1
+	PRINTFORMW %조사처리(CALLNAME:PLAYER,"과")% 교대합니다.
+	;시간 경과 처리
+	CALL ADD_TRAINING_TIME, ARG
+	RETURN 1
+ELSEIF RESULT == 801
+	CALL STAIN_INFO
+	RETURN 1
+ELSEIF RESULT == 810 && (CFLAG:MASTER:42 & 1) == 0 && TALENT:MASTER:120 == 0 && ((TALENT:MASTER:121 == 0 && TALENT:MASTER:123) || (TALENT:MASTER:121 && TALENT:MASTER:124 & 2))
+	CALL COMMAND_TRAIN_F,MASTER
+	RETURN 1
+ELSEIF RESULT == 811 && ASSI >= 0 && (ABL:ASSI:11 >= 5 || ABL:ASSI:22 >= 4) && (CFLAG:ASSI:42 & 1) == 0 && TALENT:ASSI:120 == 0 && ((TALENT:ASSI:121 == 0 && TALENT:ASSI:123) || (TALENT:ASSI:121 && TALENT:ASSI:124 & 2))
+	CALL COMMAND_TRAIN_F,ASSI
+	RETURN 1
+ELSEIF RESULT == 830 && TALENT:PLAYER:831 && TEQUIP:78 < 1 && FLAG:574 >= 10000
+	CALL IRC_ANATA_EXMODE
+	RETURN 1
+ELSEIF RESULT == 831 && NO:PLAYER == 400 && TALENT:PLAYER:831 && TEQUIP:78 < 2 && FLAG:574 >= 1000000
+	CALL IRC_ANATA_PHMODE
+	RETURN 1
+ELSEIF RESULT == 850 && TEQUIP:89 == 0 && TEQUIP:52 == 0 && TEQUIP:53 == 0 && TEQUIP:55 == 0 && (ITEM:610 + ITEM:611 + ITEM:612 + ITEM:613 +ITEM:614 + ITEM:615)
+	CALL BURN_INCENSE
+	RETURN 1
+ELSEIF RESULT == 876
+
+	IF (FLAG:12 & 2) && FLAG:1122
+		FLAG:1122 = 0
+		FLAG:12 ^= 2
+	ELSEIF !(FLAG:12 & 2)
+		FLAG:1122 = 0
+		FLAG:12 ^= 2
+	ELSE
+		FLAG:1122 = 1
+	ENDIF
+	
+	;③형 표시. 컬러바 패치
+	IF (FLAG:12 & 2) && FLAG:1122 > 0
+		PRINTFORMW 3(컬러바 형태)식으로 표시하도록 설정했습니다.
+	;①형 표시
+	ELSEIF !(FLAG:12 & 2)		
+		PRINTFORMW 1(기존 형태) 식으로 표시하도록 설정했습니다.
+	;②형 표시
+	ELSE
+		PRINTFORMW 2(신규 형태)식으로 표시하도록 설정했습니다.
+	ENDIF
+
+	RETURN 1
+ELSEIF RESULT == 888
+	PRINTL 커맨드 확장 설정을 변경했습니다.
+	CALL CONFIGURATION_3
+	RETURN 1
+ELSEIF RESULT == 889
+	PRINTL 커맨드 필터의 개별 설정을 변경합니다.
+	CALL CUSTOM_COMMAND_FILTER
+	RETURN 1
+ELSEIF RESULT == 890 && FLAG:14 & 1
+	PRINTFORMW Ｖ계 조교 필터를 \@(FLAG:2 & 1) ? OFF # ON \@합니다.
+	FLAG:2 ^= 1
+	RETURN 1
+ELSEIF RESULT == 891 && FLAG:14 & 1
+	PRINTFORMW Ａ계 조교 필터를 \@(FLAG:2 & 2) ? OFF # ON \@합니다.
+	FLAG:2 ^= 2
+	RETURN 1
+ELSEIF RESULT == 892 && FLAG:14 & 1
+	PRINTFORMW 이상계 조교 필터를 \@(FLAG:2 & 4) ? OFF # ON \@합니다.
+	FLAG:2 ^= 4
+	RETURN 1
+ELSEIF RESULT == 893 && FLAG:18 & 1
+	CALL CHANGE_SAMEN_PLACE
+	RETURN 1
+;토리코모드용 커맨드
+ELSEIF RESULT == 899
+	CALL FEED_IN_TRAIN_TORIKOMODE
+	RETURN 1
+
+ELSEIF RESULT == 900 && FLAG:15 & 4096 && FLAG:75 & 512 && TALENT:146
+	CALL TENTACLE_HEAL
+	RETURN 1
+ELSEIF RESULT == 901 && TALENT:139 && TFLAG:899 <= 0 && EQUIP:14 == 0 && ABL:10 > 2 && TEQUIP:20 == 0 && TEQUIP:21 == 0 && TEQUIP:25 == 0 && TEQUIP:26 == 0 && TEQUIP:30 == 0 && TEQUIP:31 == 0 && TEQUIP:32 == 0 && TEQUIP:35 == 0 && TEQUIP:36 == 0 && TEQUIP:40 == 0 && TEQUIP:41 == 0 && TEQUIP:42 == 0 && TEQUIP:43 == 0 && TEQUIP:44 == 0 && TEQUIP:45 == 0 && TEQUIP:55 == 0 && TEQUIP:58 == 0 && TEQUIP:59 == 0 && TEQUIP:60 == 0 && TEQUIP:69 == 0
+	CALL CHANGE_SIZE_SLAVE
+	RETURN 1
+ELSEIF RESULT == 902 && TALENT:MASTER:139 && TEQUIP:MASTER:31 == 0
+	CALL CHANGE_SIZE_MASTER
+	RETURN 1
+ELSEIF RESULT == 903 && ASSI >= 0 && TALENT:ASSI:139 && TEQUIP:ASSI:31 == 0 && TEQUIP:ASSI:59 == 0
+	CALL CHANGE_SIZE_ASSI
+	RETURN 1
+ELSEIF RESULT == 911 && TALENT:9 && TFLAG:899 <= 0 && EQUIP:14 == 0 && ABL:10 > 2 && TEQUIP:20 == 0 && TEQUIP:21 == 0 && TEQUIP:25 == 0 && TEQUIP:26 == 0 && TEQUIP:30 == 0 && TEQUIP:31 == 0 && TEQUIP:32 == 0 && TEQUIP:35 == 0 && TEQUIP:36 == 0 && TEQUIP:40 == 0 && TEQUIP:41 == 0 && TEQUIP:42 == 0 && TEQUIP:43 == 0 && TEQUIP:44 == 0 && TEQUIP:45 == 0 && TEQUIP:55 == 0 && TEQUIP:58 == 0 && TEQUIP:59 == 0 && TEQUIP:60 == 0 && TEQUIP:69 == 0 && TEQUIP:90 == 0
+	CALL CHANGE_SEX,TARGET
+	RETURN 1
+ELSEIF RESULT == 912 && TALENT:MASTER:9 && TEQUIP:MASTER:31 == 0
+	CALL CHANGE_SEX,MASTER
+	RETURN 1
+ELSEIF RESULT == 913 && ASSI >= 0 && TALENT:ASSI:9 && TEQUIP:ASSI:31 == 0 && TEQUIP:ASSI:59 == 0
+	CALL CHANGE_SEX,ASSI
+	RETURN 1
+ELSEIF RESULT == 990 && FLAG:14 & 64
+	CALL COMSEQ_REGISTER
+	RETURN 1
+ELSEIF RESULT == 991 && FLAG:550 > 0 && FLAG:14 & 64
+	CALL COMSEQ_SHOW
+	WAIT
+	RETURN 1
+ELSEIF RESULT == 992 && FLAG:550 > 0 && FLAG:14 & 64
+	CALL COMSEQ_TRAIN
+	RETURN 1
+ELSEIF RESULT == 994 && ASSI >= 0 && ASSIPLAY
+	CALL ASSI_SELECT_TRAIN
+	IF RESULT != 99
+		SELECTCOM:1 = RESULT
+		CALLTRAIN 1
+	ENDIF
+	RETURN 1
+ELSEIF RESULT == 997
+	CALL DICTIONARY_MENU
+	RETURN 1
+ELSEIF RESULT == 998 && TALENT:MASTER:998
+	;디버그 모드용 메뉴
+	PRINTL 디버그 메뉴를 불러옵니다.
+	CALL DEBUG_MENU_TRAIN
+	RETURN 1
+ELSEIF RESULT == 999 && TEQUIP:71 == 0
+	BEGIN AFTERTRAIN
+	RETURN 1
+ELSE
+	REUSELASTLINE  
+ENDIF
+RETURN 0
+
+;=============================================================================
+;커스텀 커맨드 필터 관련
+;=============================================================================
+@CUSTOM_COMMAND_FILTER
+;변수의 리셋
+LOCALS:0 = ○
+LOCALS:1 = ×
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+
+REPEAT 600
+	;コマンドが存在しているかどうか
+	STRLENS TRAINNAME:COUNT
+	SIF RESULT < 1
+		CONTINUE
+	CALLF SET_LIST, COUNT, 1
+	LOCAL:3 += 1
+	SIF (LOCAL:3%60) == 1 && LOCAL:3 > 60
+		LOCAL:1 += 1
+REND
+
+;ページをめくったときなどはここから
+$PRINT_LIST_PAGE
+LOCAL:2 = 0
+DRAWLINE
+PRINTFORML 커스텀 커맨드 필터 ＜page.{LOCAL + 1}/{LOCAL:1 + 1}＞
+PRINTL 필터링할(해제할) 항목을 선택하세요.
+DRAWLINE
+REPEAT 600
+	;(表示可否)が0の場合は除外
+	SIF GET_LIST(COUNT) == 0
+		CONTINUE
+	;どこからどこまでを陳列するか
+	LOCAL:2 += 1
+	SIF LOCAL:2 <= (LOCAL * 60) || LOCAL:2 > ((LOCAL + 1) * 60)
+		CONTINUE
+	PRINTFORMLC %LOCALS:((DITEMTYPE:999:COUNT) > 0)%[{COUNT,3}]%TRAINNAME:COUNT%
+REND
+
+PRINTL 
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 뒤로
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+PRINTLC [1011] 필터 초기화
+PRINTFORMLC %" " * 17%
+PRINTL [1019] 모든 필터 적용
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+ELSEIF RESULT == 1011 || RESULT == 1019
+	PRINTFORMW \@(RESULT == 1011) ? 조교 필터를 모두 해제 # 모든 조교 명령을 필터링 \@했습니다
+	REPEAT 600
+		DITEMTYPE:999:COUNT = (RESULT == 1011) ? 0 # 1
+	REND
+ELSEIF RESULT < 0 || RESULT > 600 || GET_LIST(RESULT) == 0
+	GOTO INPUT_LOOP_1
+ELSE
+	PRINTFORMW 개별 조교 「%TRAINNAME:RESULT%」\@(DITEMTYPE:999:RESULT) ? 의 필터를 적용 # 의 필터를 해제 \@합니다.
+	DITEMTYPE:999:RESULT = (DITEMTYPE:999:RESULT) ? 0 # 1
+ENDIF
+GOTO PRINT_LIST_PAGE
+
+;=============================================================================
+;조수의 커맨드 선택 처리
+;=============================================================================
+@ASSI_SELECT_TRAIN
+;ランダム選択による行き先がすべて実行できない場合は戻すので.
+LOCAL = 0
+FOR COUNT , 0, 500
+	STRLENS TRAINNAME:COUNT
+	SIF RESULT <= 0
+		CONTINUE
+	CALLFORM COM_ABLE{COUNT}
+	SIF RESULT == 1
+		LOCAL += 1
+NEXT
+[SKIPSTART]
+@COM_ABLE37
+;에러 땜빵용 테스트
+RETurn LOCAL
+
+IF LOCAL <= 0
+	PRINTFORML %조사처리(CALLNAME:ASSI,"는")% 특별히 하고 싶은 조교가 없는 것 같다.
+	RETURN 99
+ENDIF
+
+;새드끼 높은 조수
+IF ABL:ASSI:20 > 3 && RAND:3 == 0
+	LOCAL = RAND:25 + 220
+	SELECTCASE LOCAL
+		CASE 237
+			LOCAL = 240
+		CASE 238
+			LOCAL = 241
+		CASE 239
+			LOCAL = 242
+		CASE 240
+			LOCAL = 243
+		CASE 241
+			LOCAL = 244
+		CASE 242
+			LOCAL = 245
+		CASE 243
+			LOCAL = 251
+		CASE 244
+			LOCAL = 252
+	ENDSELECT
+;마조끼 높은 조수
+ELSEIF ABL:ASSI:21 > 3 && RAND:3 == 0
+	LOCAL = RAND:5
+	SELECTCASE LOCAL
+		CASE 0
+			LOCAL = 270
+		CASE 1
+			LOCAL = 271
+		CASE 2
+			LOCAL = 262
+		CASE 3
+			LOCAL = 445
+		CASE 4
+			LOCAL = 446
+	ENDSELECT
+;정액중독 높은 조수
+ELSEIF ABL:ASSI:31 > 3 && RAND:3 == 0
+	LOCAL = RAND:21
+	SELECTCASE LOCAL
+		CASE 0 TO 2
+			LOCAL = 5
+		CASE 3
+			LOCAL = 292
+		CASE 4
+			LOCAL = 293
+		CASE 5
+			LOCAL = 303
+		CASE 6
+			LOCAL = 304
+		CASE 7
+			LOCAL = 306
+		CASE 8
+			LOCAL = 307
+		CASE 9
+			LOCAL = 308
+		CASE 10
+			LOCAL = 321
+		CASE 11
+			LOCAL = 322
+		CASE 12
+			LOCAL = 323
+		CASE 13
+			LOCAL = 324
+		CASE 14
+			LOCAL = 325
+		CASE 15
+			LOCAL = 326
+		CASE 16
+			LOCAL = 331
+		CASE 17
+			LOCAL = 332
+		CASE 18
+			LOCAL = 333
+		CASE 19
+			LOCAL = 334
+		CASE 20
+			LOCAL = 335
+	ENDSELECT
+;자위중독 높은 조수
+ELSEIF ABL:ASSI:30 > 3 && RAND:3 == 0
+	LOCAL = RAND:4 + 115
+;그 외
+ELSE
+	LOCAL = RAND:500
+ENDIF
+STRLENS TRAINNAME:LOCAL
+SIF RESULT <= 0
+	RESTART
+CALLFORM COM_ABLE{LOCAL}
+SIF RESULT == 0
+	RESTART
+RETURN LOCAL
+[SKIPEND]

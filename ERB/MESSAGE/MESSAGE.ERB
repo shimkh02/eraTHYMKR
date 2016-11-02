@@ -1,0 +1,1855 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;조교시 캐릭터별 대사를 일괄 처리
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;-----------------------------------------------------------------------------------
+;대사용 시스템 파일의 존재 판정
+;MESSAGE.ERB(즉 이 파일)가 존재하고 있는지를 판정
+;대사가 사용 가능하고 대사 기능을 능동적으로 OFF하고 있지 않을 경우에는, 자동적으로 스위치가 켜진다
+;각 대사 파일 내에서 캐릭터 플래그를 제어하므로
+;EVENT_Kxx.ERB(캐릭터별 대사 파일)를 도중에 삭제해도 에러는 나지 않는다
+;단, 대사를 ON으로 한 상태에서 이 파일을 삭제하면 에러가 발생함
+;있어도 방해가 되진 않으니 삭제하지 않는 편이 좋을 거임
+;-----------------------------------------------------------------------------------
+@EVENTSHOP
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM_MASTER 관계
+;EX 모드에서의 조교주의 범용 대사를 호출합니다
+;@KOJO_MESSAGE_COM, @KOJO_MESSAGE_COM_ASSI와는 배타적이지 않습니다.
+;표시 순서는, 주인→조수→대상 이 됩니다
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_MASTER
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && CFLAG:MASTER:5000 != 1
+	RETURN 0
+TRYCALLFORM KOJO_MESSAGE_COM_ASSI_{NO:MASTER}
+;글자 색을 원래대로
+RESETCOLOR
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM_ASSI 관계
+;조수 조교 중의 커맨드 실행시에 출력됩니다.
+;@KOJO_MESSAGE_COM과는 배타적이지 않습니다.
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_ASSI
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+;조수가 없으면 튕긴다
+SIF ASSI < 0
+	RETURN 0
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && CFLAG:ASSI:5000 != 1
+	RETURN 0
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:ASSI}
+	TRYCALLFORM KOJO_MESSAGE_COM_ASSI_{NO:ASSI}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL KOJO_MESSAGE_COM_ASSI_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_PLAYERCHANGE 관계
+;조수 전환시에 출력됩니다.
+;조수로 교대했을 때, 조수로부터 돌아왔을 때에 조수가 말하기 위한 기능
+;--------------------------------------------------
+@KOJO_MESSAGE_PLAYERCHANGE
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;조수가 없으면 튕긴다
+SIF ASSI < 0
+	RETURN 0
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && CFLAG:ASSI:5000 != 1
+	RETURN 0
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:ASSI}
+	TRYCALLFORM KOJO_MESSAGE_PLAYERCHANGE_{NO:ASSI}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL KOJO_MESSAGE_PLAYERCHANGE_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_CHANGEASSI 관계
+;조수 전환시에 출력됩니다.
+;조수로 교대했을 때, 조수로부터 돌아왔을 때에 대상이 말하기 위한 기능
+;KOJO_MESSAGE_PLAYERCHANGE와는 배타관계가 아닙니다
+;--------------------------------------------------
+@KOJO_MESSAGE_CHANGEASSI
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;조수가 없으면 튕긴다
+SIF ASSI < 0
+	RETURN 0
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM KOJO_MESSAGE_CHANGEASSI_{NO:TARGET}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL KOJO_MESSAGE_CHANGEASSI_X
+ENDCATCH
+RESETCOLOR
+
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM 관계
+;커맨드 실행시에 출력됩니다
+;--------------------------------------------------
+@KOJO_MESSAGE_COM
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+TFLAG:223 = 0
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM KOJO_MESSAGE_COM_{NO:TARGET}
+	SIF TFLAG:223 && FLAG:22 == 0
+		TRYCALL KOJO_MESSAGE_COM_X
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		;자동 신음성 함수 호출
+		TRYCALL TRAINVOICE
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+;--------------------------------------------------
+;@KOJO_DENIAL_MESSAGE_COM 관계
+;커맨드 거부시에 지문 표시를 제어할 수 있습니다. 호출하는 구문이 없으면 제어할 수 없습니다.
+;--------------------------------------------------
+@KOJO_DENIAL_MESSAGE_COM
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "RED", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+;대사의 존재 판정
+LOCAL = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	RESULT = 0
+	TRYCCALLFORM KOJO_DENIAL_MESSAGE_COM_{NO:TARGET}
+		LOCAL = RESULT
+	CATCH
+		LOCAL = 0
+	ENDCATCH
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	IF FLAG:22 == 0
+		TRYCCALL KOJO_DENIAL_MESSAGE_COM_X
+			LOCAL = RESULT
+		CATCH
+			LOCAL = 0
+		ENDCATCH
+	ENDIF
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+RETURN LOCAL
+
+
+;--------------------------------------------------
+;@KOJO_TRAIN_MESSAGE_COM 관계
+;커맨드 실행시에 지문 표시를 제어할 수 있습니다. 추가 지문은 제어할 수 없습니다.
+;대사 분기용으로 TFLAG:99나 TFLAG:201 등을 사용하는 경우가 있습니다.
+;--------------------------------------------------
+@KOJO_TRAIN_MESSAGE_COM
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+;대사의 존재 판정
+LOCAL = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	RESULT = 0
+	;조교 지문 출력. (캐릭터별 대사도 포함하는 것 같으나, 확실하지 않다)
+	TRYCCALLFORM KOJO_TRAIN_MESSAGE_COM_{NO:TARGET}
+		LOCAL = RESULT
+	CATCH
+		LOCAL = 0
+	ENDCATCH
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	IF FLAG:22 == 0
+		TRYCCALL KOJO_TRAIN_MESSAGE_COM_X
+			LOCAL = RESULT
+		CATCH
+			LOCAL = 0
+		ENDCATCH
+	ENDIF
+ENDCATCH
+RETURN LOCAL
+
+
+;--------------------------------------------------
+;@KOJO_EQUIP_MESSAGE_COM 관계
+;기구 장착시에 지문 표시를 제어할 수 있습니다.
+;--------------------------------------------------
+@KOJO_EQUIP_MESSAGE_COM
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+;대사의 존재 판정
+LOCAL = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	RESULT = 0
+	TRYCCALLFORM KOJO_EQUIP_MESSAGE_COM_{NO:TARGET}
+		LOCAL = RESULT
+	CATCH
+		LOCAL = 0
+	ENDCATCH
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	IF FLAG:22 == 0
+		TRYCCALL KOJO_EQUIP_MESSAGE_COM_X
+			LOCAL = RESULT
+		CATCH
+			LOCAL = 0
+		ENDCATCH
+	ENDIF
+ENDCATCH
+RETURN LOCAL
+
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG 관계
+;패러미터 변동을 방아쇠로 하는 대사
+;패러미터 변동 뒤에 대사를 발동합니다
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM KOJO_MESSAGE_PALAMCNG_{NO:TARGET}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL KOJO_MESSAGE_PALAMCNG_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG 관계
+;각인 변동을 방아쇠로 하는 대사
+;각인 변동 뒤에 대사를 발동합니다
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM KOJO_MESSAGE_MARKCNG_{NO:TARGET}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL KOJO_MESSAGE_MARKCNG_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;--------------------------------------------------
+;@KOJO_EVENT_COM 관계
+;커맨드 처리 최후에 출력
+;대사를 OFF로 해도 실행함
+;--------------------------------------------------
+@KOJO_EVENT_COM
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM KOJO_EVENT_COM_{NO:TARGET}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL KOJO_EVENT_COM_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;-------------------------------------------------
+;@SELF_KOJO 관계
+;이벤트 시의 대사, 이벤트 개시시에 출력합니다
+;-------------------------------------------------
+;ARG = 대상 캐릭터(등록 번호)
+;ARG:1 = TFLAG:200 (대사 분기용)
+;ARG:2 = TFLAG:99 (대사 분기용)
+;LOCAL = TARGET 일시 퇴피용
+@SELF_KOJO, ARG, ARG:1, ARG:2
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:ARG:5000 & 1)
+	RETURN 0
+
+LOCAL = TARGET
+TARGET = ARG
+TFLAG:200 = ARG:1
+TFLAG:99 = ARG:2
+
+TFLAG:223 = 0
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM SELF_KOJO_K{NO:TARGET}
+	SIF TFLAG:223 && FLAG:22 == 0
+		TRYCALL SELF_KOJO_X
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL SELF_KOJO_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+TARGET = LOCAL
+
+
+;-------------------------------------------------
+;@LOOK_VIDEO_KOJO 관계
+;비디오를 함께 감상할 때에 출력
+;-------------------------------------------------
+;FLAG:51～60을 참조하면 무슨 커맨드인지는 이해함(내용물이 -1이라면 그 회의 촬영은 되지 않았다. 커맨드명은 VIDEO_COMF(FLAG:XXX)로 취득 가능)
+@LOOK_VIDEO
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0 && !(CFLAG:5000 & 1)
+	RETURN 0
+
+TRYCALLFORM LOOK_VIDEO_KOJO_K{NO:TARGET}
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;--------------------------------------------------
+;@DAILY_LIFE_MESSAGE 관계
+;휴식 실행시에 출력됩니다
+;선택되는 건 꼭 TARGET이라고만은 할 수 없으므로, 대사 존재 판정을 CFLAG:A:406으로 사용해 특수하게 합니다
+;--------------------------------------------------
+@DAILY_LIFE_MESSAGE, ARG
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사를 표시하지 않는다+대사 템플릿 판별 플래그가 1이 아니라면 튕긴다
+SIF FLAG:11 <= 0
+	RETURN 1
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:ARG}
+	TRYCALLFORM DAILY_MESSAGE_{NO:ARG}, ARG
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL DAILY_MESSAGE_X, ARG
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;-------------------------------------------------
+;@SINGLE_ENDING 관계
+;단독 엔딩의 조건을 만족시켰을 때에 출력합니다
+;-------------------------------------------------
+@SINGLE_ENDING
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+FONTBOLD
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM SINGLE_ENDING_K{NO:TARGET}
+CATCH
+	TRYCALL SINGLE_ENDING_X
+ENDCATCH
+FONTREGULAR
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;-------------------------------------------------
+;@SLAVE_ENDING 관계
+;노예 엔딩의 조건을 만족시켰을 때에 출력합니다
+;-------------------------------------------------
+@SLAVE_ENDING
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+FONTBOLD
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM SLAVE_ENDING_K{NO:TARGET}
+CATCH
+	TRYCALL SLAVE_ENDING_X
+ENDCATCH
+FONTREGULAR
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;-------------------------------------------------
+;@SINGLE_ENDING_AFTER 관계
+;단독 엔딩 뒤에 「계속한다」를 선택했을 때에 출력합니다
+;-------------------------------------------------
+@SINGLE_ENDING_AFTER
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM SINGLE_ENDING_AFTER_K{NO:TARGET}
+CATCH
+	TRYCALL SINGLE_ENDING_AFTER_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+
+;-------------------------------------------------
+;@SLAVE_ENDING_AFTER 관계
+;노예 엔딩 뒤에 「계속한다」를 선택했을 때에 출력합니다
+;-------------------------------------------------
+@SLAVE_ENDING_AFTER
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCALLFORM SLAVE_ENDING_AFTER_K{NO:TARGET}
+CATCH
+	TRYCALL SLAVE_ENDING_AFTER_X
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+;-------------------------------------------------
+;캐릭터별 매각 후 에피소드
+;-------------------------------------------------
+;………………………………………………
+;매각 후 에피소드의 표시 내용 세트
+;………………………………………………
+;ARG＝누구의 에피소드인가(캐릭터의 등록번호)
+;대사 참조용으로 TFLAG:710에도 표시하는 캐릭터의 등록번호를 보존
+@SET_SLAVE_AFTERWARDS, ARG
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+;RESULT를 초기화해두지 않으면, 전용 대사로 처리가 없을 경우에 0 외의 값을 반환해버릴 가능성이 있다
+RESULT = 0
+;대사의 존재 판정
+TRYCCALLFORM TRY_{ARG}
+	TRYCALLFORM SET_SLAVE_AFTERWARDS_K{ARG}
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL SET_SLAVE_AFTERWARDS_KX, ARG
+ENDCATCH
+RETURN RESULT
+
+;………………………………………………
+;매각 후 에피소드의 표시 처리
+;………………………………………………
+;비표시일 경우에는 세트의 시점에서 튕기기 때문에, 표시할지 말지의 판정은 없다
+;또, 매각 후에 사용하므로 NO:TARGET은 쓰지 않는다
+;ARG:0=누구의 에피소드인가, ARG:1=어떠한 에피소드인가,
+;ARG:2=본 엔딩은 무엇이련가
+@SHOW_SLAVE_AFTERWARDS, ARG, ARG:1, ARG:2
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{ARG}
+	TRYCALLFORM SHOW_SLAVE_AFTERWARDS_K{ARG}, ARG:1, ARG:2
+CATCH
+	;범용 대사 미사용이 아니라면 범용 대사 표시
+	SIF FLAG:22 == 0
+		TRYCALL SHOW_SLAVE_AFTERWARDS_KX, ARG, ARG:1, ARG:2
+ENDCATCH
+;글자 색을 원래대로
+RESETCOLOR
+
+;--------------------------------------------------
+;@IMPRESSION_MAIN 관계
+;스테이터스 화면을 볼 때에 출력됩니다
+;--------------------------------------------------
+@IMPRESSION_MAIN, ARG
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+;대사 표시 OFF라면 아무것도 하지 않음
+SIF FLAG:11 <= 0
+	RETURN 0
+
+;조교 대상을 일시적으로 대사를 표시시킬 수 있는 캐릭터로 변경
+LOCAL = TARGET
+TARGET = ARG
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:TARGET}
+	TRYCCALLFORM IMPRESSION_K{NO:TARGET}
+	;한 마디 대사가 없을 경우, 범용 한 마디 대사를 호출한다
+	CATCH
+		;범용 대사 미사용이 아니라면 범용 대사 표시
+		SIF FLAG:22 == 0
+			TRYCALL IMPRESSION_KX
+	ENDCATCH
+CATCH
+	SIF FLAG:22 == 0
+		TRYCALL IMPRESSION_KX
+ENDCATCH
+;조교 대상을 원래대로 되돌린다
+TARGET = LOCAL
+;글자 색을 원래대로
+RESETCOLOR
+
+;-------------------------------------------------
+;대사에서 캐릭터의 특수 초기화 등의 처리 호출
+;-------------------------------------------------
+@SET_CHARA_KOJO_EXTRA, ARG
+;토리코 모드 글자 색칠
+CALL SETCOLOR_TORIKOMODE, "PINK", 2
+
+;대사의 존재 판정
+RESULT = 0
+TRYCCALLFORM TRY_{NO:ARG}
+	TRYCALLFORM SET_CHARA_KOJO_EXTRA_K{NO:ARG}
+CATCH
+ENDCATCH
+
+;글자 색을 원래대로
+RESETCOLOR
+RETURN RESULT
+
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;범용 대사, 범용 역대사 제너레이터용 공용 함수군
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;범용 대사, 범용 역대사 상용 함수부
+;=============================================================================
+;--------------------------------------------------
+;범용 대사를 표시할지를 판정하는 식중함수
+;--------------------------------------------------
+;ARG＝대사를 표시하는 캐릭터
+@KX_MESSAGE_DISPLAYCHECK(ARG)
+#FUNCTION
+
+;자고 있다 · 실신 중 · 재갈 물림
+SIF EQUIP:ARG:14 || (TFLAG:999 && TFLAG:899 >= 1 && ARG == TARGET) || KX_MOUSE_CHECK(ARG)
+	RETURNF 0
+;(원래) [남자] 또는 말을 못하는 [인형]
+SIF (TALENT:ARG:120 && CFLAG:ARG:4995 != 2) || TALENT:ARG:208 == 1
+	RETURNF 0
+
+RETURNF 1
+
+;--------------------------------------------------
+;범용 역대사를 표시할지를 판정하는 식중함수
+;--------------------------------------------------
+;ARG＝대사를 표시하는 캐릭터(통상은 MASTER가 대입된다)
+@RKX_MESSAGE_DISPLAYCHECK(ARG)
+#FUNCTION
+
+;조수 조교시
+SIF ASSIPLAY
+	RETURNF 0
+;자고 있다 · 실신 중 · 재갈 물림
+SIF EQUIP:ARG:14 || TFLAG:899 >= 1 || KX_MOUSE_CHECK(ARG)
+	RETURNF 0
+;(원래) [남자] 또는 말을 못하는 [인형]
+SIF (TALENT:ARG:120 && CFLAG:ARG:4995 != 2) || TALENT:ARG:208 == 1
+	RETURNF 0
+
+RETURNF 1
+
+;--------------------------------------------------
+;입이 막혀 있는지 아닌지를 판정하는 식중함수
+;--------------------------------------------------
+;ARG＝대사를 표시하는 캐릭터
+@KX_MOUSE_CHECK(ARG)
+#FUNCTION
+RETURNF TEQUIP:ARG:42
+
+;--------------------------------------------------
+;대상이 주인의 자식인지 아닌지를 판정하는 식중함수
+;--------------------------------------------------
+;ARG＝판정하는 캐릭터
+;0을 반환했을 경우＝주인의 자식이 아님, 1을 반환했을 경우＝주인의 딸, 2를 반환했을 경우＝주인의 아들
+@CHECK_MASTERS_CHILD(ARG)
+#FUNCTION
+IF (NO:ARG == 148 || NO:ARG == 149) && CFLAG:ARG:3107 == CFLAG:MASTER:3109
+	RETURNF (TALENT:ARG:120) ? 2 # 1
+ELSE
+	RETURNF 0
+ENDIF
+
+;--------------------------------------------------
+;대상에게 있어 주인이 아버지인가 어머니인가를 판정하는 식중함수
+;대상이 주인의 자식일 것이 필요 조건
+;--------------------------------------------------
+;ARG＝판정하는 캐릭터
+;0을 반환했을 경우＝주인의 자식이 아님, 1을 반환했을 경우＝주인의 딸, 2를 반환했을 경우＝주인의 아들
+@CHECK_MASTER_IS_DAD_OR_MOM(ARG)
+#FUNCTIONS
+;아버지
+IF (NO:ARG == 148 || NO:ARG == 149) && CFLAG:ARG:3107 == CFLAG:MASTER:3109
+	RETURNF CSTR:ARG:55
+;어머니
+ELSEIF (NO:ARG == 148 || NO:ARG == 149) && CFLAG:ARG:3105 == CFLAG:MASTER:3109 || CFLAG:ARG:3106 == CFLAG:MASTER:3109
+	RETURNF CSTR:ARG:54
+;필요 조건을 만족시키지 못했을 때
+ELSE
+	RETURNF CSTR:ARG:53
+ENDIF
+
+;--------------------------------------------------
+;러브러브 대사의 표시를 판정하는 식중함수
+;--------------------------------------------------
+;ARG＝판정하는 캐릭터
+@KX_LOVELY_CHECK(ARG)
+#FUNCTION
+RETURNF ((TALENT:ARG:151 || TALENT:ARG:152 || TALENT:ARG:153 || TALENT:ARG:162) && MARK:ARG:9 == 0) ? 1 # 0
+
+;=============================================================================
+;범용 대사, 범용 역대사 제너레이터 인격 결정의 처리
+;=============================================================================
+;--------------------------------------------------
+;범용 대사나 범용 역대사의 판별
+;--------------------------------------------------
+@DEFINE_JINKAKU_SELECT, ARG
+;REVERSAL 모드일 때는 역대사용 처리로 이동
+IF FLAG:4 == 3
+	CALL DEFINE_JINKAKU_REVERSE, ARG
+;그 외의 게임 모드 시는 통상의 처리로 이동
+ELSE
+	CALL DEFINE_JINKAKU_NORMAL, ARG
+ENDIF
+
+;--------------------------------------------------
+;범용 대사의 인격 결정 처리
+;--------------------------------------------------
+@DEFINE_JINKAKU_NORMAL, ARG
+;………………………………………………
+;1인칭(CSTR:11)을 결정
+;………………………………………………
+;성전환으로 남자가 된 존재의 경우 원래 성별의 인격을 본다. 그리고 원래 남자일 경우에는 성전환해도 남자 취급
+IF (TALENT:ARG:120 && CFLAG:ARG:4995 != 2) || CFLAG:ARG:4995 == 1
+	;わし(캐릭터 유래)
+	IF NO:ARG == 70 || NO:ARG == 74
+		CSTR:ARG:11 = 나
+	;僕(캐릭터 유래)
+	ELSEIF NO:ARG == 69
+		CSTR:ARG:11 = 나
+	;俺([반항적], [건방짐])
+	ELSEIF TALENT:ARG:11 || TALENT:ARG:15
+		CSTR:ARG:11 = 나
+	;我輩([프라이드가 높음], [흡혈귀])
+	ELSEIF TALENT:ARG:16 || TALENT:ARG:205
+		CSTR:ARG:11 = 본좌
+	;わし([보수적], [정조관념], [오니], [텐구])
+	ELSEIF TALENT:ARG:24 || TALENT:ARG:30 || TALENT:ARG:214 || TALENT:ARG:215
+		CSTR:ARG:11 = 나
+	;僕([겁쟁이], [얌전함], [유아], [유아퇴행], [캇파])
+	ELSEIF TALENT:ARG:10 || TALENT:ARG:14 || TALENT:ARG:130 || TALENT:ARG:159 || TALENT:ARG:210
+		CSTR:ARG:11 = 나
+	;私
+	ELSE
+		CSTR:ARG:11 = 나
+	ENDIF
+ELSE
+	;あたい
+	IF NO:ARG == 5 || NO:ARG == 35 || NO:ARG == 62
+		CSTR:ARG:11 = 이몸
+	;릴리
+	ELSEIF NO:ARG == 15
+		CSTR:ARG:11 = 릴리
+	;僕
+	ELSEIF NO:ARG == 153 || NO:ARG == 163 || NO:ARG == 314
+		CSTR:ARG:11 = 나
+	;あたし
+	ELSEIF NO:ARG == 152 || NO:ARG == 162
+		CSTR:ARG:11 = 나
+	;私
+	ELSE
+		CSTR:ARG:11 = 나
+	ENDIF
+ENDIF
+CSTR:ARG:50 = %CSTR:ARG:11%
+;………………………………………………
+;2인칭(CSTR:12)과 인격(CFLAG:43)을 결정
+;………………………………………………
+CFLAG:ARG:43 = 0
+IF (TALENT:ARG:120 && CFLAG:ARG:4995 != 2) || CFLAG:ARG:4995 == 1
+	;貴様(캐릭터 유래)
+	IF NO:ARG == 70
+		CSTR:ARG:12 = 네놈
+		CFLAG:ARG:43 = 11
+	;お主(캐릭터 유래)
+	ELSEIF NO:ARG == 74
+		CSTR:ARG:12 = 자네
+		CFLAG:ARG:43 = 11
+	;君(캐릭터 유래)
+	ELSEIF NO:ARG == 69
+		CSTR:ARG:12 = 너
+		CFLAG:ARG:43 = 13
+	;貴様([오니], [텐구])
+	ELSEIF TALENT:ARG:214 || TALENT:ARG:215
+		CSTR:ARG:12 = 네놈
+		CFLAG:ARG:43 = 11
+	;お主([보수적], [정조관념])
+	ELSEIF TALENT:ARG:24 || TALENT:ARG:30
+		CSTR:ARG:12 = 자네
+		CFLAG:ARG:43 = 11
+	;そなた([프라이드가 높음], [흡혈귀])
+	ELSEIF TALENT:ARG:16 || TALENT:ARG:205
+		CSTR:ARG:12 = 그대
+		CFLAG:ARG:43 = 11
+	;お前([반항적], [건방짐], [저항])
+	ELSEIF TALENT:ARG:11 || TALENT:ARG:15 || TALENT:ARG:34
+		CSTR:ARG:12 = 너
+		CFLAG:ARG:43 = 12
+	;君([気丈], [教育者])
+	ELSEIF TALENT:ARG:12 || TALENT:ARG:126
+		CSTR:ARG:12 = 너
+		CFLAG:ARG:43 = 13
+	;あなた
+	ELSE
+		CSTR:ARG:12 = 당신
+		CFLAG:ARG:43 = 14
+	ENDIF
+
+	;연모 후
+	;お主
+	SIF CFLAG:ARG:5201 >= 5 && CFLAG:ARG:43 == 11
+		CSTR:ARG:12 = 임자
+	
+	CSTR:ARG:53 = %CSTR:ARG:12%
+	
+	SELECTCASE CFLAG:ARG:43
+		CASE 11
+			CSTR:ARG:35 = 어머니
+			CSTR:ARG:36 = 아버지
+		CASE 12, 13
+			CSTR:ARG:35 = 어머니
+			CSTR:ARG:36 = 아버지
+		CASE 14
+			CSTR:ARG:35 = 엄마
+			CSTR:ARG:36 = 아빠
+	ENDSELECT
+	
+	CSTR:ARG:51 = %CSTR:ARG:35%
+	CSTR:ARG:52 = %CSTR:ARG:36%
+ELSE
+	;あんた
+	IF TALENT:ARG:16 && TALENT:ARG:84
+		CSTR:ARG:12 = 너
+		CFLAG:ARG:43 = 1
+	;お前
+	ELSEIF (TALENT:ARG:16 && (TALENT:ARG:낙관적 || TALENT:ARG:반항적 || TALENT:ARG:동물귀) && TALENT:ARG:새드 == 0) || (TALENT:ARG:자제심 && TALENT:ARG:보수적) || NO:ARG == 2
+		CSTR:ARG:12 = 너
+		CFLAG:ARG:43 = 2
+	;貴方
+	ELSEIF TALENT:ARG:16 && NO:ARG != 37
+		CSTR:ARG:12 = 당신
+		CFLAG:ARG:43 = 3
+	;형(오빠)·언니(누나)
+	ELSEIF TALENT:ARG:유치 && TALENT:ARG:건방짐 == 0 && TALENT:ARG:반항적 == 0 && NO:ARG != 45
+		;남자라면 형·누나. 성전환 여부도 조사함
+		IF (TALENT:ARG:120 && CFLAG:ARG:4995 != 2) || CFLAG:ARG:4995 == 1
+			CSTR:ARG:12 = \@(TALENT:MASTER:120) ? 형 # 누나\@
+		;그 외라면 오빠·언니
+		ELSE
+			CSTR:ARG:12 = \@(TALENT:MASTER:120) ? 오빠 # 언니\@
+		ENDIF
+		CFLAG:ARG:43 = 4
+	;あなた
+	ELSEIF TALENT:ARG:유치 == 0 && TALENT:ARG:유아퇴행 == 0 && TALENT:ARG:저항 == 0 && TALENT:ARG:건방짐 == 0 && TALENT:ARG:반항적 == 0 && TALENT:ARG:무관심 == 0 && TALENT:ARG:억압 == 0 && (TALENT:ARG:해방 || TALENT:ARG:70 || TALENT:ARG:고무)
+		CSTR:ARG:12 = 당신
+		CFLAG:ARG:43 = 6
+	;あなた([겁쟁이], [얌전함], [부끄럼쟁이], [헌신적], [소악마)
+	ELSEIF TALENT:ARG:10 || TALENT:ARG:14 || TALENT:ARG:35 || TALENT:ARG:63 || TALENT:ARG:93
+		CSTR:ARG:12 = 당신
+		CFLAG:ARG:43 = 5
+	;あんた
+	ELSE
+		CSTR:ARG:12 = 너
+		CFLAG:ARG:43 = 1
+	ENDIF
+
+	;연모 후
+	;◎◎쨩(캐릭터 유래)＋연모＋주인이 「당신」이 아니다
+	IF CFLAG:ARG:5201 >= 5 && NO:ARG == 119 && CALLNAME:MASTER != "당신"
+		CSTR:ARG:12 = %CALLNAME:MASTER%쨩
+	;마스터([요정])
+	ELSEIF CFLAG:ARG:5201 >= 5 && TALENT:ARG:200
+		CSTR:ARG:12 = 마스터
+	;주인님
+	ELSEIF CFLAG:ARG:5201 >= 5
+		CSTR:ARG:12 = 주인님
+	ENDIF
+
+	;테위 · 오린 한정
+	IF NO:ARG == 27 || NO:ARG == 62
+		CSTR:ARG:12 = \@(TALENT:MASTER:120) ? 오빠 # 언니\@
+	;와타츠키 자매 한정
+	ELSEIF NO:ARG == 53 || (NO:ARG == 54 && TALENT:ARG:150)
+		CSTR:ARG:12 = 여보
+	;나즈린 한정
+	ELSEIF NO:ARG == 70
+		CSTR:ARG:12 = 너
+	;코가사 한정
+	ELSEIF NO:ARG == 72
+		CSTR:ARG:12 = \@(CFLAG:ARG:5225) ? 사부 # 너\@
+		CFLAG:ARG:43 = 4
+	ENDIF
+	
+	CSTR:ARG:53 = %CSTR:ARG:12%
+	
+	SELECTCASE CFLAG:ARG:43
+		CASE 1
+			CSTR:ARG:35 = 엄마
+			CSTR:ARG:36 = 아빠
+		CASE 2
+			CSTR:ARG:35 = 어머니
+			CSTR:ARG:36 = 아버지
+		CASE 3
+			CSTR:ARG:35 = 어머니
+			CSTR:ARG:36 = 아버지
+		CASE 4
+			CSTR:ARG:35 = 엄마야
+			CSTR:ARG:36 = 아빠야
+		CASE 5
+			CSTR:ARG:35 = 엄마아
+			CSTR:ARG:36 = 아빠아
+		CASE 6
+			CSTR:ARG:35 = 엄마
+			CSTR:ARG:36 = 아빠
+	ENDSELECT
+
+	CSTR:ARG:51 = %CSTR:ARG:35%
+	CSTR:ARG:52 = %CSTR:ARG:36%
+
+	CSTR:ARG:15 = 
+	;당신의 딸
+	IF CHECK_MASTERS_CHILD(ARG) == 1
+		IF TALENT:MASTER:120
+			;현재 주인이 「부친」인 딸밖에 조교할 수 없다. 즉, 주인이 「모친」일 케이스가 있다면 별도로 다시 제작해야 될 거임.
+			IF CFLAG:ARG:43 == 1
+				CSTR:ARG:12 = 아버지
+				CSTR:ARG:15 = 어머니
+			ELSEIF CFLAG:ARG:43 == 2
+				CSTR:ARG:12 = 아바마마
+				CSTR:ARG:15 = 어마마마
+			ELSEIF CFLAG:ARG:43 == 3
+				CSTR:ARG:12 = 아버님
+				CSTR:ARG:15 = 어머님
+			ELSEIF CFLAG:ARG:43 == 4
+				CSTR:ARG:12 = 아빠야
+				CSTR:ARG:15 = 엄마야
+			ELSEIF CFLAG:ARG:43 == 5
+				CSTR:ARG:12 = 아빠
+				CSTR:ARG:15 = 엄마
+			ELSEIF CFLAG:ARG:43 == 6
+				CSTR:ARG:12 = 아버지
+				CSTR:ARG:15 = 어머니
+			ENDIF
+			CSTR:ARG:54 = %CSTR:ARG:15%
+			CSTR:ARG:55 = %CSTR:ARG:12%
+		ELSE
+			;솔직히 이 처리에는 위화감이 있음. 있다만…
+			IF CFLAG:ARG:43 == 1
+				CSTR:ARG:12 = 아버지
+				CSTR:ARG:15 = 어머니
+			ELSEIF CFLAG:ARG:43 == 2
+				CSTR:ARG:12 = 아바마마
+				CSTR:ARG:15 = 어마마마
+			ELSEIF CFLAG:ARG:43 == 3
+				CSTR:ARG:12 = 아버님
+				CSTR:ARG:15 = 어머님
+			ELSEIF CFLAG:ARG:43 == 4
+				CSTR:ARG:12 = 아빠야
+				CSTR:ARG:15 = 엄마야
+			ELSEIF CFLAG:ARG:43 == 5
+				CSTR:ARG:12 = 아빠
+				CSTR:ARG:15 = 엄마
+			ELSEIF CFLAG:ARG:43 == 6
+				CSTR:ARG:12 = 아버지
+				CSTR:ARG:15 = 어머니
+			ENDIF
+			CSTR:ARG:54 = %CSTR:ARG:15%
+			CSTR:ARG:55 = %CSTR:ARG:12%
+		ENDIF
+	;누군가의 자식, 부모가 「당신」이 아니어도 좋게 되었다
+	ELSEIF NO:ARG == 149 || NO:ARG == 148
+		;현재 주인이 「부친」인 딸밖에 조교할 수 없다. 즉, 주인이 「모친」일 케이스가 있다면 별도로 다시 제작해야 될 거임.
+		IF CFLAG:ARG:43 == 1
+			CSTR:ARG:12 = 아버지
+			CSTR:ARG:15 = 어머니
+		ELSEIF CFLAG:ARG:43 == 2
+			CSTR:ARG:12 = 아바마마
+			CSTR:ARG:15 = 어마마마
+		ELSEIF CFLAG:ARG:43 == 3
+			CSTR:ARG:12 = 아버님
+			CSTR:ARG:15 = 어머님
+		ELSEIF CFLAG:ARG:43 == 4
+			CSTR:ARG:12 = 아빠야
+			CSTR:ARG:15 = 엄마야
+		ELSEIF CFLAG:ARG:43 == 5
+			CSTR:ARG:12 = 아빠
+			CSTR:ARG:15 = 엄마
+		ELSEIF CFLAG:ARG:43 == 6
+			CSTR:ARG:12 = 아버지
+			CSTR:ARG:15 = 어머니
+		ENDIF
+		CSTR:ARG:54 = %CSTR:ARG:15%
+		CSTR:ARG:55 = %CSTR:ARG:12%
+	ENDIF
+	;CSTR:ARG:12 = %CSTR:ARG:53%
+ENDIF
+
+;………………………………………………
+;특수 어미(CSTR:13, CSTR:14)를 결정
+;………………………………………………
+;だぜ
+IF NO:ARG == 2 || NO:ARG == 107
+	CSTR:ARG:13 = くれ
+	CSTR:ARG:14 = ぜ
+;고풍
+ELSEIF NO:ARG == 19 || NO:ARG == 26 || NO:ARG == 70 || NO:ARG == 74
+	CSTR:ARG:13 = くれ
+	CSTR:ARG:14 = 
+	;조교 완료 묭
+	IF NO:ARG == 19 && MARK:ARG:2 > 1
+		CSTR:ARG:12 = 당신
+		CFLAG:ARG:43 = 5
+		;주인님(ご主人様)
+		SIF CFLAG:ARG:5201 >= 5
+			CSTR:ARG:12 = 주인님
+	ENDIF
+;리카
+ELSEIF NO:ARG == 101
+	CSTR:ARG:13 = です
+	CSTR:ARG:14 = わ
+;よ
+ELSEIF CFLAG:ARG:43 == 2
+	CSTR:ARG:13 = よね
+	CSTR:ARG:14 = よ
+;わ
+ELSEIF CFLAG:ARG:43 < 10
+	CSTR:ARG:13 = ね
+	CSTR:ARG:14 = わ
+ENDIF
+
+IF STRLENS(MASTERNAME:ARG) > 0
+	;[솔직함], [연모], [망신], [친애], [상애], [복종], [낙인], [예속], [사역마], [괴리], [괴조인격], [즉각함락], 반발각인 Lv0에다 굴복각인 Lv2 이상, [겁쟁이]에다 공포각인 및 굴복각인 취득 완료
+	SIF TALENT:ARG:13 || TALENT:ARG:150 || TALENT:ARG:151 || TALENT:ARG:152 || TALENT:ARG:153 || TALENT:ARG:160 || TALENT:ARG:161 || TALENT:ARG:162 || TALENT:ARG:164 || TALENT:ARG:168 || TALENT:ARG:169 || TALENT:ARG:179 || (MARK:2 > 1 && MARK:9 == 0) || (TALENT:ARG:10 && MARK:2 && MARK:8)
+		CSTR:ARG:12 = %MASTERNAME:ARG%
+ENDIF
+
+;--------------------------------------------------
+;범용 역대사의 인격 결정 처리
+;--------------------------------------------------
+@DEFINE_JINKAKU_REVERSE, ARG
+;………………………………………………
+;1인칭(CSTR:ARG:16)을 결정
+;………………………………………………
+;성전환으로 남자가 된 존재의 경우 원래 성별의 인격을 본다. 그리고 원래 남자일 경우에는 성전환해도 남자 취급
+IF (TALENT:MASTER:120 && CFLAG:MASTER:4995 != 2) || CFLAG:MASTER:4995 == 1
+	;俺([반항적], [건방짐])
+	IF TALENT:MASTER:11 || TALENT:MASTER:15
+		CSTR:ARG:16 = 나
+	;我輩([프라이드가 높음], [흡혈귀])
+	ELSEIF TALENT:MASTER:16 || TALENT:MASTER:205
+		CSTR:ARG:16 = 본좌
+	;わし([보수적], [정조관념], [오니], [텐구])
+	ELSEIF NO:MASTER == 70 || NO:MASTER == 74 || TALENT:MASTER:24 || TALENT:MASTER:30 || TALENT:MASTER:214 || TALENT:MASTER:215
+		CSTR:ARG:16 = 나
+	;僕([겁쟁이], [얌전함], [유아], [유아퇴행], [캇파])
+	ELSEIF NO:MASTER == 69 || TALENT:MASTER:10 || TALENT:MASTER:14 || TALENT:MASTER:130 || TALENT:MASTER:159 || TALENT:MASTER:210
+		CSTR:ARG:16 = 나
+	;私
+	ELSE
+		CSTR:ARG:16 = 나
+	ENDIF
+ELSE
+	;あたい
+	IF NO:MASTER == 5 || NO:MASTER == 35 || NO:MASTER == 62
+		CSTR:ARG:16 = 이몸
+	;릴리
+	ELSEIF NO:MASTER == 15
+		CSTR:ARG:16 = 릴리
+	;僕
+	ELSEIF NO:ARG == 153 || NO:ARG == 163 || NO:ARG == 314
+		CSTR:ARG:16 = 나
+	;あたし
+	ELSEIF NO:ARG == 152 || NO:ARG == 162
+		CSTR:ARG:16 = 나
+	;私
+	ELSE
+		CSTR:ARG:16 = 나
+	ENDIF
+ENDIF
+;………………………………………………
+;2인칭(CSTR:ARG:17)과 인격(CFLAG:ARG:44)을 결정
+;………………………………………………
+CFLAG:ARG:44 = 0
+IF (TALENT:MASTER:120 && CFLAG:MASTER:4995 != 2) || CFLAG:MASTER:4995 == 1
+	;貴様([鬼], [天狗])
+	IF NO:MASTER == 70 || TALENT:MASTER:214 || TALENT:MASTER:215
+		CSTR:ARG:17 = 네놈
+		CFLAG:ARG:44 = 11
+	;お主([보수적], [정조관념])
+	ELSEIF NO:MASTER == 74 || TALENT:MASTER:24 || TALENT:MASTER:30
+		CSTR:ARG:17 = 자네
+		CFLAG:ARG:44 = 11
+	;そなた([프라이드가 높음], [흡혈귀])
+	ELSEIF TALENT:MASTER:16 || TALENT:MASTER:205
+		CSTR:ARG:17 = 그대
+		CFLAG:ARG:44 = 11
+	;お前([반항적], [건방짐], [저항])
+	ELSEIF TALENT:MASTER:11 || TALENT:MASTER:15 || TALENT:MASTER:34
+		CSTR:ARG:17 = 너
+		CFLAG:ARG:44 = 12
+	;君([気丈], [教育者])
+	ELSEIF NO:MASTER == 69 || TALENT:MASTER:12 || TALENT:MASTER:126
+		CSTR:ARG:17 = 너
+		CFLAG:ARG:44 = 13
+	;あなた
+	ELSE
+		CSTR:ARG:17 = 당신
+		CFLAG:ARG:44 = 14
+	ENDIF
+ELSE
+	;あんた
+	IF TALENT:MASTER:16 && TALENT:MASTER:84
+		CSTR:ARG:17 = 너
+		CFLAG:ARG:44 = 1
+	;お前
+	ELSEIF (TALENT:MASTER:16 && (TALENT:MASTER:낙관적 || TALENT:MASTER:반항적 || TALENT:MASTER:동물귀) && TALENT:MASTER:새드 == 0) || (TALENT:MASTER:자제심 && TALENT:MASTER:보수적) || NO:MASTER == 2
+		CSTR:ARG:17 = 너
+		CFLAG:ARG:44 = 2
+	;貴方
+	ELSEIF TALENT:MASTER:16 && NO:MASTER != 37
+		CSTR:ARG:17 = 당신
+		CFLAG:ARG:44 = 3
+	;お兄さん・お姉さん
+	ELSEIF TALENT:MASTER:유치 && TALENT:MASTER:건방짐 == 0 && TALENT:MASTER:반항적 == 0 && NO:MASTER != 45
+		CSTR:ARG:17 = \@(TALENT:ARG:120) ? 오빠 # 언니\@
+		CFLAG:ARG:44 = 4
+	;あなた
+	ELSEIF TALENT:MASTER:유치 == 0 && TALENT:MASTER:유아퇴행 == 0 && TALENT:MASTER:저항 == 0 && TALENT:MASTER:건방짐 == 0 && TALENT:MASTER:반항적 == 0 && TALENT:MASTER:무관심 == 0 && TALENT:MASTER:억압 == 0 && (TALENT:MASTER:해방 || TALENT:MASTER:70 || TALENT:MASTER:고무)
+		CSTR:ARG:17 = 당신
+		CFLAG:ARG:44 = 6
+	;あなた([겁쟁이], [얌전함], [부끄럼쟁이], [헌신적], [소악마])
+	ELSEIF TALENT:MASTER:10 || TALENT:MASTER:14 || TALENT:MASTER:35 || TALENT:MASTER:63 || TALENT:MASTER:93
+		CSTR:ARG:17 = 당신
+		CFLAG:ARG:44 = 5
+	;あんた
+	ELSE
+		CSTR:ARG:17 = 너
+		CFLAG:ARG:44 = 1
+	ENDIF
+
+	;오린 · 테위 한정
+	SIF NO:MASTER == 27 || NO:MASTER == 62
+		CSTR:ARG:17 = \@(TALENT:ARG:120) ? 오빠 # 언니\@
+
+	;貴方	와타츠키 자매 한정(즉 요리히메의 연모니까 뭐… 그렇지)
+	SIF NO:MASTER == 53 || (NO:MASTER == 54 && TALENT:MASTER:150)
+		CSTR:ARG:17 = 당신
+	;君	나즈린 한정
+	SIF NO:MASTER == 70
+		CSTR:ARG:17 = 너
+	;あなた	코가사 한정
+	IF NO:MASTER == 72
+		CSTR:ARG:17 = 당신
+		CFLAG:ARG:44 = 4
+	ENDIF
+ENDIF
+
+;………………………………………………
+;특수 어미(CSTR:ARG:18, CSTR:ARG:19)를 결정
+;………………………………………………
+;だぜ
+IF NO:MASTER == 2 || NO:MASTER == 107
+	CSTR:ARG:18 = くれ
+	CSTR:ARG:19 = ぜ
+;고풍
+ELSEIF NO:MASTER == 19 || NO:MASTER == 26 || NO:MASTER == 70 || NO:MASTER == 74
+	CSTR:ARG:18 = くれ
+	CSTR:ARG:19 = 
+;리카
+ELSEIF NO:MASTER == 201
+	CSTR:ARG:18 = です
+	CSTR:ARG:19 = わ
+;よ
+ELSEIF CFLAG:ARG:44 == 2
+	CSTR:ARG:18 = よね
+	CSTR:ARG:19 = よ
+;わ
+ELSEIF CFLAG:ARG:44 < 10
+	CSTR:ARG:18 = ね
+	CSTR:ARG:19 = わ
+ENDIF
+
+;-------------------------------------------------
+;캐릭터 간 관계 여러 함수
+;-------------------------------------------------
+;ARG와 ARG:1에 등록번호를 넣어 두 명의 관계를 조사해, 결과를 반환한다.
+;ARG가 보기에 ARG:1은 무엇?
+;반환값(-1=이라면 전제가 틀림, 0=딱히 깊은 관계는 없음, 1=언니, 2=주인이 사부 혹은 고개를 못 드는 상대, 3=밀접하긴 함, 4=부하거나 제자, 5=여동생)
+@CHARA_RELATION(ARG, ARG:1)
+#FUNCTION
+#LOCALSIZE 3
+SIF ARG < 0 || ARG:1 < 0 || ARG == ARG:1
+	RETURNF (-1)
+
+LOCAL:1 = NO:ARG
+LOCAL:2 = NO:(ARG:1)
+;언니 체크
+SIF CHARA_SISTER_ELDER_XXX(LOCAL:1, LOCAL:2, ARG, ARG:1) == 1
+	RETURNF 1
+;손윗사람 · 상사 · 사부 · 주인님 체크
+SIF CHARA_MASTER_XXX(LOCAL:1, LOCAL:2, ARG, ARG:1) == 1
+	RETURNF 2
+;친구 · 지인 체크
+SIF CHARA_UNISON_XXX(LOCAL:1, LOCAL:2, ARG, ARG:1) == 1
+	RETURNF 3
+;손아랫사람 · 부하 · 제자 · 노예 체크
+SIF CHARA_SLAVE_XXX(LOCAL:1, LOCAL:2, ARG, ARG:1) == 1
+	RETURNF 4
+;여동생 체크
+SIF CHARA_SISTER_YOUNG_XXX(LOCAL:1, LOCAL:2, ARG, ARG:1) == 1
+	RETURNF 5
+RETURNF 0
+
+;………………………………………………
+;여동생인가 아닌가 판정
+;………………………………………………
+;ARG가 보기에 ARG:1이 여동생이라면 1, 그렇지 않으면 0을 반환하는 함수
+@CHARA_SISTER_YOUNG_XXX(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+;스칼렛 자매
+IF ARG == 10
+	RETURNF (ARG:1 == 11) ? 1 # 0
+;프리즘리버 자매
+ELSEIF ARG == 18
+	RETURNF (ARG:1 == 16 || ARG:1 == 17) ? 1 # 0
+ELSEIF ARG == 17
+	RETURNF (ARG:1 == 16) ? 1 # 0
+;아키 자매
+ELSEIF ARG == 37
+	RETURNF (ARG:1 == 38) ? 1 # 0
+;와타츠키 자매
+ELSEIF ARG == 53
+	RETURNF (ARG:1 == 54) ? 1 # 0
+;코메이지 자매
+ELSEIF ARG == 61
+	RETURNF (ARG:1 == 64) ? 1 # 0
+;몽환 자매
+ELSEIF ARG == 113
+	RETURNF (ARG:1 == 112) ? 1 # 0
+;아나타의 자식
+ELSEIF (ARG == 148 || ARG == 149) && (ARG:1 == 148 || ARG:1 == 149)
+	IF CFLAG:(ARG:2):3105 == CFLAG:(ARG:3):3105 && CFLAG:(ARG:2):3102 < CFLAG:(ARG:3):3102
+		RETURNF 1
+	ELSEIF CFLAG:(ARG:2):3107 == CFLAG:(ARG:3):3107 && CFLAG:(ARG:2):3104 < CFLAG:(ARG:3):3104
+		RETURNF 1
+	ENDIF
+;미토리는 니토리의 언니지만 2차 설정이므로 일방통행
+ELSEIF ARG == 207
+	RETURNF (ARG:1 == 40) ? 1 # 0
+;츠쿠모 자매
+ELSEIF ARG == 223
+	RETURNF (ARG:1 == 224) ? 1 # 0
+ENDIF
+RETURNF 0
+
+;………………………………………………
+;언니인가 아닌가 판정
+;………………………………………………
+;ARG가 보기에 ARG:1이 언니라면 1, 그렇지 않으면 0을 반환하는 함수
+@CHARA_SISTER_ELDER_XXX(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+;스칼렛 자매
+IF ARG == 11
+	RETURNF (ARG:1 == 10) ? 1 # 0
+;프리즘리버 자매
+ELSEIF ARG == 16
+	RETURNF (ARG:1 == 17 || ARG:1 == 18) ? 1 # 0
+ELSEIF ARG == 17
+	RETURNF (ARG:1 == 18) ? 1 # 0
+;아키 자매
+ELSEIF ARG == 38
+	RETURNF (ARG:1 == 37) ? 1 # 0
+;와타츠키 자매
+ELSEIF ARG == 54
+	RETURNF (ARG:1 == 53) ? 1 # 0
+;코메이지 자매
+ELSEIF ARG == 64
+	RETURNF (ARG:1 == 61) ? 1 # 0
+;몽환 자매
+ELSEIF ARG == 112
+	RETURNF (ARG:1 == 113) ? 1 # 0
+;아나타의 자식
+ELSEIF (ARG == 148 || ARG == 149) && (ARG:1 == 148 || ARG:1 == 149)
+	IF CFLAG:(ARG:2):3105 == CFLAG:(ARG:3):3105 && CFLAG:(ARG:2):3102 > CFLAG:(ARG:3):3102
+		RETURNF 1
+	ELSEIF CFLAG:(ARG:2):3107 == CFLAG:(ARG:3):3107 && CFLAG:(ARG:2):3104 > CFLAG:(ARG:3):3104
+		RETURNF 1
+	ENDIF
+;린보쿠산에게 파츄리는 언니지만 2차 설정이므로 일방통행
+ELSEIF ARG == 206
+	RETURNF (ARG:1 == 8) ? 1 # 0
+;텐소쿠에게 텐시는 언니지만 2차 설정이므로 일방통행
+ELSEIF ARG == 209
+	RETURNF (ARG:1 == 52) ? 1 # 0
+;에이카에게 에이키는 언니지만 2차 설정이므로 일방통행
+ELSEIF ARG == 214
+	RETURNF (ARG:1 == 36) ? 1 # 0
+;츠쿠모 자매
+ELSEIF ARG == 224
+	RETURNF (ARG:1 == 223) ? 1 # 0
+ENDIF
+RETURNF 0
+
+;………………………………………………
+;손윗사람인가 아닌가 판정
+;………………………………………………
+;ARG가 보기에 ARG:1가 주인 · 상사 · 사부 · 고개를 못 드는 상대라면 1, 그렇지 않으면 0을 반환하는 함수
+@CHARA_MASTER_XXX(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+;메이링 입장이면 레밀리아는 고용주, 플랑은 고용주의 여동생, 파체는 고용주의 절친
+IF ARG == 6
+	RETURNF (ARG:1 == 10 || ARG:1 == 11 || ARG:1 == 8) ? 1 # 0
+;소악마에게 파체는 주인, 레밀리아는 주인의 맹우이자 저택의 수장, 플랑은 그 여동생
+ELSEIF ARG == 7
+	RETURNF (ARG:1 == 8 || ARG:1 == 10 || ARG:1 == 11) ? 1 # 0
+;사쿠야에게 레밀리아는 모든 것, 파체에게도 경의를 표하며, 플랑은 소중한 레밀리아 아가씨의 동생
+ELSEIF ARG == 9
+	RETURNF (ARG:1 == 10 || ARG:1 == 8 || ARG:1 == 11) ? 1 # 0
+;첸에게 유카링과 란샤마는 소중한 주인이야
+ELSEIF ARG == 13
+	RETURNF (ARG:1 == 21 || ARG:1 == 22) ? 1 # 0
+;묭에게 유유코 님은 주인, 요우키는 할아버님이자 사부, 유카링은 주인의 절친
+ELSEIF ARG == 19
+	RETURNF (ARG:1 == 20 || ARG:1 == 70 || ARG:1 == 22) ? 1 # 0
+;란샤마에게 유카링은 소중한 주인님, 유유코 님은 주인의 절친
+ELSEIF ARG == 21
+	RETURNF (ARG:1 == 22 || ARG:1 == 20) ? 1 # 0
+;우동게의 사부가 에이린, 기르는 주인은 카구야
+ELSEIF ARG == 28
+	RETURNF (ARG:1 == 29 || ARG:1 == 30) ? 1 # 0
+;에이린이 모든 것을 걸고 섬기는 게 카구야
+ELSEIF ARG == 29
+	RETURNF (ARG:1 == 30) ? 1 # 0
+;코맛쨩도 상사에겐 한 수 접어주고 있다고요
+ELSEIF ARG == 35
+	RETURNF (ARG:1 == 36) ? 1 # 0
+;모미지의 상사가 아야야지만, 섹션 다르지 않나?
+ELSEIF ARG == 41
+	RETURNF (ARG:1 == 32) ? 1 # 0
+;두 명의 신님을 모시는 사나엣치
+ELSEIF ARG == 42
+	RETURNF (ARG:1 == 43 || ARG:1 == 44) ? 1 # 0
+;이쿠 씨에게 텐시는 상사의 따님
+ELSEIF ARG == 51
+	RETURNF (ARG:1 == 52) ? 1 # 0
+;와타츠키 자매의 스승이 에이린 선생님
+ELSEIF ARG == 53 || ARG == 54
+	RETURNF (ARG:1 == 29) ? 1 # 0
+;레이센 2호의 현재 주인은 와타츠키 자매
+ELSEIF ARG == 55
+	RETURNF (ARG:1 == 53 || ARG:1 == 54) ? 1 # 0
+;오린린을 기르는 주인은 사도링, 코이시는 주인의 여동생
+ELSEIF ARG == 62
+	RETURNF (ARG:1 == 61 || ARG:1 == 64) ? 1 # 0
+;오쿠를 기르는 주인도 사도링, 코이시는 주인의 여동생, 그리고 모리야의 두 신에게도 감사의 의미로.
+ELSEIF ARG == 63 && CFLAG:(ARG:2):0 == 0
+	RETURNF (ARG:1 == 61 || ARG:1 == 64 || ARG:1 == 43 || ARG:1 == 44) ? 1 # 0
+;태양의 힘을 내려받기 전의 오쿠는 모리야의 두 신에 대해 모름
+ELSEIF ARG == 63 && CFLAG:(ARG:2):0 == 1
+	RETURNF (ARG:1 == 61 || ARG:1 == 64) ? 1 # 0
+;상하이 인형의 창조주는 앨리스(로리스일 때는 인식 못함)
+ELSEIF ARG == 66
+	RETURNF (ARG:1 == 14 && CFLAG:(ARG:3):0 == 0) ? 1 # 0
+;호라이 인형의 창조주는 앨리스(로리스일 때는 인식 못함)
+ELSEIF ARG == 67
+	RETURNF (ARG:1 == 14 && CFLAG:(ARG:3):0 == 0) ? 1 # 0
+;요우키의 주인은 유유 님
+ELSEIF ARG == 70
+	RETURNF (ARG:1 == 20) ? 1 # 0
+;나즈린은 미덥지 못한 쇼 씨를 지탱하고 있음, 또 뱌쿠렌 님에게 경의를 표하고 있음
+ELSEIF ARG == 71
+	RETURNF (ARG:1 == 76 || ARG:1 == 77) ? 1 # 0
+;이치린은 뱌쿠렌 님을 존경하고 있음
+ELSEIF ARG == 73
+	RETURNF (ARG:1 == 77) ? 1 # 0
+;운잔은 이치린에게 사역되고 있음
+ELSEIF ARG == 74
+	RETURNF (ARG:1 == 73) ? 1 # 0
+;무라사 선장은 뱌쿠렌 님을 존경하고 있음
+ELSEIF ARG == 75
+	RETURNF (ARG:1 == 77) ? 1 # 0
+;쇼는 뱌쿠렌 님을 존경하고 있음
+ELSEIF ARG == 76
+	RETURNF (ARG:1 == 77) ? 1 # 0
+;누에는 뱌쿠렌 님에게 츤데레입니다
+ELSEIF ARG == 78
+	RETURNF (ARG:1 == 77) ? 1 # 0
+;오오에도 인형의 창조주는 앨리스(로리스일 때는 인식 못함)
+ELSEIF ARG == 96
+	RETURNF (ARG:1 == 14 && CFLAG:(ARG:3):0 == 0) ? 1 # 0
+;골리아테 인형의 창조주는 앨리스(로리스일 때는 인식 못함)
+ELSEIF ARG == 97
+	RETURNF (ARG:1 == 14 && CFLAG:(ARG:3):0 == 0) ? 1 # 0
+;마리사는 미마 님의 제자
+ELSEIF ARG == 2
+	RETURNF (ARG:1 == 100) ? 1 # 0
+;앨리스에게 신키는  소중(설이 여럿 있으니 뭐…)
+ELSEIF ARG == 14
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;치유리의 지도교관은 유메미?
+ELSEIF ARG == 107
+	RETURNF (ARG:1 == 108) ? 1 # 0
+;쿠루미는 유카에게 괴롭힘 당하고 있습니다
+ELSEIF ARG == 110
+	RETURNF (ARG:1 == 34) ? 1 # 0
+;엘리도 유카에게 괴롭힘 당하고 있습니다
+ELSEIF ARG == 111
+	RETURNF (ARG:1 == 34) ? 1 # 0
+;사라는 마계인이므로 신키 님의 딸입니다
+ELSEIF ARG == 114
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;루이즈는 마계인이므로 신키 님의 딸입니다
+ELSEIF ARG == 115
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;유키는 마계인이므로 신키 님의 딸입니다
+ELSEIF ARG == 116
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;마이는 마계인이므로 신키 님의 딸입니다
+ELSEIF ARG == 117
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;유메코는 신키 님을 모시고 있고, 딸이기도 합니다
+ELSEIF ARG == 118
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;메이드 요정의 상사는 레밀리아 님과 사쿠야 씨
+ELSEIF ARG == 151 || ARG == 161
+	RETURNF (ARG:1 == 9 || ARG:1 == 10) ? 1 # 0
+;지상 토끼들의 리더는 테위
+ELSEIF ARG == 170
+	RETURNF (ARG:1 == 27) ? 1 # 0
+;앨리스의 인형들의 창조주는 앨리스(로리스일 때는 인식 못함)
+ELSEIF ARG == 172
+	RETURNF (ARG:1 == 14 && CFLAG:(ARG:3):0 == 0) ? 1 # 0
+;마계인은 모두 신키 님의 딸입니다
+ELSEIF ARG == 173
+	RETURNF (ARG:1 == 119) ? 1 # 0
+;코코아의 주인은 파체
+ELSEIF ARG == 176
+	RETURNF (ARG:1 == 8)
+;키나코의 부모는 에이린(2차 캐릭터이므로 일방통행인 걸로 합니다)
+ELSEIF ARG == 203
+	RETURNF (ARG:1 == 29) ? 1 # 0
+;쿄코는 뱌쿠렌 님을 존경하고 있음
+ELSEIF ARG == 81
+	RETURNF (ARG:1 == 77) ? 1 # 0
+;요시카는 청아에게 사역되고 있음
+ELSEIF ARG == 82
+	RETURNF (ARG:1 == 83) ? 1 # 0
+;청아는 태자님의 사부지만 추종자(서로 존중하는 관계)
+ELSEIF ARG == 83
+	RETURNF (ARG:1 == 86) ? 1 # 0
+;토지코는 태자님의 신하
+ELSEIF ARG == 84
+	RETURNF (ARG:1 == 86) ? 1 # 0
+;후토는 태자님의 신하
+ELSEIF ARG == 85
+	RETURNF (ARG:1 == 86) ? 1 # 0
+;태자님은 (일단) 청아의 제자
+ELSEIF ARG == 86
+	RETURNF (ARG:1 == 83) ? 1 # 0
+ENDIF
+RETURNF 0
+
+;………………………………………………
+;손아랫사람인가 아닌가 판정
+;………………………………………………
+;ARG가 보기에 ARG:1이 노예 · 부하 · 제자라면 1, 그렇지 않으면 0을 반환하는 함수
+@CHARA_SLAVE_XXX(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+;파체에게 소악마는 사역마가 되나? 코코아도 그럴지도?
+IF ARG == 8
+	RETURNF (ARG:1 == 7 || ARG:1 == 176) ? 1 # 0
+;사쿠야는 메이드 요정들을 지휘함
+ELSEIF ARG == 9
+	RETURNF (ARG:1 == 151 || ARG:1 == 161) ? 1 # 0
+;레밀리아 아가씨의 카리스마가 메이링 · 소악마 · 사쿠야 · 메이드 요정에게 미친다
+ELSEIF ARG == 10
+	RETURNF (ARG:1 == 6 || ARG:1 == 7 || ARG:1 == 9 || ARG:1 == 151 || ARG:1 == 161) ? 1 # 0
+;앨리스(로리스가 아니라)에게 인형은 소중한 작품
+ELSEIF ARG == 14 && CFLAG:(ARG:2):0 == 0
+	RETURNF (ARG:1 == 66 || ARG:1 == 67 || ARG:1 == 96 || ARG:1 == 97 || ARG:1 == 172) ? 1 # 0
+;유유코 님은 묭과 요우키의 주인
+ELSEIF ARG == 20
+	RETURNF (ARG:1 == 19 || ARG:1 == 70) ? 1 # 0
+;란샤마는 첸을 맹목적으로 사랑하는 중
+ELSEIF ARG == 21
+	RETURNF (ARG:1 == 13) ? 1 # 0
+;쇼에게 나즈는 믿음직스러운 부하
+ELSEIF ARG == 76
+	RETURNF (ARG:1 == 71) ? 1 # 0
+;유카링에게 식(式)은 귀중한 손발
+ELSEIF ARG == 22
+	RETURNF (ARG:1 == 13 || ARG:1 == 21) ? 1 # 0
+;테위는 지상 토끼들의 리더
+ELSEIF ARG == 27
+	RETURNF (ARG:1 == 170) ? 1 # 0
+;에이린의 제자가 우동게, 와타츠키 자매
+ELSEIF ARG == 29
+	RETURNF (ARG:1 == 28 || ARG:1 == 53 || ARG:1 == 54) ? 1 # 0
+;카구야에게 우동게와 에이린은 소중한 가족
+ELSEIF ARG == 30
+	RETURNF (ARG:1 == 28 || ARG:1 == 29) ? 1 # 0
+;아야야에게 모미지모미모미는 소중한 욕망 발산의…
+ELSEIF ARG == 32
+	RETURNF (ARG:1 == 41) ? 1 # 0
+;유카링에게 쿠루미와 엘리는… 누구더라?
+ELSEIF ARG == 34
+	RETURNF (ARG:1 == 110 || ARG:1 == 111) ? 1 # 0
+;에이키 님은 언제나 코마치 때문에 고민하고 있습니다
+ELSEIF ARG == 36
+	RETURNF (ARG:1 == 35) ? 1 # 0
+;카나코에게 사나에는 소중한 「가족」입니다
+ELSEIF ARG == 43
+	RETURNF (ARG:1 == 42) ? 1 # 0
+;스와코에게 사나에는 소중한 「가족」입니다
+ELSEIF ARG == 44
+	RETURNF (ARG:1 == 42) ? 1 # 0
+;텐시는 이쿠 씨를 부하라고 착각하고 있음
+ELSEIF ARG == 52
+	RETURNF (ARG:1 == 51) ? 1 # 0
+;토요히메에게 레이센 2호는 놀려먹을 보람이 있을 것 같군
+ELSEIF ARG == 53
+	RETURNF (ARG:1 == 55) ? 1 # 0
+;요리히메에게 레이센 2호의 현 상황은 한심스러울지도 모르지?
+ELSEIF ARG == 54
+	RETURNF (ARG:1 == 55) ? 1 # 0
+;사도링은 펫을 기르고 있음
+ELSEIF ARG == 61
+	RETURNF (ARG:1 == 62 || ARG:1 == 63) ? 1 # 0
+;코이시에게 오린과 오쿠는 언니의 펫
+ELSEIF ARG == 64
+	RETURNF (ARG:1 == 62 || ARG:1 == 63) ? 1 # 0
+;요우키는 손녀가 걱정됨
+ELSEIF ARG == 70
+	RETURNF (ARG:1 == 19) ? 1 # 0
+;이치린은 운잔을 사역하고 있음
+ELSEIF ARG == 73
+	RETURNF (ARG:1 == 74) ? 1 # 0
+;뱌쿠렌은 나즈린, 이치린, 무라사, 쇼, 누에, 쿄코를 염두에 두고 있음
+ELSEIF ARG == 77
+	RETURNF (ARG:1 == 71 || ARG:1 == 73 || ARG:1 == 75 || ARG:1 == 76 || ARG:1 == 78 || ARG:1 == 81) ? 1 # 0
+;미마에게 마리사는 가장 아끼는 제자
+ELSEIF ARG == 100
+	RETURNF (ARG:1 == 2) ? 1 # 0
+;유메미에게 치유리는 조수다
+ELSEIF ARG == 108
+	RETURNF (ARG:1 == 107) ? 1 # 0
+;신키 마마는 마계인들의 존경을 한 몸에 모은 더듬이털 신님입니다
+ELSEIF ARG == 119
+	RETURNF (ARG:1 == 14 || ARG:1 == 114 || ARG:1 == 115 || ARG:1 == 116 || ARG:1 == 117 || ARG:1 == 118 || ARG:1 == 173) ? 1 # 0
+;청아는 요시카를 귀여워 합니다
+ELSEIF ARG == 83
+	RETURNF (ARG:1 == 82) ? 1 # 0
+;태자님에게 후토지코는 측근, 코코로는 자신의 피조물?
+ELSEIF ARG == 86
+	RETURNF (ARG:1 == 84 || ARG:1 == 85 || ARG:1 == 89) ? 1 # 0
+;레이카는 레이무의 선대 하쿠레이의 무녀(2차 설정이므로 일방통행으로 합니다)
+ELSEIF ARG == 218
+	RETURNF (ARG:1 == 1) ? 1 # 0
+ENDIF
+RETURNF 0
+
+;………………………………………………
+;친구 · 지인인가 아닌가 판정
+;………………………………………………
+;2차 설정 소재 만재일지도 모름. 이용할 거면 자기책임으로.
+;ARG가 보기에 ARG:1가 밀접한 관계라면 1, 그렇지 않으면 0을 반환하는 함수
+@CHARA_UNISON_XXX(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+;더블 릴리
+IF ARG == 15
+	RETURNF (ARG:1 == 56) ? 1 # 0
+ELSEIF ARG == 56
+	RETURNF (ARG:1 == 15) ? 1 # 0
+;테위와 영원정
+ELSEIF ARG == 27
+	RETURNF (ARG:1 == 28 || ARG:1 == 29 || ARG:1 == 30) ? 1 # 0
+ELSEIF ARG == 28
+	RETURNF (ARG:1 == 27) ? 1 # 0
+ELSEIF ARG == 29
+	RETURNF (ARG:1 == 27) ? 1 # 0
+ELSEIF ARG == 30
+	RETURNF (ARG:1 == 27) ? 1 # 0
+;삼월정
+ELSEIF ARG == 45
+	RETURNF (ARG:1 == 46 || ARG:1 == 47) ? 1 # 0
+ELSEIF ARG == 46
+	RETURNF (ARG:1 == 45 || ARG:1 == 47) ? 1 # 0
+ELSEIF ARG == 47
+	RETURNF (ARG:1 == 45 || ARG:1 == 46) ? 1 # 0
+;비봉 클럽
+ELSEIF ARG == 49
+	RETURNF (ARG:1 == 50) ? 1 # 0
+ELSEIF ARG == 50
+	RETURNF (ARG:1 == 49) ? 1 # 0
+;오니 사천왕
+ELSEIF ARG == 23
+	RETURNF (ARG:1 == 60) ? 1 # 0
+ELSEIF ARG == 60
+	RETURNF (ARG:1 == 23) ? 1 # 0
+;유키마이
+ELSEIF ARG == 116
+	RETURNF (ARG:1 == 117) ? 1 # 0
+ELSEIF ARG == 117
+	RETURNF (ARG:1 == 116) ? 1 # 0
+;레이라와 프리즘리버
+ELSEIF ARG == 98
+	RETURNF (ARG:1 == 16 || ARG:1 == 17 || ARG:1 == 18) ? 1 # 0
+ELSEIF ARG == 16
+	RETURNF (ARG:1 == 98) ? 1 # 0
+ELSEIF ARG == 17
+	RETURNF (ARG:1 == 98) ? 1 # 0
+ELSEIF ARG == 18
+	RETURNF (ARG:1 == 98) ? 1 # 0
+;Ｗ 메이링이지만 2차 설정이므로 일방통행으로 해두겠습니다
+ELSEIF ARG == 204
+	RETURNF (ARG:1 == 6) ? 1 # 0
+;슈가 쪽에서 삼월정(일방통행)
+ELSEIF ARG == 215
+	RETURNF (ARG:1 == 45 || ARG:1 == 46 || ARG:1 == 47) ? 1 # 0
+;아야와 하타테는 더블 스포일러
+ELSEIF ARG == 32
+	RETURNF (ARG:1 == 79) ? 1 # 0
+ELSEIF ARG == 79
+	RETURNF (ARG:1 == 32) ? 1 # 0
+;누에와 마미조는 부르면 찾아오는 친구 사이
+ELSEIF ARG == 78
+	RETURNF (ARG:1 == 87) ? 1 # 0
+ELSEIF ARG == 87
+	RETURNF (ARG:1 == 78) ? 1 # 0
+;아큐와 코스즈
+ELSEIF ARG == 48
+	RETURNF (ARG:1 == 88) ? 1 # 0
+ELSEIF ARG == 88
+	RETURNF (ARG:1 == 48) ? 1 # 0
+;토지코와 후토는 같은 주군을 모시는 사이
+ELSEIF ARG == 84
+	RETURNF (ARG:1 == 85) ? 1 # 0
+ELSEIF ARG == 85
+	RETURNF (ARG:1 == 84) ? 1 # 0
+ENDIF
+RETURNF 0
+
+
+
+
+;=============================================================================
+;범용 대사 제네레이터 인격 결정의 처리
+;범용 대사(EVENT_KX) 재정립 후 삭제할 예정.
+;=============================================================================
+;--------------------------------------------------
+;인격의 결정
+;--------------------------------------------------
+@JINKAKU
+;친딸의 경우.
+IF CHECK_MASTERS_CHILD(TARGET) == 1
+	IF CFLAG:3005 == 3
+		STR:401 = 아버님
+		STR:404 = 어머님
+	ELSEIF CFLAG:3005 == 1
+		STR:401 = 아빠
+		STR:404 = 엄마
+	ELSEIF CFLAG:3005 == 2
+		STR:401 = 아버님
+		STR:404 = 어머님
+	ELSEIF CFLAG:3005 == 5
+		STR:401 = 아버지
+		STR:404 = 어머니
+	ELSEIF CFLAG:3005 == 6
+		STR:401 = 아빠
+		STR:404 = 엄마
+	ELSEIF CFLAG:3005 == 4
+		STR:401 = 파파
+		STR:404 = 마마
+	ENDIF
+;범용 캐릭터일 경우
+ELSE
+	IF CFLAG:43 == 0
+		CALL DEFINE_JINKAKU
+		CFLAG:43 = RESULT
+	ELSE
+		STR:400 = %CSTR:11%
+		STR:401 = %CSTR:12%
+		STR:402 = %CSTR:13%
+		STR:403 = %CSTR:14%
+		STR:404 = %CSTR:15%
+		CFLAG:3005 = CFLAG:43
+	ENDIF
+
+	IF STRLENS(MASTERNAME:TARGET) > 0
+		SIF TALENT:13 || TALENT:150 || TALENT:151 || TALENT:152 || TALENT:153 || TALENT:160 || TALENT:161 || TALENT:162 || TALENT:164 || TALENT:168 || TALENT:169 || TALENT:179 || (MARK:9 < 1 && MARK:2 > 1) || (TALENT:10 && MARK:8 && MARK:2)
+			STR:401 = %MASTERNAME:TARGET%
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;주인의 인격이 필요한 경우도 있으므로
+;--------------------------------------------------
+@MASTER_JINKAKU
+
+LOCAL = TARGET
+TARGET = MASTER
+
+CALL JINKAKU
+
+TARGET = LOCAL
+
+;--------------------------------------------------
+;인격의 결정
+;--------------------------------------------------
+@DEFINE_JINKAKU
+;1인칭(STR:400)을 결정
+;성전환으로 남자가 된 존재의 경우원의 성별의 인격을 보는, 나머지 원래 남자의 경우는 성전환 해도 남자 취급
+IF (TALENT:120 && CFLAG:4995 != 2) || CFLAG:4995 == 1
+	;わし(캐릭터 유래)
+	IF NO:TARGET == 70 || NO:TARGET == 74
+		STR:400 = 나
+	;僕(캐릭터 유래)
+	ELSEIF NO:TARGET == 69
+		STR:400 = 나
+	;俺
+	ELSEIF TALENT:11 || TALENT:15
+		STR:400 = 나
+	;我輩
+	ELSEIF TALENT:16 || TALENT:205
+		STR:400 = 본좌
+	;わし
+	ELSEIF TALENT:24 || TALENT:30 || TALENT:214 || TALENT:215
+		STR:400 = 나
+	;僕
+	ELSEIF TALENT:10 || TALENT:14 || TALENT:130 || TALENT:159 || TALENT:210
+		STR:400 = 나
+	;私
+	ELSE
+		STR:400 = 나
+	ENDIF
+ELSE
+	;あたい
+	IF NO:TARGET == 5 || NO:TARGET == 35 || NO:TARGET == 62
+		STR:400 = 이몸
+	;릴리
+	ELSEIF NO:TARGET == 15
+		STR:400 = 릴리
+	;僕
+	ELSEIF NO:TARGET == 153 || NO:TARGET == 163
+		STR:400 = 나
+	;あたし
+	ELSEIF NO:TARGET == 152 || NO:TARGET == 162
+		STR:400 = 나
+	;私
+	ELSE
+		STR:400 = 나
+	ENDIF
+ENDIF
+;2인칭(STR:401)과 인격(CFLAG:3005)을 결정
+IF (TALENT:120 && CFLAG:4995 != 2) || CFLAG:4995 == 1
+	;貴様(캐릭터 유래)
+	IF NO:TARGET == 70
+		STR:401 = 네놈
+		CFLAG:3005 = 11
+	;お主(캐릭터 유래)
+	ELSEIF NO:TARGET == 74
+		STR:401 = 임자
+		CFLAG:3005 = 11
+	;君(캐릭터 유래)
+	ELSEIF NO:TARGET == 69
+		STR:401 = 너
+		CFLAG:3005 = 13
+	;貴様
+	ELSEIF TALENT:214 || TALENT:215
+		STR:401 = 네놈
+		CFLAG:3005 = 11
+	;お主
+	ELSEIF TALENT:24 || TALENT:30
+		STR:401 = 임자
+		CFLAG:3005 = 11
+	;そなた
+	ELSEIF TALENT:16 || TALENT:205
+		STR:401 = 그대
+		CFLAG:3005 = 11
+	;お前
+	ELSEIF TALENT:11 || TALENT:15 || TALENT:34
+		STR:401 = 너
+		CFLAG:3005 = 12
+	;君
+	ELSEIF TALENT:12 || TALENT:126
+		STR:401 = 너
+		CFLAG:3005 = 13
+	;あなた
+	ELSE
+		STR:401 = 당신
+		CFLAG:3005 = 14
+	ENDIF
+
+	;연모 후
+	;お主
+	SIF CFLAG:5201 >= 5 && CFLAG:3005 == 11
+		STR:401 = お主(자네)
+
+ELSE
+	;あんた
+	IF TALENT:16 && TALENT:84
+		STR:401 = 너
+		CFLAG:3005 = 1
+	;お前
+	ELSEIF (TALENT:16 && (TALENT:25 || TALENT:11 || TALENT:116) && TALENT:81 == 0) || (TALENT:20 && TALENT:24) || NO:TARGET == 2
+		STR:401 = 너
+		CFLAG:3005 = 2
+	;貴方
+	ELSEIF TALENT:16 && NO:TARGET != 37
+		STR:401 = 당신
+		CFLAG:3005 = 3
+	;형(오빠)·언니(누나)
+	ELSEIF TALENT:131 && TALENT:15 == 0 && TALENT:11 == 0 && NO:TARGET != 45
+		;남자라면 형·누나. 성전환 여부도 조사함
+		IF (TALENT:120 && CFLAG:4995 != 2) || CFLAG:4995 == 1
+			STR:401 = \@(TALENT:MASTER:120) ? 형 # 누나\@
+		;그 외라면 오빠·언니
+		ELSE
+			STR:401 = \@(TALENT:MASTER:120) ? 오빠 # 언니\@
+		ENDIF
+		CFLAG:3005 = 4
+	;당신
+	ELSEIF TALENT:131 == 0 && TALENT:159 == 0 && TALENT:34 == 0 && TALENT:15 == 0 && TALENT:11 == 0 && TALENT:21 == 0 && TALENT:32 == 0 && (TALENT:33 || TALENT:70 || TALENT:95)
+		STR:401 = 당신
+		CFLAG:3005 = 6
+	;あなた
+	ELSEIF TALENT:63 || TALENT:14 || TALENT:93 || TALENT:10 || TALENT:35
+		STR:401 = 당신
+		CFLAG:3005 = 5
+	;あんた
+	ELSE
+		STR:401 = 너
+		CFLAG:3005 = 1
+	ENDIF
+
+	;연모 후
+	;◎◎(캐릭터 유래)＋연모＋주인이 「당신」은 아니다
+	IF CFLAG:5201 >= 5 && NO:TARGET == 119 && CALLNAME:MASTER != "당신"
+		STR:401 = %CALLNAME:MASTER%
+	;마스터
+	ELSEIF CFLAG:5201 >= 5 && TALENT:200
+		STR:401 = 마스터
+	;주인님
+	ELSEIF CFLAG:5201 >= 5
+		STR:401 = 주인님
+	ENDIF
+
+	;테위·오린 한정
+	SIF NO:TARGET == 27 || NO:TARGET == 62
+		STR:401 = \@(TALENT:MASTER:120) ? 오빠 # 언니\@
+
+	;와타츠키 자매 한정 (貴方)
+	SIF NO:TARGET == 53 || (NO:TARGET == 54 && TALENT:150)
+		STR:401 = 당신
+	;나즈린 한정 (君)
+	SIF NO:TARGET == 70
+		STR:401 = 너
+	;코가사 한정
+	IF NO:TARGET == 72
+		STR:401 = \@(CFLAG:5225) ? 사부 # 당신\@
+		CFLAG:3005 = 4
+	ENDIF
+ENDIF
+
+
+
+;특수 어미(STR:402, STR:403)를 결정
+;(이)다
+IF NO:TARGET == 2 || NO:TARGET == 107
+	STR:402 = 네
+	STR:403 = 라구
+;고풍
+ELSEIF NO:TARGET == 19 || NO:TARGET == 26 || NO:TARGET == 70 || NO:TARGET == 74
+	STR:402 = 해다오
+	STR:403 = 
+	;조교 끝났쩡
+	IF NO:TARGET == 19 && MARK:2 > 1
+		STR:401 = あなた(당신)
+		CFLAG:3005 = 5
+		;주인님
+		SIF CFLAG:5201 >= 5
+			STR:401 = 주인님
+	ENDIF
+;리카
+ELSEIF NO:TARGET == 101
+	STR:402 = 
+	STR:403 = 
+;
+ELSEIF CFLAG:3005 == 2
+	STR:402 = 
+	STR:403 = 
+;원
+ELSEIF CFLAG:3005 < 10
+	STR:402 = 
+	STR:403 = 
+ENDIF
+
+CSTR:11 = %STR:400%
+CSTR:12 = %STR:401%
+CSTR:13 = %STR:402%
+CSTR:14 = %STR:403%
+CSTR:15 = %STR:404%
+
+;결정된 성격을 반환한다.
+RETURN CFLAG:3005

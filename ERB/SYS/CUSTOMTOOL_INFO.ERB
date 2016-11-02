@@ -1,0 +1,215 @@
+﻿;-------------------------------------------------
+;技師パッチYM 改良ツール用各種処理群 2
+;-------------------------------------------------
+;中毒者曰く：
+;改造済みアイテム管理用ステータス画面。
+;本来はデバッグ用の機能らしい"LOCAL@関数名"を使って処理を簡易化。（ぉ
+;
+;@CUSTOMTOOL_INFO                : 開発アイテム表示メイン
+;@CUSTOMTOOL_INFO_DEVELOP        : 上質／高性能開発中アイテム表示
+;@CUSTOMTOOL_INFO_DEVELOPED      : 上質／高性能開発済アイテム表示
+;@CUSTOMTOOL_INFO_DEVELOP_PLUS   : 特製品開発中アイテム表示
+;@CUSTOMTOOL_INFO_DEVELOPED_PLUS : 特製品開発済アイテム表示
+;
+;=======================================;
+;CUSTOMTOOL_INFO 開発アイテム表示メイン
+;引数
+;FLAG 1110 : 対象キャラ番号
+;戻値
+;RETURN : 0固定
+;LOCAL変数
+;  0 : 引数受け取り(対象キャラ番号)
+;  1 : 上質／高性能開発中アイテム数
+;  2 : 上質／高性能開発済アイテム数
+;  3 : 特製品開発中アイテム数
+;  4 : 開発状況管理番号 (対象アイテム番号＋700)
+;  5 : アイテム開発管理番号
+;=======================================;
+@CUSTOMTOOL_INFO
+LOCAL:0 = FLAG:1110
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = 0
+LOCAL:4 = 0
+;表示対象の確認
+REPEAT 90
+	LOCAL:5 = COUNT + 700
+	LOCAL@CUSTOMTOOL_INFO_DEVELOP:COUNT = 0
+	LOCAL@CUSTOMTOOL_INFO_DEVELOPED:COUNT = 0
+	LOCAL@CUSTOMTOOL_INFO_DEVELOP_PLUS:COUNT = 0
+	LOCAL@CUSTOMTOOL_INFO_DEVELOPED_PLUS:COUNT = 0
+	IF CFLAG:(LOCAL:0):(LOCAL:5) == 2
+		LOCAL@CUSTOMTOOL_INFO_DEVELOP:COUNT = 1
+		LOCAL:1 += 1
+	ELSEIF CFLAG:(LOCAL:0):(LOCAL:5) == 4
+		LOCAL@CUSTOMTOOL_INFO_DEVELOPED:COUNT = 1
+		LOCAL:2 += 1
+	ELSEIF CFLAG:(LOCAL:0):(LOCAL:5) == 6
+		LOCAL@CUSTOMTOOL_INFO_DEVELOP_PLUS:COUNT = 1
+		LOCAL:3 += 1
+	ELSEIF CFLAG:(LOCAL:0):(LOCAL:5) == 12
+		LOCAL@CUSTOMTOOL_INFO_DEVELOPED_PLUS:COUNT = 1
+		LOCAL:4 += 1
+	ENDIF
+REND
+SIF LOCAL:1 > 0
+	CALL CUSTOMTOOL_INFO_DEVELOP
+SIF LOCAL:2 > 0
+	CALL CUSTOMTOOL_INFO_DEVELOPED
+SIF LOCAL:3 > 0
+	CALL CUSTOMTOOL_INFO_DEVELOP_PLUS
+SIF LOCAL:4 > 0
+	CALL CUSTOMTOOL_INFO_DEVELOPED_PLUS
+IF LOCAL:1 == 0 && LOCAL:2 == 0 && LOCAL:3 == 0 && LOCAL:4 == 0
+	PRINTL 개발한 조교 도구는 없습니다
+	CALL NEW_DRAWLINE
+ENDIF
+RETURN 0
+
+;=======================================;
+;CUSTOMTOOL_INFO_DEVELOP 上質／高性能開発中アイテム表示
+;引数
+;FLAG  1110  : 対象キャラ番号
+;LOCAL 0～89 : 開発中道具の存在フラグ
+;戻値
+;RETURN : 0固定
+;LOCAL変数
+; 0～89 : 開発中道具の存在フラグ(引数)
+; 90    : COUNTの受け皿
+;=======================================;
+@CUSTOMTOOL_INFO_DEVELOP
+PRINTL 개발 중인 양질/고성능 조교 도구
+REPEAT 90
+	IF LOCAL:COUNT == 1
+		PRINTFORML %ITEMNAME:COUNT%
+	ENDIF
+REND
+CALL NEW_DRAWLINE
+RETURN
+
+;=======================================;
+;CUSTOMTOOL_INFO_DEVELOPED 上質／高性能開発済アイテム表示
+;引数
+;FLAG 1110 : 対象キャラ番号
+;戻値
+;RETURN : 0固定
+;LOCAL変数
+; 0～89 : 開発中道具の存在フラグ(引数)
+; 90    : COUNTの受け皿
+;=======================================;
+@CUSTOMTOOL_INFO_DEVELOPED
+PRINTL 개발된 양질/고성능 조교 도구
+REPEAT 90
+	IF LOCAL:COUNT == 1
+		PRINTFORML %ITEMNAME:COUNT%
+	ENDIF
+REND
+CALL NEW_DRAWLINE
+RETURN
+
+;=======================================;
+;CUSTOMTOOL_INFO_DEVELOP_PLUS 特製品開発中アイテム表示
+;引数
+;FLAG 1110 : 対象キャラ番号
+;戻値
+;RETURN : 0固定
+;LOCAL変数
+; 0～89 : 開発中道具の存在フラグ(引数)
+; 90    : COUNTの受け皿
+;=======================================;
+@CUSTOMTOOL_INFO_DEVELOP_PLUS
+PRINTL 개발 중인 특제품 조교 도구
+REPEAT 90
+	IF LOCAL:COUNT == 1
+		PRINTFORML %ITEMNAME:COUNT%
+	ENDIF
+REND
+CALL NEW_DRAWLINE
+RETURN
+
+;=======================================;
+;CUSTOMTOOL_INFO_DEVELOPED_PLUS : 特製品開発済アイテム表示
+;引数
+;FLAG 1110 : 対象キャラ番号
+;戻値
+;RETURN : 0固定
+;LOCAL変数
+; 0～89 : 開発中道具の存在フラグ(引数)
+; 90    : COUNTの受け皿
+; 91    : 特殊な名前使用時の横表示数 (デフォルト：3)
+; 92    : 特殊な名前使用時の文字数   (デフォルト：25)
+; 93    : 現在の横表示数
+; 94    : 今回の文字数
+; 95    : 今回の必要枠数
+; 96    : 特殊な名前の使用状況(SPECIALNAME_CUSTOMTOOL戻り値)
+; 97    : テンポラリ(今回の文字数%(特殊な名前使用時の文字数+1))
+; 98    : 対象キャラ番号受け皿
+;=======================================;
+@CUSTOMTOOL_INFO_DEVELOPED_PLUS
+PRINTL 개발된 특제품 조교 도구
+LOCAL:91 = 3
+LOCAL:92 = 25
+LOCAL:93 = 0
+LOCAL:98 = FLAG:1110
+REPEAT 90
+	LOCAL:90 = COUNT
+	IF LOCAL:(LOCAL:90) == 1
+		;特殊な名前を使うか否かで処理が変わる
+		IF FLAG:1100 & 2
+			;特製品に特殊な名前を使う場合
+			FLAG:1111 = LOCAL:98
+			FLAG:1110 = COUNT
+			CALL SPECIALNAME_CUSTOMTOOL
+			LOCAL:96 = RESULT
+			IF LOCAL:96
+				IF FLAG:1100 & 4
+					;アイテム番号併記の場合
+					IF LOCAL:90 < 10
+						LOCALS = %TSTR:7%(No.0{LOCAL:90})
+					ELSE
+						LOCALS = %TSTR:7%(No.{LOCAL:90})
+					ENDIF
+				ELSE
+					;本来の調教道具名併記の場合
+					LOCALS = %TSTR:7%(%ITEMNAME:(LOCAL:90)%)
+				ENDIF
+			ELSE
+				IF FLAG:1100 & 4
+					;アイテム番号併記の場合
+					IF LOCAL:90 < 10
+						LOCALS = %ITEMNAME:(LOCAL:90)%(No.{LOCAL:90})
+					ELSE
+						LOCALS = %ITEMNAME:(LOCAL:90)%(No.{LOCAL:90})
+					ENDIF
+				ELSE
+					;本来の調教道具名併記の場合は併記なし
+					LOCALS = %ITEMNAME:(LOCAL:90)%
+				ENDIF
+			ENDIF
+			STRLENS LOCALS
+			LOCAL:94 = RESULT
+			LOCAL:95 = (LOCAL:94 / (LOCAL:92 + 1)) + ((LOCAL:94 % (LOCAL:92 + 1)) > 0)
+			SIF LOCAL:93 > 0 && LOCAL:91 < (LOCAL:93 + LOCAL:95)
+				PRINTL 
+			PRINTFORM %LOCALS%
+			LOCAL:93 += LOCAL:95
+			IF LOCAL:93 >= LOCAL:91
+				PRINTL 
+				LOCAL:93 = 0
+			ELSE
+				LOCAL:97 = LOCAL:94 % (LOCAL:92 + 1)
+				FLAG:1110 = LOCAL:92 - LOCAL:97
+				CALL SPACER
+			ENDIF
+		ELSE
+			;特製品に特殊な名前を使わない場合
+			PRINTFORML %ITEMNAME:(LOCAL:90)%
+		ENDIF
+	ENDIF
+	COUNT = LOCAL:90
+REND
+IF (FLAG:1100 & 2) && (LOCAL:93 > 0)
+	PRINTL 
+ENDIF
+CALL NEW_DRAWLINE
+RETURN 0

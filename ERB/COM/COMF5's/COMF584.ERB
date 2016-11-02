@@ -1,0 +1,169 @@
+﻿;=============================================================================
+;촉수 정신 제어
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE584
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:584 > 0
+	RETURN 0
+;신사적인 촉수계 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4096) == 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;아이템進化の秘法を持っているか, 아이템なし設定でないとダメ
+SIF ITEM:59 == 0 && NOITEM == 0
+	RETURN 0
+;촉수조교 중이 아니면 불가
+SIF TEQUIP:90 == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:77 == 2
+	RETURN 1
+;조교자는 촉수사역LV3이상 필요
+SIF ABL:PLAYER:98 < 3
+	RETURN 0
+;촉수가 [ALICE촉수]を得ていないとダメ
+SIF (FLAG:98 & 16) == 0
+	RETURN 0
+;アリスを촉수生贄に捧げていない(=アリスが何らかの形で存在している)とダメ
+SIF (FLAG:97 & 16) == 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수생지를 통해서 촉수와 일체화한 앨리스를 소환,
+;변이한 조정의 실로 상대의 마음을 조작해, 반감을 억제한다……라고 하는 초드급 변태 플레이
+@COM584
+PRINTL 촉수 정신 제어
+TSTR:0 = 촉수 정신 제어
+CALL TRAIN_MESSAGE_COM584
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 100
+
+SOURCE:31 = 30000
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	SOURCE:22 = 30
+	SOURCE:23 = 20
+	TIMES SOURCE:31 , 2.00
+ELSEIF ABL:10 == 1
+	SOURCE:22 = 80
+	SOURCE:23 = 40
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:10 == 2
+	SOURCE:22 = 160
+	SOURCE:23 = 80
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:10 == 3
+	SOURCE:22 = 320
+	SOURCE:23 = 160
+	TIMES SOURCE:31 , 0.50
+ELSEIF ABL:10 == 4
+	SOURCE:22 = 700
+	SOURCE:23 = 320
+	TIMES SOURCE:31 , 0.25
+ELSE
+	SOURCE:22 = 1200
+	SOURCE:23 = 640
+	TIMES SOURCE:31 , 0.10
+ENDIF
+
+;복종
+IF TALENT:160
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:23 , 1.20
+	TIMES SOURCE:31 , 0.20
+ENDIF
+
+;MARK:공포 각인을 본다
+IF MARK:8 == 1
+	TIMES SOURCE:23 , 1.20
+ELSEIF MARK:8 == 2
+	TIMES SOURCE:23 , 1.50
+ELSEIF MARK:8 >= 3
+	TIMES SOURCE:23 , 2.00
+ENDIF
+
+;MARK:반발 각인을 본다
+IF MARK:9 == 1
+	TIMES SOURCE:31 , 0.50
+ELSEIF MARK:9 == 2
+	TIMES SOURCE:31 , 0.25
+ELSEIF MARK:9 >= 3
+	TIMES SOURCE:31 , 0.10
+ENDIF
+
+IF TEQUIP:77 == 2
+	TEQUIP:77 = 0
+ELSE
+	TEQUIP:77 = 2
+ENDIF
+
+;커맨드 속성：촉수
+TFLAG:98 = 8
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;촉수 정신 제어중
+;-------------------------------------------------
+@EQUIP_COM584
+PRINTL <촉수 정신 제어중>
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 10
+
+;앨리스의 성별상, 조교 대상이♀의 때만 레즈비언 경험이 들어가는 사양에
+SIF TALENT:120 == 0
+	TCVAR:12 += 1
+
+;촉수 경험 플래그
+TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM584
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:77 == 2
+	PRINTFORML 앨리스는 %CALLNAME:PLAYER%의 명령을 받자 마력을 차단해,
+	PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 묶고 있던 실을 지워 없앴다.
+	PRINTFORML 마력에 의한 영향인가, %조사선택(CALLNAME:TARGET, "는")% 초점이 없는 눈으로 허공을 응시하고 있다….
+	PRINTFORML 멍~ 하고 있는 %조사선택(CALLNAME:TARGET, "를")% 거들떠보지도 않고 앨리스는 촉수의 꽃 안에 들어가더니,
+	PRINTW 고기로 된 꽃잎을 닫아 그대로 원래 있던 곳으로 돌아갔다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "가")% 명령을 내리자 %CALLNAME:TARGET% 배후의 벽이 빠끔히 갈라지더니,
+	PRINTL 사람이 들어갈 수 있을 정도의 굵기를 자랑하는 촉수가 한 개 나타났다.
+	PRINTFORML %CALLNAME:TARGET%에게 가까워진 촉수는 장미가 피듯이 몸을 열더니,
+	PRINTL 그안에 하반신을 촉수와 하나로 한 앨리스의 모습을 보였다.
+	PRINTFORML 앨리스는 %CALLNAME:MASTER%에게 공손하게 인사 하고,
+	PRINTFORML 알카익 스마일을 띄우면서 %CALLNAME:TARGET%에게 가까워져,
+	IF TFLAG:899 == 0
+		PRINTFORML 손가락끝에서 눈에 보이지 않는 마력의 실을 자아내, %CALLNAME:TARGET%의 몸을 속박했다.
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 목덜미에 실이 묶이는 순간, 
+		IF MARK:9
+			PRINTL 지금까지의 반항적이었던 얼굴이 사라져
+		ELSEIF PALAM:17 >= PALAMLV:4 || (MARK:8 && ABL:35 == 0)
+			PRINTL 공포로 질려있던 얼굴이 느슨해져
+		ELSE
+			PRINTL 일순간 표정이 얼굴에서 사라졌다고 생각하자마자,
+		ENDIF
+		PRINTW 무엇이 즐거운 것인지 알 수 없는 미소를 띠기 시작했다.
+	ELSE
+		PRINTFORMW 손가락 끝에서 눈에 보이지 않는 마력의 실을 자아내, %CALLNAME:TARGET%의 몸을 속박했다.
+	ENDIF
+ENDIF

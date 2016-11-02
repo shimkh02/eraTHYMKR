@@ -1,0 +1,974 @@
+﻿;---------------------------------------------------------
+; SHOP_WORKSHOP1 技師パッチ 工房イベントファイル
+;---------------------------------------------------------
+;中毒者曰く：
+;技師パッチ本領部分。
+;技術を持ったエロい娘やエロくなった技術っ娘が技術を教えあったり開発したり開発されたりする場。
+;多人数乱交プレイルームという噂があるが噂は反逆行為と見なす。さぁ尻を出せ。
+;
+;以下関数群
+;
+;@BUILD_WORKSHOP                 工房開設
+;@MENU_WORKSHOP                  工房メニュー
+;@MONEY_ENLARGE_WORKSHOP         工房拡張に必要な金額
+;@ENLARGE_WORKSHOP               工房の増築
+;@STATE_WORKSHOP                 工房の様子を見る
+;@STAFFCALL_WORKSHOP             奴隷を工房に呼ぶ
+;@ORDER_WORKSHOP                 指示を出す(指示対象選択)
+;@ORDER_WORKSHOP_2               指示を出す(指示内容選択)
+;@STAY_WORKSHOP                  工房を視察する
+;@STAFFRETURN_WORKSHOP           奴隷を部屋に帰す
+;@ORDER_CANCEL                   指示中止(待機)
+;@ORDER_TEACH_HANDYCRAFT         工作技能教習
+;@TEACH_HANDYCRAFT_WITH_MASTER   工作技能教習複数対象に主人含むかチェック
+;@TEACH_HANDYCRAFT_RETARGET      工作技能教習複数対象再チェック
+;@ORDER_CRAFT_ITEM               調教道具製作
+;@ORDER_CRAFT_MACHINE            特殊調教装置製作(未実装) 
+;@COUNT_STAY_WORKSHOP            工房メンバー確認
+;@REORDER_WORKSHOP_DELCHARA      キャラ削除時の命令番号調整
+
+;以下別ファイルにて定義
+;@JUDGE_WORKSHOP                 工房作業判定
+;@JUDGE_TEACH_HANDYCRAFT         工作技能教習判定
+;@JUDGE_MOTIVATION               工房モチベーション判定
+
+;=======================================;
+;BUILD_WORKSHOP 工房開設
+; LOCAL : 工房開設に必要な代金 難易度で変更させる？
+;=======================================;
+@BUILD_WORKSHOP
+LOCAL = 10000
+DRAWLINE
+PRINTFORML 공방 개설 시 {LOCAL}원이 필요합니다. (자금 {MONEY}원)
+IF MONEY < LOCAL
+	PRINTW 자금이 부족합니다.
+	RETURN 0
+ENDIF
+PRINTL 개설하겠습니까?
+PRINTC [0] 네  
+PRINTC [1] 아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	FLAG:1102 = 2
+	MONEY -= LOCAL
+	PRINTW 공방을 개설하였습니다.
+	;とりあえず工房に入る
+	CFLAG:MASTER:4 = 3
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+RETURN 0
+
+;=======================================;
+;SHOW_WORKSHOP 工房メニュー表示
+;FLAG
+; 1130 : 工房内人数
+; 
+;=======================================;
+@SHOW_WORKSHOP
+CALL MONEY_ENLARGE_WORKSHOP
+CALL COUNT_STAY_WORKSHOP
+DRAWLINE
+PRINTFORML 공방 (현재 %조사선택(CALLNAME:MASTER, "를")% 포함하여 {FLAG:1130}명 존재)
+PRINTFORML 공방 규모：정원 {FLAG:1102}명  확장비：${FLAG:1125} (자금 ${MONEY})
+PRINTFORM 현재 공방 분위기：
+IF FLAG:1135 < FLAG:1134
+	;従順な嫁の人数よりも危険な奴隷の人数の方が多い場合
+	PRINTL 불온
+ELSEIF FLAG:1130 == 1
+	;MASTER一人きりの場合
+	PRINTL 1명 존재
+ELSEIF FLAG:1130 == 2
+	;MASTERと呼んだキャラの二人だけの場合
+	PRINTL 2명 존재
+ELSEIF FLAG:1130 == FLAG:1133
+	;工房にいる全員がエロ要因
+	PRINTL 색정 MAX
+ELSEIF (FLAG:1130 * 3 / 4) < FLAG:1133
+	PRINTL 색정 포화
+ELSEIF (FLAG:1130 / 2) < FLAG:1133
+	PRINTL 색정 충만 중
+ELSEIF FLAG:1102 == FLAG:1130
+	PRINTL 만원
+ELSEIF (FLAG:1102 / 2) < FLAG:1130
+	PRINTL 작업하기에 비좁음
+ELSE
+	PRINTL 평범
+ENDIF
+DRAWLINE
+SIF CFLAG:MASTER:690 != 0
+	PRINTL [100] 작업 개시 (시간이 경과합니다)
+SIF FLAG:1102 > FLAG:1130
+	PRINTL [101] 노예를 부른다
+PRINTL [102] 작업 지시
+PRINTL [103] 공방 확장
+PRINTL [109] 공방 설정
+SIF CFLAG:MASTER:690 == 0
+	PRINTL [100] 자신의 방으로 돌아간다
+RETURN 0
+
+;=======================================;
+;USERSHOP_WORKSHOP 工房メニュー入力処理
+;=======================================;
+@USERSHOP_WORKSHOP
+IF RESULT == 101 && FLAG:1102 > FLAG:1130
+	CALL STAFFCALL_WORKSHOP
+ELSEIF RESULT == 102
+	CALL ORDER_WORKSHOP
+ELSEIF RESULT == 103
+	CALL ENLARGE_WORKSHOP
+ELSEIF RESULT == 109
+	CALL CONFIG_WORKSHOP
+ELSEIF RESULT == 100
+	IF CFLAG:MASTER:690 != 0
+		;作業があるなら作業開始
+		CALL STAY_WORKSHOP
+	ELSE
+		;不穏な空気のまま工房を去るとバッドエンド
+;		IF FLAG:1135 < FLAG:1134
+;			LOCAL:0 = RAND:(FLAG:1134) + 1
+;			REPEAT CHARANUM
+;				IF CFLAG:COUNT:4 == 3 && MARK:COUNT:9 == 3 && TALENT:COUNT:150 == 0 && TALENT:COUNT:151 == 0 && TALENT:COUNT:152 == 0 && TALENT:COUNT:153 == 0 && TALENT:COUNT:160 == 0 && TALENT:COUNT:161 == 0 && TALENT:COUNT:162 == 0 && TALENT:COUNT:164 == 0
+;					IF LOCAL:0 == 0
+;						TARGET = COUNT
+;					ENDIF
+;					LOCAL:0 -= 1
+;				ENDIF
+;			REND
+;			CALL KOJO_WORKSHOP_BADEND_REBELLED_RETURNING
+;			SIF RESULT
+;				QUIT
+;			PRINTW 工房を後にし
+;			PRINTW ………………
+;			PRINTW …………
+;			PRINTW ……
+;			CALL BADEND_3
+;		ENDIF
+;		;工房を出るので主人の作業と主人絡みの作業を取り消す
+;		FLAG:1110 = MASTER
+;		CALL ORDER_CANCEL
+		;作業が無ければ工房を出る
+		PRINTW 工房を後にした……
+		CFLAG:MASTER:4 = 0
+	ENDIF
+ENDIF
+RETURN 0
+
+;=======================================;
+;MONEY_ENLARGE_WORKSHOP 工房拡張に必要な金額
+;引数
+;なし
+;戻り値
+;FLAG 1125 : 増築代金
+;LOCAL
+; 0 : 工房増築に必要な基本代金 難易度で変更させる？
+; 1 : 増築後の規模
+; 2 : 増築後規模の桁数 (増築代金に影響)
+; 3 : 増築代金
+; 4 : 増築前の規模(FLAG:1102と同値)
+;=======================================;
+@MONEY_ENLARGE_WORKSHOP
+LOCAL:0 = 5000
+LOCAL:1 = FLAG:1102 + 1
+LOCAL:2 = 0
+LOCAL:3 = 0
+LOCAL:4 = FLAG:1102
+$KETA_LOOP
+LOCAL:1 = LOCAL:1 / 10
+LOCAL:2 += 1
+SIF LOCAL:1 != 0
+	GOTO KETA_LOOP
+REPEAT LOCAL:4
+	LOCAL:3 += LOCAL:0
+REND
+REPEAT LOCAL:2
+	LOCAL:3 *= 2
+REND
+FLAG:1125 = LOCAL:3
+
+;=======================================;
+;ENLARGE_WORKSHOP 工房の増築
+;
+;=======================================;
+@ENLARGE_WORKSHOP
+CALL MONEY_ENLARGE_WORKSHOP
+PRINTFORML 공방 크기를 {FLAG:1102}에서 {FLAG:1102 + 1}로 증축하려면 ${FLAG:1125} 필요합니다.
+IF MONEY < FLAG:1125
+	PRINTW 자금이 부족합니다.
+	RETURN 0
+ENDIF
+PRINTL 증축합니까?
+PRINTC [0] 네  
+PRINTC [1] 아니오
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	FLAG:1102 += 1
+	MONEY -= FLAG:1125
+	PRINTFORMW 공방 사이즈가 {FLAG:1102}로 증축되었습니다.
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+RETURN 0
+
+;=======================================;
+;STAFFCALL_WORKSHOP 奴隷を工房に呼ぶ
+;変数
+;LOCAL:0 開始キャラ番号
+;LOCAL:1 キャラ番号
+;LOCAL:2 テンポラリ
+;LOCAL:3 一度に表示する人数 (FLAG:1103で設定)
+;=======================================;
+@STAFFCALL_WORKSHOP
+LOCAL:0 = 0
+LOCAL:3 = FLAG:1103
+$STAFFCALL_WORKSHOP_TOP
+DRAWLINE
+PRINTL 공방에 누구를 부릅니까?
+DRAWLINE
+LOCAL:1 = LOCAL:0
+;自室にいるキャラの表示(LOCAL:3の数分)
+REPEAT LOCAL:3
+	LOCAL:1 += 1
+	;CHARANUMで見た最後のキャラまで表示済みなら表示処理終了
+	IF LOCAL:1 >= CHARANUM
+		BREAK
+	ENDIF
+	;居場所が自室(0)で無ければスキップ
+	IF CFLAG:(LOCAL:1):4 != 0
+		COUNT -= 1
+		CONTINUE
+	ENDIF
+	;教育者であればシンボルを表示
+	IF TALENT:(LOCAL:1):126
+		PRINT 교
+	ELSE
+		PRINT 　
+	ENDIF
+	CALL ARRANGE_CHARALIST, LOCAL:1
+	PRINTFORML  공작기능Lv {ABL:(LOCAL:1):73},  공작경험 {EXP:(LOCAL:1):74},  교육 경험 {EXP:(LOCAL:1):75}
+REND
+PRINTL 　교：교육자를 나타냅니다
+PRINTFORMLC [1001] 이전 {FLAG:1103}명 표시　　　
+PRINTLC [1000] 돌아가기　　　　　　 
+PRINTFORMLC [1009] 다음 {FLAG:1103}명 표시　　　
+PRINTL 
+$INPUT_LOOP
+INPUT
+IF RESULT > 0 && RESULT < CHARANUM
+	LOCAL:2 = RESULT
+	IF CFLAG:(LOCAL:2):4 == 0
+		;対象が自室に居れば呼びつける
+		PRINTFORMW %조사선택(CALLNAME:(LOCAL:2), "를")% 공방에 불렀습니다.
+		CFLAG:(LOCAL:2):4 = 3
+		;前ターンに工房に居なかった場合(すぐ呼び戻されたワケではない場合)は誘惑対象フラグを初期化
+		IF CFLAG:(LOCAL:2):691 & 512
+			CFLAG:(LOCAL:2):792 = -1
+			CFLAG:(LOCAL:2):793 = -1
+			CFLAG:(LOCAL:2):794 = -1
+			CFLAG:(LOCAL:2):795 = -1
+			CFLAG:(LOCAL:2):796 = -1
+		ENDIF
+		;調教対象・助手であれば指定を解除する
+		SIF (LOCAL:2) == TARGET
+			TARGET = -1
+		SIF (LOCAL:2) == ASSI
+			ASSI = -1
+		RETURN 1
+	ELSEIF CFLAG:(LOCAL:2):4 == 3
+		;対象はすでに工房にいる
+		PRINTFORML %조사선택(CALLNAME:(LOCAL:2), "는")% 이미 공방에 있습니다.
+	ELSE
+		;対象は工房・自室以外
+		PRINTFORML %조사선택(CALLNAME:(LOCAL:2), "는")% 자기 방에 없습니다.
+	ENDIF
+ELSEIF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001
+	;自室に居るLOCAL:3指定の人数分さかのぼる
+	REPEAT LOCAL:3
+		LOCAL:0 -= 1
+		IF LOCAL:0 < 1
+			BREAK
+		ENDIF
+		SIF CFLAG:(LOCAL:0):4 != 0
+			COUNT -= 1
+	REND
+	SIF LOCAL:0 < 0
+		LOCAL:0 = 0
+	GOTO STAFFCALL_WORKSHOP_TOP
+ELSEIF RESULT == 1009
+	SIF LOCAL:1 < CHARANUM
+		LOCAL:0 = LOCAL:1
+	GOTO STAFFCALL_WORKSHOP_TOP
+ENDIF
+GOTO INPUT_LOOP
+
+;=======================================;
+;@ORDER_WORKSHOP 奴隷に指示を出す
+;LOCAL:0 開始キャラ番号
+;LOCAL:1 キャラ番号
+;LOCAL:2 選択キャラ番号
+;LOCAL:3 作業番号
+;LOCAL:4 作業対象番号
+;LOCAL:5 COUNTテンポラリ
+;LOCAL:6 一度に表示する人数 (FLAG:1103で設定)
+;=======================================;
+@ORDER_WORKSHOP
+LOCAL:0 = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = 0
+LOCAL:4 = 0
+LOCAL:5 = FLAG:1103
+DRAWLINE
+$ORDER_WORKSHOP_TOP
+PRINTL 누구에게 지시하겠습니까?
+LOCAL:0 = 0
+$ORDER_WORKSHOP_LOOP_1
+DRAWLINE
+IF TALENT:MASTER:126
+	PRINT 교
+ELSE
+	PRINT Lv
+ENDIF
+PRINTFORM {ABL:MASTER:73}
+COUNT = 0
+CALL ARRANGE_CHARALIST, 0
+PRINTL (주인)
+DRAWLINE
+LOCAL:1 = LOCAL:0
+;工房にいるキャラの表示(LOCAL:5の数分)
+REPEAT LOCAL:5
+	LOCAL:1 += 1
+	;表示キャラ番号がCHARANUM超えたら表示終了
+	IF LOCAL:1 >= CHARANUM
+		BREAK
+	ENDIF
+	;居ないキャラは飛ばす
+	IF CFLAG:(LOCAL:1):4 != 3
+		COUNT -= 1
+		CONTINUE
+	ENDIF
+	;教育者は表示を変える
+	IF TALENT:(LOCAL:1):126
+		PRINT 교
+	ELSE
+		PRINT Lv
+	ENDIF
+	PRINTFORM {ABL:(LOCAL:1):73}
+	CALL ARRANGE_CHARALIST, LOCAL:1
+	LOCAL:3 = CFLAG:(LOCAL:1):690
+	;作業内容の表示
+	IF LOCAL:3 == 0
+		PRINTL [대기중]
+	ELSEIF LOCAL:3 == 1
+		PRINT [지도중] 대상：
+		IF CFLAG:(LOCAL:1):692 > -1
+			FINDCHARA CFLAG:3109, CFLAG:(LOCAL:1):692
+			LOCAL:4 = RESULT
+			IF LOCAL:4 > -1
+				PRINTFORML %CALLNAME:(LOCAL:4)%
+			ELSE
+				PRINTL 행방불명
+			ENDIF
+		ELSE
+			PRINTL 전원
+		ENDIF
+	ELSEIF LOCAL:3 == 2
+		PRINT [공부중] 선생：
+		FINDCHARA CFLAG:3109, CFLAG:(LOCAL:1):692
+		LOCAL:4 = RESULT
+		IF LOCAL:4 > -1
+			PRINTFORML %CALLNAME:(LOCAL:4)%
+		ELSE
+			PRINTL 행방불명
+		ENDIF
+	ELSEIF LOCAL:3 == 3
+		PRINT [작업중] 대상：
+		PRINTFORML %ITEMNAME:(CFLAG:(LOCAL:1):692)%
+;	ELSEIF LOCAL:3 == 4
+;		PRINT [작업중] 특수 조교 기구 제작용  미실장
+	ENDIF
+REND
+PRINTL 　교：교육자  수치：공작 기능 수준을 나타냅니다
+PRINTFORMLC [1001] 이전 {FLAG:1103}명 표시　　　
+PRINTLC [1000] 돌아가기　　　　　　 
+PRINTFORMLC [1009] 다음 {FLAG:1103}명 표시　　　
+PRINTL 
+$INPUT_LOOP_1
+INPUT
+LOCAL:2 = RESULT
+IF LOCAL:2 < CHARANUM && LOCAL:2 > -1
+	IF CFLAG:(LOCAL:2):4 != 3
+		PRINTFORMW %조사선택(CALLNAME:(LOCAL:2), "는")% 공방에 없습니다.
+		GOTO INPUT_LOOP_1
+	ENDIF
+ELSEIF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001
+	REPEAT 10
+		LOCAL:0 -= 1
+		IF LOCAL:0 < 1
+			BREAK
+		ENDIF
+		SIF CFLAG:(LOCAL:0):21 != 0
+			COUNT -= 1
+	REND
+	SIF LOCAL:0 < 0
+		LOCAL:0 = 0
+	GOTO ORDER_WORKSHOP_LOOP_1
+ELSEIF RESULT == 1009
+	SIF LOCAL:1 < CHARANUM
+		LOCAL:0 = LOCAL:1
+	GOTO ORDER_WORKSHOP_LOOP_1
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+
+$ORDER_WORKSHOP_2
+DRAWLINE
+IF LOCAL:2 == MASTER
+	PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 무엇을 하겠습니까?
+ELSE
+	PRINTFORML %CALLNAME:(LOCAL:2)%에게 무엇을 시키겠습니까?
+ENDIF
+DRAWLINE
+IF LOCAL:2 == MASTER
+	PRINTL [ 0] 작업하지 않는다
+	PRINTL [ 1] 시찰한다
+ELSE
+	PRINTL [ 0] 방으로 돌려보낸다
+	PRINTL [ 1] 대기
+ENDIF
+SIF ABL:(LOCAL:2):73 > 2
+	PRINTL [ 2] 공작 기능 교육
+;SIF ABL:(LOCAL:2):73 > 3
+;	PRINTL [ 3] 조교 도구 제작
+;SIF ABL:(LOCAL:2):73 > 4
+;	PRINTL [  4] 특수 조교 장치 제작
+PRINTL [100] 돌아간다
+FLAG:1111 = LOCAL:2
+$INPUT_LOOP_2
+INPUT
+IF RESULT == 0
+	IF LOCAL:2 == MASTER
+		CALL ORDER_CANCEL
+	ELSE
+		CALL STAFFRETURN_WORKSHOP
+	ENDIF
+ELSEIF RESULT == 1
+	CALL ORDER_CANCEL
+	IF LOCAL:2 == MASTER
+		CFLAG:MASTER:690 = 5
+	ENDIF
+ELSEIF RESULT == 2 && ABL:(LOCAL:2):73 > 2
+	CALL TEACH_HANDYCRAFT
+;ELSEIF RESULT == 3 && ABL:(LOCAL:2):73 > 3
+;	CALL ORDER_CRAFT_ITEM
+;ELSEIF RESULT == 4 && ABL:(LOCAL:2):73 > 4
+;	CALL ORDER_CRAFT_MACHINE
+ELSEIF RESULT != 100
+	GOTO INPUT_LOOP_2
+ENDIF
+SIF CFLAG:MASTER:690 != 0
+	RETURN 0
+DRAWLINE
+PRINT 그 외 
+GOTO ORDER_WORKSHOP_TOP
+
+;=======================================;
+;@STAY_WORKSHOP 工房に半日滞在する
+;工房に滞在するための準備処理を行う
+;=======================================;
+@STAY_WORKSHOP
+IF TARGET < 0
+	;調教対象がいない場合、念のためMASTERを代わりにセットしておく
+	TARGET = MASTER
+	;調教対象無しフラグを立てておく
+	SIF (CFLAG:MASTER:691 & 1p10) == 0
+		CFLAG:MASTER:691 |= 1p10
+ELSE
+	;調教対象がいる場合、調教対象無しフラグを倒しておく
+	SIF CFLAG:MASTER:691 & 1p10
+		CFLAG:MASTER:691 -= 1p10
+ENDIF
+SIF CFLAG:MASTER:690 == 5
+	CFLAG:MASTER:690 = 0
+BEGIN TURNEND
+RETURN 0
+
+;=======================================;
+;@STAFFRETURN_WORKSHOP 奴隷を部屋に帰す
+;引数
+;FLAG:1111 対象のキャラ番号
+;=======================================;
+@STAFFRETURN_WORKSHOP
+CALL ORDER_CANCEL
+CFLAG:(FLAG:1111):4 = 0
+PRINTFORMW %조사선택(CALLNAME:(FLAG:1111), "를")% 방으로 돌려보냈습니다.
+RETURN 0
+
+;=======================================;
+;@ORDER_CANCEL 指示中止(待機)
+;引数
+;FLAG:1111 対象のキャラ番号
+;変数
+;LOCAL:0 対象キャラの現作業番号
+;LOCAL:1 対象キャラの現作業対象
+;LOCAL:2 テンポラリ
+;=======================================;
+@ORDER_CANCEL
+LOCAL:0 = CFLAG:(FLAG:1111):690
+LOCAL:1 = CFLAG:(FLAG:1111):692
+;工房作業番号フラグと工房作業対象フラグを消す
+CFLAG:(FLAG:1111):690 = 0
+CFLAG:(FLAG:1111):692 = 0
+IF LOCAL:0 == 1
+	;教師役であれば生徒の工房作業番号と工房作業対象のフラグも消す
+	IF (LOCAL:1) > -1
+		FINDCHARA CFLAG:3109, LOCAL:1
+		LOCAL:2 = RESULT
+		CFLAG:(LOCAL:2):690 = 0
+		CFLAG:(LOCAL:2):692 = 0
+	ELSE
+		;複数を教えているならば生徒全員の工房作業番号と工房作業対象のフラグも消す
+		REPEAT CHARANUM
+			IF CFLAG:COUNT:4 == 3 && CFLAG:COUNT:690 == 2 && CFLAG:COUNT:692 == CFLAG:(FLAG:1111):3109
+				CFLAG:COUNT:690 = 0
+				CFLAG:COUNT:692 = 0
+			ENDIF
+		REND
+	ENDIF
+	;教育対象カウントは0になる
+	CFLAG:(FLAG:1111):694 = 0
+ELSEIF LOCAL:0 == 2
+	CALL TEACH_HANDYCRAFT_RETARGET
+ENDIF
+RETURN 0
+
+;=======================================;
+;TEACH_HANDYCRAFT 工作技能教習
+;引数
+;FLAG:1111 教師役のキャラ番号
+;LOCAL変数
+; 0 教育対象キャラリスト開始キャラ番号
+; 1 教育対象キャラリスト表示済み末尾キャラ番号
+; 2 COUNT受け皿
+; 3 指導対象人数
+; 4 入力受け皿
+;=======================================;
+@TEACH_HANDYCRAFT
+DRAWLINE
+PRINTL 누구에게 공작 기능을 가르칠까요?
+LOCAL:0 = -1
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = 0
+REPEAT CHARANUM
+	SIF CFLAG:COUNT:4 == 3 && (CFLAG:COUNT:690 == 0 || (CFLAG:COUNT:690 == 2 && CFLAG:COUNT:692 == CFLAG:(FLAG:1111):3109)) && ABL:COUNT:73 == 0
+		LOCAL:3 += 1
+REND
+$TEACH_HANDYCRAFT_TOP
+DRAWLINE
+PRINTFORML 教師役：%CALLNAME:(FLAG:1111)%
+DRAWLINE
+IF ABL:MASTER:73 == 0
+	CALL ARRANGE_CHARALIST, MASTER
+	PRINTFORML %CALLNAME:MASTER% (주인)
+	DRAWLINE
+ENDIF
+LOCAL:1 = LOCAL:0
+;3×10人ずつ表示するのが画面に優しい気はするが……
+;表示するなら生徒の資質か……？
+REPEAT 30
+	LOCAL:1 += 1
+	;キャラ番号超えたらループ終了
+	IF LOCAL:1 >= CHARANUM
+		BREAK
+	ENDIF
+	;主人はスキップ
+	SIF LOCAL:1 == MASTER
+		CONTINUE
+	;工房にいないか他の先生が付いてるか工作技能があるならスキップ
+	IF CFLAG:(LOCAL:1):4 != 3 || (CFLAG:COUNT:690 == 2 && CFLAG:(LOCAL:1):692 != CFLAG:(FLAG:1111):3109) || ABL:(LOCAL:1):73 > 0
+		COUNT -= 1
+		CONTINUE
+	ENDIF
+	LOCAL:2 = COUNT
+	CALL ARRANGE_CHARALIST, LOCAL:1
+	COUNT = LOCAL:2
+	SIF LOCAL:2 % 3 == 2
+		PRINTL 
+REND
+SIF LOCAL:2 % 3 != 2
+	PRINTL 
+PRINTC [1001] 이전 30명 표시　　　
+PRINTC [1000] 돌아가기　　　　　　 
+PRINTC [1009] 다음 30명 표시　　　
+PRINTL 
+SIF LOCAL:3 > 1
+	PRINTL [1008] 공방에 있는 공작 기능 미취득자 전원을 지도한다
+$INPUT_LOOP
+INPUT
+IF RESULT > -1 && RESULT < CHARANUM
+	IF CFLAG:RESULT:4 != 3
+		PRINTFORML %조사선택(CALLNAME:RESULT, "는")% 공방에 없습니다.
+	ELSEIF ABL:RESULT:73 > 0
+		PRINTFORML %조사선택(CALLNAME:RESULT, "는")% 이미 공작 기능을 습득했습니다.
+	ELSE
+		LOCAL:4 = RESULT
+		CALL ORDER_CANCEL
+		CFLAG:(FLAG:1111):690 = 1
+		CFLAG:(FLAG:1111):692 = CFLAG:(LOCAL:4):3109
+		CFLAG:(LOCAL:4):690 = 2
+		CFLAG:(LOCAL:4):692 = CFLAG:(FLAG:1111):3109
+		RETURN 1
+	ENDIF
+ELSEIF RESULT == 1000
+	RETURN 0
+ELSEIF RESULT == 1001
+	REPEAT 30
+		LOCAL:0 -= 1
+		IF LOCAL:0 < 0
+			BREAK
+		ENDIF
+		;主人はスキップ
+		SIF LOCAL:1 == MASTER
+			CONTINUE
+		;工房にいないか他の先生が付いてるか工作技能があるならスキップ
+		IF CFLAG:(LOCAL:1):4 != 3 || (CFLAG:COUNT:690 == 2 && CFLAG:(LOCAL:1):692 != CFLAG:(FLAG:1111):3109) || ABL:(LOCAL:1):73 > 0
+			COUNT -= 1
+			CONTINUE
+		ENDIF
+	REND
+	SIF LOCAL:0 < -1
+		LOCAL:0 = -1
+	GOTO TEACH_HANDYCRAFT_TOP
+ELSEIF RESULT == 1009
+	SIF LOCAL:1 < CHARANUM
+		LOCAL:0 = LOCAL:1
+	GOTO TEACH_HANDYCRAFT_TOP
+ELSEIF RESULT == 1008 && (LOCAL:3) > 1
+	CALL ORDER_CANCEL
+	CFLAG:(FLAG:1111):694 = 0
+	REPEAT CHARANUM
+		SIF COUNT == MASTER
+			CONTINUE
+		IF CFLAG:COUNT:4 == 3 && CFLAG:COUNT:690 == 0 && ABL:COUNT:73 == 0
+			CFLAG:COUNT:690 = 2
+			CFLAG:COUNT:692 = CFLAG:(FLAG:1111):3109
+			CFLAG:(FLAG:1111):694 += 1
+		ELSEIF CFLAG:COUNT:4 == 3 && CFLAG:COUNT:690 == 2 && CFLAG:COUNT:692 == CFLAG:(FLAG:1111):3109 && ABL:COUNT:73 == 0
+			CFLAG:(FLAG:1111):694 += 1
+		ENDIF
+	REND
+	CFLAG:(FLAG:1111):690 = 1
+	CFLAG:(FLAG:1111):692 = -1
+	IF ABL:MASTER:73 == 0
+		CALL TEACH_HANDYCRAFT_WITH_MASTER
+	ENDIF
+	RETURN 2
+ENDIF
+GOTO INPUT_LOOP
+
+;=======================================;
+;TEACH_HANDYCRAFT_WITH_MASTER 工作技能教習複数対象に主人含むかチェック
+;引数
+;FLAG:1111 教師役のキャラ番号
+;=======================================;
+@TEACH_HANDYCRAFT_WITH_MASTER
+PRINTFORML %CALLNAME:MASTER%도 %CALLNAME:(FLAG:1111)%에게 공작 기능을 배웁니까?
+PRINTC [0] 네  
+PRINTC [1] 아니오
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	CFLAG:MASTER:690 = 2
+	CFLAG:MASTER:692 = CFLAG:(FLAG:1111):3109
+	CFLAG:(FLAG:1111):694 += 1
+	RETURN 1
+ELSEIF RESULT != 1
+	GOTO INPUT_LOOP
+ENDIF
+CALL TEACH_HANDYCRAFT_RETARGET
+RETURN 0
+
+;=======================================;
+;TEACH_HANDYCRAFT_RETARGET 工作技能教習複数対象再チェック
+;引数
+;なし
+;LOCAL変数
+; 0 生徒数
+; 1 最後に検知した生徒のキャラ番号
+; 2 反復子(教師役のキャラ番号)
+; 3 反復子2
+;=======================================;
+@TEACH_HANDYCRAFT_RETARGET
+;引数のキャラ番号がキャラ番号外なら何もしない
+SIF FLAG:1111 < 0 || FLAG:1111 >= CHARANUM
+	RETURN 0
+LOCAL:2 = -1
+WHILE 1
+	SIF (LOCAL:2 + 1) == CHARANUM
+		BREAK
+	FINDCHARA CFLAG:690, 1, LOCAL:2 + 1
+	LOCAL:2 = RESULT
+	SIF LOCAL:2 == -1
+		BREAK
+	LOCAL:0 = 0
+	FOR LOCAL:3, 0, CHARANUM
+		IF (CFLAG:(LOCAL:3):4 == 3) && (CFLAG:(LOCAL:3):690 == 2) && (CFLAG:(LOCAL:3):692 == CFLAG:(LOCAL:2):3109) && (ABL:(LOCAL:3):73 == 0)
+			LOCAL:0 += 1
+			LOCAL:1 = LOCAL:3
+		ENDIF
+	NEXT
+	;生徒数一人なら「対象全員」を「対象その生徒」に変更
+	IF LOCAL:0 == 1
+		CFLAG:(LOCAL:2):692 = CFLAG:(LOCAL:1):3109
+	;生徒数ゼロなら待機状態に変更
+	ELSEIF LOCAL:0 < 1
+		CFLAG:(LOCAL:2):690 = 0
+		CFLAG:(LOCAL:2):692 = 0
+		LOCAL:0 = 0
+	ENDIF
+	CFLAG:(LOCAL:2):694 = LOCAL:0
+WEND
+RETURN 0
+
+;=======================================;
+;ORDER_CRAFT_ITEM 調教道具製作
+;引数
+;FLAG:1111 作業キャラ番号 B
+;LOCAL変数
+;  アイテム種別 H
+;  アイテム番号 I
+; 1 改行フラグ L
+;K テンポラリ (工作経験・文字数) K
+; 0 テンポラリ N
+;=======================================;
+@ORDER_CRAFT_ITEM
+DRAWLINE
+PRINTFORM %CALLNAME:(FLAG:1111)%
+IF FLAG:1111 == MASTER
+	PRINTFORML %조사만처리(CALLNAME:(FLAG:1111), "는")% 무엇을 만들겠습니까?
+ELSE
+	PRINTFORML 에게 무엇을 만들도록 시키겠습니까?
+ENDIF
+DRAWLINE
+LOCAL:1 = 0
+;とりあえず0～89で回す
+REPEAT 90
+	FLAG:1110 = COUNT
+	LOCAL:0 = COUNT
+	CALL ITEMNUM_TYPE_CHECK
+	CALL ABLE_CRAFT_ITEM
+	SIF RESULT == 0
+		CONTINUE
+	;該当アイテムを表示
+	IF COUNT < 10
+		PRINTFORMLC [ {COUNT}]%ITEMNAME:COUNT%
+	ELSE
+		PRINTFORMLC [{COUNT}]%ITEMNAME:COUNT%
+	ENDIF
+	STRLENFORM %ITEMNAME:COUNT%
+	LOCAL:1 += 1
+	IF LOCAL:1 % 3 == 0
+		PRINTL 
+	ENDIF
+REND
+IF LOCAL:1 % 3 != 0
+	PRINTL 
+ENDIF
+PRINTL [100] 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT < 90 && RESULT > 0
+	FLAG:1110 = RESULT
+	CALL ITEMNUM_TYPE_CHECK
+	CALL ABLE_CRAFT_ITEM
+	IF RESULT
+		CALL ORDER_CANCEL
+		CFLAG:(FLAG:1111):690 = 3
+		CFLAG:(FLAG:1111):692 = FLAG:1110
+		RETURN 1
+	ENDIF
+ELSEIF RESULT == 100
+	RETURN 0 
+ENDIF
+GOTO INPUT_LOOP
+
+;=======================================;
+;ABLE_CRAFT_ITEM 調教道具再チェック
+;引数
+;FLAG:1110 アイテム番号 I
+;FLAG:1111 作業キャラ番号 B
+;FLAG:1120 アイテム種別 H
+;LOCAL
+; 0 必要工作経験
+;=======================================;
+@ABLE_CRAFT_ITEM
+;アイテム種別がなければスキップ
+SIF FLAG:1120 < 0
+	RETURN 0
+;魔術品は(現状)工房では作成不能
+;SIF (FLAG:1120 & 256) && TALENT:(FLAG:1111):197
+SIF (FLAG:1120 & 256)
+	RETURN 0
+;医療用品は(現状)工房では作成不能
+;SIF (FLAG:1120 & 128) && TALENT:(FLAG:1111):55
+SIF (FLAG:1120 & 128)
+	RETURN 0
+;工作経験を記憶
+;K = EXP:(FLAG:1111):94
+LOCAL:0 = 1
+;電動品は工作技能Lv5必要
+SIF (FLAG:1120 & 2) && ABL:(FLAG:1111):73 < 5
+	RETURN 0
+;SM用品はSM系素養(ドＳ、ドＭ、サド、マゾ、サドっ気Lv1以上、マゾっ気Lv1以上のいずれか)が必要
+SIF (FLAG:1120 & 4) && (TALENT:(FLAG:1111):177 || TALENT:(FLAG:1111):178 || TALENT:(FLAG:1111):81 || TALENT:(FLAG:1111):82 || ABL:(FLAG:1111):20 || ABL:(FLAG:1111):21)
+	RETURN 0
+;大道具は工作経験がある程度必要
+IF (FLAG:1120 & 8) 
+	LOCAL:0 *= 6
+ENDIF
+;消耗品は工作経験が少々必要
+IF (FLAG:1120 & 16)
+	LOCAL:0 *= 2
+ENDIF
+;衣料品は工作経験が少々必要
+IF (FLAG:1120 & 32)
+	LOCAL:0 *= 2
+ENDIF
+;精密機器は工作技能Lv5と工作経験がかなり必要
+IF (FLAG:1120 & 64)
+	IF ABL:(FLAG:1111):93 < 5
+		RETURN 0
+	ELSE
+		LOCAL:0 *= 8
+	ENDIF
+ENDIF
+;工作名人なら必要工作経験を半減
+SIF TALENT:(FLAG:1111):195
+	LOCAL:0 /= 2
+;工作経験が必要工作経験に満たなければ作成不能
+SIF EXP:(FLAG:1111):74 < LOCAL:0
+	RETURN 0
+RETURN 1
+
+;=======================================;
+;CRAFT_MACHINE 特殊調教装置製作(未実装) 
+;=======================================;
+;@CRAFT_MACHINE
+;CALL ORDER_CANCEL
+
+;=======================================;
+;COUNT_STAY_WORKSHOP 工房メンバー確認
+;FLAG
+; 1130 : 今工房に居る人数
+; 1131 : 工房内で開発作業してる人数(サボり含む)
+; 1132 : 工房内で開発作業をサボっている人数
+; 1133 : 工房内のエロ要因人数
+; 1134 : 反発刻印Lv3持ちで恋慕・妄信・親愛・相愛・服従・烙印・隷属・使い魔のいずれもなしの人の数
+; 1135 : 反発刻印Lv0で恋慕・妄信・親愛・相愛・服従・烙印・隷属・使い魔のいずれかを持つ人の数
+; 1140 : サディスト人数
+; 1141 : マゾヒスト人数
+; 1142 : 母乳体質者人数
+; 1143 : 魅力が高い人数
+; 1144 : 淫乱系もち人数
+; 1146 : レズ中毒者人数
+; 1147 : ＢＬ中毒者人数
+; 1148 : 男性器もち人数
+; 1149 : 女性器もち人数
+;=======================================;
+@COUNT_STAY_WORKSHOP
+FLAG:1130 = 0
+FLAG:1131 = 0
+FLAG:1132 = 0
+FLAG:1133 = 0
+FLAG:1134 = 0
+FLAG:1135 = 0
+FLAG:1140 = 0
+FLAG:1141 = 0
+FLAG:1142 = 0
+FLAG:1143 = 0
+FLAG:1144 = 0
+FLAG:1145 = 0
+FLAG:1146 = 0
+
+REPEAT CHARANUM
+	IF CFLAG:COUNT:4 != 3
+		;対象キャラが工房に居なければスキップ
+		CONTINUE
+	ELSE
+		;工房の人数としてカウント
+		FLAG:1130 += 1
+		;エロス要素確認
+		LOCAL:0 = 0
+		;サディストチェック (サドっ気Lv3以上かサドかドＳ)
+		IF ABL:COUNT:20 > 2 || TALENT:COUNT:81 || TALENT:COUNT:177
+			FLAG:1140 += 1
+			LOCAL:0 += 1
+		ENDIF
+		;マゾヒストチェック (マゾっ気Lv3以上かマゾかドＭ)
+		IF ABL:COUNT:21 > 2 || TALENT:COUNT:82 || TALENT:COUNT:178
+			FLAG:1141 += 1
+			LOCAL:0 += 1
+		ENDIF
+		;母乳チェック
+		IF TALENT:COUNT:134
+			FLAG:1142 += 1
+			LOCAL:0 += 1
+		ENDIF
+		;魅力度チェック（魅惑・謎の魅力・魅力・人気がある）
+		IF TALENT:COUNT:90 || TALENT:COUNT:91 || TALENT:COUNT:92 || TALENT:COUNT:94
+			FLAG:1143 += 1
+			LOCAL:0 += 1
+		ENDIF
+		;淫乱チェック
+		IF TALENT:COUNT:170 || TALENT:COUNT:171 || TALENT:COUNT:172 || TALENT:COUNT:173 || TALENT:COUNT:174 || TALENT:COUNT:175 || TALENT:COUNT:176 || TALENT:COUNT:177 || TALENT:COUNT:178 || TALENT:COUNT:179 || TALENT:COUNT:180
+			FLAG:1144 += 1
+			LOCAL:0 += 1
+		ENDIF
+		;大きな胸チェック
+		IF TALENT:COUNT:112 || TALENT:COUNT:113
+			FLAG:1145 += 1
+			LOCAL:0 += 1
+		ENDIF
+		;エロス要素があればエロ要因人数として加算
+		IF LOCAL:0 > 0
+			FLAG:1133 += 1
+		ENDIF
+		;レズっ気チェック
+		IF ABL:COUNT:22
+			FLAG:1146 += 1
+		ENDIF
+		;ＢＬっ気チェック
+		IF ABL:COUNT:23
+			FLAG:1147 += 1
+		ENDIF
+		;ペニスチェック
+		IF TALENT:COUNT:121 || TALENT:COUNT:120
+			FLAG:1148 += 1
+		ENDIF
+		;ヴァギナチェック
+		IF TALENT:COUNT:121 || TALENT:COUNT:120 == 0
+			FLAG:1149 += 1
+		ENDIF
+		;あと作業内容チェック
+		IF CFLAG:COUNT:690 != 0
+			FLAG:1131 += 1
+		ENDIF
+		;ところで反発刻印3で陥落していない人なんて呼んでないよね？
+		IF MARK:COUNT:9 == 3 && TALENT:COUNT:150 == 0 && TALENT:COUNT:151 == 0 && TALENT:COUNT:152 == 0 && TALENT:COUNT:153 == 0 && TALENT:COUNT:160 == 0 && TALENT:COUNT:161 == 0 && TALENT:COUNT:162 == 0 && TALENT:COUNT:164 == 0 && TALENT:COUNT:169 == 0
+			FLAG:1134 += 1
+		;陥落済みの信頼性のある人だよね？
+		ELSEIF MARK:COUNT:9 == 0 && (TALENT:COUNT:150 || TALENT:COUNT:151 || TALENT:COUNT:152 || TALENT:COUNT:153 || TALENT:COUNT:160 || TALENT:COUNT:161 || TALENT:COUNT:162 || TALENT:COUNT:164 || TALENT:COUNT:169)
+			FLAG:1135 += 1
+		ENDIF
+	ENDIF
+REND
+RETURN 1

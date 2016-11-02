@@ -1,0 +1,225 @@
+﻿;=============================================================================
+;G스팟 자극
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE600
+RETURN 0
+
+@EXCOM_ABLE600
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;윤활 부족이고, 순종4미만 · 레즈끼3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;조교자의 기교가 3미만はだめ
+SIF ABL:PLAYER:12 < 3
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가(바이브, 쿠스코除く)
+SIF TEQUIP:20 && TEQUIP:20 != 1
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM600
+PRINTL G스팟 자극
+TSTR:0 = G스팟 자극
+
+SELECTCOM = 600
+CALL TRAIN_MESSAGE_COM600
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 180
+
+SOURCE:11 = 300
+SOURCE:24 = 200
+SOURCE:19 = 500
+SOURCE:12 = 300
+SOURCE:31 = 400
+SOURCE:32 = 50
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 10
+	SOURCE:22 = 20
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 150
+	SOURCE:22 = 120
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 600
+	SOURCE:22 = 500
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 1800
+	SOURCE:22 = 1200
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 2400
+	SOURCE:22 = 1800
+ELSE
+	SOURCE:1 = 3200
+	SOURCE:22 = 2400
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 < EXPLV:1
+	TIMES SOURCE:1 , 0.20
+	TIMES SOURCE:22, 0.20
+	SOURCE:20 = 150
+ELSEIF EXP:0 < EXPLV:2
+	TIMES SOURCE:1 , 0.50
+	TIMES SOURCE:22, 0.50
+	SOURCE:20 = 80
+ELSEIF EXP:0 < EXPLV:3
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:22, 0.80
+	SOURCE:20 = 80
+ELSEIF EXP:0 < EXPLV:4
+	TIMES SOURCE:1 , 1.20
+	TIMES SOURCE:22, 1.00
+	SOURCE:20 = 0
+ELSEIF EXP:0 < EXPLV:5
+	TIMES SOURCE:1 , 1.60
+	TIMES SOURCE:22, 1.20
+	SOURCE:20 = 0
+ELSE
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:22, 1.50
+	SOURCE:20 = 0
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	SOURCE:20 += 2000
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.20
+	SOURCE:20 += 800
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:20 , 0.80
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:20 , 0.50
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:1 , 1.50
+	TIMES SOURCE:24 , 0.90
+	TIMES SOURCE:19 , 0.90
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:1 , 1.80
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:19 , 1.00
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:1 , 2.10
+	TIMES SOURCE:24 , 1.10
+	TIMES SOURCE:19 , 1.10
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:1 , 3.20
+	TIMES SOURCE:24 , 1.20
+	TIMES SOURCE:19 , 1.20
+ELSE
+	TIMES SOURCE:1 , 4.30
+	TIMES SOURCE:24 , 1.30
+	TIMES SOURCE:19 , 1.30
+ENDIF
+
+;V민감, 둔감을 본다
+;쾌V자체의 체크는 다음에 정리해 준다
+IF TALENT:103
+	TIMES SOURCE:20 , 1.50
+	TIMES SOURCE:22 , 1.50
+	TIMES SOURCE:31 , 1.50
+ELSEIF TALENT:102
+	TIMES SOURCE:20 , 0.60
+	TIMES SOURCE:22 , 0.60
+	TIMES SOURCE:31 , 0.60
+ENDIF
+
+;처녀로 정조관념
+SIF TALENT:0 == 1 && TALENT:30
+	TIMES SOURCE:22 , 2.00
+
+TCVAR:0 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM600
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:68
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 민감한 천정을 손가락 끝으로 조용하게 압박했다….
+ELSEIF TEQUIP:21
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 질 내의 불룩 부풀어 오른 위쪽을 손가락으로 어루만졌다….
+ELSEIF TEQUIP:20 == 1
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 교묘하게 바이브를 조종해, 민감한 천정을 놀려댔다….
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 질 안에서 손가락을 굽혀 볼록 올려 붙은 천정을 자극했다….
+ENDIF
+IF TEQUIP:20 == 1
+	IF PALAM:13 >= PALAMLV:3 && ABL:1 <= 3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 뺨을 붉히며 신음소리를 높이고 있다….
+	ELSEIF PALAM:13 >= PALAMLV:3
+		PRINTFORMW %CALLNAME:TARGET%의 질은, 꿀에 젖은 바이브를 끈적히 물고 있다.
+	ELSEIF PALAM:13 < PALAMLV:3 && ABL:1 <= 3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 조금 괴로운 듯한 표정을 하고 있다….
+	ELSEIF PALAM:13 < PALAMLV:3
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 바이브의 자극에 번민하고 있다….
+	ENDIF
+ELSE
+	IF EXP:0 <= 1
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 질 내의 이물감에 무서워하고 있다….
+	ELSEIF EXP:0 <= 30
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 손가락의 감촉에 한숨을 토하며 참고 있다….
+	ELSEIF EXP:0 <= 50
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 손가락의 감촉을 즐기고 있는 것 같다….
+	ELSEIF EXP:0 <= 80
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 손가락이 우글거리는 감촉에 넋을 잃고 있다….
+	ELSEIF EXP:0 <= 120
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 배 안을 휘저어지는 감각에 뜨거운 한숨을 토하며 번민하고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 군침을 흘리며 스스로 허리를 흔들어, 쾌락을 탐내고 있다….
+	ENDIF
+ENDIF

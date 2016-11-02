@@ -1,0 +1,252 @@
+﻿;=============================================================================
+;약물각인
+;=============================================================================
+@ABLUP93
+DRAWLINE
+SIF MARK:3 >= 3
+	JUMP ABLUP_MAX
+
+;上げるときは異常経験必要(素質：[中毒しやすい]なら無視できる)
+SIF COST93(3)
+	PRINTFORM %EXPNAME:50% {COST93(3)} 이상, 그리고 
+;薬物刻印Lv+1Lvの快楽刻印が必要
+PRINTFORML %MARKNAME:1% {MARK:3 + 1}LV 이상(현재 {MARK:1})이며 
+
+PRINTFORM [0] - %PALAMNAME:13%의 구슬×{COST93(0)}, %PALAMNAME:30%의 구슬×{COST93(1)}, %EXPNAME:40% {COST93(2)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN93(0)
+
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN93(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:13 -= COST93(0)
+	JUEL:30 -= COST93(1)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+CALL COMMON_MARK_UP, TARGET, 3, MARK:3+1, 0
+
+;薬物刻印がLv3になったとき, 남은薬毒의 구슬を別의 구슬로 변환可能
+SIF MARK:3 == 3
+	CALL EXCHANGE_JUEL_ABLUP93
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算, レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP93
+SIF MARK:3 >= 3
+	RETURN 0
+
+CALLF CALC_COST93, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP93("CHECK")
+
+@COST93(ARG)
+#FUNCTION
+RETURNF CALC_COST93("GET", ARG)
+
+@CALC_COST93(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF MARK:3 == 0
+	LOCAL:0 = 40000
+	LOCAL:1 = 10000
+	LOCAL:2 = 50
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 1.50
+		TIMES LOCAL:1 , 1.50
+		TIMES LOCAL:2 , 1.50
+	ENDIF
+ELSEIF MARK:3 == 1
+	LOCAL:0 = 80000
+	LOCAL:1 = 50000
+	LOCAL:2 = 100
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+		TIMES LOCAL:2 , 2.00
+	ENDIF
+ELSEIF MARK:3 == 2
+	LOCAL:0 = 160000
+	LOCAL:1 = 100000
+	LOCAL:2 = 200
+	;一線越えない
+	IF TALENT:27
+		TIMES LOCAL:0 , 3.00
+		TIMES LOCAL:1 , 3.00
+		TIMES LOCAL:2 , 3.00
+	ENDIF
+ENDIF
+
+;必要な異常経験計算(素質：[中毒しやすい]なら無視できる)
+IF TALENT:84 == 0
+	REPEAT 8
+		LOCAL:3 += ABL:(30+COUNT)
+	REND
+	LOCAL:3 /= 7
+	IF LOCAL:3 == 0
+		LOCAL:3 = 15
+	ELSEIF LOCAL:3 == 1
+		LOCAL:3 = 12
+	ELSEIF LOCAL:3 == 2
+		LOCAL:3 = 10
+	ELSEIF LOCAL:3 == 3
+		LOCAL:3 = 7
+	ELSEIF LOCAL:3 == 4
+		LOCAL:3 = 5
+	ELSE
+		LOCAL:3 = 3
+	ENDIF
+ENDIF
+
+;薬毒耐性
+IF TALENT:44
+	TIMES LOCAL:0 , 3.00
+	TIMES LOCAL:1 , 3.00
+	TIMES LOCAL:2 , 3.00
+ENDIF
+;媚薬中毒
+IF TALENT:46
+	TIMES LOCAL:1 , 0.25
+	TIMES LOCAL:2 , 0.25
+ENDIF
+;快感に素直
+IF TALENT:70
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:3 , 0.50
+;快感の否定
+ELSEIF TALENT:71
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:3 , 1.50
+ENDIF
+;中毒しやすい
+IF TALENT:84
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+	TIMES LOCAL:2 , 0.75
+;中毒しにくい
+ELSEIF TALENT:85
+	TIMES LOCAL:0 , 1.25
+	TIMES LOCAL:1 , 1.25
+	TIMES LOCAL:2 , 1.25
+ENDIF
+;即落ち
+IF TALENT:179
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+	TIMES LOCAL:2 , 0.50
+	TIMES LOCAL:3 , 0.50
+ENDIF
+;呪精
+IF TALENT:48
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ENDIF
+;蓬莱人
+IF TALENT:49
+	TIMES LOCAL:0 , 2.50
+	TIMES LOCAL:1 , 2.50
+	TIMES LOCAL:2 , 2.50
+ENDIF
+;機械
+IF TALENT:206
+	TIMES LOCAL:1 , 2.50
+	TIMES LOCAL:2 , 2.50
+ENDIF
+;霊体
+IF TALENT:207
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+ENDIF
+;人形
+IF TALENT:208
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.50
+ENDIF
+
+RETURNF 0
+
+@CAN93(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP93("GET", ARG)
+
+@CAN_ABLUP93(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;薬物刻印Lv+1Lvと同じLvの快楽刻印が必要
+SIF MARK:3 + 1 > MARK:1
+	LOCAL:0 |= 8
+
+;上げるときは異常経験が必要(素質：[中毒しやすい]なら無視できる)
+IF EXP:50 < COST93(3)
+	;異常経験が不足
+	LOCAL:0 |= 2
+ENDIF
+
+;欲情의 구슬で上げる
+SIF JUEL:13 < COST93(0)
+	LOCAL:0 |= 1
+;薬毒의 구슬で上げる
+SIF JUEL:30 < COST93(1)
+	LOCAL:0 |= 1
+
+;薬物経験が必要
+SIF EXP:40 < COST93(2)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)
+
+;--------------------------------------------------
+;余剰薬毒의 구슬変換処理
+;--------------------------------------------------
+;남은薬毒의 구슬は破棄するか否定(等価), 欲情(半分), 習得(1/5)로 변환可能
+;「侵蝕」については未実装かつどうなるか分からないのでコメントアウト
+@EXCHANGE_JUEL_ABLUP93
+DRAWLINE
+PRINTFORML 남은 %PALAMNAME:30%의 구슬({JUEL:30}개)는 어떻게 합니까?
+PRINTFORML [0]모두 폐기처분한다.
+PRINTFORML [1]%PALAMNAME:100%의 구슬로 변환({JUEL:30}개)
+SIF JUEL:30 / 2 > 0
+	PRINTFORML [2]%PALAMNAME:13%의 구슬로 변환({JUEL:30 / 2}개)
+SIF JUEL:30 / 5 > 0
+	PRINTFORML [3]%PALAMNAME:11%의 구슬로 변환({JUEL:30 / 5}개)
+SIF JUEL:30 / 10 > 0
+	PRINTFORML [4]%PALAMNAME:31%의 구슬로 변환({JUEL:30 / 10}개)
+$INPUT_LOOP
+INPUT
+IF RESULT == 0
+	PRINTFORMW 남은%PALAMNAME:30%의 구슬은 모두 폐기처분되었다.
+ELSEIF RESULT == 1
+	PRINTFORML 남은%PALAMNAME:30%의 구슬은%PALAMNAME:100%의 구슬로 변환했다.
+	CALL COMMON_UP_JUEL, TARGET, 100, (JUEL:30), 1, 1
+ELSEIF RESULT == 2 && JUEL:30 / 2 > 0
+	PRINTFORML 남은%PALAMNAME:30%의 구슬은%PALAMNAME:13%의 구슬로 변환했다.
+	CALL COMMON_UP_JUEL, TARGET, 13, (JUEL:30 / 2), 1, 1
+ELSEIF RESULT == 3 && JUEL:30 / 5 > 0
+	PRINTFORML 남은%PALAMNAME:30%의 구슬은%PALAMNAME:11%의 구슬로 변환했다.
+	CALL COMMON_UP_JUEL, TARGET, 11, (JUEL:30 / 5), 1, 1
+ELSEIF RESULT == 4 && JUEL:30 / 10 > 0
+	PRINTFORML 남은%PALAMNAME:30%의 구슬은%PALAMNAME:31%의 구슬로 변환했다.
+	CALL COMMON_UP_JUEL, TARGET, 31, (JUEL:30 / 5), 1, 1
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+JUEL:30 = 0

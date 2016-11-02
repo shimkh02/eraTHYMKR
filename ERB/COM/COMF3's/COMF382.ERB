@@ -1,0 +1,303 @@
+﻿;=============================================================================
+;개를 범하게 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE382
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:382 > 0
+	RETURN 0
+;獣姦系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8192) == 0
+	RETURN 0
+;初体験のときは이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF (FLAG:25 & 2) == 0 && FLAG:2 & 4
+	RETURN 0
+;動物小屋と犬が필요
+SIF (FLAG:72 & 1) == 0 || (FLAG:72 & 2) == 0
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;主人に금단의 지식か狂気がないとダメ
+SIF TALENT:MASTER:56 == 0 && TALENT:MASTER:158 == 0
+	RETURN 0
+;소인체형だとダメ
+SIF TALENT:127
+	RETURN 0
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;縄사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;코스프레 중에는 불가
+SIF TEQUIP:59 > 2
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;후배위 시키는 것보다 작성.
+@COM382
+PRINTL 개를 범하게 한다
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+TSTR:0 = 개를 범하게 한다
+CALL TRAIN_MESSAGE_COM382
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 50
+ELSEIF ABL:12 == 1
+	LOCAL = 300
+ELSEIF ABL:12 == 2
+	LOCAL = 800
+ELSEIF ABL:12 == 3
+	LOCAL = 1500
+ELSEIF ABL:12 == 4
+	LOCAL = 2000
+ELSE
+	LOCAL = 3200
+ENDIF
+
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL)
+
+;조교 대상의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(TARGET, LOCAL)
+
+SIF TALENT:120 || TALENT:121
+	BASE:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 50
+DOWNBASE:1 += 230
+
+SOURCE:18 = 750
+SOURCE:22 = 4000
+SOURCE:24 = 500
+SOURCE:30 = 12500
+SOURCE:31 = 50000
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 700
+	SOURCE:15 = 1200
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 900
+	SOURCE:15 = 1500
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 1400
+	SOURCE:15 = 1800
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1800
+	SOURCE:15 = 2300
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2300
+	SOURCE:15 = 2700
+ELSE
+	SOURCE:0 = 3000
+	SOURCE:15 = 3500
+ENDIF
+
+;고양이혀 소유는 트라우마와 일탈 증가
+IF TALENT:54
+	TIMES SOURCE:31 , 2.0
+	SOURCE:25 = 800
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(TARGET)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	TIMES SOURCE:15 , 3.00
+
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 += 0
+		TIMES SOURCE:0 , 2.00
+		TIMES SOURCE:22, 2.00
+	ELSEIF ABL:31 == 1
+		SOURCE:24 += 50
+		TIMES SOURCE:0 , 2.50
+		TIMES SOURCE:22, 1.60
+	ELSEIF ABL:31 == 2
+		SOURCE:24 += 150
+		TIMES SOURCE:0 , 3.00
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 3
+		SOURCE:24 += 300
+		TIMES SOURCE:0 , 4.50
+		TIMES SOURCE:22, 0.70
+	ELSEIF ABL:31 == 4
+		SOURCE:24 += 600
+		TIMES SOURCE:0 , 6.00
+		TIMES SOURCE:22, 0.40
+	ELSE
+		SOURCE:24 += 1200
+		TIMES SOURCE:0 , 8.00
+		TIMES SOURCE:22, 0.10
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 18
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;노예 사정 판정이 끝난 플래그
+	TFLAG:705 = 1
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;노예의 P에 애액의 더러움이 붙는다
+SIF TALENT:1 || TALENT:120 || TALENT:121
+	STAIN:2 |= 1
+
+IF (CFLAG:25 & 2) == 0
+	CFLAG:25 |= 2
+	TCVAR:50 += 1
+ENDIF
+TCVAR:56 += 2
+
+;커맨드 속성：수간
+TFLAG:98 = 9
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM382
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:MASTER, "는")% 암캐의 음부를 %CALLNAME:TARGET%에게 향하게 하며,
+PRINTL 이 개를 범하도록 명령했다.
+PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 페니스를 암캐에게 삽입했다….
+
+;-------------------------------------------------
+;고유의 실행 판정
+;-------------------------------------------------
+@COM_ORDER_382, ARG
+LOCAL:99 = ARG
+;ABL:욕망
+IF ABL:11
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = ABL:11
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %ABLNAME:11%LV({LOCAL:99})({LOCAL:99 * 2})
+ENDIF
+
+;쾌락 각인
+IF MARK:1
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = MARK:1
+	TFLAG:240 += LOCAL:99 * 2
+	RESULTS = %RESULTS% %MARKNAME:1%LV({LOCAL:99})({LOCAL:99 * 2})
+ENDIF
+
+;PALAM:욕정
+GETPALAMLV PALAM:13, 5
+LOCAL:2 = RESULT
+IF LOCAL:2
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = LOCAL:2 * 2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %PALAMNAME:13%LV{LOCAL:2}({LOCAL:99})
+ENDIF
+
+;쾌감에 솔직
+IF TALENT:70
+	SIF LOCAL:99
+		RESULTS = %RESULTS% + 
+	LOCAL:99 = 2
+	TFLAG:240 += LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:70%({LOCAL:99})
+;쾌감의 부정
+ELSEIF TALENT:71
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 2
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:71%({LOCAL:99})
+ENDIF
+
+;고양이혀
+IF TALENT:54
+	RESULTS = %RESULTS% - 
+	LOCAL:99 = 5
+	TFLAG:240 -= LOCAL:99
+	RESULTS = %RESULTS% %TALENTNAME:54%({LOCAL:99})
+ENDIF
+
+;실행치는 84
+TFLAG:241 = 84

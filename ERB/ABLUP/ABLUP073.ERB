@@ -1,0 +1,150 @@
+﻿;=============================================================================
+;공작 기능
+;=============================================================================
+; 中毒者曰く：
+; YM以前の仮版のまま。
+; 成長条件はさらに修正かけるかも。
+;=============================================================================
+; 이식한 사람의 말
+; 에라토호 YMrev5용 기사패치에 동봉되어 있던 공작기능 상승메뉴를 이식했습니다.
+; 소질에 따른 조건도 추가했습니다.
+@ABLUP73
+SIF (FLAG:12 & 16) == 0
+	RETURN 0
+IF (FLAG:1100 & 1) == 0
+	RETURN 0
+ELSEIF ABL:73 == 0
+;工作技能未取得なら成長不能
+	RETURN 0
+ENDIF
+DRAWLINE
+SIF ABL:73 >= 5
+	JUMP ABLUP_MAX
+
+PRINTFORM [0] - %PALAMNAME:11%의 구슬×{COST73(0)}, %EXPNAME:74% {COST73(1)} 이상……
+CALL SHOW_ISABLUP_COMMON, CAN73(0)
+
+PRINTL [100] - 돌아간다
+$INPUT_LOOP
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0 && CAN73(0) != 0
+	PRINTL 조건을 만족하고 있지 않습니다.
+	RESTART
+ELSEIF RESULT == 0
+	JUEL:11 -= COST73(0)
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+ABL:73 += 1
+PRINTFORMW %ABLNAME:73%의 레벨이 %조사처리(ABL:73,"가")% 되었습니다.
+
+;--------------------------------------------------
+;レベルアップに必要な珠計算、レベルアップ予告処理
+;--------------------------------------------------
+@ISABLUP73
+SIF ABL:73 == 0
+	RETURN 0
+SIF ABL:73 >= 5
+	RETURN 0
+
+CALLF CALC_COST73, "CALC"
+
+;条件別にＯＫかダメかを記録する
+RETURN CAN_ABLUP73("CHECK")
+
+@COST73(ARG)
+#FUNCTION
+RETURNF CALC_COST73("GET", ARG)
+
+@CALC_COST73(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+;必要な条件の算出
+VARSET LOCAL, 0
+
+IF ABL:73 == 0
+	LOCAL:0 = 50
+	LOCAL:1 = 0
+ELSEIF ABL:73 == 1
+	LOCAL:0 = (EXP:74 >= EXPLV:3) ? 250 # 500
+	LOCAL:1 = 0
+ELSEIF ABL:73 == 2
+	LOCAL:0 = (EXP:74 >= EXPLV:4) ? 1500 # 3000
+	LOCAL:1 = 0
+ELSEIF ABL:73 == 3
+	LOCAL:0 = (EXP:74 >= EXPLV:5) ? 4500 # 9000
+	LOCAL:1 = 2
+ELSEIF ABL:73 == 4
+	LOCAL:0 = (EXP:74 >= EXPLV:5) ? 12000 # 24000
+	LOCAL:1 = 4
+ENDIF
+
+;習得早い
+IF TALENT:50
+	TIMES LOCAL:0 , 0.80
+	TIMES LOCAL:1 , 0.75
+;習得遅い
+ELSEIF TALENT:51
+	TIMES LOCAL:0 , 1.20
+	TIMES LOCAL:1 , 1.10
+ENDIF
+
+;調合知識
+IF TALENT:55
+	TIMES LOCAL:0 , 0.90
+	TIMES LOCAL:1 , 0.90
+ENDIF
+
+;가전제품지식
+IF TALENT:189
+	TIMES LOCAL:0 , 0.90
+	TIMES LOCAL:1 , 0.90
+ENDIF
+
+;공작명인
+IF TALENT:195
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+;마술기능
+IF TALENT:197
+	TIMES LOCAL:0 , 0.75
+	TIMES LOCAL:1 , 0.75
+ENDIF
+
+;캇파
+IF TALENT:210
+	TIMES LOCAL:0 , 0.85
+	TIMES LOCAL:1 , 0.85
+ENDIF
+
+;求聞持
+IF TALENT:216
+	TIMES LOCAL:0 , 0.90
+	TIMES LOCAL:1 , 0.90
+ENDIF
+
+RETURNF 0
+
+@CAN73(ARG)
+#FUNCTION
+RETURNF CAN_ABLUP73("GET", ARG)
+
+@CAN_ABLUP73(ARGS, ARG)
+#FUNCTION
+SIF ARGS == "GET"
+	RETURNF LOCAL:ARG
+VARSET LOCAL, 0
+;習得의 구슬で上げる
+SIF JUEL:11 < COST73(0)
+	LOCAL:0 |= 1
+;공작경험が必要
+SIF EXP:74 < COST73(1)
+	LOCAL:0 |= 2
+
+RETURNF (LOCAL:0 == 0)

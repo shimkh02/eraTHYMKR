@@ -1,0 +1,161 @@
+﻿;=============================================================================
+;신장 · 체중 · 3사이즈의 생성 처리
+;=============================================================================
+;신장 · 체중 · 3사이즈를 생성하고, 이하의 변수에 격납합니다.
+;BASE:10 … 신장
+;BASE:11 … 체중
+;BASE:12 … 바스트
+;BASE:13 … 웨스트
+;BASE:14 … 힙
+;MAXBASE:10 … 신장의 계산시의 난수값
+;MAXBASE:11 … 미사용
+;MAXBASE:12 … 미사용
+;MAXBASE:13 … 미사용
+;MAXBASE:14 … 미사용
+;CFLAG:3500 … 임신에 따른 추가 사이즈
+;LOCAL:0 ～ 4 … 최종 계산 결과의 임시 보존용
+;LOCAL:10 ～ 14 … 계산 도중의 임시 보존용
+;LOCAL:20 ～ 24 … 전의 값의 임시 보존용
+;산출 순서는, 신장→웨스트→바스트→힙→체중 순으로 산출합니다.
+;
+;제1인수 ･･･ 호출처 ARG 0:그대로 1:캐릭터의 등록번호 있음
+;제2인수 ･･･ 캐릭터의 등록번호
+;
+;--------------------------------------------------
+;신체 사이즈 생성 처리. 인수로 호출처를 취득
+;--------------------------------------------------
+@MAKE_SIZE, ARG, ARG:1
+VARSET LOCAL,0
+;초기값의 취득	호출처의 장소에 따라 변화
+LOCAL:99 = (ARG == 0) ? TARGET # ARG:1
+;신체측정 플래그가 켜져 있으면 계산하지 않고 돌아감
+SIF CFLAG:(LOCAL:99):8 
+	RETURN 0
+
+;===신장의 산출===
+;난수값이 존재하지 않을 경우에는 계산하고, 그것을 평생에 걸쳐 사용한다.
+IF MAXBASE:(LOCAL:99):10 <= 0
+	LOCAL:10 = 1 + RAND:70 + RAND:70 + RAND:70 + RAND:70 + RAND:70
+	MAXBASE:(LOCAL:99):10 = LOCAL:10
+ELSE
+	LOCAL:10 = MAXBASE:(LOCAL:99):10
+ENDIF
+;난수값＋성별에 따른 기초가 신장이다(mm)
+LOCAL:10 += (TALENT:(LOCAL:99):120) ? 1450 # 1300 
+;체격 소질에 따른 수정
+;소인체형
+IF TALENT:(LOCAL:99):127
+	LOCAL:10 -= 1100
+	LOCAL:10 /= 2
+;소인이 아니라 작은 체형
+ELSEIF TALENT:(LOCAL:99):128
+	LOCAL:10 -= 400
+;거구
+ELSEIF TALENT:(LOCAL:99):129
+	LOCAL:10 += 400
+ENDIF
+;신장 결정
+BASE:(LOCAL:99):10 = LOCAL:10
+
+
+;===웨스트의 산출===
+;웨스트의 기초값 산출
+LOCAL:13 = (LOCAL:10 * 38) / 100
+;웨스트 결정
+BASE:(LOCAL:99):13 = LOCAL:13
+
+;===바스트의 산출===
+;언더 바스트 산출
+LOCAL:12 = (((LOCAL:10 * 100) / 22) - ((LOCAL:10 * 100) / LOCAL:13)) / 10
+
+;가슴계 소질로 기초값 변화	110:절벽 111:빈유 112:거유 113:폭유
+;소인체형인 경우, 이대로 더하면 수치가 완전히 파탄 나므로 보정
+;호출처의 장소에 따라 변화
+IF TALENT:(LOCAL:99):110
+	LOCAL:12 += 0
+ELSEIF TALENT:(LOCAL:99):111
+	LOCAL:12 += 100 / (TALENT:(LOCAL:99):127 * 3 + 1)
+ELSEIF TALENT:(LOCAL:99):112
+	LOCAL:12 += 200 / (TALENT:(LOCAL:99):127 * 3 + 1)
+ELSEIF TALENT:(LOCAL:99):113
+	LOCAL:12 += 250 / (TALENT:(LOCAL:99):127 * 3 + 1)
+ELSE
+	LOCAL:12 += 150 / (TALENT:(LOCAL:99):127 * 3 + 1)
+ENDIF
+;바스트 결정
+BASE:(LOCAL:99):12 = LOCAL:12
+
+;===힙의 산출===
+;힙의 기초값 산출
+LOCAL:14 = (LOCAL:10 * 54) / 100
+;작은 체형과 소인 체형은 약간 작게 보정해봄
+SIF TALENT:(LOCAL:99):127 || TALENT:(LOCAL:99):128
+	TIMES LOCAL:14, 0.95
+;힙 결정
+BASE:(LOCAL:99):14 = LOCAL:14
+
+;===체중의 산출===
+;체중의 기초값 산출(남자만 별도 처리)
+LOCAL:11 = (TALENT:(LOCAL:99):120) ? (LOCAL:10 * 30) /100 # (LOCAL:10 * 28) /100
+;소인 체형에서의 보정
+IF TALENT:(LOCAL:99):127
+	TIMES LOCAL:11, 0.2
+;작은 체형에서의 보정
+ELSEIF TALENT:(LOCAL:99):128
+	TIMES LOCAL:11, 0.8
+;거구에서의 보정
+ELSEIF TALENT:(LOCAL:99):129
+	TIMES LOCAL:11, 1.25
+ENDIF
+
+;바스트에 따른 중량 가산
+LOCAL:12 = 4 * LOCAL:12 * LOCAL:12 * LOCAL:12 / 1000000
+LOCAL:12 *= 2
+LOCAL:12 /= 100
+
+;합계
+LOCAL:1 = LOCAL:11 + LOCAL:12
+
+;소질에 따른 보정
+;기계(무거움)
+SIF TALENT:(LOCAL:99):206
+	TIMES LOCAL:1 , 1.50
+;영체(극히 가벼움)
+SIF TALENT:(LOCAL:99):207
+	TIMES LOCAL:1 , 0.60
+;오니(조금 무거움)
+SIF TALENT:(LOCAL:99):214
+	TIMES LOCAL:1, 1.10
+;신령(조금 가벼움)
+SIF TALENT:(LOCAL:99):222
+	TIMES LOCAL:1 , 0.90
+
+;체중 결정
+BASE:(LOCAL:99):11 = LOCAL:1
+
+;신체측정 플래그를 켠다
+CFLAG:(LOCAL:99):8 = 1
+
+;--------------------------------------------------
+;임신시에 증가하는 웨스트(가슴둘레)와 체중을 조작한다
+;--------------------------------------------------
+;LOCAL:0 ･･･ 역산용 변수
+;LOCAL:1 ･･･ 난수 보존용 변수
+;LOCAL:10 ･･･ 전회 계측 신장 보존
+@MAKE_BABY_SIZE, ARG
+LOCAL:10 = BASE:ARG:10
+CFLAG:ARG:8 = 0
+CALL MAKE_SIZE, 1, ARG
+
+IF CFLAG:ARG:3500
+	LOCAL:0 = (CFLAG:ARG:3500 * 100) / (LOCAL:10 / 15)
+	;LOCAL:0 /= (20 - (CFLAG:ARG:77 - DAY) + 1)
+	LOCAL:0 = (20 - (CFLAG:ARG:77 - DAY) + 1)
+ENDIF
+
+LOCAL:1 = (13 + RAND:6)
+;임신 증가 사이즈가 과하게 감소하지 않도록 조정
+LOCAL:1 = MAX(LOCAL:0, LOCAL:1)
+CFLAG:ARG:3500 = LOCAL:1 * (20 - (CFLAG:ARG:77 - DAY))
+CFLAG:ARG:3500 *= (BASE:ARG:10 / 15)
+CFLAG:ARG:3500 /= 100

@@ -1,0 +1,5599 @@
+﻿;=============================================================================
+;무명 캐릭터 호칭 생성 처리
+;=============================================================================
+;여기서는 무명 캐릭터의 호칭 · 이름을 랜덤으로 결정.
+;-----------------------------------------------
+;노예용 랜덤 CALLNAME 생성 처리
+;ARG:0……명명용 분기
+;-----------------------------------------------
+;그 이름대로 노예용의 처리. SHOP2 또는 SYSTEM에서 호출된다.
+@CHARA_RANDOM_NAME , ARG:0
+
+;변수의 청소
+VARSET LOCAL
+VARSET LOCALS
+
+$RETRY
+
+TSTR:0 = %CALLNAME%
+
+RESULT = 0
+SIF TALENT:120 == 0 || ((NO == 148 || NO == 176) && TALENT:120)
+	CALL RANDOM_N , ARG:0
+
+LOCAL:3 = RESULT
+
+;중복 체크
+LOCAL = FINDCHARA(CALLNAME, TSTR:0, 1)
+LOCAL = (LOCAL != -1 && LOCAL != TARGET) ? 1 # 0
+
+;被ったらやりなおし300回まで
+IF LOCAL && LOCAL:100 < 300 && LOCAL:3 == 0
+	LOCAL:100 += 1
+	NICKNAME = 
+	GOTO RETRY
+;300回やってもダメなら外国名か和名を200回回す
+ELSEIF LOCAL && LOCAL:100 < 500 && LOCAL:3 == 0
+	$RETRY2
+	;確率は半々
+	LOCAL = RAND:2
+	IF TALENT:120
+		IF LOCAL
+			CALL RANDOM_N_BOYPOPNAME
+		ELSE
+			CALL RANDOM_N_BOY , RAND:2
+		ENDIF
+	ELSE
+		IF LOCAL
+			CALL RANDOM_N_POPNAME
+		ELSE
+			CALL RANDOM_N_GIRL , RAND:2
+		ENDIF
+	ENDIF
+	;重複チェック
+	LOCAL = FINDCHARA(CALLNAME, TSTR:0, 1)
+	LOCAL = (LOCAL != -1 && LOCAL != TARGET) ? 1 # 0
+	LOCAL:100 += 1
+	IF LOCAL && LOCAL:100 < 500
+		NICKNAME = 
+		GOTO RETRY2
+	ELSEIF LOCAL
+		NICKNAME = 
+		GOTO RETRY
+	ENDIF
+ENDIF
+
+CALLNAME = %TSTR:0%
+SIF TFLAG:651
+	RETURN 1
+
+IF TALENT:208 == 1
+	PRINTL 그 인형은 자신에게 달린 태그를 가리켰다.
+ELSE
+	PRINTFORM 이름을 묻자 %조사처리(NAME,"는")% 
+ENDIF
+
+IF LOCAL:100 < 500
+	;人形はしゃべらないと思った
+	IF TALENT:208 == 1
+		PRINTFORMW 그곳에는 「%CALLNAME%」%조사만처리(CALLNAME,"라")%고 적혀 있었다.
+	ELSE
+		;소질 분기
+		IF TALENT:22 && NO:TARGET != 172
+			PRINT 느릿하게 
+		ELSEIF TALENT:16
+			PRINT 언짢은 듯이 
+		ELSEIF TALENT:10
+			PRINT 겁먹은 기색으로 
+		ELSEIF TALENT:30 || TALENT:34 || TALENT:11
+			PRINT 이쪽을 노려보며 
+		ELSEIF TALENT:131
+			PRINT 똘망똘망 건강하게 
+		ELSE
+			PRINT 의심스러워하면서도 
+		ENDIF
+
+		PRINTFORMW 「%CALLNAME%」%조사만처리(CALLNAME,"라")%고 이름을 밝혔다.
+	ENDIF
+
+	CALL DEFINE_JINKAKU_SELECT, MASTER
+	;인형의 경우
+	IF TALENT:MASTER:208 == 1
+		PRINTL [0] 받아들인다.
+		PRINTL [1] 스스로 이름을 붙인다.
+	;당신의 경우
+	ELSEIF NO:MASTER == 0 && TALENT:MASTER:120
+		PRINTL [0] 좋은 이름이다.
+		PRINTL [1] 관계없지.
+	ELSEIF NO:MASTER == 0
+		PRINTL [0] 좋은 이름인걸.
+		PRINTL [1] 관계없지.
+	;이하 인격 마다
+	ELSEIF CFLAG:3005 == 3 || CFLAG:3005 == 1
+		PRINTL [0] 좋은 이름인걸.
+		PRINTL [1] 그 이름은 못 쓰겠어.
+	ELSEIF CFLAG:3005 == 2 || CFLAG:3005 == 12
+		PRINTL [0] 좋은 이름이다.
+		PRINTL [1] 그 이름은 글러먹었군.
+	ELSEIF CFLAG:3005 == 5 || CFLAG:3005 == 6 || CFLAG:3005 == 13
+		PRINTL [0] 좋은 이름이네요.
+		PRINTL [1] 그 이름은 좀….
+	ELSEIF CFLAG:3005 == 4 || CFLAG:3005 == 14
+		PRINTL [0] 좋은 이름이구나.
+		PRINTL [1] 그 이름은 안 되지.
+	ELSEIF CFLAG:3005 == 11
+		PRINTL [0] 좋은 이름이구먼.
+		PRINTL [1] 그 이름은 때려치거라.
+	ELSE
+		PRINTL [0] 좋은 이름이다.
+		PRINTL [1] 관계없지.
+	ENDIF
+
+	$INPUT_LOOP_1
+	INPUT
+	IF RESULT == 1
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %NAME%에게 이름을 붙여 주기로 했다….
+		PRINTL 
+		$INPUT_LOOP_2
+		PRINTL 어떤 이름으로 하겠습니까? (0 입력시 기존 이름)
+		$INPUT_LOOP_3
+		INPUTS
+		STRLENS RESULTS
+		IF RESULT > 14
+			PRINTFORML 이름이 너무 깁니다!
+			GOTO INPUT_LOOP_2
+		ELSEIF RESULTS == "0" || RESULTS == CALLNAME
+			CALL DEFINE_JINKAKU_SELECT, MASTER
+			;인형의 경우
+			IF TALENT:MASTER:208 == 1
+				PRINTFORMW 「%CALLNAME%」%조사만처리(CALLNAME,"를")% 받아들이기로 했다….
+			;당신의 경우
+			ELSEIF NO:MASTER == 0 && TALENT:MASTER:120
+				PRINTFORMW 역시 「%CALLNAME%」인 채로도 괜찮겠지….
+			ELSEIF NO:MASTER == 0
+				PRINTFORMW 역시 「%CALLNAME%」인 채로도 괜찮겠지….
+			;이하 인격 마다
+			ELSEIF CFLAG:3005 == 3 || CFLAG:3005 == 1
+				PRINTFORMW 역시 「%CALLNAME%」인 채로도 괜찮겠어….
+			ELSEIF CFLAG:3005 == 2 || CFLAG:3005 == 12
+				PRINTFORMW 역시 「%CALLNAME%」인 채로도 문제없겠지…
+			ELSEIF CFLAG:3005 == 5 || CFLAG:3005 == 6|| CFLAG:3005 == 13
+				PRINTFORMW 역시 「%CALLNAME%」인 채가 낫겠어….
+			ELSEIF CFLAG:3005 == 4 || CFLAG:3005 == 14
+				PRINTFORMW 역시 「%CALLNAME%」인 채가 좋겠어….
+			ELSEIF CFLAG:3005 == 11
+				PRINTFORMW 역시 「%CALLNAME%」인 채가 낫겠구먼….
+			ELSE
+				PRINTFORMW 역시 「%CALLNAME%」인 채로도 문제없겠지….
+			ENDIF
+
+			PRINTFORM %조사처리(CALLNAME,"는")% 
+			;소질 분기
+			IF TALENT:22
+				PRINT 흥미 없다는 듯이 
+			ELSEIF TALENT:16
+				PRINT 의미심장하게 웃으며 
+			ELSEIF TALENT:10
+				PRINT 한시름 놓았다는 듯이 
+			ELSEIF TALENT:30 || TALENT:34 || TALENT:11
+				PRINT 의심스러워하는 시선을 그대로 둔 채로 
+			ELSEIF TALENT:131
+				PRINT 이해를 잘 못하고 있는 낌새로 
+			ELSE
+				PRINT 조금 안심했는지 
+			ENDIF
+			PRINTFORMW 작게 끄덕였다.
+		ELSEIF RESULTS == ""
+			GOTO INPUT_LOOP_3
+		ELSE
+			PRINTFORML 「%RESULTS%」%조사만처리(RESULTS,"로")% 좋습니까?
+			PRINTL [0] 네.
+			PRINTL [1] 아니요.
+			$INPUT_LOOP_4
+			INPUT
+			IF RESULT == 0
+				PRINTFORM %CALLNAME%에서 바뀐 %조사처리(RESULTS,"는")% 
+				;소질 분기
+				IF TALENT:22 && NO:TARGET != 172
+					PRINTW 그래, 하고 한 마디 했을 뿐이었다….
+				ELSEIF TALENT:16
+					PRINTW 이를 갈면서 굴욕을 참고 있다….
+				ELSEIF TALENT:10
+					PRINTW 포기했다는 듯 힘없이 고개를 떨구었다….
+				ELSEIF TALENT:30 || TALENT:34 || TALENT:11
+					PRINTW 격앙해 거듭해서 항의한다….
+				ELSEIF TALENT:131
+					PRINTW 어리둥절하게 고개를 갸우뚱했다….
+				ELSE
+					PRINTW 하고 싶은 말을 눌러삼키고, 얼굴을 돌렸다….
+				ENDIF
+				;임의명 플래그
+				CFLAG:5100 = 1
+				CALLNAME = %RESULTS%
+			ELSEIF RESULT == 1
+				GOTO INPUT_LOOP_2
+			ELSE
+				GOTO INPUT_LOOP_4
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 0
+		PRINTFORM 좋은 이름이라고 말하자, %조사처리(CALLNAME,"는")% 
+		;소질 분기
+		IF TALENT:22 && NO:TARGET != 172
+			PRINTW 그래, 하고 한 마디 중얼거렸다….
+		ELSEIF TALENT:16
+			PRINTW 당연하다는 양 코웃음쳤다….
+		ELSEIF TALENT:10
+			PRINTW 신기한 걸 다 봤다는 듯한 눈이 되었다….
+		ELSEIF TALENT:30 || TALENT:34 || TALENT:11
+			PRINTW 미심쩍게 눈쌀을 찌푸렸다….
+		ELSEIF TALENT:131
+			PRINTW 방긋 웃어보였다….
+		ELSE
+			PRINTW 의도를 알지 못한 채 고개를 갸우뚱했다….
+		ENDIF
+	ELSE
+		GOTO INPUT_LOOP_1
+	ENDIF
+;전부 감쌌을 경우
+ELSE
+	IF TALENT:208 == 1
+		PRINTW 이름을 가리키는 것은 아무데도 달려있지 않았다.
+	ELSE
+		PRINTW 이름은 없다고 대답했다.
+	ENDIF
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %NAME%에게 이름을 붙여주기로 했다….
+	PRINTL 
+	$INPUT_LOOP_5
+	PRINTL 어떤 이름으로 하겠습니까?
+	$INPUT_LOOP_6
+	INPUTS
+	STRLENS RESULTS
+	IF RESULT > 14
+		PRINTFORML 이름이 너무 깁니다!
+		GOTO INPUT_LOOP_5
+	ELSEIF RESULTS == ""
+		GOTO INPUT_LOOP_6
+	ELSE
+		PRINTFORML %조사처리(RESULTS,"로")% 좋습니까?
+		PRINTL [0] 네.
+		PRINTL [1] 아니요.
+		$INPUT_LOOP_7
+		INPUT
+		IF RESULT == 0
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %조사처리(NAME,"를")% %조사처리(RESULTS,"라")%고 이름 붙였다.
+			PRINTFORM %조사처리(RESULTS,"는")% 
+			;소질 분기
+			IF TALENT:208 == 1
+				PRINTW 신기한 듯이 고개를 갸우뚱했다….
+			ELSEIF TALENT:22
+				PRINTW 그래, 하고 한 마디 했을 뿐이었다….
+			ELSEIF TALENT:16
+				PRINTW 뜻밖에 썩 싫지만도 않은 낌새다….
+			ELSEIF TALENT:10
+				PRINTW 겁먹으면서도 확실히 고개는 끄덕였다….
+			ELSEIF TALENT:30 || TALENT:34 || TALENT:11
+				PRINTW 뜻밖인 듯했지만, 곧 만족스레 미소지었다….
+			ELSEIF TALENT:131
+				PRINTW 기쁘다는 듯 방방 뛰어 다녔다….
+			ELSE
+				PRINTW 신기하다는 듯이 쿡쿡 웃었다….
+			ENDIF
+			CALLNAME = %RESULTS%
+		ELSEIF RESULT == 1
+			GOTO INPUT_LOOP_5
+		ELSE
+			GOTO INPUT_LOOP_7
+		ENDIF
+	ENDIF
+ENDIF
+
+CALL RANDOM_N_NAMESTR
+PRINTL 
+
+;-----------------------------------------------
+;챌린지 모드용 랜덤 CALLNAME 생성 처리
+;-----------------------------------------------
+@CHARA_RANDOM_NAME_C
+
+;변수의 청소
+VARSET LOCAL
+VARSET LOCALS
+
+$RETRY
+
+
+
+TSTR:0 = %CALLNAME%
+
+RESULT = 0
+
+SIF TALENT:120 == 0
+	CALL RANDOM_N
+
+LOCAL:3 = RESULT
+
+;중복 체크
+LOCAL = FINDCHARA(CALLNAME, TSTR:0, 1)
+LOCAL = (LOCAL != -1 && LOCAL != TARGET) ?  1 # 0
+
+;감싸면(자) 다시 해 300회까지
+IF LOCAL && LOCAL:100 < 300 && LOCAL:3 == 0 && LOCAL:101 == 0
+	LOCAL:100 += 1
+	NICKNAME = 
+	GOTO RETRY
+;300회 하고도 안되면 외국명이나 일본에서 부르는 이름을 200회 돌린다
+ELSEIF LOCAL && LOCAL:100 < 500 && LOCAL:3 == 0
+	$RETRY2
+	;확률은 반반
+	LOCAL = RAND:2
+	IF TALENT:120
+		IF LOCAL
+			CALL RANDOM_N_BOYPOPNAME
+		ELSE
+			CALL RANDOM_N_BOY , RAND:2
+		ENDIF
+	ELSE
+		IF LOCAL
+			CALL RANDOM_N_POPNAME
+		ELSE
+			CALL RANDOM_N_GIRL , RAND:2
+		ENDIF
+	ENDIF
+	;중복 체크
+	LOCAL = FINDCHARA(CALLNAME, TSTR:0, 1)
+	LOCAL = (LOCAL != -1 && LOCAL != TARGET) ?  1 # 0
+	LOCAL:100 += 1
+	IF LOCAL && LOCAL:100 < 500
+		NICKNAME = 
+		GOTO RETRY2
+	ELSEIF LOCAL
+		NICKNAME = 
+		GOTO RETRY
+	ENDIF
+	;연속으로 여기에 들어간 계산한다(2명 연속으로 여기에 오면(자) 고정 네임의 300회 재시도를 생략한다)
+	LOCAL:101 = 1
+ELSE
+	LOCAL:101 = 0
+ENDIF
+
+CALLNAME = %TSTR:0%
+CALL RANDOM_N_NAMESTR
+
+;-----------------------------------------------
+;주인용 랜덤 CALLNAME 생성 처리
+;-----------------------------------------------
+;SYSTEM보다 불려 간다.
+@CHARA_RANDOM_NAME_M
+
+;변수의 청소
+VARSET LOCAL
+VARSET LOCALS
+
+$RETRY
+
+
+TSTR:0 = %CALLNAME%
+
+RESULT = 0
+CALL RANDOM_N
+
+LOCAL:3 = RESULT
+
+PRINTFORMW 현재의 플레이어는 %NAME%의 「%TSTR:0%」입니다.
+PRINTL [0] 이대로 시작한다.
+PRINTL [1] 이름을 재생성한다.
+PRINTL [2] 이름을 입력한다.
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 2
+	$INPUT_LOOP_2
+	PRINTL 어떤 이름으로 하겠습니니까? (0 입력시 기존 이름)
+	$INPUT_LOOP_3
+	INPUTS
+	STRLENS RESULTS
+	IF RESULT > 14
+		PRINTFORML 이름이 너무 깁니다!
+		GOTO INPUT_LOOP_2
+	ELSEIF RESULTS == "0" || RESULTS == CALLNAME
+		PRINTFORMW 「%TSTR:0%」인 채로 좋습니까?
+		PRINTL [0] 네.
+		PRINTL [1] 아니요.
+		$INPUT_LOOP_4
+		INPUT
+		IF RESULT == 0
+			CALLNAME = %TSTR:0%
+		ELSEIF RESULT == 1
+			GOTO INPUT_LOOP_2
+		ELSE
+			GOTO INPUT_LOOP_4
+		ENDIF
+	ELSEIF RESULTS == ""
+		GOTO INPUT_LOOP_3
+	ELSE
+		PRINTFORML 「%RESULTS%」%조사만처리(RESULTS,"로")% 좋습니까?
+		PRINTL [0] 네.
+		PRINTL [1] 아니요.
+		$INPUT_LOOP_5
+		INPUT
+		IF RESULT == 0
+			CALLNAME = %RESULTS%
+			NICKNAME = 
+		ELSEIF RESULT == 1
+			GOTO INPUT_LOOP_2
+		ELSE
+			GOTO INPUT_LOOP_5
+		ENDIF
+	ENDIF
+ELSEIF RESULT == 1
+	NICKNAME = 
+	GOTO RETRY
+ELSEIF RESULT == 0
+	CALLNAME = %TSTR:0%
+ELSE
+	GOTO INPUT_LOOP_1
+ENDIF
+
+CALL RANDOM_N_NAMESTR
+PRINTL 
+;-------------------------------------------------
+;ランダムCALLNAME生成
+;ARG:0……命名用分岐
+;-------------------------------------------------
+@RANDOM_N , ARG:0
+LOCAL = 0
+NICKNAME = 
+
+;里の人間
+IF NO == 171
+	CALL RANDOM_N_171
+;あなたの息子/娘
+ELSEIF NO == 148 || NO == 149
+	;娘出生時に選択した和名か洋名かの選択結果参照
+	;和風
+	IF ARG:0 == 0
+		CALL RANDOM_N_171
+	;洋風
+	ELSEIF ARG:0 == 1
+		;1/7で黒妖精のカタカナ名
+		IF RAND:7 == 0
+			;ひらがな名は使用しない
+			CALL RANDOM_N_FAIRY_4 , 0
+		ELSEIF TALENT:120
+			CALL RANDOM_N_BOYPOPNAME
+		ELSE
+			CALL RANDOM_N_POPNAME
+		ENDIF
+	;嫁に任せた
+	ELSE
+		;レアな名付け方をする場合あり
+		IF RAND:30 == 1
+			SELECTCASE RAND:10
+				CASE 0
+					CALL RANDOM_N_FLOWER , RAND:2
+				CASE 1
+					CALL RANDOM_N_FAIRY_NC , RAND:2
+				CASE 2
+					CALL RANDOM_N_OLDSTYLE , RAND:2
+				CASE 3
+					CALLFORM RANDOM_N_FAIRY_{RAND:5} , RAND:2
+				CASE 4
+					CALL RANDOM_N_BIRD , RAND:2
+				CASE 5
+					CALL RANDOM_N_OGRE
+				CASE 6
+					CALL RANDOM_N_CROW , RAND:2
+				CASE 7
+					CALL RANDOM_N_SPELL , RAND:2
+				CASE 8
+					CALL RANDOM_N_WHITEWOLF , RAND:2
+				CASE 9
+					CALL RANDOM_N_DOLL , RAND:2
+			ENDSELECT
+		;洋風か和風かは確率1/2
+		ELSEIF RAND:2
+			CALL RANDOM_N_171
+		ELSE
+			;1/7で黒妖精のカタカナ名
+			IF RAND:7 == 0
+				CALL RANDOM_N_FAIRY_4 , 0
+			ELSEIF TALENT:120
+				CALL RANDOM_N_BOYPOPNAME
+			ELSE
+				CALL RANDOM_N_POPNAME
+			ENDIF
+		ENDIF
+	ENDIF
+;色妖精
+ELSEIF NO >= 152 && NO <= 156
+	CALL RANDOM_N_FAIRY
+;亜種色妖精
+ELSEIF NO >= 162 && NO <= 166
+	CALL RANDOM_N_FAIRY
+;ひまわり妖精
+ELSEIF NO == 150
+	;1/10で問答無用でひまわりになる
+	LOCAL = RAND:10
+	SIF LOCAL != 0
+		CALL RANDOM_N_HIMAWARI
+;メイド妖精
+ELSEIF NO == 151
+	CALL RANDOM_N_MAID
+;黒ひまわり妖精
+ELSEIF NO == 160
+	CALL RANDOM_N_HIMAWARI_B
+;黒メイド妖精
+ELSEIF NO == 161
+	CALL RANDOM_N_MAID_B
+;地上の兎
+ELSEIF NO == 170
+	CALL RANDOM_N_170
+;アリスの人形
+ELSEIF NO == 172
+	CALL RANDOM_N_172
+;魔界人
+ELSEIF NO == 173
+	CALL RANDOM_N_173
+;鴉天狗
+ELSEIF NO == 174
+	CALL RANDOM_N_174
+;白狼天狗
+ELSEIF NO == 175
+	CALL RANDOM_N_175
+;夜雀
+ELSEIF NO == 177
+	CALL RANDOM_N_177
+;地獄鴉
+ELSEIF NO == 178
+	CALL RANDOM_N_178
+;亡霊
+ELSEIF NO == 179
+	CALL RANDOM_N_179
+;河童
+ELSEIF NO == 180
+	CALL RANDOM_N_180
+;旧都鬼
+ELSEIF NO == 181
+	CALL RANDOM_N_181
+;地獄鬼
+ELSEIF NO == 182
+	CALL RANDOM_N_182
+;死神
+ELSEIF NO == 183
+	CALL RANDOM_N_183
+;化け猫
+ELSEIF NO == 186
+	CALL RANDOM_N_186
+;化け狐
+ELSEIF NO == 187
+	CALL RANDOM_N_187
+;化け鼠
+ELSEIF NO == 188
+	CALL RANDOM_N_188
+;仙人
+ELSEIF NO == 189
+	CALL RANDOM_N_189
+;吸血鬼
+ELSEIF NO == 190
+	CALL RANDOM_N_190
+;小悪魔のうちランダムで…
+ELSEIF NO == 176 && RAND:50 == 0
+	CALL RANDOM_N_176
+;生成しない場合LOCALを立てる
+ELSE
+	LOCAL = 1
+ENDIF
+
+RETURN LOCAL
+
+;-------------------------------------------------
+;末尾に種族名付加
+;-------------------------------------------------
+@RANDOM_N_NAMESTR
+;長すぎる名前は３文字までに整理
+IF NO == 150
+	NAME = %CALLNAME%(해바요)
+ELSEIF NO == 151
+	NAME = %CALLNAME%(메이드)
+ELSEIF NO == 156
+	NAME = %CALLNAME%(주정)
+ELSEIF NO == 160
+	NAME = %CALLNAME%(흑해바)
+ELSEIF NO == 161
+	NAME = %CALLNAME%(흑메이)
+ELSEIF NO == 170
+	NAME = %CALLNAME%(지상토)
+ELSEIF NO == 172
+	NAME = %CALLNAME%(인형)
+;デフォ名のここぁは処理しない
+ELSEIF NO != 176 || CALLNAME != "코코아"
+	NAME = %CALLNAME%(%NAME%)
+ENDIF
+
+;………………………………………………
+;ひまわり妖精
+;………………………………………………
+@RANDOM_N_HIMAWARI
+LOCAL:1 = 0
+;3/4で和名・ひらがな
+LOCAL = RAND:4
+SIF LOCAL != 0
+	LOCAL:1 = 1
+
+;1/2で色に関係の無い妖精の名前
+LOCAL = RAND:2
+IF LOCAL == 0
+	CALL RANDOM_N_FAIRY_NC , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;メイド妖精
+;………………………………………………
+@RANDOM_N_MAID
+LOCAL:1 = 0
+;1/4で和名・ひらがな
+LOCAL = RAND:4
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;8/10で色に関係の無い妖精の名前
+LOCAL = RAND:10
+IF LOCAL < 8
+	CALL RANDOM_N_FAIRY_NC , LOCAL:1
+;1/10で花の名前
+ELSEIF LOCAL == 9
+	CALL RANDOM_N_FLOWER , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;黒ひまわり妖精
+;………………………………………………
+@RANDOM_N_HIMAWARI_B
+LOCAL:1 = 0
+;3/4で和名・ひらがな
+LOCAL = RAND:4
+SIF LOCAL != 0
+	LOCAL:1 = 1
+
+;4/10で色に関係の無い妖精の名前
+LOCAL = RAND:10
+IF LOCAL < 3
+	CALL RANDOM_N_FAIRY_NC , LOCAL:1
+;4/10で黒妖精の名前
+ELSEIF LOCAL < 9
+	CALL RANDOM_N_FAIRY_4 , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;黒メイド妖精
+;………………………………………………
+@RANDOM_N_MAID_B
+LOCAL:1 = 0
+;1/4で和名・ひらがな
+LOCAL = RAND:4
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;4/10で色に関係の無い妖精の名前
+LOCAL = RAND:10
+IF LOCAL < 3
+	CALL RANDOM_N_FAIRY_NC , LOCAL:1
+;4/10で黒妖精の名前
+ELSEIF LOCAL < 9
+	CALL RANDOM_N_FAIRY_4 , LOCAL:1
+;さらに1/2で花の名前
+ELSEIF RAND:2 == 0
+	CALL RANDOM_N_FLOWER , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;色妖精・亜種色妖精
+;………………………………………………
+@RANDOM_N_FAIRY
+LOCAL:1 = 0
+;色妖精は4/5、亜種は1/5で和名
+;※元ネームが色妖精ひらがな・亜種カタカナなので、偏りをもたせた
+LOCAL = RAND:5
+SIF LOCAL != 0 && NO >= 152 && NO <= 156
+	LOCAL:1 = 1
+SIF LOCAL == 0 && NO >= 162 && NO <= 166
+	LOCAL:1 = 1
+
+;色分け
+;LOCAL:2=0赤/1青/2緑/3黄/4呪
+LOCAL:2 = NO-152
+SIF LOCAL:2 >= 10
+	LOCAL:2 -=10
+
+;1/5で色に関係の無い名前
+LOCAL = RAND:5
+IF LOCAL == 0
+	CALL RANDOM_N_FAIRY_NC , LOCAL:1
+;各色由来ネームを呼ぶ
+ELSE
+	CALLFORM RANDOM_N_FAIRY_{LOCAL:2} , LOCAL:1
+ENDIF
+
+;………………………………………………
+;地上の兎
+;………………………………………………
+@RANDOM_N_170
+CALL RANDOM_N_INABA
+
+;………………………………………………
+;里の人間
+;………………………………………………
+@RANDOM_N_171
+LOCAL:1 = 0
+;1/5でひらがな
+LOCAL = RAND:5
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/4で固定名(花の名前.ひらがな限定と漢字限定の対あり)
+LOCAL = RAND:4
+IF LOCAL == 0
+	CALL RANDOM_N_FLOWER , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;アリスの人形
+;………………………………………………
+@RANDOM_N_172
+
+;変数の掃除
+VARSET LOCAL
+VARSET LOCALS
+
+;1/4で固定名
+LOCAL = RAND:4
+IF LOCAL == 0
+	CALL RANDOM_N_DOLL , LOCAL:1
+;スペルカード名
+ELSE
+	CALL RANDOM_N_SPELL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;魔界人
+;………………………………………………
+@RANDOM_N_173
+LOCAL:1 = 0
+;ひらがな率は20％
+LOCAL = RAND:5
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/7で和名
+LOCAL = RAND:7
+IF LOCAL == 0
+	CALL RANDOM_N_GIRL , LOCAL:1
+;1/7で黒妖精名
+ELSEIF LOCAL == 1
+	CALL RANDOM_N_FAIRY_4 , LOCAL:1
+;基本は外国名
+ELSE
+	CALL RANDOM_N_POPNAME
+ENDIF
+
+;………………………………………………
+;鴉天狗
+;………………………………………………
+@RANDOM_N_174
+LOCAL:1 = 0
+;ひらがな率は1/4
+LOCAL = RAND:4
+SIF LOCAL <= 1
+	LOCAL:1 = 1
+
+;1/4で鴉由来名
+LOCAL = RAND:4
+IF LOCAL == 0
+	CALL RANDOM_N_CROW , LOCAL:1
+;1/4で旧暦由来名
+ELSEIF LOCAL == 1
+	CALL RANDOM_N_OLDSTYLE , LOCAL:1
+;1/4で一般名
+ELSEIF LOCAL == 2
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;白狼天狗
+;………………………………………………
+@RANDOM_N_175
+LOCAL:1 = 0
+;ひらがな率は1/4
+LOCAL = RAND:4
+SIF LOCAL <= 1
+	LOCAL:1 = 1
+
+;1/3で専用名
+LOCAL = RAND:3
+IF LOCAL == 0
+	CALL RANDOM_N_WHITEWOLF , LOCAL:1
+;1/3で一般名
+ELSEIF LOCAL == 1
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;小悪魔（注意：ごく一部のみ）
+;………………………………………………
+@RANDOM_N_176
+IF TALENT:120
+	CALL RANDOM_N_DEVIL
+ELSEIF RAND:73 == 0
+	TSTR:0 = 그레모리
+	NICKNAME = 서열 56위의 대공작
+ENDIF
+
+;………………………………………………
+;夜雀
+;………………………………………………
+@RANDOM_N_177
+LOCAL:1 = 0
+;ひらがな率は2/3
+LOCAL = RAND:3
+SIF LOCAL <= 1
+	LOCAL:1 = 1
+
+;2/3で鳥関連名
+LOCAL = RAND:3
+IF LOCAL <= 1
+	CALL RANDOM_N_BIRD , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;地獄鴉
+;………………………………………………
+@RANDOM_N_178
+LOCAL:1 = 0
+;ひらがな率は1/2
+LOCAL = RAND:2
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/2で鴉関連名(なおこの場合ひらがなでなければカタカナになる)
+LOCAL = RAND:4
+IF LOCAL <= 1
+	CALL RANDOM_N_CROW , LOCAL:1
+;1/4で一般名(つまりのこり1/4は強制的にデフォ名前)
+ELSEIF LOCAL == 3
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;亡霊
+;………………………………………………
+@RANDOM_N_179
+LOCAL:1 = 0
+;ひらがな率は50％
+LOCAL = RAND:2
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;0で花の名前
+LOCAL = RAND:10
+IF LOCAL == 0
+	CALL RANDOM_N_FLOWER , LOCAL:1
+;123で和名
+ELSEIF LOCAL < 4
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+;4567で黒妖精名
+ELSEIF LOCAL < 9
+	CALL RANDOM_N_FAIRY_4 , LOCAL:1
+;89で外国名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOYPOPNAME
+ELSE
+	CALL RANDOM_N_POPNAME
+ENDIF
+
+;………………………………………………
+;河童
+;………………………………………………
+@RANDOM_N_180
+LOCAL:1 = 0
+;ひらがな率は1/2のこりはカタカナ（漢字名はむずいので^^）
+LOCAL = RAND:2
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;2/4で河童関連名
+LOCAL = RAND:4
+IF LOCAL <= 2
+	CALL RANDOM_N_KAPPA , LOCAL:1
+;1/4で一般名
+ELSEIF LOCAL == 3
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;旧都鬼
+;………………………………………………
+@RANDOM_N_181
+;1/5で固定名
+LOCAL = RAND:5
+IF LOCAL == 0
+	CALL RANDOM_N_ONI_2
+;汎用名
+ELSE
+	CALL RANDOM_N_OGRE
+ENDIF
+
+;………………………………………………
+;地獄鬼
+;………………………………………………
+@RANDOM_N_182
+;1/2で固定名
+LOCAL = RAND:2
+IF LOCAL == 0
+	CALL RANDOM_N_ONI_1
+;汎用名
+ELSE
+	CALL RANDOM_N_OGRE
+ENDIF
+
+;………………………………………………
+;死神
+;………………………………………………
+@RANDOM_N_183
+LOCAL:1 = 0
+;ひらがな率は25％
+LOCAL = RAND:4
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+LOCAL = RAND:10
+;0で花の名前
+IF LOCAL == 0
+	CALL RANDOM_N_FLOWER , LOCAL:1
+;12345で和名
+ELSEIF LOCAL < 6
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+;67で黒妖精名
+ELSEIF LOCAL < 8
+	CALL RANDOM_N_FAIRY_4 , LOCAL:1
+;89で鬼の名前
+ELSE
+	CALL RANDOM_N_OGRE
+ENDIF
+
+;………………………………………………
+;化け猫
+;………………………………………………
+@RANDOM_N_186
+LOCAL:1 = 0
+;ひらがな率は1/2
+LOCAL = RAND:2
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/2で猫関連名
+LOCAL = RAND:4
+IF LOCAL <= 1
+	CALL RANDOM_N_CAT , LOCAL:1
+;1/4で一般名(つまりのこり1/4は強制的にデフォ名前)
+ELSEIF LOCAL == 3
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;化け狐
+;………………………………………………
+@RANDOM_N_187
+LOCAL:1 = 0
+;ひらがな率は1/2
+LOCAL = RAND:2
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/2で狐関連名
+LOCAL = RAND:4
+IF LOCAL <= 1
+	CALL RANDOM_N_FOX , LOCAL:1
+;1/4で一般名(つまりのこり1/4は強制的にデフォ名前)
+ELSEIF LOCAL == 3
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;化け鼠
+;………………………………………………
+@RANDOM_N_188
+LOCAL:1 = 0
+;ひらがな率は1/2
+LOCAL = RAND:2
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/2で鼠関連名
+LOCAL = RAND:4
+IF LOCAL <= 1
+	CALL RANDOM_N_MOUSE , LOCAL:1
+;1/4で一般名(つまりのこり1/4は強制的にデフォ名前)
+ELSEIF LOCAL == 3
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+ENDIF
+
+;………………………………………………
+;仙人
+;………………………………………………
+@RANDOM_N_189
+LOCAL:1 = 0
+;1/4でひらがな
+LOCAL = RAND:4
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/4で固定名(花の名前.ひらがな限定と漢字限定の対あり)
+LOCAL = RAND:4
+IF LOCAL == 0
+	CALL RANDOM_N_FLOWER , LOCAL:1
+;1/4で旧暦由来名
+ELSEIF LOCAL == 1
+	CALL RANDOM_N_OLDSTYLE , LOCAL:1
+;残りは一般名
+ELSEIF TALENT:120
+	CALL RANDOM_N_BOY , LOCAL:1
+ELSE
+	CALL RANDOM_N_GIRL , LOCAL:1
+ENDIF
+
+;………………………………………………
+;吸血鬼
+;………………………………………………
+@RANDOM_N_190
+LOCAL:1 = 0
+;1/10でひらがな
+LOCAL = RAND:10
+SIF LOCAL == 0
+	LOCAL:1 = 1
+
+;1/8で一般名
+LOCAL = RAND:8
+IF LOCAL == 0
+	IF TALENT:120
+		CALL RANDOM_N_BOY , LOCAL:1
+	ELSE
+		CALL RANDOM_N_GIRL , LOCAL:1
+	ENDIF
+;残りは外国名
+ELSE
+	IF TALENT:120
+		CALL RANDOM_N_BOYPOPNAME
+	ELSE
+		CALL RANDOM_N_POPNAME
+	ENDIF
+ENDIF
+
+;--------------------------------------------------
+;ここから条件別ネーミング関数
+;--------------------------------------------------
+;………………………………………………
+;ランダム少女名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL , ARG:0
+
+;大量の変更はバグの温床なのでココで渡す
+LOCAL:1 = ARG:0
+
+REPEAT 20
+	LOCAL:(COUNT+10) = 0
+	LOCALS:COUNT = 0
+REND
+;後半部はそれぞれ
+;LOCAL:10こ/11み/12か/13え/14な/15の/16ほ/17め/18よ/19き/20姫　に対応して除外
+;ひらがなの場合姫は出ない.また、プライド高いがないと3/4の確率で出ない(レアネーム)
+LOCAL = RAND:100
+SIF LOCAL:1 || (TALENT:16 == 0 && LOCAL < 75)
+	LOCAL:20 = 1
+;妖精の場合子は出ない
+SIF TALENT:200
+	LOCAL:10 = 1
+LOCAL = RAND:34
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 하루 # 하루\@
+		LOCAL:16 = 1
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 나츠 # 나츠\@
+		LOCAL:12 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 아키 # 아키\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 후유 # 후유\@
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 마나 # 마나\@
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 요시 # 요시\@
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 사야 # 사야\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 요리 # 요리\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:20 = 1
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 미즈 # 미즈\@
+		LOCAL:10 = 1
+		LOCAL:11 = 1
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 아사 # 아사\@
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:20 = 1
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 타마 # 타마\@
+		LOCAL:14 = 1
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 유미 # 유미\@
+		LOCAL:11 = 1
+		LOCAL:19 = 1
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 에리 # 에리\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 히나 # 히나\@
+		LOCAL:11 = 1
+		LOCAL:12 = 1
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 리 # 리\@
+		LOCAL:11 = 1
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 15
+		IF LOCAL:1
+			TSTR:0 = 후우
+			LOCAL:11 = 1
+			LOCAL:19 = 1
+		ELSE
+			TSTR:0 = 후우
+		ENDIF
+		LOCAL:13 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 아야 # 아야\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 후미 # 후미\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 18
+		IF LOCAL:1
+			TSTR:0 = 우타
+			LOCAL:13 = 1
+		ELSE
+			TSTR:0 = 우타
+		ENDIF
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 사치 # 사치\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 스미 # 스미\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 유키 # 유키\@
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 키리 # 키리\@
+		LOCAL:11 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 유리 # 유리\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 24
+		TSTR:0 = \@(LOCAL:1) ? 유우 # 유우\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+	CASE 25
+		TSTR:0 = \@(LOCAL:1) ? 시즈 # 시즈\@
+		LOCAL:11 = 1
+	CASE 26
+		TSTR:0 = \@(LOCAL:1) ? 스즈 # 스즈\@
+	CASE 27
+		TSTR:0 = \@(LOCAL:1) ? 마 # 마\@
+		LOCAL:12 = 1
+		LOCAL:13 = 1
+		LOCAL:17 = 1
+		LOCAL:20 = 1
+	CASE 28
+		TSTR:0 = \@(LOCAL:1) ? 쿄 # 쿄\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:15 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 29
+		TSTR:0 = \@(LOCAL:1) ? 하루 # 하루\@
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+	CASE 30
+		TSTR:0 = \@(LOCAL:1) ? 토요 # 토요\@
+		LOCAL:12 = 1
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 31
+		TSTR:0 = \@(LOCAL:1) ? 마이 # 마이\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 32
+		TSTR:0 = \@(LOCAL:1) ? 사요 # 사요\@
+		LOCAL:11 = 1
+		LOCAL:12 = 1
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 33
+		TSTR:0 = \@(LOCAL:1) ? 노리 # 노리\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+ENDSELECT
+
+LOCAL:2 = 0
+;後半部生成
+REPEAT 11
+	IF LOCAL:(10+COUNT) == 0
+		LOCAL:2 += 1
+		LOCAL:(20+LOCAL:2) = COUNT
+	ENDIF
+REND
+
+LOCALS = %TSTR:0%
+
+TRYCALLFORM RANDOM_N_GIRL_{LOCAL:(21+RAND:(LOCAL:2))} , LOCAL:1
+
+TSTR:0 = %LOCALS%%TSTR:0%
+
+;………………………………………………
+;ランダム名末尾0
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_0 , ARG:0
+IF ARG:0
+	TSTR:0 = 코
+ELSE
+	TSTR:0 = 코
+ENDIF
+
+;………………………………………………
+;ランダム名末尾1
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_1 , ARG:0
+LOCAL = RAND:4
+IF ARG:0
+	TSTR:0 = 미
+ELSEIF LOCAL == 0
+	TSTR:0 = 미
+ELSEIF LOCAL == 1
+	TSTR:0 = 미
+ELSEIF LOCAL == 2
+	TSTR:0 = 미
+ELSE
+	TSTR:0 = 미
+ENDIF
+
+;………………………………………………
+;ランダム名末尾2
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_2 , ARG:0
+LOCAL = RAND:5
+IF ARG:0
+	TSTR:0 = 카
+ELSEIF LOCAL == 0
+	TSTR:0 = 카
+ELSEIF LOCAL == 1
+	TSTR:0 = 카
+ELSEIF LOCAL == 2
+	TSTR:0 = 카
+ELSEIF LOCAL == 3
+	TSTR:0 = 카
+ELSE
+	TSTR:0 = 카
+ENDIF
+
+;………………………………………………
+;ランダム名末尾3
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_3 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 에
+ELSEIF LOCAL == 0
+	TSTR:0 = 에
+ELSEIF LOCAL == 1
+	TSTR:0 = 에
+ELSE
+	TSTR:0 = 에
+ENDIF
+
+;………………………………………………
+;ランダム名末尾4
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_4 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 나
+ELSEIF LOCAL == 0
+	TSTR:0 = 나
+ELSEIF LOCAL == 1
+	TSTR:0 = 나
+ELSE
+	TSTR:0 = 나
+ENDIF
+
+;………………………………………………
+;ランダム名末尾5
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_5 , ARG:0
+IF ARG:0
+	TSTR:0 = 노
+ELSE
+	TSTR:0 = 노
+ENDIF
+
+;………………………………………………
+;ランダム名末尾6
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_6 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 호
+ELSEIF LOCAL == 0
+	TSTR:0 = 호
+ELSEIF LOCAL == 1
+	TSTR:0 = 호
+ELSE
+	TSTR:0 = 호
+ENDIF
+
+;………………………………………………
+;ランダム名末尾7
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_7 , ARG:0
+LOCAL = RAND:5
+IF ARG:0
+	TSTR:0 = 메
+ELSEIF LOCAL == 0
+	TSTR:0 = 메
+ELSE
+	TSTR:0 = 메
+ENDIF
+
+;………………………………………………
+;ランダム名末尾8
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_8 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 요
+ELSEIF LOCAL == 0
+	TSTR:0 = 요
+ELSEIF LOCAL == 1
+	TSTR:0 = 요
+ELSE
+	TSTR:0 = 요
+ENDIF
+
+;………………………………………………
+;ランダム名末尾9
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_9 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 키
+ELSEIF LOCAL == 0
+	TSTR:0 = 키
+ELSE
+	TSTR:0 = 키
+ENDIF
+
+;………………………………………………
+;ランダム名末尾10
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_GIRL_10 , ARG:0
+IF ARG:0
+	TSTR:0 = 히메
+ELSE
+	TSTR:0 = 히메
+ENDIF
+
+;………………………………………………
+;一般外国名
+;………………………………………………
+@RANDOM_N_POPNAME
+LOCAL = RAND:216
+SELECTCASE LOCAL
+	;英語
+	CASE 0
+		TSTR:0 = 에이다
+	CASE 1
+		TSTR:0 = 아델
+	CASE 2
+		TSTR:0 = 아이린
+	CASE 3
+		TSTR:0 = 알마
+	CASE 4
+		TSTR:0 = 아멜리아
+	CASE 5
+		TSTR:0 = 에이미
+	CASE 6
+		TSTR:0 = 안젤라
+	CASE 7
+		TSTR:0 = 아니타
+	CASE 8
+		TSTR:0 = 안나
+	CASE 9
+		TSTR:0 = 에이프릴
+	CASE 10
+		TSTR:0 = 오드리
+	CASE 11
+		TSTR:0 = 오렐리아
+	CASE 12
+		TSTR:0 = 바바라
+	CASE 13
+		TSTR:0 = 베아트리스
+	CASE 14
+		TSTR:0 = 카밀라
+	CASE 15
+		TSTR:0 = 캐럴
+	CASE 16
+		TSTR:0 = 캐서린
+	CASE 17
+		TSTR:0 = 세실리아
+	CASE 18
+		TSTR:0 = 셀리아
+	CASE 19
+		TSTR:0 = 샤를로트
+	CASE 20
+		TSTR:0 = 셰리
+	CASE 21
+		TSTR:0 = 신디
+	CASE 22
+		TSTR:0 = 클레어
+	CASE 23
+		TSTR:0 = 클라라
+	CASE 24
+		TSTR:0 = 클로디아
+	CASE 25
+		TSTR:0 = 콜린
+	CASE 26
+		TSTR:0 = 콘스탄스
+	CASE 27
+		TSTR:0 = 데이지
+	CASE 28
+		TSTR:0 = 신시아
+	CASE 29
+		TSTR:0 = 대릴
+	CASE 30
+		TSTR:0 = 돌리
+	CASE 31
+		TSTR:0 = 드리스
+	CASE 32
+		TSTR:0 = 아이린
+	CASE 33
+		TSTR:0 = 엘레노어
+	CASE 34
+		TSTR:0 = 엘렌
+	CASE 35
+		TSTR:0 = 엘마
+	CASE 36
+		TSTR:0 = 엘시
+	CASE 37
+		TSTR:0 = 에밀리
+	CASE 38
+		TSTR:0 = 에마
+	CASE 39
+		TSTR:0 = 에스텔
+	CASE 40
+		TSTR:0 = 에바
+	CASE 41
+		TSTR:0 = 이브
+	CASE 42
+		TSTR:0 = 피오나
+	CASE 43
+		TSTR:0 = 플로라
+	CASE 44
+		TSTR:0 = 그레이스
+	CASE 45
+		TSTR:0 = 헬렌
+	CASE 46
+		TSTR:0 = 헨리에타
+	CASE 47
+		TSTR:0 = 이자벨
+	CASE 48
+		TSTR:0 = 제인
+	CASE 49
+		TSTR:0 = 제시카
+	CASE 50
+		TSTR:0 = 줄리아
+	CASE 51
+		TSTR:0 = 카렌
+	CASE 52
+		TSTR:0 = 케이트
+	CASE 53
+		TSTR:0 = 캐슬린
+	CASE 54
+		TSTR:0 = 카트리나
+	CASE 55
+		TSTR:0 = 케이
+	CASE 56
+		TSTR:0 = 레일라
+	CASE 57
+		TSTR:0 = 라나
+	CASE 58
+		TSTR:0 = 로라
+	CASE 59
+		TSTR:0 = 로렌
+	CASE 60
+		TSTR:0 = 라비니아
+	CASE 61
+		TSTR:0 = 리라
+	CASE 62
+		TSTR:0 = 레오노라
+	CASE 63
+		TSTR:0 = 릴리안
+	CASE 64
+		TSTR:0 = 리자
+	CASE 65
+		TSTR:0 = 롤라
+	CASE 66
+		TSTR:0 = 로레타
+	CASE 67
+		TSTR:0 = 루시
+	CASE 68
+		TSTR:0 = 리디아
+	CASE 69
+		TSTR:0 = 마델리느
+	CASE 70
+		TSTR:0 = 마샤
+	CASE 71
+		TSTR:0 = 머라이어
+	CASE 72
+		TSTR:0 = 마리안
+	CASE 73
+		TSTR:0 = 메어리
+	CASE 74
+		TSTR:0 = 메이
+	CASE 75
+		TSTR:0 = 멜리사
+	CASE 76
+		TSTR:0 = 미셰라
+	CASE 77
+		TSTR:0 = 밀드레드
+	CASE 78
+		TSTR:0 = 밀리엄
+	CASE 79
+		TSTR:0 = 모리
+	CASE 80
+		TSTR:0 = 마일라
+	CASE 81
+		TSTR:0 = 나탈리아
+	CASE 82
+		TSTR:0 = 니나
+	CASE 83
+		TSTR:0 = 올리비아
+	CASE 84
+		TSTR:0 = 올리아나
+	CASE 85
+		TSTR:0 = 파멜라
+	CASE 86
+		TSTR:0 = 폴라
+	CASE 87
+		TSTR:0 = 프리실라
+	CASE 88
+		TSTR:0 = 레이첼
+	CASE 89
+		TSTR:0 = 레베카
+	CASE 90
+		TSTR:0 = 레지나
+	CASE 91
+		TSTR:0 = 리타
+	CASE 92
+		TSTR:0 = 로자
+	CASE 93
+		TSTR:0 = 사만사
+	CASE 94
+		TSTR:0 = 셀리나
+	CASE 95
+		TSTR:0 = 셀마
+	CASE 96
+		TSTR:0 = 샤론
+	CASE 97
+		TSTR:0 = 셰라
+	CASE 98
+		TSTR:0 = 셜리
+	CASE 99
+		TSTR:0 = 소피아
+	CASE 100
+		TSTR:0 = 소피
+	CASE 101
+		TSTR:0 = 스텔라
+	CASE 102
+		TSTR:0 = 수잔느
+	CASE 103
+		TSTR:0 = 테레사
+	CASE 104
+		TSTR:0 = 발레리아
+	CASE 105
+		TSTR:0 = 베로니카
+	CASE 106
+		TSTR:0 = 버지니아
+	CASE 107
+		TSTR:0 = 웬디
+	CASE 108
+		TSTR:0 = 질
+	;独語
+	CASE 109
+		TSTR:0 = 콘스탄트
+	CASE 110
+		TSTR:0 = 에르나
+	CASE 111
+		TSTR:0 = 알마
+	CASE 112
+		TSTR:0 = 에파
+	CASE 113
+		TSTR:0 = 엘리제
+	CASE 114
+		TSTR:0 = 코르넬리아
+	CASE 115
+		TSTR:0 = 피네
+	CASE 116
+		TSTR:0 = 에리카
+	CASE 117
+		TSTR:0 = 드로테아
+	CASE 118
+		TSTR:0 = 오렐리아
+	CASE 119
+		TSTR:0 = 프란세스카
+	CASE 120
+		TSTR:0 = 프레데리카
+	CASE 121
+		TSTR:0 = 카밀라
+	CASE 122
+		TSTR:0 = 한나
+	CASE 123
+		TSTR:0 = 헬가
+	CASE 124
+		TSTR:0 = 아리에타
+	CASE 125
+		TSTR:0 = 이두벨라
+	CASE 126
+		TSTR:0 = 카린
+	CASE 127
+		TSTR:0 = 카트리느
+	CASE 128
+		TSTR:0 = 라우라
+	CASE 129
+		TSTR:0 = 리제로테
+	CASE 130
+		TSTR:0 = 루이제
+	CASE 131
+		TSTR:0 = 마르가리타
+	CASE 132
+		TSTR:0 = 마리
+	CASE 133
+		TSTR:0 = 모니카
+	CASE 134
+		TSTR:0 = 리타
+	CASE 135
+		TSTR:0 = 시몬느
+	CASE 136
+		TSTR:0 = 수잔느
+	CASE 137
+		TSTR:0 = 테레제
+	CASE 138
+		TSTR:0 = 티아나
+	CASE 139
+		TSTR:0 = 베로니카
+	;スペイン系
+	CASE 140
+    	TSTR:0 = 아미나
+	CASE 141
+    	TSTR:0 = 베아트리스
+	CASE 142
+    	TSTR:0 = 카를라
+	CASE 143
+    	TSTR:0 = 에스텔
+	CASE 144
+    	TSTR:0 = 일레네
+	CASE 145
+    	TSTR:0 = 로레나
+	CASE 146
+    	TSTR:0 = 나탈리아
+	CASE 147
+    	TSTR:0 = 패치
+	CASE 148
+    	TSTR:0 = 소피아
+	CASE 149
+    	TSTR:0 = 바네사
+	CASE 150
+    	TSTR:0 = 루시아
+	CASE 151
+    	TSTR:0 = 파나
+	CASE 152
+    	TSTR:0 = 리타
+	CASE 153
+    	TSTR:0 = 미란다
+	CASE 154
+    	TSTR:0 = 루아나
+	CASE 155
+    	TSTR:0 = 이네스
+	CASE 156
+    	TSTR:0 = 피오나
+	CASE 157
+    	TSTR:0 = 카타리나
+	CASE 158
+	    TSTR:0 = 벨린다
+	CASE 159
+    	TSTR:0 = 티아
+	CASE 160
+    	TSTR:0 = 모니카
+	;ロシア系
+	CASE 161
+    	TSTR:0 = 아드리아나
+	CASE 162
+    	TSTR:0 = 엘리비라
+	CASE 163
+    	TSTR:0 = 율리아나
+	CASE 164
+    	TSTR:0 = 류드밀라
+	CASE 165
+    	TSTR:0 = 마디나
+	CASE 166
+    	TSTR:0 = 타치아나
+	CASE 167
+    	TSTR:0 = 체찔리야
+	CASE 168
+    	TSTR:0 = 레나타
+	CASE 169
+    	TSTR:0 = 발렌찌나
+	CASE 170
+    	TSTR:0 = 악사나
+	;イタリア系
+	CASE 171
+    	TSTR:0 = 카타리나
+	CASE 172
+    	TSTR:0 = 엘레나
+	CASE 173
+    	TSTR:0 = 이자벨라
+	CASE 174
+    	TSTR:0 = 소니아
+	CASE 175
+    	TSTR:0 = 수잔나
+	CASE 176
+    	TSTR:0 = 실비아
+	CASE 177
+    	TSTR:0 = 프란체스카
+	CASE 178
+    	TSTR:0 = 비앙카
+	;その他諸々
+	CASE 179
+    	TSTR:0 = 아이샤
+	CASE 180
+    	TSTR:0 = 에어리스
+	CASE 181
+    	TSTR:0 = 올랭피아
+	CASE 182
+    	TSTR:0 = 카테지나
+	CASE 183
+    	TSTR:0 = 키시리아
+	CASE 184
+    	TSTR:0 = 쿠데리아
+	CASE 185
+    	TSTR:0 = 쿠루루
+	CASE 186
+    	TSTR:0 = 시라
+	CASE 187
+    	TSTR:0 = 세실리
+	CASE 188
+    	TSTR:0 = 세실
+	CASE 189
+    	TSTR:0 = 제나
+	CASE 190
+    	TSTR:0 = 셀리스
+	CASE 191
+    	TSTR:0 = 투스쿨
+	CASE 192
+    	TSTR:0 = 티파
+	CASE 193
+    	TSTR:0 = 테오도라
+	CASE 194
+    	TSTR:0 = 토토리
+	CASE 195
+    	TSTR:0 = 나코루루
+	CASE 196
+    	TSTR:0 = 니스
+	CASE 197
+    	TSTR:0 = 하이디
+	CASE 198
+    	TSTR:0 = 하만
+	CASE 199
+    	TSTR:0 = 페이트
+	CASE 200
+    	TSTR:0 = 마벨
+    CASE 201
+    	TSTR:0 = 마리나
+	CASE 202
+    	TSTR:0 = 마릴린
+	CASE 203
+    	TSTR:0 = 유피
+    CASE 204
+    	TSTR:0 = 유리아
+	CASE 205
+    	TSTR:0 = 라크스
+	CASE 206
+    	TSTR:0 = 리무루
+	CASE 207
+    	TSTR:0 = 리무루루
+    CASE 208
+    	TSTR:0 = 리리나
+	CASE 209
+    	TSTR:0 = 릴리스
+	CASE 210
+    	TSTR:0 = 레일리아
+	CASE 211
+    	TSTR:0 = 레인
+	CASE 212
+    	TSTR:0 = 레시
+	CASE 213
+    	TSTR:0 = 레나
+	CASE 214
+    	TSTR:0 = 렌
+   	CASE 215
+    	TSTR:0 = 로로나
+
+;	CASE 216
+;	　　TSTR:0 = 
+;	CASE 217
+;	　　TSTR:0 = 
+ENDSELECT
+
+;………………………………………………
+;汎用鬼名
+;………………………………………………
+@RANDOM_N_OGRE
+REPEAT 20
+	LOCAL:(COUNT+10) = 0
+	LOCALS:COUNT = 0
+REND
+;後半部はそれぞれ
+;LOCAL:10童子/11鬼/12天/13門/14王/15女/16羅/17姫/18冠子/19子神/20車力　に対応して除外
+;鬼以外は童子・鬼が出ない
+IF NO != 181 && NO != 182
+	LOCAL:10 = 1
+	LOCAL:11 = 1
+ENDIF
+;実は適当です
+LOCAL = RAND:61
+SELECTCASE LOCAL
+	;作品由来系（あからさまなのはもじって）
+	CASE 0
+		TSTR:0 = 향마
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+		LOCAL:16 = 1
+	CASE 1
+		TSTR:0 = 요요
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 2
+		TSTR:0 = 야초
+		LOCAL:15 = 1
+	CASE 3
+		TSTR:0 = 화총
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 4
+		TSTR:0 = 문과
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 5
+		TSTR:0 = 신풍
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 6
+		TSTR:0 = 지령
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 7
+		TSTR:0 = 청련
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 8
+		TSTR:0 = 영전
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 9
+		TSTR:0 = 봉마
+		LOCAL:16 = 1
+		LOCAL:15 = 1
+	CASE 10
+		TSTR:0 = 공몽
+		LOCAL:14 = 1
+		LOCAL:15 = 1
+	CASE 11
+		TSTR:0 = 현승
+		LOCAL:14 = 1
+	CASE 12
+		TSTR:0 = 회기
+	;場所系
+	CASE 13
+		TSTR:0 = 우
+	CASE 14
+		TSTR:0 = 좌
+	CASE 15
+		TSTR:0 = 전
+	CASE 16
+		TSTR:0 = 후
+	CASE 17
+		TSTR:0 = 북호
+	CASE 18
+		TSTR:0 = 남릉
+	CASE 19
+		TSTR:0 = 동산
+	CASE 20
+		TSTR:0 = 서원
+	;いろいろ.元ネタあったりなかったり
+	CASE 21
+		TSTR:0 = 야차
+	CASE 22
+		TSTR:0 = 금색
+	CASE 23
+		TSTR:0 = 아
+	CASE 24
+		TSTR:0 = 운
+		LOCAL:19 = 1
+	CASE 25
+		TSTR:0 = 화화
+	CASE 26
+		TSTR:0 = 암철
+	CASE 27
+		TSTR:0 = 대륜
+	CASE 28
+		TSTR:0 = 역
+	CASE 29
+		TSTR:0 = 배
+	CASE 30
+		TSTR:0 = 굉굉
+	CASE 31
+		TSTR:0 = 고뢰
+	CASE 32
+		TSTR:0 = 철륜
+	CASE 33
+		TSTR:0 = 공방
+	CASE 34
+		TSTR:0 = 혜
+	CASE 35
+		TSTR:0 = 풍풍
+	CASE 36
+		TSTR:0 = 이래
+	CASE 37
+		TSTR:0 = 추상
+	CASE 38
+		TSTR:0 = 열일
+	CASE 39
+		TSTR:0 = 서성
+	CASE 40
+		TSTR:0 = 주산
+	CASE 41
+		TSTR:0 = 도보
+	CASE 42
+		TSTR:0 = 노
+	CASE 43
+		TSTR:0 = 화명
+	CASE 44
+		TSTR:0 = 어렴
+	CASE 45
+		TSTR:0 = 나맹
+	CASE 46
+		TSTR:0 = 원락
+	CASE 47
+		TSTR:0 = 유유
+	CASE 48
+		TSTR:0 = 어즐
+	CASE 49
+		TSTR:0 = 유요
+	CASE 50
+		TSTR:0 = 요향
+		LOCAL:14 = 1
+	CASE 51
+		TSTR:0 = 탕탕
+		LOCAL:14 = 1
+	CASE 52
+		TSTR:0 = 가력
+	CASE 53
+		TSTR:0 = 난란
+	CASE 54
+		TSTR:0 = 춘훈
+	CASE 55
+		TSTR:0 = 내래
+	CASE 56
+		TSTR:0 = 서귀
+		LOCAL:11 = 1
+	CASE 57
+		TSTR:0 = 악팔
+	CASE 58
+		TSTR:0 = 염
+	CASE 59
+		TSTR:0 = 가
+	CASE 60
+		TSTR:0 = 규
+ENDSELECT
+
+LOCAL:2 = 0
+;後半部生成
+REPEAT 11
+	IF LOCAL:(10+COUNT) == 0
+		LOCAL:2 += 1
+		LOCAL:(20+LOCAL:2) = COUNT
+	ENDIF
+REND
+
+LOCALS = %TSTR:0%
+
+TRYCALLFORM RANDOM_N_OGRE_{LOCAL:(21+RAND:(LOCAL:2))}
+
+TSTR:0 = %LOCALS%%TSTR:0%
+
+@RANDOM_N_OGRE_0
+TSTR:0 = 동자
+
+@RANDOM_N_OGRE_1
+TSTR:0 = 귀
+
+@RANDOM_N_OGRE_2
+TSTR:0 = 천
+
+@RANDOM_N_OGRE_3
+TSTR:0 = 문
+
+@RANDOM_N_OGRE_4
+TSTR:0 = 왕
+
+@RANDOM_N_OGRE_5
+TSTR:0 = 녀
+
+@RANDOM_N_OGRE_6
+TSTR:0 = 라
+
+@RANDOM_N_OGRE_7
+TSTR:0 = 희
+
+@RANDOM_N_OGRE_8
+TSTR:0 = 관자
+
+@RANDOM_N_OGRE_9
+TSTR:0 = 자신
+
+@RANDOM_N_OGRE_10
+TSTR:0 = 차력
+
+;………………………………………………
+;花の固有名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FLOWER , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:34
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 사쿠라 # 사쿠라\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 츠바키 # 츠바키\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 아이카 # 아이카\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 아야메 # 아야메\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 히나게시 # 히나게시\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 아오이 # 아오이\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 스미레 # 스미레\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 호타루 # 호타루\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 마츠리 # 마츠리\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 아카네 # 아카네\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 렌게 # 렌게\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 아케비 # 아케비\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 탄포포 # 탄포포\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 안즈 # 안즈\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 이로하 # 이로하\@
+	CASE 15
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 나데시코 # 나데시코\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 카에데 # 카에데\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 츠츠지 # 츠츠지\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 칸나 # 칸나\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 나즈나 # 나즈나\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 보탄 # 보탄\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 유리 # 유리\@
+	CASE 22
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 키쿄 # 키쿄\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 시온 # 시온\@
+	CASE 24
+		TSTR:0 = \@(LOCAL:1) ? 미캉 # 미캉\@
+	CASE 25
+		TSTR:0 = \@(LOCAL:1) ? 린고 # 린고\@
+	CASE 26
+		TSTR:0 = \@(LOCAL:1) ? 카타바미 # 카타바미\@
+	CASE 27
+		TSTR:0 = \@(LOCAL:1) ? 란 # 란\@
+	CASE 28
+		TSTR:0 = \@(LOCAL:1) ? 아자미 # 아자미\@
+	CASE 29
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 오미나에시 # 오미나에시\@
+	CASE 30
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 하기 # 하기\@
+	CASE 31
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 후지바카마 # 후지바카마\@
+	CASE 32
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 쿠즈 # 쿠즈\@
+	CASE 33
+		;秋の七草
+		TSTR:0 = \@(LOCAL:1) ? 오바나 # 오바나\@
+ENDSELECT
+
+;………………………………………………
+;旧暦の名称から
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_OLDSTYLE , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:24
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 무츠키 # 무츠키\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 키사라기 # 키사라기\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 야오이 # 야요이\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 우즈키 # 우즈키\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 사츠키 # 사츠키\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 미나즈키 # 미나즈키\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 후미즈키 # 후미즈키\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 하즈키 # 하즈키\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 나가츠키 # 나가츠키\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 칸나즈키 # 칸나즈키\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 시모츠키 # 시모츠키\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 시와스 # 시와스\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 카게츠 # 카게츠\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 레이게츠 # 레이게츠\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 토게츠 # 토게츠\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 친게츠 # 친게츠\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 우게츠 # 우게츠\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 스이게츠 # 스이게츠\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 신게츠 # 신게츠\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 칸게츠 # 칸게츠\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 에이게츠 # 에이게츠\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 타이게츠 # 타이게츠\@
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 코게츠 # 코게츠\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 고쿠게츠 # 고쿠게츠\@
+ENDSELECT
+
+;………………………………………………
+;白狼天狗の固有名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_WHITEWOLF , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:22
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 호로나이 # 호로나이\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 혼도지 # 혼도지\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 히로하 # 히로하\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 후카기레 # 후카기레\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 토우 # 토우\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 호소에 # 호소에\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 치도리 # 치도리\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 밋데 # 밋데\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 카지 # 카지\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 히토츠바 # 히토츠바\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 카라코기 # 카라코기\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 시나노하우치와 # 시나노하우치와\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 케하우치와 # 케하우치와\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 이타야 # 이타야\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 토네리코바노 # 토네리코바노\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 이로하 # 이로하\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 노무라카에데 # 노무라카에데\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 야마모미지 # 야마모미지\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 아오시다레 # 아오시다레\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 오사카즈키 # 오사카즈키\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 하나노키 # 하나노키\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 사토카에데 # 사토카에데\@
+ENDSELECT
+
+;………………………………………………
+;鳥の固有名(これでもみんなスズメの仲間だぜ)
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BIRD , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:66
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 스즈메 # 스즈메\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 호지로 # 호지로\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 시쥬카라 # 시쥬카라\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 히가라 # 히가라\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 코가라 # 코가라\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 야마가라 # 야마가라\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 고쥬카라 # 고쥬카라\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 에나가 # 에나가\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 메지로 # 메지로\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 우구이스 # 우구이스\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 히요도리 # 히요도리\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 모즈 # 모즈\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 이소히요도리 # 이소히요도리\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 코게라 # 코게라\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 오아카게라 # 오아카게라\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 아오게라 # 아오게라\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 카와라히와 # 카와라히와\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 카와세미 # 카와세미\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 카와가라스 # 카와가라스\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 미소사자이 # 미소사자이\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 세구로세키레이 # 세구로세키레이\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 키세키레이 # 키세키레이\@
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 카이츠부리 # 카이츠부리\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 이소시기 # 이소시기\@
+	CASE 24
+		TSTR:0 = \@(LOCAL:1) ? 코치도리 # 코치도리\@
+	CASE 25
+		TSTR:0 = \@(LOCAL:1) ? 이카루 # 이카루\@
+	CASE 26
+		TSTR:0 = \@(LOCAL:1) ? 무쿠도리 # 무쿠도리\@
+	CASE 27
+		TSTR:0 = \@(LOCAL:1) ? 히바리 # 히바리\@
+	CASE 28
+		TSTR:0 = \@(LOCAL:1) ? 츠미 # 츠미\@
+	CASE 29
+		TSTR:0 = \@(LOCAL:1) ? 오코노하즈쿠 # 오코노하즈쿠\@
+	CASE 30
+		TSTR:0 = \@(LOCAL:1) ? 츠바메 # 츠바메\@
+	CASE 31
+		TSTR:0 = \@(LOCAL:1) ? 코마도리 # 코마도리\@
+	CASE 32
+		TSTR:0 = \@(LOCAL:1) ? 코루리 # 코루리\@
+	CASE 33
+		TSTR:0 = \@(LOCAL:1) ? 오루리 # 오루리\@
+	CASE 34
+		TSTR:0 = \@(LOCAL:1) ? 키비타키 # 키비타키\@
+	CASE 35
+		TSTR:0 = \@(LOCAL:1) ? 메보소무시쿠이 # 메보소무시쿠이\@
+	CASE 36
+		TSTR:0 = \@(LOCAL:1) ? 하마시기 # 하마시기\@
+	CASE 37
+		TSTR:0 = \@(LOCAL:1) ? 야부사메 # 야부사메\@
+	CASE 38
+		TSTR:0 = \@(LOCAL:1) ? 코사메비타키 # 코사메비타키\@
+	CASE 39
+		TSTR:0 = \@(LOCAL:1) ? 산쇼쿠이 # 산쇼쿠이\@
+	CASE 40
+		TSTR:0 = \@(LOCAL:1) ? 산코쵸 # 산코쵸\@
+	CASE 41
+		TSTR:0 = \@(LOCAL:1) ? 아카쇼빈 # 아카쇼빈\@
+	CASE 42
+		TSTR:0 = \@(LOCAL:1) ? 오요시키리 # 오요시키리\@
+	CASE 43
+		TSTR:0 = \@(LOCAL:1) ? 오지시키 # 오지시키\@
+	CASE 44
+		TSTR:0 = \@(LOCAL:1) ? 히렌쟈쿠 # 히렌쟈쿠\@
+	CASE 45
+		TSTR:0 = \@(LOCAL:1) ? 키렌쟈쿠 # 키렌쟈쿠\@
+	CASE 46
+		TSTR:0 = \@(LOCAL:1) ? 노고마 # 노고마\@
+	CASE 47
+		TSTR:0 = \@(LOCAL:1) ? 에소비타키 # 에소비타키\@
+	CASE 48
+		TSTR:0 = \@(LOCAL:1) ? 키아시시기 # 키아시시기\@
+	CASE 49
+		TSTR:0 = \@(LOCAL:1) ? 무나구로 # 무나구로\@
+	CASE 50
+		TSTR:0 = \@(LOCAL:1) ? 빈즈이 # 빈즈이\@
+	CASE 51
+		TSTR:0 = \@(LOCAL:1) ? 호오아카 # 호오아카\@
+	CASE 52
+		TSTR:0 = \@(LOCAL:1) ? 사메비타키 # 사메비타키\@
+	CASE 53
+		TSTR:0 = \@(LOCAL:1) ? 노비타키 # 노비타키\@
+	CASE 54
+		TSTR:0 = \@(LOCAL:1) ? 죠비타키 # 죠비타키\@
+	CASE 55
+		TSTR:0 = \@(LOCAL:1) ? 코이카루 # 코이카루\@
+	CASE 56
+		TSTR:0 = \@(LOCAL:1) ? 우소 # 우소\@
+	CASE 57
+		TSTR:0 = \@(LOCAL:1) ? 마히와 # 마히와\@
+	CASE 58
+		TSTR:0 = \@(LOCAL:1) ? 아토리 # 아토리\@
+	CASE 59
+		TSTR:0 = \@(LOCAL:1) ? 시로하라 # 시로하라\@
+	CASE 60
+		TSTR:0 = \@(LOCAL:1) ? 츠구미 # 츠구미\@
+	CASE 61
+		TSTR:0 = \@(LOCAL:1) ? 하쿠세키레이 # 하쿠세키레이\@
+	CASE 62
+		TSTR:0 = \@(LOCAL:1) ? 카시라다카 # 카시라다카\@
+	CASE 63
+		TSTR:0 = \@(LOCAL:1) ? 카야쿠구리 # 카야쿠구리\@
+	CASE 64
+		TSTR:0 = \@(LOCAL:1) ? 이와히바리 # 이와히바리\@
+	CASE 65
+		TSTR:0 = \@(LOCAL:1) ? 욧쨩 # 욧쨩\@
+ENDSELECT
+
+;………………………………………………
+;カラスの固有名
+;ARG:0……命名分岐(ここのみ漢字名はなし)
+;………………………………………………
+@RANDOM_N_CROW , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:46
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 무나지로 # 무나지로\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 미나미코 # 미나미코\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 아메리카 # 아메리카\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 츠루하시 # 츠루하시\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 히메코바시 # 히메코바시\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 와타리 # 와타리\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 하시보소 # 하시보소\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 오하시 # 오하시\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 시로에리 # 시로에리\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 코쿠마루 # 코쿠마루\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 슨다 # 슨다\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 플로레스 # 플로레스\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 미야마 # 미야마\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 챠가시라 # 챠가시라\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 하와이 # 하와이\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 멕시코 # 멕시코\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 자마이카 # 자마이카\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 쿠바리 # 쿠바리\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 하시부토 # 하시부토\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 부겐빌 # 부겐빌\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 니시코쿠마루 # 니시코쿠마루\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 칼레도니아 # 칼레도니아\@
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 쿠바 # 쿠바\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 미나미 # 미나미\@
+	CASE 24
+		TSTR:0 = \@(LOCAL:1) ? 워 # 워\@
+	CASE 25
+		TSTR:0 = \@(LOCAL:1) ? 야시 # 야시\@
+	CASE 26
+		TSTR:0 = \@(LOCAL:1) ? 치비오 # 치비오\@
+	CASE 27
+		TSTR:0 = \@(LOCAL:1) ? 챠에리 # 챠에리\@
+	CASE 28
+		TSTR:0 = \@(LOCAL:1) ? 서멕시코 # 서멕시코\@
+	CASE 29
+		TSTR:0 = \@(LOCAL:1) ? 이에 # 이에\@
+	CASE 30
+		TSTR:0 = \@(LOCAL:1) ? 모리 # 모리\@
+	CASE 31
+		TSTR:0 = \@(LOCAL:1) ? 쿠비와 # 쿠비와\@
+	CASE 32
+		TSTR:0 = \@(LOCAL:1) ? 하게가오 # 하게가오\@
+	CASE 33
+		TSTR:0 = \@(LOCAL:1) ? 셀레베스 # 셀레베스\@
+	CASE 34
+		TSTR:0 = \@(LOCAL:1) ? 반가이 # 반가이\@
+	CASE 35
+		TSTR:0 = \@(LOCAL:1) ? 몰루카 # 몰루카\@
+	CASE 36
+		TSTR:0 = \@(LOCAL:1) ? 솔로몬 # 솔로몬\@
+	CASE 37
+		TSTR:0 = \@(LOCAL:1) ? 별 # 별\@
+	CASE 38
+		TSTR:0 = \@(LOCAL:1) ? 잿빛별 # 잿빛별\@
+	CASE 39
+		TSTR:0 = \@(LOCAL:1) ? 오지로사막 # 오지로사막\@
+	CASE 40
+		TSTR:0 = \@(LOCAL:1) ? 사막 # 사막\@
+	CASE 41
+		TSTR:0 = \@(LOCAL:1) ? 이란사막 # 이란사막\@
+	CASE 42
+		TSTR:0 = \@(LOCAL:1) ? 아씨사막 # 아씨사막\@
+	CASE 43
+		TSTR:0 = \@(LOCAL:1) ? 키바시 # 키바시\@
+	CASE 44
+		TSTR:0 = \@(LOCAL:1) ? 베니하시 # 베니하시\@
+	CASE 45
+		TSTR:0 = \@(LOCAL:1) ? 소데구로 # 소데구로\@
+ENDSELECT
+
+;………………………………………………
+;河童の固有名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_KAPPA , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:22
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 가아타로 # 가아타로\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 카왓소 # 카왓소\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 카와로 # 카와로\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 가타로 # 가타로\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 카와타로 # 카와타로\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 미즈시 # 미즈시\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 가메 # 가메\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 엔코 # 엔코\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 가랍파 # 가랍파\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 게타로 # 게타로\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 메도치 # 메도치\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 도치가메 # 도치가메\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 가와왑파 # 가와왑파\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 가타로 # 가타로\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 메도치 # 메도치\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 카와코 # 카와코\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 가오로 # 가오로\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 시바텐 # 시바텐\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 곤고 # 곤고\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 카와노모노 # 카와노모노\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 가우루 # 가우루\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 타비노히토 # 타비노히토\@
+ENDSELECT
+
+;………………………………………………
+;猫の固有名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_CAT , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:24
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 시로 # 시로\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 킨메긴메 # 긴메긴메\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 쿠로 # 쿠로\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 사비 # 사비\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 카라스 # 카라스\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 벳코 # 벳코\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 토라 # 토라\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 챠토라 # 챠토라\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 키지토라 # 키지토라\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 사바토라 # 사바토라\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 부치 # 부치\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 니케 # 니케\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 미케 # 미케\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 시마미케 # 시마미케\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 노라 # 노라\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 이에 # 이에\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 야마 # 야마\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 이리오모테 # 이리오모테\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 오나가 # 오나가\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 시마 # 시마\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 노 # 노\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 치이키 # 치이키\@
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 바케 # 바케\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 톰 # 톰\@
+ENDSELECT
+
+;………………………………………………
+;狐の固有名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FOX , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:32
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 아카 # 아카\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 오구로스나 # 오구로스나\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 오지로스나 # 오지로스나\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 케이프 # 케이프\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 코삭 # 코삭\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 스위프트 # 스위프트\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 티벳모래 # 티벳모래\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 벵갈 # 벵갈\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 페넥 # 페넥\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 북극 # 북극\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 오미미 # 오미미\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 하이이로 # 하이이로\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 시마하이이로 # 시마하이이로\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 카니쿠이 # 카니쿠이\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 쿨페오 # 쿨페오\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 스지오 # 스지오\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 세추라 # 세추라\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 치코하이이로 # 치코하이이로\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 팜파스 # 팜파스\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 포클랜드 # 포클랜드\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 이나리 # 이나리\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 콘지키 # 콘지키\@
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 긴 # 긴\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 야지로 # 야지로\@
+	CASE 24
+		TSTR:0 = \@(LOCAL:1) ? 코안 # 코안\@
+	CASE 25
+		TSTR:0 = \@(LOCAL:1) ? 덴바치 # 덴바치\@
+	CASE 26
+		TSTR:0 = \@(LOCAL:1) ? 오타케 # 오타케\@
+	CASE 27
+		TSTR:0 = \@(LOCAL:1) ? 뱍코 # 뱍코\@
+	CASE 28
+		TSTR:0 = \@(LOCAL:1) ? 쿄조보 # 쿄조보\@
+	CASE 29
+		TSTR:0 = \@(LOCAL:1) ? 쿠다 # 쿠다\@
+	CASE 30
+		TSTR:0 = \@(LOCAL:1) ? 닌코 # 닌코\@
+	CASE 31
+		TSTR:0 = \@(LOCAL:1) ? 이즈나 # 이즈나\@
+ENDSELECT
+
+;………………………………………………
+;鼠の固有名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_MOUSE , ARG:0
+
+LOCAL:1 = ARG:0
+
+LOCAL = RAND:24
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 쿠마 # 쿠마\@
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 도부 # 도부\@
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 하츠카 # 하츠카\@
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 아카 # 아카\@
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 아레치 # 아레치\@
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 스나 # 스나\@
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 아시나가 # 아시나가\@
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 키누게 # 키누게\@
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 미즈하타 # 미즈하타\@
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 햄스터 # 햄스터\@
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 하타 # 하타\@
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 메쿠라 # 메쿠라\@
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 요루 # 요루\@
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 토비 # 토비\@
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 호리 # 호리\@
+	CASE 15
+		TSTR:0 = \@(LOCAL:1) ? 텐지쿠 # 텐지쿠\@
+	CASE 16
+		TSTR:0 = \@(LOCAL:1) ? 토게 # 토게\@
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 아후리카이와 # 아후리카이와\@
+	CASE 18
+		TSTR:0 = \@(LOCAL:1) ? 데바 # 데바\@
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 하리 # 하리\@
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 토가리 # 토가리\@
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 하네지 # 하네지\@
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 후쿠로 # 후쿠로\@
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 제리 # 제리\@
+ENDSELECT
+
+;………………………………………………
+;無色
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FAIRY_NC , ARG:0
+
+
+;和名(日本の神話・精霊、和語、気象用語、洋名の平仮名読みなど.たまに漢字)
+IF ARG:0
+	LOCAL = RAND:36
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 코하네
+		CASE 1
+			TSTR:0 = 요로즈
+		CASE 2
+			TSTR:0 = 훼아
+		CASE 3
+			TSTR:0 = 토기
+		CASE 4
+			TSTR:0 = 메루
+		CASE 5
+			TSTR:0 = 야마세
+		CASE 6
+			TSTR:0 = 미야비
+		CASE 7
+			TSTR:0 = 코로모
+		CASE 8
+			TSTR:0 = 카라시
+		CASE 9
+			TSTR:0 = 토키
+		CASE 10
+			TSTR:0 = 아야카
+		CASE 11
+			TSTR:0 = 이자야
+		CASE 12
+			TSTR:0 = 카나
+		CASE 13
+			TSTR:0 = 이나사
+		CASE 14
+			TSTR:0 = 오기
+		CASE 15
+			TSTR:0 = 나기
+		CASE 16
+			TSTR:0 = 사쿠
+		CASE 17
+			TSTR:0 = 츠키미
+		CASE 18
+			TSTR:0 = 와타
+		CASE 19
+			TSTR:0 = 쿠시
+		CASE 20
+			TSTR:0 = 아마츠
+		CASE 21
+			TSTR:0 = 우즈메
+		CASE 22
+			TSTR:0 = 히나도리
+		CASE 23
+			TSTR:0 = 이즈나
+		CASE 24
+			TSTR:0 = 엔
+		CASE 25
+			TSTR:0 = 카부라
+		CASE 26
+			TSTR:0 = 코노하
+		CASE 27
+			TSTR:0 = 무스비
+		CASE 28
+			TSTR:0 = 모나카
+		CASE 29
+			TSTR:0 = 시구레
+		CASE 30
+			TSTR:0 = 에루
+		CASE 31
+			TSTR:0 = 티아
+		CASE 32
+			TSTR:0 = 미키
+		CASE 33
+			TSTR:0 = 바이린
+		CASE 34
+			TSTR:0 = 야나리
+		CASE 35
+			TSTR:0 = 츠유
+	ENDSELECT
+;洋名.なんでもあり
+ELSE
+	LOCAL = RAND:36
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 티타
+		CASE 1
+			TSTR:0 = 픽시
+		CASE 2
+			TSTR:0 = 엘레노어
+		CASE 3
+			TSTR:0 = 슈가
+		CASE 4
+			TSTR:0 = 멜
+		CASE 5
+			TSTR:0 = 미나
+		CASE 6
+			TSTR:0 = 애니스
+		CASE 7
+			TSTR:0 = 케이트
+		CASE 8
+			TSTR:0 = 엘
+		CASE 9
+			TSTR:0 = 애니
+		CASE 10
+			TSTR:0 = 랩처
+		CASE 11
+			TSTR:0 = 티아
+		CASE 12
+			TSTR:0 = 팝
+		CASE 13
+			TSTR:0 = 콜리
+		CASE 14
+			TSTR:0 = 에일
+		CASE 15
+			TSTR:0 = 세사미
+		CASE 16
+			TSTR:0 = 람
+		CASE 17
+			TSTR:0 = 마알
+		CASE 18
+			TSTR:0 = 진
+		CASE 19
+			TSTR:0 = 까샤사
+		CASE 20
+			TSTR:0 = 놀
+		CASE 21
+			TSTR:0 = 질
+		CASE 22
+			TSTR:0 = 니스
+		CASE 23
+			TSTR:0 = 네모
+		CASE 24
+			TSTR:0 = 도로시
+		CASE 25
+			TSTR:0 = 그레텔
+		CASE 26
+			TSTR:0 = 신디
+		CASE 27
+			TSTR:0 = 소린
+		CASE 28
+			TSTR:0 = 헬가
+		CASE 29
+			TSTR:0 = 레이첼
+		CASE 30
+			TSTR:0 = 사라
+		CASE 31
+			TSTR:0 = 쿼츠
+		CASE 32
+			TSTR:0 = 파스텔
+		CASE 33
+			TSTR:0 = 코튼
+		CASE 34
+			TSTR:0 = 새틴
+		CASE 35
+			TSTR:0 = 실키
+		CASE 34
+			TSTR:0 = 멜로디
+		CASE 35
+			TSTR:0 = 마시
+	ENDSELECT
+ENDIF
+
+;………………………………………………
+;赤
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FAIRY_0 , ARG:0
+
+;和名(専らひらがな.鉱石由来は漢字)
+IF ARG:0
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 아카네
+		CASE 1
+			TSTR:0 = 이치고
+		CASE 2
+			TSTR:0 = 노바라
+		CASE 3
+			TSTR:0 = 츠바키
+		CASE 4
+			TSTR:0 = 유히
+		CASE 5
+			TSTR:0 = 린고
+		CASE 6
+			TSTR:0 = 쿠레나이
+		CASE 7
+			TSTR:0 = 자쿠로
+		CASE 8
+			TSTR:0 = 코교쿠
+		CASE 9
+			TSTR:0 = 우메
+		CASE 10
+			TSTR:0 = 사츠키
+		CASE 11
+			TSTR:0 = 츠츠지
+		CASE 12
+			TSTR:0 = 히나게시
+		CASE 13
+			TSTR:0 = 보탄
+		CASE 14
+			TSTR:0 = 칸나
+		CASE 15
+			TSTR:0 = 사잔카
+		CASE 16
+			TSTR:0 = 세키류
+		CASE 17
+			TSTR:0 = 베니바나
+		CASE 18
+			TSTR:0 = 카에데
+		CASE 19
+			TSTR:0 = 메노
+		CASE 20
+			TSTR:0 = 호즈키
+		CASE 21
+			TSTR:0 = 쿠쟈쿠
+		CASE 22
+			TSTR:0 = 호무라
+		CASE 23
+			TSTR:0 = 카가리
+		CASE 24
+			TSTR:0 = 호츠모리
+		CASE 25
+			TSTR:0 = 아카모
+		CASE 26
+			TSTR:0 = 카가치
+		CASE 27
+			TSTR:0 = 타치바나
+		CASE 28
+			TSTR:0 = 구미
+		CASE 29
+			TSTR:0 = 아카니
+	ENDSELECT
+;洋名
+ELSE
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 루비
+		CASE 1
+			TSTR:0 = 카넬리아
+		CASE 2
+			TSTR:0 = 크로사이트
+		CASE 3
+			TSTR:0 = 로즈
+		CASE 4
+			TSTR:0 = 아네모네
+		CASE 5
+			TSTR:0 = 안스
+		CASE 6
+			TSTR:0 = 데이지
+		CASE 7
+			TSTR:0 = 달리아
+		CASE 8
+			TSTR:0 = 샐비어
+		CASE 9
+			TSTR:0 = 코스모스
+		CASE 10
+			TSTR:0 = 루쥬
+		CASE 11
+			TSTR:0 = 치크
+		CASE 12
+			TSTR:0 = 크림
+		CASE 13
+			TSTR:0 = 카마인
+		CASE 14
+			TSTR:0 = 아갓
+		CASE 15
+			TSTR:0 = 엠버
+		CASE 16
+			TSTR:0 = 오페라
+		CASE 17
+			TSTR:0 = 카디널
+		CASE 18
+			TSTR:0 = 가넷
+		CASE 19
+			TSTR:0 = 카멜리아
+		CASE 20
+			TSTR:0 = 코레일
+		CASE 21
+			TSTR:0 = 스트로베리
+		CASE 22
+			TSTR:0 = 체리
+		CASE 23
+			TSTR:0 = 파프리카
+		CASE 24
+			TSTR:0 = 플레어
+		CASE 25
+			TSTR:0 = 메이플
+		CASE 26
+			TSTR:0 = 애플
+		CASE 27
+			TSTR:0 = 마즈
+		CASE 28
+			TSTR:0 = 안탈레스
+		CASE 29
+			TSTR:0 = 미라
+	ENDSELECT
+ENDIF
+
+;………………………………………………
+;青
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FAIRY_1 , ARG:0
+
+;和名(専らひらがな.鉱石由来は漢字)
+IF ARG:0
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 아오바
+		CASE 1
+			TSTR:0 = 소라
+		CASE 2
+			TSTR:0 = 츠바메
+		CASE 3
+			TSTR:0 = 이즈미
+		CASE 4
+			TSTR:0 = 린도
+		CASE 5
+			TSTR:0 = 루리
+		CASE 6
+			TSTR:0 = 아지사이
+		CASE 7
+			TSTR:0 = 스즈카케
+		CASE 8
+			TSTR:0 = 마츠리
+		CASE 9
+			TSTR:0 = 아오이
+		CASE 10
+			TSTR:0 = 후지
+		CASE 11
+			TSTR:0 = 아야메
+		CASE 12
+			TSTR:0 = 우미
+		CASE 13
+			TSTR:0 = 아이다마
+		CASE 14
+			TSTR:0 = 호타루이시
+		CASE 15
+			TSTR:0 = 벽옥
+		CASE 16
+			TSTR:0 = 청옥
+		CASE 17
+			TSTR:0 = 아사기
+		CASE 18
+			TSTR:0 = 아이카
+		CASE 19
+			TSTR:0 = 미카가미
+		CASE 20
+			TSTR:0 = 코토리
+		CASE 21
+			TSTR:0 = 츠유쿠사
+		CASE 22
+			TSTR:0 = 스미레
+		CASE 23
+			TSTR:0 = 미소라
+		CASE 24
+			TSTR:0 = 시노부
+		CASE 25
+			TSTR:0 = 카스미
+		CASE 26
+			TSTR:0 = 코야
+		CASE 27
+			TSTR:0 = 카스리
+		CASE 28
+			TSTR:0 = 산고
+		CASE 29
+			TSTR:0 = 나기
+	ENDSELECT
+;洋名
+ELSE
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 사피
+		CASE 1
+			TSTR:0 = 마린
+		CASE 2
+			TSTR:0 = 아일
+		CASE 3
+			TSTR:0 = 와토
+		CASE 4
+			TSTR:0 = 아주르
+		CASE 5
+			TSTR:0 = 미스트
+		CASE 6
+			TSTR:0 = 오페리아
+		CASE 7
+			TSTR:0 = 시안
+		CASE 8
+			TSTR:0 = 타코이즈
+		CASE 9
+			TSTR:0 = 민트
+		CASE 10
+			TSTR:0 = 라피스
+		CASE 11
+			TSTR:0 = 라벤더
+		CASE 12
+			TSTR:0 = 아이리스
+		CASE 13
+			TSTR:0 = 베로니카
+		CASE 14
+			TSTR:0 = 샐비어
+		CASE 15
+			TSTR:0 = 프리뮬러
+		CASE 16
+			TSTR:0 = 코발트
+		CASE 17
+			TSTR:0 = 프리즈
+		CASE 18
+			TSTR:0 = 미틸
+		CASE 19
+			TSTR:0 = 블루
+		CASE 20
+			TSTR:0 = 코로나
+		CASE 21
+			TSTR:0 = 피닛
+		CASE 22
+			TSTR:0 = 아이시
+		CASE 23
+			TSTR:0 = 플로시
+		CASE 24
+			TSTR:0 = 울룸
+		CASE 25
+			TSTR:0 = 리겔
+		CASE 26
+			TSTR:0 = 어스
+		CASE 27
+			TSTR:0 = 리라
+		CASE 28
+			TSTR:0 = 시리우스
+		CASE 29
+			TSTR:0 = 스피카
+	ENDSELECT
+ENDIF
+
+;………………………………………………
+;緑
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FAIRY_2 , ARG:0
+
+;和名(専らひらがな.鉱石由来等は漢字)
+;春の七草コンプリートする人が現れると信じて
+IF ARG:0
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 미도리
+		CASE 1
+			TSTR:0 = 와카메
+		CASE 2
+			TSTR:0 = 와카나
+		CASE 3
+			TSTR:0 = 후타바
+		CASE 4
+			TSTR:0 = 요츠바
+		CASE 5
+			TSTR:0 = 미즈나
+		CASE 6
+			;春の七草、菘
+			TSTR:0 = 스즈나
+		CASE 7
+			TSTR:0 = 하즈메
+		CASE 8
+			TSTR:0 = 마츠바
+		CASE 9
+			TSTR:0 = 히스이
+		CASE 10
+			TSTR:0 = 와라비
+		CASE 11
+			TSTR:0 = 녹주석
+		CASE 12
+			TSTR:0 = 취옥
+		CASE 13
+			TSTR:0 = 모에
+		CASE 14
+			TSTR:0 = 요모기
+		CASE 15
+			;春の七草、芹
+			TSTR:0 = 세리
+		CASE 16
+			;春の七草、薺
+			TSTR:0 = 나즈나
+		CASE 17
+			;春の七草、蘿蔔
+			TSTR:0 = 스즈시로
+		CASE 18
+			;春の七草、御形
+			TSTR:0 = 고교
+		CASE 19
+			;春の七草、繁縷
+			TSTR:0 = 하코베라
+		CASE 20
+			;春の七草、仏の座
+			TSTR:0 = 호토케노자
+		CASE 21
+			TSTR:0 = 히이라기
+		CASE 22
+			TSTR:0 = 카코이
+		CASE 23
+			TSTR:0 = 스이바
+		CASE 24
+			TSTR:0 = 츠메쿠사
+		CASE 25
+			TSTR:0 = 하자쿠라
+		CASE 26
+			TSTR:0 = 토쿠사
+		CASE 27
+			TSTR:0 = 와카쿠사
+		CASE 28
+			TSTR:0 = 아즈사
+		CASE 29
+			TSTR:0 = 토키와
+	ENDSELECT
+;洋名
+ELSE
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 제이드
+		CASE 1
+			TSTR:0 = 에메랄드
+		CASE 2
+			TSTR:0 = 터프
+		CASE 3
+			TSTR:0 = 딜
+		CASE 4
+			TSTR:0 = 클로버
+		CASE 5
+			TSTR:0 = 파슬리
+		CASE 6
+			TSTR:0 = 로렐
+		CASE 7
+			TSTR:0 = 리프
+		CASE 8
+			TSTR:0 = 멜론
+		CASE 9
+			TSTR:0 = 믹
+		CASE 10
+			TSTR:0 = 페어
+		CASE 11
+			TSTR:0 = 배즐
+		CASE 12
+			TSTR:0 = 말라카이트
+		CASE 13
+			TSTR:0 = 모스
+		CASE 14
+			TSTR:0 = 아이비
+		CASE 15
+			TSTR:0 = 엘프
+		CASE 16
+			TSTR:0 = 가든
+		CASE 17
+			TSTR:0 = 올리브
+		CASE 18
+			TSTR:0 = 글래스
+		CASE 19
+			TSTR:0 = 샐러드
+		CASE 20
+			TSTR:0 = 재스퍼
+		CASE 21
+			TSTR:0 = 세이지
+		CASE 22
+			TSTR:0 = 피클스
+		CASE 23
+			TSTR:0 = 빌리지언
+		CASE 24
+			TSTR:0 = 포레스타
+		CASE 25
+			TSTR:0 = 플레인
+		CASE 26
+			TSTR:0 = 메두
+		CASE 27
+			TSTR:0 = 마스카트
+		CASE 28
+			TSTR:0 = 브로콜리
+		CASE 29
+			TSTR:0 = 리스
+	ENDSELECT
+ENDIF
+
+;………………………………………………
+;黄
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FAIRY_3 , ARG:0
+
+;和名(専らひらがな.鉱石由来等は漢字)
+IF  ARG:0
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 키히로
+		CASE 1
+			TSTR:0 = 야마부키
+		CASE 2
+			TSTR:0 = 레몬
+		CASE 3
+			TSTR:0 = 이쵸
+		CASE 4
+			TSTR:0 = 이나호
+		CASE 5
+			TSTR:0 = 코무기
+		CASE 6
+			TSTR:0 = 스즈메
+		CASE 7
+			TSTR:0 = 카타바미
+		CASE 8
+			TSTR:0 = 츠쿠시
+		CASE 9
+			TSTR:0 = 쿠누기
+		CASE 10
+			TSTR:0 = 코가네
+		CASE 11
+			TSTR:0 = 탄포포
+		CASE 12
+			TSTR:0 = 코기쿠
+		CASE 13
+			TSTR:0 = 츠와부키
+		CASE 14
+			TSTR:0 = 안즈
+		CASE 15
+			TSTR:0 = 카라타치
+		CASE 16
+			TSTR:0 = 콘고세키
+		CASE 17
+			TSTR:0 = 유즈
+		CASE 18
+			TSTR:0 = 코하쿠
+		CASE 19
+			TSTR:0 = 모에기
+		CASE 20
+			TSTR:0 = 킨츠바
+		CASE 21
+			TSTR:0 = 나노하나
+		CASE 22
+			TSTR:0 = 쿠치나시
+		CASE 23
+			TSTR:0 = 나타네
+		CASE 24
+			TSTR:0 = 카린
+		CASE 25
+			TSTR:0 = 오오바코
+		CASE 26
+			TSTR:0 = 아케비
+		CASE 27
+			TSTR:0 = 카라쿠사
+		CASE 28
+			TSTR:0 = 나츠메
+		CASE 29
+			TSTR:0 = 아마구리
+	ENDSELECT
+;洋名
+ELSE
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 아울룸
+		CASE 1
+			TSTR:0 = 앰버
+		CASE 2
+			TSTR:0 = 니켈
+		CASE 3
+			TSTR:0 = 포테토
+		CASE 4
+			TSTR:0 = 크림
+		CASE 5
+			TSTR:0 = 레몬
+		CASE 6
+			TSTR:0 = 셀레나이트
+		CASE 7
+			TSTR:0 = 시트론
+		CASE 8
+			TSTR:0 = 코인
+		CASE 9
+			TSTR:0 = 하베스트
+		CASE 10
+			TSTR:0 = 파인
+		CASE 11
+			TSTR:0 = 허니
+		CASE 12
+			TSTR:0 = 미모자
+		CASE 13
+			TSTR:0 = 카펠라
+		CASE 14
+			TSTR:0 = 폴라리스
+		CASE 15
+			TSTR:0 = 크롬
+		CASE 16
+			TSTR:0 = 플라티나
+		CASE 17
+			TSTR:0 = 치탄
+		CASE 18
+			TSTR:0 = 루틸
+		CASE 19
+			TSTR:0 = 지르콘
+		CASE 20
+			TSTR:0 = 페리오도르
+		CASE 21
+			TSTR:0 = 시트린
+		CASE 22
+			TSTR:0 = 사도닉스
+		CASE 23
+			TSTR:0 = 다이아
+		CASE 24
+			TSTR:0 = 마론
+		CASE 25
+			TSTR:0 = 수플레
+		CASE 26
+			TSTR:0 = 푸딩
+		CASE 27
+			TSTR:0 = 오니온
+		CASE 28
+			TSTR:0 = 사프랑
+		CASE 29
+			TSTR:0 = 머스타드
+	ENDSELECT
+ENDIF
+
+;………………………………………………
+;黒・ゾンビ
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_FAIRY_4 , ARG:1
+;和名(専らひらがな.鉱石由来等は漢字)
+IF ARG:1
+	LOCAL = RAND:30
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 요이
+		CASE 1
+			TSTR:0 = 야미
+		CASE 2
+			TSTR:0 = 토바리
+		CASE 3
+			TSTR:0 = 미타마
+		CASE 4
+			TSTR:0 = 하카나
+		CASE 5
+			TSTR:0 = 흑요석
+		CASE 6
+			TSTR:0 = 요미
+		CASE 7
+			TSTR:0 = 누바타마
+		CASE 8
+			TSTR:0 = 코모리
+		CASE 9
+			TSTR:0 = 네부리
+		CASE 10
+			TSTR:0 = 카레키
+		CASE 11
+			TSTR:0 = 타타리
+		CASE 12
+			TSTR:0 = 츠이
+		CASE 13
+			TSTR:0 = 토코요
+		CASE 14
+			TSTR:0 = 토무라
+		CASE 15
+			TSTR:0 = 스미
+		CASE 16
+			TSTR:0 = 나유타
+		CASE 17
+			TSTR:0 = 이자나
+		CASE 18
+			TSTR:0 = 츠쿠요
+		CASE 19
+			TSTR:0 = 키사카
+		CASE 20
+			TSTR:0 = 스세리
+		CASE 21
+			TSTR:0 = 츠쿠모
+		CASE 22
+			TSTR:0 = 니라이
+		CASE 23
+			TSTR:0 = 요모츠
+		CASE 24
+			TSTR:0 = 미카즈라
+		CASE 25
+			TSTR:0 = 이쿠사
+		CASE 26
+			TSTR:0 = 히사메
+		CASE 27
+			TSTR:0 = 츠마구시
+		CASE 28
+			TSTR:0 = 린네
+		CASE 29
+			TSTR:0 = 카쿠리
+	ENDSELECT
+;洋名
+ELSE
+	LOCAL = RAND:32
+	SELECTCASE LOCAL
+		CASE 0
+			TSTR:0 = 애슐리
+		CASE 1
+			TSTR:0 = 포실
+		CASE 2
+			TSTR:0 = 브로네
+		CASE 3
+			TSTR:0 = 콜
+		CASE 4
+			TSTR:0 = 아니마
+		CASE 5
+			TSTR:0 = 피어
+		CASE 6
+			TSTR:0 = 솔로우
+		CASE 7
+			TSTR:0 = 카테드랄
+		CASE 8
+			TSTR:0 = 헤이트
+		CASE 9
+			TSTR:0 = 모운
+		CASE 10
+			TSTR:0 = 루인
+		CASE 11
+			TSTR:0 = 카르마
+		CASE 12
+			TSTR:0 = 사라
+		CASE 13
+			TSTR:0 = 소마
+		CASE 14
+			TSTR:0 = 암리타
+		CASE 15
+			TSTR:0 = 모리온
+		CASE 16
+			TSTR:0 = 페인
+		CASE 17
+			TSTR:0 = 커스
+		CASE 18
+			TSTR:0 = 셰이드
+		CASE 19
+			TSTR:0 = 소울
+		CASE 20
+			TSTR:0 = 아스터
+		CASE 21
+			TSTR:0 = 아카샤
+		CASE 22
+			TSTR:0 = 에틸
+		CASE 23
+			TSTR:0 = 크론
+		CASE 24
+			TSTR:0 = 크래프트
+		CASE 25
+			TSTR:0 = 신
+		CASE 26
+			TSTR:0 = 비오
+		CASE 27
+			TSTR:0 = 에스크리다
+		CASE 28
+			TSTR:0 = 네로
+		CASE 29
+			TSTR:0 = 느와르
+		CASE 30
+			TSTR:0 = 쇼콜라
+		CASE 31
+			TSTR:0 = 카페
+	ENDSELECT
+ENDIF
+
+;………………………………………………
+;人形スペル
+;ARG:0……命名分岐（現在未使用）
+;………………………………………………
+@RANDOM_N_SPELL , ARG:0
+LOCAL = RAND:31
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = 오토메
+	CASE 1
+		TSTR:0 = 불란서
+	CASE 2
+		TSTR:0 = 오를레앙
+	CASE 3
+		TSTR:0 = 화란
+	CASE 4
+		TSTR:0 = 로서아
+	CASE 5
+		TSTR:0 = 륜돈
+	CASE 6
+		TSTR:0 = 서장
+	CASE 7
+		TSTR:0 = 쿄우
+	CASE 8
+		TSTR:0 = 사쿠린
+	CASE 9
+		TSTR:0 = 이나닌
+	CASE 10
+		TSTR:0 = 레기온
+	CASE 11
+		TSTR:0 = 워
+	CASE 12
+		TSTR:0 = 찬트
+	CASE 13
+		TSTR:0 = 크루세
+	CASE 14
+		TSTR:0 = 데빌리
+	CASE 15
+		TSTR:0 = 키뇨르
+	CASE 16
+		TSTR:0 = 인시
+	CASE 17
+		TSTR:0 = 카미카제
+	CASE 18
+		TSTR:0 = 밀라세티
+	CASE 19
+		TSTR:0 = 시커
+	CASE 20
+		TSTR:0 = 미라이
+	CASE 21
+		TSTR:0 = 트립
+	CASE 22
+		TSTR:0 = 스쿼트
+	CASE 23
+		TSTR:0 = 솔저
+	CASE 24
+		TSTR:0 = 포크
+	CASE 25
+		TSTR:0 = 파랄
+	CASE 26
+		TSTR:0 = 퍼핏
+	CASE 27
+		TSTR:0 = ＳＰ
+	CASE 28
+		TSTR:0 = 레인보
+	CASE 29
+		TSTR:0 = 리모트
+	CASE 30
+		TSTR:0 = 스펙트르
+ENDSELECT
+
+;………………………………………………
+;人形（着せ替え人形の名前から）
+;ARG:0……命名分岐（現在未使用）
+;………………………………………………
+@RANDOM_N_DOLL , ARG:0
+
+LOCAL = RAND:58
+;リカちゃんファミリー（アリスちゃんはさすがに入れられないや）←入れちゃえｗ
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = 리카
+	CASE 1
+		TSTR:0 = 마리아
+	CASE 2
+		TSTR:0 = 모에
+	CASE 3
+		TSTR:0 = 미키
+	CASE 4
+		TSTR:0 = 마키
+	CASE 5
+		TSTR:0 = 아오이
+	CASE 6
+		TSTR:0 = 이즈미
+	CASE 7
+		TSTR:0 = 카코
+	CASE 8
+		TSTR:0 = 미쿠
+	;ジェニーちゃんファミリー（メイリンちゃんとエリーちゃんはｒｙ）←入れちゃえｗ
+	CASE 9
+		TSTR:0 = 제니
+	CASE 10
+		TSTR:0 = 시나
+	CASE 11
+		TSTR:0 = 플로라
+	CASE 12
+		TSTR:0 = 줄리아
+	CASE 13
+		TSTR:0 = 레이프
+	CASE 14
+		TSTR:0 = 키사라
+	CASE 15
+		TSTR:0 = 마린
+	CASE 16
+		TSTR:0 = 사쿠라코
+	CASE 17
+		TSTR:0 = 리나
+	CASE 18
+		TSTR:0 = 율리시아
+	CASE 19
+		TSTR:0 = 수지
+	CASE 20
+		TSTR:0 = 리에
+	CASE 21
+		TSTR:0 = 루이즈
+	CASE 22
+		TSTR:0 = 엘리제
+	CASE 23
+		TSTR:0 = 프랑소와
+	CASE 24
+		TSTR:0 = 로자나
+	CASE 25
+		TSTR:0 = 리사
+	CASE 26
+		TSTR:0 = 아야
+	CASE 27
+		TSTR:0 = 셰리
+	CASE 28
+		TSTR:0 = 애니
+	CASE 29
+		TSTR:0 = 사야카
+	CASE 30
+		TSTR:0 = 타마키
+	CASE 31
+		TSTR:0 = 시온
+	CASE 32
+		TSTR:0 = 로벨리아
+	CASE 33
+		TSTR:0 = 쥬디
+	CASE 34
+		TSTR:0 = 나오미
+	CASE 35
+		TSTR:0 = 사유리
+	CASE 36
+		TSTR:0 = 에리카
+	CASE 37
+		TSTR:0 = 아벨
+	CASE 38
+		TSTR:0 = 올리브
+	CASE 39
+		TSTR:0 = 플로라
+	CASE 40
+		TSTR:0 = 마리
+	CASE 41
+		TSTR:0 = 아야노
+	CASE 42
+		TSTR:0 = 제인
+	CASE 43
+		TSTR:0 = 로라
+	CASE 44
+		TSTR:0 = 카오리
+	CASE 45
+		TSTR:0 = 나나코
+	CASE 46
+		TSTR:0 = 치히로
+	CASE 47
+		TSTR:0 = 아이코
+	CASE 48
+		TSTR:0 = 미츠키
+	CASE 49
+		TSTR:0 = 티모테
+	CASE 50
+		TSTR:0 = 밀피유
+	CASE 51
+		TSTR:0 = 엑셀리나
+	;バービーちゃん（友達はいません）
+	CASE 52
+		TSTR:0 = 바비
+	;アリスの姉と妹
+	CASE 53
+		TSTR:0 = 로리나
+	CASE 54
+		TSTR:0 = 이디스
+	;というわけでｗ
+	CASE 55
+		TSTR:0 = 메이린
+	CASE 56
+		TSTR:0 = 엘리
+	CASE 57
+		TSTR:0 = 앨리스
+ENDSELECT
+
+;………………………………………………
+;地獄鬼（仏教関連）
+;………………………………………………
+@RANDOM_N_ONI_1
+LOCAL = RAND:43
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = 액귀
+	CASE 1
+		TSTR:0 = 야차
+	CASE 2
+		TSTR:0 = 아그리
+	CASE 3
+		TSTR:0 = 마후라가
+	CASE 4
+		TSTR:0 = 킨나리
+	CASE 5
+		TSTR:0 = 아수라
+	CASE 6
+		TSTR:0 = 간다르바
+	CASE 7
+		TSTR:0 = 약시니
+	CASE 8
+		TSTR:0 = 아난타
+	CASE 9
+		TSTR:0 = 셰샤
+	CASE 10
+		TSTR:0 = 궁기
+	CASE 11
+		TSTR:0 = 혼돈
+	CASE 12
+		TSTR:0 = 도올
+	CASE 13
+		TSTR:0 = 도철
+	CASE 14
+		TSTR:0 = 압사라
+	CASE 15
+		TSTR:0 = 메나카
+	CASE 16
+		TSTR:0 = 우르바시
+	CASE 17
+		TSTR:0 = 아난다
+	CASE 18
+		TSTR:0 = 마하
+	CASE 19
+		TSTR:0 = 미륵
+	CASE 20
+		TSTR:0 = 샤크티
+	CASE 21
+		TSTR:0 = 탄트라
+	CASE 22
+		TSTR:0 = 만트라
+	CASE 23
+		TSTR:0 = 아쇼카
+	CASE 24
+		TSTR:0 = 슈라
+	CASE 25
+		TSTR:0 = 락샤사
+	CASE 26
+		TSTR:0 = 고쿠사
+	CASE 27
+		TSTR:0 = 이치도
+	CASE 28
+		TSTR:0 = 세키마
+	CASE 29
+		TSTR:0 = 하이가
+	CASE 30
+		TSTR:0 = 테츠간
+	CASE 31
+		TSTR:0 = 킨부
+	CASE 32
+		TSTR:0 = 켄쥬
+	CASE 33
+		TSTR:0 = 코운
+	CASE 34
+		TSTR:0 = 무운
+	CASE 35
+		TSTR:0 = 카카
+	CASE 36
+		TSTR:0 = 나카
+	CASE 37
+		TSTR:0 = 요메이
+	CASE 38
+		TSTR:0 = 슈켄다이
+	CASE 39
+		TSTR:0 = 우하츠라
+	CASE 40
+		TSTR:0 = 쿠모츠즈
+	CASE 41
+		TSTR:0 = 분다리
+	CASE 42
+		TSTR:0 = 하도마
+ENDSELECT
+
+;………………………………………………
+;旧都鬼（日本関連…だけど足りないから仏教関連も借りる）
+;………………………………………………
+@RANDOM_N_ONI_2
+LOCAL = RAND:30
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = 마시바
+	CASE 1
+		TSTR:0 = 라쇼
+	CASE 2
+		TSTR:0 = 코코
+	CASE 3
+		TSTR:0 = 아카메
+	CASE 4
+		TSTR:0 = 아다치
+	CASE 5
+		TSTR:0 = 히보코
+	CASE 6
+		TSTR:0 = 모레
+	CASE 7
+		TSTR:0 = 아테루이
+	CASE 8
+		TSTR:0 = 에미시
+	CASE 9
+		TSTR:0 = 키카타
+	CASE 10
+		TSTR:0 = 우라
+	CASE 11
+		TSTR:0 = 콘비라
+	CASE 12
+		TSTR:0 = 바사라
+	CASE 13
+		TSTR:0 = 메키라
+	CASE 14
+		TSTR:0 = 아니라
+	CASE 15
+		TSTR:0 = 산시라
+	CASE 16
+		TSTR:0 = 인다라
+	CASE 17
+		TSTR:0 = 하이라
+	CASE 18
+		TSTR:0 = 마코라
+	CASE 19
+		TSTR:0 = 신나라
+	CASE 20
+		TSTR:0 = 샤토라
+	CASE 21
+		TSTR:0 = 피카라
+	CASE 22
+		TSTR:0 = 스즈카
+	CASE 23
+		TSTR:0 = 아쿠로
+	CASE 24
+		TSTR:0 = 스쿠나
+	CASE 25
+		TSTR:0 = 욘지
+	CASE 26
+		TSTR:0 = 산지
+	CASE 27
+		TSTR:0 = 세키가쿠
+	CASE 28
+		TSTR:0 = 아오소카쿠
+	CASE 29
+		TSTR:0 = 아마노쟈
+ENDSELECT
+
+;………………………………………………
+;小悪魔名(オトコのみ)
+;………………………………………………
+@RANDOM_N_DEVIL
+LOCAL = RAND:74
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = 바알
+		NICKNAME = 서열 1위의 왕
+	CASE 1
+		TSTR:0 = 아가레스
+		NICKNAME = 서열 2위의 대공작
+	CASE 2
+		TSTR:0 = 바사고
+		NICKNAME = 서열 3위의 지옥의 군주
+	CASE 3
+		TSTR:0 = 가미진
+		NICKNAME = 서열 4위의 지옥의 대후작
+	CASE 4
+		TSTR:0 = 마르바스
+		NICKNAME = 서열 5위의 지옥의 대총재
+	CASE 5
+		TSTR:0 = 발레포르
+		NICKNAME = 서열 6위의 지옥의 공작
+	CASE 6
+		TSTR:0 = 아몬
+		NICKNAME = 서열 7위의 위대한 후작
+	CASE 7
+		TSTR:0 = 바르바토스
+		NICKNAME = 서열 8위의 백작이자 공작
+	CASE 8
+		TSTR:0 = 파이몬
+		NICKNAME = 서열 9위의 지옥의 왕
+	CASE 9
+		TSTR:0 = 부에르
+		NICKNAME = 서열 10위의 지옥의 총재
+	CASE 10
+		TSTR:0 = 구시온
+		NICKNAME = 서열 11위의 지옥의 대공작
+	CASE 11
+		TSTR:0 = 시트리
+		NICKNAME = 서열 12위의 지옥의 위대한 군주
+	CASE 12
+		TSTR:0 = 벨레트
+		NICKNAME = 서열 13위의 두려운 대왕
+	CASE 13
+		TSTR:0 = 레라지에
+		NICKNAME = 서열 14위의 지옥의 대후작
+	CASE 14
+		TSTR:0 = 엘리고스
+		NICKNAME = 서열 15위의 지옥의 공작
+	CASE 15
+		TSTR:0 = 제파르
+		NICKNAME = 서열 16위의 지옥의 대공작
+	CASE 16
+		TSTR:0 = 보티스
+		NICKNAME = 서열 17위의 지옥의 대총재이자 백작
+	CASE 17
+		TSTR:0 = 바틴
+		NICKNAME = 서열 18위의 지옥의 대공작
+	CASE 18
+		TSTR:0 = 살레오스
+		NICKNAME = 서열 19위의 위대하며 강력한 공작
+	CASE 19
+		TSTR:0 = 푸르손
+		NICKNAME = 서열 20위의 왕
+	CASE 20
+		TSTR:0 = 모락스
+		NICKNAME = 서열 21위의 위대한 백작이자 총재
+	CASE 21
+		TSTR:0 = 이포스
+		NICKNAME = 서열 22위의 백작이자 군주
+	CASE 22
+		TSTR:0 = 아임
+		NICKNAME = 서열 23위의 지옥의 공작
+	CASE 23
+		TSTR:0 = 나베리우스
+		NICKNAME = 서열 24위의 용맹한 후작
+	CASE 24
+		TSTR:0 = 글라샬라볼라스
+		NICKNAME = 서열 25위의 대총재
+	CASE 25
+		TSTR:0 = 부네
+		NICKNAME = 서열 26위의 위대하며 강력한 공작
+	CASE 26
+		TSTR:0 = 로노웨
+		NICKNAME = 서열 27위의 후작이자 대백작
+	CASE 27
+		TSTR:0 = 베리트
+		NICKNAME = 서열 28위의 지옥의 공작
+	CASE 28
+		TSTR:0 = 아스타로트
+		NICKNAME = 서열 29위의 대공작
+	CASE 29
+		TSTR:0 = 포르네우스
+		NICKNAME = 서열 30위의 지옥의 대후작
+	CASE 30
+		TSTR:0 = 포라스
+		NICKNAME = 서열 31위의 위대한 총재
+	CASE 31
+		TSTR:0 = 아스모데우스
+		NICKNAME = 서열 32위의 위대한 왕
+	CASE 32
+		TSTR:0 = 가프
+		NICKNAME = 서열 33위의 대총재이자 강대한 군주
+	CASE 33
+		TSTR:0 = 푸르푸르
+		NICKNAME = 서열 34위의 지옥의 대백작
+	CASE 34
+		TSTR:0 = 마르코시아스
+		NICKNAME = 서열 35위의 지옥의 위대한 후작
+	CASE 35
+		TSTR:0 = 스토라스
+		NICKNAME = 서열 36위의 지옥의 군주
+	CASE 36
+		TSTR:0 = 피닉스
+		NICKNAME = 서열 37위의 위대한 후작
+	CASE 37
+		TSTR:0 = 할파스
+		NICKNAME = 서열 38위의 지옥의 백작
+	CASE 38
+		TSTR:0 = 말파스
+		NICKNAME = 서열 39위의 강대한 대총재
+	CASE 39
+		TSTR:0 = 라움
+		NICKNAME = 서열 40위의 지옥의 위대한 백작
+	CASE 40
+		TSTR:0 = 포칼로르
+		NICKNAME = 서열 41위의 지옥의 대공작
+	CASE 41
+		TSTR:0 = 베파르
+		NICKNAME = 서열 42위의 위대한 공작
+	CASE 42
+		TSTR:0 = 사브나크
+		NICKNAME = 서열 43위의 위대하며 강대한 후작
+	CASE 43
+		TSTR:0 = 샥스
+		NICKNAME = 서열 44위의 지옥의 대후작
+	CASE 44
+		TSTR:0 = 비네
+		NICKNAME = 서열 45위의 위대한 왕이자 백작
+	CASE 45
+		TSTR:0 = 비프론즈
+		NICKNAME = 서열 46위의 지옥의 백작
+	CASE 46
+		TSTR:0 = 우발
+		NICKNAME = 서열 47위의 강대하며 위대한 공작
+	CASE 47
+		TSTR:0 = 하겐티
+		NICKNAME = 서열 48위의 총재
+	CASE 48
+		TSTR:0 = 크로켈
+		NICKNAME = 서열 49위의 위대한 공작
+	CASE 49
+		TSTR:0 = 푸르카스
+		NICKNAME = 서열 50위의 지옥의 기사
+	CASE 50
+		TSTR:0 = 발람
+		NICKNAME = 서열 51위의 위대한 힘 센 왕
+	CASE 51
+		TSTR:0 = 알로켈
+		NICKNAME = 서열 52위의 강대한 대공작
+	CASE 52
+		TSTR:0 = 카임
+		NICKNAME = 서열 53위의 총재
+	CASE 53
+		TSTR:0 = 무르무르
+		NICKNAME = 서열 54위의 지옥의 대공작이자 백작
+	CASE 54
+		TSTR:0 = 오로바스
+		NICKNAME = 서열 55위의 위대한 군주
+	CASE 55
+		;TSTR:0 = 그레모리
+		;NICKNAME = 서열 56위의 대공작
+		;変更者注釈 グレモリー（＝ゴモリー）72柱の中では唯一の女性型悪魔とされています
+		;なのでコレが出たらやり直し！ｗ
+		RESTART
+	CASE 56
+		TSTR:0 = 오세
+		NICKNAME = 서열 57위의 지옥의 대총재
+	CASE 57
+		TSTR:0 = 아미
+		NICKNAME = 서열 58위의 대총재
+	CASE 58
+		TSTR:0 = 오리아스
+		NICKNAME = 서열 59위의 위대한 후작
+	CASE 59
+		TSTR:0 = 바풀라
+		NICKNAME = 서열 60위의 위대하며 강대한 공작
+	CASE 60
+		TSTR:0 = 자간
+		NICKNAME = 서열 61위의 대왕이자 총재
+	CASE 61
+		TSTR:0 = 발라크
+		NICKNAME = 서열 62위의 지옥의 대총재
+	CASE 62
+		TSTR:0 = 안드라스
+		NICKNAME = 서열 63위의 대후작
+	CASE 63
+		TSTR:0 = 플라우로스
+		NICKNAME = 서열 64위의 지옥의 대공작
+	CASE 64
+		TSTR:0 = 안드레알푸스
+		NICKNAME = 서열 65위의 대후작
+	CASE 65
+		TSTR:0 = 키마리스
+		NICKNAME = 서열 66위의 위대하며 강력한 후작
+	CASE 66
+		TSTR:0 = 암두스키아스
+		NICKNAME = 서열 67위의 지옥의 공작
+	CASE 67
+		TSTR:0 = 벨리알
+		NICKNAME = 서열 68위의 강대하며 강력한 왕
+	CASE 68
+		TSTR:0 = 데카라비아
+		NICKNAME = 서열 69위의 지옥의 대후작
+	CASE 69
+		TSTR:0 = 세에레
+		NICKNAME = 서열 70위의 지옥의 강대한 군주
+	CASE 70
+		TSTR:0 = 단탈리온
+		NICKNAME = 서열 71위의 대공작
+	CASE 71
+		TSTR:0 = 안드로말리우스
+		NICKNAME = 서열 72위의 위대한 백작
+	CASE 72
+		TSTR:0 = 벨제부브
+		NICKNAME = 마계의 왕자이자 마신의 군주
+	CASE 73
+		TSTR:0 = 루시퍼
+		NICKNAME = 마계의 황제이자 최고위 악마
+ENDSELECT
+
+;………………………………………………
+;ランダム少年名
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY , ARG:0
+
+;大量の変更はバグの温床なのでココで渡しておく
+LOCAL:1 = ARG:0
+
+REPEAT 20
+	LOCAL:(COUNT+10) = 0
+	LOCALS:COUNT = 0
+REND
+;後半部はそれぞれ
+;LOCAL:10お/11ろう/12じ/13ぞう/14へい/15えもん/16すけ/17いち/18よ/19き/20王　に対応して除外
+;ひらがなの場合王は出ない.また、プライド高いがないと3/4の確率で出ない(レアネーム)
+LOCAL = RAND:100
+SIF LOCAL:1 || (TALENT:16 == 0 && LOCAL < 75)
+	LOCAL:20 = 1
+;妖精の場合子は出ない
+SIF TALENT:200
+	LOCAL:10 = 1
+LOCAL = RAND:33
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = \@(LOCAL:1) ? 하루 # 하루\@
+		LOCAL:16 = 1
+	CASE 1
+		TSTR:0 = \@(LOCAL:1) ? 나츠 # 나츠\@
+		LOCAL:12 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+	CASE 2
+		TSTR:0 = \@(LOCAL:1) ? 아키 # 아키\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 3
+		TSTR:0 = \@(LOCAL:1) ? 후유 # 후유\@
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+	CASE 4
+		TSTR:0 = \@(LOCAL:1) ? 요시 # 요시\@
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 5
+		TSTR:0 = \@(LOCAL:1) ? 유우 # 유우\@
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 6
+		TSTR:0 = \@(LOCAL:1) ? 노부 # 노부\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 7
+		TSTR:0 = \@(LOCAL:1) ? 요리 # 요리\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:20 = 1
+	CASE 8
+		TSTR:0 = \@(LOCAL:1) ? 미즈 # 미즈\@
+		LOCAL:10 = 1
+		LOCAL:11 = 1
+	CASE 9
+		TSTR:0 = \@(LOCAL:1) ? 아사 # 아사\@
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:20 = 1
+	CASE 10
+		TSTR:0 = \@(LOCAL:1) ? 타마 # 타마\@
+		LOCAL:14 = 1
+	CASE 11
+		TSTR:0 = \@(LOCAL:1) ? 유미 # 유미\@
+		LOCAL:11 = 1
+		LOCAL:19 = 1
+	CASE 12
+		TSTR:0 = \@(LOCAL:1) ? 야루 # 야루\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 13
+		TSTR:0 = \@(LOCAL:1) ? 요시 # 요시\@
+		LOCAL:11 = 1
+		LOCAL:12 = 1
+		LOCAL:13 = 1
+		LOCAL:14 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 14
+		TSTR:0 = \@(LOCAL:1) ? 리 # 리\@
+		LOCAL:11 = 1
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 15
+		IF LOCAL:1
+			TSTR:0 = 후우
+			LOCAL:11 = 1
+			LOCAL:19 = 1
+		ELSE
+			TSTR:0 = 후우
+		ENDIF
+		LOCAL:13 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+	CASE 16
+			TSTR:0 = \@(LOCAL:1) ? 츠구 # 츠구\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 17
+		TSTR:0 = \@(LOCAL:1) ? 후미 # 후미\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 18
+		IF LOCAL:1
+			TSTR:0 = 우타
+			LOCAL:13 = 1
+		ELSE
+			TSTR:0 = 우타
+		ENDIF
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 19
+		TSTR:0 = \@(LOCAL:1) ? 사치 # 사치\@
+		LOCAL:11 = 1
+		LOCAL:14 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 20
+		TSTR:0 = \@(LOCAL:1) ? 스미 # 스미\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+	CASE 21
+		TSTR:0 = \@(LOCAL:1) ? 마츠 # 마츠\@
+		LOCAL:12 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 22
+		TSTR:0 = \@(LOCAL:1) ? 키리 # 키리\@
+		LOCAL:11 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:19 = 1
+	CASE 23
+		TSTR:0 = \@(LOCAL:1) ? 바라 # 바라\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 24
+		TSTR:0 = \@(LOCAL:1) ? 유우 # 유우\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+	CASE 25
+		TSTR:0 = \@(LOCAL:1) ? 시즈 # 시즈\@
+		LOCAL:11 = 1
+	CASE 26
+		TSTR:0 = \@(LOCAL:1) ? 스즈 # 스즈\@
+	CASE 27
+		TSTR:0 = \@(LOCAL:1) ? 신 # 신\@
+		LOCAL:12 = 1
+		LOCAL:13 = 1
+		LOCAL:17 = 1
+		LOCAL:20 = 1
+	CASE 28
+		TSTR:0 = \@(LOCAL:1) ? 쿄 # 쿄\@
+		LOCAL:11 = 1
+		LOCAL:13 = 1
+		LOCAL:15 = 1
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+	CASE 29
+		TSTR:0 = \@(LOCAL:1) ? 하루 # 하루\@
+		LOCAL:16 = 1
+		LOCAL:17 = 1
+	CASE 30
+		TSTR:0 = \@(LOCAL:1) ? 토요 # 토요\@
+		LOCAL:11 = 1
+		LOCAL:17 = 1
+		LOCAL:18 = 1
+		LOCAL:19 = 1
+		LOCAL:20 = 1
+	CASE 31
+		TSTR:0 = \@(LOCAL:1) ? 토시 # 토시\@
+		LOCAL:11 = 1
+		LOCAL:18 = 1
+		LOCAL:20 = 1
+	CASE 32
+		TSTR:0 = \@(LOCAL:1) ? 히데 # 히데\@
+		LOCAL:11 = 1
+		LOCAL:20 = 1
+ENDSELECT
+
+LOCAL:2 = 0
+;後半部生成
+REPEAT 11
+	IF LOCAL:(10+COUNT) == 0
+		LOCAL:2 += 1
+		LOCAL:(20+LOCAL:2) = COUNT
+	ENDIF
+REND
+
+LOCALS = %TSTR:0%
+
+TRYCALLFORM RANDOM_N_BOY_{LOCAL:(21+RAND:(LOCAL:2))} , LOCAL:1
+
+TSTR:0 = %LOCALS%%TSTR:0%
+
+;………………………………………………
+;ランダム名末尾0
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_0 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 오
+ELSEIF LOCAL == 0
+	TSTR:0 = 오
+ELSEIF LOCAL == 1 && TSTR:0 != "오"
+	TSTR:0 = 오
+ELSE
+	TSTR:0 = 오
+ENDIF
+
+;………………………………………………
+;ランダム名末尾1
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_1 , ARG:0
+LOCAL = RAND:2
+IF ARG:0
+	TSTR:0 = 로
+ELSEIF LOCAL == 0
+	TSTR:0 = 로
+ELSE
+	TSTR:0 = 로
+ENDIF
+
+;………………………………………………
+;ランダム名末尾2
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_2 , ARG:0
+LOCAL = RAND:4
+IF ARG:0
+	TSTR:0 = 지
+ELSEIF LOCAL == 0
+	TSTR:0 = 지
+ELSEIF LOCAL == 1
+	TSTR:0 = 지
+ELSEIF LOCAL == 2
+	TSTR:0 = 지
+ELSE
+	TSTR:0 = 지
+ENDIF
+
+;………………………………………………
+;ランダム名末尾3
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_3 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 조
+ELSEIF LOCAL == 0
+	TSTR:0 = 조
+ELSEIF LOCAL == 1
+	TSTR:0 = 조
+ELSE
+	TSTR:0 = 조
+ENDIF
+
+;………………………………………………
+;ランダム名末尾4
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_4 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 헤
+ELSEIF LOCAL == 0
+	TSTR:0 = 헤
+ELSEIF LOCAL == 1
+	TSTR:0 = 헤
+ELSE
+	TSTR:0 = 헤
+ENDIF
+
+;………………………………………………
+;ランダム名末尾5
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_5 , ARG:0
+IF ARG:0
+	TSTR:0 = 에몬
+ELSE
+	TSTR:0 = 에몬
+ENDIF
+
+;………………………………………………
+;ランダム名末尾6
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_6 , ARG:0
+LOCAL = RAND:3
+IF ARG:0
+	TSTR:0 = 스케
+ELSEIF LOCAL == 0
+	TSTR:0 = 스케
+ELSEIF LOCAL == 1
+	TSTR:0 = 스케
+ELSE
+	TSTR:0 = 스케
+ENDIF
+
+;………………………………………………
+;ランダム名末尾7
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_7 , ARG:0
+LOCAL = RAND:5
+IF ARG:0
+	TSTR:0 = 이치
+ELSEIF LOCAL == 0
+	TSTR:0 = 이치
+ELSE
+	TSTR:0 = 이치
+ENDIF
+
+;………………………………………………
+;ランダム名末尾8
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_8 , ARG:0
+LOCAL = RAND:2
+IF ARG:0
+	TSTR:0 = 요
+ELSEIF LOCAL == 0
+	TSTR:0 = 요
+ELSE
+	TSTR:0 = 요
+ENDIF
+
+;………………………………………………
+;ランダム名末尾9
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_9 , ARG:0
+LOCAL = RAND:2
+IF ARG:0
+	TSTR:0 = 키
+ELSEIF LOCAL == 0
+	TSTR:0 = 키
+ELSE
+	TSTR:0 = 키
+ENDIF
+
+;………………………………………………
+;ランダム名末尾10
+;ARG:0……命名分岐
+;………………………………………………
+@RANDOM_N_BOY_10 , ARG:0
+LOCAL = RAND:2
+IF ARG:0
+	TSTR:0 = 오
+ELSEIF LOCAL == 0
+	TSTR:0 = 오
+ELSE
+	TSTR:0 = 오
+ENDIF
+
+;………………………………………………
+;一般外国名(オトコ版)
+;………………………………………………
+@RANDOM_N_BOYPOPNAME
+LOCAL = RAND:215
+SELECTCASE LOCAL
+	;英語
+	CASE 0
+		TSTR:0 = 아론
+	CASE 1
+		TSTR:0 = 아벨
+	CASE 2
+		TSTR:0 = 에이브러험
+	CASE 3
+		TSTR:0 = 아달베르트
+	CASE 4
+		TSTR:0 = 애덤
+	CASE 5
+		TSTR:0 = 아도니스
+	CASE 6
+		TSTR:0 = 앨런
+	CASE 7
+		TSTR:0 = 알렉스
+	CASE 8
+		TSTR:0 = 앨렌
+	CASE 9
+		TSTR:0 = 안드레아
+	CASE 10
+		TSTR:0 = 아놀드
+	CASE 11
+		TSTR:0 = 볼드윈
+	CASE 12
+		TSTR:0 = 버나드
+	CASE 13
+		TSTR:0 = 바비
+	CASE 14
+		TSTR:0 = 브래들리
+	CASE 15
+		TSTR:0 = 브라운
+	CASE 16
+		TSTR:0 = 찰스
+	CASE 17
+		TSTR:0 = 크리스티
+	CASE 18
+		TSTR:0 = 척
+	CASE 19
+		TSTR:0 = 클라크
+	CASE 20
+		TSTR:0 = 코난
+	CASE 21
+		TSTR:0 = 다미앤
+	CASE 22
+		TSTR:0 = 도날드
+	CASE 23
+		TSTR:0 = 더클라스
+	CASE 24
+		TSTR:0 = 에디
+	CASE 25
+		TSTR:0 = 에드워드
+	CASE 26
+		TSTR:0 = 퍼거스
+	CASE 27
+		TSTR:0 = 프랜시스
+	CASE 28
+		TSTR:0 = 프레데릭
+	CASE 29
+		TSTR:0 = 제랄드
+	CASE 30
+		TSTR:0 = 글렌
+	CASE 31
+		TSTR:0 = 그레고리
+	CASE 32
+		TSTR:0 = 해럴드
+	CASE 33
+		TSTR:0 = 이안
+	CASE 34
+		TSTR:0 = 제리
+	CASE 35
+		TSTR:0 = 지저스
+	CASE 36
+		TSTR:0 = 존
+	CASE 37
+		TSTR:0 = 조셉
+	CASE 38
+		TSTR:0 = 켄
+	CASE 39
+		TSTR:0 = 란버트
+	CASE 40
+		TSTR:0 = 로렌스
+	CASE 41
+		TSTR:0 = 리
+	CASE 42
+		TSTR:0 = 랜스
+	CASE 43
+		TSTR:0 = 로토
+	CASE 44
+		TSTR:0 = 루카스
+	CASE 45
+		TSTR:0 = 마커스
+	CASE 46
+		TSTR:0 = 맥스
+	CASE 47
+		TSTR:0 = 멀린
+	CASE 48
+		TSTR:0 = 닐
+	CASE 49
+		TSTR:0 = 니콜라스
+	CASE 50
+		TSTR:0 = 오스왈드
+	CASE 51
+		TSTR:0 = 폴
+	CASE 52
+		TSTR:0 = 피터
+	CASE 53
+		TSTR:0 = 랄프
+	CASE 54
+		TSTR:0 = 레이먼드
+	CASE 55
+		TSTR:0 = 라이언
+	CASE 56
+		TSTR:0 = 리차드
+	CASE 57
+		TSTR:0 = 라이스
+	CASE 58
+		TSTR:0 = 롤랜드
+	CASE 59
+		TSTR:0 = 루퍼스
+	CASE 60
+		TSTR:0 = 러셀
+	CASE 61
+		TSTR:0 = 샘
+	CASE 62
+		TSTR:0 = 시드
+	CASE 63
+		TSTR:0 = 사일러스
+	CASE 64
+		TSTR:0 = 사이몬
+	CASE 65
+		TSTR:0 = 스테판
+	CASE 66
+		TSTR:0 = 스티브
+	CASE 67
+		TSTR:0 = 테리
+	CASE 68
+		TSTR:0 = 토마스
+	CASE 69
+		TSTR:0 = 티모시
+	CASE 70
+		TSTR:0 = 톰
+	CASE 71
+		TSTR:0 = 토미
+	CASE 72
+		TSTR:0 = 토니
+	CASE 73
+		TSTR:0 = 설리번
+	CASE 74
+		TSTR:0 = 밸런타인
+	CASE 75
+		TSTR:0 = 율리시즈
+	CASE 76
+		TSTR:0 = 트로이
+	CASE 77
+		TSTR:0 = 빈센트
+	CASE 78
+		TSTR:0 = 빅터
+	CASE 79
+		TSTR:0 = 월트
+	CASE 80
+		TSTR:0 = 워렌
+	CASE 81
+		TSTR:0 = 윌리엄
+	CASE 82
+		TSTR:0 = 윌리
+	CASE 83
+		TSTR:0 = 와이어트
+	CASE 84
+		TSTR:0 = 잭
+	CASE 85
+		TSTR:0 = 와트
+	CASE 86
+		TSTR:0 = 부르터스
+	CASE 87
+		TSTR:0 = 밥
+	CASE 88
+		TSTR:0 = 빌리
+	CASE 89
+		TSTR:0 = 체스터
+	CASE 90
+		TSTR:0 = 클리프
+	CASE 91
+		TSTR:0 = 코넬리
+	CASE 92
+		TSTR:0 = 콘스탠스
+	CASE 93
+		TSTR:0 = 데니스
+	CASE 94
+		TSTR:0 = 딘
+	CASE 95
+		TSTR:0 = 돈
+	CASE 96
+		TSTR:0 = 듀크
+	CASE 97
+		TSTR:0 = 에릭
+	CASE 98
+		TSTR:0 = 엠마뉴엘
+	CASE 99
+		TSTR:0 = 파비안
+	CASE 100
+		TSTR:0 = 프랭클린
+	CASE 101
+		TSTR:0 = 게일리
+	CASE 102
+		TSTR:0 = 해밀튼
+	CASE 103
+		TSTR:0 = 해리슨
+	CASE 104
+		TSTR:0 = 아이잭
+	CASE 105
+		TSTR:0 = 잭
+	CASE 106
+		TSTR:0 = 루크
+	CASE 107
+		TSTR:0 = 마크
+	CASE 108
+		TSTR:0 = 사이퍼
+	;独語
+	CASE 109
+		TSTR:0 = 아돌프
+	CASE 110
+		TSTR:0 = 알렉스
+	CASE 111
+		TSTR:0 = 알로이스
+	CASE 112
+		TSTR:0 = 아마데우스
+	CASE 113
+		TSTR:0 = 안드레
+	CASE 114
+		TSTR:0 = 악셀
+	CASE 115
+		TSTR:0 = 볼프강
+	CASE 116
+		TSTR:0 = 부르노
+	CASE 117
+		TSTR:0 = 카시미르
+	CASE 118
+		TSTR:0 = 클레멘스
+	CASE 119
+		TSTR:0 = 다니엘
+	CASE 120
+		TSTR:0 = 디트하르트
+	CASE 121
+		TSTR:0 = 도미니크
+	CASE 122
+		TSTR:0 = 에크하르트
+	CASE 123
+		TSTR:0 = 오이겐
+	CASE 124
+		TSTR:0 = 플랑크
+	CASE 125
+		TSTR:0 = 세바스천
+	CASE 126
+		TSTR:0 = 프리드리히
+	CASE 127
+		TSTR:0 = 게오르그
+	CASE 128
+		TSTR:0 = 고트하르트
+	CASE 129
+		TSTR:0 = 귄터
+	CASE 130
+		TSTR:0 = 하르트만
+	CASE 131
+		TSTR:0 = 하인츠
+	CASE 132
+		TSTR:0 = 힐데브란트
+	CASE 133
+		TSTR:0 = 지크프리트
+	CASE 134
+		TSTR:0 = 이반
+	CASE 135
+		TSTR:0 = 요한
+	CASE 136
+		TSTR:0 = 율리우스
+	CASE 137
+		TSTR:0 = 콘라트
+	CASE 138
+		TSTR:0 = 린하르트
+	CASE 139
+		TSTR:0 = 루트비히
+	CASE 140
+		TSTR:0 = 마테우스
+	CASE 141
+		TSTR:0 = 막시밀리안
+	CASE 142
+		TSTR:0 = 미하엘
+	CASE 143
+		TSTR:0 = 미르코
+	CASE 144
+		TSTR:0 = 모제스
+	CASE 145
+		TSTR:0 = 니콜라스
+	CASE 146
+		TSTR:0 = 오토
+	CASE 147
+		TSTR:0 = 페터
+	CASE 148
+		TSTR:0 = 필리프
+	CASE 149
+		TSTR:0 = 라인하르트
+	;スペイン系
+	CASE 150
+		TSTR:0 = 안토니오
+	CASE 151
+		TSTR:0 = 카를로스
+	CASE 152
+		TSTR:0 = 도밍고
+	CASE 153
+		TSTR:0 = 엔리케
+	CASE 154
+		TSTR:0 = 에스테반
+	CASE 155
+		TSTR:0 = 펠리시아노
+	CASE 156
+		TSTR:0 = 페르난도
+	CASE 157
+		TSTR:0 = 파우스토
+	CASE 158
+		TSTR:0 = 가브리엘
+	CASE 159
+		TSTR:0 = 곤잘레스
+	CASE 160
+		TSTR:0 = 이그나시오
+	CASE 161
+		TSTR:0 = 프리오
+	CASE 162
+		TSTR:0 = 레오
+	CASE 163
+		TSTR:0 = 미겔
+	CASE 164
+		TSTR:0 = 스테파노
+	CASE 165
+		TSTR:0 = 빅토르
+	;ロシア系
+	CASE 166
+		TSTR:0 = 니콜라이
+	CASE 167
+		TSTR:0 = 표트르
+	CASE 168
+		TSTR:0 = 야코프
+	CASE 169
+		TSTR:0 = 세르게이
+	;イタリア系
+	CASE 170
+		TSTR:0 = 단테
+	CASE 171
+		TSTR:0 = 제로니모
+	CASE 172
+		TSTR:0 = 마르코
+	CASE 173
+		TSTR:0 = 마리오
+	CASE 174
+		TSTR:0 = 피에트로
+	CASE 175
+		TSTR:0 = 로베르토
+	CASE 176
+		TSTR:0 = 테오도로
+	CASE 177
+		TSTR:0 = 루이지
+	;その他諸々
+	CASE 178
+		TSTR:0 = 아스란
+	CASE 179
+		TSTR:0 = 아무로
+	CASE 180
+		TSTR:0 = 카이엔
+	CASE 181
+		TSTR:0 = 카인
+	CASE 182
+		TSTR:0 = 카오스
+	CASE 183
+		TSTR:0 = 가우
+	CASE 184
+		TSTR:0 = 가토
+	CASE 185
+		TSTR:0 = 카미유
+	CASE 186
+		TSTR:0 = 칼라일
+	CASE 187
+		TSTR:0 = 길버트
+	CASE 188
+		TSTR:0 = 쿠쥬라
+	CASE 189
+		TSTR:0 = 클라우드
+	CASE 190
+		TSTR:0 = 그레고르
+	CASE 191
+		TSTR:0 = 클로즈
+	CASE 192
+		TSTR:0 = 크와트로
+	CASE 193
+		TSTR:0 = 사우저
+	CASE 194
+		TSTR:0 = 제리드
+	CASE 195
+		TSTR:0 = 샤아
+	CASE 196
+		TSTR:0 = 쟈기
+	CASE 197
+		TSTR:0 = 쥬도
+	CASE 198
+		TSTR:0 = 죠죠
+	CASE 199
+		TSTR:0 = 스파크
+	CASE 200
+		TSTR:0 = 디오
+	CASE 201
+		TSTR:0 = 데긴
+	CASE 202
+		TSTR:0 = 토카마크
+	CASE 203
+		TSTR:0 = 드레이크
+	CASE 204
+		TSTR:0 = 니콜
+	CASE 205
+		TSTR:0 = 바레트
+	CASE 206
+		TSTR:0 = 프랑켄
+	CASE 207
+		TSTR:0 = 마다르
+	CASE 208
+		TSTR:0 = 마이클
+	CASE 209
+		TSTR:0 = 무우
+	CASE 210
+		TSTR:0 = 라오우
+	CASE 211
+		TSTR:0 = 라콕
+	CASE 212
+		TSTR:0 = 리토
+	CASE 213
+		TSTR:0 = 레이
+	CASE 214
+		TSTR:0 = 롤랑
+ENDSELECT
+
+;………………………………………………
+;地上の兎
+;………………………………………………
+@RANDOM_N_INABA
+LOCAL = RAND:177
+SELECTCASE LOCAL
+	CASE 0
+		TSTR:0 = 우사비시단
+	CASE 1
+		TSTR:0 = 토카니도타
+	CASE 2
+		TSTR:0 = 마키와니덴
+	CASE 3
+		TSTR:0 = 지미스긴테
+	CASE 4
+		TSTR:0 = 미루츠리츠마
+	CASE 5
+		TSTR:0 = 라샤바츠나리
+	CASE 6
+		TSTR:0 = 사다무히키네
+	CASE 7
+		TSTR:0 = 자야테바치리
+	CASE 8
+		TSTR:0 = 콘기쿠니케
+	CASE 9
+		TSTR:0 = 바이카고슈
+	CASE 10
+		TSTR:0 = 다샤쿠샤게시
+	CASE 11
+		TSTR:0 = 니시루루훈
+	CASE 12
+		TSTR:0 = 난덴마요
+	CASE 13
+		TSTR:0 = 호노미니도루
+	CASE 14
+		TSTR:0 = 토로후라이시
+	CASE 15
+		TSTR:0 = 무라쿠니세라
+	CASE 16
+		TSTR:0 = 데샤무네테레
+	CASE 17
+		TSTR:0 = 케미니스이무
+	CASE 18
+		TSTR:0 = 사마요쿠갸후
+	CASE 19
+		TSTR:0 = 보쟌게마
+	CASE 20
+		TSTR:0 = 수쟌니라
+	CASE 21
+		TSTR:0 = 샤바치리린
+	CASE 22
+		TSTR:0 = 하라비시쿠스
+	CASE 23
+		TSTR:0 = 이세지슈리키
+	CASE 24
+		TSTR:0 = 리샤치노로쿠
+	CASE 25
+		TSTR:0 = 보야테이나노
+	CASE 26
+		TSTR:0 = 톤파룬게
+	CASE 27
+		TSTR:0 = 이시키레자이
+	CASE 28
+		TSTR:0 = 베니데슨쟈
+	CASE 29
+		TSTR:0 = 지루나에이와
+	CASE 30
+		TSTR:0 = 제로쿠진데
+	CASE 31
+		TSTR:0 = 노리츠바쿠메
+	CASE 32
+		TSTR:0 = 킨타비샤리
+	CASE 33
+		TSTR:0 = 챠보사샤지
+	CASE 34
+		TSTR:0 = 세로우루리샤
+	CASE 35
+		TSTR:0 = 스노토마시
+	CASE 36
+		TSTR:0 = 노무도쿠베무
+	CASE 37
+		TSTR:0 = 마루루후키쇼
+	CASE 38
+		TSTR:0 = 미츠우네테쿠
+	CASE 39
+		TSTR:0 = 마카루츠루비
+	CASE 40
+		TSTR:0 = 오도라폰노
+	CASE 41
+		TSTR:0 = 라이마이즈기
+	CASE 42
+		TSTR:0 = 히게시고슈키
+	CASE 43
+		TSTR:0 = 메스덴노니
+	CASE 44
+		TSTR:0 = 쇼루빈슈
+	CASE 45
+		TSTR:0 = 테바루스나바
+	CASE 46
+		TSTR:0 = 후와이후유다
+	CASE 47
+		TSTR:0 = 베르나세이케
+	CASE 48
+		TSTR:0 = 베이스우데샤
+	CASE 49
+		TSTR:0 = 다호시카쇼무
+	CASE 50
+		TSTR:0 = 쇼반푼부
+	CASE 51
+		TSTR:0 = 덴폰핀
+	CASE 52
+		TSTR:0 = 나기로킨쇼
+	CASE 53
+		TSTR:0 = 쿠쇼루빈고
+	CASE 54
+		TSTR:0 = 즌나스네로
+	CASE 55
+		TSTR:0 = 챤자쿠무마
+	CASE 56
+		TSTR:0 = 호란파닌
+	CASE 57
+		TSTR:0 = 비샤무미로지
+	CASE 58
+		TSTR:0 = 스모리무레키
+	CASE 59
+		TSTR:0 = 루이네리코무
+	CASE 60
+		TSTR:0 = 브라비시즈이
+	CASE 61
+		TSTR:0 = 노레라폰파
+	CASE 62
+		TSTR:0 = 타윤파츠바
+	CASE 63
+		TSTR:0 = 후웨쇼카마
+	CASE 64
+		TSTR:0 = 쟌슈운비
+	CASE 65
+		TSTR:0 = 로니란챠타
+	CASE 66
+		TSTR:0 = 요쿠게이세레
+	CASE 67
+		TSTR:0 = 세미라이쟌
+	CASE 68
+		TSTR:0 = 유킨메스이
+	CASE 69
+		TSTR:0 = 챠쿠쇼리키와
+	CASE 70
+		TSTR:0 = 즌슈미미샤
+	CASE 71
+		TSTR:0 = 챠카시나쇼타
+	CASE 72
+		TSTR:0 = 와타메스키슈
+	CASE 73
+		TSTR:0 = 본카샤아쟈
+	CASE 74
+		TSTR:0 = 코이로우타니
+	CASE 75
+		TSTR:0 = 민타이미소
+	CASE 76
+		TSTR:0 = 데스미라폰
+	CASE 77
+		TSTR:0 = 자이토란즈
+	CASE 78
+		TSTR:0 = 메츠키와이시
+	CASE 79
+		TSTR:0 = 모지리샤게키
+	CASE 80
+		TSTR:0 = 바케리무히로
+	CASE 81
+		TSTR:0 = 라이토라쟌
+	CASE 82
+		TSTR:0 = 야츠키리키미
+	CASE 83
+		TSTR:0 = 우바루비샤루
+	CASE 84
+		TSTR:0 = 쇼루리츠노우
+	CASE 85
+		TSTR:0 = 자타루나키라
+	CASE 86
+		TSTR:0 = 요루츠키미니
+	CASE 87
+		TSTR:0 = 시에키와타나
+	CASE 88
+		TSTR:0 = 키란토카비
+	CASE 89
+		TSTR:0 = 쇼루후라무무
+	CASE 90
+		TSTR:0 = 코야쿠우타키
+	CASE 91
+		TSTR:0 = 니도도지무루
+	CASE 92
+		TSTR:0 = 아챠리키와시
+	CASE 93
+		TSTR:0 = 벤바보스스
+	CASE 94
+		TSTR:0 = 타미라쟌보
+	CASE 95
+		TSTR:0 = 노미츠무키로
+	CASE 96
+		TSTR:0 = 헤쿠리샤사무
+	CASE 97
+		TSTR:0 = 료우쇼타마키
+	CASE 98
+		TSTR:0 = 지리카신토
+	CASE 99
+		TSTR:0 = 치빈마진
+	CASE 100
+		TSTR:0 = 론테미키슈
+	CASE 101
+		TSTR:0 = 츠루미룬카니
+	CASE 102
+		TSTR:0 = 마나바이테미
+	CASE 103
+		TSTR:0 = 보스즈이룬
+	CASE 104
+		TSTR:0 = 료쿠미니쟌
+	CASE 105
+		TSTR:0 = 모진니켄
+	CASE 106
+		TSTR:0 = 하이라이리키
+	CASE 107
+		TSTR:0 = 사키레지슈바
+	CASE 108
+		TSTR:0 = 멘쟈아야마
+	CASE 109
+		TSTR:0 = 라쟌게키라
+	CASE 110
+		TSTR:0 = 유우도리쿠무
+	CASE 111
+		TSTR:0 = 케루슨츠지
+	CASE 112
+		TSTR:0 = 아나도라이츠
+	CASE 113
+		TSTR:0 = 이테이시쿠미
+	CASE 114
+		TSTR:0 = 보무네퓨마
+	CASE 115
+		TSTR:0 = 빈잔샤지
+	CASE 116
+		TSTR:0 = 아진슈키레
+	CASE 117
+		TSTR:0 = 레츠무무루비
+	CASE 118
+		TSTR:0 = 스미리스노무
+	CASE 119
+		TSTR:0 = 헤루루스시도
+	CASE 120
+		TSTR:0 = 지진노마카
+	CASE 121
+		TSTR:0 = 로키노니데스
+	CASE 122
+		TSTR:0 = 슈쿤로우니
+	CASE 123
+		TSTR:0 = 토미샤바스네
+	CASE 124
+		TSTR:0 = 모스우니쟌
+	CASE 125
+		TSTR:0 = 테레지슈바츠
+	CASE 126
+		TSTR:0 = 빈스시곤
+	CASE 127
+		TSTR:0 = 분게소토이
+	CASE 128
+		TSTR:0 = 토츠지지지지
+	CASE 129
+		TSTR:0 = 라쟌나시다
+	CASE 130
+		TSTR:0 = 타닌샤지지
+	CASE 131
+		TSTR:0 = 코히다레이루
+	CASE 132
+		TSTR:0 = 보쿠라샤아샤
+	CASE 133
+		TSTR:0 = 비샤나노노바
+	CASE 134
+		TSTR:0 = 와라샤쿠즈이
+	CASE 135
+		TSTR:0 = 레지로쿠시마
+	CASE 136
+		TSTR:0 = 소긴바이네
+	CASE 137
+		TSTR:0 = 즈샤렌마요
+	CASE 138
+		TSTR:0 = 메타메타키루
+	CASE 139
+		TSTR:0 = 보루리츠미라
+	CASE 140
+		TSTR:0 = 네리카무샤사
+	CASE 141
+		TSTR:0 = 챠코토레지루
+	CASE 142
+		TSTR:0 = 하반고쿠즈
+	CASE 143
+		TSTR:0 = 바사라폰타
+	CASE 144
+		TSTR:0 = 호우슨로키
+	CASE 145
+		TSTR:0 = 즈이모샤나하
+	CASE 146
+		TSTR:0 = 타스우루나바
+	CASE 147
+		TSTR:0 = 후다샤사킨
+	CASE 148
+		TSTR:0 = 키와타게마시
+	CASE 149
+		TSTR:0 = 슈미스기쿠이
+	CASE 150
+		TSTR:0 = 카모기쿠빈
+	CASE 151
+		TSTR:0 = 모나빈나타
+	CASE 152
+		TSTR:0 = 니쟌지리츠
+	CASE 153
+		TSTR:0 = 지루비시나비
+	CASE 154
+		TSTR:0 = 조쿠레자이마
+	CASE 155
+		TSTR:0 = 시호시아슌
+	CASE 156
+		TSTR:0 = 나무무다메스
+	CASE 157
+		TSTR:0 = 넨무도무리
+	CASE 158
+		TSTR:0 = 니란스테쿠
+	CASE 159
+		TSTR:0 = 제인텐노
+	CASE 160
+		TSTR:0 = 레이리쿠니쟈
+	CASE 161
+		TSTR:0 = 네무마타이나
+	CASE 162
+		TSTR:0 = 케미라폰피
+	CASE 163
+		TSTR:0 = 덴데스셰
+	CASE 164
+		TSTR:0 = 키레츠우니세
+	CASE 165
+		TSTR:0 = 부타레단니
+	CASE 166
+		TSTR:0 = 이네기로우츠
+	CASE 167
+		TSTR:0 = 메이토쿠라무
+	CASE 168
+		TSTR:0 = 니샤라인포
+	CASE 169
+		TSTR:0 = 쿠샤이도쿠타
+	CASE 170
+		TSTR:0 = 네로무리노마
+	CASE 171
+		TSTR:0 = 카타빈닌
+	CASE 172
+		TSTR:0 = 첸부타카
+	CASE 173
+		TSTR:0 = 로우쟌폰
+	CASE 174
+		TSTR:0 = 노베시케사카
+	CASE 175
+		TSTR:0 = 조우쟌스나
+	CASE 176
+		TSTR:0 = 치이네바쿠후
+	CASE 177
+		TSTR:0 = 제니케사야미
+ENDSELECT

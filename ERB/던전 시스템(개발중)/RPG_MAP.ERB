@@ -1,0 +1,987 @@
+﻿;----------------------------------------------------
+;포커스를 중심으로 주변을 그리는 함수
+;에라에서 표현할 수 있는 글자수가 1회 1000자인가? 로 제한되어 있기에, 이렇게 처리한다.
+;전역변수 FOCUS를 사용한다.
+;이동시 - 포커스가 주인공에게 맞춰지니까 긴박감도 늘어서 RPG스러움.
+;탐색시 - 포커스는 자유롭게 이동한다.
+;그리는 순서. 필드맵 > 오브젝트 > 몬스터(플레이어) 순으로 그려낸다.
+;ARG = 맵번호. 생략시 포커스 정보에서 받아옴.
+;LOCAL:0 = 맵번호
+;LOCAL:1 = 그릴 땅의 X
+;LOCAL:2 = 그릴 땅의 Y
+;LOCAL:3 = 출력화면크기X
+;LOCAL:4 = 출력화면크기Y
+;LOCAL:5 = 시야크기
+@DRAW_FOCUSED_MAP, ARG
+;맵번호 취득. 생략시, 포커스 정보에서 받아온다.
+IF ARG > 0
+	LOCAL:0 = ARG
+ELSE
+	LOCAL:0 = FOCUS:0
+ENDIF
+;출력 전 스타일 결정.
+;ALIGNMENT CENTER
+
+;맵에 남은 몬스터 머릿수를 갱신.
+CALL CALC_HOWMANY_MONSTER_IN_THIS_MAP, ARG
+;맵 이름을 출력한다.
+PRINTL
+PRINTFORML ---------------[%NAME_MAP:ARG%]---------------
+PRINTFORML {DATA_MAP:ARG:4}턴 째. 남은 몬스터:{DATA_MAP:ARG:3}마리
+;포커스 주변으로 몇칸까지 그릴지를 결정한다. (화면크기)
+;가로가 세로보다는 조금 크다.
+LOCAL:3 = 15
+LOCAL:4 = 20
+;시야크기를 설정한다.
+;현재는 임의로 5로 잡는다.
+;LOCAL:5 = MONSTER_DATA:0:3
+
+;맵의 땅을 그린다. (단, 탐색한 지형에 한해서)
+FOR LOCAL:1, FOCUS:1-LOCAL:3, FOCUS:1 +LOCAL:3
+	FOR LOCAL:2, FOCUS:2-LOCAL:4, FOCUS:2 +LOCAL:4
+		;범위를 넘어서 계산하려 할때는 특수기호 표시....(실제 값이 존재하는 건 아니야. 걍 그릴 뿐이지)
+		IF LOCAL:1 < 0 || LOCAL:1 > DATA_MAP:(ARG):1 || LOCAL:2 < 0 || LOCAL:2 > DATA_MAP:(ARG):2
+			CALL SETCOLOR_TORIKOMODE, "BLACK", 4
+			PRINTFORM ■
+			RESETCOLOR
+		ELSE
+			;탐색된 맵이라면, 그린다.
+			IF FOW_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) >= 1
+				;포커스모드 중이고, 만약 타일이 포커스의 중심이면 색을 바르고 ◇표를 한다.
+				IF LOCAL:0 == FOCUS:0 && LOCAL:1 == FOCUS:1 && LOCAL:2 == FOCUS:2 && FOCUS:3 == 1
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+					PRINTFORM ◇
+					RESETCOLOR
+				;이동모드 중이고, 보이는 타일이면, 모든 정보 출력.
+				ELSEIF CHECK_CAN_SEE(0, LOCAL:1, LOCAL:2) == 0
+					;만약 몬스터가 있으면
+					IF MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) >= 0
+						;주인공이면
+						IF MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 0
+							CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+							FONTBOLD
+							PRINTFORM 人
+							FONTREGULAR
+							RESETCOLOR
+						;몬스터면, 적대상황을 체크해서 출력 > 이건 나중에 함수로 뺄 것...
+						ELSE
+							IF MONSTER_DATA:(MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)):4 == 1
+								CALL SETCOLOR_TORIKOMODE, "RED", 2
+								FONTBOLD
+								PRINTFORM 敵
+								FONTREGULAR
+								RESETCOLOR						
+							ELSE
+								CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+								FONTBOLD
+								PRINTFORM 中
+								FONTREGULAR
+								RESETCOLOR
+							ENDIF
+						ENDIF
+					;몬스터가 없으면
+					ELSE
+						;디버그. 몬스터 시야에 들어있으면 빨강색을 입힐 것.
+						;SIF FOW_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)  == 2
+						;	CALL SETCOLOR_TORIKOMODE, "RED", 2
+						;오브젝트가 있으면 출력한다.
+						IF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) > 0
+							;닫힌문
+							IF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 1
+								PRINTFORM 門
+							;열린문
+							ELSEIF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 2
+								PRINTFORM □
+							ENDIF
+						;오브젝트가 없으면
+						ELSE
+							;아이템을 그린다.
+							IF ITEM_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) > 0
+								;돈이라면
+								IF ITEM_DATA_RPG:(ITEM_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)):0 == 6
+									CALL SETCOLOR_TORIKOMODE, "YELLOW", 4
+									PRINTFORM $$
+									RESETCOLOR
+								;무기라면
+								ELSEIF ITEM_DATA_RPG:(ITEM_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2)):0 == 2
+									CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 4
+									PRINTFORM ♆
+									RESETCOLOR
+								ENDIF
+							;아이템이 없으면
+							ELSE
+								;지형을 그린다.
+								IF FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 1
+									PRINTFORM //
+								ELSE
+									PRINTFORM ■
+								ENDIF
+							ENDIF
+						ENDIF
+						RESETCOLOR
+					ENDIF
+				;그 외의 경우에는 지형만 표시한다. (어두운 색으로...)
+				ELSE
+					CALL SETCOLOR_TORIKOMODE, "BLACK", 3
+					;오브젝트가 있으면
+					IF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) > 0
+						;닫힌문
+						IF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 1
+							PRINTFORM 門
+						;열린문
+						ELSEIF OBJECT_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 2
+							PRINTFORM □
+						ENDIF
+					;오브젝트가 없으면
+					ELSE
+						;지형을 그린다. 색은 어둡다.
+						IF FILED_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) == 1
+							PRINTFORM //
+						ELSE
+
+							PRINTFORM ■
+						ENDIF
+					ENDIF
+					RESETCOLOR
+				ENDIF
+			;탐색되지 않은 맵이라면. 빈칸만 표시
+			ELSE
+				;만약 타일이 포커스의 중심이며 포커스모드 중이라면, 색을 바르고 ◇표를 한다.
+				IF LOCAL:0 == FOCUS:0 && LOCAL:1 == FOCUS:1 && LOCAL:2 == FOCUS:2 && FOCUS:3 == 1
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+					PRINTFORM ◇
+				ELSE
+					RESETCOLOR
+					PRINTFORM   
+				ENDIF
+			ENDIF
+		ENDIF
+	NEXT
+	;줄내림.
+	PRINTL
+NEXT
+
+;출력 후 스타일 원복
+;ALIGNMENT LEFT
+
+
+;------------------------------------------------------
+;맵을 초기화 시킨다.
+;ARG = 맵번호
+@RESET_MAP,ARG
+;지형,탐색,오브젝트, 몬스터 싹지워!
+FOR LOCAL:1, 0, 100	
+	FOR LOCAL:2, 0, 100
+		;지형정보삭제
+		FILED_MAP:ARG:(LOCAL:1):(LOCAL:2) = 0
+		;시야정보삭제
+		FOW_MAP:ARG:(LOCAL:1):(LOCAL:2) = 0
+		;오브젝트정보삭제
+		OBJECT_MAP:ARG:(LOCAL:1):(LOCAL:2) = 0
+		;몬스터정보삭제
+		MONSTER_MAP:ARG:(LOCAL:1):(LOCAL:2) = -1
+		;맵정보삭제(2차배열)
+		DATA_MAP:ARG:(LOCAL:2) = 0
+		;주인공정보삭제 (2차배열)
+		PLAYER_DATA:(LOCAL:2) = 0
+	NEXT
+NEXT
+
+;디버그
+;PRINTFORML 맵을 초기화 했습니다.
+;PRINTL
+;CALL DRAWMAP, ARG
+;PRINT
+;WAIT
+
+
+
+
+;------------------------------------------------------
+;주어진 칸의 주위 셀중 한개라도 비어있는지를 체크하는 함수.
+;주위칸의 값을 합쳐서 반환한다.
+;ARG = 맵번호
+;ARG:1 = 맵X좌표
+;ARG:2 = 맵Y좌표
+@CALC_NUMBER_OF_EMPTYPLACE_AROUND,ARG, ARG:1, ARG:2
+
+RESULT = 0
+
+RESULT +=  FILED_MAP:ARG:(ARG:1-1):(ARG:2-1)
+RESULT +=  FILED_MAP:ARG:(ARG:1-1):(ARG:2)
+RESULT +=  FILED_MAP:ARG:(ARG:1-1):(ARG:2+1)
+RESULT +=  FILED_MAP:ARG:(ARG:1):(ARG:2-1)
+RESULT +=  FILED_MAP:ARG:(ARG:1):(ARG:2)
+RESULT +=  FILED_MAP:ARG:(ARG:1):(ARG:2+1)
+RESULT +=  FILED_MAP:ARG:(ARG:1+1):(ARG:2-1)
+RESULT +=  FILED_MAP:ARG:(ARG:1+1):(ARG:2)
+RESULT +=  FILED_MAP:ARG:(ARG:1+1):(ARG:2+1)
+
+RETURN RESULT
+
+
+;------------------------------------------------------
+;주어진 칸의 주위 셀중 방 타일의 개수를 반환한다
+;주위칸의 값을 합쳐서 반환한다.
+;ARG = 맵번호
+;ARG:1 = 맵X좌표
+;ARG:2 = 맵Y좌표
+@CHECK_ROOMTILE_MAP,ARG, ARG:1, ARG:2
+RESULT = 0
+FOR LOCAL:99, -1, 2
+	FOR LOCAL:98, -1, 2
+		;방 타일이면, 결과치 증가함.
+		SIF ROOM_MAP:ARG:(ARG:1-LOCAL:99):(ARG:2-LOCAL:98) == 2
+			RESULT ++
+	NEXT	
+NEXT
+RETURN RESULT
+
+;-------------------------------------------------------
+;방 면적체크 함수
+;ARG = 맵번호
+;ARG:1 = 방 시작좌표X
+;ARG:2 = 방 시작좌표Y
+;ARG:3 = 방 크기X
+;ARG:4 = 방 크기Y
+@CHECK_EMPTY_ROOM,ARG, ARG:1, ARG:2, ARG:3, ARG:4
+;X축 반복자
+LOCAL:0 = 0 
+;Y축 반복자
+LOCAL:1 = 0 
+;결과값
+LOCAL:2 = 0
+
+;해당 면적+1의 필드값을 싹 더한다.
+FOR LOCAL:0, 0, (ARG:3+2)
+	FOR LOCAL:1, 0, (ARG:4+2)
+		LOCAL:2 += FILED_MAP:ARG:(ARG:1-1+LOCAL:0):(ARG:2-1+LOCAL:1)
+	NEXT
+NEXT
+
+;;디버그
+;;방 한번 그리고
+;PRINTL 
+;CALL DRAWMAP, 1
+;PRINTL 
+;WAIT
+;;다시 싹 지워라...
+;FOR LOCAL:0, 0, (ARG:3+2)
+;	FOR LOCAL:1, 0, (ARG:4+2)
+;		FILED_MAP:ARG:(ARG:1-1+LOCAL:0):(ARG:2-1+LOCAL:1) = 0
+;	NEXT
+;NEXT
+
+RESULT = LOCAL:2
+RETURN RESULT
+
+
+;-------------------------------------------------------
+;방 파내기 함수
+;ARG = 맵번호
+;ARG:1 = 방 시작좌표X
+;ARG:2 = 방 시작좌표Y
+;ARG:3 = 방 크기X
+;ARG:4 = 방 크기Y
+@DIG_ROOM,ARG, ARG:1, ARG:2, ARG:3, ARG:4
+;X축 반복자
+LOCAL:0 = 0 
+;Y축 반복자
+LOCAL:1 = 0 
+;결과값
+LOCAL:2 = 0
+
+;해당 면적을 싹 파낸다
+FOR LOCAL:0, 0, ARG:3
+	FOR LOCAL:1, 0, ARG:4
+		;맵 테두리는 파지마
+		IF ARG:1+LOCAL:0 >= (DATA_MAP:ARG:1)-1 || ARG:2+LOCAL:1 >= (DATA_MAP:ARG:2)-1
+			;
+		ELSE
+			;공간을 파낸다.
+			FILED_MAP:ARG:(ARG:1+LOCAL:0):(ARG:2+LOCAL:1) = 1
+			;방으로 지정한다.
+			ROOM_MAP:ARG:(ARG:1+LOCAL:0):(ARG:2+LOCAL:1) = 2
+		ENDIF
+	NEXT
+NEXT
+
+;-------------------------------------------------------
+;복도 파내기 함수
+;로직 - 0번방부터 끝번방까지 싹 다 잇는다. 0 - 1 - 2 - 3 ... (방 자체라 랜덤위치에 배치되므로 상관없음)
+;로직 - 시작하는 위치를 하나의 캐릭터로 상정해서, 목표지점까지 x, y 순으로 직선으로 길을 찾아가며 파낸다. (딱히 y,x라도 상관없지만)
+;로직의 문제점 - 길이 벽을 파내다 보면, 방의 '벽'을 무너뜨리는 경우가 있다... 꽤나 보기 흉함. 거기다 길 수가 쓸데없이 많은 느낌도.
+;로직의 장점 - 적절히 가볍고 적절하게 만들어냄. 
+;LOCAL:1 = 시작하는 방의 임의의 X좌표 (이것이 현재의 위치)
+;LOCAL:2 = 시작하는 방의 임의의 Y좌표 (이것이 현재의 위치)
+;LOCAL:3 = 도착할 방의 임의의 X좌표
+;LOCAL:4 = 도착할 방의 임의의 Y좌표
+;LOCAL:5 = 시작방번호
+;LOCAL:6 = 도착방번호
+;ARG = 맵번호, ARG:1  = 방의개수
+@DIG_CORRIDOR, ARG, ARG:1
+;루프카운터세팅
+LOCAL:99 = 0
+
+;디버그
+;PRINTFORML 방의 개수는 ARG:1 = {ARG:1} 입니다.
+;방 개수만큼 돌린다.
+DO
+	;시작방을 뽑는다. 루프와 같다. 
+	LOCAL:5 = LOCAL:99
+	;디버그
+	;PRINTFORMW  시작방은 {LOCAL:5}번 입니다.
+	;도착방을 뽑는다. 루프+1.
+	LOCAL:6 = LOCAL:99+1
+	;디버그
+	;PRINTFORMW  도착방은 {LOCAL:6}번 입니다.
+
+	;시작방에서 임의의 좌표를 골라낸다. 방의 시작점을 잡고, 크기만큼 랜덤을 돌린다.
+	LOCAL:1 = ROOM:(LOCAL:5):11+RAND:(ROOM:(LOCAL:5):1)
+	LOCAL:2 = ROOM:(LOCAL:5):12+RAND:(ROOM:(LOCAL:5):2)
+	;디버그
+	;PRINTFORML 시작좌표 ={LOCAL:1},{LOCAL:2}
+
+	;도착방에서 임의의 좌표를 골라낸다. 방의 시작점을 잡고, 크기만큼 랜덤을 돌린다.
+	LOCAL:3 = ROOM:(LOCAL:6):11+RAND:(ROOM:(LOCAL:6):1)
+	LOCAL:4 = ROOM:(LOCAL:6):12+RAND:(ROOM:(LOCAL:6):2)
+	;디버그
+	;PRINTFORML 종료좌표 ={LOCAL:3},{LOCAL:4}
+
+	;X축 이동한다.
+	DO
+		;목표지점보다 앞에 있으면
+		IF LOCAL:1 > LOCAL:3
+			;1칸 뒤로 갈 것.
+			LOCAL:1 --
+		ELSE
+			;1칸 앞으로 갈 것.
+			LOCAL:1 ++
+		ENDIF
+		;그리고 현재 위치를 파낸다.
+		FILED_MAP:ARG:(LOCAL:1):(LOCAL:2) = 1
+		;만약 현재 위치가 방공간이 아니라면, 현재 위치를 복도 공간으로 지정한다.
+		SIF ROOM_MAP:ARG:(LOCAL:1):(LOCAL:2) != 2
+			ROOM_MAP:ARG:(LOCAL:1):(LOCAL:2) = 1
+		;디버그. 맵을 그려볼 것.
+		;CALL DRAWMAP, ARG
+		;PRINTFORML X축 이동중입니다. 현재위치:{LOCAL:1}, 목표위치:{LOCAL:3}
+		;WAIT
+
+		LOCAL:98 ++
+	;겹칠때까지 돌린다.
+	LOOP (LOCAL:1 != LOCAL:3)
+	
+	;Y축 이동한다.
+	DO
+		;목표지점보다 앞에 있으면
+		IF LOCAL:2 > LOCAL:4
+			;1칸 뒤로 갈 것.
+			LOCAL:2 --
+		ELSE
+			;1칸 앞으로 갈 것.
+			LOCAL:2 ++
+		ENDIF
+		;그리고 현재 위치를 파낸다.
+		FILED_MAP:ARG:(LOCAL:1):(LOCAL:2) = 1
+		;만약 현재 위치가 방공간이 아니라면, 현재 위치를 복도 공간으로 지정한다.
+		SIF ROOM_MAP:ARG:(LOCAL:1):(LOCAL:2) != 2
+			ROOM_MAP:ARG:(LOCAL:1):(LOCAL:2) = 1
+		;디버그. 맵을 그려볼 것.
+		;CALL DRAWMAP, ARG
+		;PRINTFORML Y축 이동중입니다. 현재위치:{LOCAL:2}, 목표위치:{LOCAL:4}
+		;WAIT
+
+		LOCAL:98 ++
+	;겹칠때까지 돌린다.
+	LOOP (LOCAL:2 != LOCAL:4)
+	
+	;루프카운터 증가
+	LOCAL:99 ++
+LOOP LOCAL:99 < ARG:1 -1
+
+
+
+;-------------------------------------
+;주인공 배치 함수.
+;로직 : 지정된 맵의 '아무곳' 에나 배치된다.
+;ARG : 맵 번호.
+@SET_STARTING_POINT_MAP, ARG
+
+$SELECT_STARTING_POINT
+;지정된 맵의 빈 공간을 찾아서, 아무곳에나 배치한다. 
+;뽑힐 때 까지 무한루프를 돌려야 한다. 만약 여기서 무한루프가 걸린다면, 다른 로직을 찾아봐야 함. (방 정보를 따로 저장하는 한이 있더라도)
+LOCAL:1 = RAND:(DATA_MAP:ARG:1)
+LOCAL:2 = RAND:(DATA_MAP:ARG:2)
+;공간을 찾았다면 들어간다.
+IF  FILED_MAP:ARG:(LOCAL:1):(LOCAL:2) == 1
+	;주인공의 맵 번호
+	PLAYER_DATA:0 = ARG
+	MONSTER_DATA:0:0 = ARG
+	;주인공의 X좌표
+	PLAYER_DATA:1 = LOCAL:1
+	MONSTER_DATA:0:1 = LOCAL:1
+	;주인공의 Y좌표
+	PLAYER_DATA:2 = LOCAL:2
+	MONSTER_DATA:0:2 = LOCAL:2
+	;주인공의 시야. 5로 정해준다 일단은.
+	PLAYER_DATA:3 = 7
+	MONSTER_DATA:0:3 = 7
+	;몬스터맵에 주인공을 뿌려준다.
+	MONSTER_MAP:ARG:(LOCAL:1):(LOCAL:2) = 0
+ELSE
+	GOTO SELECT_STARTING_POINT
+ENDIF
+
+;-------------------------------------
+;몬스터 배치 함수. 원래 몬스터는 정해진 만큼뿌려져야 하나, 일단은 일정 수를 그냥 뿌린다.
+;ARG = 맵번호, ARG:1 = 뿌려질 마릿수
+@SET_MONSTERS_MAP,ARG, ARG:1
+;지정된 맵의 빈 공간을 찾아서, 아무곳에나 배치한다. 0은 주인공이므로 1부터 시작해.
+LOCAL:99 = 1
+DO
+	$SELECT_SETTING_POINT
+	;뽑힐 때 까지 무한루프를 돌려야 한다. 만약 여기서 무한루프가 걸린다면, 다른 로직을 찾아봐야 함. (방 정보를 따로 저장하는 한이 있더라도)
+	LOCAL:1 = RAND:(DATA_MAP:ARG:1)
+	LOCAL:2 = RAND:(DATA_MAP:ARG:2)
+	;공간을 찾았다면 들어간다. (빈공간이어야 하며, 몬스터가 없어야 함. 오브젝트 위에는 떨어질 수 있다)
+	IF  FILED_MAP:ARG:(LOCAL:1):(LOCAL:2) == 1 && MONSTER_MAP:ARG:(LOCAL:1):(LOCAL:2) < 0
+		;몬스터의 맵번호
+		MONSTER_DATA:(LOCAL:99):0 = ARG
+		;몬스터의 X좌표
+		MONSTER_DATA:(LOCAL:99):1 = LOCAL:1
+		;몬스터의 Y좌표
+		MONSTER_DATA:(LOCAL:99):2 = LOCAL:2
+		;몬스터의 시야크기. 일단 4로 둔다
+		MONSTER_DATA:(LOCAL:99):3  = 4
+		;몬스터의 적대여부. 일단은 랜덤하게 정한다.
+		MONSTER_DATA:(LOCAL:99):4  = RAND:2
+		;몬스터맵에 몬스터를 추가한다.
+		MONSTER_MAP:ARG:(LOCAL:1):(LOCAL:2) = LOCAL:99
+		;맵정보에 몬스터 머릿수를 증가시킨다.
+		DATA_MAP:ARG:3 ++
+		;디버그
+		PRINTFORML {LOCAL:1},{LOCAL:2}에 몬스터{LOCAL:99}가 나타났다! 
+	ELSE
+		GOTO SELECT_SETTING_POINT
+	ENDIF
+	LOCAL:99++
+LOOP LOCAL:99 < ARG:1
+
+
+
+;-------------------------------------
+;문 배치 함수.
+;ARG = 맵번호
+;문 배치 로직
+;-복도타일에 대해, 검사를 실시한다.
+;-해당 타일은 비어있어야 한다.
+;-해당타일의 주변에 최소 1이상의 방 타일이 있어야 한다.
+;-체크할 곳의 주변의 빈공간합이 최소 2 이상이어야 한다.
+;-2개의 쌍 벽이 존재해야 한다. (예, 1-9, 4-6 등)
+;그러면 문을 생성한다.
+@SET_DOOR_MAP, ARG
+
+;;디버그. FOW를 전부 잡아준다.
+;FOR LOCAL:99, 0, 100
+;	FOR LOCAL:98, 0, 100
+;		FOW_MAP:ARG:(LOCAL:99):(LOCAL:98) = 1
+;	NEXT
+;NEXT
+
+FOR LOCAL:99, 0, 100
+	FOR LOCAL:98, 0, 100
+	
+		;디버그. 포커스를 잡고, 지도를 그린다.
+		;FOCUS:0 = ARG
+		;FOCUS:1 = LOCAL:99
+		;FOCUS:2 = LOCAL:98
+		;FOCUS:3 = 1
+		;CALL DRAW_FOCUSED_MAP, ARG
+		;PRINTFORML {FOCUS:0},{FOCUS:1},{FOCUS:2}
+
+		;복도타일에 대해서 체크한다. 해당 타일은 비어있어야 함
+		IF ROOM_MAP:ARG:(LOCAL:99):(LOCAL:98) == 1 && FILED_MAP:ARG:(LOCAL:99):(LOCAL:98) == 1
+			;해당타일 주변에 최소 1이상의 방 타일이 존재해야 한다.
+			CALL CHECK_ROOMTILE_MAP, ARG, LOCAL:99, LOCAL:98
+			IF RESULT >= 1
+				;체크할 곳의 주변 빈공간합이 최소 2 이상이어야 한다.
+				CALL CALC_NUMBER_OF_EMPTYPLACE_AROUND,ARG, LOCAL:99, LOCAL:98
+				IF RESULT >= 2
+					;주위에 2개의 대칭형 벽이 존재해야 한다. (4가지 존재하나, 일단 수직 수평만 사용한다. 대각까지 하면 너무 번거롭고)
+					;IF FILED_MAP:ARG:(LOCAL:99-1):(LOCAL:98-1) == 0 && FILED_MAP:ARG:(LOCAL:99+1):(LOCAL:98+1) == 0
+					;	;문을 생성한다.
+					;	OBJECT_MAP:ARG:(LOCAL:99):(LOCAL:98) = 1
+					;ENDIF
+					;IF FILED_MAP:ARG:(LOCAL:99-1):(LOCAL:98+1) == 0 && FILED_MAP:ARG:(LOCAL:99+1):(LOCAL:98-1) == 0
+					;	;문을 생성한다.
+					;	OBJECT_MAP:ARG:(LOCAL:99):(LOCAL:98) = 1
+					;ENDIF
+					IF FILED_MAP:ARG:(LOCAL:99+0):(LOCAL:98-1) == 0 && FILED_MAP:ARG:(LOCAL:99+0):(LOCAL:98+1) == 0
+						;문을 생성한다. 생성확률은 1/2
+						OBJECT_MAP:ARG:(LOCAL:99):(LOCAL:98) = RAND(2)
+					ENDIF
+					IF FILED_MAP:ARG:(LOCAL:99-1):(LOCAL:98+0) == 0 && FILED_MAP:ARG:(LOCAL:99+1):(LOCAL:98+0) == 0
+						;문을 생성한다.생성확률은 1/2
+						OBJECT_MAP:ARG:(LOCAL:99):(LOCAL:98) = RAND(2)
+					ENDIF
+				ELSE
+					;디버그
+					;PRINTFORMW 체크할 곳의 주변 빈공간합이 2보다 작다!
+				ENDIF
+			ELSE
+				;디버그
+				;PRINTFORMW 해당 타일 주변에 최소 1이상의 방타일이 없다!. {RESULT}
+			ENDIF
+		ENDIF
+	NEXT
+NEXT
+
+;;디버그. FOW를 전부 끈다
+;FOR LOCAL:99, 0, 100
+;	FOR LOCAL:98, 0, 100
+;		FOW_MAP:ARG:(LOCAL:99):(LOCAL:98) = 0
+;	NEXT
+;NEXT
+
+
+;------------------------------------------
+;맵에 아이템을 뿌리는 함수
+;ARG = 맵번호, ARG:1 = 뿌릴 아이템 개수
+@SET_ITEM_MAP, ARG, ARG:2
+;아이템코드
+;LOCAL:0 = 0
+;지정된 맵의 빈 공간을 찾아서, 아무곳에나 배치한다.
+FOR LOCAL:99, 0, ARG:2 +1
+	$SELECT_SETTING_POINT
+	;뽑힐 때 까지 무한루프를 돌려야 한다. 만약 여기서 무한루프가 걸린다면, 다른 로직을 찾아봐야 함. (방 정보를 따로 저장하는 한이 있더라도)
+	LOCAL:1 = RAND:(DATA_MAP:ARG:1)
+	LOCAL:2 = RAND:(DATA_MAP:ARG:2)
+	;빈공간이라면, 뿌려진다.
+	IF CHECK_EMPTY_TOMOVE(ARG, LOCAL:1, LOCAL:2) == 1
+		;아이템은 임의로 10~20을 뿌린다. (임시용)
+		LOCAL:0 = RAND(10)+10
+		ITEM_MAP:ARG:(LOCAL:1):(LOCAL:2) = LOCAL:0
+		;디버그
+		PRINTFORML {LOCAL:1},{LOCAL:2}에 아이템 "%ITEM_NAME_RPG:(LOCAL:0)%" 이 뿌려졌다.
+	;빈공간을 못 찾았다면, 다시 돌려볼 것.
+	ELSE
+		GOTO SELECT_SETTING_POINT
+	ENDIF
+NEXT
+
+;--------------------------------------------
+;이 맵에 존재하는 몬스터 머릿수를 갱신하는 함수
+;ARG = 맵번호
+@CALC_HOWMANY_MONSTER_IN_THIS_MAP, ARG
+;머릿수 초기화
+DATA_MAP:ARG:3 = 0
+;맵 전체에서 머릿수를 체크한다.
+FOR LOCAL:1, 0, DATA_MAP:ARG:1
+	FOR LOCAL:2, 0, DATA_MAP:ARG:2
+		SIF MONSTER_MAP:ARG:(LOCAL:1):(LOCAL:2) > 0
+			DATA_MAP:ARG:3 ++
+	NEXT
+NEXT
+
+;--------------------------------------------
+;특정 좌표의 몬스터를 죽이는 함수
+;ARG = 몬스터번호
+@DELETE_MONSTER, ARG
+;정보 만들어내기...
+;맵번호
+LOCAL:0 = MONSTER_DATA:ARG:0
+;X좌표
+LOCAL:1 = MONSTER_DATA:ARG:1 
+;Y좌표
+LOCAL:2 = MONSTER_DATA:ARG:2
+
+;몬스터 정보를 완전삭제한다.
+FOR LOCAL:99, 0, 1000
+	MONSTER_DATA:ARG:(LOCAL:99) = 0
+NEXT
+;몬스터 시야정보를 완전삭제한다.
+FOR LOCAL:99, 0, 100
+	FOR LOCAL:98, 0, 100
+	FOW_MONSTER:ARG:(LOCAL:99):(LOCAL:98) = 0
+	NEXT
+NEXT
+;맵상의 몬스터를 삭제한다.
+MONSTER_MAP:(LOCAL:0):(LOCAL:1):(LOCAL:2) = -1
+
+;디버그
+PRINTFORML {ARG}는 외쳤다. "나의 죽음을 알리지 마라..."
+
+;--------------------------------------------
+;포커스를 주인공에게 맞추는 함수.
+@RESET_FOCUS
+FOCUS:0 = MONSTER_DATA:0:0
+FOCUS:1 = MONSTER_DATA:0:1
+FOCUS:2 = MONSTER_DATA:0:2
+FOCUS:3 = 0
+
+
+;--------------------------------------------
+;주위의 문을 닫는 함수. 섬세하게 1개씩 닫아도 좋겠지만 유저가 귀찮지. 그래서 전부 닫기로 했다.
+@CLOSE_DOOR_BY_PLAYER
+;맵번호
+LOCAL:0 = MONSTER_DATA:0:0
+;X
+LOCAL:1 = MONSTER_DATA:0:1
+;Y
+LOCAL:2 = MONSTER_DATA:0:2
+;문개수
+LOCAL:3 = 0
+;문턱에 뭐가 있다!
+LOCAL:4 = 0
+
+;주위 문 개수를 체크한다.
+FOR LOCAL:99, -1, 2
+	FOR LOCAL:98, -1, 2
+		;열린 문이면
+		IF OBJECT_MAP:(LOCAL:0):(LOCAL:1-LOCAL:99):(LOCAL:2-LOCAL:98) == 2
+			;장애물이 있다면, 
+			IF MONSTER_MAP:(LOCAL:0):(LOCAL:1-LOCAL:99):(LOCAL:2-LOCAL:98) > 0
+				LOCAL:4 ++
+			;장애물이 없다면, 문을 닫는다.
+			ELSE
+				OBJECT_MAP:(LOCAL:0):(LOCAL:1-LOCAL:99):(LOCAL:2-LOCAL:98) == 1
+				LOCAL:3 ++
+			ENDIF
+		ENDIF
+	NEXT	
+NEXT
+IF LOCAL:3 == 0
+	PRINTL 주위에 열린 문이 없다.
+ELSEIF LOCAL:4 > 0
+	PRINTL 문에 장애물이 있어 닫을 수가 없다.
+ELSE
+	PRINTL 문을 닫았다.
+ENDIF
+
+
+;------------------------------------------------------------------------
+;해당 셀이 (이동을 위해) 비어있는지 체크하는 펑션. 워낙 여기저기서 쓰이기에 이렇게 빼둠
+@CHECK_EMPTY_TOMOVE(MAP, POS_X, POS_Y)
+#FUNCTION
+#DIM MAP
+#DIM POS_X
+#DIM POS_Y
+;해당 셀은 몬스터가 없어야 하고, 벽이 없고 공간이 비어있어야 하며, 닫힌 문이 없어야 한다.
+IF MONSTER_MAP:MAP:POS_X:POS_Y == -1 && FILED_MAP:MAP:POS_X:POS_Y == 1 && OBJECT_MAP:MAP:POS_X:POS_Y != 2
+	RETURNF 1
+ELSE
+	RETURNF 0
+ENDIF
+
+;-----------------------------------------------------------------------
+;8방향 탐색 함수 - 매우 비효율적이며 멍청한! (누가 이 알고리즘 좀 고쳐주세요!!!)
+;가야 할 곳이 막혀있을 경우,
+;가까운 대각선을 체크한다. (아래든 위든 상관없다)
+;대각선도 막혀있으면 수평(수직)을 체크한다.
+;그도 안되면 뒤 대각을 체크한다.
+;그도 안되면 뒤로 체크한다.
+;그도 안되면 걍 서있는다...
+;넘패드의 번호대로 체크한다.
+;ARG = 맵번호
+;ARG:1 = 현재 X좌표
+;ARG:2 = 현재 Y좌표
+;ARG:3 = 타겟 X좌표
+;ARG:4 = 타겟 Y좌표
+@CHECK_8_DIRECTION, ARG, ARG:1, ARG:2, ARG:3, ARG:4
+;타겟이7
+IF ARG:1-1==ARG:3 && ARG:2-1==ARG:4
+;디버그
+;PRINTFORML 타겟이 7시 방향
+	;체크8
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	;체크4
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	;체크9
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크1
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	;체크6
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟이8
+ELSEIF ARG:1 == ARG:3 && ARG:2+1 == ARG:4
+;디버그
+;PRINTFORML 타겟이 8시 방향
+	;체크7
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	;체크9
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크4
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	;체크6
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	;체크1
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟9
+ELSEIF ARG:1+1 == ARG:3 && ARG:2-1 == ARG:4
+;디버그
+;PRINTFORML 타겟이 9시 방향
+	;체크8
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	;체크6
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	;체크7
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크4
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	;체크1
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟4
+ELSEIF ARG:1-1 == ARG:3 && ARG:2 == ARG:4
+;디버그
+;PRINTFORML 타겟이 4시 방향
+	;체크7
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	;체크1
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	;체크8
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	;체크9
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크6
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟6
+ELSEIF ARG:1+1 == ARG:3 && ARG:2 == ARG:4
+;디버그
+;PRINTFORML 타겟이 6시 방향
+	;체크9
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크8
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	;체크7
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	;체크1
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	;체크4
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟1
+ELSEIF ARG:1-1 == ARG:3 && ARG:2+1 == ARG:4
+;디버그
+;PRINTFORML 타겟이 1시 방향
+	;체크 12
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	;체크7
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크8
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	;체크6
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	;체크9
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟2
+ELSEIF ARG:1 == ARG:3 && ARG:2+1==ARG:4
+;디버그
+;PRINTFORML 타겟이 2시 방향
+	;체크1
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	;체크3
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+1) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크4
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	;체크6
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	;체크7
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	;체크9
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크8
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+;타겟3
+ELSEIF ARG:1+1 == ARG:3 && ARG:2 + 1 == ARG:4
+;디버그
+;PRINTFORML 타겟이 3시 방향
+	;체크6
+	IF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 0
+	;체크2
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2+1) == 1
+		RESULT:1 = 0
+		RESULT:2 = 1
+	;체크1
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 1
+	;체크9
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+1, ARG:2+0) == 1
+		RESULT:1 = 1
+		RESULT:2 = 1
+	;체크4
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-0, ARG:2+0) == 1
+		RESULT:1 = -1
+		RESULT:2 = 0
+	;체크8
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1+0, ARG:2-1) == 1
+		RESULT:1 = 0
+		RESULT:2 = -1
+	;체크7
+	ELSEIF CHECK_EMPTY_TOMOVE(ARG, ARG:1-1, ARG:2-1) == 1
+		RESULT:1 = -1
+		RESULT:2 = -1
+	ELSE
+		RESULT:1 = 0
+		RESULT:2 = 0
+	ENDIF
+ENDIF
+
+;디버그. 
+;PRINTFORML {RESULT:1},{RESULT:2}
+
+;값을 반환한다.
+RETURN RESULT:1
+RETURN RESULT:2

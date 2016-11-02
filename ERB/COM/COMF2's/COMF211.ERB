@@ -1,0 +1,116 @@
+﻿;=============================================================================
+;젖 맞대기 과시
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE211
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:211 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;主人もしくは조수가 オトコだとダメ
+SIF TALENT:MASTER:120 || TALENT:ASSI:120
+	RETURN 0
+;主人と助手の体格差が違いすぎるとダメ(금단의 지식は無関係で)
+SIF ABS(COMMON_BODYSIZE_CHECK2(MASTER, ASSI)) > 1
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;조수가 ウェディングドレス · ゴスロリ着用中の場合助手に기교4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && (TEQUIP:ASSI:59 == 19 || TEQUIP:ASSI:59 == 20) && ABL:ASSI:12 < 4
+	RETURN 0
+;眼隠しと耳栓両方つけていた場合は意味がないので実行できない
+SIF TEQUIP:41 && TEQUIP:45
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;조교자와 조수가 유두를 맞추는 플레이
+;외형적으로는  진기한 것을 보고 즐김이지만 효과적으로는 역시 초라하다
+@COM211
+PRINTL 젖 맞대기 과시
+TSTR:0 = 젖 맞대기 과시
+CALL TRAIN_MESSAGE_COM211
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 10
+
+SOURCE:31 = 180
+SOURCE:15 = 10
+SOURCE:30 = 80
+SOURCE:12 = 120
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:18 = 10
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:18 = 20
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:18 = 40
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:18 = 80
+ELSE
+	SOURCE:18 = 160
+ENDIF
+
+;주인의 B⇔조수의 B의 불결이 이동
+STAIN:MASTER:5 |= STAIN:ASSI:5
+STAIN:ASSI:5 |= STAIN:MASTER:5
+
+SIF TALENT:MASTER:120 == 0 && TALENT:ASSI:120 == 0
+	TCVAR:ASSI:12 += 5
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM211
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %CALLNAME:TARGET%에게 과시하듯이,
+PRINTFORM %조사선택(CALLNAME:MASTER, "는")% 
+IF TALENT:MASTER:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:MASTER:128 && TALENT:MASTER:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:MASTER:111
+	PRINT 표준 보다 약간 작은 
+ELSEIF TALENT:MASTER:112
+	PRINT 손에서 흘러 넘칠 것 같은 
+ELSEIF TALENT:MASTER:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+PRINTL 가슴의 끄트머리의, 아직 부드러운 돌기와
+PRINTFORM %CALLNAME:ASSI%의 
+IF TALENT:ASSI:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:ASSI:128 && TALENT:ASSI:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:ASSI:111
+	PRINT 표준 보다 약간 작은 
+ELSEIF TALENT:ASSI:112
+	PRINT 손에서 흘러 넘칠 것 같은 
+ELSEIF TALENT:ASSI:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+PRINT 가슴의 끄트머리의, 
+PRINTW 아직 부드러운 돌기를 붙이고 살짝 누르거나 하고 있다….

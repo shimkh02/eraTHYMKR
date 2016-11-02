@@ -1,0 +1,280 @@
+﻿;=============================================================================
+;술 따르기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE424
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:424 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 萃香または勇儀, 若しくは조교 대상이 萃香または勇儀でないとダメ
+IF NO:TARGET != 23 && NO:TARGET != 60
+	SIF NO:PLAYER != 23 && NO:PLAYER != 60
+		RETURN 0
+ENDIF
+;性器が汚れているとMASTERの場合はできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+SIF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && ASSIPLAY == 0 && TALENT:MASTER:64 == 0
+	RETURN 0
+;性器が汚れており, 汚臭敏感で순종4미만의 ASSI일 경우はできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+IF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && ASSIPLAY
+	SIF ABL:ASSI:10 <= 3 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;작은 체형の場合, 巨乳か爆乳じゃないとダメ
+SIF TALENT:128 && TALENT:111 == 0 && TALENT:112 == 0
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;Ｖ계 장착구使用中のときは기교가 4이상 없으면 안 됨
+SIF TEQUIP:20 && ABL:PLAYER:12 < 4
+	RETURN 0
+;쿠스코 채웠으면 불가
+SIF TEQUIP:21
+	RETURN 0
+;縄で緊縛中または대상의 순종이 3이상 없으면 안 됨
+SIF TEQUIP:40 && ABL:10 < 2
+	RETURN 0
+;거미집에 걸려 있을 때는 불가
+SIF TEQUIP:40 == 7
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;コスプレ中はだめ(色々と面倒なので)
+SIF TEQUIP:59 > 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM424
+IF TEQUIP:20 == 9
+	PRINTL 고구마 술 따르기
+	TSTR:0 = 고구마 술 따르기
+ELSE
+	PRINTL 가랑이 술 따르기
+	TSTR:0 = 가랑이 술 따르기
+ENDIF
+;말용으로 TFLAG:201을 사용. (0=가슴에, 1=정좌로 가랑이에, 2=보통으로 가랑이에)
+TFLAG:201 = 0
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+IF FLAG:14 & 8
+	PRINTL 어디를 사용할까?
+	SIF TALENT:112 || TALENT:113
+		PRINTL [0] - 가슴
+	PRINTL [1] - 가랑이(정좌)
+	PRINTL [2] - 가랑이
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0 && (TALENT:112 || TALENT:113)
+		LOCAL:1 = 0
+	ELSEIF RESULT == 1 || RESULT == 2
+		LOCAL:1 = RESULT
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ELSE
+	LOCAL:1 = RAND:3
+ENDIF
+;말용
+TFLAG:201 = LOCAL:1
+CALL TRAIN_MESSAGE_COM424
+
+DOWNBASE:0 += 20
+DOWNBASE:1 += 60
+
+SOURCE:19 = 5000
+SOURCE:18 = 1000
+SOURCE:12 = 500
+SOURCE:22 = 500
+SOURCE:31 = 1000
+
+IF LOCAL:1 == 1
+	SOURCE:20 = 500
+	TIMES SOURCE:22 , 1.30
+ENDIF
+
+IF (TALENT:112 || TALENT:113) && LOCAL:1 == 0
+	;ABL:B감각을 본다
+	IF ABL:3 == 0
+		SOURCE:3 = 75
+	ELSEIF ABL:3 == 1
+		SOURCE:3 = 150
+	ELSEIF ABL:3 == 2
+		SOURCE:3 = 450
+	ELSEIF ABL:3 == 3
+		SOURCE:3 = 900
+	ELSEIF ABL:3 == 4
+		SOURCE:3 = 1700
+	ELSE
+		SOURCE:3 = 2600
+	ENDIF
+	
+	;B민감, 둔감을 본다
+	IF TALENT:106
+		TIMES SOURCE:3 , 1.50
+	ELSEIF TALENT:107
+		TIMES SOURCE:3 , 0.60
+	ENDIF
+ELSE
+	;ABL:C감각을 본다
+	IF ABL:0 == 0
+		SOURCE:0 = 100
+	ELSEIF ABL:0 == 1
+		SOURCE:0 = 250
+	ELSEIF ABL:0 == 2
+		SOURCE:0 = 500
+	ELSEIF ABL:0 == 3
+		SOURCE:0 = 1000
+	ELSEIF ABL:0 == 4
+		SOURCE:0 = 1800
+	ELSE
+		SOURCE:0 = 2900
+	ENDIF
+	
+	;C민감, 둔감을 본다
+	IF TALENT:100
+		TIMES SOURCE:0 , 1.50
+	ELSEIF TALENT:101
+		TIMES SOURCE:0 , 0.60
+	ENDIF
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:18, 0.30
+	TIMES SOURCE:22, 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:18, 0.60
+	TIMES SOURCE:22, 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:18, 1.00
+	TIMES SOURCE:22, 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:18, 1.30
+	TIMES SOURCE:22, 1.30
+ELSE
+	TIMES SOURCE:18, 1.60
+	TIMES SOURCE:22, 1.60
+ENDIF
+
+;프라이드 높다
+SIF TALENT:16
+	SOURCE:22 /= 2
+;보수적
+SIF TALENT:24
+	SOURCE:22 /= 3
+;약에 들어 있는 독 내성
+SIF TALENT:44
+	SOURCE:18 /= 4
+
+IF (TALENT:112 == 0 && TALENT:113 == 0) || LOCAL:1 > 0
+	SIF PLAYER == MASTER
+		TCVAR:41 += 1
+	;노예의 V⇔조교자의 입의 불결이 이동
+	STAIN:3 |= STAIN:PLAYER:0
+	STAIN:PLAYER:0 |= STAIN:3
+ENDIF
+
+;취기가 돈다(피부 흡수……는 무리하게인가? )
+SOURCE:40 += 100
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM424
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF (TALENT:112 || TALENT:113) && TFLAG:201 == 0
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%에게 풍부한 가슴을
+	PRINTFORML 껴안도록 명령하고, 가슴의 구덩이에 술을 부어 넣었다.
+	PRINTFORMW 술의 자극인가 %CALLNAME:TARGET%의 얼굴은 은은한 다홍색을 띄고 있다….
+	PRINTL
+	PRINTL
+	PRINTFORM 충분히 술이 차 올랐을 무렵, %조사선택(CALLNAME:PLAYER, "는")% 
+	IF TALENT:134 && EX:10 && PALAM:10 >= PALAMLV:5
+		PRINTFORML %CALLNAME:TARGET%의 타액과 모유가 섞인 술을
+	ELSEIF TALENT:134 && EX:10
+		PRINTL 모유가 섞여, 부드러운 맛이 된 술을
+	ELSEIF PALAM:10 >= PALAMLV:5
+		PRINTFORML %CALLNAME:TARGET%의 타액이 충분히 섞인 술을
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%의 양 유방으로 만들어진 구덩이에 흘러 들어가고 있는 술을
+	ENDIF
+	IF NO:PLAYER == 23 || NO:PLAYER == 60
+		PRINTL 기다렸다는 듯이 마셔버렸다.
+		PRINTFORML 그리고 아깝다고 말하면서 %CALLNAME:TARGET%의 유방에 남아있는
+		PRINTW 얼마 안 되는 술을 전부 핥았다….
+	ELSE
+		PRINTW 단번에 다 마셨다.
+	ENDIF
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+	IF TFLAG:201 == 1
+		PRINTFORML %조사선택(CALLNAME:TARGET, "를")% 정좌시켜, 양 다리를 모으게 하고
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%의 양 다리를 모으게 하고
+	ENDIF
+	PRINTL 허벅지와 하복부로 만들어진 구덩이에 술을 부어 넣었다.
+	PRINTFORMW 술의 자극인가 %CALLNAME:TARGET%의 얼굴은 은은하게 다홍색으로 물들고 있다….
+	PRINTL
+	PRINTL
+	PRINTFORM 충분히 술이 채워졌을 무렵, %조사선택(CALLNAME:PLAYER, "는")% 
+	IF TEQUIP:20 == 9 && PALAM:10 >= PALAMLV:5
+		PRINTFORML %CALLNAME:TARGET%의 애액과 감자의 향이 뒤섞인 술을
+	ELSEIF TEQUIP:20 == 9
+		PRINTL 감자의 좋은 향기가 깃든 술을
+	ELSEIF PALAM:10 >= PALAMLV:5
+		PRINTFORML %CALLNAME:TARGET%의 애액이 잔뜩 섞인 술을
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%의 양 다리와 하복부 사이의 델타지대에 흘러 들어가지고 있는 술을
+	ENDIF
+	IF NO:PLAYER == 23 || NO:PLAYER == 60
+		PRINTL 기다리고 있었다는 듯이 마셔버렸다.
+		PRINTFORML 그리고 아깝다고 말하면서 %CALLNAME:TARGET%의 허벅지에 남아있는
+		PRINTW 얼마 안되는술도 놓치지 않으려고 빨아댔다….
+	ELSE
+		PRINTW 단번에 다 마셨다.
+	ENDIF
+ENDIF

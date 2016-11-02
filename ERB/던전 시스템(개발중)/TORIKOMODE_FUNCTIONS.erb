@@ -1,0 +1,477 @@
+﻿;============================================================
+;여기저기서 가져다 쓸 수 있는 공통함수/펑션의 저장.
+
+;셔플함수.(1000까지)
+;전역변수 SUFFLE을 사용한다. (1차원변수로, 항목수 1000개)
+;ARG = 뽑을 개수.
+;로직
+;- 1천장의 빈카드가 존재한다 (전역변수)
+;- 0부터 ARG-1 까지의 카드에 (총 ARG장수) 숫자를 0부터 차례대로 써넣는다.
+;- 그리고 숫자가 적힌 카드만으로, 뽑아 섞기 알고리즘을 돌린다.
+;- 그러면 빈카드는 섞이게 된다. (전역변수). 필요할때마다 이걸 섞은 후, 필요한 개수만큼의 카드를 뽑아 쓰면 된다.(전역변수로)
+;- 예) 셔플,5 를 한다. 그리고 덱(전역변수)에서 위에서부터 5장을 뽑는다. 0~4까지의 숫자가 1장씩 무작위하게 들어있다.
+;-       그리고 다시 카드를 뽑고싶을때는 셔플을 해준 후, 뽑아야 한다. 만약 그냥 또 뽑으면 아까와 같은 결과가 나오게 되므로.
+@SHUFFLE, ARG
+;LOCAL:0 = 버퍼
+
+;ARG만큼의 카드에 숫자를 0부터 저장한다.
+FOR LOCAL:99, 0, ARG
+	SHUFFLE:(LOCAL:99) = (LOCAL:99)
+	;디버그
+	;PRINTFORML (LOCAL:99)={(LOCAL:99)}, SHUFFLE:{(LOCAL:99)} = {SHUFFLE:(LOCAL:99)}
+NEXT
+;0번 카드를 뽑는다. 그후 아무 카드나 뽑아서 카드와 교환한다.(같은 카드는 안됨) 이걸 ARG 회수 반복한다.
+FOR COUNT, 0, ARG
+	;COUNT 번째 카드 뽑고, 저장
+	LOCAL:0 = SHUFFLE:COUNT
+	;디버그
+	;PRINTFORML {COUNT}번째 카드를 뽑았습니다. 그리고 그 값은 {LOCAL:0}입니다.
+	$LOOP_SELECT2NDCARD
+	;ARG 장수 중에서 아무카드나 뽑는다.
+	LOCAL:1 = RAND:ARG
+	;만약 같은 카드를 뽑았다면 다시 뽑을 것.
+	SIF LOCAL:1 == COUNT
+		GOTO LOOP_SELECT2NDCARD
+	;그리고 카드 값을 저장.
+	LOCAL:2 = SHUFFLE:(LOCAL:1)
+	;디버그
+	;PRINTFORML {LOCAL:1}번째 카드를 뽑았습니다. 그리고 그 값은 {LOCAL:2}입니다.
+	;이제 두 카드를 서로 바꿔서 저장한다.
+	SHUFFLE:COUNT = LOCAL:2
+	SHUFFLE:(LOCAL:1) = LOCAL:0
+	;디버그
+	;PRINTFORML 두 카드를 바꿨습니다. 이제 카드배열은 다음과 같습니다.
+	;FOR LOCAL:99, 0, ARG
+	;	PRINTFORM {SHUFFLE:(LOCAL:99)},
+	;NEXT
+	;PRINTL
+NEXT
+
+
+;------------------------------------
+;테스트로 만들어보는 룰렛. 정확히는 루프와 리드로우 테스트이다.
+;X개의 상품을 받아와서, 돌린다. 
+;중앙열은 상품 리스트. 아래와 위는 '룰렛이 돌아가는 걸' 보여주기 위한 연출.
+;룰렛을 돌려야 하므로, 상품명은 그렇게 길어질 수는 없다.
+;로직
+;-룰렛에는 총 5개의 상품이 들어있다.  (대부분 돈이다)
+;-룰렛은 1,2,3열 각각이 따로 움직인다. (각각 속도를 정해서 돌아간다)
+;-스탑타임. 이 수치 이상이 되면 룰렛은 멈춘다.
+;-회전속도. 시작시 가장 빠르며, 점점 느려진다.
+;-1,2,3열은 상품의 순서가 다르다. (각각 랜덤정렬)
+;-버튼스탑을 쓰지 않았다면, 브레이크 버튼을 눌러 모든 릴을 일정 시간 후 강제중단 시킬 수 있다. 
+;  (만약 브레이크로 인한 스탑타임이 가장 스탑타임이 적은 릴보다 적다면, 모든 릴의 스탑타임은 가장 빨리 멈출 녀석으로 맞춰진다)
+;-브레이크를 쓰지 않았다면, 유저는 버튼을 눌러 특정 릴의 정지시간을 앞당길 수 있다. (1회만 입력받는다).
+;-3개가 일치하면 높은 보상을 추가로 받을 수 있다.
+;-각 상품이 나올 확률은 정확히 동일하다. (랜덤을 그대로 따라간다)
+;결과를 반환하는 함수이다. RESULT:0 = 1 = 잭팟. RESULT:1~3  = 각 상품번호
+@RULLET, ARG, ARG:1, ARG:2, ARG:3, ARG:4
+LOCAL = 0
+LOCAL:1 = 0
+LOCAL:2 = 0
+LOCAL:3 = RAND:5
+LOCALS:0 = %ITEM_NAME_RPG:(ARG:0)%
+LOCALS:1 = %ITEM_NAME_RPG:(ARG:1)%
+LOCALS:2 = %ITEM_NAME_RPG:(ARG:2)%
+LOCALS:3 = %ITEM_NAME_RPG:(ARG:3)%
+LOCALS:4 = %ITEM_NAME_RPG:(ARG:4)%
+;룰렛 릴의 속도값
+;전체 릴의 속도값
+LOCAL:4 = 0
+;1번릴의 번호값
+LOCAL:5 = 1
+;2번릴의 번호값
+LOCAL:6 = 2
+;3번릴의 번호값
+LOCAL:7 = 3
+;1번릴의 속도
+LOCAL:55 = 1
+;2번릴의 속도
+LOCAL:56 = 2
+;3번릴의 속도
+LOCAL:57 = 3
+;급속정지 사용여부 (0/미사용 1/사용)
+LOCAL:8 = 0
+;카지노머신이 멈출 시간
+LOCAL:9 == RAND:100 + 900
+;카지노머신 꾸미기용
+LOCALS:99 = ☆
+LOCALS:98 = ★
+
+;1번릴을 정한다.
+CALL SHUFFLE, 5
+LOCAL:10 = SHUFFLE:0
+LOCAL:11 = SHUFFLE:1
+LOCAL:12 = SHUFFLE:2
+LOCAL:13 = SHUFFLE:3
+LOCAL:14 = SHUFFLE:4
+
+;2번릴을 정한다.
+CALL SHUFFLE, 5
+LOCAL:20 = SHUFFLE:0
+LOCAL:21 = SHUFFLE:1
+LOCAL:22 = SHUFFLE:2
+LOCAL:23 = SHUFFLE:3
+LOCAL:24 = SHUFFLE:4
+
+;3번릴을 정한다.
+CALL SHUFFLE, 5
+LOCAL:30 = SHUFFLE:0
+LOCAL:31 = SHUFFLE:1
+LOCAL:32 = SHUFFLE:2
+LOCAL:33 = SHUFFLE:3
+LOCAL:34 = SHUFFLE:4
+
+PRINTL
+PRINTL
+
+$REPEAT_LOOP
+
+;루프를 돌린다.
+TONEINPUT 50, -999, 0
+;이전 라인를 지운다 (화면이 위로 올라가지 않도록...)
+IF LOCAL:4 >0
+	CLEARLINE 8
+ELSE
+	CLEARLINE 2
+ENDIF
+
+;룰렛이 돌 시간을 증가시킨다. 십자리수는 임의로 정할 수 있으나, 1자릿수는 반드시1이어야 한다. (그래야 1회전마다 1씩 증가하는 카운터 역활을 할 수 있음)
+IF LOCAL:8 == 1
+	LOCAL:4 += 51
+ELSE
+	LOCAL:4 += 11
+ENDIF
+
+;릴의 속도가 감소할지 여부를 결정. 룰렛의 회전수가 늘어날수록, 속도는 점점 감소한다.
+IF LOCAL:4 > 800
+	LOCAL:55 = 16
+	LOCAL:56 = 24
+	LOCAL:57 = 32
+ELSEIF LOCAL:4 > 600
+	LOCAL:55 = 8
+	LOCAL:56 = 12
+	LOCAL:57 = 16
+ELSEIF LOCAL:4 > 400
+	LOCAL:55 = 4
+	LOCAL:56 = 6
+	LOCAL:57 = 8
+ELSEIF LOCAL:4 > 200
+	LOCAL:55 = 2
+	LOCAL:56 = 3
+	LOCAL:57 = 4
+ENDIF
+ 
+;릴이 돌아갈지 여부를 결정
+SIF LOCAL:4%LOCAL:55 == 0
+	LOCAL:5++
+SIF LOCAL:4%LOCAL:56 == 0
+	LOCAL:6++
+SIF LOCAL:4%LOCAL:57 == 0
+	LOCAL:7++
+
+;디버그
+;PRINTFORML LOCAL:5={LOCAL:5}, LOCAL:6={LOCAL:6}, LOCAL:7={LOCAL:7}
+
+;アニメーション
+REDRAW 0
+;색 이쁘게 하는 처리.
+LOCAL:2 = 0x005599 + 65536*3*LOCAL + 256*3*LOCAL - 3*LOCAL
+;輝度補正
+LOCAL:2 += 65536*2*LOCAL + 256*2*LOCAL + 2*LOCAL
+
+IF (LOCAL:1) == 0
+	LOCAL += 1
+	SIF LOCAL == 34
+		LOCAL:1 = 1
+ELSEIF (LOCAL:1) == 1
+	LOCAL -= 1
+	SIF LOCAL == 0
+		LOCAL:1 = 0
+ENDIF
+
+;카지노 기계 그리기
+IF LOCAL:4%2 ==1
+	LOCALS:99 = ☆
+	LOCALS:98 = ★
+ELSE
+	LOCALS:99 = ★
+	LOCALS:98 = ☆
+ENDIF
+;윗선
+PRINTFORML %LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%
+
+;좌베젤
+PRINTFORM %LOCALS:99%
+;릴
+PRINTFORM |%LOCALS:(LOCAL:(10+(LOCAL:5+1)%5)), 6%|  
+PRINTFORM |%LOCALS:(LOCAL:(20+(LOCAL:6+1)%5)), 6%|  
+PRINTFORM |%LOCALS:(LOCAL:(30+(LOCAL:7+1)%5)), 6%|
+;우베젤
+PRINTFORML %LOCALS:98%
+
+;좌베젤
+PRINTFORM %LOCALS:98%
+;릴
+SETCOLOR LOCAL:2
+PRINTFORM |%LOCALS:(LOCAL:(10+(LOCAL:5)%5)), 6%|--
+PRINTFORM |%LOCALS:(LOCAL:(20+(LOCAL:6)%5)), 6%|--
+PRINTFORM |%LOCALS:(LOCAL:(30+(LOCAL:7)%5)), 6%|
+RESETCOLOR
+;우베젤
+PRINTFORML %LOCALS:99%
+
+;좌베젤
+PRINTFORM %LOCALS:99%
+;릴
+PRINTFORM |%LOCALS:(LOCAL:(10+(LOCAL:5-1)%5)), 6%|  
+PRINTFORM |%LOCALS:(LOCAL:(20+(LOCAL:6-1)%5)), 6%|  
+PRINTFORM |%LOCALS:(LOCAL:(30+(LOCAL:7-1)%5)), 6%|
+;우베젤
+PRINTFORML %LOCALS:98%
+
+;아랫선
+PRINTFORML %LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%%LOCALS:98%%LOCALS:99%
+
+
+;일정회수 돌았다면, 멈춘다.
+IF LOCAL:4 > LOCAL:9
+	PRINTFORML =정지=
+;급속정지가 눌러졌다면, 급속정지모드를 켠다. (여러번 누른다고 효과가 더 있는 것은 아니다...)
+ELSEIF RESULT == 5 || LOCAL:8 ==1
+	LOCAL:8 == 1
+	PRINTFORML =정지중...=
+	GOTO REPEAT_LOOP
+;그게 아니라면, 계속 돈다.
+ELSE 
+	PRINTFORML =[5] : 급속정지=
+	GOTO REPEAT_LOOP
+ENDIF
+
+;잭팟처리
+SIF LOCAL:(10+(LOCAL:5)%5) == LOCAL:(20+(LOCAL:6)%5) &&  LOCAL:(10+(LOCAL:5)%5) == LOCAL:(30+(LOCAL:7)%5)
+	RESULT:0 = 1
+;보상처리
+PRINTFORMW 상품은...%LOCALS:(LOCAL:(10+(LOCAL:5)%5))%, %LOCALS:(LOCAL:(20+(LOCAL:6)%5))%, %LOCALS:(LOCAL:(30+(LOCAL:7)%5))% 입니다!
+RESULT:1 = LOCAL:(10+(LOCAL:5)%5)
+RESULT:2 = LOCAL:(20+(LOCAL:6)%5)
+RESULT:3 = LOCAL:(30+(LOCAL:7)%5)
+
+
+;RPG모드에서 특정 번호의 아이템을 보상으로 받았을 때, 이를 처리하는 함수.
+@ITEM_REWARD_RPG, ARG
+CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+;타입이 돈일 경우
+IF ITEM_DATA_RPG:ARG:0 == 6
+	PRINTFORML %ITEM_NAME_RPG:ARG%을 획득했다. 돈 증가.
+		;아이템 가격만큼 돈이 + 된다.
+		MONEY += ITEM_DATA_RPG:ARG:1
+;그 외의 경우에는
+ELSE
+	PRINTFORML %ITEM_NAME_RPG:ARG%을 획득했다.
+	;유저의 아이템 개수를 받아와, +1의 인벤토리 슬롯에 저장한다.
+	INVENTORY_ITEM:(CALC_ITEM_HOWMANY_INVENTORY() +1) = ARG
+	;디버그
+	PRINTFORML 아이템이 {INVENTORY_ITEM:(CALC_ITEM_HOWMANY_INVENTORY() +1)}번째 인벤에 들어갔다.
+ENDIF
+RESETCOLOR
+
+;---------------------------------------------------
+;RPG모드에서 특정 아이템을 버리는 처리
+;ARG - 아이템이 들어있는 인벤토리 번호.
+@DELETE_ITEM_IN_INVENTORY, ARG
+;아이템을 삭제한다. 
+INVENTORY_ITEM:(ARG) = 0
+;그리고 이 후부터 체크한다.
+FOR LOCAL:99, ARG, 999
+	;전부 1칸씩 당긴다.
+	INVENTORY_ITEM:(LOCAL:99) = INVENTORY_ITEM:(LOCAL:99+1)
+	INVENTORY_ITEM:(LOCAL:99+1) = 0
+NEXT
+
+
+;----------------------------------
+;유저의 인벤토리의 아이템 개수를 반환하는 펑션.
+@CALC_ITEM_HOWMANY_INVENTORY
+#FUNCTION
+RESULT = 0
+FOR LOCAL:99, 0, 1000
+	IF INVENTORY_ITEM:(LOCAL:99) > 0
+		RESULT++
+	ENDIF
+NEXT
+RETURNF RESULT
+
+;---------------------------------------------------------
+;유저의 인벤토리를 출력하는 함수
+@PRINT_INVENTORY
+;한 페이지에 출력할 아이템의 개수
+LOCAL:0 = 20
+;현재의 페이지 번호
+LOCAL:1 = 0
+;선택한 아이템 번호
+LOCAL:2 = 0
+
+$LOOP_PRINT_INVENTORY
+DRAWLINE
+;출력부분........................................................................
+PRINTL ==‡INVENTORY‡========================
+PRINTL
+;소팅정보 출력
+SIF INVENTORY_FLAG == 0
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE",3
+PRINT [T:전부보기]
+	RESETCOLOR
+
+SIF INVENTORY_FLAG == 1
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE",3
+PRINT [W:무기]
+	RESETCOLOR
+
+SIF INVENTORY_FLAG == 2
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE",3
+PRINT [A:방어구]
+	RESETCOLOR
+
+SIF INVENTORY_FLAG == 3
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE",3
+PRINT [J:악세사리]
+	RESETCOLOR
+
+SIF INVENTORY_FLAG == 4
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE",3
+PRINT [U:소모품]
+	RESETCOLOR
+
+SIF INVENTORY_FLAG == 5
+	CALL SETCOLOR_TORIKOMODE, "SKYBLUE",3
+PRINT [S:포로]
+	RESETCOLOR
+PRINTL
+PRINTL
+
+;아이템 정보 출력. 1페이지에 LOCAL:0 개씩 출력한다.
+FOR LOCAL:99, LOCAL:0*LOCAL:1+1, LOCAL:0*(LOCAL:1+1)+1
+	PRINTFORM [{LOCAL:99,3,RIGHT}] 
+		IF INVENTORY_ITEM:(LOCAL:99) == 0
+			PRINT - - - - - - - - 비어있음 - - - - - - -
+		ELSE
+			;이름 출력
+			PRINTFORM %ITEM_NAME_RPG:(INVENTORY_ITEM:(LOCAL:99)),14, LEFT%
+			PRINT  - 
+			;설명 출력. 앞에서 10글자 까지만.
+			PRINTFORM %SUBSTRING(ITEM_DISCRIPT_RPG:(INVENTORY_ITEM:(LOCAL:99)), 0, 20)%
+			PRINT ...
+
+		ENDIF
+	PRINTL
+NEXT
+
+;페이지 이동 출력
+PRINTL
+;앞으로
+SIF LOCAL:1 != 0
+	PRINT [B:이전] 
+;페이지수
+PRINTFORM <{LOCAL:1}page> 
+
+;뒤로
+SIF LOCAL:1 != 99
+PRINT [N:다음페이지]
+PRINTFORML 
+
+PRINTL
+;돌아간다
+PRINTL [I :돌아간다]
+DRAWLINE
+;인풋을 받는다.
+
+
+;입력,처리부분...................................................................
+INPUTS
+SELECTCASE RESULTS
+	;정렬관련
+	CASE "T"
+		INVENTORY_FLAG = 0
+		GOTO LOOP_PRINT_INVENTORY
+	CASE "W"
+		INVENTORY_FLAG = 1
+		GOTO LOOP_PRINT_INVENTORY
+	CASE "A"
+		INVENTORY_FLAG = 2
+		GOTO LOOP_PRINT_INVENTORY
+	CASE "J"
+		INVENTORY_FLAG = 3
+		GOTO LOOP_PRINT_INVENTORY
+	CASE "U"
+		INVENTORY_FLAG = 4
+		GOTO LOOP_PRINT_INVENTORY
+	CASE "S"
+		INVENTORY_FLAG = 5
+		GOTO LOOP_PRINT_INVENTORY
+	;페이지 관련
+	CASE "B"
+		SIF LOCAL:1 != 0
+			LOCAL:1 --
+		GOTO LOOP_PRINT_INVENTORY
+	CASE "N"
+		SIF LOCAL:1 != 99
+			LOCAL:1 ++
+		GOTO LOOP_PRINT_INVENTORY
+	;종료
+	CASE "I"
+		RETURN 0
+
+	;그외, 아이템번호를 입력했을 때,
+	CASEELSE
+		LOCAL:2 = TOINT(RESULTS)
+		;아이템이 존재한다면, 
+		IF INVENTORY_ITEM:(LOCAL:2) > 0
+			$LOOP_ITEM_WHATTODO
+			;아이템 정보를 출력
+			PRINTFORML %ITEM_NAME_RPG:(INVENTORY_ITEM:(LOCAL:2))%를 어떻게 할까요?
+			;장비계열이면
+			IF ITEM_DATA_RPG:(LOCAL:2):0 == 2 || ITEM_DATA_RPG:(LOCAL:2):0 == 3 || ITEM_DATA_RPG:(LOCAL:2):0 == 4 
+				PRINTL [0] 장비한다.
+			;소모품계열이면
+			ELSEIF ITEM_DATA_RPG:(LOCAL:2):0 == 1
+				PRINTL [0] 사용한다.
+			;포로계열이면
+			ELSEIF ITEM_DATA_RPG:(LOCAL:2):0 == 5
+				PRINTL [0] 파티에 추가한다.
+			ENDIF
+			PRINTL [1] 버린다.
+			PRINTL [2] 돌아간다.
+			INPUT
+			IF RESULT == 0
+				PRINTFORMW ...개발중...
+			ELSEIF RESULT == 1
+				PRINTFORML %ITEM_NAME_RPG:(INVENTORY_ITEM:(LOCAL:2))%를 정말로 버립니까? (0:아니 1:응)
+				INPUT
+				IF RESULT == 1
+					PRINTFORML %ITEM_NAME_RPG:(INVENTORY_ITEM:(LOCAL:2))% 를 버렸다.
+					;아이템 버리는 처리를 한다.
+					CALL DELETE_ITEM_IN_INVENTORY, LOCAL:2
+				ELSE
+					GOTO LOOP_ITEM_WHATTODO
+				ENDIF
+			ELSEIF RESULT == 2
+				;
+			ELSE
+				PRINTL 잘못된 입력입니다.
+				GOTO LOOP_ITEM_WHATTODO
+			ENDIF
+
+			GOTO LOOP_PRINT_INVENTORY
+		;아이템이 없다
+		ELSE
+			PRINTFORMW 잘못된 입력입니다.
+			GOTO LOOP_PRINT_INVENTORY
+		ENDIF
+ENDSELECT
+	
+
+
+
+
+

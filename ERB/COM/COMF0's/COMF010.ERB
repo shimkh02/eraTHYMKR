@@ -1,0 +1,116 @@
+﻿;=============================================================================
+;로터
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE10
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:10 > 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이 아니면 안 됨
+SIF ITEM:0 == 0 && NOITEM == 0
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우 조교자의 기교 4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM10
+TSTR:7 = 로터
+IF FLAG:1100 & 1
+	;技師パッチ有効なら特殊な名前チェック
+	FLAG:1110 = 0
+	CALL NAMECHECK_CUSTOMTOOL
+ELSE
+	TSTR:8 = %TSTR:7%
+	TSTR:9 = %TSTR:7%
+ENDIF
+PRINTFORML %TSTR:8%
+TSTR:0 = 로터
+CALL TRAIN_MESSAGE_COM010
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 80
+
+SOURCE:12 = 120
+SOURCE:31 = 70
+
+;ABL:Ｃ감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 200
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 400
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 900
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1600
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2400
+ELSE
+	SOURCE:0 = 3000
+ENDIF
+
+IF FLAG:1100 & 1
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 0
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:0
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:0 = FLAG:1120
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+SIF PLAYER == MASTER
+	TCVAR:41 += 1
+
+;커맨드 속성：도구(조교자)
+TFLAG:98 = 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM010
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+	PRINTFORM %CALLNAME:TARGET%의 
+IF (TALENT:120 || TALENT:121) && PALAM:13 >= PALAMLV:3
+	IF TALENT:120
+		PRINT 딱딱하게 선 페니스에 
+	ELSE
+		PRINT 푹 젖어 있는 보지에 
+	ENDIF
+	PRINTFORMW 진동하고 있는 %조사선택(TSTR:7, "를")% 꾹 눌렀다….
+ELSEIF TEQUIP:68
+	SIF EX:20
+		PRINT 팽창한 
+	PRINTFORMW 클리토리스에 %조사선택(TSTR:9, "를")% 접근시켜 주변만을 살짝살짝 자극했다….
+ELSEIF TALENT:120 || TALENT:121
+	PRINTFORMW \@(TALENT:120) ?페니스 # 보지 \@에 부들대는 %조사선택(TSTR:7, "를")% 들이댔다….
+ELSEIF PALAM:13 >= PALAMLV:3
+	PRINTFORMW 딱딱하게 솟은 클리토리스에 진동하는 %조사선택(TSTR:7, "를")% 들이댔다….
+ELSE
+	PRINTFORMW 클리토리스에 진동하는 %조사선택(TSTR:9, "를")% 들이댔다….
+ENDIF

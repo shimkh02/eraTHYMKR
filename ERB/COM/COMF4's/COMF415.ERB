@@ -1,0 +1,311 @@
+﻿;=============================================================================
+;독심
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE415
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:415 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;조교자가 心の目を閉ざしていない[覚]でないとダメ
+SIF TALENT:PLAYER:213 != 1
+	RETURN 0
+;助手調教時は[恋慕]持ちじゃないとダメ
+SIF ASSIPLAY && TALENT:ASSI:150 == 0
+	RETURN 0
+;조교 대상이 心の目を閉ざしている[覚]だとダメ
+SIF TALENT:213 == 2
+	RETURN 0
+;触手読心責め中はダメ
+SIF TEQUIP:76 == 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM415
+IF TEQUIP:74
+	PRINTL 독심 중단
+	TSTR:0 = 독심 중단
+ELSE
+	PRINTL 독심 개시
+	TSTR:0 = 독심 개시
+ENDIF
+CALL TRAIN_MESSAGE_COM415
+
+;독심세트
+;종료시는 수정 없음
+IF TEQUIP:74
+	TEQUIP:74 = 0
+	RETURN 1
+ENDIF
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 200
+
+LOCAL:1 = 1000
+LOCAL:2 = 1000
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL:1 , 1.00
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL:1 , 1.10
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL:1 , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL:1 , 1.30
+ELSE
+	TIMES LOCAL:1 , 1.40
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	SOURCE:22 += 600
+	SOURCE:31 += 1000
+	SOURCE:32 += 1000
+	TIMES LOCAL:1, 0.60
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	SOURCE:22 += 500
+	TIMES LOCAL:1, 1.00
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 300
+	SOURCE:19 += 300
+	SOURCE:22 += 400
+	TIMES LOCAL:1, 1.60
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 600
+	SOURCE:19 += 600
+	SOURCE:22 += 300
+	TIMES LOCAL:1, 2.00
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 1000
+	SOURCE:19 += 1000
+	SOURCE:22 += 200
+	TIMES LOCAL:1, 2.60
+ELSE
+	SOURCE:24 += 1800
+	SOURCE:19 += 1800
+	SOURCE:22 += 100
+	TIMES LOCAL:1, 3.80
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL:1 , 1.00
+ELSEIF ABL:21 == 1
+	TIMES LOCAL:1 , 1.20
+ELSEIF ABL:21 == 2
+	TIMES LOCAL:1 , 1.40
+ELSEIF ABL:21 == 3
+	TIMES LOCAL:1 , 1.60
+ELSEIF ABL:21 == 4
+	TIMES LOCAL:1 , 1.80
+ELSE
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+;무관심
+SIF TALENT:21
+	TIMES LOCAL:1 , 0.80
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.80
+;호기심
+SIF TALENT:23
+	TIMES LOCAL:1 , 2.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL:1 , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:2 , 3.00
+;도착적
+IF TALENT:80
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.20
+ENDIF
+;매력
+IF TALENT:90
+	SOURCE:11 += 500
+	SOURCE:17 += 500
+	TIMES LOCAL:1 , 1.50
+	TIMES LOCAL:2 , 1.20
+ENDIF
+
+SOURCE:28 += LOCAL:1 /2
+SOURCE:25 += LOCAL:2 /2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:2 , 1.50
+
+SOURCE:12 += LOCAL:1
+SOURCE:31 += LOCAL:2
+SOURCE:17 += LOCAL:1 /2
+TEQUIP:74 = 1
+
+RETURN 1
+
+;-------------------------------------------------
+;독심중
+;-------------------------------------------------
+@EQUIP_COM415
+PRINTL <독심 중>
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 100
+
+LOCAL = 1000
+LOCAL:1 = 1000
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 1.10
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.20
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.30
+ELSE
+	TIMES LOCAL , 1.40
+ENDIF
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:24 += 0
+	SOURCE:19 += 0
+	SOURCE:22 += 600
+	SOURCE:31 += 1000
+	SOURCE:32 += 1000
+	TIMES LOCAL, 0.30
+ELSEIF ABL:14 == 1
+	SOURCE:24 += 150
+	SOURCE:19 += 150
+	SOURCE:22 += 500
+	TIMES LOCAL, 1.00
+ELSEIF ABL:14 == 2
+	SOURCE:24 += 300
+	SOURCE:19 += 300
+	SOURCE:22 += 400
+	TIMES LOCAL, 2.00
+ELSEIF ABL:14 == 3
+	SOURCE:24 += 600
+	SOURCE:19 += 600
+	SOURCE:22 += 300
+	TIMES LOCAL, 3.60
+ELSEIF ABL:14 == 4
+	SOURCE:24 += 1000
+	SOURCE:19 += 1000
+	SOURCE:22 += 200
+	TIMES LOCAL, 4.60
+ELSE
+	SOURCE:24 += 1800
+	SOURCE:19 += 1800
+	SOURCE:22 += 100
+	TIMES LOCAL, 5.80
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES LOCAL , 1.10
+ELSEIF ABL:21 == 1
+	TIMES LOCAL , 1.20
+ELSEIF ABL:21 == 2
+	TIMES LOCAL , 1.30
+ELSEIF ABL:21 == 3
+	TIMES LOCAL , 1.40
+ELSEIF ABL:21 == 4
+	TIMES LOCAL , 1.60
+ELSE
+	TIMES LOCAL , 1.80
+ENDIF
+
+;무관심
+SIF TALENT:21
+	TIMES LOCAL , 0.80
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.80
+;호기심
+SIF TALENT:23
+	TIMES LOCAL , 2.50
+;해방
+SIF TALENT:33
+	TIMES LOCAL , 1.50
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL:1 , 3.00
+;도착적
+IF TALENT:80
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.20
+ENDIF
+;매력
+IF TALENT:90
+	SOURCE:11 += 500
+	SOURCE:17 += 500
+	TIMES LOCAL , 1.50
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+SOURCE:25 += LOCAL:1 /2
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.50
+
+SOURCE:12 += LOCAL
+SOURCE:31 += LOCAL:1
+SOURCE:17 += LOCAL/2
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+;주인 경험 플래그
+SIF ASSIPLAY == 0 && ABL:14 >= 3
+	TFLAG:50 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM415
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 마음을 
+IF TEQUIP:74
+	;겁쟁이인가 부끄럼쟁이
+	IF TALENT:10 || TALENT:35
+		PRINTL 해방해 주었다.
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 마음 깊이 안심하고 있는 것 같다….
+	ELSE
+		PRINTW 해방해 주었다….
+	ENDIF
+ELSE
+	;겁쟁이인가 부끄럼쟁이
+	IF TALENT:10 || TALENT:35
+		PRINTW 들여다 보기 시작했다….
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 마음을 읽히는 것에 공포심을 느끼고 있다….
+	ELSE
+		PRINTW 들여다 보기 시작했다….
+	ENDIF
+ENDIF

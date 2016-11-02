@@ -1,0 +1,415 @@
+﻿;=============================================================================
+;샌드위치
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+;더미 함수(커맨드를 직접 선택할 수는 없음)
+@COM_ABLE629
+RETURN 0
+
+@EXCOM_ABLE629
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;主人にペニスがないとダメ
+SIF EXIST_BAR(MASTER) == 0
+	RETURN 0
+;주인이 【魅惑】か【謎の魅力】じゃないとダメ
+SIF TALENT:MASTER:91 == 0 && TALENT:MASTER:92 == 0
+	RETURN 0
+;조수가 奉仕精神3이상, 기교4이상이 아니면 불가
+SIF ABL:ASSI:12 < 4 || ABL:ASSI:13 < 3
+	RETURN 0
+;全員体のサイズが同程度か, 주인이 금단의 지식 보유자가 아니면 불가
+IF TALENT:MASTER:56 == 0
+	IF TALENT:MASTER:127
+		SIF TALENT:127 == 0 || TALENT:ASSI:127 == 0
+			RETURN 0
+	ELSE
+		SIF TALENT:127 || TALENT:ASSI:127
+			RETURN 0
+	ENDIF
+ENDIF
+;조교 대상か助手の両方, あるいはどちらかが肥大陰核かオトコか후타나리だとダメ
+SIF EXIST_BAR(TARGET) || EXIST_BAR(ASSI)
+	RETURN 0
+;윤활이 높지 않으면 불가
+SIF PALAM:10 < 2000
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;패닉 중에는 불가
+SIF TFLAG:108 > 0
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;밧줄 사용 중에는 불가
+SIF TEQUIP:40
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 훈도시 착용 중일 경우에는 불가
+SIF ASSI >= 0 && TEQUIP:ASSI:59 == 17
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;인어는 안됨
+SIF TALENT:229 == 1
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;특정의 콤비 전용 더블 가랑이 파생 커맨드
+;상하에 노예＆조수의 한가운데를 페니스로 비빈다
+@COM629
+IF TFLAG:175 == 1
+	LOCALS = 샌드위치
+ELSEIF TFLAG:175 == 2
+	LOCALS = 무녀 샌드
+ELSEIF TFLAG:175 == 3
+	LOCALS = 가을의 미각 샌드
+ELSEIF TFLAG:175 == 4
+	LOCALS = 문사르트 샌드
+ELSEIF TFLAG:175 == 5
+	LOCALS = 비봉샌드
+ELSEIF TFLAG:175 == 6
+	LOCALS = 봄의 더블 릴리 샌드
+ELSEIF TFLAG:175 == 7
+	LOCALS = 코메이지 로리로리 샌드
+ELSEIF TFLAG:175 == 8
+	LOCALS = 몽환 세계 자매 샌드
+ELSEIF TFLAG:175 == 9
+	LOCALS = 백합결계 누님 샌드
+ELSEIF TFLAG:175 == 10
+	LOCALS = 조울MIX 샌드
+ELSEIF TFLAG:175 == 11
+	LOCALS = 환상 무디 샌드
+ELSEIF TFLAG:175 == 12
+	LOCALS = 환상 해피 샌드
+ENDIF
+PRINTFORML %LOCALS%
+
+;-------------------------------------------------
+;실행할 수 있을까의 판정(더블 가랑이의 처리와 같다)
+;-------------------------------------------------
+IF TFLAG:699 == 0
+	CALL COM_ORDER, 305
+	;실행할 수 없다
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+SELECTCOM = 629
+TSTR:0 = %LOCALS%
+CALL TRAIN_MESSAGE_COM629
+
+;-------------------------------------------------
+;사정 게이지 체크
+;-------------------------------------------------
+LOCAL = 0
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	LOCAL = 500
+ELSEIF ABL:12 == 1
+	LOCAL = 1100
+ELSEIF ABL:12 == 2
+	LOCAL = 2000
+ELSEIF ABL:12 == 3
+	LOCAL = 3000
+ELSEIF ABL:12 == 4
+	LOCAL = 3900
+ELSE
+	LOCAL = 4600
+ENDIF
+
+;윤활을 본다
+LOCAL = EJACULATIONCHECK_PALAM_10_5(TARGET, LOCAL)
+;순종을 본다
+LOCAL = EJACULATIONCHECK_ABL_10_1(TARGET, LOCAL)
+;봉사 정신을 본다
+LOCAL = EJACULATIONCHECK_ABL_13_1(TARGET, LOCAL)
+
+;조교자의 C감각을 본다
+LOCAL = EJACULATIONCHECK_ABL_0_1(PLAYER, LOCAL)
+
+SIF TALENT:PLAYER:120 || TALENT:PLAYER:121
+	BASE:PLAYER:2 += LOCAL
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 45
+DOWNBASE:1 += 190
+
+SOURCE:10 = 650
+SOURCE:12 = 350
+SOURCE:22 = 1700
+SOURCE:31 = 700
+
+;위 쪽으로 계산한 더러운 데이터
+SOURCE:30 = TFLAG:242*10 + 60
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	SOURCE:15 = 220
+	SOURCE:16 = 120
+	TIMES SOURCE:30 , 4.00
+ELSEIF ABL:13 == 1
+	SOURCE:15 = 280
+	SOURCE:16 = 210
+	TIMES SOURCE:30 , 2.50
+ELSEIF ABL:13 == 2
+	SOURCE:15 = 330
+	SOURCE:16 = 280
+	TIMES SOURCE:30 , 1.50
+ELSEIF ABL:13 == 3
+	SOURCE:15 = 380
+	SOURCE:16 = 380
+	TIMES SOURCE:30 , 1.00
+ELSEIF ABL:13 == 4
+	SOURCE:15 = 440
+	SOURCE:16 = 540
+	TIMES SOURCE:30 , 0.50
+ELSE
+	SOURCE:15 = 500
+	SOURCE:16 = 850
+	TIMES SOURCE:30 , 0.10
+ENDIF
+
+;ABL:기교를 본다
+IF ABL:12 == 0
+	TIMES SOURCE:15 , 0.70
+	TIMES SOURCE:16 , 0.70
+ELSEIF ABL:12 == 1
+	TIMES SOURCE:15 , 0.90
+	TIMES SOURCE:16 , 0.90
+ELSEIF ABL:12 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:12 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:12 == 4
+	TIMES SOURCE:15 , 1.40
+	TIMES SOURCE:16 , 1.40
+ELSE
+	TIMES SOURCE:15 , 1.60
+	TIMES SOURCE:16 , 1.60
+ENDIF
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 20
+	TIMES SOURCE:12 , 0.80
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 80
+	TIMES SOURCE:12 , 0.90
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 350
+	TIMES SOURCE:12 , 1.00
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 750
+	TIMES SOURCE:12 , 1.10
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1200
+	TIMES SOURCE:12 , 1.20
+ELSE
+	SOURCE:0 = 1750
+	TIMES SOURCE:12 , 1.30
+ENDIF
+
+;PALAM:윤활
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:0 , 0.30
+	TIMES SOURCE:15 , 0.60
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:0 , 0.60
+	TIMES SOURCE:15 , 0.80
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:15 , 1.00
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:15 , 1.20
+ELSEIF PALAM:10 < PALAMLV:5
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:15 , 1.40
+ELSE
+	TIMES SOURCE:0 , 2.50
+	TIMES SOURCE:15 , 1.60
+ENDIF
+
+;조수의 ABL:C감각을 본다
+IF ABL:ASSI:0 == 0
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:16 , 0.50
+ELSEIF ABL:ASSI:0 == 1
+	TIMES SOURCE:15 , 0.90
+	TIMES SOURCE:16 , 0.70
+ELSEIF ABL:ASSI:0 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+ELSEIF ABL:ASSI:0 == 3
+	TIMES SOURCE:15 , 1.10
+	TIMES SOURCE:16 , 1.20
+ELSEIF ABL:ASSI:0 == 4
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.40
+ELSE
+	TIMES SOURCE:15 , 1.30
+	TIMES SOURCE:16 , 1.70
+ENDIF
+
+;-------------------------------------------------
+;사정 체크
+;-------------------------------------------------
+TFLAG:91 = SAMEN_CHECK(MASTER)
+
+;사정시의 처리
+IF TFLAG:91 >= 1
+	;커맨드 마다 고유의 처리는 이 아래에 쓴다
+	TIMES SOURCE:15 , 2.00
+
+	;ABL:정액 중독을 본다
+	IF ABL:31 == 0
+		SOURCE:24 = 0
+		TIMES SOURCE:16 , 1.50
+		TIMES SOURCE:22, 1.40
+	ELSEIF ABL:31 == 1
+		SOURCE:24 = 200
+		TIMES SOURCE:16 , 2.00
+		TIMES SOURCE:22, 1.00
+	ELSEIF ABL:31 == 2
+		SOURCE:24 = 400
+		TIMES SOURCE:16 , 2.50
+		TIMES SOURCE:22, 0.80
+	ELSEIF ABL:31 == 3
+		SOURCE:24 = 700
+		TIMES SOURCE:16 , 3.00
+		TIMES SOURCE:22, 0.50
+	ELSEIF ABL:31 == 4
+		SOURCE:24 = 1000
+		TIMES SOURCE:16 , 4.00
+		TIMES SOURCE:22, 0.20
+	ELSE
+		SOURCE:24 = 1500
+		TIMES SOURCE:16 , 5.00
+		TIMES SOURCE:22, 0.00
+	ENDIF
+
+	;사정처 타입의 설정
+	TFLAG:703 = 5
+	;사정처 선택의 가능·불가
+	TFLAG:704 = 0
+	;범용적인 처리는 이 함수로 실시한다
+	;(사정 게이지의 재계산이나 사정 경험의 상승과 공통 부분의 표시)
+	CALL SAMEN_SHOOT
+ENDIF
+
+;사정에 관계없이 행해지는 처리는 여기로부터
+;노예의 V⇔조교자의 P의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:3
+
+;조수의 V⇔조교자의 P의 불결이 이동
+STAIN:ASSI:3 |= STAIN:PLAYER:2
+STAIN:PLAYER:2 |= STAIN:ASSI:3
+
+;노예의 V⇔조수의 V의 불결이 이동
+STAIN:3 |= STAIN:ASSI:3
+STAIN:ASSI:3 |= STAIN:3
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+IF TALENT:MASTER:120
+	TCVAR:41 += 1
+	TCVAR:ASSI:41 += 1
+ENDIF
+;봉사 쾌락 경험 입수 판정
+TFLAG:100 |= 1
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+TFLAG:175 = 0
+RETURN 1
+
+;--------------------------------------------------
+;명령 거부의 메시지
+;--------------------------------------------------
+@DENIAL_MESSAGE_COM_629
+CALL KOJO_DENIAL_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM629
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:TARGET, "와")% %CALLNAME:ASSI%의 성기 사이에 페니스를 끼우고, 두 명의 사이를 비벼댔다.
+IF TFLAG:175 == 1
+	PRINTFORMW 그것은 마치 샌드위치와 같았다….
+ELSEIF TFLAG:175 == 2
+	PRINTFORMW 무녀의 사랑경쟁은 %CALLNAME:MASTER%의 고간을 잔뜩 만족시켰다….
+ELSEIF TFLAG:175 == 3
+	PRINTFORMW 가을의 신이 만들어내는 쾌감을 %조사선택(CALLNAME:MASTER, "는")% 마음껏 맛보았다….
+ELSEIF TFLAG:175 == 4
+	PRINTW 달의 자매의 가랑이는 확실히 쾌감으로 무중력 상태였다….
+ELSEIF TFLAG:175 == 5
+	PRINTFORMW 두 사람의 오랜 세월의 교제로 닦아진 테크닉은 %CALLNAME:MASTER%의 고간을 많이 만족시켰다….
+ELSEIF TFLAG:175 == 6
+	PRINTFORMW 릴리들의 봉사로 %CALLNAME:MASTER%의 고간에 봄이 찾아왔다….
+ELSEIF TFLAG:175 == 7
+	PRINTW 사토리와 코이시가 봉사하고 있는 것을 즐기고 있자니 마치 범죄자라도 된 것 같은 기분이었다….
+ELSEIF TFLAG:175 == 8
+	PRINTFORMW 몽월과 환월들의 봉사로 %CALLNAME:MASTER%의 가랑이는 확실히 몽환의 경지에 이른 것 같다….
+ELSEIF TFLAG:175 == 9
+	PRINTFORMW 두 사람의 아름다운 누님에 의한 요염한 사랑경쟁을, %조사선택(CALLNAME:MASTER, "는")% 마음껏 만끽했다….
+ELSEIF TFLAG:175 == 10
+	PRINTFORMW 루나사와 메를랑의 서로 다른 봉사로 %조사선택(CALLNAME:MASTER, "는")% 감정이 흔들려져 버렸다….
+ELSEIF TFLAG:175 == 11
+	PRINTFORMW 리리카와 루나사의 촉촉한 봉사로 %조사선택(CALLNAME:MASTER, "는")% 환상적인 기분을 맛보았다….
+ELSEIF TFLAG:175 == 12
+	PRINTFORMW 리리카와 메를랑의 격렬한 사랑경쟁에 %조사선택(CALLNAME:MASTER, "는")% 매우 해피해졌다….
+ENDIF

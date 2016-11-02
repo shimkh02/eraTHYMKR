@@ -1,0 +1,5851 @@
+﻿;-------------------------------------------------
+;YM용 레티 대사 (ver.1.00)
+;-------------------------------------------------
+;목표인 200KB에 도달했으므로 일단 업. readme도 봐줘요.
+;아직 채우고 싶은 부분도 많이 있으니 향후 서서히 덧붙여나가겠습니다(특히 B계 조교와 촉수 관련).
+;-------------------------------------------------
+;口上設定雛形
+;X1とX2をキャラ番号に置換し, Y1を助手のキャラ番号に置換する。
+;ただし, キャラ番号が3桁未満のキャラの場合, X1,Y1は1, X2は001のように変える必要がある
+;そしてコマンド内の適当な条件の下のPRINTFORMWの後ろに半角スペ―スを置いてセリフを追加してください。
+;テンプレ―トが更新された際には, 新しいテンプレをベ―スにして, 
+;該等する条件のPRINTFORMWの行をコピ―＆ペ―ストしていくことをお勧めします。（手間はかかるが, エラ―は起こりえない）
+;口上を追加しないコマンドには行頭に『;』をつけましょう。後で追加した際に初めての口上が出ないなどの弊害が起こります。
+;また, 口上を追加したコマンドの『;』をきちんと外しましょう。これだと条件を満たしても口上がでません
+;条件の追加や変更は自由ですが, その際には随時テストをしていくとよいでしょう。（エラ―の原因は, ほぼ確実に手を加えた部分にあるため）
+;最後にできればread meも読んで下さい
+;-------------------------------------------------
+
+
+;--------------------------------------------------
+;대사 파일의 존재 판정
+;--------------------------------------------------
+;대사의 존재 판정(YM판)
+@TRY_12
+RETURN 1
+
+@EVENTTRAIN
+#PRI
+SIF FLAG:11 == 0
+	FLAG:11 = 2
+
+@EVENTEND
+#LATER
+
+;--------------------------------------------------
+;EVENTTRAIN関係（X1をキャラ番号に置換）
+;調教開始時のセリフ CFLAG 201～219を使用
+;-------------------------------------------------
+@EVENTTRAIN
+SIF FLAG:11 == 0
+	RETURN 0
+SIF NO:TARGET != 12
+	RETURN 0
+;--------------------------------------------------
+;엑스트라 모드 구문 CFLAG:5020을 사용
+;예를 선택했을 때 첫 조교시에 대사 설정용의 소질로 변경할 수 있습니다.
+;밑에 적은 처녀화할 경우의 구문을 샘플로 실어둡니다.
+;-------------------------------------------------;
+IF CFLAG:5020 == 0
+	PRINTL 처녀 모드로 이행하겠습니까?
+	PRINTL [0] 예
+	PRINTL [1] 아니오
+	$INPUT_LOOP
+	INPUT
+	IF RESULT == 0
+		PRINTFORMW ―처녀 모드로 소질, 능력을 변경합니다―
+		TALENT:0 = 1
+		ABL:1 = 0
+		EXP:0 = 0
+	ELSEIF RESULT == 1
+		PRINTFORMW ―통상 모드로 조교를 개시합니다―
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+	CFLAG:5020 = 1
+ENDIF
+;--------------------------------------------------
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTTRAIN_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_EVENTTRAIN_KX1_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;--------------------------------------------------
+;簡易助手口上の発動時に初調教時口上をスキップ（Y1を助手のキャラ番号にする）
+;複数人いる際には, SIF ASSINO() == Y1 || ASSINO() == Z1と追加していく
+;--------------------------------------------------
+;IF CFLAG:5021 == 0 && ASSI > 0
+;	SIF ASSINO() == Y1
+;		CFLAG:5021 =1
+;ENDIF
+;-------------------------------------------------
+;初調教時 CFLAG5001
+;-------------------------------------------------
+IF CFLAG:5001 == 0
+	DRAWLINE
+	PRINTFORMW 「어둡고 더러운 방이네…. 더운 것보단 낫지만」
+	PRINTFORMW 「근데, 뭘 할 생각이지? 즐거운 것이 아니라는건 알겠지만」
+	PRINTFORMW 레티는 수상하다는 얼굴로 이쪽을 보고 있다.
+	CFLAG:5001 = 1
+	RETURN 1
+
+;-------------------------------------------------
+;調教開始時（一回のみ） CFLAG5001
+;-------------------------------------------------
+
+;굴복각인Lv1
+ELSEIF CFLAG:5001 < 2 && MARK:2 == 1 && TALENT:150 == 0 && TALENT:160 == 0
+	DRAWLINE
+	PRINTFORMW 「이런 걸로 뜻대로 될 줄 아는 거야?」
+	PRINTFORMW 레티는 적개심을 숨길 생각도 없는 것 같다.
+	CFLAG:5001 = 2
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF CFLAG:5001 < 3 && MARK:2 == 2 && TALENT:150 == 0 && TALENT:160 == 0
+	DRAWLINE
+	PRINTFORMW 「…무엇을 하더라도 마음까지는 뺏을 수 없어」
+	PRINTFORMW 꿋꿋한 말을 하고 있지만, 이전보다는 패기가 없어, %조사처리(CALLNAME:MASTER,"가")% 눈을 부라리자 의기소침해버렸다.
+	CFLAG:5001 = 3
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF CFLAG:5001 < 4 && MARK:2 == 3 && TALENT:150 == 0 && TALENT:160 == 0
+	DRAWLINE
+	PRINTFORMW 「이제… 단념할 수 밖에 없는걸까…」
+	PRINTFORMW 연약한 목소리로 중얼거리곤, 레티는 %CALLNAME:MASTER%의 눈 앞에서 옷을 벗었다.
+	PRINTFORMW 하얀 살갗은 희미하게 붉게 되어있지만, 눈에는 눈물을 머금고 있다.
+	CFLAG:5001 = 4
+	RETURN 1
+
+;연모
+ELSEIF CFLAG:5001 < 5 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 방에 들어가자마자, 레티가 이쪽으로 안겨왔다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 순간적으로 움찔했지만, 아무래도 상태가 이상하다.
+	PRINTFORMW 「내 패배야」
+	PRINTFORMW 「몸이… 말하는걸 들어주지 않는걸」
+	PRINTFORMW 레티의 시선은 이쪽을 똑바로 향하고 있다.
+	PRINTFORMW 「마음으로 아무리 거절해도, 몸이 당신을 원해버려」
+	PRINTFORMW 「더 이상 괴로워하고 싶지 않은걸. 이대로 흘려버리는 거야」
+	PRINTFORMW 「부탁해…. 나를 당신 하나로 채워줘. 몸도 마음도 전부 받들테니까…」
+	PRINTFORMW 그렇게 말하곤 %CALLNAME:MASTER%의 빰을 어루만지는 레티.
+	PRINTFORMW 비통할 정도의 호소를 들은 %조사처리(CALLNAME:MASTER,"는")%, 레티의 허리에 손을 둘러,
+	PRINTFORMW 호소에 응하는 것을 고했다.
+	PRINTFORMW 「고마워…. 정말 좋아해, %CALLNAME:MASTER%」
+	CFLAG:5001 = 5
+	RETURN 1
+
+;음란+연모
+ELSEIF CFLAG:5001 < 6 && TALENT:170 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「기다렸어, %CALLNAME:MASTER%」
+	PRINTFORMW 「더 이상 참을 수 없어…. 몸이 욱신거려 견딜 수 없어」
+	PRINTFORMW 「빨리 기분 좋은 일 해줘. 녹아버릴 정도로 뜨거운 것을 원해…」
+	PRINTFORMW 급변한 태도에 당황한 %조사처리(CALLNAME:MASTER,"를")% 아랑곳하지 않고, 레티는 부랴부랴 옷을 벗고 있다.
+	CFLAG:5001 = 6
+	RETURN 1
+
+;助手の有無をチェック（いない場合は二回目以降へ飛ぶ）
+ELSEIF ASSI < 0 
+	CALL K12_KOJO2
+
+;-------------------------------------------------
+;簡易助手口上（Y1を助手のキャラ番号に置換, X1をキャラ番号に変更する) CFLAG5002
+;掛け合いをするキャラを増やす場合は, コピ―＆ペ―ストをして, CFLAGの数を5003, 5004と増やす
+;-------------------------------------------------
+;助手
+;ELSEIF ASSINO() == Y1
+;	DRAWLINE
+	;初めて
+;	IF CFLAG:5002 == 0
+		;연모＋연모時初口上（陥落イベント）が発生済み
+;		IF TALENT:TARGET:150 == 1 && CFLAG:201 >= 5
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5002 = 1
+;			RETURN 1
+	;二回目以降
+;	ELSE CFLAG:5002 == 1 && FLAG:11 ==2
+		;연모
+;		IF TALENT:TARGET:150 == 1
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+
+;ELSEIF ASSINO() == Y1
+;	DRAWLINE
+	;初めて
+;	IF CFLAG:5003 == 0
+		;연모＋연모時初口上（陥落イベント）が発生済み
+;		IF TALENT:TARGET:150 == 1 && CFLAG:201 >= 5
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			CFLAG:5003 = 1
+;			RETURN 1
+	;二回目以降
+;	ELSE CFLAG:5003 == 1 && FLAG:11 ==2
+		;연모
+;		IF TALENT:TARGET:150 == 1
+;			PRINTFORMW 
+		;그 외
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;			RETURN 1
+;	ENDIF
+;口上のある助手が居ない場合は, 通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K12_KOJO2
+ENDIF
+
+
+;-------------------------------------------------
+;調教開始時（2回目以降, X1をキャラ番号に変更する） CFLAGなし 
+;-------------------------------------------------
+@K12_KOJO2
+;反発刻印Lv3
+IF MARK:3 == 3 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「한기만이라도 있었으면. 금방 숨통을 끊어줄텐데」
+	PRINTFORMW 찌르는 듯한 시선에, %조사처리(CALLNAME:MASTER,"는")% 다른 의미로 한기를 느꼇다.
+	RETURN 1
+
+;굴복각인Lv0
+ELSEIF MARK:2 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「좋아하지도 않는 남자한테 만저져, 여자가 허덕이기라도 하는 거야?」
+	PRINTFORMW 시선을 마주치지 않고, 레티는 냉철하게 단언했다.
+	RETURN 1
+
+;굴복각인Lv1
+ELSEIF MARK:2 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「할거면 어서 해. 그리고 어서 어딘가로 가버려」
+	PRINTFORMW 서투르다고 말하는 거 같이, 경멸하는 표정이 %CALLNAME:MASTER%에게 향해졌다.
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF MARK:2 == 2 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「부탁이야, 이 이상 만지지 말아줘…」
+	PRINTFORMW 미약하게 저항하는 레티를 억누르며, 난폭하게 옷을 벗겨나갔다.
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「오늘도 하는 거네…. 알았어」
+	PRINTFORMW 「그…, 심한 일은 하지말아줘」
+	PRINTFORMW 벌써 단념했는지, 스스로 옷을 벗어 던지는 레티.
+	PRINTFORMW 그 탄식은 살짝 거칠어져있다.
+	RETURN 1
+
+;음란+연모
+ELSEIF TALENT:170 && TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	PRINTFORMW 「야한 여자가 되어버렸다고 스스로도 생각해」
+	PRINTFORMW 「그치만 괜찮아…이젠 %조사처리(CALLNAME:MASTER,"과")% 야한 일 할 생각밖에 나지 않아」
+	PRINTFORMW 「오늘도 잔뜩 범해줘…엉망진창으로 해주길 바래」
+	PRINTFORMW 침대에 눌려 넘어진 레티의 표정은, 쾌락에 지배되는 암컷 그 자체였다.
+	RETURN 1
+
+;연모
+ELSEIF TALENT:150 == 1 && FLAG:11 == 2
+	DRAWLINE
+	;ランダムで口上が変化する（使わない場合はすべて同じにすればよい）
+	IF RAND:3 == 0
+		PRINTFORMW 「오늘은 어떤 일을 하는 거려나. 후후후」
+		PRINTFORMW 온화한 미소와 함께 레티는 옷을 벗어 던졌다.
+		PRINTFORMW 「잔뜩 기분 좋게 해줘, %CALLNAME:MASTER%」
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 「와줬구나. 기다리고 있었어」
+		PRINTFORMW 애타게 침대에 엎드리며, 반갑게 손짓하는 레티.
+		PRINTFORMW 「가끔은 당신이 벗겨주었으면 해…」
+		PRINTFORMW 「응…성급하게 하지마. 나는 어디에도 가지 않아」
+	ELSE
+		PRINTFORMW 「아, 잠깐 기다리고 있어봐」
+		PRINTFORMW 방에 들어가자, 레티가 세심하게 머리를 말리고 있었다. 샤워라도 한거겠지.
+		PRINTFORMW 도와줬으면 한다고 말해서, 건조한 곳부터 차례로 빗으로 빗어줬다.
+		PRINTFORMW 「…우응, 우응. 좋아, 예쁘게 되었어」
+		PRINTFORMW 거울 앞에서 한동안 확인하곤, 레티는 이쪽을 보곤 생긋 미소지었다.
+		PRINTFORMW 「기다리게 해버려서 미안해. 그러면 시작할까♪」
+	ENDIF
+	RETURN 1
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;EVENTEND関係（X1をキャラ番号に置換）
+;調教終了時のセリフ
+;-------------------------------------------------
+@EVENTEND
+SIF FLAG:11 == 0
+	RETURN 0
+SIF NO:TARGET != 12
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_EVENTEND_K12_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	SIF ASSINO() == Y1
+;	CALL LES_EVENTEND_K12_MY1
+;	RETURN 0
+;ENDIF
+;--------------------------------------------------
+;調教終了時のセリフ
+;--------------------------------------------------
+;反発刻印Lv3
+IF MARK:3 == 3
+	DRAWLINE
+	PRINTFORMW 「힘을 발휘할수 없는게 분해」
+	PRINTFORMW 「지금이라면 배가 비었을텐데…」
+	PRINTFORMW 뒤숭숭한 말을 흘려들으면서, 방문을 세게 닫았다.
+	RETURN 1
+
+;굴복각인Lv1以下
+ELSEIF MARK:2 <= 1
+	DRAWLINE
+	PRINTFORMW 「어서 나가줘. 냄새나」
+	PRINTFORMW 「적어도 조금은 더 능숙하게 되었고 나서 와」
+	PRINTFORMW 레티는 무표정인채로, 담담하게 옷을 바로입었다.
+	RETURN 1
+
+;굴복각인Lv2
+ELSEIF MARK:2 == 2
+	DRAWLINE
+	PRINTFORMW 「하아…앙, 하아…」
+	PRINTFORMW 거친 숨을 내뱉으면서도, 레티의 눈은 굴복한 노예의 것이 아니다.
+	RETURN 1
+
+;굴복각인Lv3
+ELSEIF MARK:2 == 3 && TALENT:150 == 0
+	DRAWLINE
+	PRINTFORMW 「안 돼…. 휘말려 버리면 안 되는 거야…」
+	PRINTFORMW 옷을 입지도 않고, 침데에 축 늘어져 몸을 맡기면서 혼자말을 중얼거리고 있다.
+	PRINTFORMW 뜨겁게 %조사처리(CALLNAME:MASTER,"를")% 보는 눈동자엔, 더 이상 저항의 빛이 보이지 않는다.
+	RETURN 1
+
+;연모＋体力500未満
+ELSEIF TALENT:150 == 1 && BASE:0 < 500
+	DRAWLINE
+	PRINTFORMW 「미안. 조금 피곤해져버렸을지도…」
+	PRINTFORMW 그렇게 말하며 고요하게 잠에 빠진 레티의 머리를, %조사처리(CALLNAME:MASTER,"는")% 부드럽게 쓰다듬었다.
+	RETURN 1
+
+;연모
+ELSEIF TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「아직 괜찮지만, 당신이 말하는 거라면 따르겠어」
+	PRINTFORMW 「금방 또 와줘? 약속이야?」
+	RETURN 1
+
+;음란+연모
+ELSEIF TALENT:170 && TALENT:150 == 1
+	DRAWLINE
+	PRINTFORMW 「싫어…좀 더, 좀 더 해줘…」
+	PRINTFORMW 「모자른걸…. 야한일 좀 더 하고 싶어…」
+	PRINTFORMW 애절한 목소리를 뒤로, %조사처리(CALLNAME:MASTER,"는")% 방의 문에 손을 걸었다.
+	RETURN 1
+ENDIF
+RETURN 0
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COM関係（X1をキャラ番号に置換）
+;コマンド実行時に出力されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COM_12
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ・猿轡(?)・触手口屈辱時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42 && (SELECTCOM != 226 && SELECTCOM != 229 && SELECTCOM != 506)
+	RETURN 0
+;睡眠・失神時に口上をスキップする（OFFだと寝言が凄いことに）
+SIF TEQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_COM_K12_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_COM_K12_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;コマンド実行時のセリフ CFLAG 9000～9999を使用（コマンド番号＋9000）
+;-------------------------------------------------
+;-------------------------------------------------
+;愛撫 CFLAG9000
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;初めて
+	IF CFLAG:9000 == 0
+		;굴복각인Lv2이상
+		IF MARK:2 >= 2
+			PRINTFORMW 「거기…아후, 우응」
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 일 해봤자…」
+			PRINTFORMW 「그만둬, 응우읏」
+		ENDIF
+			CFLAG:9000 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ｃ감각Lv5
+		IF TALENT:150 == 1 && ABL:0 >= 5 && (CFLAG:9000 <= 7 || FLAG:11 == 2)
+			PRINTFORMW 「응아우! 아아… 좋… 좋아아!」
+			PRINTFORMW 「클리도 가슴도 만져줘! 마구 주물러줘!」
+			PRINTFORMW 「응츄… 츄루… 응핫, 키스도 좋아…」
+			PRINTFORMW 몸의 모든 부위를 들볶아져, 레티는 희열에 찬 표정으로 한층 더 쾌감을 요구하고 있다.
+			CFLAG:9000 = 8
+		;연모+Ｃ감각Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:0 >= 3 && (CFLAG:9000 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「그거, 그게 좋아앗!」
+			PRINTFORMW 「클리, 좀 더 만지작 만지작 해줫! 응아아앙앗!」
+			PRINTFORMW 쌓여진 음핵을 만지자, 격렬하게 몸부림치면서 안겨왔다.
+			CFLAG:9000 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9000 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아아… %CALLNAME:MASTER%에게 만지작거려져」
+			PRINTFORMW 「굉장히 안심했어…. 저기, 좀 더 만져줘」
+			CFLAG:9000 = 6
+		;굴복각인Lv3+Ｃ감각3Lv이상
+		ELSEIF MARK:2 == 3 && ABL:0 >= 3 && (CFLAG:9000 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「잔뜩 만져줘… 응응읏, 좋아…」
+			PRINTFORMW 「크리 만지작거려져서 기분 좋아… 핫, 아앗!」
+			CFLAG:9000 = 5
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9000 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아앙! 거기… 싫, 응아읏!」
+			PRINTFORMW 몸을 뒤로 젖히며, 격렬하게 몸부림치는 레티.
+			PRINTFORMW 저항하는 모습도 없이, 당하는대로 쾌락을 받아들이고 있는 듯하다.
+			CFLAG:9000 = 4
+		;굴복각인Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:9000 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아…앙, 아아…달라, 달라…」
+			PRINTFORMW 싫어하는 기색은 보이지만, 쾌락은 확실하게 느끼고 있는 듯하다.
+			CFLAG:9000 = 3
+		;그 외
+		ELSEIF MARK:2 <= 1 && (CFLAG:9000 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「그대로 동상에 걸리게 하고 싶어…응응읏」
+			PRINTFORMW 아직 아직 만져지는 것에 대한 혐오감이 강한 거 같다.
+			CFLAG:9000 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クンニ CFLAG9001
+;岩清水 CFLAG9611
+;-------------------------------------------------
+;クンニ
+IF SELECTCOM == 1 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:9001 == 0
+		;굴복각인Lv2이상
+		IF MARK:2 >= 2
+			PRINTFORMW 「혀와 손가락은 감각이 다르네」
+			PRINTFORMW 「이상한 냄새 나지않아?」
+		;그 외
+		ELSE
+			PRINTFORMW 「천박하네. 개 같아」
+			PRINTFORMW 「네 네. 젖어와서 다행이구나」
+		ENDIF
+			CFLAG:9001 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ｃ감각Lv5
+		IF TALENT:150 == 1 && ABL:0 >= 5 && (CFLAG:9001 <= 7 || FLAG:11 == 2)
+			PRINTFORMW 「후훗, 또 클리도 보지도 만지작거려 주는 거네」
+			PRINTFORMW 「네, 모쪼록」
+			PRINTFORMW 스스로 비순을 벌려주고, 음핵의 표피를 벗긴 레티의 표정은, 
+			PRINTFORMW 입이 헤벌어져 흐르는 타액을 신경쓰지도 않고, 쾌락을 애타게 기다리는 거 같다.
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그 기대에 부응하듯이, 레티의 허벅지 사이에 달라 붙었다.
+			PRINTFORMW 「응아앗! 아, 하앙! 굉장해, 굉장해에!」
+			CFLAG:9001 = 8
+		;연모+Ｃ감각Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:0 >= 3 && (CFLAG:9001 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「응, 클리가, 찌릿찌릿해…아앙!」
+			PRINTFORMW 「좋아! 핥아지는 거 기분 좋아!」
+			PRINTFORMW 몸 전체가 감전된듯한 느낌에 빠져, 
+			PRINTFORMW 레티는 무심코 %CALLNAME:MASTER%의 머리를 허벅지로 끼워버렸다.
+			CFLAG:9001 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9001 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「핥아지는 거네…」
+			PRINTFORMW 「하지만 얼굴이 그다지 보이지 않아서, 약간 외로워…아앙앗」
+			CFLAG:9001 = 6
+		;굴복각인Lv3+Ｃ감각3Lv이상
+		ELSEIF MARK:2 == 3 && ABL:0 >= 3 && (CFLAG:9001 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「싫엇, 거긴 민감하니까앗…!」
+			PRINTFORMW 「후앗…아앙! 응하아!」
+			PRINTFORMW 음핵을 감싸는 거 같은 느낌에, 레티는 참지 못하고 소리를 냈다.
+			CFLAG:9001 = 5
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9001 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또…핥는 거야…?」
+			PRINTFORMW 「히얏, 응…」
+			PRINTFORMW 꽤 혀의 감촉에 익숙해졌는지, 소리를 내지 않으려 필사적으로 입을 누르고 있다.
+			CFLAG:9001 = 4
+		;굴복각인Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:9001 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「질리지도 않고…응읏」
+			PRINTFORMW 「잘도 이런 일이, 계속되는, 거네…!」
+			CFLAG:9001 = 3
+		;그 외
+		ELSEIF MARK:2 <= 1 && (CFLAG:9001 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「적당히 그만두면 좋은데」
+			CFLAG:9001 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;岩清水
+IF SELECTCOM == 611 || (SELECTCOM == 1 && TEQUIP:56)
+	;연모+Ｃ감각Lv5
+	IF TALENT:150 == 1 && ABL:0 >= 5 && (CFLAG:9611 <= 7 || FLAG:11 == 2)
+		PRINTFORMW 「이 자세라면 보지가 훤히 들여가보이네」
+		PRINTFORMW 「깊은 곳까지 보여? 자, 아앙!」
+		PRINTFORMW 레티가 말을 마치기 전에, %조사처리(CALLNAME:MASTER,"는")% 충혈된 비부에 혀를 삽입했다.
+		PRINTFORMW 「응, 정말, 성급하다니깐, 후아아앙♪」
+		CFLAG:9611 = 8
+	;연모+Ｃ감각Lv3이상
+	ELSEIF TALENT:150 == 1 && ABL:0 >= 3 && (CFLAG:9611 <= 6 || FLAG:11 == 2)
+		PRINTFORMW 「보지도 좋지만…클리도 만지작거려줬으면 해…」
+		PRINTFORMW 레티의 요구를 수락하고, 대상을 비부에서 음핵으로 옮겼다
+		PRINTFORMW 「아웃, 응하아아아!」
+		PRINTFORMW 「빨아줘, 좀 더 클리 빨아줘어어어!」
+		CFLAG:9611 = 7
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:9611 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「부끄러워…그래도 %조사처리(CALLNAME:MASTER,"가")% 말한다면…」
+		PRINTFORMW 「아후, 응…잔뜩 핥아줘…」
+		CFLAG:9611 = 6
+	;굴복각인Lv3+Ｃ감각3Lv이상
+	ELSEIF MARK:2 == 3 && ABL:0 >= 3 && (CFLAG:9611 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「그렇게 해버리…싫, 읏!」
+		PRINTFORMW 「보여져, 핥아져, 그리고 느껴서…나도 상당히 한심하게 돼버린 거네…」
+		PRINTFORMW 「싫어, 응읏! 소리 내지 말아줘…」
+		CFLAG:9611 = 5
+	;굴복각인Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:9611 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「싫어…보지말아줘…」
+		PRINTFORMW 「우응…! 거기, 안 돼애…」
+		CFLAG:9611 = 4
+	;굴복각인Lv2
+	ELSEIF MARK:2 == 2 && (CFLAG:9611 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「이 자세 피곤하지만, 들어주지 않겠지요」
+		PRINTFORMW 「알면서도 말하는 나도 참…아흣」
+		CFLAG:9611 = 3
+	;그 외
+	ELSEIF CFLAG:9611 <= 1 || FLAG:11 == 2
+		PRINTFORMW (이대로 으깰 순 없는걸까…?)
+		CFLAG:9611 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナル愛撫 CFLAG9002
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;初めて
+	IF CFLAG:9002 == 0
+		PRINTFORMW 「잠깐, 거긴 다른 구멍…」
+		PRINTFORMW 「아팟!」
+		PRINTFORMW 경험한적 없는 느낌과 통증에, 레티는 반사적으로 %CALLNAME:MASTER%에게서 몸을 떼었다.
+		CFLAG:9002 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		P = PALAM:10 + UP:10
+	;연모+潤滑Lv2이상+Ａ감각3Lv이상
+	IF P >= PALAMLV:2 && TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9002 <= 6 || FLAG:11 == 2)
+		PRINTFORMW 「좋앗…좋아…엉덩이가 이렇게 좋다니…」
+		PRINTFORMW 「좀 더 깊은 곳까지 만져줘…! 아앙!」
+		PRINTFORMW 「나, 변태인거야…엉덩이로 느끼는 변태인거야아♪ 후앙!」
+		PRINTFORMW 레티는 이 이상 말할 수 없을 정도의 교성을 내며, 애널을 만지작거려져 기뻐하고 있다.
+		CFLAG:9002 = 9
+	;연모+潤滑Lv2이상
+	ELSEIF P >= PALAMLV:2 && TALENT:150 == 1 && (CFLAG:9002 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「엉덩이 만지는 거네? 알겠어」
+		PRINTFORMW 「앗……우응읏…」
+		PRINTFORMW 「괜찮아…아프진 않아…, 응응…」
+		CFLAG:9002 = 8
+	;연모+潤滑Lv2未満
+	ELSEIF P < PALAMLV:2 && TALENT:150 == 1 && (CFLAG:9002 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「엉덩이 만지는 거야? 괜찮지만…」
+		PRINTFORMW 「그, 아프지 않으면 해서」
+		PRINTFORMW 「다음부터는 충분히 적셔줘…?」
+		CFLAG:9002 = 7
+	;굴복각인Lv3+潤滑Lv2이상+Ａ감각3Lv이상
+	ELSEIF P >= PALAMLV:2 && MARK:2 == 3 && ABL:2 >= 3 && (CFLAG:9002 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「하우, 아아…거긴…」
+		PRINTFORMW 애널을 만져지는 것이 익숙해졌는지, 때때로 달콤한 목소리를 섞으며, 손가락의 감촉을 받아들이고 있다.
+		CFLAG:9002 = 6
+	;굴복각인Lv3+潤滑Lv2이상
+	ELSEIF P >= PALAMLV:2 && MARK:2 == 3 && (CFLAG:9002 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「그만하라고 말해봤자 하겠지?」
+		PRINTFORMW 「그럴꺼면 차라리 기분 좋게 되는 편이 그나마 나아」
+		PRINTFORMW 그렇게 말하며 레티는 스스로 엉덩이를 내밀었다.
+		CFLAG:9002 = 5
+	;굴복각인Lv3+潤滑Lv2未満
+	ELSEIF P < PALAMLV:2 && MARK:2 == 3 && (CFLAG:9002 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「또 엉덩이…?」
+		PRINTFORMW 「아파. 적어도 적신 다음에 해주지 않을래?」
+		PRINTFORMW 레티는 불만을 입에 담았지만, %CALLNAME:MASTER%에게 으름장이 놓여 마지못해 엉덩이를 이쪽으로 향했다.
+		CFLAG:9002 = 4
+	;潤滑Lv2이상
+	ELSEIF P >= PALAMLV:2 && (CFLAG:9002 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「그런 더러운 곳, 잘도 만지는 거네…!」
+		PRINTFORMW 「응우우! 싫엇…!」
+		CFLAG:9002 = 3
+	;그 외
+	ELSEIF CFLAG:9611 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「그만둿! 진짜 아파!」
+		PRINTFORMW 보는 한 통증은 확실한듯 하다. 개발에는 시간이 걸리겠지.
+		CFLAG:9002 = 2
+		ENDIF
+		RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸愛撫 CFLAG9003
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;初めて
+	IF CFLAG:9003 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「가슴에는 자신 있다고?」
+			PRINTFORMW 「응……꼼꼼히 만져줘…」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW (가슴이 이상하게 되었어…?)
+			PRINTFORMW (만져지는 거, 이상한 스위치가 켜져버려…)
+			PRINTFORMW 레티는 말 없이 옷을 풀어헤쳐, 그 표정은 어딘가 곤혹스러워 하고 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「손놀림이 기분 나빠. 빨리 끝내줘」
+		ENDIF
+			CFLAG:9003 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ｂ감각Lv5이상
+		IF TALENT:150 == 1 && ABL:3 >= 5 && (CFLAG:9003 <= 7 || FLAG:11 == 2)
+			PRINTFORMW 「후후훗…. 자, 모쪼록♪」
+			PRINTFORMW 유방을 완전히 내놓아, 자신의 양손을 요사스럽게 위아래로 흔드는
+			PRINTFORMW 그런 레티의 선정적인 몸짓에 견딜수 없게 되어, %조사처리(CALLNAME:MASTER,"는")% 눈 앞의 유방을 움켜쥐었다.
+			PRINTFORMW 「아후우응읏…아…우앙! 가슴 만져지는 거…좋아…!」
+			PRINTFORMW 「응하아! 좀 더어…좀 더 가슴 귀여워해줘…♪」
+			PRINTFORMW 가슴을 향한 한층 더 자극을 요구하며, 레티는 뜨거워진 유방을 쭉쭉 밀어 붙여왔다.
+			CFLAG:9003 = 8
+		;연모+Ｂ감각Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:3 >= 3 && (CFLAG:9003 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「히야아아앙…! 그거 좋아! 유두 꾸욱 해줘!」
+			PRINTFORMW 「좀 더 강하게…! 잡아 당겨도 좋으니까아!」
+			PRINTFORMW 「가슴 굉장해에…! 기분 좋은게 멈추지 않아…!」
+			PRINTFORMW 야하게 개발된 유두를 세우며, 음탕한 표정으로 더욱 자극을 요구해왔다.
+			CFLAG:9003 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9003 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「가슴 만지는 %CALLNAME:MASTER%, 뭐랄까 아기 같네」
+			PRINTFORMW 「좀 더 달콤하게…내 가슴에」
+			PRINTFORMW 일심불란하게 레티의 가슴을 주무르는 %CALLNAME:MASTER%의 머리를, 상냥하게 쓰다듬는 레티
+			PRINTFORMW 그 표정은, 마치 아이를 사랑하는 모친같은 부드러움을 띄고 있다.
+			CFLAG:9003 = 6
+		;굴복각인Lv3+Ｂ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:3 >= 3 && (CFLAG:9003 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이런 것만, 능숙하다니까…! 아앙앗」
+			PRINTFORMW 「비비는 것만이…아니랏…유두돗!」
+			PRINTFORMW 「우, 응읏…! 거기, 찝어줘…엇!」
+			PRINTFORMW 비비는 것만으로는 만족할수 없게 되었는지, 레티는 자꾸 유두에 접촉을 요구하고 있다.
+			CFLAG:9003 = 5
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9003 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응, 쿠응…아후…」
+			PRINTFORMW 「히우……하아, 응…」
+			PRINTFORMW 레티는 반항하는 일 없이, 가슴을 향한 자극을 받아들이고 있다.
+			CFLAG:9003 = 4
+		;굴복각인Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:9003 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우응…마음대로 하면 되잖아」
+			PRINTFORMW 반쯤 포기한 표정으로, 멍하니 유방을 보고 있다.
+			CFLAG:9003 = 3
+		;그 외
+		ELSEIF CFLAG:9003 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「가슴 만져서 즐거워? 이상한걸…」
+			PRINTFORMW 「이런 거 방해될 뿐인데도. 엉큼한 눈으로 보여지고」
+			CFLAG:9003 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;指挿入れ CFLAG9004
+;Ｇスポット刺激 CGLAG 9600
+;-------------------------------------------------
+IF SELECTCOM == 4 || SELECTCOM == 600
+	;Ｇスポット刺激
+	IF SELECTCOM == 600
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9600 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응읏, 핫…! 거, 거긴…거기가 굉장해…」
+			PRINTFORMW 「좀 더 만져줘…! 응하아아앙!!」
+			CFLAG:9600 = 4
+		;Ｖ감각Lv3이상
+		ELSEIF ABL:1 >= 3 && (CFLAG:9600 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗…, 거긴…!」
+			PRINTFORMW 「거기 안 되, 는뎃…! 너무 좋아서…이상하게 되어버려어…!!」
+			CFLAG:9600 = 3
+		;그 외
+		ELSEIF CFLAG:9600 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫엇, 안 됏…, 거긴 만지지 마…!」
+			PRINTFORMW 「이상하게 되어버려…!! 앗, 응아아아앙!!」
+			CFLAG:9600 = 2
+		ENDIF
+			RETURN 0
+	;指挿入れ
+	ELSE
+		;初めて
+		IF CFLAG:9004 == 0
+			;処女（処女でないキャラの場合は無記入でよい）
+			IF TALENT:0 == 1
+				;연모
+				IF TALENT:150 == 1
+					PRINTFORMW 「설녀 같은 것과 부부가 되는 거, 싫어…? 역시 나는 안 돼?」
+					PRINTFORMW 「우웅, 좋아…. 이 쪽이 통증도 적고…」
+					PRINTFORMW 「걱정해줘서 고마워, %CALLNAME:MASTER%…」
+				;그 외
+				ELSE
+					 PRINTFORMW 「첫 상대가 손가락, 이네…」
+					 PRINTFORMW 헛소리를 투덜투덜 중얼거리는 레티의 눈에는, 하염없이 눈물이 흐르고 있다.
+				ENDIF
+					CFLAG:9004 = 1
+					RETURN 0
+			;非処女
+			ELSE
+				;연모
+				IF TALENT:150 == 1
+					PRINTFORMW 「응읏, 들어왔어…」
+					PRINTFORMW 「만져줘…좀 더 깊은 곳까지 와줘…」
+				;Ｖ감각Lv3이상
+				ELSEIF ABL:1 >= 3
+					PRINTFORMW 「느끼지 않앗, 느끼는 거 같은거 아닌데…!」
+					PRINTFORMW 「왜 머리가…새하얗게…!!」
+				;그 외
+				ELSE
+					PRINTFORMW 「손톱은 자른거겠죠…?」
+					PRINTFORMW 「안에 상처입는 것은 용서하지 않아요」
+				ENDIF
+					CFLAG:9004 = 1
+					RETURN 0
+			ENDIF
+		;二回目以降
+		ELSE
+			;연모
+			IF TALENT:150 == 1 && (CFLAG:9004 <= 3 || FLAG:11 == 2)
+				PRINTFORMW 「좀 더…휘저어줘…읏」
+				PRINTFORMW 「손가락…몇 개 넣어도 좋으니깟…하아앙…!!」
+				CFLAG:9004 = 4
+			;Ｖ감각Lv3이상
+			ELSEIF ABL:1 >= 3 && (CFLAG:9004 <= 2 || FLAG:11 == 2)
+				PRINTFORMW 「더엇, 이 이상…하지 마앗…」
+				PRINTFORMW 「안쪽이 약하니깟…응아아아아!!」
+				CFLAG:9004 = 3
+			;그 외
+			ELSEIF CFLAG:9004 <= 1 || FLAG:11 == 2
+				PRINTFORMW 「웃, 쿠우우…」
+				PRINTFORMW 「더러운 손가락…들어왔어…읏」
+				PRINTFORMW 
+				CFLAG:9004 = 2
+			ENDIF
+				RETURN 0
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラする(ふたなり/オトコのみ) CFLAG9005
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;初めて
+	IF CFLAG:9005 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응…뭐랄까 오싹오싹하네」
+			PRINTFORMW 「저기, 좀 더 핥아줘…」
+		;그 외
+		ELSE
+			PRINTFORMW 「당신은 몰라」
+			PRINTFORMW 「원래 여자에게는 붙어있지 안잖아? 이런 거」
+		ENDIF
+			CFLAG:9005 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9005 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「내 자지, 맛있어? 우앙…」
+			PRINTFORMW 「아아…거기, 좀 더…」
+			PRINTFORMW 「응아아아아! 그렇게 빨면…! 참을수…없게 돼버려!」
+			PRINTFORMW 레티는 전신을 경련하면서, 음경에의 기분 좋은 자극에 몸을 맡기고 있다.
+			CFLAG:9005 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9005 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응핫, 하우우…」
+			PRINTFORMW 「끝쪽이 저려어…싫엇, 안 돼애…!」
+			PRINTFORMW 귀두 잘록한 부분부터 끝을 세심히 핥자, 레티는 이루 말할 수 없는 쾌감에 몸을 비틀었다.
+			CFLAG:9005 = 3
+		;그 외
+		ELSEIF CFLAG:9005 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우, 응읏…」
+			PRINTFORMW 「그렇게 핥고 싶으면 남자랑 하면 될텐데…응쿠읏」
+			PRINTFORMW 말과는 반대로, 레티의 음경은 %CALLNAME:MASTER%의 입에 씰룩씰룩거리며 반응하고 있다.
+			CFLAG:9005 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;キス CFLAG9006
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;初めて
+	IF CFLAG:9006 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응음읏…츗…」
+			PRINTFORMW 「부드러운 키스…. 정말 좋아」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「키스, 네…. 새삼스럽지만…」
+			PRINTFORMW 「わかってるわ……。んっ…」
+		;그 외
+		ELSE
+			PRINTFORMW 「처녀의 입술을 뭐라고…응풋」
+			PRINTFORMW 저항하기 전에, 문답무용으로 입술을 겹쳤다.
+		ENDIF
+			CFLAG:9006 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9006 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아음…응, 츄…쿠츄…우웅…」
+			PRINTFORMW 「응후…푸핫」
+			PRINTFORMW 「하아…하아…벌써 녹아버릴거 같아…」
+			PRINTFORMW 살짝 입술을 떼자, 실을 늘어뜨리는 타액이 조명 아래서 번들 번들 빛나고 있다.
+			PRINTFORMW 레티는 그것을 손으로 잡아, 사랑스러운듯이 입에 물었다.
+			CFLAG:9006 = 5
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:9006 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 조교의 한창, 레티가 자꾸만 입술을 핥아 물어보았다.
+			PRINTFORMW 「우…저, 저기말야…」
+			PRINTFORMW 「키스…하고 싶다, 하고…」
+			PRINTFORMW 쉬운 일이라고 대답해주자, 레티는 먼저 입술을 요구해왔다.
+			PRINTFORMW 그 뿐만 아니라 스스로 혀를 밀어 넣어, %CALLNAME:MASTER%의 입 안을 핥아 돌렸다.
+			CFLAG:9006 = 4
+		;従順Lv2이상
+		ELSEIF ABL:10 >=2 && (CFLAG:9006 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 응뭇, 츗……」
+			PRINTFORMW 시선은 %CALLNAME:MASTER%에서 돌린 상태였지만, 
+			PRINTFORMW 약간은 고분고분하게 입맞춤을 받아들이게 되었다.
+			CFLAG:9006 = 3
+		;그 외
+		ELSEIF CFLAG:9006 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응읏…싫엇」
+			PRINTFORMW 키스는 저항이 강했는지, 레티는 %CALLNAME:MASTER%로부터 얼굴을 피하려 하고 있다.
+			CFLAG:9006 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;自慰 CFLAG9007
+;バイブオナニ― CFLAG8804
+;アナルバイブオナニ― CFLAG8805
+;二穴バイブオナニ― CFLAG8806
+;シャワ―オナニ― CFLAG8801
+;公開オナニ― CFLAG8803
+;-------------------------------------------------
+;通常自慰（シャワ―無し）
+IF SELECTCOM == 7 && TEQUIP:20 == 0 && TEQUIP:25 == 0 && TEQUIP:50 == 0 && TEQUIP:54 == 0
+	;初めて
+	IF CFLAG:9007 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%에게 만져졌으면 하지만…」
+			PRINTFORMW 「보는 것만으로 괜찮아?」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「어째서 이런 일을…」
+			PRINTFORMW 「하지 않겠다곤 말하지 않아. 난폭하게 당하는 것보단 좋아」
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 거, 사람 앞에서 할 일이 아니야…」
+		ENDIF
+			CFLAG:9007 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:9007 <= 7 || FLAG:11 == 2)
+			PRINTFORMW 「아, 아아♪ 보여져♪」
+			PRINTFORMW 「오나니 하고 있는 곳 %조사처리(CALLNAME:MASTER,"가")% 보고 있어♪」
+			PRINTFORMW 「좀 더 가까이서 봐줘! 보지 깊은 곳까지 휘젓는 거 봐줘어♪」
+			PRINTFORMW 주저않고 다리를 벌려, 자위를 계속하는 모습이, 더 이상 이성을 찾아볼수 없었다.
+			CFLAG:9007 = 8
+		;연모+自慰中毒Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:9007 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 핫♪ 쿠응…」
+			PRINTFORMW 「%CALLNAME:MASTER%의 손가락도 좋지만…스스로 하는 것도 좋아아…」
+			PRINTFORMW 레티는 익숙한 모습으로 비부를 만지며, 황홀하게 자위의 쾌락에 빠져있다.
+			CFLAG:9007 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9007 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응웃…아후, 응…」
+			PRINTFORMW 「스스로, 하는 거, 좋지만…후앙…」
+			PRINTFORMW 「다음은, %CALLNAME:MASTER%가, 만져줘…? 응으읏」
+			CFLAG:9007 = 6
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9007 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이러면 안 돼…이래선 틀렸어…」
+			PRINTFORMW 그렇게 말하며 레티는 부끄러운 듯이 느긋이 양 다리를 열었다.
+			PRINTFORMW 「이런 몸으로 만든건 당신이야…」
+			PRINTFORMW 「부탁이야, 여기 봐줘…. 만지는곳 봐줘…」
+			CFLAG:9007 = 5
+		;自慰中毒Lv3이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:9007 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아…하아…응, 우응」
+			PRINTFORMW 「안 되는데도…어째서 손가락이 멈추지 않는 거야…」
+			PRINTFORMW 아직 마음 깊숙히 저속해진 모습은 아니지만, 쾌락에 저항할 기력은 사라지고 있는 듯하다.
+			CFLAG:9007 = 4
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2 && (CFLAG:9007 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「버릇이 되어버려… 안 돼…」
+			PRINTFORMW 비부를 만지는 레티의 얼굴은 숙이고 있지만, 하얗고 가느다란 손가락이 멈출 모습은 없다.
+			CFLAG:9007 = 3
+		;그 외
+		ELSEIF CFLAG:9007 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응…쿠읏, 응으읏」
+			PRINTFORMW 「정나미가 떨어지는 취미네…」
+			PRINTFORMW 진절머리난 시선을 %CALLNAME:MASTER%에게 향하며, 분한 표정으로 허벅지 사이를 만지작거리고 있다.
+			CFLAG:9007 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;バイブオナニ―
+ELSEIF SELECTCOM == 7 && TEQUIP:20 == 1
+	;初めて
+	IF CFLAG:8804 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「스스로, 박고 박아넣는 거야…?」
+			PRINTFORMW 「후아아…찌르르해…」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「해… 할테니깐… 난폭하게 하지마…」
+			PRINTFORMW 질에 삽입된 바이브에 손을 대자, 레티가 천천히 움직이기 시작했다.
+		;그 외
+		ELSE
+			PRINTFORMW 「뭘 생각하는 거야…」
+			PRINTFORMW 「응으읏, 뻑뻑해…」
+		ENDIF
+			CFLAG:8804 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+自慰中毒Lv3이상＋Ｖ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && ABL:1 >= 3 && (CFLAG:8804 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「싫…우앙♪ 이거 굉장해에…」
+			PRINTFORMW 「커서 괴로운데도, 좋아…! 보지 삐걱삐걱하게 되서 기분 좋아…!」
+			PRINTFORMW 「%CALLNAME:MASTER% 봐줘…! 여기, 내가 기분 좋아지는 것은 여기야!」
+			PRINTFORMW 엄청난 관능의 소용돌이에 빠진 채, 레티는 꿈을 꾸듯한 기분으로 바이브를 움직였다.
+
+			CFLAG:8804 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:8804 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「후아…앙, 쿠으…」
+			PRINTFORMW 「이거 계속하니까…자신의 기분 좋은곳을 알겠어…」
+			PRINTFORMW 뺨을 빨갛게 물들이며, 바이브의 쾌감이 좀 더 강해지도록 컨트롤하고 있는 듯하다.
+			CFLAG:8804 = 5
+		;自慰中毒Lv3이상＋Ｖ감각Lv3이상
+		ELSEIF ABL:30 >= 3 && ABL:1 >= 3 && (CFLAG:8804 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아응읏! 응앗! 굵어…굵어어…!」
+			PRINTFORMW 「이런 장난감으로…후아아앙!」
+			CFLAG:8804 = 4
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2 && (CFLAG:8804 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우우…보지 말아줘…, 쿠흣…응…」
+			PRINTFORMW 그렇게 말하면서도, 서서히 바이브를 삽입하는 속도를 올려갔다.
+			CFLAG:8804 = 3
+		;그 외
+		ELSEIF CFLAG:8804 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…하아, 응…응응읏…」
+			PRINTFORMW 「이런 일 시켜서, 즐거운거야…?」
+			CFLAG:8804 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;アナルバイブオナニ―
+ELSEIF SELECTCOM == 7 && TEQUIP:25 == 1
+	;初めて
+	IF CFLAG:8805 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「엉덩이로…? 우응…」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 해줬으면 하는데…」
+		;그 외
+		ELSE
+			PRINTFORMW 「에…? 움직이라니…」
+			PRINTFORMW 「찢어지거나 하면 어쩔거야…」
+			PRINTFORMW 레티는 중얼 중얼 불만을 말했지만, 결국 마지못하면서도 삽입을 개시했다.
+		ENDIF
+			CFLAG:8805 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+自慰中毒Lv3이상+潤滑Lv2이상+Ａ감각3Lv이상
+		IF P >= PALAMLV:2 && TALENT:150 == 1 && ABL:2 >= 3 && ABL:30 >= 3 && (CFLAG:8805 <= 9 || FLAG:11 == 2)
+			PRINTFORMW 「응핫, 좋아, 좋아!」
+			PRINTFORMW 「굵은 바이브가, 엉덩이에서 날뛰어어…♪」
+			PRINTFORMW 「스스로 삐걱삐걱하는 거, 하앙! 기분 좋아!」
+			PRINTFORMW 흠뻑 젖은 국화 구멍을 스스로 바이브로 채우며,
+			PRINTFORMW 레티는 전격같은 쾌감에 전신을 떨고 있다.
+			CFLAG:8805 = 10
+		;연모+自慰中毒Lv3이상+潤滑Lv2이상
+		ELSEIF P >= PALAMLV:2 && TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:8805 <= 8 || FLAG:11 == 2)
+			PRINTFORMW 「아…우앙…! 앗, 아앗!」
+			PRINTFORMW 「우응…, 기분 좋아…. 가버릴지도…」
+			PRINTFORMW 「응, 아앙…후앗!」
+			PRINTFORMW 엉덩이 구멍에의 자극에 몸을 비틀면서도, 손은 끊임없이 애널 바이브를 뺏다 넣었다 하고 있다.
+			CFLAG:8805 = 9
+		;연모+潤滑Lv2이상
+		ELSEIF P > PALAMLV:2 && TALENT:150 == 1 && (CFLAG:8805 <= 7 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이는 아직 무섭지만…」
+			PRINTFORMW 「그래도 %조사처리(CALLNAME:MASTER,"가")% 보아준다면, 힘낼게」
+			PRINTFORMW 「응, 아아…기, 깊은 곳 까지, 오는 거야아…」
+			PRINTFORMW 엉덩이를 괴롭힌다는 두려움에 갈등하면서도, 
+			PRINTFORMW %CALLNAME:MASTER%의 눈을 즐겁게 해주려고, 레티는 필사적으로 애널바이브를 박고 박았다.
+			CFLAG:8805 = 8
+		;연모+潤滑Lv2未満
+		ELSEIF P < PALAMLV:2 && TALENT:150 == 1 && (CFLAG:8805 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「아직 젖지 않았으니까…」
+			PRINTFORMW 「그…기분 좋지 않게 된다면, 미안해…?」
+			PRINTFORMW 레티는 애널바이브를 박으면서, 면목 없다는 듯이 %조사처리(CALLNAME:MASTER,"를")% 보고 있다.
+			CFLAG:8805 = 7
+		;自慰中毒Lv3이상+潤滑Lv2이상+Ａ감각3Lv이상
+		ELSEIF P > PALAMLV:2 && ABL:30 >= 3 && ABL:2 >= 3 && (CFLAG:8805 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아아♪ 후앙…! 이런걸로, 기분, 좋게…!」
+			PRINTFORMW (스스로 엉덩이 만져서 느낀다니…)
+			PRINTFORMW (이미 완전히 변태네, 나도…)
+			CFLAG:8805 = 6
+		;自慰中毒Lv3이상+潤滑Lv2이상
+		ELSEIF P > PALAMLV:2 && ABL:30 >= 3 && (CFLAG:8805 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이가…응아아…」
+			PRINTFORMW 「젖을 뿐이라면 차라리 나을텐데…. 쿠후…우우…」
+			CFLAG:8805 = 5
+		;自慰中毒Lv3이상+潤滑Lv2未満
+		ELSEIF P < PALAMLV:2 && ABL:30 >= 3 && (CFLAG:8805 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「시킬거면 시키는대로 제대로 적셔둬 줘…부탁이니깐…」
+			PRINTFORMW 「으응읏, 아파…」
+			PRINTFORMW 레티는 항문과 장벽을 상처입지 않도록 주의하면서, 서서히 애널 바이브를 움직이고 있다.
+			CFLAG:8805 = 4
+		;潤滑Lv2이상
+		ELSEIF P >= PALAMLV:2 && (CFLAG:8805 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿…카훗…」
+			PRINTFORMW 「다, 당신이 하라고 말했잖아!?」
+			CFLAG:8805 = 3
+		;그 외
+		ELSEIF CFLAG:8805 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응우우…아파」
+			PRINTFORMW 자신의 몸을 걱정하고 있는지, 레티는 가끔 가끔 손을 멈추고 있다.
+			CFLAG:8805 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;二穴バイブオナニ―
+ELSEIF SELECTCOM == 7 && TEQUIP:20 == 1 && TEQUIP:25 == 1
+	;初めて
+	IF CFLAG:8806 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"는")% 움직여주지 않는 거야…?」
+			PRINTFORMW 「스스로 찌걱찌걱 하는 거 보고 싶어? 그런 거라면, 힘낼게…」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「두 개 들어간것 만으로 이미 엄청난건데도…」
+			PRINTFORMW 「움직이거나 하면, 부셔져버려어…. 야아앙…!」
+		;그 외
+		ELSE
+			PRINTFORMW 「또 피곤한 짓을…」
+			PRINTFORMW 「괴로워…응응읏」
+		ENDIF
+			CFLAG:8806 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+自慰中毒Lv3이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:8806 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「싫, 응앗! 이상하게…이상하게 돼버려!」
+			PRINTFORMW 「손이 멈추질 않앗…! 보지도, 엉덩이도, 기분 좋아!」
+			PRINTFORMW 「후아앙! 머리가, 새하얗게 되어버려어…!」
+			PRINTFORMW 혀를 축 내민채, 레티는 허벅지 사이의 쾌락에 취해있다.
+			PRINTFORMW 양 구멍은 레티 스스로가 다루는 바이브에 의해 격렬하게 자극받아, 
+			PRINTFORMW 줄기차게 뜨거운 점액이 흥건해져있다.
+			CFLAG:8806 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:8806 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응으읏…쿠앙! 너무 격렬해서…!」
+			PRINTFORMW 「그래도, %조사처리(CALLNAME:MASTER,"가")% 즐겨준다면, 나는…! 아앗!」
+			PRINTFORMW 레티는 뜨겁게 이쪽을 보고는, 기쁜듯이 바이브를 움직이는 스피드를 올렸다.
+			CFLAG:8806 = 5
+		;自慰中毒Lv3이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:8806 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「안 돼에…! 어디든 너무 좋아아…!」
+			PRINTFORMW 「쾌감에, 몸이, 따라갈수 없어어어!!」
+			PRINTFORMW 명령하지도 않았는데, 레티는 황홀한 표정으로 양 구멍의 바이브를 움직였다.
+			CFLAG:8806 = 4
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2 && (CFLAG:8806 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우아아…싫엇, 앙…」
+			PRINTFORMW 명령을 거부하는 것이 불가능하단걸 알고 있는 거겠지.
+			PRINTFORMW 레티는 고개를 가로 저으며, 양 구멍의 바이브를 교대로 움직이고 있다.
+			CFLAG:8806 = 3
+		;그 외
+		ELSEIF CFLAG:8806 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「부탁이야…괴로우니까…」
+			PRINTFORMW 「적어도, 움직이는 것은 한쪽만으로 해줘…아우, 후…」
+			CFLAG:8806 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;シャワ―オナニ―
+IF SELECTCOM == 7 && TEQUIP:54
+	;初めて
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「샤워 보다는 직접 만졌으면…」
+			PRINTFORMW 「제대로 보아줘?」
+		;그 외
+		ELSE
+			PRINTFORMW 「욕실에서만큼은 천천히 했으면 하는데」
+			PRINTFORMW 「정말로 색욕만으로 이루어져있는 거네, 당신의 뇌는」
+		ENDIF
+			CFLAG:8801 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋自慰中毒Lv3이상
+		IF TALENT:150 == 1 && ABL:30 >= 3 && (CFLAG:8801 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아♪ 핫♪ 멈추지 않아, 응아아!」
+			PRINTFORMW 「굉장해…물의 자극이 좋아앗! 후아앙♪」
+			PRINTFORMW 「보여? 애액이 샤워로 흘려지는 거 보여?」
+			PRINTFORMW 전신으로 전해지는 부드러운 물이, 레티의 성감을 환기시키는 듯하다.
+			CFLAG:8801 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:8801 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응핫, 야앗, 응…!」
+			PRINTFORMW 「이게 끝난다면, 후아…, %조사처리(CALLNAME:MASTER,"가")% 만져줘, 앙♪」
+			CFLAG:8801 = 4
+		;自慰中毒Lv3이상
+		ELSEIF ABL:30 >= 3 && (CFLAG:8801 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「안절부절해…이런걸로 느낀다니…」
+			PRINTFORMW 「여러 위치가 자극되서, 아아, 하아…애태우는게, 좋아…」
+			CFLAG:8801 = 3
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「후우, 으응…읏」
+			PRINTFORMW 「싫어…찌걱찌걱거려서 싫어어…」
+		;그 외
+		ELSEIF CFLAG:8801 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이 샤워기를 만든 사람은 뭘 생각했을까」
+			PRINTFORMW 「이런 일에 사용되리라곤, 틀림없이 생각지도 못했을거야. 쿠후우…」
+			CFLAG:8801 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;公開オナニ―
+IF SELECTCOM == 7 && TEQUIP:50 == 1
+	;初めて
+	IF CFLAG:8803 == 0
+		;연모
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER% 외에 자위 보여져버리는 거네…」
+			PRINTFORMW 「에에, 기대에 부응하도록 노력할게」
+		;그 외
+		ELSE
+			PRINTFORMW 「뭐라고…말한거야…?」
+			PRINTFORMW 「싫어! 그런 거 절대로 이상해!」
+			PRINTFORMW 격렬하게 날뛰는 레티를 억눌러, 자위를 강요했다.
+			PRINTFORMW 
+		ENDIF
+			CFLAG:8803 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:8803 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「찍어줘…. 나의 변태 오나니, 꼼꼼이 촬영해줘…」
+			PRINTFORMW 「그래, 좀 더 가까이 오길 바래…. 보지 깊숙히 비디오에 담아줘…♪」
+			PRINTFORMW 「가슴도…스스로 만져서 야하게 서있는 유두도, 클리도, 단정하지 못한 얼굴도…」
+			PRINTFORMW 「엣지한 나의 모습, 전부 기록해줘! 후아아앙앗…!」
+			PRINTFORMW 스스로 변태라 부르며, 수많은 남자에게 시선으로 범해지는 것을 망상하며 자위를 계속하는 레티의 모습이, 
+			PRINTFORMW 오늘도 비디오에 점점 기록되어간다.
+			PRINTFORMW 그 모습은 무서운 설녀가 아닌, 바로 치녀라고 불리기에 걸맞은 것이었다.
+			CFLAG:8803 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:8803 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응아…오나니 보여지고 있어…많은 사람들에게 보여져버려…」
+			PRINTFORMW 「%CALLNAME:MASTER%에게만 보여지고 싶은데, 야한 모습 드러나…」
+			PRINTFORMW 「촬영 끝나면, 포상 받을거야…. %CALLNAME:MASTER%…」
+			PRINTFORMW 명령받은대로 열심히 자위를 드러내 계속하는 레티였지만, 수치심때문인지, 좀처럼 집중 할 수 없나보다.
+			CFLAG:8803 = 4
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:8803 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응아앙! 좋아… 기분 좋아…」
+			PRINTFORMW 「이런 일, 하면 안 되는데도, 기분 좋아서 견딜 수 없게 돼버려…」
+			PRINTFORMW 「보여지는데도, 오나니 촬영되어 버리는데돗, 아아…앙…♪」
+			PRINTFORMW 비부를 만지작거리는 손가락을 진심으로는 멈추고 싶어하는 거 같지만, 애액이 흘러넘친 비부를 보는한, 멈출거 같지 않다.
+			CFLAG:8803 = 3
+		;그 외
+		ELSEIF CFLAG:8803 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런 모습 촬영해서 기뻐한다니…, 변태에도 유분수가 있잖아!?」
+			PRINTFORMW 「언젠가 반드시 얼려 죽여주겠어…!」
+			PRINTFORMW 등골이 얼어붙을거 같은 시선을 이쪽에 향하며, 레티는 싫어하며 자위를 개시했다.
+			CFLAG:8803 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;何もしない CFLAG9009
+;-------------------------------------------------
+IF SELECTCOM == 9
+	;初めて
+	IF CFLAG:9009 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「잠시 휴식이네」
+			PRINTFORMW 레티는 %CALLNAME:MASTER%에게 가까이 다가가, 살짝 머리를 어깨에 기댔다.
+			PRINTFORMW 「이렇게 하고 있으면 안정돼…」
+		;그 외
+		ELSE
+			PRINTFORMW 뭘 하려하는지 생각하고 있는지, 레티는 경계하며 이쪽에 다가오려 하지않는다.
+		ENDIF
+			CFLAG:9009 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋欲情Lv3이상
+		IF TALENT:150 == 1 && PALAM:13 >= PALAMLV:3 && (CFLAG:9009 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「나는 괜찮으니까…」
+			PRINTFORMW 「저기, 해줘…. 몸이 뜨겁게 되서 어쩔수없는걸…」
+			PRINTFORMW 「당신의 손으로 식혀줘…」
+			CFLAG:9009 = 4
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9009 <= 2 || FLAG:11 == 2)
+			IF RAND:3 == 0
+				PRINTFORMW 「우―응. 왠지 진정되지 않아」
+				PRINTFORMW 「그래도 %조사처리(CALLNAME:MASTER,"가")% 곁에 있어주는 덕분에 지루하진않아」
+				PRINTFORMW 「그렇네…. 무릎베개라던가 어때?」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 심심해서 레티의 배를 쿡쿡 찔렀다.
+				PRINTFORMW 「응읏, 어떻게된거야? 혹시 살 빼라던가 생각하는 거야?」
+				PRINTFORMW 레티의 배는 말랑말랑하게 탄력이 있어, 찌르는 것만으로 재밌다.
+				PRINTFORMW 하지만 그건, 두껍다기보단 오히려 유방 같다고 말할 수 있다.
+				PRINTFORMW 지금 그대로 좋다고 말하자, 레티는 기쁜듯한 미소를 띄웠다.
+			ELSE
+				PRINTFORMW 「이렇게 멍- 하고 보내는 것도 괜찮네」
+				PRINTFORMW 「저기, 좀 더 가까이 가도 돼?」
+				PRINTFORMW 둘이서 나란히 침대에 앉아있는 것 만으로, 레티는 행복한듯한 얼굴을 하고 있다.
+			ENDIF
+			CFLAG:9009 = 3
+		;그 외
+		ELSEIF CFLAG:9009 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「의도를 모르겠어」
+			PRINTFORMW 「휴식을 준다 라는 선의, 당신에게 있을리가 없는 것」
+			CFLAG:9009 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ロ―タ― CFLAG9010
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;初めて
+	IF CFLAG:9010 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「작은 도구네. 이것도 엣지한 일 하는데 사용하는 거야?」
+			PRINTFORMW 「앗, 떨고 있어…」
+			PRINTFORMW 처음 보는 로터에, 레티는 흥미진진한듯 하다.
+		;그 외
+		ELSE
+			PRINTFORMW 「뭐야 그거」
+			PRINTFORMW 「후응…. 이상한 물건 만드는 사람도 있는 거네」
+		ENDIF
+			CFLAG:9010 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ｃ감각Lv5
+		IF TALENT:150 == 1 && ABL:0 >= 5 && (CFLAG:9010 <= 7 || FLAG:11 == 2)
+			PRINTFORMW 「로터 대주는 거네. 우응, 하고 싶어…♪」
+			PRINTFORMW 스스로 음핵의 표피를 벗기며, 레티는 로터의 진동을 요구했다.
+			PRINTFORMW 요구대로 해주자, 기쁜 표정으로 음핵에 전해지는 쾌감에 몸부림쳤다.
+			PRINTFORMW 「아…아앙♪ 좀 더 떨어줘…! 엉큼한 클리 잔뜩 괴롭혀줘…!」
+			PRINTFORMW 레티는 자신의 집게손가락을 물며, 오직 로터의 자극을 음미하고 있다.
+			CFLAG:9010 = 8
+		;연모+Ｃ감각Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:0 >= 3 && (CFLAG:9003 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「그거 대줫…! 어서 클리에 대줘엇…!」
+			PRINTFORMW 「응읏, 하앗…부르르해서 기분 좋아…!」
+			PRINTFORMW 「%CALLNAME:MASTER%의 손이 아닌대에…, 로터만으로 가버릴지도…후아앙!」
+			PRINTFORMW 레티는 작은 도구를 꽤나 맘에 들어한거 같아, 출력을 최대로 맞추고 끊임없이 교성을 울렸다.
+			CFLAG:9010 = 7
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9010 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「햐앙! 떨고 있어어…」
+			PRINTFORMW 「그래도…익숙해지면, 후아…! 기분 좋아져와…!」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 해주길 바라는데도…응아우! 좋아…!」
+			CFLAG:9010 = 6
+		;굴복각인Lv3+Ｃ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:0 >= 3 && (CFLAG:9010 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「…앙, 응읏, 후아아…!」
+			PRINTFORMW 「거기 기분 좋아…! 저려와…!」
+			PRINTFORMW 벌써 완벽하게 저항을 그만둔 레티는, 음핵에 전해지는 자극에 몸부림치고 있다.
+			CFLAG:9010 = 5
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9010 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「거기 안 돼…! 응, 아아앙!」
+			PRINTFORMW 입으로는 거절했지만, 그다지 저항하는일도 없이, 로터의 자극을 받아들이고 있다.
+			CFLAG:9010 = 4
+		;굴복각인Lv2
+		ELSEIF MARK:2 == 2 && (CFLAG:9010 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응읏, 쿳, 우으응읏……」
+			PRINTFORMW 「안 돼…그런데에 대지 마…」
+			PRINTFORMW 목소리를 눌러 죽이고 있지만, 음핵에의 자극은 확실하게 전해지고 있는 듯 하다.
+			CFLAG:9010 = 3
+		;그 외
+		ELSEIF CFLAG:9010 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응으읏…차가워…」
+			PRINTFORMW 「이 차가움을 냉기로 바꿀수 없는 것이 아까워…」
+			CFLAG:9010 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;電気按摩 CFLAG9011
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;初めて
+	IF CFLAG:9011 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「굉장히 진동하고 있네, 이거」
+			PRINTFORMW 「에? 허, 허벅지 사이에 대는 거야?」
+			PRINTFORMW 「싫…후아아아아아아앙!」
+		;그 외
+		ELSE
+			PRINTFORMW 「뭐야? 어깨라도 풀어주는 것일까?」
+			PRINTFORMW 「그럴리, 가…」
+			PRINTFORMW 「에, 자, 꺄아아아아아!!」
+		ENDIF
+			CFLAG:9011 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ｃ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:0 >= 3 && (CFLAG:9011 < 4 || FLAG:11 == 2)
+			PRINTFORMW 「크, 클리가아아앗! 안 돼게 돼버려어어어어어어!」
+			PRINTFORMW 「읏아아아아아아!! 굉장해에에에, 굉장해에에에에에에!!」
+			PRINTFORMW 레티는 짐승이 포효하는 듯한 교성을 내며, 쾌락에 삼켜져있다.
+			CFLAG:9011 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9011 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응아아아゛아゛아゛! 너무 강햇, 서엇, 응하아아아아앙!」
+			PRINTFORMW 「싫엇…! 그만두면 안됏! 그대로 대줘어어어어어!!」
+			CFLAG:9011 = 4
+		;Ｃ감각Lv3이상
+		ELSEIF ABL:0 >= 3 && (CFLAG:9011 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫, 안됏…! 안 돼에엣! 후아아아아아아아아앙!」
+			PRINTFORMW 무시하고 음핵을 강하게 누르자, 레티는 몸을 뒤로 젖히며 몸부림쳤다.
+			CFLAG:9011 = 3
+		;그 외
+		ELSEIF CFLAG:9011 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「기다려…부탁이야, 대지 말아줫」
+			PRINTFORMW 「너무 격해섯, 우아아아아아아!」
+			CFLAG:9011 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;バイブ CFLAG9012　CFLAG8811
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 12 && TEQUIP:20
+	;初めて
+	IF CFLAG:9012 == 0
+		;処女
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「처음은 %CALLNAME:MASTER%에게 주길 바랬는데…」
+				PRINTFORMW 「우응, 좋아. %조사처리(CALLNAME:MASTER,"가")% 원한다면…」
+				PRINTFORMW 이쪽의 염려를 보여주었지만, 레티의 표정은 흐렸다.
+				PRINTFORMW 「응, 크아아아아아!! 아파…!」
+			;그 외
+			ELSE
+				PRINTFORMW 「첫 상대가 이런 장난감이라곤…」
+				PRINTFORMW 「할거면 어서 해. 당신의 변변찮은 물건보다는 즐거울거같아」
+				PRINTFORMW 꿋꿋한 말을 내뱉는 레티.
+				PRINTFORMW 하지만 얼굴은 이쪽에서 돌리고, 흘러 나오는 눈물이 침대 시트를 적시고 있다.
+			ENDIF
+		;非処女
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「이건 보는걸로 알겠어. 여기에 넣는 거네?」
+				PRINTFORMW 「응읏, 꽤나 큰거네…. 아후…」
+			;그 외
+			ELSE
+				PRINTFORMW 「이상한 장난감…」
+				PRINTFORMW 「그치만 당신에게 삽입되는 것에 비한다면」
+			ENDIF
+		ENDIF
+			CFLAG:9012 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ｖ감각Lv5
+		IF TALENT:150 == 1 && ABL:1 >= 5 && (CFLAG:9012 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「아아…그거 좋아아♪ 어서, 어서어…」
+			PRINTFORMW 「왔다아아아…! 잔뜩 움직여줘…보지 좀 더 찌걱찌걱해줘어!」
+			PRINTFORMW 「보지 채워져 있지 않으면 외로운거야…! 응하아아앗, 좋아…!」
+			PRINTFORMW 음란한 교성을 내면서, 레티는 바이브의 고문을 마음껏 맛보고 있다.
+			PRINTFORMW 바이브에 달라붙은 애액이, 쾌락의 깊이를 이야기하고 있다.
+			CFLAG:9012 = 6
+		;연모+Ｖ감각Lv3이상
+		ELSEIF TALENT:150 == 1 && ABL:1 >= 3 && (CFLAG:9012 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아…바이브」
+			PRINTFORMW 우뚝 선 바이브를 보자, 레티는 눈을 빛냈다.
+			PRINTFORMW 「우응. 꽃아줘…. 보지도 원하고 있어…」
+			PRINTFORMW 「후아아…! 안에서 빠득빠득거렷…! 좀 더 움직여줘어!」
+			CFLAG:9012 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9012 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의 자지쪽이 좋아…」
+			PRINTFORMW 「미안해, 제멋대로였네…. 바이브도 좋아…」
+			PRINTFORMW 「응앗, 쿠우우웅…. 깊은 곳까지 와버렸어…」
+			CFLAG:9012 = 4
+		;Ｖ감각Lv3이상
+		ELSEIF ABL:1 >= 3 && (CFLAG:9012 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후, 응아아! 안이…뜨거워!」
+			PRINTFORMW 「이런 장난감으로 느껴지고 있어…, 싫엇, 아아앙…!」
+			PRINTFORMW 빠득빠득거리는 감촉에, 레티는 못 견디고 몸을 뒤로 젖혔다.
+			CFLAG:9012 = 3
+		;그 외
+		ELSEIF CFLAG:9012 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「여자한테 장난감 넣어서 만족?」
+			PRINTFORMW 「이게 들어온 이상, 당신에게 범해질 일은 없는 거야…」
+			PRINTFORMW 「그렇게 생각하니, 응읏, 후우, 응…귀여운 물건이네…」
+			PRINTFORMW 자극은 전해지고 있는 거 같지만, 레티는 조소를 띄웠다.
+			CFLAG:9012 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 12 && TEQUIP:20 == 0
+	;연모+Ｖ감각Lv3이상
+	IF TALENT:150 == 1 && ABL:1 >= 3 && (CFLAG:8811 < 4 || FLAG:11 == 2)
+		PRINTFORMW 「싫어…빼버리는 거야아…?」
+		PRINTFORMW 「아아아아앙…! 뽑히는 거 만으로, 기분 좋아…」
+		PRINTFORMW 「응읏, 후훗. 다음은 무엇을 박아넣어주는걸까…?」
+		PRINTFORMW 레티는 기대에 찬 표정으로, 스스로 비부를 넓혔다.
+		CFLAG:8811 = 4
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:8811 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「후아아…아아…응…」
+		PRINTFORMW 「기분 좋았지만…」
+		PRINTFORMW 「다음은 %CALLNAME:MASTER%의 자지 먹고 싶어…」
+		PRINTFORMW 레티의 질은 다음의 조교를 기다리듯이, 붉게 빛나고 있다.
+		CFLAG:8811 = 3
+	;Ｖ감각Lv3이상
+	ELSEIF ABL:1 >= 3 && (CFLAG:8811 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「하아, 후우우…」
+		PRINTFORMW 바이브를 뽑자, 입을 벌린 질이 씰룩씰룩 움직이고 있다.
+		PRINTFORMW 레티는 상실감을 느끼는 것같이, 자꾸만 허벅지 사이를 머뭇머뭇 비틀고 있다.
+		CFLAG:8811 = 2
+	;그 외
+	ELSEIF CFLAG:8811 < 1 || FLAG:11 == 2
+		PRINTFORMW 「응, 하아…끝났…다…? 하아…」
+		PRINTFORMW 바이브를 잡아 뽑자 레티는, 어떻게든 호흡을 가지런하게 하고 있다.
+		CFLAG:8811 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナルバイブ CFLAG9013　CFLAG8812
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 13 && TEQUIP:25
+	;初めて
+	IF CFLAG:9013 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이거, 엉덩이에 넣는 것인가…」
+			PRINTFORMW 「응읏…서서히네…」
+		;그 외
+		ELSE
+			PRINTFORMW 「싫엇, 그만둬…그런 거 들어가지 않아…!」
+			PRINTFORMW 싫어하는 레티를 잡아눌러, 국화주름에 무리하게 삽입했다.
+		ENDIF
+			CFLAG:9013 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+潤滑Lv2이상+Ａ감각3Lv이상
+		IF P >= PALAMLV:2 && TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9013 <= 6 || FLAG:11 == 2)
+			PRINTFORMW 「아, 그건……넣어주는 거야?」
+			PRINTFORMW 「웅, 원해…. 엉덩이가 쓸쓸해서 어쩔수 없었으니깐…」
+			PRINTFORMW 스스로 국화주름을 벌린 레티에게, 주저 없이 애널 바이브를 넣었다.
+			PRINTFORMW 「아아…! 왔닷, 들어왔다아…♪」
+			CFLAG:9013 = 7
+		;연모+潤滑Lv2이상
+		ELSEIF P >= PALAMLV:2 && TALENT:150 == 1 && (CFLAG:9013 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「응응읏…엉덩이에 바이브가…꼬리같이…」
+			PRINTFORMW 「나, %CALLNAME:MASTER%의 펫이 되어버린걸까나아…」
+			PRINTFORMW 「그래도, 그것도 나쁘지 않네…, 후후훗♪」
+			PRINTFORMW 바이브의 끝에 동물의 털이라도 달아, 정말 꼬리처럼 해주는 것도 좋을지도 모른다.
+			CFLAG:9013 = 6
+		;연모+潤滑Lv2未満
+		ELSEIF P < PALAMLV:2 && TALENT:150 == 1 && (CFLAG:9013 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 넣길 원한다면…」
+			PRINTFORMW 「우, 아아아…! 아, 파아…!!」
+			PRINTFORMW 침대 시트를 씹으면서, 레티는 기특하게 참고 있다.
+			CFLAG:9013 = 5
+		;潤滑Lv2이상+Ａ감각3Lv이상
+		ELSEIF P > PALAMLV:2 && ABL:2 >= 3 && (CFLAG:9013 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아…어째서…어쨰서어…?」
+			PRINTFORMW 「어째서 아프지 않은거야…어째서 이게 기분 좋은거야…」
+			PRINTFORMW 애널바이브에서 전해지는 쾌락에 당황해, 레티는 자문 자답하고 있다.
+			PRINTFORMW 순조롭개 애널은 개발되어있는 듯하다.
+			CFLAG:9013 = 4
+		;潤滑Lv2이상
+		ELSEIF P >= PALAMLV:2 && (CFLAG:9013 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그렇게, 아픈건…아니지만…」
+			PRINTFORMW 「가능하다면, 그만둬, 주지 않…을 래엣…!」
+			PRINTFORMW 붙어있는 액체에 의해 부감은 완화되고 있는 듯 하지만, 
+			PRINTFORMW 이물감에 익숙하지 않은 것 같다.
+			CFLAG:9013 = 3
+		;그 외
+		ELSEIF CFLAG:9013 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이, 기이이…응아앗…」
+			PRINTFORMW 레티의 좁은 국화주름을 차가운 기계가 억지로 벌려, 유린하고 있다.
+			CFLAG:9013 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 13 && TEQUIP:25 == 0
+	;연모+Ａ감각Lv3이상
+	IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:8812 <= 5 || FLAG:11 == 2)
+		PRINTFORMW 「히야우…후아아아…♪」
+		PRINTFORMW 국화 주름의 쾌락을 마음껏 만족한 레티는, 매우 행복한 얼굴을 하고 있다.
+		CFLAG:8812 = 4
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:8812 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「괜찮아? 내 엉덩이, 찢어지진 않았어?」
+		PRINTFORMW 「어서 %조사처리(CALLNAME:MASTER,"가")% 만족할수있는 엉덩이가 되고 싶다아…」
+		CFLAG:8812 = 3
+	;Ａ감각Lv3이상
+	ELSEIF ABL:2 >= 3 && (CFLAG:8812 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응앗…빠져주…우우, 응…」
+		PRINTFORML 상실감 때문인지
+		PRINTFORMW 국화 주름을 어루 만지는 레티의 얼굴은, 여운을 안타까워하는 듯이 보였다.
+		CFLAG:8812 = 2
+	;그 외
+	ELSEIF CFLAG:8812 < 1 || FLAG:11 == 2
+		PRINTFORMW 「드, 드디어, 빠졌다…」
+		PRINTFORML 상당한 부담이었겠지
+		PRINTFORMW 애널 바이브가 빠진 순간, 레티는 축 늘어져버렸다.
+		CFLAG:8812 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;クリキャップ CFLAG9014　CFLAG8813
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 14 && TEQUIP:30
+	;初めて
+	IF CFLAG:9014 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이거 뭐야? 바느질할때 쓰는 골무같아」
+			PRINTFORMW 「그, 그런 사용법이었구나…」
+		;그 외
+		ELSE
+			PRINTFORMW 「그걸 어떻게할 속셈…?」
+			PRINTFORMW 「싫, 그런곳에…붙이지 말아줘…읏」
+		ENDIF
+			CFLAG:9014 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9014 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이걸 붙이면 머리가 새하얗게 돼버리는 거네…」
+			PRINTFORMW 「캡의 자극에 지지 않을 정도로, %CALLNAME:MASTER%도 기분 좋게 해줘?」
+			CFLAG:9014 = 3
+		;그 외
+		ELSEIF CFLAG:9014 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또, 이거…」
+			PRINTFORMW 레티의 표정은 불안해보이진 않지만, 꿀꺽 하고 침을 삼키는 것을 %조사처리(CALLNAME:MASTER,"는")% 놓치지 않았다.
+			CFLAG:9014 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 14 && TEQUIP:30 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8813 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응아아…나와버렸다…」
+		PRINTFORMW 「클리 빨려지는 거…버릇이 돼버릴거 같아…」
+		CFLAG:8813 = 2
+	;그 외
+	ELSEIF CFLAG:8813 < 1 || FLAG:11 == 2
+		PRINTFORMW 「하아…하아…응읏, 하아…」
+		PRINTFORMW 「너무 강력해…이거…」
+		CFLAG:8813 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;ニプルキャップ CFLAG9015　CFLAG8814
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 15 && TEQUIP:35
+	;初めて
+	IF CFLAG:9015 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「감도도 제대로 올리지않으면말야」
+			PRINTFORMW 「모처럼 큰 가슴을 가지고 있고, 이걸로 기분 좋게되면 최고야」
+		;그 외
+		ELSE
+			PRINTFORMW 「후, 우아…」
+			PRINTFORMW 「어서…빼주지, 않을랫…?」
+		ENDIF
+			CFLAG:9015 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9015 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 응응읏…강하게 죄어져서…」
+			PRINTFORMW 「가슴 깊숙한 곳에서 꾸욱 해와…」
+			CFLAG:9015 = 3
+		;그 외
+		ELSEIF CFLAG:9015 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「가슴만 잔뜩 당해도…」
+			PRINTFORMW 「우응? 뭘 말하고 있는걸까, 나」
+			CFLAG:9015 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 15 && TEQUIP:35 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8814 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「후훗, 유두가 굉장하게 서있어…」
+		PRINTFORMW 「만질래? 서서 위로 두드러져서…앙♪」
+		CFLAG:8814 = 2
+	;그 외
+	ELSEIF CFLAG:8814 < 1 || FLAG:11 == 2
+		PRINTFORMW 「후우우…응읏」
+		PRINTFORMW 「기계라도, 상처만 나지 않으면 차라리 나아…」
+		CFLAG:8814 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;オナホ―ル(ふたなり/オトコのみ) CFLAG9016　CFLAG8815
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 16 && TEQUIP:30
+	;初めて
+	IF CFLAG:9016 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이건 어떻게 쓰는 거야? 우―응, 통 모양이 되었어」
+			PRINTFORMW 레티는 처음보는 기구에 관심을 가져, 가운데의 구멍을 빤히 바라보고 있다.
+			PRINTFORMW 용도를 설명해주자 얼굴을 새빨갛게 물들이며 고개를 떨궈서, 
+			PRINTFORMW 이번만은 %조사처리(CALLNAME:MASTER,"가")% 부드럽게 씌워주기로 했다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 물건이 달려있는 것 만으로도 이상사태인데도…」
+			PRINTFORMW 「뭐, 당신에게 있어 여자도 장난감이긴 마찬가지니까」
+			PRINTFORMW 「아니면 장난으로 이런 거 기르고 있지 않겠지…」
+			PRINTFORMW 레티가 언제까지나 불만을 말해 조교가 진행되지 않아서, 
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 강하게 레티의 음경에 오나홀을 씌웠다.
+		ENDIF
+			CFLAG:9016 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9016 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「핫, 앗♪ 응응읏…자지 기분 좋아…!」
+			PRINTFORMW 「중독될…거 같앗…응읏, 후아…♪」
+			CFLAG:9016 = 3
+		;그 외
+		ELSEIF CFLAG:9016 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「웃, 아웃…안쪽이, 굉장해…!」
+			PRINTFORMW 「미끌미끌해서…비벼지고 있엇…!!」
+			CFLAG:9016 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 16 && TEQUIP:30 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8014 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「저, 저기…? 그거, 빌려주진 않아…?」
+		PRINTFORMW 「안 돼? 우우～, 치사해―」
+		PRINTFORMW 이쪽에도 조교 플랜이 있기 때문에 거절하자, 레티는 서운한듯이 오나홀에 이별을 고했다.
+		CFLAG:8815 = 2
+	;그 외
+	ELSEIF CFLAG:8014 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…하아…하아, 이런 장난감으로…」
+		PRINTFORMW 「그래도…나는, 그렇게 미칠정도로, 타락해버리…진 않앗…!」
+		PRINTFORMW 호흡도 흐트러진채로 그런 말 해봐야 설득력이 없다.
+		CFLAG:8815 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;正常位 CFLAG9020
+;-------------------------------------------------
+IF SELECTCOM == 20
+	;初めて
+	IF CFLAG:9020 == 0
+		;処女
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「아아…그말해주기를 기다렸어…♪」
+				PRINTFORMW 「도대체 언제 안아주는걸까 하고, 쭈욱 기다렸으니까…」
+				PRINTFORMW 「그러면……부드럽게 해줘?」
+			;그 외
+			ELSE
+				PRINTFORMW 「때가 와버린거네…」
+				PRINTFORMW 「각오같은건 여기 왔을 때부터 돼있었어. 차라리 단번에 해줘」
+				PRINTFORMW 「응, 이, 응하아아아아아아아아!!」
+			ENDIF
+		;非処女
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「앗…후읏, 우응…」
+				PRINTFORMW 「알았어…. 지금, %조사처리(CALLNAME:MASTER,"가")% 내 안에 있는 거네…」
+				PRINTFORMW 「부탁해, 움직여줘…. 좀 더 %조사처리(CALLNAME:MASTER,"를")% 느끼게해줘…!」
+			;그 외
+			ELSE
+				PRINTFORMW 「언젠가 말하려고 생각했어…」
+				PRINTFORMW 「가능한 한 소중한 곳이 동상입지 않도록 주의하라고」
+				PRINTFORMW 입으로는 그렇게 위협하고 있지만, 질네는 예상 외로 따뜻했다.
+			ENDIF
+		ENDIF
+			CFLAG:9020 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9020 <= 4 || FLAG:11 == 2)
+			IF RAND:3 == 0
+				PRINTFORMW 「좀 더, 좀 더 깊게 찔러줘…!」
+				PRINTFORMW 「후아아…! 좋앗! 쑥쑥 들어와…♪」
+				PRINTFORMW 「부드러운데도…격렬해…! 아, 아앙!!」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 질의 쾌락에 도취되어있는 레티를 보며, %조사처리(CALLNAME:MASTER,"는")% 살짝 허리의 속도를 줄였다.
+				PRINTFORMW 「싫엇…! 멈추지 말아줘…!」
+				PRINTFORMW 「보지 좀 더 피슉피슉 해줘…! 나를 녹여줘어…!!」
+				PRINTFORMW 야하게 조른 보상으로 특별히 깊게 찔러주자, 
+				PRINTFORMW 레티는 이성을 잃은 듯 한 목소리를 내며 기뻐했다.
+			ELSE
+				PRINTFORMW 「아…또 보지 채워주는 거네…♪」
+				PRINTFORMW 「도구도 좋지만, 역시 %CALLNAME:MASTER%의 자지가 최고야」
+				PRINTFORMW 「자아…오늘도 여유있게 귀여워해줘…정말 좋아해…」
+			ENDIF
+			CFLAG:9020 = 5
+		;굴복각인Lv3＋Ｖ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9020 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아아!! 싫엇, 응아…!」
+			PRINTFORMW 「틀린데도, 몸이 멋대로…! 앗, 이런 나는…, 야아앙!」
+			PRINTFORMW 입으로는 싫어하면서도, 레티의 만족은 %조사처리(CALLNAME:MASTER,"를")% 꽉 홀드하고 있다.
+			CFLAG:9020 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9020 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후응읏…앗, 하앗…」
+			PRINTFORMW 거역할수 없는 것을 자각했는지, 성교중의 레티는 놀랄만큼 얌전했다.
+			CFLAG:9020 = 3
+		;그 외
+		ELSEIF CFLAG:9020 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「어, 얼마나, 깊이…」
+			PRINTFORMW 「좋아하는 사람이 아니면, 좋게 될수 없엇…!」
+			CFLAG:9020 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位 CFLAG9021
+;-------------------------------------------------
+IF SELECTCOM == 21
+	;初めて
+	IF CFLAG:9021 == 0
+		;処女
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「우우…무서워…」
+				PRINTFORMW 「%CALLNAME:MASTER%의 얼굴이 보이지 않아서, 불안한거야…」
+				PRINTFORMW 「응, 와…앗, 응아아아아아아!!」
+			;그 외
+			ELSE
+				PRINTFORMW 「처음이 이런 모습이라니…읏」
+				PRINTFORMW 「짐승 이하인 당신에겐 딱 어울렷…. 응, 쿳아아아아아아아!」
+			ENDIF
+		;非処女
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「아앗…깊겟…」
+				PRINTFORMW 「개처럼 범해져서…그게 좋아…!」
+			;그 외
+			ELSE
+				PRINTFORMW 「이렇게 뒤에서…」
+				PRINTFORMW 「굴욕을 주면 복종하겠지 라고 생각하는 거네…. 천박해…」
+			ENDIF
+		ENDIF
+			CFLAG:9021 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9021 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이 체위, 짐승 같아서 좋아…」
+			PRINTFORMW 「%CALLNAME:MASTER%에게 지배되는 느낌이 들어서…후아, 왔다아…♪」
+			PRINTFORMW 「깊은 곳 까지, 응읏, 후앗♪ 깊어엇…!」
+			CFLAG:9021 = 5
+		;굴복각인Lv3＋Ｖ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9021 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「하아아…! 싫엇, 아앙!」
+			PRINTFORMW 「교미같아서…엇! 그치만 거기, 좋앗…!!」
+			PRINTFORMW 레티는 때때로 이쪽을 뒤돌아보며, 질에서 날뛰는 음경의 감촉을 맛보고 있다.
+			CFLAG:9021 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9021 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 쿳…우, 응응읏…」
+			PRINTFORMW 모욕에 대해 반발하는 것 보다도, 시간이 흐르길 기다리는 것을 선택한듯 하다.
+			CFLAG:9021 = 3
+		;그 외
+		ELSEIF CFLAG:9021 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「지지않아…앗! 절대 지지 않으니깐…읏!! 싫엇, 쿠하아아!!」
+			PRINTFORMW 레티는 마음 깊숙히 분하다는 듯이 %조사처리(CALLNAME:MASTER,"를")% 쏘아보고 있다.
+			CFLAG:9021 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位 CFLAG9022
+;-------------------------------------------------
+IF SELECTCOM == 22
+	;初めて
+	IF CFLAG:9022 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「하아아…멋져…」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"과")% 이어진채, 안길수 있다니…」
+			PRINTFORMW 레티는 서서히 허리를 돌리며, %CALLNAME:MASTER%의 뺨을 부드럽게 어루만졌다.
+			PRINTFORMW 힘껏 응석부릴수 있는 이 체위를 완전히 맘에 들어한거 같다.
+		;그 외
+		ELSE
+			PRINTFORMW 「후아…우응, 핫…」
+			PRINTFORMW 「얼굴이 너무 가까워…싫엇, 들이 대지 말아줘…」
+			PRINTFORMW 레티는 틈을 벌리려 하고 있는지, %CALLNAME:MASTER%와는 반대방향으로 힘을 주고 있다.
+		ENDIF
+			CFLAG:9022 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9022 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의 것이 안에 들어왔어…」
+			PRINTFORMW 「이렇게 얼굴이 가까워서…키스라던가 마음껏…」
+			PRINTFORMW 「응아…♪ 이게 제일 좋을지도…아음읏, 응츄…♪」
+			PRINTFORMW 레티는 녹는 듯한 시선으로 응석부리며, 키스를 졸라 왔다.
+			CFLAG:9022 = 5
+		;굴복각인Lv3＋Ｖ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9022 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「질퍽질퍽해져있어…응읏, 야해…안 돼…!」
+			PRINTFORMW 그렇게 말하면서도 몸이 원해버리는지, 
+			PRINTFORMW 레티는 빨간 얼굴로 가슴을 %CALLNAME:MASTER%의 몸에 눌러붙여왔다.
+			CFLAG:9022 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9022 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 아아…하아…핫…」
+			PRINTFORMW 레티는 아무것도 말하지 않는채로 있지만, 시선은 %CALLNAME:MASTER%에서 떨어지지 않았다.
+			CFLAG:9022 = 3
+		;그 외
+		ELSEIF CFLAG:9022 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응웃…응읏, 싫어…츄, 응츄…」
+			PRINTFORMW 「푸핫, 우우…키스 싫어어…」
+			CFLAG:9022 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面座位 CFLAG9023
+;乱れ牡丹 CFLAG9612
+;-------------------------------------------------
+;背面座位
+IF SELECTCOM == 23 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:9023 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아앙…이거, 안타까워…」
+			PRINTFORMW 「안아주고 싶은데도…후앙…읏!」
+			PRINTFORMW 「%CALLNAME:MASTER%의 얼굴, 보이지 않아…」
+		;그 외
+		ELSE
+			PRINTFORMW 「차라리 좋아…이쪽이…」
+			PRINTFORMW 「마주보지 않고 끝나고, 짐승같이 범해지는 일도 없는 거고…」
+			PRINTFORMW 「응, 쿠아아아아…! 들어와…앗」
+		ENDIF
+			CFLAG:9023 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9023 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「보지…기분 좋아서…엇! 응하아아!」
+			PRINTFORMW 「가슴도 주물려져서…후아아아앗, 좋아아…!」
+			PRINTFORMW 레티는 쾌락을 호소하면서, 팔을 %CALLNAME:MASTER%의 목 뒤로 둘러왔다.
+			CFLAG:9023 = 5
+		;굴복각인Lv3＋Ｖ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:1 >= 3 && (CFLAG:9023 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후앗…앗! 느껴버려…엇!」
+			PRINTFORMW 「이런 거, 안 되는데에…엣! 기분 좋아…!」
+			CFLAG:9023 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9023 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫어…찌르지 말아줘…」
+			PRINTFORMW 「가슴 그렇게 꽉 해버리면…쿠하아앙…!」
+			CFLAG:9023 = 3
+		;그 외
+		ELSEIF CFLAG:9023 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「부탁이야…어서, 끝내줘…큿, 응응읏…」
+			CFLAG:9023 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+;乱れ牡丹
+IF SELECTCOM == 612 || (SELECTCOM == 23 && TEQUIP:56)
+	;初めて
+	IF CFLAG:9612 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「보, 보면서…? 저것에 비쳐버려?」
+			PRINTFORMW 「정말, 엣지하다니깐. 그래도 %조사처리(CALLNAME:MASTER,"가")% 해주는 거라면 좋아…와줘…」
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9612 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아아…저쪽에 들어오고 있어…」
+			PRINTFORMW 「이렇게 엣지한 일 하고 있었구나…굉장해…」
+			PRINTFORMW 레티는 거울에 비친 결합부에서 눈을 떼지 못하고 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 거, 일부러 보여주지 마…앗!」
+			PRINTFORMW 레티는 수치를 견디지 못하고, 손으로 거울을 가려버렸다.
+		ENDIF
+			CFLAG:9612 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+露出癖Lv3이상+Ｖ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:9612 <= 5 || FLAG:11 == 2)
+			PRINTFORMW 「보여져…이어지는 거 보여어…!」
+			PRINTFORMW 「반들 반들한 보지, 자지가 푸슉푸슉하는 거야…앗!」
+			PRINTFORMW 「%CALLNAME:MASTER%도 봐줫…! 우리들, 이어져있어…!」
+			CFLAG:9612 = 6
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9612 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 
+			CFLAG:9612 = 5
+		;굴복각인Lv3+露出癖Lv3이상+Ｖ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:14 >= 3 && ABL:1 >= 3 && (CFLAG:9612 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이런 모습으로, 찔러져서…응읏, 하앙!」
+			PRINTFORMW 「나 이런 야한 얼굴하고 기뻐하고 있었던거네…! 아앗, 좋아!」
+			PRINTFORMW 레티는 부끄러운듯 했지만, 거울에 비친 자신의 치태에 눈을 떼지 못했다.
+			CFLAG:9612 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9612 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싫엇, 싫어…부끄러워…」
+			PRINTFORMW 「응읏, 앗, 찌르면 안 돼엣…!」
+			CFLAG:9612 = 3
+		;그 외
+		ELSEIF CFLAG:9612 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「나, 나는 보지 않을래…」
+			PRINTFORMW 양 눈을 가리는 손을 치우자, 레티는 얼굴을 새빨갛게하고 항의했다.
+			CFLAG:9612 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位 CFLAG9024
+;-------------------------------------------------
+IF SELECTCOM == 24
+	;初めて
+	IF CFLAG:9024 == 0
+		;処女
+		IF TALENT:0 == 1
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「무서워…그치만…」
+				PRINTFORMW 「그 이상으로, 당신과 하나가 되고 싶으니까…」
+				PRINTFORMW 「응읏, 응쿳, 우아아아아아!!」
+			;그 외
+			ELSE
+				PRINTFORMW 「싫어어…어째서 스스로…」
+				PRINTFORMW 「이거라면 아직, 한번에 해버려주는 쪽이 차라리 나…」
+				PRINTFORMW 레티는 방울 방울 눈물을 흘리면서, 서서히 허리를 내리고 있다.
+			ENDIF
+		;非処女
+		ELSE
+			;연모
+			IF TALENT:150 == 1
+				PRINTFORMW 「신선한 시점이네…」
+				PRINTFORMW 「후훗. 뭐랄까 내가 %조사처리(CALLNAME:MASTER,"를")% 범하는 거같아…」
+				PRINTFORMW 레티는 요염한 눈으로 위치를 잡아, 그 비부로 단숨에 음경을 물어 삼켰다.
+			;그 외
+			ELSE
+				PRINTFORMW 「이 자세, 당신의 목을 조르기엔 딱 좋은거 알고 있어?」
+				PRINTFORMW 「알면서도 시킨다니…」
+				PRINTFORMW 「정말 배짱만큼은 대단하네…. 그것 만큼은 인정해줄게…앗, 웅응읏…」
+			ENDIF
+		ENDIF
+			CFLAG:9024 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9024 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아…앗, 앙읏…좋아…좀 더 찔러 올려줘…!」
+			PRINTFORMW 「좀 더 느껴줘…! 내가 가게 해줄테닛…!!」
+			PRINTFORMW 반짝거리는 눈으로 오직 허리를 부딫혀오는 레티
+			PRINTFORMW 입으로는 줄줄 침을 흘리며, 음란한 행위를 마음으로부터 즐기고 있는 듯 하.
+			CFLAG:9024 = 5
+		;굴복각인Lv3+奉仕精神Lv3이상＋Ｖ감각Lv3이상
+		ELSEIF MARK:2 == 3 && ABL:13 >= 3 && ABL:1 >= 3 && (CFLAG:9024 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응핫, 앗, 핫…좋아? 기분 좋아…?」
+			PRINTFORMW 「우응읏…나도 좋아…, 응읏…하앙!」
+			PRINTFORMW 레티는 부끄러워하는 일 없이 쾌감을 계속해서 탐하고 있다.
+			CFLAG:9024 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9024 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「나…이런 야한일 하고 있어…」
+			PRINTFORMW 「응하아아…! 갑자기 찔러 올리지 말아줘, 후아앙!」
+			CFLAG:9024 = 3
+		;그 외
+		ELSEIF CFLAG:9024 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「훗, 응읏… 쿠흣…」
+			PRINTFORMW 「당신이… 움직여서, 사람이 말하니깐…!」
+			PRINTFORMW 말대꾸가 많아서, 그 떄마다 찔러 올려줘 중단시켜줬다.
+			CFLAG:9024 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;逆レイプ CFLAG9025
+;(主人が非オトコ, 奴隷がオトコ/ふたなりのみ)
+;-------------------------------------------------
+IF SELECTCOM == 25
+	;初めて
+	IF CFLAG:9025 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%의, 안에…?」
+			PRINTFORMW 「후아아아…, 웃, 응읏…」
+			PRINTFORMW 「보지에 넣는 거, 이렇게 기분 좋아…」
+		;그 외
+		ELSE
+			PRINTFORMW 「이상한 물건 자라게 하곤, 이런 것까지…」
+			PRINTFORMW 「응앗…핫, 자연의 섭리엣…너무 거역하고 있엇…!」
+			PRINTFORMW 처음 맛보는 쾌감에, 레티는 당혹감을 숨길수 없는 거같다.
+		ENDIF
+			CFLAG:9025 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9025 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이것…좋앗…!」
+			PRINTFORMW 「범해지는 %CALLNAME:MASTER%의 얼굴…굉장햇, 멋졋!!」
+			PRINTFORMW 야수처럼 일심불란하게 음경을 박아 넣어오는 레티는, 
+			PRINTFORMW 이 이상 만족할수 없는 듯하다.
+			PRINTFORMW 「내 정액…잔뜩 흘려 넣어줄겟…!」
+			CFLAG:9025 = 3
+		;그 외
+		ELSEIF CFLAG:9025 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「미끌미끌해서…휘감겨 와서…」
+			PRINTFORMW 「괴한잇, 없어지지 않는 것읏, 이런 이유인거넷…!!」
+			PRINTFORMW 레티의 얼굴은 하는 쪽의 쾌감에 지배되어, 허리의 움직임을 멈출 기미는 전혀 없다.
+			CFLAG:9025 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;正常位アナル CFLAG9030
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;初めて
+	IF CFLAG:9030 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「자지 들어오는 거야…?」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"는")% 능숙하니까, 괜찮은거지…?」
+			PRINTFORMW 항문의 좁음을 걱정하면서, 레티는 애널섹스를 승낙했다.
+		;그 외
+		ELSE
+			PRINTFORMW 「기, 기다려! 거기는 집어넣으면 안 되는 곳이잖아!?」
+			PRINTFORMW 「응읏, 구, 응아아아아아!」
+		ENDIF
+			CFLAG:9030 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9030 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「뜨거운 자지가, 안에…!」
+			PRINTFORMW 「엉덩이 얼얼해서…날뛰어서…! 후아앙!!」
+			CFLAG:9030 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9030 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응읏, 읏…!」
+			PRINTFORMW 「마음대로 움직여…! %조사처리(CALLNAME:MASTER,"가")% 기분 좋다면, 나는 기쁘니깐…!」
+			PRINTFORMW 일신을 던진 레티의 말에는, 고통과 함께 진심어린 애정이 담겨있었다.
+			CFLAG:9030 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9030 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿, 하아…후앙…」
+			PRINTFORMW 「엉덩이…어째서…?」
+			PRINTFORMW 천천히 음경을 받아들이고, 레티는 달콤함이 섞인 목소리를 냈다.
+			CFLAG:9030 = 3
+		;그 외
+		ELSEIF CFLAG:9030 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아, 아파…아파아…」
+			PRINTFORMW 「부탁이니까 빼줘…아프고 쓰라려…!!」
+			PRINTFORMW 울며 매달리는 레티를 무시하고, %조사처리(CALLNAME:MASTER,"는")% 허리를 계속 움직였다.
+			CFLAG:9030 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;後背位アナル CFLAG9031
+;-------------------------------------------------
+IF SELECTCOM == 31
+	;初めて
+	IF CFLAG:9031 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우우…엉덩이니깐 교미하고는 다르고…응아…!」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"는")% 기분 좋아…? 그렇다면 다행이다…」
+			PRINTFORMW 불안과 고통으로 터질것만 같은 얼굴을 하고 있던 레티였지만, 
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 기분 좋은 쾌락을 전하자, 조금 안도한 표정이 섞였다.
+		;그 외
+		ELSE
+			PRINTFORMW 「응읏, 깃…쿠하아아아!」
+			PRINTFORMW 「싫어엇…그만, 아팟!」
+		ENDIF
+			CFLAG:9031 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9031 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이가 쓸쓸해…봐줘, 이렇게나 원하고 있어…」
+			PRINTFORMW 레티는 엉덩이를 들이밀어, 유혹하듯이 흔들고 있다.
+			PRINTFORMW 원하는 대로 음경으로 격렬하게 찔러주자, 그것만으로 레티는 절정에 달해버린듯했다.
+			PRINTFORMW 「끼뻐…! 뜨거운 자지 원했었엇, 앗, 아앗!」
+			CFLAG:9031 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9031 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후그읏…깊숙한 곳 까지, 왔어…!」
+			PRINTFORMW 「계속해도 좋으니까…! 엉덩이에서 장까지, %CALLNAME:MASTER%의 걸로 해줘!」
+			CFLAG:9031 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9031 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그만둬…더 이상 엉덩이로 하지 말아줘…」
+			PRINTFORMW 「되돌릴수 없게, 돼버려어엇…! 후아아아!」
+			CFLAG:9031 = 3
+		;그 외
+		ELSEIF CFLAG:9031 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「뒤에서 엉덩이 찔러져서…응큿, 아파…」
+			PRINTFORMW 「이젠 싫엇…차라리 죽여줘…!!」
+			PRINTFORMW 레티는 비통한 절규를 내버려두고, 가느다란 국화주름을 화난듯 어깨를 치켜올리고 계속해서 범했다.
+			CFLAG:9031 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;対面座位アナル CFLAG9032
+;-------------------------------------------------
+IF SELECTCOM == 32
+	;初めて
+	IF CFLAG:9032 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「후, 아아…」
+			PRINTFORMW 「괜찮아, %CALLNAME:MASTER%에게 안겨져있으니까…무섭지 않아…」
+			PRINTFORMW 애널 삽입의 감각을 불안해하는 레티를, %조사처리(CALLNAME:MASTER,"는")% 강하게 안았다.
+		;그 외
+		ELSE
+			PRINTFORMW 「엉덩이로 어째서 싫어어…떨어져…」
+			PRINTFORMW 「아웃…! 응풋, 츄…」
+			PRINTFORMW 이대로는 불만을 늘어놓을 뿐이라, 강인하게 입술을 가로 막으며, 조용하게 했다.
+		ENDIF
+			CFLAG:9032 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9032 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이에 삽입해줘서…당신과 이렇게 가까이 있어서…」
+			PRINTFORMW 「키스도 잔뜩…응, 최고…♪ 하아, 후앙…!」
+			PRINTFORMW %CALLNAME:MASTER%에게 찰싹 밀착하며, 레티는 애널에 더 큰 자극을 요구하고 있다
+			CFLAG:9032 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:9032 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응아음, 응츄, 츄…하음읏…」
+			PRINTFORMW 국화 주름의 아픔에 자신을 속이기 위해서인지, 레티는 자꾸만 입술을 요구해왔다.
+			CFLAG:9032 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9032 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응읏, 으응읏, 우큿, 후, 응…!」
+			PRINTFORMW 확실히 쾌락을 느끼고 있는 듯 하지만, 레티의 이성이 목소리를 내는 것을 방해하고 있다.
+			CFLAG:9032 = 3
+		;그 외
+		ELSEIF CFLAG:9032 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「훗, 쿠우우, 핫, 핫, 응응읏……」
+			PRINTFORMW 애널을 찔러 올릴때마다, %조사처리(CALLNAME:MASTER,"를")% 끌어안는 레티의 힘이 강하게 되고 있다.
+			CFLAG:9032 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;背面座位アナル CFLAG9033
+;-------------------------------------------------
+IF SELECTCOM == 33
+	;初めて
+	IF CFLAG:9033 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 기분 좋다면 전혀 상관없지만…」
+			PRINTFORMW 「그치만, 가능하다면 나도 느끼게 해주면 좋겠다…」
+		;그 외
+		ELSE
+			PRINTFORMW 「캇…쿠흣, 아팟…응응응읏!」
+			PRINTFORMW 레티의 국화주름의 고통을 이를 악물며 참고 있다.
+		ENDIF
+			CFLAG:9033 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9033 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아…후우, 기분 좋아…」
+			PRINTFORMW 「엉덩이 뿐만 아니라, 다른 곳도 만져줬으면 좋겠어…」
+			PRINTFORMW 레티는 애널을 찔러 올려지면서, %CALLNAME:MASTER%에게 몸을 만지작거렸다.
+			CFLAG:9033 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:9033 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우, 응읏…아직 약간 아파…」
+			PRINTFORMW 「부탁이야, 가슴 만져줘…. 그쪽으 분명 좋으니까…」
+			PRINTFORMW 「모처럼 %CALLNAME:MASTER%사 해주는데, 기분 좋아지지 않는건 싫어…」
+			CFLAG:9033 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9033 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「후아아…싫엇, 엉덩이 저릿저릿해져 버린걸…!」
+			PRINTFORMW (이젠…끝났을지도…)
+			CFLAG:9033 = 3
+		;그 외
+		ELSEIF CFLAG:9033 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「긋, 이, 우…아아…」
+			PRINTFORMW 아픔을 풀어주려 다른 부분을 만지려하자, 팟 하고 뿌리쳐져 버렸다.
+			PRINTFORMW 하지만 찔러 올리는 기세에 저항할 기력도 없어졌는지, 나름대로 밀쳐버리려 하는 힘도 약해져있다.
+			CFLAG:9033 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;騎乗位アナル CFLAG9034
+;-------------------------------------------------
+IF SELECTCOM == 34
+	;初めて
+	IF CFLAG:9034 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「내, 내 페이스대로 넣는 거네…. 아아… 우아, 응읏…!」
+			PRINTFORMW 「어때…? 제대로 느끼고 있어…?」
+			PRINTFORMW 긍정하자 레티는 얼굴을 펴고 허리를 서서히 상하운동시켰다.
+		;그 외
+		ELSE
+			PRINTFORMW 「상스러워요, 이런 거…」
+			PRINTFORMW 애널에 삽입은 어떻게든 가능했지만, 레티는 그 뒤 움직임을 멈추고 울기시작해버렸다.
+		ENDIF
+			CFLAG:9034 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9034 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「내가 위에 올라간것만으로 흥분돼…」
+			PRINTFORMW 「후훗…오늘도 엉덩이로 잔뜩 가게 해줘…」
+			PRINTFORMW 요염한 미소와 함께, 레티의 국화주름에 음경이 받아들여지고 있다.
+			CFLAG:9034 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && P < PALAMLV:2 && (CFLAG:9034 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「나라면, 괜찮으니까…읏」
+			PRINTFORMW 「엉덩이로 기분 좋아진…! %CALLNAME:MASTER%의 느끼는 얼굴, 좀 더 보여줘…읏!」
+			CFLAG:9034 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9034 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응아…앗, 엉덩이, 들어와…!」
+			PRINTFORMW 「허리가 제멋대로…, 하앗…! 움직여버려어어!」
+			CFLAG:9034 = 3
+		;그 외
+		ELSEIF CFLAG:9034 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「누가 좋아하는데 이런 일…!」
+			PRINTFORMW 「쿠앗…! 아플뿐, 인데돗…!」
+			CFLAG:9034 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手淫 CFLAG9040
+;-------------------------------------------------
+IF SELECTCOM == 40
+	;初めて
+	IF CFLAG:9040 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「굉장해…비비는 것만으로 이렇게 되는구나…」
+			PRINTFORMW 「뜨겁고…부들부들거려…」
+			PRINTFORMW 레티는 마치 실험이라도 하고 있는 것처럼, 머뭇머뭇 음경을 보고 있다.
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「아, 지금 핏! 했다…」
+			PRINTFORMW 「여기네…? 여기 만져지면 기분 좋은거네…?」
+		;그 외
+		ELSE
+			PRINTFORMW 「우우…만지고 싶지 않아…더러워…」
+			PRINTFORMW 수음을 꺼리는 레티의 손을 붙잡고, 무리하게 훑었다.
+		ENDIF
+			CFLAG:9040 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:13 >= 3 && (CFLAG:9040 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「맡겨둬, 잔뜩 기분 좋게 해줄게…」
+			PRINTFORMW 가느다랗고 매끄러운 손의 감촉이, %CALLNAME:MASTER%의 음경을 쥐어 싸듯이 문질렀다.
+			PRINTFORMW 「아, 쿠퍼액이…. 어쩔수 없네에」
+			PRINTFORMW 레티는 손가락 끝으로 점액을 휘감고는, 
+			PRINTFORMW %CALLNAME:MASTER%의 귀두에 문질러 바르듯 칠해주었다.
+			PRINTFORMW 「이걸로 좀 더 기분 좋겠지? 언제 가도 좋으니까…♪」
+			CFLAG:9040 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9040 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이대로 가고 싶어? 어쩔까나…♪」
+			PRINTFORMW 「이따가 제대로 기분 좋게 해준다면, 좋아…」
+			PRINTFORMW 심술궂은 미소로 음경을 농락하는 레티는, 매우 즐거워보인다.
+			CFLAG:9040 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9040 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「에또…여기를, 이렇게…」
+			PRINTFORMW 「참을수 없어…? 손으로 그렇게나 느껴…?」
+			PRINTFORMW 「역시 잘 모르겠어. 남자의 몸은」
+			CFLAG:9040 = 3
+		;그 외
+		ELSEIF CFLAG:9040 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「얼굴에 갖다대지마…」
+			PRINTFORMW 「뒤틀어 부셔지고 싶지 않다면, 가만히좀 있어줘」
+			PRINTFORMW 레티는 무뚝뚝한 얼굴 그대로, 묵묵히 음경을 비비고 있다.
+			CFLAG:9040 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;フェラチオ CFLAG9041
+;-------------------------------------------------
+IF SELECTCOM == 41
+	;初めて
+	IF CFLAG:9041 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이렇게…일까나?」
+			PRINTFORMW 「앗…지금 핏! 했다. 여기인거네…? 후읍…츄루…」
+			PRINTFORMW 레티는 만족한듯 음경을 물고 있다.
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「전형적인『봉사』네」
+			PRINTFORMW 「응, 아음…츄, 츄파…응응읏…!」
+			PRINTFORMW (불가사의하게 싫지 않네…빠는 거…)
+		;그 외
+		ELSE
+			PRINTFORMW 「이것도 진부하네…」
+			PRINTFORMW 「별로 아무것도 생각하지 않아. 이빨로 갈기갈기 잘리고 싶지 않으면 어서 끝내줘」
+		ENDIF
+			CFLAG:9041 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:13 >= 3 && (CFLAG:9041 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「언제나 나를 괴롭히는 자지…」
+			PRINTFORMW 「혼내주지 않으면…아웁…」
+			PRINTFORMW 「음웃…츄루루루…츄, 응츄우…」
+			PRINTFORMW 혀와 구강을 사용한 레티의 뛰어난 기술에, %조사처리(CALLNAME:MASTER,"는")% 빨리도 절정에 도달할거같이 되었다.
+			CFLAG:9041 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9041 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또 기분 좋게 해주는 거네…?」
+			PRINTFORMW 「내 입으로 잔뜩 가줘…츄, 츄흡…」
+			PRINTFORMW 레티는 음경에 혀를 기어가게 하며, 이쪽의 상황을 살피고 있다.
+			CFLAG:9041 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9041 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아, 하아, 앗…はむっ…」
+			PRINTFORMW 레티는 음경을 본 단계에서 얼굴에 홍조를 띄고, 뺨을 물건으로 팟팟 두드려주자, 
+			PRINTFORMW 명령되지도 않고 물건을 입에 물었다.
+			CFLAG:9041 = 3
+		;그 외
+		ELSEIF CFLAG:9041 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「후우, 으…냄새…」
+			PRINTFORMW 「적어도 제대로 씻어줄래? 코가 빠질거같아」
+			PRINTFORMW 불평 불만을 말하며, 레티는 억영 없이 음경에 혀를 기었다.
+			CFLAG:9041 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリ CFLAG9042
+;-------------------------------------------------
+IF SELECTCOM == 42
+	;初めて
+	IF CFLAG:9042 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「제대로 될까나…응읏, 차」
+			PRINTFORMW 「끼우는 것은 쉽지만, 기술이…」
+			PRINTFORMW 레티는 조심조심 가슴으로 봉사를 개시했다.
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「응, 영차」
+			PRINTFORMW 「아…가슴 사이가 뜨거워…」
+		;그 외
+		ELSE
+			PRINTFORMW 「심한 냄새네…정말이라면 피부에 닿은 것도 싫어」
+			PRINTFORMW 「그치만 한 번 말하면 내말은 듣지 않겠지? 그렇다면 빨리 끝내줄게」
+		ENDIF
+			CFLAG:9042 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:13 >= 3 && (CFLAG:9042 <= 4 || FLAG:11 == 2)
+			IF RAND:3 == 0
+				PRINTFORMW 「이렇게 해서 기분 좋게 해주는 것도 익숙해진거네」
+				PRINTFORMW 「후훗. 응아…」
+				PRINTFORMW 레티는 가슴 골짜기에서 얼굴을 내미는 음경에 타액을 떨어트려, 더 미끈미끈하게했다.
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「이렇게, 꾸욱 해서…」
+				PRINTFORMW 「가슴 사이가 뜨겁게 되서…젖어버려…」
+				PRINTFORMW 「자지의 뜨거움으로 오버히트해버린걸까. 쿠훗」
+				PRINTFORMW 그렇게 말하고 웃음을 흘린 레티의 유두는 완전히 굳어있다.
+			ELSE
+				PRINTFORMW 「가슴만으로 괜찮아?」
+				PRINTFORMW 「말해준다면 핥아줄텐데도…」
+				PRINTFORMW 사실 자기가 핥고 싶은 것 뿐이 아닐까 하고 생각했지만, 입밖엔 내지 않았다.
+			ENDIF
+			CFLAG:9042 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9042 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아직 그다지 능숙하지 않으니까…응읏…」
+			PRINTFORMW 「서툴다고 생각하면 말해줘? 다른 방법 생각해볼테니까…」
+			PRINTFORMW 제대로 쾌감을 주고 있는지, 레티는 종종 걱정하고 있다.
+			CFLAG:9042 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9042 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「…응…아아…」
+			PRINTFORMW 무의식적으로 핥으려고 하고 있어서, 가슴으로 봉사에 집중하라고 주의주었다.
+			CFLAG:9042 = 3
+		;그 외
+		ELSEIF CFLAG:9042 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「가슴은 더럽히지 말아주면 도와주는 거야…」
+			PRINTFORMW 「이미 더러우니까 무리? 말한대로군요. 물론 당신의 것, 말이지만」
+			CFLAG:9042 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;素股 CFLAG9043
+;-------------------------------------------------
+IF SELECTCOM == 43
+	;初めて
+	IF CFLAG:9043 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이런 거…안타까워어…」
+			PRINTFORMW 「섹스 쪽이 기분 좋다고 생각하는데말야…」
+			PRINTFORMW 그래도 %조사처리(CALLNAME:MASTER,"가")% 말한다면, 하고 봉사를 계속하는 레티의 모습은, 무척 보람차보였다.
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「삽입하는 것도 아니고, 입이나 가슴을 사용하는 것도 없고」
+			PRINTFORMW 「이런 곳으로 문질러 지는게 좋아? 후응, 그래…」
+		;그 외
+		ELSE
+			PRINTFORMW 「혹시 망설이는 거야? 새삼스럽게」
+			PRINTFORMW 처음엔 내키지 않는 듯 했지만, 안을 범해지는게 아닌걸 알고는 속으로 휴 하고 있는 듯 하다.
+		ENDIF
+			CFLAG:9043 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:13 >= 3 && (CFLAG:9043 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「정말로 이걸로 만족…?」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 좋다면, 나도 하는 보람이 있지만…」
+			PRINTFORMW 레티는 자위라도 하듯이, 허벅지 사이를 문질러 자극하길 계속했다.
+			CFLAG:9043 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9043 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「문지르는 것만으론, 안타까워…」
+			PRINTFORMW 「받아줘…안에 줘…!」
+			CFLAG:9043 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9043 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이상한 취미네, 응읏, 후우…」
+			PRINTFORMW 「그치만 그 취미를 만족시켜주는 것도, 나쁘진, 않을지돗…」
+			CFLAG:9043 = 3
+		;그 외
+		ELSEIF CFLAG:9043 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이거, 비벼서…」
+			PRINTFORMW 「느끼는 거 따위, 응아아…」
+			CFLAG:9043 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;アナルおねだり CFLAG9045
+;-------------------------------------------------
+IF SELECTCOM == 45
+	;初めて
+	IF CFLAG:9045 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「엉덩이 애원이라니 어떻게해야 좋은걸까…」
+			PRINTFORMW 「이렇게…하는 거네、이걸로 좋아?」
+			PRINTFORMW 국화 주름을 벌리면서、레티는 부끄러운듯 이쪽을 보고 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 굴욕…언젠가 절대롯…」
+			PRINTFORMW 몸을 잘게 떤 레티는、울면서 항문을 벌렸다.
+		ENDIF
+			CFLAG:9045 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:10 >= 3 && (CFLAG:9045 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이가 텅텅비어서…또 미쳐버릴거같은걸…」
+			PRINTFORMW 「바이브든 자지든 뭐든 좋으니까…. 박아줬으면 해…」
+			PRINTFORMW 레티는 엉덩이를 삐죽 내밀며、그대로 동그라미를 그리면서 천천히 조르기 시작했다.
+			CFLAG:9045 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9045 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이도 좋지만、보지에도 원해…」
+			PRINTFORMW 「어디든 %CALLNAME:MASTER%의 것인걸. 애원이라던지 하지 않아도 자유롭게 사용해도 좋아…」
+			CFLAG:9045 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9045 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (엉덩이가 이렇게 돼버린걸…어쩔 수 없어…)
+			PRINTFORMW 「내 엉덩이…야하게 한 책임、져줘…」
+			PRINTFORMW 레티는 골똘히 생각해 결심한듯이 머뭇머뭇 엉덩이를 내밀어、스스로 국화주름을 벌려 보여줬다.
+			CFLAG:9045 = 3
+		;그 외
+		ELSEIF CFLAG:9045 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…우우、원하지도 않는 일로 애째서 애원같은걸…」
+			PRINTFORMW 굴욕과 치욕의 사이에서、레티는 쓰러져 울어버릴것만 같은 것을 필사적으로 버티고 있다.
+			CFLAG:9045 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;玉揉み強制 CFLAG9053
+;-------------------------------------------------
+IF SELECTCOM == 53
+	;初めて
+	IF CFLAG:9053 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「자루만으로 좋아? 장대는?」
+			PRINTFORMW 「사양하지 않아도 좋은데도…」
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「부드러워…힘 조절이 어려울거같아…」
+			PRINTFORMW 「그…아플거같으면 말해?」
+		;그 외
+		ELSE
+			PRINTFORMW 「꽉 짓이기면 당신은 어떤 얼굴을 하는걸까」
+			PRINTFORMW 「……안해. 어차피 대책은 있겠지」
+		ENDIF
+			CFLAG:9053 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:13 >= 3 && (CFLAG:9053 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「부들부들, 해. 기분 좋은듯한 얼굴이 되었다…쿠훗」
+			PRINTFORMW 「하아…주무르면서 자지 핥고 싶어져버렸다…」
+			PRINTFORMW 레티는 입맛을 다시며, 정신없이 음낭을 주무르고 있다.
+			CFLAG:9053 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9053 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「언제나 장대쪽에 신세를 지고 있는데도…」
+			PRINTFORMW 「자루도 이렇게나 귀여운거네, 후훗♪」
+			CFLAG:9053 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9053 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「조금 요령을 잡은 느낌이야」
+			PRINTFORMW 「이렇게일까나…우웅, 이쪽이였을지도…」
+			PRINTFORMW 레티는 매일 연구를 거듭하고 있는 듯하고, 목을 비틀며 봉사에 집중하고 있다.
+			CFLAG:9053 = 3
+		;그 외
+		ELSEIF CFLAG:9053 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「정말…자루인데도 축축해…」
+			PRINTFORMW 「만져진다면 땀날정돈 닦아 내둬. 웃, 코를 찔러…」
+			PRINTFORMW 레티는 마음 깊숙히 싫어하는 듯한 얼굴로 코를 쥐었다.
+			CFLAG:9053 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ロ―ション CFLAG9060
+;-------------------------------------------------
+IF SELECTCOM == 60
+	;初めて
+	IF CFLAG:9060 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「히얏…굉장한 찰기」
+		;그 외
+		ELSE
+			PRINTFORMW 「뭐야 이거, 기분 나빠…」
+		ENDIF
+			CFLAG:9060 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9060 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「잘 보면 약간 재밌을지도…」
+			PRINTFORMW 레티는 몸에 붙은 로션을 길게 늘이며 놀고 있다.
+			CFLAG:9060 = 3
+		;그 외
+		ELSEIF CFLAG:9060 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「바르는 걸 핑계로 만지고 싶을뿐 아니야?」
+			CFLAG:9060 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;媚薬 CFLAG9061
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;初めて
+	IF CFLAG:9061 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「좀 더 기분 좋게 되는 약? 후응」
+			PRINTFORMW (이런 것 보다, %조사처리(CALLNAME:MASTER,"가")% 좋게 해줬으면하는데…)
+		;그 외
+		ELSE
+			PRINTFORMW 「싫아, 뭘 할 속셈…응붓」
+		ENDIF
+			CFLAG:9061 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9061 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 곁에 있는 것만으로, 나에겐 미약같은거야…」
+			CFLAG:9061 = 3
+		;그 외
+		ELSEIF CFLAG:9061 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「마시면 되는 거지?」
+			PRINTFORMW 레티는 이쪽을 차갑게 쏘아보며, 담담히 미약을 입에 물었다.
+			CFLAG:9061 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;利尿剤 CFLAG9062
+;-------------------------------------------------
+IF SELECTCOM == 62
+	;연모+おもらし癖
+	IF TALENT:150 && TALENT:45 && (CFLAG:9062 < 4 || FLAG:11 == 2)
+		PRINTFORMW 「이런 약 없어도…」
+		PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 말해준다면, 언제든지 쌀텐데…」
+		CFLAG:9062 = 4
+	;연모
+	ELSEIF TALENT:150 && (CFLAG:9062 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「%CALLNAME:MASTER%의 앞에서 흘려버리는 거야…부끄러워…」
+		CFLAG:9062 = 3
+	;굴복각인Lv3
+	ELSEIF MARK:2 == 3 && (CFLAG:9062 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「정체를 모르는 것에 비교하면, 오줌쯤이야…」
+		CFLAG:9062 = 2
+	;그 외
+	ELSEIF CFLAG:9062 < 1 || FLAG:11 == 2
+		PRINTFORMW 「…이 변태」
+		CFLAG:9062 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;裸エプロン CFLAG9090 解除 CFLAG8823
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 90 && TEQUIP:59
+	;初めて
+	IF CFLAG:9090 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「자자, 봐줘♪」
+			PRINTFORMW 레티는 스스로 충만한 가슴의 계곡에 에이프런을 천을 모아, 부끄러워 하는일 없이 가슴을 드러내고 있다.
+			PRINTFORMW 그 어깨를 팡팡 하고 두드린 %조사처리(CALLNAME:MASTER,"는")%, 알몸 에이프런이 어떤것인지에 대해 구구절절 설명했다.
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3
+			PRINTFORMW 「………」
+			PRINTFORMW 말 없이 에이프런을 입은 레티의 얼굴은, 은은하게 빨갛게 되어있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이런건 사랑하는 사람 앞에서 하는 거겠지…?」
+			PRINTFORMW 「공교롭게도 당신에겐 그런 대상이 없네」
+		ENDIF
+		CFLAG:9090 = 1
+		RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9090 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후훗. 신부기분이네♪」
+			PRINTFORMW 「이게 어울히면 한 사람 몫의 신부일까나아…」
+			PRINTFORMW 지금도 충분히 어울리고 있다고 말하자, 레티는 기쁜듯이 끌어 안겨왔다.
+			CFLAG:9090 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:9090 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「가슴 부분이 좁아…이래선 보여버려…」
+			PRINTFORMW 레티는 에이프런에서 유두가 나오지 않도록 필사적이었지만, 
+			PRINTFORMW 풍만한 가슴이 재앙으로, 유방 옆쪽은 숨길 수 없었다.
+			CFLAG:9090 = 3
+		;그 외
+		ELSEIF CFLAG:9090 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「허탈하지 않아? 전혀 기분이 들지 않지만」
+			PRINTFORMW 「뭔가 알몸보다 야해…」
+			CFLAG:9090 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 90 && TEQUIP:59 == 0
+	;初めて
+	IF CFLAG:8823 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우우～, 조금만 더…」
+			PRINTFORMW 좀 더 부부 기분을 맛보고 싶었는지, 레티는 유감인듯하다.
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3
+			PRINTFORMW 「결국 벗기는 쪽이 보이는 면적이 증가해버린거네…」
+			PRINTFORMW 「입어서 에로? 이해하기 어려워…」
+			PRINTFORMW 「입을 뿐이라면 입어주겠지만…뭔가 석연치 않네」
+		;그 외
+		ELSE
+			PRINTFORMW 「어찌되든 좋아…」
+			PRINTFORMW 레티는 차가운 눈으로 이쪽을 보며, 재빨리 에이프런을 벗어버렸다.
+		ENDIF
+			CFLAG:8823 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:8823 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또 입혀줘…?」
+			PRINTFORMW 「우우～응, 뭐랄까, 엄청 행복한 기분이 되니깐…」
+			CFLAG:8823 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:8823 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이 의상 좋아하는 거야? 몇 번이고 입어주겠지만」
+			PRINTFORMW 「후응, 그래…」
+			PRINTFORMW 알몸에이프런이 좋다고대답하자, 레티는 지긋이 에이프런을 보았다.
+			CFLAG:8823 = 3
+		;그 외
+		ELSEIF CFLAG:8823 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「질리지도 않네…당신도」
+			PRINTFORMW 「알지 못하겠어? 한숨 쉬며 에이프런을 개는 기분이」
+			CFLAG:8823 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;スク水プレイ CFLAG9091 解除 CFLAG8825
+;遂に念願のスク水レティさんを手に入れたぞ! 
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 91 && TEQUIP:59 == 2
+	;初めて
+	IF CFLAG:9091 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「무―, 좀 작아」
+			PRINTFORMW 「특히 가슴과 엉덩이가…꽈악꽈악…」
+			PRINTFORMW 「그게 좋아? 정말, 바보…」
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3
+			PRINTFORMW 「응웃…의외로 조여서 꾹하네…」
+			PRINTFORMW 앞가슴을 넣는데 고생했지만, 어떻게든 입는건 가능한 거 같다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이거 작은 애들이 입는 거 아니야?」
+			PRINTFORMW 「그런걸 어째서 일부러 나에게…」
+		ENDIF
+			CFLAG:9091 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9091 <= 3 || FLAG:11 == 2)
+			IF RAND:3 == 0
+				PRINTFORMW 「싫어…유두 모양이 보여버려…」
+				PRINTFORMW 아무래도 레티는  스쿨미즈를 입은 것 만으로 흥분하고, 유두를 세워버린 듯 하다.
+				PRINTFORMW 「이, 이게 보고 싶어? 응, 좋을만큼 모쪼록…」
+				PRINTFORMW 레티는 그렇게 말하고, 안 그래도 풍만한 가슴을 더 강조하는 포즈를 취했다.
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 「옷감이 얇아서, 여기 위치가 알려져버려」
+				PRINTFORMW 레티의 말대로, 허벅지 사이의 옷감에 비부의 모양이 보여진다.
+				PRINTFORMW 그쪽을 몇 번인가 문질러주자, 빨리도早 새로운 점액이 배어들어, %CALLNAME:MASTER%의 손가락을 더럽혔다.
+				PRINTFORMW 「앙…♪ 보지의 준비라면 진작 되있어…」
+			ELSE
+				PRINTFORMW 스쿨미즈에 싸인 레티의 엉덩이는 빵빵해서, 지금이라도 터질것같다.
+				PRINTFORMW 글래머러스한 그 몸에 넋을 잃고 보고 있자, 레티는 엉덩이를 이쪽에향해, 뇌살적으로 흔들고 있다.
+				PRINTFORMW 「엉덩이 굉장하지? 주물러도, 빨아도, 두드려도 좋아…」
+			ENDIF
+			CFLAG:9091 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:9091 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이거, 몸의 라인이 특히 강조돼버리는 거 어떻게 할 수 없어?」
+			PRINTFORMW 「그렇네. 야한걸 좋아하는 당신다운 선택이야」
+			PRINTFORMW (이걸로 흥분하는 나도, 어떻게 된 거 같아…)
+			CFLAG:9091 = 3
+		;그 외
+		ELSEIF CFLAG:9091 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「입고서 얼마 안지났지만, 어서 벗고 싶어. 옷감이 마찰되서 빨갛게 되어버렸으니까」
+			PRINTFORMW 「싫다면 평범한 수영복이라도 사와주면? 입을지 말지는 별개의 문제지만」
+			PRINTFORMW 평범한 수영복으론 의미가 없다고 말하자, 레티는 진심으로 어이가 없어져, 차가운 시선을 향해왔다.
+			CFLAG:9091 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 91 && TEQUIP:59 == 0
+	;初めて
+	IF CFLAG:8825 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「역시 직접 보여주고 싶어」
+			PRINTFORMW 「있는 그대로의 나를, 응…?」
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3
+			PRINTFORMW 「평소보다 노출 면적은 적을 터인데도, 평소보다 더 부끄럽네요…」
+			PRINTFORMW 「엣, 맘에 들어버린거야…? 알겠어…」
+			PRINTFORMW 마지못해하는 표정이었지만, 아무래도 그다지 싫은거 같지는 않다.
+		;그 외
+		ELSE
+			PRINTFORMW 「…피부가 거칠어지면 어떻게 해줄거야, 정말…」
+			PRINTFORMW 레티는 스쿨 미즈의 옷감 자국을 자꾸만 신경쓰고 있다.
+		ENDIF
+			CFLAG:8825 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:8825 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 탈의 후의 스쿨미즈를 바라보자, 허벅지 사이 부분의 물기가 두드러져있다.
+			PRINTFORMW 「보지 부분, 굉장하게 되어있겠지?」
+			PRINTFORMW 「그…, 그거 입은 것 만으로 새어버려…」
+			PRINTFORMW 「야한 모습으로 엣지한거 생각하니까, 견딜수 없이 되어버린걸…」
+			PRINTFORMW 레티는 부끄러운듯이 머뭇머뭇거리고 있지만, 그것을 솔직하게 보고하는 것이 사랑스럽다.
+			CFLAG:8825 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:8825 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「저, 전라랑 그 모습, 어느쪽이 흥분되…?」
+			PRINTFORMW 「어느쪽도 매력적? 정말 바보네…」
+			PRINTFORMW (매력적이라니…, 부끄러운 말 가볍게 얘기하네…)
+			CFLAG:8825 = 3
+		;그 외
+		ELSEIF CFLAG:8825 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런 모습은 싫다고 말했던 거겠지?」
+			PRINTFORMW 냉큼 스쿨미즈를 벗고는, 잔뜩 마음에 들지 않는 듯 뒤쪽으로 내팽겨쳐 버렸다.
+			CFLAG:8825 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ビデオ撮影（ビデオカメラ使用） CFLAG9100
+;-------------------------------------------------
+IF SELECTCOM == 100 && TEQUIP:50
+	;初めて
+	IF CFLAG:9100 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이걸로 촬영해 기록가능한거구나…편리한 물건도 있네」
+			PRINTFORMW 「엣,  팔아버리는 거? 그런…」
+		;그 외
+		ELSE
+			PRINTFORMW 「싫엇, 그런 거 안 돼, 절대 안 돼에!」
+			PRINTFORMW 「찍지 말아줘…싫어…」
+		ENDIF
+			CFLAG:9100 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:9100 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「수많은 사람들에게 보여진다고 생각하면 흥분되고…」
+			PRINTFORMW 「남겨두고 함께 보고 싶기도 하고…우우～응」
+			PRINTFORMW 고민하고 있는데 나쁘지만, 공교롭게도 테이프를 어쩔지 결정하는 것은 이쪽이고.
+			CFLAG:9100 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9100 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「팔지 않고 남겨두면 하는데…」
+			PRINTFORMW 「두명의 사랑의 기록이야? 함께 보고 싶어…」
+			CFLAG:9100 = 4
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9100 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이게 나돌아다녀버리는 거구나…」
+			PRINTFORMW 「그렇게 생각하니까, 뭐랄까 잔뜩 시선을 느껴…. 아아…♪」
+			CFLAG:9100 = 3
+		;그 외
+		ELSEIF CFLAG:9100 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「1개 나돌아 다닌 이상 이젠 끝이네…」
+			PRINTFORMW 「이제와서 저항해도 늦은건, 가…」
+			CFLAG:9100 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;羞恥プレイ CFLAG9103 解除 CFLAG8822
+;-------------------------------------------------
+IF SELECTCOM == 103 && TEQUIP:56
+	;初めて
+	IF CFLAG:9103 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이런 큰 거울로 비쳐버리는 거구나…」
+			PRINTFORMW 「엣지한 얼굴 하고 있는 거, 보여버리네」
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「이래선 죄다 보여…」
+			PRINTFORMW 레티는 부끄러운듯이 하고 있지만, 다리를 닫으려 하진 않았다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이것만을 위해서 일부러 산거야? 수고로운 일이네」
+			PRINTFORMW 「나는 안봐…자, 잠깐, 그만둿…」
+			PRINTFORMW 얼굴을 돌리려 하는 레티의 머리를, 억지로 거울 쪽으로 향했다.
+		ENDIF
+			CFLAG:9103 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:9103 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%에게 감사하지 않으면」
+			PRINTFORMW 「보여지면서 하는게 기분 좋다는 거, 가르쳐줬는걸」
+			CFLAG:9103 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9103 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「또 엣지한 얼굴 하는 거 보여주고 싶어?」
+			PRINTFORMW 「정말…부끄러우니까…」
+			CFLAG:9103 = 4
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「거울에 양쪽이 비쳐져버려…」
+			PRINTFORMW (그치만 어째서일까…평소보다 흥분해…)
+			CFLAG:9103 = 3
+		;그 외
+		ELSEIF CFLAG:272 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이쪽을 향하지마…」
+			PRINTFORMW 레티는 최대한의 저항으로, 양손으로 눈을 가리고 있다.
+			CFLAG:9103 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 103 && TEQUIP:56 == 0
+	;初めて
+	IF CFLAG:8822 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「역시 %CALLNAME:MASTER%의 얼굴에 집중하고 싶달까나」
+		;그 외
+		ELSE
+			PRINTFORMW 「그래, 당신은 약간 지나치게 추잡해」
+			PRINTFORMW 「라고 말하겠죠. 어딘가의 염라님이라면」
+			PRINTFORMW 농담할 여유가 있다면, 다음엔 더욱 격렬하게 해도 괜찮겠지.
+		ENDIF
+			CFLAG:8822 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:8822 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「다음엔 좀 더 야한 얼굴해버릴지도…」
+			CFLAG:8822 = 3
+		;그 외
+		ELSEIF CFLAG:8822 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어…뭔가 쑥쓰러워…」
+			PRINTFORMW 레티는 얼굴에 홍조를 띄우면서, 치워지는 거울을 힐끗 보았다.
+			CFLAG:8822 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;野外プレイ CFLAG9104　CFLAG:8821
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 104 && TEQUIP:52
+	;初めて
+	IF CFLAG:9104 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「사실은 둘이서만 즐기고 싶지만…」
+			PRINTFORMW 레티는 첫 야외에 약간 당혹한것 같았지만, 
+			PRINTFORMW 목걸이를 걸어주자 살짝 어깨의 힘이 빠진거같다.
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「결국 구경거리로까지 전락해버린걸까」
+			PRINTFORMW 「어쩔수 없네…자, 어서 따라와」
+		;그 외
+		ELSE
+			PRINTFORMW 「정말, 자기 이외엔 전부 축생취급인거네…」
+			PRINTFORMW 「그 방자함, 언젠가 몸을 망칠거야」
+			PRINTFORMW 레티는 분노와 미움이 깃든 눈으로, 지긋이 이쪽을 째려보고 있다.
+		ENDIF
+			CFLAG:9104 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3 && (CFLAG:9104 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「또 엣지한 산책이네♪」
+			PRINTFORMW 「네발로 걸어볼까? 펫같이」
+			PRINTFORMW 얼굴을 물들이며 그렇게 말한 레티의 목걸이가, 반짝 빛났다.
+			CFLAG:9104 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9104 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「누군가에게 보여져버릴까나…」
+			PRINTFORMW 「우응, 그래도 %조사처리(CALLNAME:MASTER,"가")% 옆에 있으니 불안은 없어」
+			CFLAG:9104 = 4
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9104 <= 2 || FLAG:11 == 2)
+			PRINTFORMW (보여지는게…버릇이되어버려…)
+			CFLAG:9104 = 3
+		;그 외
+		ELSEIF CFLAG:9104 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 바깥…? 질리지도 않네」
+			PRINTFORMW 이미 달관의 경지에 이르른 레티는, 싫증난 모습으로 목걸이를 받아들였다.
+			CFLAG:9104 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 104 && TEQUIP:52 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8821 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「밖에서 보여주는 것도 즐겁지만」
+		PRINTFORMW 「집 안 에서도 같은 정도로 잔뜩 사랑해줘…」
+		CFLAG:8821 = 2
+	;露出癖Lv3이상
+	ELSEIF CFLAG:8821 < 1 || FLAG:11 == 2
+		PRINTFORMW 「시선, 모여졌었어…」
+		PRINTFORMW 행위가 보여진 것을 생각해냈는지, 레티는 부끄러운듯 얼굴을 가리고 있다.
+		CFLAG:8821 = 1
+	;그 외
+	ELSEIF CFLAG:8821 < 1 || FLAG:11 == 2
+		PRINTFORMW 「아직 집 안이 훨씬 낫다고 생각할 만큼 무서워」
+		PRINTFORMW 「어디에서 하던 행위 자체는 변하지 않지만…」
+		CFLAG:8821 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;秘貝開帳 CFLAG9110
+;-----------------------------------------------
+IF SELECTCOM == 110
+	;射精後
+	IF TFLAG:103 > 0
+		;연모+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3
+			PRINTFORMW 「정액과 애액으로 질퍽질퍽해져서, 넘쳐버려…」
+			PRINTFORMW 「아까워…. 응읏, 후…아…」
+			PRINTFORMW 비부에서 떨어지는 점액을 레티는 받쳐잡아, 보여주듯이 천천히 질내에 집어넣었다.
+		;연모
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「잔뜩 나왔네. 굉장하게 되었어…」
+			PRINTFORMW 레티는 비부에서 두 종류의 점액이 섞여, 야한 향기를 자아내고 있다.
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「아아…정액, 늘어져…」
+			PRINTFORMW 「그렇게 바라보다니…. 어지간히 외설스러운 광경이 된거겠죠…」
+			PRINTFORMW (상상했더니…몸이 쑤셔와…)
+		;그 외
+		ELSE
+			PRINTFORMW 「안에서 나오기 전에, 이런…」
+			PRINTFORMW 레티는 망연자실하면서, 비부를 열고 있다
+		ENDIF
+	ELSE
+		;연모+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:14 >= 3
+			PRINTFORMW 「하아…하아…보지 바라봐져서…」
+			PRINTFORMW 「응읏, 이것만으로, 더는…」
+			PRINTFORMW 「엣지한 국물 나와버려…야한 구멍 보여져서, 느껴…!」
+		;연모
+		ELSEIF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%의 자지 원해서, 녹아버렸어…」
+			PRINTFORMW 「좋을만큼 봐도 좋지만…만족했다면 넣어줘…?」
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3
+			PRINTFORMW 「국물이 배어나와서 야하다니?」
+			PRINTFORMW 「누구 때문에 이런 몸이 되었다고 생각하는 거야…」
+			PRINTFORMW (보여진것만으로, 흥분한다니…)
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 곳 뚫어지게 본다고, 아무것도 아니야」
+			PRINTFORMW 「이제 됐어? 역시 설녀라도 이곳은 노출된 채로는 차가워져버려」
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;放尿 CFLAG9111
+;強制放尿 CFLAG9620
+;-------------------------------------------------
+IF SELECTCOM == 111 || SELECTCOM == 620
+	;強制放尿
+	IF SELECTCOM == 86 || SELECTCOM == 85 && ((TALENT:45 == 0 && ABL:10 >= 4 && ABL:31 >= 3 && ABL:21 >= 3) || (TALENT:45 && TEQUIP:22 == 0))
+		;연모+おもらし癖+野外プレイ
+		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:9620 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「아앗, 와, 오줌 와앗!」
+			PRINTFORMW 「응읏, 응아아아, 하아…하아……끝나버렸다」
+			PRINTFORMW 좀 더 내보내고 싶었는지, 레티는 약간 유감인듯하다.
+			CFLAG:9620 = 5
+		;연모+おもらし癖
+		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:9620 < 4 || FLAG:11 == 2)
+			PRINTFORMW 「후아앙읏, 아아…쉬이이 하는 소리가…」
+			PRINTFORMW 「나중에 청소가 큰일이지만, %CALLNAME:MASTER%의 앞에서 내보내는 기분에는 이길수 없는 것 같네에」
+			CFLAG:9620 = 4
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9620 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「흣, 쿠웃…후아, 아아아아아♪」
+			PRINTFORMW 사람앞에서 방뇨하는 쾌락에, 레티는 완전히 마음을 뺏겨버린듯하다.
+			CFLAG:9620 = 3
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9620 < 2 || FLAG:11 == 2)
+			PRINTFORMW 「이젠…한곗, 쿠아아아아…」
+			PRINTFORMW 더 이상 참을수 없었던 거겠지. 레티로부터 방출된 오줌은, 한층 더 기세가 강했다.
+			CFLAG:9620 = 2
+		;그 외
+		ELSEIF CFLAG:9620 < 1 || FLAG:11 == 2
+			PRINTFORMW 「싫엇…나와, 나와버려!」
+			PRINTFORMW 「이런곳 보지마…부탁이니까…응하아앗!」
+			CFLAG:9620 = 1
+		ENDIF
+	;放尿
+	ELSE
+		;연모+おもらし癖+野外プレイ
+		IF TALENT:150 && TALENT:45 && TEQUIP:52 && (CFLAG:9111 < 5 || FLAG:11 == 2)
+			PRINTFORMW 「꿇어앉아, 개처럼 하는 것도 좋을지도」
+			PRINTFORMW 「싫지 않아? 밖에서 할때의 나는 %CALLNAME:MASTER%의 펫인걸」
+			PRINTFORMW 「앗, 나와버려…후아아♪」
+			CFLAG:9111 = 5
+		;연모+おもらし癖
+		ELSEIF TALENT:150 && TALENT:45 && (CFLAG:9111 < 4 || FLAG:11 == 2)
+			PRINTFORMW 「응응읏…오줌, 냄새나지않아?」
+			PRINTFORMW 「또 잔뜩 나왔어…더러운 오줌이 이렇게나…」
+			CFLAG:9111 = 4
+		;露出癖Lv3이상
+		ELSEIF ABL:14 >= 3 && (CFLAG:9111 < 3 || FLAG:11 == 2)
+			PRINTFORMW 「오줌싸는 곳 보여져서…응읏, 후아…」
+			CFLAG:9111 = 3
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9111 < 2 || FLAG:11 == 2)
+			PRINTFORMW (단지 생리현상인걸…어쩔수 없는 거야…)
+			PRINTFORMW 레티는 자신에게 뭔가를 말해주며, 조심스레 방뇨를 시작했다.
+			CFLAG:9111 = 2
+		;그 외
+		ELSEIF CFLAG:9111 < 1 || FLAG:11 == 2
+			PRINTFORMW 「당신이 얼마나 변태라도…」
+			PRINTFORMW 「이건 조금, 도가 지나쳐…!」
+			CFLAG:9111 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;秘貝開帳見せつけ CFLAG9117
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 117
+	;初めて
+	IF CFLAG:9117 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%도 이렇게 돼버린거네…」
+			PRINTFORMW 「보는 것만으로 힘들어…빨리 만지게해줘…?」
+		;レズっ気Lv3이상
+		ELSEIF ABL:22 >= 3
+			PRINTFORMW 「굉장해…씰룩씰룩거려…」
+			PRINTFORMW 「와앗, 그렇게 벌려도 괜찮아?」
+		;그 외
+		ELSE
+			PRINTFORMW 「그런 거 보여줘도 말야…」
+			PRINTFORMW 「나도 가지고 있는 것이고, 반응하기 곤란해」
+		ENDIF
+			CFLAG:9117 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9117 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의 보지…뭔가 원하는 거같아…?」
+			PRINTFORMW 「소, 손가락이라도 넣어줄까?」
+			PRINTFORMW 이번엔 보여주는 것 만이라고 말하고, 이쪽에 바싹 다가오는 레티를 제지했다.
+			CFLAG:9117 = 4
+		;レズっ気Lv3이상
+		ELSEIF ABL:22 >= 3 && (CFLAG:9117 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「냄새가 떠돌아와…응읏, 하아…」
+			PRINTFORMW 레티는 %CALLNAME:MASTER%의 비부에서 풀리는 냄새에 넋을 잃고 있다.
+			CFLAG:9117 = 3
+		;그 외
+		ELSEIF CFLAG:9117 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「당신, 보여져서 흥분하는 타입이야?」
+			PRINTFORMW 「밖에서도 똑같은일 하는게? 곧바로 덮져질거라고 생각해」
+			CFLAG:9117 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;クスコ CFLAG9150 終了時 CFLAG8851
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 150 && TEQUIP:21
+	;初めて
+	IF CFLAG:9150 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「왠지 아플거같아…」
+			PRINTFORMW 「상처는 피할테니까…? 응, 좋아」
+			PRINTFORMW 다리를 벌리는 레티의 얼굴은 불안한듯하다.
+		;그 외
+		ELSE
+			PRINTFORMW 「응우우우…! 아팟…」
+			PRINTFORMW 「그, 그만해…보지마, 이런곳 보지말아줘…!」
+		ENDIF
+			CFLAG:9150 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋マゾっ気Lv3이상+露出癖Lv3이상
+		IF TALENT:150 == 1 && ABL:21 >= 3 && ABL:14 >= 3 && (CFLAG:9150 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아…또 보지 진찰해주는 거네…♪」
+			PRINTFORMW 「어떨, 까나…? 보지, 깊숙한곳 끝까지…제대로, 보엿…?」
+			PRINTFORMW 레티는 이제 시선만으로 궁지에 몰려, 흘러넘치는 애액으로 쿠스코까지 적시고 있다
+			CFLAG:9150 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9150 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「우우…아프고, 창피하고…」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 아니었으면, 이런 거 허용하지 않았을테니깐…」
+			PRINTFORMW 레티는 울음을 필사적으로 참아, 스스로 비부가 열려가는 것을 보고 있다.
+			CFLAG:9150 = 4
+		;マゾっ気Lv3이상+露出癖Lv3이상
+		ELSEIF ABL:21 >= 3 && ABL:14 >= 3 && (CFLAG:9150 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응웃…아아…」
+			PRINTFORMW (또 보여져버려…깊숙히까지 지긋이 관찰되어버려…)
+			PRINTFORMW 보는 것 뿐인데도, 레티는 비부에서 애액이 줄줄 흘러넘치고 있다.
+			CFLAG:9150 = 3
+		;그 외
+		ELSEIF CFLAG:9150 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런 일…우우…이제, 그만둬…히끗…우아아아…!!」
+			PRINTFORMW 쿠스코를 틀어박히는 통증 때문인지, 아니면 비부를 눈으로 강간당하는 수치때문인지, 
+			PRINTFORMW 레티는 목소리를 높여 울기 시작해버렸다.
+			CFLAG:9150 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 150 && TEQUIP:21 == 0
+	;연모+マゾっ気Lv3이상+露出癖Lv3이상
+	IF TALENT:150 == 1 && ABL:21 >= 3 && ABL:14 >= 3 && (CFLAG:8851 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「싫어…더 이상 보지 않아주는 거야…?」
+		PRINTFORMW 「좀 더 보아줬으면 하는데…자, 이렇게 되어있어…」
+		PRINTFORMW 레티는 비부에 스스로 손가락을 넣어, 양쪽으로 벌렸다.
+		PRINTFORMW 소중한 곳에 상처라도 나면 당해낼 수 없기에, %조사처리(CALLNAME:MASTER,"는")% 살짝 구슬려주었다.
+		CFLAG:8851 = 5
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:8851 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「안쪽이 얼얼해…. 저기, 조금 휴식하지않을래?」
+		PRINTFORMW 쿠스코가 뽑혀 안심했는지, 레티는 안도의 한숨을 쉬고 있다.
+		CFLAG:8851 = 4
+	;マゾっ気Lv3이상+露出癖Lv3이상
+	ELSEIF ABL:21 >= 3 && ABL:14 >= 3 && (CFLAG:8851 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「끄, 끝…?」
+		PRINTFORMW 레티는 어쩐지 아쉽다는 듯이, 쿠스코가 정리되는 것을 보고 있다.
+		CFLAG:8851 = 3
+	;그 외
+	ELSEIF CFLAG:8851 <= 1 || FLAG:11 == 2
+		PRINTFORMW 「구읏…이런 거…지나쳐…」
+		PRINTFORMW 울음을 그치지않는 레티를 무시하며, %조사처리(CALLNAME:MASTER,"는")% 다음의 조교를 준비하기 시작했다.
+		CFLAG:8851 = 2
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナルビ―ズ 開始時CFLAG9172 終了時CFLAG8852
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 172 && TEQUIP:25
+	;初めて
+	IF CFLAG:9172 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「바이브 보다는 넣기 쉬운거같지만…」
+			PRINTFORMW 「응읏…살며시 넣어줘…아아아…」
+		;그 외
+		ELSE
+			PRINTFORMW 「배, 괴로워…응응읏…」
+			PRINTFORMW 「이 이상은…무리얏, 아우우…」
+		ENDIF
+			CFLAG:9172 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9172 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「이거, 아핫…뽑을때가 굉장해서…」
+			PRINTFORMW 「그니깐, 응훗…하아…잔뜩 집어넣어줘…」
+			CFLAG:9172 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9172 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이거 집어넣는 거 괴로워서…」
+			PRINTFORMW 「배속까지, 딱딱해버려…후아아아!」
+			CFLAG:9172 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9172 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 응읏, 응응읏…」
+			PRINTFORMW 「둥근 것이, 엉덩이 범하고 있어…」
+			CFLAG:9172 = 3
+		;그 외
+		ELSEIF CFLAG:9172 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「그만둬, 엉덩이 망가져버…하악, 응읏」
+			CFLAG:9172 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 172 && TEQUIP:25 == 0
+	;연모+Ａ감각Lv3이상
+	IF TALENT:150 == 1 && (CFLAG:8852 < 4 || FLAG:11 == 2)
+		PRINTFORMW 「후아아아아! 굉장해, 뽑아줘어어어어어!!」
+		PRINTFORMW 「하아…우응…이 순간, 최고…♪」
+		CFLAG:8852 = 4
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:8852 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「후앗, 응아우우우우우우!!」
+		PRINTFORMW 「응…후우…후우…엉덩이 벌어져 버릴거같아…」
+		CFLAG:8852 = 3
+	;Ａ감각Lv3이상
+	ELSEIF ABL:2 >= 3 && (CFLAG:8852 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「싫, 안됏…그렇게 잡아 당기지마아아아아아!!」
+		PRINTFORMW 「하아…하아…이거, 굉장해…」
+		CFLAG:8852 = 2
+	;그 외
+	ELSEIF CFLAG:8852 < 1 || FLAG:11 == 2
+		PRINTFORMW 「쿠아아아아아! 핫…아아…」
+		PRINTFORMW 기세 좋게 끌어당겨진 애널비즈가, 레티의 항문에서 장까지 한번에 마찰했다.
+		CFLAG:8852 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アナル舐め CFLAG9180
+;-------------------------------------------------
+IF SELECTCOM == 180
+	;初めて
+	IF CFLAG:9180 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「제대로 깨끗하게할 생각이지만…」
+			PRINTFORMW 「이상한 냄새가 나면 말해줘? 씻어올테니」
+		;그 외
+		ELSE
+			PRINTFORMW 「미리 알았으면 일부러 더럽게하고 왔을텐데」
+			PRINTFORMW 「……역시 안 돼. 그런 거 내가 참을 수 없어」
+		ENDIF
+			CFLAG:9180 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9180 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「하아…아앙…」
+			PRINTFORMW 「좀 더 핥아줘…혀가 기분 좋은걸…」
+			CFLAG:9180 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9180 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「웃…히얏…」
+			PRINTFORMW 「혀가 부드러워서, 간지러워…」
+			CFLAG:9180 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9180 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그런곳 핥아버리면…싫어…」
+			PRINTFORMW 「엉덩이가 저려서…자꾸자꾸 뜨겁게 되어서…아, 후아…」
+			CFLAG:9180 = 3
+		;그 외
+		ELSEIF CFLAG:9180 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「…응읏, 이상한 감촉」
+			PRINTFORMW 「대단한 취미네. 물론 칭찬은 아니지만」
+			CFLAG:9180 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;尻愛撫 CFLAG9186
+;-------------------------------------------------
+IF SELECTCOM == 186
+	;初めて
+	IF CFLAG:9186 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「부드럽지? 자랑스러운 엉덩이야」
+			PRINTFORMW 「으응, 그렇게 주무르면 가버려…」
+		;그 외
+		ELSE
+			PRINTFORMW 「구멍을 만지는 것보다야 좋네…」
+			PRINTFORMW 레티는 기가 막힌 얼굴로 이쪽의 행위를 바라보고 있다.
+		ENDIF
+			CFLAG:9186 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+Ａ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:9186 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「우, 응…엉덩이 주물러지는 것도 기분 좋아…」
+			PRINTFORMW 「그래도…슬슬 구멍쪽도 만져주길 바라고 있어…」
+			CFLAG:9186 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9186 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「싫어…순산형이라니…」
+			PRINTFORMW 레티는 얼굴을 빨갛게 하고 수줍어하고 있다. %CALLNAME:MASTER% 사이의 아이라도 상상하는 거겠지.
+			CFLAG:9186 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:9186 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응, 후…아아…」
+			PRINTFORMW (뭔가 아쉬워…이래선 이러지도 저러지도 못해…)
+			CFLAG:9186 = 3
+		;그 외
+		ELSEIF CFLAG:9186 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「엉덩이 만져서 기뻐?」
+			PRINTFORMW 「그래. 나는 조금 즐겁지 못해」
+			CFLAG:9186 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首ロ―タ― CFLAG:9190
+;-------------------------------------------------
+IF SELECTCOM == 190
+	;初めて
+	IF CFLAG:9190 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응읏…기분 좋아…」
+			PRINTFORMW 「벌벌 떨어서, 유두가…아앙…」
+		;그 외
+		ELSE
+			PRINTFORMW 「싫어…그런 거 붙이지 마…」
+			PRINTFORMW 「쿠읏, 응…」
+		ENDIF
+			CFLAG:9190 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ｂ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:3 >= 3 && (CFLAG:9190 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아아…로터 굉장해…」
+			PRINTFORMW 「좀 더 강하게 해줘…꾸욱 눌러붙여줘…!」
+			PRINTFORMW 「응아아아아…! 유두 좋아, 좋아!!」
+			CFLAG:9190 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9190 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 해주는 쪽이…」
+			PRINTFORMW 「이거, 감질나서…답답한걸…」
+			PRINTFORMW 레티는 젖은 눈동자로 지긋이 이쪽을 보면서 호소해왔다.
+			CFLAG:9190 = 4
+		;Ｂ감각Lv3이상
+		ELSEIF ABL:3 >= 3 && (CFLAG:9190 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아…앗, 응앗…」
+			PRINTFORMW 유두에 전해지는 절묘한 자극에, 레티는 달콤한 목소리를 흘렸다.
+			CFLAG:9190 = 3
+		;그 외
+		ELSEIF CFLAG:9190 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「또 로터…」
+			PRINTFORMW 「응큿…도구에 의지하다니, 자신없는 증거…얏」
+			CFLAG:9190 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;搾乳機(母乳体質のみ) CFLAG9191　CFLAG8861
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 191 && TEQUIP:35
+	;初めて
+	IF CFLAG:9191 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「우유 짜버리는 거야…?」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 직접 마시면 좋은데도…」
+		;그 외
+		ELSE
+			PRINTFORMW 「이미 가축취급이네…」
+			PRINTFORMW 「당신이 나를 어떻게 보는진 잘 알았어…」
+		ENDIF
+			CFLAG:9191 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9191 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응읏…잔뜩 짜져…멈추지않아…」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 마실분량, 제대로 남겨둬…?」
+			CFLAG:9191 = 3
+		;그 외
+		ELSEIF CFLAG:9191 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「모유 모으면서 기뻐한다니…」
+			PRINTFORMW 「생각대로. 정신적으로 아이인거네」
+			CFLAG:9191 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;脱着時
+ELSEIF SELECTCOM == 16 && TEQUIP:35 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8861 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「후아아…잔뜩 나왔네…♪」
+		PRINTFORMW 「또 흘러넘쳐…. 자, 다음은 %조사처리(CALLNAME:MASTER,"가")% 빨아줄 차례야」
+		CFLAG:8861 = 2
+	;그 외
+	ELSEIF CFLAG:8861 < 1 || FLAG:11 == 2
+		PRINTFORMW 「엑, 그렇게나 모아서 어쩔셈?」
+		PRINTFORMW 「팔아…? 모유같은거 구매자가 있을리 없잖아…」
+		PRINTFORMW 세상에는 마니악한 사람이 존재하는걸 모르는 듯하다.
+		CFLAG:8861 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;胸揉み CFLAG:9200
+;搾乳 CFLAG:9626
+;-------------------------------------------------
+;胸揉み
+IF SELECTCOM == 200
+	;初めて
+	IF CFLAG:9200 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%CALLNAME:MASTER%의 손, 부드러워서…마음이 따듯해져오는 거 같아…」
+			PRINTFORMW 「응, 괜찮아. 그런 따듯함이라면 오히려 대환영이야♪」
+		;그 외
+		ELSE
+			PRINTFORMW 「역시 이것이 신경쓰이는 거네」
+			PRINTFORMW 「남자는 그런 것 잔뜩일 뿐일까…?」
+		ENDIF
+			CFLAG:9200 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ｂ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:3 >= 3 && (CFLAG:9200 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%의 손은 마법의 손이네…」
+			PRINTFORMW 「자, 가슴 주무른 것만으로 이렇게…」
+			PRINTFORMW 레티가 가르킨 쪽을 보자, 확실히 일부가 뜨거운 점액으로 흠뻑 젖어있다.
+			CFLAG:9200 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9200 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「손에 다 들어가지 않지?」
+			PRINTFORMW 「이렇게 주물러주면, 좀 더 크게되어버릴지도. 쿠훗」
+			PRINTFORMW 레티는 미소를 띄우며, 기쁜 듯이 손의 감촉을 즐기고 있다.
+			CFLAG:9200 = 4
+		;Ｂ감각Lv3이상
+		ELSEIF ABL:3 >= 3 && (CFLAG:9200 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응읏…후아아…, 거기…」
+			PRINTFORMW (처음부터 이 정도로 부드러웠다면…)
+			PRINTFORMW 부들부들하게 가슴을 주물러지며, 레티는 기분 좋은듯 달콤한 목소리를 냈다.
+			CFLAG:9200 = 3
+		;그 외
+		ELSEIF CFLAG:9200 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런 일 하기위해 커진게 아니지만…」
+			PRINTFORMW 「커진 이유? 몰라」
+			CFLAG:9200 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;搾乳
+IF SELECTCOM == 626
+	;初めて
+	IF CFLAG:9626 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「너무 빼버리면 안 돼…?」
+			PRINTFORMW 「이건 %조사처리(CALLNAME:MASTER,"가")% 빨 만큼이니까…」
+		;그 외
+		ELSE
+			PRINTFORMW 「그만…짜버려, 후앗…!」
+			PRINTFORMW 「우우…나왔어…이렇게나…」
+		ENDIF
+			CFLAG:9626 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋噴乳中毒Lv3이상
+		IF TALENT:150 == 1 && ABL:34 >= 3 && (CFLAG:9626 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「좀 더 가슴 짜줘, 꾸욱 하고!」
+			PRINTFORMW 「모유 나오는 거 기분 좋아!! 아앙!!」
+			PRINTFORMW 모유가 뿜어져 나올 때마다, 레티는 쾌락 섞인 목소리를 냈다.
+			CFLAG:9626 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9626 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「후아아아…잔뜩 나왔어…」
+			PRINTFORMW 「%CALLNAME:MASTER%의 분량이 없게 돼버려…」
+			PRINTFORMW 레티는 무의식 중에 모유를 감아, %CALLNAME:MASTER%의 입앞에 가져가려고하고 있다.
+			CFLAG:9626 = 4
+		;噴乳中毒Lv3이상
+		ELSEIF ABL:34 >= 3 && (CFLAG:9626 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이런 일로…아앗, 좋아져버리면…」
+			PRINTFORMW 「…앞으로, 어떻게해야하는 거야아…응읏!」
+			PRINTFORMW 몸이 모유를 내며 느끼게 돼버린 반면, 마음은 아직 쾌락을 받아들이지 않은 것같다.
+			CFLAG:9626 = 3
+		;그 외
+		ELSEIF CFLAG:9626 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「모유가 과분하네…잠깐, 그런 의미가 아니야」
+			PRINTFORMW 「애초에 이런 몸이 아니면 있을수가 없는 이야기잖아?」
+			CFLAG:9626 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首責め CFLAG:9201
+;-------------------------------------------------
+IF SELECTCOM == 201
+	;初めて
+	IF CFLAG:9201 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「가슴은 조금 둔감하니까…」
+			PRINTFORMW 「우응, 기분 좋게 되도록 개발해줘…」
+		;그 외
+		ELSE
+			PRINTFORMW 「여기 만지면 느낄거라 생각하는 거…?」
+			PRINTFORMW 「잔꾀네……응읏」
+		ENDIF
+			CFLAG:9201 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ｂ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:3 >= 3 && (CFLAG:9201 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아…응읏! 그거 좋아…유두가 굉장해…」
+			PRINTFORMW 「좀 더 딱딱하게 해줘…잡아 당겨줘…응, 하아!」
+			PRINTFORMW 리퀘스트에 응하자, 레티는 아양을 떨듯이 눈매로 더욱 자극을 요구했다.
+			CFLAG:9201 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9201 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응아…끝 저릿저릿해져…」
+			PRINTFORMW 「그렇게 튕겨버리면…앗, 응우…」
+			CFLAG:9201 = 4
+		;Ｂ감각Lv3이상
+		ELSEIF ABL:3 >= 3 && (CFLAG:9201 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「안, 돼에…그 이상 만지지 마…」
+			PRINTFORMW 「느끼고 싶지 않은데…읏, 후앙!」
+			CFLAG:9201 = 3
+		;그 외
+		ELSEIF CFLAG:9201 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「유두가 딱딱하게 되었어?」
+			PRINTFORMW 「자기 멋대로 된걸. 어쩔수 없잖아」
+			CFLAG:9201 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;乳首吸い CFLAG:9203
+;-------------------------------------------------
+IF SELECTCOM == 203
+	;初めて
+	IF CFLAG:9203 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응석꾸러기씨네…후훗」
+			PRINTFORMW 레티의 표정은 %조사처리(CALLNAME:MASTER,"를")% 사랑하는대로 부드러워져 있다.
+		;그 외
+		ELSE
+			PRINTFORMW 「씨, 씹지 않는 거겠지…?」
+			PRINTFORMW 레티는 경계하면서, 머뭇머뭇 가슴을 드러냈다.
+		ENDIF
+			CFLAG:9203 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ｂ감각Lv3이상
+		IF TALENT:150 == 1 && ABL:3 >= 3 && (CFLAG:9203 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「우, 응읏… %CALLNAME:MASTER%의 얼굴 어루만져주고 싶은데…」
+			PRINTFORMW 「기분 좋아서… 집중할 수 없어…. 후앗, 앗!」
+			PRINTFORMW 레티는 때때로 쾌락에 몸을 뒤로 휘었지만, 그래도 %CALLNAME:MASTER%의 머리에서 손을 떼는 일은 없었다.
+			CFLAG:9203 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9203 <= 3 || FLAG:11 == 2)
+			PRINTFORMW (아아… %조사처리(CALLNAME:MASTER,"가")% 가슴 빨고 있어…)
+			PRINTFORMW 레티는 마치 모 친같은 상냥한 미소로, %CALLNAME:MASTER%의 얼굴을 어루만지길 계속했다.
+			CFLAG:9203 = 4
+		;Ｂ감각Lv3이상
+		ELSEIF ABL:3 >= 3 && (CFLAG:9203 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「그렇게 세게 빨면… 응아아!」
+			PRINTFORMW 「적어도… 소리 내지 말아줘, 하아, 응읏!」
+			CFLAG:9203 = 3
+		;그 외
+		ELSEIF CFLAG:9203 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우우… 가슴이 더러워져버려…」
+			CFLAG:9203 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;母乳飲み CFLAG:9204
+;-------------------------------------------------
+IF SELECTCOM == 204
+	;初めて
+	IF CFLAG:9204 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「모처럼 우유가 나오게 된걸」
+			PRINTFORMW 「우선은 %CALLNAME:MASTER%에게 맛보여주지 않으면…」
+			PRINTFORMW 레티는 살이 오른 유방을, 아낌 없이 %CALLNAME:MASTER%의 입앞에 가져갔다.
+		;그 외
+		ELSE
+			PRINTFORMW 「너무하네…성인이 마시는 것이 아닌데도…」
+		ENDIF
+			CFLAG:9204 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋噴乳中毒Lv3이상
+		IF TALENT:150 == 1 && ABL:34 >= 3 && (CFLAG:9204 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「홀짝이는 소리, 굉장히 엣지하네…」
+			PRINTFORMW 「아아…♪ 저기, 좀 더 세게 빨아줘…」
+			PRINTFORMW 레티는 %CALLNAME:MASTER%의 머리를 끌어 안아, 유두를 눌러 붙여왔다.
+			CFLAG:9204 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9204 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응읏, 맛있는 듯이 빨려져서…」
+			PRINTFORMW 「그래도 %CALLNAME:MASTER%에게 빨려져서 기뻐」
+			CFLAG:9204 = 4
+		;噴乳中毒Lv3이상
+		ELSEIF ABL:34 >= 3 && (CFLAG:9204 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「우아…주룩주룩하고 있어…」
+			PRINTFORMW 「좋지도 않은데…어째서 멈추지 않는 거야아…!」
+			PRINTFORMW 몸과는 완전히 떨어져버린 몸에, 레티의 비통한 외침이 퍼부어졌다.
+			CFLAG:9204 = 3
+		;그 외
+		ELSEIF CFLAG:9204 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「시시해…나는 당신의 모친이 아닌걸?」
+			PRINTFORMW 레티의 눈은 분명히 식어있다.
+			CFLAG:9204 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;縦パイズリ CFLAG:9208
+;-------------------------------------------------
+IF SELECTCOM == 208
+	;初めて
+	IF CFLAG:9208 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「보통 보지에 삽입하는 쪽이 기분 좋다고 생각하지만…」
+			PRINTFORMW 「가슴이니까 좋아? 그런 거야…?」
+			PRINTFORMW 레티는 다소 놀란거 같지만, 말한대로 가슴을 대었다.
+		;그 외
+		ELSE
+			PRINTFORMW 「이런 방법도 있네…」
+			PRINTFORMW 「뭐? 내가 편하니까 좋다고 생각한것 뿐이야」
+		ENDIF
+			CFLAG:9208 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ｂ감각Lv3이상+奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:3 >= 3 && ABL:13 >= 3 && (CFLAG:9208 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「가슴이…보지처럼 되어서…」
+			PRINTFORMW 「뭔가 복잡하지만…아앗, 그쪽도 기분 좋아…」
+			CFLAG:9208 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9208 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「지금도 잘 모르겠지만…」
+			PRINTFORMW 「나로 기분 좋아지는 거니깐, 그걸로 충분해…」
+			CFLAG:9208 = 4
+		;Ｂ감각Lv3이상+奉仕精神Lv3이상
+		ELSEIF ABL:3 >= 3 && ABL:13 >= 3 && (CFLAG:9208 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「정말 이것만으로 좋아…?」
+			PRINTFORMW 「응읏…당신이 그렇게 말한다면, 괜찮지만…」
+			PRINTFORMW (가슴 사이가 뜨거워서, 나도…)
+			CFLAG:9208 = 3
+		;그 외
+		ELSEIF CFLAG:9208 <= 1 || FLAG:11 == 2
+			PRINTFORMW (빨리 끝나지 않을까나…)
+			PRINTFORMW 레티는 이런 이런, 하고 말하는 듯한 표정으로 가슴을 내밀고 있다.
+			CFLAG:9208 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;パイズリフェラ CFLAG:9209
+;-------------------------------------------------
+IF SELECTCOM == 209
+	;初めて
+	IF CFLAG:9209 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이건 좋을지도」
+			PRINTFORMW 「잔뜩 기분 좋게해줄수 있을거같은걸…하읍, 응응읏」
+		;그 외
+		ELSE
+			PRINTFORMW 「내 가슴도 큰 편이라고 생각하지만, 설마 그 위로 튀어 나온다니…」
+			PRINTFORMW 「엑, 핥는 거야? 욕심 참…」
+		ENDIF
+			CFLAG:9209 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋Ｂ감각Lv3이상+奉仕精神Lv3이상
+		IF TALENT:150 == 1 && ABL:3 >= 3 && ABL:13 >= 3 && (CFLAG:9209 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「기분 좋은 거 같네…. 내 가슴 맘에 든 거구나…」
+			PRINTFORMW 「이렇게 말하는 나도…, 응읏. 츄, 쥬루루루…」
+			CFLAG:9209 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9209 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「자지 비좁지 않아…?」
+			PRINTFORMW 「혀의 감촉으로 말하면… 이대로도 좋을 듯하네…. 쿠츄, 츄우우우…」
+			CFLAG:9209 = 4
+		;Ｂ감각Lv3이상+奉仕精神Lv3이상
+		ELSEIF ABL:3 >= 3 && ABL:13 >= 3 && (CFLAG:9209 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「어디에 집중하면 좋은걸까…」
+			PRINTFORMW 「둘 다라니…. 어려운 주문이네. 응응읏, 쥬, 츄루…」
+			CFLAG:9209 = 3
+		;그 외
+		ELSEIF CFLAG:9209 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이거 꽤나 지쳐…빨리 끝맺어줘」
+			PRINTFORMW 「응, 붓…무우…, 츄」
+			CFLAG:9209 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;スパンキング CFLAG9220
+;-------------------------------------------------
+IF SELECTCOM == 220
+	;初めて
+	IF CFLAG:9220 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 두드리고 싶다고 말한다면…」
+			PRINTFORMW 「그래도, 조금 무서울까나」
+		;그 외
+		ELSE
+			PRINTFORMW 「폭력으로 굴복하게하려는……상스럽네」
+			PRINTFORMW 「공교롭게도, 나는 아픔에 굴하지 않는다고?」
+		ENDIF
+			CFLAG:9220 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋マゾっ気Lv3이상
+		IF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:9220 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「처음엔 얼얼하게 아플 뿐이었는데도…」
+			PRINTFORMW 「쿠앙! 이젠 더 이상, 이게 참을수 없어…응읏!」
+			PRINTFORMW 「아픈거 좋아아…좀 더, 좀 더 두드려줘! 후아아!!」
+			CFLAG:9220 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9220 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이런 일 보다, 좀 더 기분 좋은일이 하고 싶은데…히웃」
+			CFLAG:9220 = 4
+		;マゾっ気Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:9220 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「큿, 하아…하아…응큿」
+			PRINTFORMW 「굴복하지 않아…나는 굴복하지 않아…앗」
+			PRINTFORMW 입과는 반대로, 레티의 비부는 흥건히 젖어있다.
+			CFLAG:9220 = 3
+		;그 외
+		ELSEIF CFLAG:9220 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응웃! 아, 아직이야…」
+			PRINTFORMW 레티는 여유로운 미소를 띄고 있다.
+			CFLAG:9220 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;鞭 CFLAG9221
+;-------------------------------------------------
+IF SELECTCOM == 221
+	;初めて
+	IF CFLAG:9221 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「그런 취향은 들어본적이 있어」
+			PRINTFORMW 「그치만 그래도 그렇게 아프…응아아!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「또 이상한 물건 들고와서…」
+			PRINTFORMW 「말하지 않아도 그것의 사용법정도는 알겠어」
+		ENDIF
+			CFLAG:9221 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋マゾっ気Lv3이상
+		IF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:9221 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「앗, 아앗…♪ 촤악 촤악해서…」
+			PRINTFORMW 「채찍, 굉장해…! 아픈데도…그게 기분 좋아앗!」
+			PRINTFORMW 「멈추지 말아줘…좀 더 쳐줘, 이 어쩔수 없는 변태에게, 좀 더 벌을 줘!!」
+			CFLAG:9221 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9221 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「아파…아프니깐…」
+			PRINTFORMW 「나쁜짓 했다면 사과할게…그니까 이제, 용서해줘…아우…!」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 레티의 눈물의 간청을 무시하고, 채찍 휘두르길 계속했다.
+			CFLAG:9221 = 4
+		;マゾっ気Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:9221 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「안 돼, 하앗…그 이상 치면, 응아…!」
+			PRINTFORMW 「기분 좋게 돼버려…! 후아아아!!」
+			CFLAG:9221 = 3
+		;그 외
+		ELSEIF CFLAG:9221 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응, 굿…우우…!」
+			PRINTFORMW 레티는 침대 시트를 꽉 움켜 쥐면서, 채찍의 격통을 필사적으로 참고 있다.
+			CFLAG:9221 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;針 CFLAG9222
+;-------------------------------------------------
+IF SELECTCOM == 222
+	;初めて
+	IF CFLAG:9222 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「역시 그건 농담…이지?」
+			PRINTFORMW 「%CALLNAME:MASTER%의 눈, 굉장히 무서워…」
+		;그 외
+		ELSE
+			PRINTFORMW 「싫어, 그거 정말 싫엇!」
+			PRINTFORMW 「떨어졋, 그만둿!! 큿, 아아아아아앗!!」
+		ENDIF
+			CFLAG:9222 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋マゾっ気Lv3이상
+		IF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:9222 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「온몸이 구멍투성이……아우, 하아…앙, 하아…」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 붙여준 흔적…아, 응아…」
+			PRINTFORMW 레티는 허벅지를 적시면서, 바늘 상처를 사랑스러운듯 바라보고 있다.
+			CFLAG:9222 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9222 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「이, 기…응응읏…싫어…」
+			PRINTFORMW 「부탁이야…상냥한 %CALLNAME:MASTER%로 돌아와줘…쿠하아아!!」
+			CFLAG:9222 = 4
+		;マゾっ気Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:9222 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「바늘이…잔뜩, 크흣, 아앙…」
+			PRINTFORMW (몸이 익숙해져버린걸까나…더 이상, 돌이킬 없을지도…)
+			CFLAG:9222 = 3
+		;그 외
+		ELSEIF CFLAG:9222 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이런 생지옥, 더는 싫어…」
+			PRINTFORMW 「죽는 쪽이 나을거야…우우…」
+			CFLAG:9222 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;縄 CFLAG9224　CFLAG:8872
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 224 && TEQUIP:40
+	;初めて
+	IF CFLAG:9224 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「일부러 묶지 않아도, 나는 도망가지 않아…」
+			PRINTFORMW 「그래도…지금부터 원하는대로 당한다고 생각하면…」
+		;그 외
+		ELSE
+			PRINTFORMW 「밧줄이네…정통파라고 하자면 정통파네」
+			PRINTFORMW 「역시 몸을 자유롭게 두는건 불안? 겁쟁이네」
+		ENDIF
+			CFLAG:9224 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋マゾっ気Lv3이상
+		IF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:9224 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「%CALLNAME:MASTER%에게 몸도 마음도 묶여…」
+			PRINTFORMW 「그렇게 생각하면, 이 감촉의 포로일지도…」
+			CFLAG:9224 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9224 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「튼튼한 매듭은 하지마?」
+			PRINTFORMW 「풀기 힘드니까. %CALLNAME:MASTER%도 귀찮은건 싫겠지?」
+			PRINTFORMW 꽉 묵으면 아픔이 강하기에, 어떻게든 그것을 피하려 하고 있는 것 같다.
+			CFLAG:9224 = 4
+		;マゾっ気Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:9224 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「얼간이 같은 모습이네…. 이렇게 묶이는걸 가만히 기다리라니」
+			PRINTFORMW (어째서 저항하지 않는걸까, 나…)
+			CFLAG:9224 = 3
+		;그 외
+		ELSEIF CFLAG:9224 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「응응읏…파고들어와…」
+			PRINTFORMW 「꽉 조여. 조금만 느슨하게 해주지 않을래?」
+			PRINTFORMW 그래선 밧줄로 묶는 의미가 없기에 무시했다.
+			CFLAG:9224 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 224 && TEQUIP:40 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8872 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…후우. 이건 이것대로, 좋을지도…」
+		PRINTFORMW 레티는 풀린 밧줄을 보며 중얼중얼 말하고 있다.
+		PRINTFORMW 「그래도 역시 자유가 최고네. 언제든 끌어 안을수 있고」
+		CFLAG:8872 = 2
+	;그 외
+	ELSEIF CFLAG:8872 < 1 || FLAG:11 == 2
+		PRINTFORMW 「밧줄 자국이 선명히 남아있어…」
+		PRINTFORMW 「이 아픔은 당분간 남아있을거같네…아야야…」
+		CFLAG:8872 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;アイマスク CFLAG9225　CFLAG:8871
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 225 && TEQUIP:41
+	;初めて
+	IF CFLAG:9225 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「사랑하는 사람의 얼굴을 보이지 않게 한다니, 심술쟁이네」
+			PRINTFORMW 「그치만 조금, 오싹오싹해졌어…」
+		;그 외
+		ELSE
+			PRINTFORMW 「당신의 얼굴을 보지 않고 끝난다면 좋아」
+		ENDIF
+			CFLAG:9225 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋マゾっ気Lv3이상
+		IF TALENT:150 == 1 && ABL:21 >= 3 && (CFLAG:9225 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「뭘 당해버리는걸까…하아…하아…」
+			PRINTFORMW 눈을 가리는 것만으로 흥분 하는 것 같다.
+			CFLAG:9225 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9225 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「시야를 뺏으면 감각이 예민해지는 거네」
+			PRINTFORMW 「%CALLNAME:MASTER%의 기색도 숨결도, 민감하게 감지할거같아」
+			CFLAG:9225 = 4
+		;マゾっ気Lv3이상
+		ELSEIF ABL:21 >= 3 && (CFLAG:9225 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「마음의 준비가 되있지 않아…」
+			PRINTFORMW 레티는 무엇을 당해버리는걸까 하고 자세를 취하고 있지만, 그 호흡은 거칠어져있다.
+			CFLAG:9225 = 3
+		;그 외
+		ELSEIF CFLAG:9225 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「아무것도 보이지 않는쪽이 행복할지도 몰라…」
+			CFLAG:9225 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 225 && TEQUIP:41 == 0
+	;연모
+	IF TALENT:150 == 1 && (CFLAG:8871 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「역시 마주보면서 하는쪽이 좋을까나」
+		CFLAG:8871 = 2
+	;그 외
+	ELSEIF CFLAG:8871 < 1 || FLAG:11 == 2
+		PRINTFORMW 「시야가 열리자 일상이 돌아왔어…」
+		PRINTFORMW 「그럴리가 없다, 인가…」
+		CFLAG:8871 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;イラマチオ CFLAG9230
+;-------------------------------------------------
+IF SELECTCOM == 230
+	;初めて
+	IF CFLAG:9230 == 0
+		;奉仕精神Lv3이상
+		IF ABL:13 >= 3
+			PRINTFORMW 「응읏…우우…, 무우, 응붓」
+		;그 외
+		ELSE
+			PRINTFORMW 「응, 부웃!? 응응～읏!!」
+			PRINTFORMW 「푸핫…콜록, 콜록. 갑자기 왜 이런짓 하는 거야…」
+		ENDIF
+			CFLAG:9230 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:9230 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응응읏…! 응읍…쥬루, 즈쥬루루루루루…」
+			CFLAG:9230 = 5
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9230 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응붓…읍, 후으응…. 읍?」
+			PRINTFORMW 「응핫. 사양하지 않아도 좋아…? 좋을대로 찔러 넣어줘…」
+			CFLAG:9230 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9230 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응쥬…추루루…응읍웃! 응, 굿…」
+			CFLAG:9230 = 3
+		;그 외
+		ELSEIF CFLAG:9230 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우우～! 응, 후읍, 응하아…」
+			PRINTFORMW 「여전히 잔인한 사람이네…」
+			CFLAG:9230 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;優しくする CFLAG9320
+;-------------------------------------------------
+IF SELECTCOM == 320
+	;初めて
+	IF CFLAG:9320 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응…안 돼…」
+			PRINTFORMW 「더 좋아져버렸어…후훗」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「이, 이런 일로 여자가 넘어올거라 생각했다면…」
+			PRINTFORMW (두근두근거리는게 멈추지않아…어떻게 된거야…?)
+		;그 외
+		ELSE
+			PRINTFORMW 「뭘할생각…?」
+			PRINTFORMW 상냥하게 할 생각이었지만, 오히려 경계를 부른것같다.
+		ENDIF
+			CFLAG:9320 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9320 <= 3 || FLAG:11 == 2)
+			IF RAND:3 == 0
+			PRINTFORMW 「안아주는 것 만으로 만족인데…」
+			PRINTFORMW 「이렇게 사랑해주면, 어떻게 되어버려…」
+		ELSEIF RAND:2 == 0
+			PRINTFORMW 「이렇게 행복해도 괜찮을걸까…」
+			PRINTFORMW 「가끔 이 행복이 달아나버리는 것은 아닐까 하고, 불안해질때도 있는걸」
+			PRINTFORMW 「이상하지…? %조사처리(CALLNAME:MASTER,"는")% 이렇게 가까이 있는데도…」
+		ELSE
+			PRINTFORMW 「처음 만났을때는 그토록 싫어했었는데…」
+			PRINTFORMW 「지금이라면 %조사처리(CALLNAME:MASTER,"가")% 없는 생활이 생각도 할수없게 돼버렸어…」
+			PRINTFORMW 「나의 마음까지 빼앗은 잘못, 책임져주지 않으면 싫어…?」
+		ENDIF
+			CFLAG:9320 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9320 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「정말, 좋을대로 해」
+			PRINTFORMW (가슴 깊숙히 꾸욱 하고…이 사람이 가까이 있다고 생각한것만으로…)
+			CFLAG:9320 = 3
+		;그 외
+		ELSEIF CFLAG:9320 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「당근과 채찍이라도 할 생각? 유감이지만, 그 계획은 빗나갔어」
+			PRINTFORMW 두꺼운 얼음으로 닫혀진것처럼, 레티의 마음은 녹지 않는다.
+			CFLAG:9320 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;指チュパ CFLAG9327
+;-------------------------------------------------
+IF SELECTCOM == 327
+	;初めて
+	IF CFLAG:9327 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「남자의 로망…? 뭐, 뭐랄까 모르겠지만…」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 해주었으면 한다면, 기쁘게 할게」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「다른 부끄러운 것에 비하면 차라리 낫네」
+		;그 외
+		ELSE
+			PRINTFORMW 「스스로 핥으면…?」
+		ENDIF
+			CFLAG:9327 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9327 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「츄, 츄읍…응읏, 뭐랄까 %CALLNAME:MASTER%에게 마킹하고 있는 것같아…」
+			CFLAG:9327 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9327 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「싸구려네…. 당신의 즐거움도, 내 프라이드도…」
+			PRINTFORMW 「응, 츄…」
+			CFLAG:9327 = 3
+		;그 외
+		ELSEIF CFLAG:9327 <= 1 || FLAG:11 == 2
+			PRINTFORMW (사람에게 손가락같은 것 빨게시켜, 즐거운걸까…)
+			CFLAG:9327 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;首筋耳裏舐め CFLAG9328
+;-------------------------------------------------
+IF SELECTCOM == 328
+	;初めて
+	IF CFLAG:9328 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「햐우…! 정말, 갑자기는 치사해?」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「응아…! 이거, 안 돼에…」
+		;그 외
+		ELSE
+			PRINTFORMW 「굼벵이가 기어가는 모습 같은 것밖에 생각나지 않아」
+		ENDIF
+			CFLAG:9328 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9328 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「구석구석 맛봐줘…후아……♪」
+			PRINTFORMW 「키스마크라도 만들어주는 거야?」
+			CFLAG:9328 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:9328 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아… 힘이 빠져버려…」
+			PRINTFORMW 레티의 긴장한 근육이 조금씩 풀어지는 것이 엿보였다.
+			CFLAG:9328 = 3
+		;그 외
+		ELSEIF CFLAG:9328 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「멈춰줘, 기분 나빠」
+			CFLAG:9328 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;ぱふぱふ CFLAG9340
+;レティさんは包容力に満ちた女性だと信じてる
+;-------------------------------------------------
+IF SELECTCOM == 340
+	;初めて
+	IF CFLAG:9340 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「응석부리는 것도 좋지만, 응석받는 것도 기쁘네」
+			PRINTFORMW 레티는 행복한듯이 %CALLNAME:MASTER%의 얼굴을 매만지고 있다.
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「이 스페이스가 맘에 들어버렸어? 그래, 안정되는 거네…」
+			PRINTFORMW (의외로 상냥함에 굶주려있는걸까…?)
+		;그 외
+		ELSE
+			PRINTFORMW (이대로 질식시키면…)
+			PRINTFORMW 뭔가 싫은 예감이 들어서, 곧장 가슴에서 얼굴을 뗏다.
+		ENDIF
+			CFLAG:9340 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9340 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"는")% 정말로, 가슴 사랑하는 거네」
+			PRINTFORMW 「후훗. 좋아 좋아, 언제라도 뛰어들어와줘」
+			PRINTFORMW 사랑해줄 생각이었지만 마음껏 사랑받아 버린것같다.
+			CFLAG:9340 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:9340 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「이, 이 방법 좋은거지?」
+			PRINTFORMW 레티는 양 언덕을, %CALLNAME:MASTER%의 얼굴을 끼우듯이 대었다.
+			CFLAG:9340 = 3
+		;그 외
+		ELSEIF CFLAG:9340 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「내 가슴은 장난감이 아니라했는데…」
+			CFLAG:9340 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;胸枕 CFLAG9341
+;-------------------------------------------------
+IF SELECTCOM == 341
+	;初めて
+	IF CFLAG:9341 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「이렇게 한가롭게 지내는 것도 나쁘지 않네」
+			PRINTFORMW 「부드러워? 쿠훗, 소임을 다해 영광이야」
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「그야, 사이즈상으로 할 수 없는건 아니지만…」
+			PRINTFORMW 「정말…알겠어. 어서 와」
+		;그 외
+		ELSE
+			PRINTFORMW 「진짜 아무것도 하지 않아도 되는걸. 즐거워」
+			PRINTFORMW 「가슴 위의 무거움이 없다면 좀 더 편안히 쉬겠지만」
+		ENDIF
+			CFLAG:9341 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9341 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「자버리면 안 돼? 즐거움은 지금부터니까」
+			PRINTFORMW 「같이 자는건 사랑해준 후에, 응?」
+			PRINTFORMW 레티는 입앞세 톡 손가락을 대고, 부드럽게 미소지었다.
+			CFLAG:9341 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:9341 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「꽤나 기분 좋은 거 같네. 밝은 얼굴이 되어버려선」
+			PRINTFORMW 「자장가라도 불러줄까?」
+			CFLAG:9341 = 3
+		;그 외
+		ELSEIF CFLAG:9341 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이대로 잠들어주면, 틈 하나라도 나는걸까…」
+			CFLAG:9341 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;お嫁さんで楽しむ CFLAG9347
+;-------------------------------------------------
+IF SELECTCOM == 347
+	;初めて
+	IF CFLAG:9347 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「지금은 서방님이라고 부르는 쪽이 좋을까나?」
+			PRINTFORMW 「평소대로 부르면 기분이 나지 않고…어쩌지. 다, 달링이라던가…?」
+			PRINTFORMW 그것은 제법 부끄럽기에 용서해주길 바란다.
+		;굴복각인Lv2이상
+		ELSEIF MARK:2 >= 2
+			PRINTFORMW 「시, 신부라니…싫어, 정말…」
+			PRINTFORMW (그럼 이 사람은, 나를 신부로 하고 싶었단 말…?)
+		;그 외
+		ELSE
+			PRINTFORMW (어째서 이런 부끄러운 일…)
+			PRINTFORMW 레티는 얼굴을 새빨갛게하고 부들부들 떨고 있다.
+		ENDIF
+			CFLAG:9347 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9347 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「너무 행복해 어질어질해졌어…」
+			PRINTFORMW 「쭉 소중히해줘, 정말 좋아해…」
+			CFLAG:9347 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 >= 3 && (CFLAG:9347 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 레티는 양 볼을 누르며 지긋이 이쪽을 보고 있다. 잘 보자 뺨이 붉게 물들어있다.
+			PRINTFORMW (신부…. 내가 신부…)
+			CFLAG:9347 = 3
+		;그 외
+		ELSEIF CFLAG:9347 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「언젠가 진짜 신랑씨에게 해주고 싶네…」
+			PRINTFORMW 「당신은 틀림없이 후보에 들지 않았으니 상상해도 소용없어」
+			CFLAG:9347 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;お風呂場プレイ CFLAG9350 解除 CFLAG8824
+;-------------------------------------------------
+IF SELECTCOM == 350 && TEQUIP:53
+	;初めて
+	IF CFLAG:9350 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「목욕탕인가. 조금 불안해. 반들반들 미끄러지고」
+			PRINTFORMW 「제대로 붙잡아줘?」
+		;그 외
+		ELSE
+			PRINTFORMW 「엣, 목욕탕? 그건 다행이야」
+			PRINTFORMW 「……어째서 달라붙는 거야?」
+		ENDIF
+			CFLAG:9350 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9350 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「등 밀어줄게」
+			PRINTFORMW 「그것만으론 미안하다니? 자, 어떨까♪」
+			PRINTFORMW 최근 레티에게 주도권을 뺏긴 기분이 들어서 안된다.
+			CFLAG:9350 = 3
+		;그 외
+		ELSEIF CFLAG:9350 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「혼자서 느긋이 들어가고 싶어…」
+			PRINTFORMW 「당신과 함께라면 몸을 씻는 의미가 그다지 없을거야」
+			CFLAG:9350 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 350 && TEQUIP:53 == 0
+	;初めて
+	IF CFLAG:8824 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「의외로 무섭지 않네요. 또 같이 들어오고 싶다…」
+		;그 외
+		ELSE
+			PRINTFORMW 「혼자 있는 공간이 갖고 싶어…」
+		ENDIF
+			CFLAG:8824 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:8824 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「깔끔해졌네. 그러면 다음으로 넘어갈까」
+			CFLAG:8824 = 3
+		;그 외
+		ELSEIF CFLAG:8824 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「결국 들어간 의미가 없었던거네」
+			CFLAG:8824 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;シャワ― CFLAG9351 終了時CFLAG8826
+;-------------------------------------------------
+IF SELECTCOM == 351 && TEQUIP:54
+	;初めて
+	IF CFLAG:9351 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「아주 깨끗이하지 않으면…」
+			PRINTFORMW 「나도 여자인걸. 좋아하는 사람 앞이라면 언제라도 예쁘게 있고 싶잖아」
+		;그 외
+		ELSE
+			PRINTFORMW 「샤워를 하는 때 정도는 가만히 있어…」
+		ENDIF
+			CFLAG:9351 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:9351 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아아…기분 좋아…」
+			PRINTFORMW 「%CALLNAME:MASTER%의 사랑의 증거가 떨어져버리는 것은 유감이지만…」
+			CFLAG:9351 = 3
+		;그 외
+		ELSEIF CFLAG:9351 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「잠깐, 어디에 끼얹는 거야…!」
+			CFLAG:9351 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 351 && TEQUIP:54 == 0
+	;初めて
+	IF CFLAG:8826 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 물이 레티의 하얀 피부를 따라, 똑하고 떨어진다.
+			PRINTFORMW 머리카락은 수분을 포함해 평소보다 유연해져, 레티의 모습을 또 다른 느낌으로 바꾸었다.
+			PRINTFORMW 그 모습이 너무나 선정적이여서, 무의식중에 아름다운 좋은 여자라고 말하자
+			PRINTFORMW 「정말…칭찬 과해? 그래도 그렇게 생각해줬다면 기뻐」
+		;그 외
+		ELSE
+			PRINTFORMW 「어차피 또 더러워지는 거네…」
+		ENDIF
+			CFLAG:8826 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:5554 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「자 그럼, 깨끗하게 씻었고」
+			PRINTFORMW 「또 잔뜩 붙여줄래? %CALLNAME:MASTER%의 사랑의 증거…」
+			CFLAG:8826 = 3
+		;그 외
+		ELSEIF CFLAG:5554 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「이대로 당신과의 관계도 씻어 흘려보내고 싶었어」
+			PRINTFORMW 「일시적이라도 깔끔하게 된것을 기뻐할수밖에 없는걸까…」
+			CFLAG:8826 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;泡踊り CFLAG9352
+;-------------------------------------------------
+IF SELECTCOM == 352
+	;初めて
+	IF CFLAG:9352 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭔가 그 손의 가게같네」
+			PRINTFORMW 「하지만 나라면 돈도 들지 않고, 사양도 필요없고, 이득이야? 후훗」
+			PRINTFORMW 
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3
+			PRINTFORMW 「나는 타올이 아닌데도…정말…」
+			PRINTFORMW 레티는 그렇게 말하면서도, 온몸에 거품을 바르고, 봉사를 개시했다.
+		;그 외
+		ELSE
+			PRINTFORMW 「지금만큼은 몸을 꽁꽁 얼리면 좋을텐데」
+			PRINTFORMW 「그거라면 마음껏 비벼줄테지만」
+		ENDIF
+			CFLAG:9352 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모＋奉仕精神Lv5
+		IF TALENT:150 == 1 && ABL:13 >= 5 && (CFLAG:9352 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「온몸이 스쳐서…나도 어쩐지…아앙읏…」
+			PRINTFORMW %CALLNAME:MASTER%의 몸에는 거품 외에, 명백히 이질적인 점액이 달라붙어있다.
+			PRINTFORMW 그런 행위에 꿈에 빠진 레티는, 순식간에 흥분의 정도를 올리고 있다.
+			CFLAG:9352 = 4
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:9352 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「하아…하아…이게 기분 좋은거야…?」
+			PRINTFORMW 「응읏, 응읏…전신이 어루만져지는 것 같아서…아아…」
+			CFLAG:9352 = 3
+		;그 외
+		ELSEIF CFLAG:9352 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「거품이 아니라 피로 잔뜩해주고 싶어…」
+			PRINTFORMW 뒤에서 들려오는 한 서린 문구에 귀를 기울이는일도 없이, 레티의 몸의 부드러움을 즐겼다.
+			CFLAG:9352 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;触手召喚 CFLAG9500　終了時CFLAG8901
+;触手関係は後日必ず加筆します
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 500 && TEQUIP:90
+	;初めて
+	IF CFLAG:9500 == 0
+		;연모
+		IF TALENT:150 == 1
+			PRINTFORMW 「뭐야 이 아이? 엣, 이 아이로 하는 거?」
+			PRINTFORMW 「우우～응, 무서워. 제대로 제어해줘?」
+		;그 외
+		ELSE
+			PRINTFORMW 「결국엔 이상한 생물까지 나왔네…」
+			PRINTFORMW 「당신보단 기분 좋게 해줄거같아」
+			PRINTFORMW 강한하고 있지만, 레티의 얼굴은 공포로 떨고 있다.
+		ENDIF
+			CFLAG:9500 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모+触手中毒Lv3이상
+		IF TALENT:150 == 1 && ABL:35 >= 3 && (CFLAG:9500 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「뭔가 귀엽게 보일지도…」
+			PRINTFORMW 「좋아 좋아. 제대로 기분 좋게 해줘?」
+			PRINTFORMW 레티는 그렇게 말하고 촉수의 일부를 부드럽게 쓰다듬었다.
+			CFLAG:9500 = 4
+		;연모
+		ELSEIF TALENT:150 == 1 && (CFLAG:9500 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아직 약간 무서우니까…」
+			PRINTFORMW 「손, 붙잡아 줬으면해…」
+			CFLAG:9500 = 3
+		;그 외
+		ELSEIF CFLAG:9500 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「당신 옆에 그 아이가 있으니, 뭔가 어울리네」
+			PRINTFORMW 「성욕 덩어리끼리, 한 사람 한 마리끼리 사이좋게 얽히면 좋을텐데」
+			CFLAG:9500 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+;終了時
+ELSEIF SELECTCOM == 500 && TEQUIP:90 == 0
+	;연모+触手中毒Lv3이상
+	IF TALENT:150 == 1 && ABL:35 >= 3 && (CFLAG:8901 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「오늘은 이걸로 끝? 아, 촉수가…」
+		PRINTFORMW 레티는 약간 아쉬운듯했지만, 기분을 전환하고, 이쪽을 다시 향했다.
+		PRINTFORMW 「자, %CALLNAME:MASTER%도 지지는 않을거야. 잔뜩 귀여워해줘」
+		CFLAG:8901 = 3
+	;연모
+	ELSEIF TALENT:150 == 1 && (CFLAG:8901 < 2 || FLAG:11 == 2)
+		PRINTFORMW 레티는 촉수부터 해방되자, 쏜살같이 %CALLNAME:MASTER%의 곁에 달려와, 안겨붙어왔다.
+		PRINTFORMW 「흑…무서웠어…굉장히 무서웠어…」
+		PRINTFORMW 가슴에 얼굴을 파묻고 흐느껴 우는 레티를, %조사처리(CALLNAME:MASTER,"는")% 강하게 끌어안았다.
+		CFLAG:8901 = 2
+	;그 외
+	ELSEIF CFLAG:8901 < 1 || FLAG:11 == 2
+		PRINTFORMW 「이런 하등생물에게까지 좋을대로 당해버린다니…」
+		PRINTFORMW 「당신에게는 귀축 외도의 칭호가 걸맞아」
+		CFLAG:8901 = 1
+	ENDIF
+		RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG関係（X1をキャラ番号に置換）
+;パラメ―タ変動をトリガ―にした口上
+;パラメ―タ変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_12
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42
+	RETURN 0
+;睡眠・失神時に口上をスキップする（OFFだと寝言が凄いことに）
+SIF TEQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_PALAMCNG_K12_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_PALAMCNG_K12_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;パラメ―タ変動時のセリフ CFLAG 221～260を使用
+;-------------------------------------------------
+;-------------------------------------------------
+;初めて潤滑がLV2超えた CFLAG8001
+;-------------------------------------------------
+P = PALAM:10 + UP:10
+IF P > PALAMLV:2 && CFLAG:TARGET:8001 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		;ロ―ションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「우웅…조금만 만지면 바로 젖는데도…」
+			PRINTFORMW 「후아…미끈미끈해…」
+		;그 외
+		ELSE
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 가 귀여워해주니깐…」
+			PRINTFORMW 「끈적끈적한 국물…잔뜩 나와버렸어…」
+		ENDIF
+	;그 외
+	ELSE
+		;ロ―ションを使った場合
+		IF SELECTCOM == 60
+			PRINTFORMW 「여자 한명 적실 자신이 없는 거네」
+			PRINTFORMW 「현명해. 마른채로 박아넣는 것 보단」
+		;그 외
+		ELSE
+			PRINTFORMW 「응읏… 젖어버렸어…」
+			PRINTFORMW 「저절로 나오는 것뿐이야…. 착각은 하지 않는 게 나아…」
+		ENDIF
+	ENDIF
+		CFLAG:TARGET:8001 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて欲情がLV2超えた CFLAG8002
+;-------------------------------------------------
+P = PALAM:13 + UP:13
+IF P > PALAMLV:2 && CFLAG:8002 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「이런 거 사용하지 않아도…」
+			PRINTFORMW 「그래도, 하아… 하아…, 싫은 건 아니야…」
+		;그 외
+		ELSE
+			PRINTFORMW 「후앗… 아아… 몸의 준비가 된 거 같아…」
+			PRINTFORMW 「와줘…. 더 이상 참을수 없어…」
+		ENDIF
+	;그 외
+	ELSE
+		;媚薬を使った場合
+		IF SELECTCOM == 61
+			PRINTFORMW 「응응…내가 이상하게…」
+			PRINTFORMW 「이런 기분…몰라…」
+		;그 외
+		ELSE
+			PRINTFORMW 「뜨거워…몸이 뜨거워…」
+			PRINTFORMW 「하아…하아…설녀를 달아오르게 하다니…」
+			PRINTFORMW 레티는 촉촉한 눈동자로, 멍한 눈으로 이쪽을 보고 있다.
+		ENDIF
+	ENDIF
+		CFLAG:8002 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて恥情がLV2超えた CFLAG8003
+;-------------------------------------------------
+P = PALAM:15 + UP:15
+IF P > PALAMLV:2 && CFLAG:8003 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「응훗… 엉큼한 모습, 잔뜩 보여져버린거네…」
+		PRINTFORMW 「좀 더 부끄럽게 해도 좋아…」
+	;그 외
+	ELSE
+		PRINTFORMW 「뭐야…? 이 느낌…」
+		PRINTFORMW 「부끄러운 일 당했는데…」
+	ENDIF
+		CFLAG:8003 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めて恐怖がLV2超えた CFLAG8004
+;-------------------------------------------------
+P = PALAM:17 + UP:17
+IF P > PALAMLV:2 && CFLAG:8004 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「부탁이야…. 용서해줘…」
+		PRINTFORMW 「좀 더 힘낼테니까… 잔인한 일 하지마…」
+	;그 외
+	ELSE
+		PRINTFORMW 「…우우… 누가, 누가 살려줘…. 이젠 싫어…」
+	ENDIF
+		CFLAG:8004 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてC절정 CFLAG8005
+;-------------------------------------------------
+IF NOWEX:0 > 0 && CFLAG:8005 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「응앗! 클리갓, 클리가 이상하게 돼버려!」
+		PRINTFORMW 「가버려! 히야아아아아아아아앙!」
+	;그 외
+	ELSE
+		PRINTFORMW 「싫엇… 가버림 안 돼! 이대로 가면… 흐아아아아앙!」
+	ENDIF
+		CFLAG:8005 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてV절정 CFLAG8006
+;-------------------------------------------------
+IF NOWEX:1 > 0 && CFLAG:8006 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「보지 왓, 와버려어어어어!」
+		PRINTFORMW 「굉장한게 왔어엇! 응, 후아, 아아아아아아앙!!」
+	;그 외
+	ELSE
+		PRINTFORMW 「안에…! 안에서 가버려…! 응, 쿠아아아아아아!!」
+	ENDIF
+		CFLAG:8006 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてA절정 CFLAG8007
+;-------------------------------------------------
+IF NOWEX:2 > 0 && CFLAG:8007 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「아응읏, 응, 큿, 굉장해! 뜨거운게엣!」
+		PRINTFORMW 「엉덩이로 가아앗! 히, 응아아아아아아아아!」
+	;그 외
+	ELSE
+		PRINTFORMW 「엉덩이 같은걸로…! 싫엇, 이런 곳으로 가고 싶지 않아!!」
+		PRINTFORMW 「응하아아아아아아아아!!」
+	ENDIF
+		CFLAG:TARGET:8007 = 1
+ENDIF
+
+;-------------------------------------------------
+;初めてB절정 CFLAG8008
+;-------------------------------------------------
+IF NOWEX:3 > 0 && CFLAG:8008 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「응, 하앗…! 가슴으로 갈거같아…!!」
+		PRINTFORMW 「좋아…! 앞쪽이 저려서…! 응핫, 응아아아아아앙!!」
+	;그 외
+	ELSE
+		PRINTFORMW 「버려! 가슴 깊숙히에서 와버려!」
+		PRINTFORMW 「안 돼엣, 오지맛, 오지마아아아!!」
+	ENDIF
+		CFLAG:TARGET:8008 = 1
+ENDIF
+
+;-------------------------------------------------
+;処女喪失(処女のみ) CFLAG8009
+;-------------------------------------------------
+A = UP:20 + UP:21
+IF TFLAG:0 > 0 && CFLAG:8009 == 0
+	;연모かつ主人のセックスによる処女喪失
+	IF TFLAG:20
+		;연모かつ反発刻印未取得
+		IF TALENT:TARGET:150 == 1 && (A < 500 || TFLAG:150 == 1)
+			PRINTFORMW 「응쿳, 하아…후아아…」
+			PRINTFORMW 「이걸로…정말로, 당신의 여자가 되는 거네…」
+			PRINTFORMW 「저기, 좀만 더 이어진 채로 있자? 이 감촉을 새겨넣고 싶어…」
+			PRINTFORMW 「…응읏, 츗. 좋아해…정말 좋아…♪」
+		;연모かつ反発刻印取得
+		ELSE
+			PRINTFORMW 「처음이니깐…부드럽게 해주었으면 했는데…」
+			PRINTFORMW 「우우…바보…」
+			PRINTFORMW 레티는 하염없이 울면서, 얼굴을 돌렸다.
+		ENDIF
+	;指挿入れで処女喪失（反感がかなり少ない）
+	ELSEIF SELECTCOM == 4
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「응, 조금 유감이지만…」
+			PRINTFORMW 「처음을 가져간게…%CALLNAME:MASTER%라는 것은 변하지 않아…」
+			PRINTFORMW 이쪽을 신경써주었는지, 행복한웃는 얼굴로 말하는 레티.
+			PRINTFORMW 첫 경험을 섹스로 뺏지 않았던 것에, %조사처리(CALLNAME:MASTER,"는")% 조금 죄악감을 느꼇다.
+		;그 외
+		ELSE
+			PRINTFORMW 「언젠가 뺏길거라고 생각했어….  각오는 되있었어…」
+			PRINTFORMW 「단지 그 방법을 생각하면, 잊는 일은 무리인거같네…」
+		ENDIF
+	;그 외の時に処女喪失
+	ELSE
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「나 같은거에겐, 삽입하고 싶지 않았던거…?」
+			PRINTFORMW 그런 것은 아니라고 말했지만, 레티는 시종 쓸쓸한듯한 얼굴을 하고 있었다.
+		;그 외
+		ELSE
+			PRINTFORMW 「…우우, 이런 걸로…」
+			PRINTFORMW 「각오되었다고 해도, 과도한 처사야…」
+		ENDIF
+	ENDIF
+		CFLAG:TARGET:8009 = 1
+ENDIF
+
+;-------------------------------------------------
+;セックスで射精させた CFLAG8010 CFLAG8011
+;-------------------------------------------------
+IF TFLAG:9 > 0 || TFLAG:10 > 0
+	;アナルセックスか? 
+	IF TFLAG:9 > 0
+		;연모+Ａ감각Lv3이상
+		IF TALENT:TARGET:150 == 1 && ABL:2 >= 3 && (CFLAG:8011 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「아아…♪ 엉덩이에 잔뜩…정액이…」
+			PRINTFORMW 「뜨거워서…녹아버릴거같아…」
+			CFLAG:8011 = 5
+		;연모
+		ELSEIF TALENT:TARGET:150 == 1 && (CFLAG:8011 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「굉장해…잔뜩 나왔네」
+			PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 기분 좋다면…엉덩이도 나쁘지 않네」
+			CFLAG:8011 = 4
+		;Ａ감각Lv3이상
+		ELSEIF ABL:2 >= 3 && (CFLAG:8011 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이…굉장히 뜨거워졌어…」
+			PRINTFORMW 「응응읏…정액이 배 안에 스며들어가는 거 같아…」
+			CFLAG:8011 = 3
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:8011 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「하아…하아…」
+			PRINTFORMW 「이렇게 내보내서…. 내 엉덩이, 기분 좋았던거야…?」
+			CFLAG:8011 = 2
+		;그 외
+		ELSEIF CFLAG:8011 <= 0 || FLAG:11 == 2
+			PRINTFORMW 「우우～…기분 나빠…」
+			PRINTFORMW 「배가 빵빵해서…괴로워…」
+			CFLAG:8011 = 1
+		ENDIF
+	;그 외（膣内射精）
+	ELSE
+		;연모+Ｖ감각Lv3이상
+		IF TALENT:TARGET:150 == 1 && ABL:1 >= 3 && (CFLAG:8010 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「보지 잔뜩…. 싫엇, 흘러버려…」
+			PRINTFORMW 「아까워…. 응웃, 쿠응…」
+			PRINTFORMW 질 안에서 흘러 나올거같은 정액을 레티는 손가락 끝으로 감아, 다시 질내에 되돌리려 하고 있다.
+			CFLAG:8010 = 5
+		;연모
+		ELSEIF TALENT:TARGET:150 == 1 && (CFLAG:8010 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「응…아기가 생겨버릴지도…」
+			PRINTFORMW 「그…만약 생겨버렸다면…함께 키워줄거야?」
+			CFLAG:8010 = 4
+		;Ｖ감각Lv3이상
+		ELSEIF ABL:1 >= 3 && (CFLAG:8010 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아, 나와…. 안에 뜨거운게 나와져…」
+			PRINTFORMW 「애액과 섞여서…안에서 미끌미끌거려…응아…♪」
+			CFLAG:8010 = 3
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:8010 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「역시 너무 과속이야?」
+			PRINTFORMW 「아기가 생긴다면 책임주는 거겠지?」
+			CFLAG:8010 = 2
+		;그 외
+		ELSEIF CFLAG:8010 <= 0 || FLAG:11 == 2
+			PRINTFORMW 「응우…안에 나와버렸다…」
+			PRINTFORMW 「싫어…이런 자식의 아기 생겨버리면 싫어어…」
+			PRINTFORMW 레티는 필사적으로 질내의 정액을 긁어내고 있다.
+			CFLAG:8010 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;手で射精させた CFLAG8012
+;-------------------------------------------------
+IF TFLAG:12 > 0
+	;연모+奉仕精神Lv3이상+精液中毒Lv3이상
+	IF TALENT:TARGET:150 == 1 && ABL:13 >= 3 && ABL:31 >= 3 &&  (CFLAG:8012 <= 4 || FLAG:11 == 2)
+		PRINTFORMW 「…아♪ 나오고 있어…. 굉장한 양이네…」
+		PRINTFORMW 「말한다면 언제든 손으로 해줄게…. (스…) 응하아아…」
+		PRINTFORMW 아까 만큼의 정액의 냄새를 맡고 황홀해하며, 레티는 활발하게 다음 사정을 재촉하고 있다.
+		PRINTFORMW 「이 냄새, 참을 수 없어…. 저기, 이번엔 먹여줘…♪」
+		CFLAG:8012 = 5
+	;연모
+	ELSEIF TALENT:TARGET:150 == 1 && (CFLAG:8012 <= 3 || FLAG:11 == 2)
+		PRINTFORMW 「응…, 이렇게 싸줘…」
+		PRINTFORMW 「미끈미끈해…아가의 씨가 잔뜩…」
+		PRINTFORMW 흥미 깊게 정액을 구경하곤, 레티는 부드러운 웃음을 살짝 보였다.
+		CFLAG:8012 = 4
+	;精液中毒Lv3이상
+	ELSEIF ABL:31 >= 3 && (CFLAG:8012 <= 2 || FLAG:11 == 2)
+		PRINTFORMW 「웃…잔뜩 나왔어…」
+		PRINTFORMW 「하얗고, 냄새나고, 끈적끈적한 정액이…」
+		PRINTFORMW 말하자 마자, 레티는 손바닥에 모인 정액을 핥기 시작했다.
+		PRINTFORMW 그 표정에는 서서히 붉은 빛이 돌며, 기쁜 듯이 전부 삼켰다.
+		CFLAG:8012 = 3
+	;奉仕精神Lv3이상
+	ELSEIF ABL:13 >= 3 && (CFLAG:8012 <= 1 || FLAG:11 == 2)
+		PRINTFORMW 「앗…」
+		PRINTFORMW 「나왔다는 것은, 기분 좋았단거지, 응…?」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 애매하게 끄덕이자, 레티는 만족한듯 미소지었다.
+		CFLAG:8012 = 2
+	;그 외
+	ELSEIF CFLAG:8012 <= 0 || FLAG:11 == 2
+		PRINTFORMW 「히얏…!? 정말, 적어도 예고정도는 해줘」
+		PRINTFORMW 「우우… 찐득거려…. 기분 나빠…. 우풋」
+		PRINTFORMW 몸 가까이 가득 차오른 정액의 냄새에, 무심코 그렇게 한 거 같다.
+		CFLAG:8012 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;口or胸で射精させた CFLAG8013 CFLAG8014 CFLAG:8208 CFLAG:8209
+;-------------------------------------------------
+IF TFLAG:11 > 0
+	;フェラ, イラマチオ, シックスナインの場合
+	IF SELECTCOM == 41 || SELECTCOM == 230 || SELECTCOM == 602
+		;연모+奉仕精神Lv3이상+精液中毒Lv3이상
+		IF TALENT:TARGET:150 == 1 && ABL:13 >= 3 && ABL:31 >= 3 && (CFLAG:8013 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응응읏♪ 응츄루루루루…즈쥬우우우우우…」
+			PRINTFORMW 「싫어…멈추지 말아줫…!」
+			PRINTFORMW 「정액 좋아아…. 좀 더, 쥬루…, 좀 더 먹여줘…」
+			CFLAG:8013 = 5
+		;연모
+		ELSEIF TALENT:TARGET:150 == 1 && (CFLAG:8013 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「츄릅…응, 응큿」
+			PRINTFORMW 「후훗. 입 안, %CALLNAME:MASTER%의 정액으로 잔뜩이야…」
+			PRINTFORMW 「깨끗하게 해줄게…. 우, 응…」
+			PRINTFORMW 레티는 백탁으로 더러워진 음경을 재차 입에 물며, 혀 끝으로 점액을 깨끗이 핥았다.
+			CFLAG:8013 = 4
+		;精液中毒Lv3이상
+		ELSEIF ABL:31 >= 3 && (CFLAG:8013 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응응゛읏…즈쥬루루루…츄우우우우…」
+			PRINTFORMW 「응하아…이 맛, 이 냄새, 참을수 없어…」
+			PRINTFORMW 더 달라고 말하는지, 레티는 여전히 음경을 입에 넣고 핥길 반복했다.
+			CFLAG:8013 = 3
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:8013 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「응무우우우! 우, 응…」
+			PRINTFORMW 「푸아앗! 하아…하아…」
+			PRINTFORMW 「제대로 다 내보낸거야? 참는건 몸에 독이야?」
+			PRINTFORMW 입안에 남은 정액을 신경쓰면서도, 레티는 관능적인 시선으로 이쪽을 보고 있다.
+			CFLAG:8013 = 2
+		;그 외
+		ELSEIF CFLAG:8013 <= 0 || FLAG:11 == 2
+			PRINTFORMW 「응, 응붓!? 응응～읏!!」
+			PRINTFORMW 「입 안 끈적끈적해서…냄새나…」
+			CFLAG:8013 = 1
+		ENDIF
+	;パイズリ, 縦パイズリの場合
+	ELSEIF SELECTCOM == 42 || SELECTCOM == 208
+		;연모+奉仕精神Lv3이상+精液中毒Lv3이상
+		IF TALENT:TARGET:150 == 1 && ABL:13 >= 3 && ABL:31 >= 3 && (CFLAG:8014 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응, 내줘…! 잔뜩 내줘어!!」
+			PRINTFORMW 「늘여줘어…정액 잔뜩…아아…멋져…」
+			PRINTFORMW 레티는 끈적하게 달라 붙은 정액을 핥고 있지만,
+			PRINTFORMW 일부는 가슴에 반죽하듯이 바르고 있다.
+			PRINTFORMW 「언제까지나 정액에 둘러 쌓이고 싶어…%CALLNAME:MASTER%의 정액에…」
+			CFLAG:8014 = 5
+		;연모
+		ELSEIF TALENT:TARGET:150 == 1 && (CFLAG:8014 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 대량으로 사정된 백탁을, 레티는 매우 기쁜듯이 받아들였다.
+			PRINTFORMW 농후한 정액이 레티의 살갗에 달라 붙어있다.
+			PRINTFORMW 「응, 기뻐…♪ 나는 %CALLNAME:MASTER%의 것이라면 무엇이든지 느껴…」
+			PRINTFORMW 「가슴, 언제나 사용해도 좋으니깐…♪」
+			CFLAG:8014 = 4
+		;精液中毒Lv3이상
+		ELSEIF ABL:31 >= 3 && (CFLAG:8014 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「응응읏, 나왔다…. 정액 나왔다아…」
+			PRINTFORMW 레티의 표정은 열뜬 듯 흐리멍텅하게되어, 
+			PRINTFORMW 손가락 끝에 얽힌 정액의 냄새를 맡곤, 그대로 입에 가져갔다.
+			PRINTFORMW (좀 더 가슴으로 힘내면, 잔뜩 나와 주는걸까나…)
+			CFLAG:8014 = 3
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:8014 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「잔뜩 나와…. 가슴 사이에서 이렇게…」
+			PRINTFORMW 「끼워 지는 거 좋은거야? 그렇구나…」
+			PRINTFORMW 레티의 속에서 뭔가 납득한 거 같다.
+			CFLAG:8014 = 2
+		;그 외
+		ELSEIF CFLAG:8014 <= 0 || FLAG:11 == 2
+			PRINTFORMW 「히얏…벌써, 찐득찐득하잖아…」
+			PRINTFORMW 「일단 샤워하고 싶어…」
+			PRINTFORMW 레티는 정액 투성이가 되어, 굴욕에 찬 표정을 하고 있다.
+			CFLAG:8014 = 1
+		ENDIF
+	;パイズリフェラの場合
+	ELSEIF SELECTCOM == 209
+		;연모+奉仕精神Lv3이상+精液中毒Lv3이상
+		IF TALENT:TARGET:150 == 1 && ABL:13 >= 3 && ABL:31 >= 3 && (CFLAG:8209 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응우우우우! 응츗, 쥬루루…」
+			PRINTFORMW 「후아…입 안에, 잔뜩…♪」
+			PRINTFORMW 입을 크게 열고, 입 안에 가득 찬 정액을 %CALLNAME:MASTER%에게 보여주는 레티
+			PRINTFORMW 그대로 모조리 삼킬꺼라 생각했지만, 일부를 손가락 끝에 휘감아, 딱딱해진 유두에 문질러 발랐다.
+			CFLAG:8209 = 5
+		;연모
+		ELSEIF TALENT:TARGET:150 == 1 && (CFLAG:8209 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「츄…응츄…(후릅)」
+			PRINTFORMW 정액이 다 나온 후에도, 레티는 가슴 앞으로부터 음경을 떼지 않는다.
+			PRINTFORMW 「…싫어…조금만 더 자지의 감촉 즐기게해줘…」
+			PRINTFORMW 그렇게 말하면서, 여운을 아끼듯이 귀두를 낼름낼름 핥고 있다.
+			CFLAG:8209 = 4
+		;精液中毒Lv3이상
+		ELSEIF ABL:31 >= 3 && (CFLAG:8209 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「쥬루…응읏, 츄, 응쿳…」
+			PRINTFORMW 「푸핫, 벌써 마지막…? 그래…」
+			PRINTFORMW 유감스러운듯한 얼굴을 했던 레티였지만, 음경을 끼운체 가슴을 돌연 상하운동하기 시작했다.
+			PRINTFORMW 「또 딱딱해져왔다…. 한번 더 핥아도 돼?」
+			CFLAG:8209 = 3
+		;奉仕精神Lv3이상
+		ELSEIF ABL:13 >= 3 && (CFLAG:8209 <= 1 || FLAG:11 == 2)
+			PRINTFORMW 「우우…응―, 츄…」
+			PRINTFORMW 「기분 좋았다면 상관 없지만…이 맛은 아직 익숙하지않아…」
+			PRINTFORMW 레티는 그렁그렁한 눈으로 힘껏 다 마시려 했지만, 태반은 흘러 떨어져버렸다.
+			CFLAG:8209 = 2
+		;그 외
+		ELSEIF CFLAG:8209 <= 0 || FLAG:11 == 2
+			PRINTFORMW 「응읏…. 다 나온거네」
+			PRINTFORMW 「어때? 얄팍한 정복욕을 충족한 기분은」
+			PRINTFORMW 입도 가슴도 정액 투성이가 된 채로, 레티는 담담하게 쏘아 붙였다.
+			CFLAG:8209 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;射精した(ふたなり/オトコのみ) CFLAG8015
+;-------------------------------------------------
+IF TFLAG:30 > 0
+	;初めて
+	IF CFLAG:8015 == 0
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「싫엇, 핫…뭔가 와아! 이상한게 와아아!」
+			PRINTFORMW 「큿, 후아아아아아아앙!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「싫엇, 어째서…! 쿠핫…!」
+			PRINTFORMW 「안 돼엣…! 이런 거 틀려어어어어어어!」
+		ENDIF
+			CFLAG:8015 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:TARGET:150 == 1 && (CFLAG:8015 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「아, 또 나와버려…! 자지 와버려어어어어어!!」
+			CFLAG:8015 = 3
+		;그 외
+		ELSEIF CFLAG:8015 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「싫어어…! 내보내고 싶지 않은데도오…!」
+			PRINTFORMW 「나오지 마아아…! 응쿳, 응하아아아아아아아앙!!」
+			CFLAG:8015 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;噴乳した(母乳体質のみ) CFLAG8016
+;-------------------------------------------------
+IF TFLAG:31 > 0
+	;初めて
+	IF CFLAG:8016 == 0
+		;従順Lv4이상
+		IF ABL:10 >= 4
+			PRINTFORMW 「우유가…나온다니…」
+			PRINTFORMW 「하, 핥아본다니…?」
+		;그 외
+		ELSE
+			PRINTFORMW 「엣? 어째서 모유가…」
+			PRINTFORMW 「설마…임신…!?」
+			PRINTFORMW 가뜩이나 하얀 레티의 얼굴에서, 더욱 핏기가 빠져나갔다.
+		ENDIF
+			CFLAG:8016 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:150 == 1 && (CFLAG:8016 <= 4 || FLAG:11 == 2)
+			PRINTFORMW 「응읏…잔뜩 나와…」
+			PRINTFORMW 「부탁이야…빨아줘…츄릅츄릅해줘…」
+			CFLAG:8016 = 5
+		;従順Lv4이상
+		ELSEIF ABL:10 >= 4 && (CFLAG:8016 <= 3 || FLAG:11 == 2)
+			PRINTFORMW 「굉장해…잔뜩 나와…」
+			PRINTFORMW 「마시고 싶어? 괜찮지만…부드럽게 빨아줘…」
+			CFLAG:8016 = 4
+		;굴복각인Lv3
+		ELSEIF MARK:2 == 3 && (CFLAG:8016 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「더 이상 새삼스레 놀라진 않아…」
+			PRINTFORMW 「모유는 어쩔거야? 좋아할대로 해도 신경 쓰지않지만.」
+			CFLAG:8016 = 3
+		;그 외
+		ELSEIF CFLAG:8016 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「우우…싫어어…」
+			CFLAG:8016 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｃ감각Lv5でＣ절정50이상 CFLAG8017
+;-------------------------------------------------
+IF ABL:0 >= 5 && EX:0 >= 50 && NOWEX:0 > 0
+	;初めて
+	IF CFLAG:8017 == 0
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「거기, 거기 좋앗! 하앗, 싫엇, 후아아아아아아!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「클리 괴롭히지맛, 거기, 또 안 돼! 응아아아아아!!」
+		ENDIF
+			CFLAG:8017 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:TARGET:150 == 1 && (CFLAG:8017 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「거기, 거기 좋앗! 하앗, 싫엇, 후아아아아아아!!」
+			CFLAG:8017 = 3
+		;그 외
+		ELSEIF CFLAG:8017 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「클리 괴롭히지맛, 거기, 또 안 돼! 응아아아아아!!」
+			CFLAG:8017 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ감각Lv5でＶ절정50이상 CFLAG8018
+;-------------------------------------------------
+IF ABL:1 >= 5 && EX:1 >= 50 && NOWEX:1 > 0
+	;初めて
+	IF CFLAG:8018 == 0
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「보지, 엉망진창이 되어서…!」
+			PRINTFORMW 「몇 번이고 가버렷! 아앗, 가버려어어어어!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「안쪽이, 이상하게 됏! 안 돼, 싫어엇! 응아아아아아!!」
+		ENDIF
+			CFLAG:8018 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:TARGET:150 == 1 && (CFLAG:8018 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「보지, 엉망진창이 되어서…!」
+			PRINTFORMW 「몇 번이고 가버렷! 아앗, 가버려어어어어!!」
+			CFLAG:8018 = 3
+		;그 외
+		ELSEIF CFLAG:8018 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「안쪽이, 이상하게 됏! 안 돼, 싫어엇! 응아아아아아!!」
+			CFLAG:8018 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ감각Lv5でＡ절정50이상 CFLAG8019
+;-------------------------------------------------
+IF ABL:2 >= 5 && EX:2 >= 50 && NOWEX:2 > 0
+	;初めて
+	IF CFLAG:8019 == 0
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「엉덩이 가! 이대로 가버려, 아앙앗, 응하아아아아아아!!」
+		;그 외
+		ELSE
+			PRINTFORMW 「엉덩이 기분 좋게 하지맛! 더는 엉덩이는 싫은거야아아아아아아!!」
+		ENDIF
+			CFLAG:8019 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:TARGET:150 == 1 && (CFLAG:8019 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「엉덩이 가! 이대로 가버려, 아앙앗, 응하아아아아아아!!」
+			CFLAG:8019 = 3
+		;그 외
+		ELSEIF CFLAG:8019 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「엉덩이 기분 좋게 하지맛! 더는 엉덩이는 싫은거야아아아아아아!!」
+			CFLAG:8019 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｂ감각Lv5でＢ절정50이상 CFLAG8020
+;-------------------------------------------------
+IF ABL:3 >= 5 && EX:3 >= 50 && NOWEX:3 > 0
+	;初めて
+	IF CFLAG:8020 == 0
+		;연모
+		IF TALENT:TARGET:150 == 1
+			PRINTFORMW 「응, 싫어, 가슴 저릿저릿해졋!」
+			PRINTFORMW 「가, 가앗, 응하아아아앙!」
+		;그 외
+		ELSE
+			PRINTFORMW 「싫엇, 더 이상 가슴 괴롭히지 맛, 싫어어어어!!」
+		ENDIF
+			CFLAG:8020 = 1
+			RETURN 0
+	;二回目以降
+	ELSE
+		;연모
+		IF TALENT:TARGET:150 == 1 && (CFLAG:8020 <= 2 || FLAG:11 == 2)
+			PRINTFORMW 「좀 더, 가슴 괴롭혀줫! 유두 만져줘엇!」
+			PRINTFORMW 「또 가앗! 가슴 가버려어어어어!!」
+			CFLAG:8020 = 3
+		;그 외
+		ELSEIF CFLAG:8020 <= 1 || FLAG:11 == 2
+			PRINTFORMW 「안 돼앳! 가슴 같은 걸로 가버리면 안 돼애!!」
+			PRINTFORMW (우우… 내 가슴, 어떻게 돼버린거야아…?)
+			CFLAG:8020 = 2
+		ENDIF
+			RETURN 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG関係（X1をキャラ番号に置換）
+;刻印変動をトリガ―にした口上
+;刻印変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_12
+;助手が調教した時に口上をスキップする（好みに応じて使う, 行頭の;を消すとスキップするようになる）
+;SIF ASSI > 0 && ASSIPLAY
+;	RETURN 0 
+;ボ―ルギャグ着用時には口上をスキップする（OFFだと口を塞いでるのに喋りまくる）
+SIF TEQUIP:42
+	RETURN 0
+;睡眠・失神時に口上をスキップする（OFFだと寝言が凄いことに）
+SIF TEQUIP:14 || TFLAG:899 > 0
+	RETURN 0
+;--------------------------------------------------
+;特定助手, 主人時に特殊助手口上を呼び出す(Y1を特定助手, X1を主人のキャラ番号に置換）
+;--------------------------------------------------
+;IF NO:MASTER == Y1
+;	CALL LES_MESSAGE_MARKCNG_KX1_MY1
+;	RETURN 0
+;ENDIF
+;IF ASSI > 0 && ASSIPLAY
+;	IF ASSINO() == Y1
+;		CALL LES_MESSAGE_MARKCNG_K12_MY1
+;		RETURN 0
+;	ENDIF
+;ENDIF
+;-------------------------------------------------
+;苦痛刻印Lv3取得 CFLAG8097
+;-------------------------------------------------
+IF TFLAG:40 == 3 && CFLAG:8097 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「우우…」
+		PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 주는 통증이라면… 견뎌보이겠어… 크읏…」
+	ELSE
+		PRINTFORMW 「응우우… 아파… 아파아…」
+		PRINTFORMW 「부탁이야… 더 이상 심한 일 하지 말아줘… 뭐든지 할테니깐…」
+	ENDIF
+		CFLAG:8097 = 1
+ENDIF
+
+;-------------------------------------------------
+;快楽刻印Lv3取得 CFLAG8098
+;-------------------------------------------------
+IF TFLAG:41 == 3 && CFLAG:8098 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「하아, 응… 하아」
+		PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 기분 좋게 해주었어…」
+		PRINTFORMW 「좀 더 해줘… 이 몸에 전부 새겨줘…」
+	ELSE
+		PRINTFORMW 「하아… 하아… 좋아…. 굉장히 기분 좋아…」
+		PRINTFORMW 「좀 더 원해… 아무것도 생각나지 않을만큼의 쾌락을 원해…」
+	ENDIF
+		CFLAG:8098 = 1
+ENDIF
+
+;-------------------------------------------------
+;굴복각인Lv3取得 CFLAG8299
+;-------------------------------------------------
+IF TFLAG:42 == 3 && CFLAG:8099 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「어째서 지금까지 말을 듣지 않았을까…」
+		PRINTFORMW 「사랑하는 %CALLNAME:MASTER%인데도 말이야」
+	ELSE
+		PRINTFORMW 「더 이상, 거역하지 않아…. 이렇게 돼버렸어…」
+		PRINTFORMW (이대로 이사람의 물건이 되는 거, 괜찮을까나…)
+	ENDIF
+		CFLAG:8099 = 1
+ENDIF
+
+;-------------------------------------------------
+;反発刻印Lv3取得 CFLAG8100
+;-------------------------------------------------
+IF TFLAG:44 == 3 && CFLAG:8100 == 0
+	;연모
+	IF TALENT:TARGET:150 == 1
+		PRINTFORMW 「%조사처리(CALLNAME:MASTER,"가")% 좋아. 그래도 말야…」
+		PRINTFORMW 「지나치게 심한일 당하면, 나라도 거리를 두자고 생각해버려」
+	ELSE
+		PRINTFORMW 「내가 여기서 나가는 때가 당신의 최후야. 동사의 공포에 전율해도 좋아」
+		PRINTFORMW 「가능한 한 지금부터, 남은 짧은 인생을 즐겨둬」
+	ENDIF
+		CFLAG:8100 = 1
+ENDIF
+
+;-------------------------------------------------
+;イベント口上集（X1, X2をキャラ番号に置換する） FLAG(TFLAG200の中身＋8100)
+;-------------------------------------------------
+@SELF_KOJO_K12
+;-------------------------------------------------
+;調教後自慰 CFLAG8251
+;-------------------------------------------------
+IF TFLAG:200 == 151
+	;연모
+	IF TALENT:TARGET:150 ==1 && (CFLAG:8251 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「아아…기분 좋아…」
+		PRINTFORMW 「그치만, 좀 더 원해…이런걸론 만족 못해…」
+		PRINTFORMW 레티는 머리에 %CALLNAME:MASTER%의 얼굴을 떠올리면서, 
+		PRINTFORMW 아무에게도 들리지 않는 요구를 계속했다.
+		CFLAG:8251 = 3
+	;自慰中毒Lv3이상
+	ELSEIF ABL:30 >= 3 && (CFLAG:8251 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「앗, 아앙앗… 여기 기분 좋아…. 응아아아앙앗!!」
+		PRINTFORMW (스스로 하는 거, 괜찮을지도…)
+		CFLAG:8251 = 2
+	;그 외
+	ELSEIF CFLAG:8251 < 1 || FLAG:11 == 2
+		PRINTFORMW 「응읏…하아, 우응…」
+		PRINTFORMW 자위 정도밖에 할 수 없어서, 레티는 그저 사타구니를 만지작거리고 있다.
+		CFLAG:8251 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後アナニ― CFLAG8252
+;-------------------------------------------------
+IF TFLAG:200 == 152
+	;연모＋Ａ감각Lv3이상
+	IF TALENT:150 == 1 && ABL:2 >= 3 && (CFLAG:8252 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「우우응… 핫… 아후… 엉덩이가 쓸쓸해…」
+		PRINTFORMW 「내 손가락보다… 그 사람에게 만지작거려졌으면하는데…쿠아앙!!」
+		CFLAG:8252 = 3
+	;Ａ감각Lv3이상
+	ELSEIF ABL:2 >= 3 && (CFLAG:8252 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「앙…응핫, 하아…하아…」
+		PRINTFORMW 「엉덩이로 이렇게 느낀다니…」
+		PRINTFORMW 개발되어버린 국화주름을 만지작거리며, 몇 번이고「아냐, 아냐」하며 호소하고 있다.
+		CFLAG:8252 = 2
+	;그 외
+	ELSEIF CFLAG:8252 < 1 || FLAG:11 == 2
+		PRINTFORMW 「쿠읏, 후…응응읏」
+		PRINTFORMW 「이런 일, 할 상황이… 아닌데도…」
+		CFLAG:8252 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;朝フェラ CFLAG8240
+;-------------------------------------------------
+IF TFLAG:200 == 140
+	;연모
+	IF TALENT:TARGET:150 ==1 && (CFLAG:8240 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「후후훗. 아침부터 여기는 건강하네…」
+		PRINTFORMW 「가끔은 내가 괴롭혀줄테니…. 후―훗」
+		PRINTFORMW 즐거운듯이 음경을 만지작 거리는 레티였지만, 
+		PRINTFORMW 몇 번이고 숨이 세게 불어와서 %조사처리(CALLNAME:MASTER,"가")% 일어나 버렸다.
+		PRINTFORMW 「아앙…. 아직 잠깐만 누워있어줘…」
+		PRINTFORMW 「응, 아웁. 후릅…츄루우…후릅」
+		PRINTFORMW 무리하게 눕혀져, 좋을대로 당해버렸다.
+		CFLAG:8240 = 3
+	;奉仕精神Lv3이상
+	ELSEIF ABL:13 >= 3 && (CFLAG:8240 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「…응우, 역시 커다랗네」
+		PRINTFORMW 「하웁, 응응…츄파…흡챠…츄루루」
+		PRINTFORMW 「응, 좋은 아침. 조금 빌리는 거야」
+		CFLAG:8240 = 2
+	;그 외
+	ELSEIF CFLAG:8240 < 1 || FLAG:11 == 2
+		PRINTFORMW 「츄루…응읏, 응츗, 츄…」
+		PRINTFORMW 「뭐? 이른 아침부터 발기해있는 사람에게 불평할 권리같은거 없어…하읏」
+		CFLAG:8240 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;朝パイズリ CFLAG8241
+;-------------------------------------------------
+IF TFLAG:200 == 141
+	;연모
+	IF TALENT:TARGET:150 ==1 && (CFLAG:8241 < 3 || FLAG:11 == 2)
+		PRINTFORMW 「응, 쇼. 뜨, 뜨거워…」
+		PRINTFORMW 「가슴 커서 다행이라고 생각하는 순간이네」
+		PRINTFORMW 부드럽고 낭창낭창한 양 언덕에 포개진 감각에, %조사처리(CALLNAME:MASTER,"는")% 눈을 떳다.
+		PRINTFORMW 「아, 좋은 아침. 자지 괴로워 하는 거같아서 진정시켜주려고해서…」
+		CFLAG:8241 = 3
+	;奉仕精神Lv3이상
+	ELSEIF ABL:13 >= 3 && (CFLAG:8240 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「응우～…여전히 길구나아…」
+		PRINTFORMW 「전부 포갤려고해도 끝쪽이…」
+		PRINTFORMW 「엣? 아…조, 좋은 아침」
+		PRINTFORMW 특훈의 모습을 보여준 레티는, 어쩐지 거북한듯 하다.
+		CFLAG:8241 = 2
+	;그 외
+	ELSEIF CFLAG:8241 < 1 || FLAG:11 == 2
+		PRINTFORMW 「좋은 아침. 기상 소감은 어떤지?」
+		PRINTFORMW 「뭐하는 거냐고 해도? 보면 알잖아」
+		PRINTFORMW 「그만두길 원한다면 그만하겠지만」
+		CFLAG:8241 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後セックス CFLAG8250
+;-------------------------------------------------
+IF TFLAG:200 == 150
+	;Ｖ감각Lv3이상
+	IF ABL:1 >= 3 && (CFLAG:8250 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「아앙…!! 응핫, 좋아…!」
+		PRINTFORMW 「좀 더 찔러줘…! 깊은 곳까지 와줘어…!! 후아아아아앙!!」
+		CFLAG:8250 = 2
+	;그 외
+	ELSEIF CFLAG:8250 < 1 || FLAG:11 == 2
+		PRINTFORMW 「얏, 핫, 아아…!! 멈추지 않앗…!!」
+		CFLAG:8250 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;調教後夜這い　 CFLAG8258
+;-------------------------------------------------
+IF TFLAG:200 == 158
+	;Ｖ감각Lv5이상
+	IF ABL:1 >= 5 && (CFLAG:8258 < 2 || FLAG:11 == 2)
+		PRINTFORMW 「봐줘…. 아직 이렇게 흠뻑…」
+		PRINTFORMW 「아까부터 흘러넘쳐 멈추지 않아…. 좀 더 원한다고 보지가 말하고 있어…」
+		PRINTFORMW 「아무리 격렬하게 해도 좋으니깟…!! 부탁이야, 자지…!!」
+		PRINTFORMW %조사처리(CALLNAME:MASTER,"가")% 대답하기 전에, 레티는 욕망하며 허리를 내렸다.
+		PRINTFORMW 「응아아…! 이거, 이거야아!! 자지 기분 좋앗!!」
+		CFLAG:8258 = 2
+	;그 외
+	ELSEIF CFLAG:8258 < 1 || FLAG:11 == 2
+		PRINTFORMW 「그런 기분이 들게 해놓고… 어중간하게 냅둔다니 잔인하잖아…」
+		PRINTFORMW 「적어도 달아오른게 잠잠해질 때까지, 제대로 해주지 않으면…」
+		PRINTFORMW 드러 누운 채로 눈을 깜빡이는 %조사처리(CALLNAME:MASTER,"를")% 거들떠보지도 않고, 
+		PRINTFORMW 레티는 흠뻑 젖은 비열을 %CALLNAME:MASTER%의 음경에 이끌었다.
+		CFLAG:8258 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;売却
+;長ぇよ…
+;-------------------------------------------------
+IF TFLAG:200 == 130
+	;연모+反発刻印Lv3未満
+	IF TALENT:TARGET:150 && MARK:3 < 3
+		PRINTFORMW 새로운 구매자가 나타났다고 말하자, 레티는 조용히 일어나, 말없이 손을 내밀어
+		PRINTFORMW %CALLNAME:MASTER%에게 손을 당겨져서, 두 번 다시 볼 일이 없는 복도를 걷던 도중, 
+		PRINTFORMW 레티는 연약한 목소리로 지금의 심정을 토로하기 시작했다.
+		PRINTFORMW 
+		PRINTFORMW 「이 따듯한 손의 감촉도 오늘로 최후. 언젠가 이날이 올꺼라 생각했고, 각오도 했다…」
+		PRINTFORMW 「그래도…즐거웠어. 짧은 시간이었지만, 잔뜩 사랑해주었어. 소중이 해주었어…」
+		PRINTFORMW 「%CALLNAME:MASTER%의 일은 알고 있으니까, 원망은 없어」
+		PRINTFORMW 「단지, 단지말야…. 조금만이라도, %CALLNAME:MASTER% 곁에 있고 싶었을까나…」
+		PRINTFORMW 레티는 복받쳐 오르는 눈물을 참으며, 필사적으로 미소를 띄웠다.
+		PRINTFORMW %CALLNAME:MASTER%의 품 속에서 보이던 그 만면의 미소와는 전혀 다른, 꾸깃꾸깃한 미소다.
+		PRINTFORMW 걸음을 멈추지 않고 따라온건, 성가시게 하지않으려는 최후의 충성일지도 모른다.
+		PRINTFORMW 
+		PRINTFORMW 중개인에게 새로운 목걸이를 걸어져, 마지막으로 뭔가 말할 것이 있나 질문받은 레티는
+		PRINTFORMW %CALLNAME:MASTER%에게 다가서, 살짝 최후의 키스를 주고받았다.
+		PRINTFORMW 「다음에 환상향이 눈으로 뒤덮힐 때, 온통 백은의 세계가 펼쳐졌을때」
+		PRINTFORMW 「정말로 조금이라도 좋아. 나 같이 나쁜 여자가 있었다는 것을, 추억해줘…」
+		PRINTFORMW 「좋아해…. 지금도, 앞으로도…계속 계속, 정말 좋아해…」
+		PRINTFORMW 거기까지 말하곤, 레티는 %CALLNAME:MASTER%에게서 떨어졌다.
+		PRINTFORMW 
+		PRINTFORMW 「지금까지, 신세졌습니닷!!」
+		PRINTFORMW 마지막에 레티는 이쪽에 깊숙히 머리숙여, 이윽고 중개인과 동행했다.
+		PRINTFORMW ''안녕'' 이란 한 마디를 하지 않은 것은 일말의 희망의 표현인가……
+		PRINTFORMW 하지만 그 모습이 보이지 않게 된 순간까지, 그녀가 이쪽을 돌아보는 일은, 없었다――――
+	;反発刻印Lv3
+	ELSEIF MARK:3 == 3
+		PRINTFORMW 「여기 이외라면 어디든지 좋아. 이만큼 심한 사람도 그다지 없겠지」
+		PRINTFORMW 「이만. 언젠가 내가 죽이러 올 그날까지, 여자를 울린 죄의 무게를 알지 못한채 살아가도록」
+	;음란
+	ELSEIF TALENT:170
+		PRINTFORMW 「%CALLNAME:MASTER% 곁을 떠나도, 하는 일은 같아. 쾌락을 요구하며 남자위에 올라탈뿐」
+		PRINTFORMW 「그것도 좋을까나 하고 생각하고 있어요? 당신과 이별하는게 외롭지 않다는 것은 아니지만」
+		PRINTFORMW 「그래도 뭐, 이제와서 무슨 말을 해봐야 소용없군요. 구매자가 개인인지, 아니면 가게인지, 그것도 모르고」
+		PRINTFORMW 「만약 가게라면, 가끔씩은 얼굴 내밀어줘요? 서비스해줄테니」
+		PRINTFORMW 이것저것 말하는 사이에, 중개인이 있는 현관 앞까지 도착했다.
+		PRINTFORMW 
+		PRINTFORMW 「이별이네. 뭐 간간히 버티도록 해」
+		PRINTFORMW 마지막에 %CALLNAME:MASTER%의 이마를 딱 하고 때린 레티는, 중개인에게 실려, 집을 나섰다.
+		PRINTFORMW 저 어조라면, 분명 새로운 구매자의 옆에서도 능숙하게 해나갈 것이 틀림없다.
+		PRINTFORMW 그렇게 확신한 %조사처리(CALLNAME:MASTER,"는")%, 만족해 매각금의 계산을 시작했다.
+	;그 외
+	ELSE
+		PRINTFORMW 「해방되는 일은 없을 듯하네…」
+		PRINTFORMW 「언젠가 진정한 의미로 해방되는 해의 겨울, 여기의 주변만큼은 산만큼 눈을 내려주도록할게」
+		PRINTFORMW 「기대하고 있어, 후훗」
+		PRINTFORMW 
+		PRINTFORMW 레티는 재빨리 집에서 떠나갔다.
+		PRINTFORMW 얼어붙은듯한 차거운 미소와, 으스스한 불안을 남기고……
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;エンゲ―ジリング使用時
+;-------------------------------------------------
+IF TFLAG:200 == 200
+	PRINTFORMW 「엣, 이거…」
+	PRINTFORMW 「바, 받아도 되는 거야?」
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 머리를 끄덕이며, 반지의 진의를 전했다.
+	PRINTFORMW 붇받쳐 오르는 감정을 참을 수 없었는지, 레티는 그 자리에서 주저앉아 흐느껴 울어버렸다.
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 그런 그녀를 일으켜, 상냥하게, 하지만 강하게, 레티를 꼬옥 껴안았다.
+	PRINTFORMW 
+	PRINTFORMW 「고마워…. 이런 근사한 선물, 태어나서 처음이야…」
+	PRINTFORMW 
+	PRINTFORMW 「일방통행이라도 좋았어…. 가벼운 여자라도 좋았어…」
+	PRINTFORMW 「아무리 마음을 주어도, 나는 노예고 %조사처리(CALLNAME:MASTER,"는")% 조교사. 언젠가는 곁을 떠나지않으면 안된다고…」
+	PRINTFORMW 「그치만, 겨울을 매섭게할 뿐인 설녀인걸…. 싫어하는게 당연하다고 단념했어…」
+	PRINTFORMW 「하물며 당신이 말해준다니 생각도 하지 못했어…」
+	PRINTFORMW 「그니깐, 정말로, 기뻐…! 기쁜거야!! 이런 나를 좋아한다고 해줘서…!!」
+	PRINTFORMW 
+	PRINTFORMW 레티는 눈물을 훔치며, 확실하게 %CALLNAME:MASTER%의 눈을 바라보았다.
+	PRINTFORMW 「부족한 곳도 잔뜩 있다고 생각하지만… 잘 부탁드립니다…!」
+	PRINTFORMW 
+	PRINTFORMW 「응읏…츄…」
+	PRINTFORMW 길고, 뜨겁고, 그리고 격렬한 키스. 이윽고 살짝 입술을 뗀 레티는――――
+	PRINTFORMW 
+	PRINTFORMW 「정말 좋아해…. 사랑해, %CALLNAME:MASTER%…」
+ENDIF
+	TFLAG:200 = 0
+	RETURN 0
+
+;-------------------------------------------------
+;@単体エンディング関係(X1, X2をキャラ番号に置換する)
+;男主人verしか書いてないです。
+;-------------------------------------------------
+@SINGLE_ENDING_K12
+DRAWLINE
+	IF TALENT:153 == 1
+		PRINTFORMW ―――단독 엔딩 조건 달성―――
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW ……
+		PRINTFORMW 
+		PRINTFORMW 6시경. 남자는 오늘도 언제나 같은 시각에 눈을 떴다.
+		PRINTFORMW 햇빛은 미약하지만, 그래도 지금이 밤이 아닌 것 정도는  알기에, 
+		PRINTFORMW 이불에서 벗어나 밖을 바라보자, 요괴의 산에 두꺼운 구름이 껴있다.
+		PRINTFORMW 서서히 몸을 덮는 한기에 떨며, 코타츠를 찾아 거실로 향했다.
+		PRINTFORMW  
+		PRINTFORMW 
+		PRINTFORMW 집에는 이 남자 이외의 기색은 없다.
+		PRINTFORMW 눈이 모든 소리를 삼켜버린듯한 고요함 속에서, 그저 내뱉는 흰 숨결과 복도를  걷는 발소리만이 두드러진다.
+		PRINTFORMW 남자는 마치 조난중에 간신히 찾아낸 산장과도 같이 부랴부랴 코타츠에 들어가, 다시 편한한 숨소리를 내기 시작했다.
+		PRINTFORMW 
+		PRINTFORMW 8시 반. 두번째 잠에서 간신히 눈을 떠, 남자는 힘겹게 일어났다.
+		PRINTFORMW 방금 전 복도를 터벅터벅 걷고 있을 때와는 달리, 공기가 뭔가 향긋하다.
+		PRINTFORMW 무음의 세계라고 생각되던 집안도, 지금은 잡다한 소리가 돌고 있다.
+		PRINTFORMW 
+		PRINTFORMW 「좋은 아침. 기분 좋은듯이 자고 있길래 깨우지 않았어」
+		PRINTFORMW 옆에 있는 주방에서 아침을 가져오는 여자 한명. 그의 아내이다.
+		PRINTFORMW 「오늘도 좋은 날씨야. 모처럼, 이따가 나가지않을래?」
+		PRINTFORMW 설녀인 그녀에게 있어서 좋은 날씨라는건, 이 정도로 눈이 소복히 쌓이는 날씨인거같다.
+		PRINTFORMW 남자는 제안을 흔쾌히 수락하면서, 가장 사랑하는 아내의 요리에 젓가락을 대기 시작했다.
+		PRINTFORMW 
+		PRINTFORMW 「집이 무너져버릴지도. 아침부터 너무 의욕이 넘쳤던걸까나」
+		PRINTFORMW 수줍어 하는 말에 쓴 웃음을 지으며 대답하는 남자.
+		PRINTFORMW 느긋하게 시간을 새기는 겨울의 아침. 그림에 그린거같은 행복한 식사풍경과, 약간은 보통과 다른 대화내용.
+		PRINTFORMW 하지만 남자는, 집을 무너뜨릴 정도의 강설을 그녀가 일으켰다고는, 진심으로는 생각하지 않는다.
+		PRINTFORMW 그만큼 그녀를 이해하고, 신뢰하며, 또 그녀도 남자를 진심으로 사랑하고 있다.
+		PRINTFORMW 
+		PRINTFORMW 남자는 이전 생업으로 하고 있던 어두운 일에서 발을 빼고, 지금은 다른 사람에게 말해도 문제없는 일로 생활하고 있다.
+		PRINTFORMW 그런 남편을 매우 보람차게 지지하는 아내도, 마음 속에서부터 현재의 생활에 만족하고 있다.
+		PRINTFORMW 큰 돈을 갖지 못해도 좋아. 이렇게 사랑하는 사람과 함께 있는 기쁨만 있으면, 하고.
+		PRINTFORMW 
+		PRINTFORMW 보통 사람은 이해하기 힘든 사귀게 된 계기를 갖고, 종족의 벽을 넘어, 우여곡절 끝에 서로 사랑하게 된 두 사람.
+		PRINTFORMW 오늘은 그의 일도 쉰다. 겨울 하늘의 아래, 정답게 달라붙은 두 사람의 모습을 확인 할 수 있을지도 모른다.
+		PRINTFORMW 당신은 확실히 방한 하는 거에요 하고 못박힌 남자는, 그만 하라는 듯이 끄덕였다.
+		PRINTFORMW 깊은 눈에 얼어붙은 환상향에 똑 하고 들어 앉은 부부의 집은, 어디까지나, 어디까지나… 따뜻했다.
+		PRINTFORMW 
+		PRINTFORMW 　　　　　　　　―― Ending No.112A (레티 애처 엔딩)
+	ELSE
+		PRINTFORMW ―――단독 엔딩 조건 달성―――
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW ……
+		PRINTFORMW 
+		PRINTFORMW 그로부터 어느 정도 시간이 흘렀다.
+		PRINTFORMW 오년? 십년? 시간의 감각 따위는 더 이상 없다.
+		PRINTFORMW 사람을 사서, 멸시하고, 치욕하며, 범해서는, 상품으로 판다. 그것이 이 남자의 일이었다.
+		PRINTFORMW 남자도 세월의 흐름에는 이기지못하고 하는 수 없이 폐업했지만, 막대한 부를 얻은 남자는, 지금은 유유자적하게 생활하고 있다.
+		PRINTFORMW 단 한명, 팔지 않고 수중에 남은 그의 전용 노예와 함께.
+		PRINTFORMW 
+		PRINTFORMW 「아앗, 응핫, 좀 더… 좀 더 깊게!」
+		PRINTFORMW 「좋아, 좋아아! 보지 질퍽질퍽하게 되서, 후아아!」
+		PRINTFORMW 「이제 가버려, 가, 하아, 응읏, 응하아아아아아!!」
+		PRINTFORMW 
+		PRINTFORMW 인간 마을에는, 최근엔 따듯한 겨울이 계속해서 화제가 되고 있다.
+		PRINTFORMW 눈이 쌓이는 일은 해마다 줄어들고, 기온의 저하도 떨어졌다.
+		PRINTFORMW 인간은 대체로 그 경향을 반기고 있지만, 그런 세태는 그녀의 귀에 닿지 않는다.
+		PRINTFORMW 요즘 몇년도 외출하지 않고, 그런 이야기를 들을 기회가 없는 것도 물론 관계있지만, 
+		PRINTFORMW 그 이상으로, 지금의 그녀에게 있어서, 추운 겨울이나 하얀 눈 같은건 사소한 일에 불과하게 되어버렸기 때문이다.
+		PRINTFORMW 원하는 것은 주인 남자의 총애와 뜨거운 몸짓, 그리고 자신을 더럽힐 백탁뿐.
+		PRINTFORMW 오늘도 환상향의 어디선가, 그녀의 요염한 교성이 메아리친다.
+		PRINTFORMW 
+		PRINTFORMW 환상향에 본격적인 겨울이 돌아오는 날은, 앞으로도 당분간은 방문하지 않겠지.
+		PRINTFORMW 남자가 그녀를 계속해서 사랑하는 한은…….
+		PRINTFORMW 
+		PRINTFORMW 　　　　　　　　―― Ending No.112B (레티 노예 엔딩)
+	ENDIF
+
+	RETURN 0
+

@@ -1,0 +1,257 @@
+﻿;=============================================================================
+;오줌 마시기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE145
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:145 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;利尿剤使用中かおもらし癖ありかある程度尿意を催していないとダメ
+SIF TEQUIP:12 == 0 && TALENT:45 == 0 && BASE:4 <= MAXBASE:4 / 2
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼) 4 미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종があるならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;순종3이상でないとダメ(お風呂場ならＯＫ)
+IF TEQUIP:53 == 0
+	SIF ABL:10 < 3
+		RETURN 0
+ENDIF
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;射精止め中はダメ
+SIF TEQUIP:69
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM145
+PRINTL 오줌 마시기
+TSTR:0 = 오줌마시기
+CALL TRAIN_MESSAGE_COM145
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 220
+
+SOURCE:31 = 7000
+SOURCE:32 = 500
+SOURCE:16 = 3000
+SOURCE:30 = 1000
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:12 = 1800
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:12 = 1900
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:12 = 2000
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:12 = 2100
+ELSE
+	SOURCE:12 = 2200
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:22 = 6000
+ELSEIF ABL:14 == 1
+	SOURCE:22 = 5000
+ELSEIF ABL:14 == 2
+	SOURCE:22 = 4000
+ELSEIF ABL:14 == 3
+	SOURCE:22 = 3000
+ELSEIF ABL:14 == 4
+	SOURCE:22 = 2000
+ELSE
+	SOURCE:22 = 1000
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:12 , 0.80
+	SOURCE:19 = 120
+	SOURCE:18 = 120
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:12 , 1.00
+	SOURCE:19 = 240
+	SOURCE:18 = 360
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:12 , 1.20
+	SOURCE:19 = 480
+	SOURCE:18 = 840
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:12 , 1.40
+	SOURCE:19 = 840
+	SOURCE:18 = 1440
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:12 , 1.50
+	SOURCE:19 = 1320
+	SOURCE:18 = 2160
+ELSE
+	TIMES SOURCE:12 , 1.70
+	SOURCE:19 = 1800
+	SOURCE:18 = 3000
+ENDIF
+
+;장소를 본다
+IF TEQUIP:52
+	TIMES SOURCE:31 , 2.50
+ELSEIF TEQUIP:53
+	TIMES SOURCE:31 , 0.50
+ELSEIF TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0)
+	TIMES SOURCE:31 , 1.50
+ELSEIF TEQUIP:56 == 1
+	TIMES SOURCE:31 , 1.20
+ENDIF
+
+LOCAL:1 = 100
+;EXP:6을 본다
+IF EXP:6 < EXPLV:1
+	TIMES LOCAL:1 , 3.00
+ELSEIF EXP:6 < EXPLV:2
+	TIMES LOCAL:1 , 2.50
+ELSEIF EXP:6 < EXPLV:3
+	TIMES LOCAL:1 , 2.00
+ELSEIF EXP:6 < EXPLV:4
+	TIMES LOCAL:1 , 1.00
+ELSEIF EXP:6 < EXPLV:5
+	TIMES LOCAL:1 , 0.80
+ELSE
+	TIMES LOCAL:1 , 0.60
+ENDIF
+
+;반항적
+SIF TALENT:11
+	TIMES LOCAL:1 , 2.00
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL:1 , 2.00
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;자제심
+SIF TALENT:20
+	TIMES LOCAL:1 , 1.50
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1 , 0.80
+;억압
+SIF TALENT:32
+	TIMES LOCAL:1 , 3.00
+;저항
+SIF TALENT:34
+	TIMES LOCAL:1 , 3.00
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:1 , 3.50
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+SOURCE:25 += LOCAL:1 * 3
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.20
+
+SOURCE:31 += LOCAL:1 * 5
+SOURCE:32 += LOCAL:1 * 2
+
+;상애
+IF TALENT:153
+	SOURCE:11 = 500
+;친애
+ELSEIF TALENT:152
+	SOURCE:11 = 300
+;연모
+ELSEIF TALENT:150
+	SOURCE:11 = 100
+ENDIF
+
+TCVAR:6 += 2
+;방뇨 레벨 증가
+IF TALENT:45 == 0
+	LOCAL:2 = 1 + ((EXP:6 + TCVAR:6) / 10)
+	LOCAL:2 = MIN(LOCAL:2 * 2, 10)
+	CFLAG:31 += LOCAL:2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+
+TEQUIP:12 = 0
+TFLAG:32 = 1
+EX:12 += 1
+NOWEX:12 += 1
+BASE:4 = 0
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM145
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:52
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 수치와 굴욕감에 눈물을 머금으면서, 풀숲에서 
+ELSEIF TEQUIP:56 && TALENT:205 == 0
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 거울에 비치는 자신을 보지 않으려 하며 
+ELSEIF TEQUIP:56
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 자신의 모습이 비치지 않음에도 불구하고, 거울에서 고개를 돌리며 
+ELSE
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 수치심에 뺨을 붉히면서, 
+ENDIF
+IF TALENT:120 || TALENT:121
+	PRINTFORMW %CALLNAME:PLAYER%의 입을 향해 방뇨했다….
+ELSE
+	PRINTFORMW %CALLNAME:PLAYER%의 위에 쪼그리고 앉아 방뇨했다….
+ENDIF

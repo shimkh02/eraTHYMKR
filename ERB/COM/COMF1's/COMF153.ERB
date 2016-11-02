@@ -1,0 +1,421 @@
+﻿;=============================================================================
+;애액 채집기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE153
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:153 > 0
+	RETURN 0
+;강력 아이템 · 커맨드 무효시에는 불가
+SIF (FLAG:13 & 2) == 0
+	RETURN 0
+;해제는 언제든 가능
+SIF TEQUIP:20 == 7
+	RETURN 1
+;Ｖ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;대상의 Ｖ확장경험이 0일 때 이상계 조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 4 && EXP:32 == 0
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+;아이템을 가지고 있거나, 아이템 없음 설정이 아니면 불가
+SIF ITEM:6 == 0 && NOITEM == 0
+	RETURN 0
+;처녀면 불가
+SIF TALENT:0 == 1
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;조교 대상이 소인체형일 경우에는 주인이 금단의 지식 보유자가 아니면 불가
+SIF TALENT:127 && TALENT:MASTER:56 == 0
+	RETURN 0
+;기계면 불가
+SIF TALENT:206
+	RETURN 0
+;윤활 부족이고, 순종4미만 · 레즈끼4미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(새드거나 새드끼Lv3이상, 또는 망신이나 복종이 있다면 ＯＫ)
+IF PALAM:10 < PALAMLV:2 && ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4)) && TALENT:ASSI:81 == 0 && ABL:ASSI:20 < 3 && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+		RETURN 0
+ENDIF
+;그밖의 Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;Ｖ조율경험이 10미만이면 불가
+SIF EXP:42 < 10
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;촉수 애액 채집은 COMF500.ERB로부터 JUMP 해 온다.
+@COM153
+IF TEQUIP:90
+	PRINTL 촉수 애액 채집
+	TSTR:0 = 촉수 애액 채집
+ELSE
+	TSTR:7 = 애액 채집기
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 6
+		CALL NAMECHECK_CUSTOMTOOL
+		SIF TSTR:9 == "애액채집기"
+			TSTR:9 = 애액을 채집하는 그릇
+	ELSE
+		TSTR:8 = %TSTR:7%
+		TSTR:9 = 애액을 채집하는 그릇
+	ENDIF
+	PRINTFORML %TSTR:8%
+	TSTR:0 = 애액 채집기
+ENDIF
+CALL TRAIN_MESSAGE_COM153
+
+;V경험을 수반하는 커맨드의 플래그(처녀막 재생 대응)
+TFLAG:1 = 1
+
+DOWNBASE:0 += 65
+DOWNBASE:1 += 110
+
+SOURCE:12 = 180
+SOURCE:16 = 180
+SOURCE:18 = 100
+SOURCE:20 = 250
+SOURCE:22 = 80
+SOURCE:24 = 300
+SOURCE:31 = 350
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	LOCAL:1 = 200
+ELSEIF ABL:1 == 1
+	LOCAL:1 = 400
+ELSEIF ABL:1 == 2
+	LOCAL:1 = 900
+ELSEIF ABL:1 == 3
+	LOCAL:1 = 1600
+ELSEIF ABL:1 == 4
+	LOCAL:1 = 2400
+ELSE
+	LOCAL:1 = 3000
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 <= EXPLV:0
+	TIMES LOCAL:1 , 0.20
+	SOURCE:20 += 5500
+ELSEIF EXP:0 <= EXPLV:1
+	TIMES LOCAL:1 , 0.60
+	SOURCE:20 += 300
+ELSEIF EXP:0 <= EXPLV:2
+	TIMES LOCAL:1 , 1.00
+	SOURCE:20 += 50
+ELSEIF EXP:0 <= EXPLV:3
+	TIMES LOCAL:1 , 1.20
+	SOURCE:20 += 10
+ELSEIF EXP:0 <= EXPLV:4
+	TIMES LOCAL:1 , 1.40
+ELSE
+	TIMES LOCAL:1 , 1.60
+ENDIF
+
+;욕망을 본다
+IF ABL:11 == 0
+	SOURCE:24 += 0
+	TIMES LOCAL:1 , 1.00
+	TIMES SOURCE:31 , 1.00
+ELSEIF ABL:11 == 1
+	SOURCE:24 += 60
+	TIMES LOCAL:1 , 1.10
+	TIMES SOURCE:31 , 1.10
+ELSEIF ABL:11 == 2
+	SOURCE:24 += 120
+	TIMES LOCAL:1 , 1.15
+	TIMES SOURCE:31 , 1.25
+ELSEIF ABL:11 == 3
+	SOURCE:24 += 240
+	TIMES LOCAL:1 , 1.25
+	TIMES SOURCE:31 , 1.50
+ELSEIF ABL:11 == 4
+	SOURCE:24 += 480
+	TIMES LOCAL:1 , 1.30
+	TIMES SOURCE:31 , 1.75
+ELSE
+	SOURCE:24 += 960
+	TIMES LOCAL:1 , 1.50
+	TIMES SOURCE:31 , 2.00
+ENDIF
+
+;V민감과 V둔감
+IF TALENT:102
+	TIMES LOCAL:1 , 1.50
+ELSEIF TALENT:103
+	TIMES LOCAL:1 , 0.60
+ENDIF
+;음 단지
+SIF TALENT:172
+	TIMES LOCAL:1 , 1.20
+
+SOURCE:1 += LOCAL:1
+
+;다만 처녀에게는 사용할 수 없는데
+SIF TALENT:0 == 1 && TALENT:30
+	SOURCE:22 /= 3
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 6
+	FLAG:1111 = 0
+	FLAG:1112 = SOURCE:1
+	CALL SOURCECHECK_CUSTOMTOOL
+	SOURCE:1 = FLAG:1120
+ENDIF
+
+;애액 채집기의 착탈
+IF TEQUIP:20 == 7
+	TEQUIP:20 = 0
+	TCVAR:0 += 2
+	TCVAR:42 += 2
+ELSE
+	IF TEQUIP:90
+		STAIN:3 |= 2
+		STAIN:3 |= 4
+		STAIN:3 |= 64
+	ENDIF
+	TCVAR:0 += 1
+	SIF EXP:32 == 0 
+		TCVAR:50 += 1
+	TCVAR:32 += 1
+	TCVAR:42 += 1
+	TEQUIP:20 = 7
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;커맨드 속성：촉수
+IF TEQUIP:90
+	TFLAG:98 = 8
+;커맨드 속성：도구(조교자)
+ELSE
+	TFLAG:98 = 1
+ENDIF
+;촉수 경험 플래그
+TFLAG:90 = 0
+RETURN 1
+
+;-------------------------------------------------
+;애액 채집기(가칭=보지 진공) 장비중
+;-------------------------------------------------
+@EQUIP_COM153
+IF TEQUIP:90
+	PRINTL <촉수 애액 채집 중>
+ELSE
+	TSTR:7 = 애액 채집기
+	IF FLAG:1100 & 1
+		;技師パッチ有効なら特殊な名前チェック
+		FLAG:1110 = 6
+		CALL NAMECHECK_CUSTOMTOOL
+	ENDIF
+	PRINTFORML <%TSTR:7% 장비 중>
+ENDIF
+
+DOWNBASE:0 += 25
+DOWNBASE:1 += 25
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	LOCAL = 40
+ELSEIF ABL:1 == 1
+	LOCAL = 120
+ELSEIF ABL:1 == 2
+	LOCAL = 250
+ELSEIF ABL:1 == 3
+	LOCAL = 450
+ELSEIF ABL:1 == 4
+	LOCAL = 600
+ELSE
+	LOCAL = 750
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES LOCAL , 0.80
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES LOCAL , 0.90
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES LOCAL , 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES LOCAL , 1.10
+ELSE
+	TIMES LOCAL , 1.20
+ENDIF
+
+;ABL:순종을 본다
+IF ABL:10 == 0
+	TIMES LOCAL , 0.80
+ELSEIF ABL:10 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:10 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:10 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:10 == 4
+	TIMES LOCAL , 1.20
+ELSE
+	TIMES LOCAL , 1.30
+ENDIF
+
+;EXP:V경험을 본다
+IF EXP:0 <= EXPLV:0
+	TIMES LOCAL , 0.20
+	SOURCE:20 += 5500
+ELSEIF EXP:0 <= EXPLV:1
+	TIMES LOCAL , 0.60
+	SOURCE:20 += 300
+ELSEIF EXP:0 <= EXPLV:2
+	TIMES LOCAL , 1.00
+	SOURCE:20 += 50
+ELSEIF EXP:0 <= EXPLV:3
+	TIMES LOCAL , 1.20
+	SOURCE:20 += 10
+ELSEIF EXP:0 <= EXPLV:4
+	TIMES LOCAL , 1.40
+ELSE
+	TIMES LOCAL , 1.60
+ENDIF
+
+;V민감과 V둔감
+IF TALENT:102
+	TIMES LOCAL , 1.40
+ELSEIF TALENT:103
+	TIMES LOCAL , 0.60
+ENDIF
+
+IF (FLAG:1100 & 1) && TEQUIP:90 == 0
+	;技師パッチ有効なら道具使用時ソースチェックを呼ぶ
+	;FLAG 1110:道具番号 1111:改善タイプ 1112:SOURCEの実値 
+	FLAG:1110 = 6
+	FLAG:1111 = 0
+	FLAG:1112 = LOCAL
+	CALL SOURCECHECK_CUSTOMTOOL
+	LOCAL = FLAG:1120
+ENDIF
+
+SOURCE:1 += LOCAL
+SOURCE:12 += 45
+SOURCE:16 += 95
+SOURCE:18 += 75
+SOURCE:20 += 90
+SOURCE:22 += 5
+SOURCE:24 += 100
+SOURCE:31 += 45
+
+TCVAR:0 += 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;윤활과 욕정이 일정 이상이라면 애액이 모인다
+SIF PALAM:10 >= 30000 && PALAM:13 >= 50000
+	TFLAG:129 += 1
+;촉수 경험 플래그
+SIF TEQUIP:90
+	TFLAG:90 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM153
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:20 == 7
+	IF TEQUIP:90
+		IF ABL:35 > 2
+			PRINTFORML 촉수는 %CALLNAME:TARGET%의 보지로부터 멀어졌다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부족하다는 듯이 %CALLNAME:PLAYER%에게 벌렸다….
+		ELSEIF MARK:9 > 1
+			PRINTFORML 촉수는 %CALLNAME:TARGET%의 보지로부터 멀어졌다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 촉수에 의해 더럽혀진 보지를 곤란한 표정으로 바라보고 있다….
+		ELSE
+			PRINTFORMW 촉수는 %CALLNAME:TARGET%의 보지로부터 멀어졌다….
+		ENDIF
+	ELSE
+		IF MARK:9 > 1
+			PRINTFORMW %조사선택(CALLNAME:PLAYER, "가")% 미처 손을 쓰기도 전에, %조사선택(CALLNAME:TARGET, "는")% 보지로부터 %조사선택(TSTR:7, "를")% 떼어내 던졌다….
+		ELSE
+			PRINTFORMW %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 보지로부터 %조사선택(TSTR:7, "를")% 떼어냈다….
+		ENDIF
+	ENDIF
+ELSE
+	IF TEQUIP:90
+		IF ABL:35 > 2
+			PRINTFORML 촉수의 흡판이 %CALLNAME:TARGET%의 보지에 매달려, 애액을 들이마시기 시작했다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 인간세상 밖의 자극을 받아, 불쾌한 소리로 허덕이고 있다….
+		ELSEIF MARK:9 > 1
+			PRINTFORML 촉수의 흡판이 %CALLNAME:TARGET%의 보지에 매달려, 애액을 들이마시기 시작했다.
+			PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 이를 악물고 참고 있다….
+		ELSE
+			PRINTFORMW 촉수의 흡판이 %CALLNAME:TARGET%의 보지에 매달려, 애액을 들이마시기 시작했다.
+		ENDIF
+	ELSE
+		IF MARK:9 > 1
+			PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 싫어서 버둥대는 %조사선택(CALLNAME:TARGET, "를")% 억눌렀다.
+			PRINTFORM 그리고, %CALLNAME:TARGET%의 
+			SIF PALAM:10 >= PALAMLV:4
+				PRINT 흠뻑 젖어있는 
+			PRINTFORMW 보지에 %조사선택(TSTR:9, "를")% 설치했다….
+		ELSE
+			PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+			SIF PALAM:10 >= PALAMLV:4
+				PRINT 흠뻑 젖어있는 
+			PRINTFORMW 보지에 %조사선택(TSTR:9, "를")% 설치했다….
+		ENDIF
+	ENDIF
+ENDIF

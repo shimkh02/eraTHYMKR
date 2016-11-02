@@ -1,0 +1,216 @@
+﻿;=============================================================================
+;둘이서 펠라한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE331
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:331 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;조수가 없으면 불가
+SIF ASSI < 0
+	RETURN 0
+;性器が汚れている場合フェラするはできない(조교자가 汚れ無視か愛液, Ｐ, 母乳のよごれならＯＫ)
+SIF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && TALENT:MASTER:64 == 0
+	RETURN 0
+;性器が汚れており, 汚臭敏感で순종4미만의 ASSI일 경우フェラはできない(조교자가 汚れ無視か愛液, Ｐ, 母乳のよごれならＯＫ)
+IF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) 
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;순종4미만 · 레즈끼(BL끼) 4 미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종があるならＯＫ)
+SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+;主人と助手のいずれかもしくは쌍방이 猫舌だと猫フェラパッチ有効でないとダメ
+SIF (TALENT:MASTER:54 || TALENT:ASSI:54) && (FLAG:14 & 16) == 0
+	RETURN 0
+;主人と助手のいずれかもしくは쌍방이 猫舌だと該当者の기교4필요
+SIF (TALENT:MASTER:54 && ABL:MASTER:12 < 4) || (TALENT:ASSI:54 && ABL:ASSI:12 < 4)
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM331
+;특정의 주인과 조수의 편성을 조사한다
+CALL JUDGE_TRAIN_PAIR, MASTER, ASSI
+IF TFLAG:175 == 1
+	LOCALS = 홍마 자매가
+ELSEIF TFLAG:175 == 2
+	LOCALS = 겨드랑이 무녀 두 명이
+ELSEIF TFLAG:175 == 3
+	LOCALS = 가을의 소득을 축하하는 두 신이
+ELSEIF TFLAG:175 == 4
+	LOCALS = 달의 자매가
+ELSEIF TFLAG:175 == 5
+	LOCALS = 비봉 클럽의 두 명이
+ELSEIF TFLAG:175 == 6
+	LOCALS = 춘고정, W릴리가
+ELSEIF TFLAG:175 == 7
+	LOCALS = 사토리 자매 음탕하게
+ELSEIF TFLAG:175 == 8
+	LOCALS = 몽환 자매가 환상적으로
+ELSEIF TFLAG:175 == 9
+	LOCALS = 유유유카가 자상하게
+ELSEIF TFLAG:175 == 10 || TFLAG:175 == 11 || TFLAG:175 == 12
+	LOCALS = 소령 자매가 떠들썩하게
+ELSE
+	LOCALS = 
+ENDIF
+PRINTFORML %LOCALS% 둘이서 펠라한다
+TSTR:0 = %LOCALS% 둘이서 펠라한다
+CALL TRAIN_MESSAGE_COM331
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 100
+
+SOURCE:12 = 320
+SOURCE:31 = 80
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 1000
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 1700
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 2400
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 3000
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 3500
+ELSE
+	SOURCE:0 = 4000
+ENDIF
+
+;주인의 TALENT:혀사용을 본다
+IF TALENT:MASTER:52
+	TIMES SOURCE:0 , 2.00
+	SOURCE:17 += SOURCE:0 / 20
+ENDIF
+;조수의 TALENT:혀사용을 본다
+IF TALENT:ASSI:52
+	TIMES SOURCE:0 , 2.00
+	SOURCE:17 += SOURCE:0 / 20
+ENDIF
+;주인의 고양이혀을 본다
+SIF TALENT:MASTER:54
+	TIMES SOURCE:0 , 0.70
+;조수의 고양이혀을 본다
+SIF TALENT:ASSI:54
+	TIMES SOURCE:0 , 0.70
+
+;노예의 P⇔주인의 입의 불결이 이동
+STAIN:2 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:2
+;노예의 P⇔조수의 입의 불결이 이동
+STAIN:2 |= STAIN:ASSI:0
+STAIN:ASSI:0 |= STAIN:2
+
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 
+	TCVAR:12 += 7
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 7
+ENDIF
+
+TCVAR:41 += 1
+TCVAR:MASTER:22 += 1
+TCVAR:ASSI:22 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM331
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;주인과 조수가 모두 고양이혀
+IF TALENT:MASTER:54 && TALENT:ASSI:54
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTFORMW %조사선택(CALLNAME:ASSI, "와")% 둘이서 교대로 입으로 빨아대며, 혀 끝으로 간질였다….
+;주인이 고양이혀
+ELSEIF TALENT:MASTER:54 && TALENT:ASSI:54 == 0
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTFORM %조사선택(CALLNAME:ASSI, "와")% 둘이서 교대로 입으로 빨아댔다. 
+	PRINTFORM %조사선택(CALLNAME:MASTER, "는")% 상냥하게 혀끝으로 간지럽하고, 
+	PRINTFORMW %조사선택(CALLNAME:ASSI, "는")% 강하게 빨아 돌렸다….
+;조수가 고양이혀
+ELSEIF TALENT:MASTER:54 == 0 && TALENT:ASSI:54
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스를 
+	ELSE
+		PRINT 페니스를 
+	ENDIF
+	PRINTFORM %조사선택(CALLNAME:ASSI, "와")% 둘이서 교대로 입으로 빨아댔다. 
+	PRINTFORM %조사선택(CALLNAME:ASSI, "는")% 상냥하게 혀끝으로 간지럽하고, 
+	PRINTFORMW %조사선택(CALLNAME:MASTER, "가")% 강하게 빨아 돌렸다….
+;초조하게 해
+ELSEIF TEQUIP:68
+	PRINTFORM %CALLNAME:TARGET%의 
+	IF TALENT:1
+		PRINT 움찔움찔 작게 떨고 있는 클리토리스에 
+	ELSE
+		SIF EX:30
+			PRINT 머리부분이 미끈하게 젖어 
+		PRINT 두근두근 뛰고 있는 페니스에 
+	ENDIF
+	PRINTFORMW %조사선택(CALLNAME:MASTER, "와")% %조사선택(CALLNAME:ASSI, "가")% 둘이서 교대로 가벼운 입맞춤을 반복했다….
+;노멀
+ELSE
+	PRINTFORM %CALLNAME:TARGET%의 
+	SIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 
+	IF TALENT:1
+		PRINT 페니스 같은 클리토리스
+	ELSE
+		PRINT 페니스
+	ENDIF
+	PRINTFORMW 를, %조사선택(CALLNAME:ASSI, "와")% 둘이서 교대로 입으로 빨아대며, 혀 끝으로 간질였다….
+ENDIF

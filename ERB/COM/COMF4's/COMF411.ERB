@@ -1,0 +1,391 @@
+﻿;=============================================================================
+;인형 애무
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE411
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:411 > 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;Ｖ조교 필터가 오프되어 있지 않으면 불가
+SIF FLAG:2 & 1
+	RETURN 0
+;조교자가 ＥＸ化していないアリスでないとダメ
+SIF NO:PLAYER != 14 || CFLAG:PLAYER:0
+	RETURN 0
+;人形愛撫残り使用可能回数オーバー
+SIF TFLAG:141 > 3
+	RETURN 0
+;対象が～感覚を1つも持っていないならダメ
+SIF ABL:0 <= 0 && ABL:1 <= 0 && ABL:2 <= 0 && ABL:3 <= 0
+	RETURN 0
+;대상에게 페니스가 있다면 불가
+SIF TALENT:1 || TALENT:120 || TALENT:121
+	RETURN 0
+;조교자의 기교가 3無いとできない
+SIF ABL:PLAYER:12 < 3
+	RETURN 0
+;Ｖ계 장착구 사용 중에는 불가
+SIF TEQUIP:20 || TEQUIP:21
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 불가
+SIF TEQUIP:53
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;알몸 앞치마, 학교수영복 플레이, 코스프레 중에는 불가
+SIF TEQUIP:59
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM411
+;연속으로 사용하면(자) 구속∇으로 발전하는 일이 있다
+IF PREVCOM == 411
+	CALL EXCOM_ABLE658
+	SIF RESULT == 1
+		JUMP COM658
+ENDIF
+
+PRINTL 인형 애무
+TSTR:0 = 인형 애무
+
+DOWNBASE:0 += 15
+DOWNBASE:1 += 75
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+
+SOURCE:15 = 60
+SOURCE:12 = 200
+SOURCE:31 = 800
+
+;여기서 커맨드 사용 회수를 플러스
+TFLAG:141 += 1
+
+IF ABL:0 > 0
+	LOCAL:1 = 1
+	SIF ABL:0 > 3
+		LOCAL:1 += 1
+ELSEIF ABL:1 > 0
+	LOCAL:2 = 1
+	SIF ABL:1 > 3
+		LOCAL:2 += 1
+ELSEIF ABL:2 > 0
+	LOCAL:3 = 1
+	SIF ABL:2 > 3
+		LOCAL:3 += 1
+ELSEIF ABL:3 > 0
+	LOCAL:4 = 1
+	SIF ABL:3 > 3
+		LOCAL:4 += 1
+ELSE
+	LOCAL:5 = 1
+ENDIF
+
+SIF LOCAL:2 > 0 || LOCAL:3 > 0
+	SOURCE:20 = 600
+SIF ABL:3 > 0
+	SOURCE:22 = 500
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 0
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 100
+	SOURCE:11 += 60
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 500
+	SOURCE:11 += 120
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1100
+	SOURCE:11 += 240
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 1900
+	SOURCE:11 += 360
+ELSE
+	SOURCE:0 = 2700
+	SOURCE:11 += 600
+ENDIF
+
+;ABL:V감각을 본다
+IF ABL:1 == 0
+	SOURCE:1 = 0
+ELSEIF ABL:1 == 1
+	SOURCE:1 = 50
+	SOURCE:22 += 100
+ELSEIF ABL:1 == 2
+	SOURCE:1 = 200
+	SOURCE:22 += 150
+ELSEIF ABL:1 == 3
+	SOURCE:1 = 600
+	SOURCE:22 += 300
+ELSEIF ABL:1 == 4
+	SOURCE:1 = 1200
+	SOURCE:22 += 600
+ELSE
+	SOURCE:1 = 1800
+	SOURCE:22 += 700
+ENDIF
+
+;ABL:A감각을 본다
+IF ABL:2 == 0
+	SOURCE:2 = 0
+ELSEIF ABL:2 == 1
+	SOURCE:2 = 75
+	SOURCE:22 += 100
+ELSEIF ABL:2 == 2
+	SOURCE:2 = 150
+	SOURCE:22 += 250
+ELSEIF ABL:2 == 3
+	SOURCE:2 = 400
+	SOURCE:22 += 500
+ELSEIF ABL:2 == 4
+	SOURCE:2 = 800
+	SOURCE:22 += 800
+ELSE
+	SOURCE:2 = 1300
+	SOURCE:22 += 1200
+ENDIF
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 0
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 100
+	SOURCE:11 += 50
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 400
+	SOURCE:11 += 100
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1000
+	SOURCE:11 += 200
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1700
+	SOURCE:11 += 320
+ELSE
+	SOURCE:3 = 2500
+	SOURCE:11 += 450
+ENDIF
+
+;C민감, 둔감을 본다
+;쾌C자체의 체크는 다음에 정리해 준다
+IF TALENT:100
+	TIMES SOURCE:0 , 1.50
+ELSEIF TALENT:101
+	TIMES SOURCE:0 , 0.60
+ENDIF
+;V민감, 둔감을 본다
+;쾌V자체의 체크는 다음에 정리해 준다
+IF TALENT:102
+	TIMES SOURCE:1 , 1.50
+ELSEIF TALENT:103
+	TIMES SOURCE:1 , 0.60
+ENDIF
+;A민감, 둔감을 본다
+;쾌A자체의 체크는 다음에 정리해 준다
+IF TALENT:104
+	TIMES SOURCE:2 , 1.50
+ELSEIF TALENT:105
+	TIMES SOURCE:2 , 0.60
+ENDIF
+;B민감, 둔감을 본다
+;쾌B자체의 체크는 다음에 정리해 준다
+IF TALENT:106
+	TIMES SOURCE:3 , 1.50
+ELSEIF TALENT:107
+	TIMES SOURCE:3 , 0.60
+ENDIF
+
+;PALAM:윤활을 본다
+IF PALAM:10 < PALAMLV:1
+	TIMES SOURCE:1 , 0.10
+	TIMES SOURCE:2 , 0.10
+	TIMES SOURCE:22, 0.10
+	TIMES SOURCE:20 , 3.00
+ELSEIF PALAM:10 < PALAMLV:2
+	TIMES SOURCE:1 , 0.20
+	TIMES SOURCE:2 , 0.20
+	TIMES SOURCE:22, 0.20
+	TIMES SOURCE:20 , 2.00
+ELSEIF PALAM:10 < PALAMLV:3
+	TIMES SOURCE:1 , 0.60
+	TIMES SOURCE:2 , 0.60
+	TIMES SOURCE:22, 0.60
+	TIMES SOURCE:20 , 1.00
+ELSEIF PALAM:10 < PALAMLV:4
+	TIMES SOURCE:1 , 1.00
+	TIMES SOURCE:2 , 1.00
+	TIMES SOURCE:22, 1.00
+	TIMES SOURCE:20 , 0.50
+ELSE
+	TIMES SOURCE:1 , 2.00
+	TIMES SOURCE:2 , 2.00
+	TIMES SOURCE:22, 2.00
+	TIMES SOURCE:20 , 0.10
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	TIMES SOURCE:22, 0.30
+ELSEIF PALAM:13 < PALAMLV:2
+	TIMES SOURCE:22, 0.60
+ELSEIF PALAM:13 < PALAMLV:3
+	TIMES SOURCE:22, 1.00
+ELSEIF PALAM:13 < PALAMLV:4
+	TIMES SOURCE:22, 1.30
+ELSE
+	TIMES SOURCE:22, 1.60
+ENDIF
+
+;프라이드 높다
+SIF TALENT:16
+	SOURCE:22 /= 2
+;보수적
+SIF TALENT:24
+	SOURCE:22 /= 3
+;연모
+SIF TALENT:150 && ASSIPLAY == 0
+	SOURCE:11 *= 2
+
+;줄로 긴박중 때는 효과대
+IF TEQUIP:40
+	TIMES SOURCE:20, 1.50
+	TIMES SOURCE:31, 1.50
+ENDIF
+
+;1회의 조교중에 회수를 거듭하면(자) 효과 다운
+LOCAL:6 = TFLAG:141
+SOURCE:1 /= LOCAL:6
+SOURCE:2 /= LOCAL:6
+SOURCE:11 /= LOCAL:6
+SOURCE:15 /= LOCAL:6
+SOURCE:16 /= LOCAL:6
+SOURCE:20 /= LOCAL:6
+SOURCE:18 /= LOCAL:6
+SOURCE:12 /= LOCAL:6
+SOURCE:22 /= LOCAL:6
+SOURCE:31 /= LOCAL:6
+SOURCE:3 /= LOCAL:6
+;말용
+TFLAG:190 = LOCAL:1
+TFLAG:191 = LOCAL:2
+TFLAG:192 = LOCAL:3
+TFLAG:193 = LOCAL:4
+
+CALL TRAIN_MESSAGE_COM411
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+;TFLAG:190 = ( 구O) 대상의 C감각에 의한 개발도(최우선)
+;TFLAG:191 = ( 구P) 대상의 V감각에 의한 개발도(2번째 )
+;TFLAG:192 = ( 구Q) 대상의 A감각에 의한 개발도(3번째 )
+;TFLAG:193 = ( 구R) 대상의 B감각에 의한 개발도(4번째 )
+@TRAIN_MESSAGE_COM411
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORML %조사선택(CALLNAME:PLAYER, "가")% 호출한 대량의 인형이, %CALLNAME:TARGET%의 몸으로 모여 갔다….
+PRINTFORM 인형들은 %CALLNAME:TARGET%의 
+IF TFLAG:190 == 2 && TFLAG:191 == 2 && TFLAG:192 == 2 && TFLAG:193 == 2
+	PRINTL 더 이상 할 수 없을 정도 개발된 온갖 성감대를 무자비할 정도로 유린하고 있다….
+ELSEIF TFLAG:190 == 1 && TFLAG:191 == 1 && TFLAG:192 == 1 && TFLAG:193 == 1
+	PRINTL 온갖 성감대를 개발할 수 있도록 끈질기게도 괴롭히고 있다….
+ELSEIF TFLAG:190 == 2 && TFLAG:191 == 2 && TFLAG:192 == 2
+	PRINTL 잘 개발 된 하반신에 집중적으로 손을 뻗고 있다….
+ELSEIF TFLAG:190 == 1 && TFLAG:191 == 1 && TFLAG:192 == 1
+	PRINTL 하반신에 달려들어, 성기에 새로운 쾌감을 새겨 넣으려는 듯이 빨아 대고 있다….
+ELSEIF TFLAG:191 == 2 && TFLAG:192 == 2
+	PRINTFORML 느슨해진 앞뒤의 구멍에 손가락을 찔러 넣고 %CALLNAME:TARGET%의 반응을 즐기고 있다….
+ELSEIF TFLAG:191 == 1 && TFLAG:192 == 1
+	PRINTL 질구와 항문에 새로운 쾌락을 새겨주려는 듯 희롱하고 있다….
+ELSEIF TFLAG:190 == 2 && TFLAG:193 == 2
+	PRINTL 성감대화한 전신에 빠짐없이 손가락으로 더듬고 있다.
+ELSEIF TFLAG:190 == 1 && TFLAG:193 == 1
+	PRINTL 전신을 찰싹 붙여 움직이며 더듬고 있다.
+ELSEIF TFLAG:190 == 2
+	PRINTL 부풀어 올라 민감하게 된 음핵을 중심으로 자극하고 있다….
+ELSEIF TFLAG:191 == 2
+	PRINTL 애액으로 젖어 있는 음순에 손을 넣어 질 안을 휘저으며 놀고 있다….
+ELSEIF TFLAG:192 == 2
+	PRINTL 조교로 느슨해져 버린 엉덩이의 구멍에 손가락을 넣으면서 전신을 더듬고 있다….
+ELSEIF TFLAG:193 == 2
+	PRINTL 발딱 일어선 유두를 절묘한 타이밍으로 튕기며 몸을 만지고 있다…
+ELSE
+	SIF TFLAG:190 == 1
+		PRINT 클리토리스를
+	SIF TFLAG:190 == 1 && (TFLAG:191 ==1 || TFLAG:192 == 1 || TFLAG:193 == 1)
+		PRINT , 
+	SIF TFLAG:191 == 1
+		PRINT 보지를
+	SIF TFLAG:191 == 1 && (TFLAG:192 == 1 || TFLAG:193 == 1)
+		PRINT , 
+	SIF TFLAG:192 == 1
+		PRINT 애널을
+	SIF TFLAG:192 == 1 && TFLAG:193 == 1
+		PRINT , 
+	SIF TFLAG:193 == 1
+		PRINT 가슴을
+	PRINTW  만지작거리고 있다….
+ENDIF
+PRINTL
+IF TFLAG:899 >= 1
+	PRINTFORML 실신한 채로 %조사선택(CALLNAME:TARGET, "는")% 인형들의 고문에 무의식 중에도 저항하고 있는지 손이나 다리를 움찔움찔 움직이고 있다.
+ELSEIF TEQUIP:40 && TEQUIP:41 && TEQUIP:42
+	PRINTFORML 시야도 말도 자유도 빼앗긴 %조사선택(CALLNAME:TARGET, "는")% 군소리 없이 인형들의 고문에 몸을 바치고 있다.
+ELSEIF TEQUIP:40 == 0 && TEQUIP:41 == 0 && TEQUIP:42 == 0
+	PRINTFORML %조사선택(CALLNAME:TARGET, "는")% 열심히 저항했지만, 대량의 인형이 짓누르고 있어 여의치 않은 것 같다….
+ELSE
+	PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 
+	IF TEQUIP:40 && TEQUIP:42
+		PRINTL 손발은 묶여있고 입에는 재갈이 물려있어 한마디 욕설도 하지 못하고,
+		PRINTL 다만 인형들에게 희롱해지고 있는 자신의 몸을 바라볼 수 밖에 없었다….
+	ELSEIF TEQUIP:40 && TEQUIP:41
+		PRINTL 눈이 가려지고 몸이 속박되어 움직일 수 없었다.
+		PRINTL 인형들에게 파묻히고 희롱 당해, 유일하게 자유로운 입으로는 애무의 자극에 떨리는 교성을 지르고 있다….
+	ELSEIF TEQUIP:41 && TEQUIP:42
+		PRINTL 천으로 시야를 가려진 채 재갈을 물려 반항하지도 못하고,
+		PRINTL 압도적인 수에 짓눌려 어쩌지도 못하고 인형들에게 유린당하고 있다….
+	ELSEIF TEQUIP:40
+		PRINTL 결박되어 충분한 저항도 할 수 없는 채, 인형들에게 희롱 당하고 있다….
+	ELSEIF TEQUIP:41
+		PRINTL 시야를 빼앗겨, 단속적으로 들리는 추잡한 소리와 자신의 피부가 유린되고 있다는 공포에 떨면서 인형들에게 범해지고 있다….
+	ELSEIF TEQUIP:42
+		PRINTL 볼 개그가 물려 큰 소리로 외치지도 못하고, 인형들에게 유린당하고 있다….
+	ENDIF
+ENDIF
+PRINTW

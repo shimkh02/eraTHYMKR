@@ -1,0 +1,161 @@
+﻿;=============================================================================
+;애널 주름 세기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE188
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:188 > 0
+	RETURN 0
+;Ａ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 4) == 0
+	RETURN 0
+;애널が汚れており, 汚臭敏感で순종5미만의 ASSI일 경우はできない(조교자가 汚れ無視か愛液, 母乳のよごれならＯＫ)
+IF STAIN:4 >= 8 && (STAIN:4 != 16 && STAIN:4 != 17) && ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;순종4미만 · 레즈끼(BL끼) 4 미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 4) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 4))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;그 조교 중에 관장 플레이＋배설이 있었을 경우, 조교자가 汚れ無視もしくは汚臭鈍感を持たないなら実行できない
+SIF TFLAG:140 & 256 && TALENT:PLAYER:61 == 0 && TALENT:PLAYER:64 == 0
+	RETURN 0
+;Ａ계 장착구 사용 중에는 불가
+SIF TEQUIP:25 || TEQUIP:26
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우 조교자의 기교4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;나체정식 중에는 불가
+SIF TEQUIP:60
+	RETURN 0
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;노예의 애널의 주름을 열거한다고 하는 카오스인 플레이
+@COM188
+PRINTL 애널 주름 세기
+TSTR:0 = 애널 주름 세기
+CALL TRAIN_MESSAGE_COM188
+
+DOWNBASE:0 += 10
+DOWNBASE:1 += 180
+
+SOURCE:12 = 800
+SOURCE:22 = 100
+SOURCE:31 = 1500
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:12 += 1500
+	SOURCE:31 += 3000
+ELSEIF ABL:14 == 1
+	SOURCE:19 += (ABL:11 + ABL:14) * 10
+	SOURCE:12 += 1250
+	SOURCE:31 += 1500
+ELSEIF ABL:14 == 2
+	SOURCE:19 += (ABL:11 + ABL:14) * 20
+	SOURCE:12 += 1000
+	SOURCE:31 += 800
+ELSEIF ABL:14 == 3
+	SOURCE:19 += (ABL:11 + ABL:14) * 40
+	SOURCE:12 += 750
+	SOURCE:31 += 400
+ELSEIF ABL:14 == 4
+	SOURCE:19 += (ABL:11 + ABL:14) * 80
+	SOURCE:12 += 500
+	SOURCE:31 += 200
+ELSE
+	SOURCE:19 += (ABL:11 + ABL:14) * 140
+	SOURCE:12 += 250
+	SOURCE:31 += 100
+ENDIF
+
+;부끄럼쟁이·부끄럼없음
+IF TALENT:35
+	TIMES SOURCE:12 , 1.20
+	TIMES SOURCE:22 , 1.20
+ELSEIF TALENT:36
+	TIMES SOURCE:12 , 0.80
+	TIMES SOURCE:22 , 0.80
+ENDIF
+
+;노예의 A⇔조교자의 손의 불결이 이동
+STAIN:4 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:4
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM188
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF EQUIP:14 == 0 && TFLAG:899 == 0
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 
+	SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINT 항문을 
+	SIF TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0)
+		PRINT 거울에 비치도록 
+	PRINTL 손으로 벌려
+	PRINTL 찬찬히 바라보며 주름의 수를 소리 높여 세기 시작했다.
+	IF TALENT:35
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 나머지 얼굴을 새빨갛게 하고 있다….
+	ELSEIF TALENT:170 || TALENT:173 || TALENT:180
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거기에 격렬하게 쾌감을 느끼고 있는 것 같다….
+	ELSEIF MARK:9 >= 2  && TALENT:150 == 0 && TALENT:160 == 0
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 굴욕과 분노에 떨면서 억지로 참고 있다….
+	ELSE
+		PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러워서 고개를 숙여버렸다….
+	ENDIF
+;수면중
+ELSEIF EQUIP:14
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "가")% 자는 것도 상관없다는 듯이, 
+	SIF TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0)
+		PRINT 거울에 비치도록 하여 
+	SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINTFORML %CALLNAME:TARGET%의 항문을 손으로 벌려
+	PRINTW 찬찬히 바라보며 주름의 수를 소리 높여 세기 시작했다.
+;실신중
+ELSE
+	PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %조사선택(CALLNAME:TARGET, "가")% 기절한 것도 상관없다는 듯이, 
+	SIF TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0)
+		PRINT 거울에 비치도록 하여 
+	SIF EXP:1 <= 10
+		PRINT 단단히 닫혀있는 
+	PRINTFORML %CALLNAME:TARGET%의 항문을 손으로 벌려
+	PRINTW 찬찬히 바라보며 주름의 수를 소리 높여 세기 시작했다.
+ENDIF

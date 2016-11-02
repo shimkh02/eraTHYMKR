@@ -1,0 +1,378 @@
+﻿;---------------------------------------------------------
+; CONFIG_CUSTOMTOOL 技師パッチYM コンフィグファイル
+;---------------------------------------------------------
+;中毒者曰く：
+;技師パッチ用の各種コンフィグを扱うファイル
+;
+;以下関数群
+;@CONFIG_CUSTOMTOOL                                                  技師パッチYM基本コンフィグメニュー
+;@CONFIG_WORKSHOP                                                  工房用コンフィグメニュー
+;@SHOW_CONFIGURATION_SELECT_CUSTOMTOOL                               調教時アイテム自動選択設定表示
+;@CONFIGURATION_SELECT_CUSTOMTOOL                                    調教時アイテム自動選択設定メニュー
+;@CONFIGURATION_SELECT_WORKSHOP_LIST_SIZE                            工房内リスト表示サイズ設定
+;@SHOW_CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER 工房作業時主人意欲設定表示
+;@CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER      工房作業時主人意欲設定メニュー
+;@CONFIGURATION_SELECT_WORKSHOP_DEBUG_MESSAGES         工房デバッグ時メッセージ出力レベルメニュー
+
+;=======================================;
+;@CONFIG_CUSTOMTOOL 技師パッチYM基本コンフィグメニュー
+;=======================================;
+@CONFIG_CUSTOMTOOL
+LOCALS:0 = ×
+LOCALS:1 = ○
+DRAWLINE
+PRINTL 현재 조교 기구 개조 개발 기능 설정은 다음과 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경할 내용을 선택하세요.
+DRAWLINE
+PRINTS LOCALS:(FLAG:1100 & 1)
+PRINTL [ 0] 조교 기구 개조 개발 기능 사용
+IF FLAG:1100 & 1
+	PRINTS LOCALS:((FLAG:1100 & 2) == 2)
+	PRINTL [ 1] 특제 조교 기구에 개발자 별로 이름 사용
+	IF FLAG:1100 & 2
+		PRINTL 　[ 2] 능력 표시 시 개발자 별 특제 조교 기구 이름의 표시 방법
+		PRINT 　　　　(현재는 
+		IF FLAG:1100 & 4
+			PRINT 아이템 번호를
+		ELSE
+			PRINT 원래 조교 기구 이름을
+		ENDIF
+		PRINTL  병기하는 설정)
+	ENDIF
+	PRINTL 　[ 3] 조교할 때 사용하는 개조 아이템 선택
+	PRINT 　　　　(현재는 
+	CALL SHOW_CONFIGURATION_SELECT_CUSTOMTOOL
+	PRINTL  설정)
+	PRINTS LOCALS:((FLAG:1100 & 8) == 8)
+	PRINTL [ 4] 공방 사용 (공방 내 작업은 미실장)
+	IF FLAG:1100 & 8
+		PRINTFORML 　[ 5] 공방 내 캐릭터 리스트 표시 인원 (현재 한 화면에 {FLAG:1103}명 표시)
+		PRINTL 　[ 6] 주인의 공방 작업 시 주인의 의욕
+		PRINT 　　　　(현재는 
+		CALL SHOW_CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+		PRINTL  설정)
+		IF TALENT:MASTER:Debug
+			PRINTS LOCALS:((FLAG:1109 & 1) == 1)
+			PRINTL [99] 공방 디버깅 표시 사용
+		ENDIF
+	ENDIF
+ENDIF
+PRINTL  [100] 그만둔다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT == 0
+	PRINT 기사 패치를 
+	IF FLAG:1100 & 1
+		FLAG:1100 -= 1
+		PRINT 사용하지 않는 것으로
+	ELSE
+		FLAG:1100 |= 1
+		PRINT 사용하는 것으로
+	ENDIF
+	PRINTW  설정했습니다.
+ELSEIF FLAG:1100 & 1 && RESULT == 1
+	PRINT 특제품 개발자 별 특수한 이름을 
+	IF FLAG:1100 & 2
+		FLAG:1100 -= 2
+		PRINT 사용하지 않는 것으로
+	ELSE
+		FLAG:1100 |= 2
+		PRINT 사용하는 것으로
+	ENDIF
+	PRINTW  설정했습니다.
+ELSEIF (FLAG:1100 & 1) && (FLAG:1100 & 2) && RESULT == 2
+	PRINT 능력 표시에서 개발자 별 특제 조교 기구 이름에 
+	IF FLAG:1100 & 4
+		FLAG:1100 -= 4
+		PRINT 원래 조교 기구 이름을
+	ELSE
+		FLAG:1100 |= 4
+		PRINT 아이템 번호를
+	ENDIF
+	PRINTW  병기하는 것으로 설정했습니다.
+ELSEIF (FLAG:1100 & 1) && RESULT == 3
+	CALL CONFIGURATION_SELECT_CUSTOMTOOL
+ELSEIF (FLAG:1100 & 1) && RESULT == 4
+	IF FLAG:1100 & 8
+		FLAG:1100 -= 8
+		PRINTL 공방을 사용하지 않습니다.
+		PRINTL (공방 내의 캐릭터는 고립되어, 조교할 수 없습니다.)
+		PRINTL (공방 내에 캐릭터가 있을 경우 다시 공방 기능을 켜세요.)
+	ELSE
+		FLAG:1100 |= 8
+		PRINTL 공방을 사용합니다.
+		IF FLAG:1102 > 1
+			PRINTFORML 규모 {FLAG:1102}의 공방을 사용합니다.
+		ELSEIF FLAG:1102 > 0
+			PRINTL 공방 개설이 가능합니다.
+		ENDIF
+		IF FLAG:1103 < 1
+			FLAG:1103 = 10
+		ENDIF
+	ENDIF
+	WAIT
+ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && RESULT == 5
+	CALL CONFIGURATION_SELECT_WORKSHOP_LIST_SIZE
+ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && RESULT == 6
+	CALL CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && TALENT:MASTER:Debug && RESULT == 99
+	CALL CONFIGURATION_SELECT_WORKSHOP_DEBUG_MESSAGES
+ELSE
+	PRINTFORML 올바른 값을 입력하세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그 외의 
+GOTO INPUT_LOOP_0
+
+;=======================================;
+;CONFIG_WORKSHOP 工房用コンフィグメニュー
+;=======================================;
+@CONFIG_WORKSHOP
+LOCALS:0 = ×
+LOCALS:1 = ○
+DRAWLINE
+PRINTL 현재, 공방의 각종 설정은 다음과 같이 되어 있습니다.
+$INPUT_LOOP_0
+PRINTL 변경할 내용을 선택하세요.
+DRAWLINE
+PRINTFORML 　[ 5] 공방 내 캐릭터 리스트 표시 인원 (현재 한 화면에 {FLAG:1103}명 표시)
+PRINTL 　[ 6] 주인의 공방 작업 시 주인의 의욕
+PRINT 　　　　(현재는 
+CALL SHOW_CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+PRINTL  설정)
+;PRINTL 　[ 7] 공방 이벤트 메시지 표시
+IF TALENT:MASTER:Debug
+	PRINTS LOCALS:((FLAG:1109 & 1) == 1)
+	PRINTL [99] 공방 디버깅 표시 사용
+ENDIF
+PRINTL  [100] 그만둔다
+
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && RESULT == 5
+	CALL CONFIGURATION_SELECT_WORKSHOP_LIST_SIZE
+ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && RESULT == 6
+	CALL CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+;ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && RESULT == 7
+ELSEIF FLAG:1100 & 1 && FLAG:1100 & 8 && TALENT:MASTER:Debug && RESULT == 99
+	CALL CONFIGURATION_SELECT_WORKSHOP_DEBUG_MESSAGES
+ELSE
+	PRINTFORML 올바른 값을 입력하세요.
+	GOTO INPUT_LOOP_1
+ENDIF
+DRAWLINE
+PRINT 그 외의 
+GOTO INPUT_LOOP_0
+
+;=======================================;
+;@SHOW_CONFIGURATION_SELECT_CUSTOMTOOL 調教時アイテム自動選択設定表示
+;=======================================;
+@SHOW_CONFIGURATION_SELECT_CUSTOMTOOL
+IF FLAG:1101 == 10
+	PRINT 조교 대상의 것을 사용
+ELSEIF FLAG:1101 == 9
+	PRINT 조교자의 것을 사용
+ELSEIF FLAG:1101 == 8
+	PRINT 조교자와 상관 없이 주인의 것을 사용
+ELSEIF FLAG:1101 == 7
+	PRINT 조수의 것을 우선으로, 조수가 없으면 조교 대상의 것을 사용
+ELSEIF FLAG:1101 == 6
+	PRINT 조수의 것을 우선으로, 조수가 없으면 주인의 것을 사용
+ELSEIF FLAG:1101 == 5
+	PRINT 조수의 것을 우선으로, 조수가 없으면 무작위
+ELSEIF FLAG:1101 == 4
+	PRINT 조수의 것을 우선으로, 조수가 없으면 효과가 높은 것을 사용
+ELSEIF FLAG:1101 == 3
+	PRINT 조수의 것을 우선으로, 조수가 없으면 매번 선택
+ELSEIF FLAG:1101 == 2
+	PRINT 무작위
+ELSEIF FLAG:1101 == 1
+	PRINT 항상 효과가 높은 것을 사용
+ELSE
+	PRINT 매번 선택
+ENDIF
+RETURN 0
+
+;=======================================;
+;@CONFIGURATION_SELECT_CUSTOMTOOL 調教時アイテム自動選択設定
+;=======================================;
+@CONFIGURATION_SELECT_CUSTOMTOOL
+PRINTL 調教時に使用する改造アイテムを選んでください
+PRINTL [  0] 매번 선택
+PRINTL [  1] 항상 효과가 높은 것을 사용
+PRINTL [  2] 무작위
+PRINTL [  3] 조수의 것을 우선으로, 조수가 없으면 매번 선택
+PRINTL [  4] 조수의 것을 우선으로, 조수가 없으면 효과가 높은 것을 사용
+PRINTL [  5] 조수의 것을 우선으로, 조수가 없으면 무작위
+PRINTL [  6] 조수의 것을 우선으로, 조수가 없으면 주인의 것을 사용
+PRINTL [  7] 조수의 것을 우선으로, 조수가 없으면 조교 대상의 것을 사용
+PRINTL [  8] 조교자와 상관 없이 주인의 것을 사용
+PRINTL [  9] 조교자의 것을 사용(주인 조교 시：주인, 조수 조교 시：조수)
+PRINTL [ 10] 조교 대상의 것을 사용
+PRINTL [100] 변경하지 않음
+$INPUT_LOOP_1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT > -1 && RESULT < 11
+	FLAG:1101 = RESULT
+	CALL SHOW_CONFIGURATION_SELECT_CUSTOMTOOL
+	PRINTW  설정으로 변경했습니다.
+	RETURN 1
+ELSE
+	PRINTL 올바른 값을 입력하세요.
+ENDIF
+GOTO INPUT_LOOP_1
+
+;=======================================;
+;@CONFIGURATION_SELECT_WORKSHOP_LIST_SIZE 工房内リスト表示サイズ設定
+;=======================================;
+@CONFIGURATION_SELECT_WORKSHOP_LIST_SIZE
+PRINTL 공방 내 지시 화면에서 한번에 표시하는 인원 수를 지정하세요.
+PRINTFORML (현재{FLAG:1103}인 표시, 무효한 값 입력 시 돌아감)
+PRINTLC [ 0] 돌아가기
+PRINTLC [ 1] 1명
+PRINTLC [ 5] 5명
+PRINTLC [10] 10명
+PRINTLC [15] 15명
+PRINTLC [20] 20명
+INPUT
+IF RESULT > 0
+	FLAG:1103 = RESULT
+	PRINTFORMW 한 화면에 {FLAG:1103}명 표시하도록 설정했습니다.
+ENDIF
+RETURN 0
+
+;=======================================;
+;SHOW_CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER 工房作業時主人意欲設定表示
+;=======================================;
+@SHOW_CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+SELECTCASE FLAG:1106
+	CASE 0
+		PRINT 매번 변하는 정도의 의욕
+	CASE 1
+		PRINT 기강을 바로잡는 정도의 의욕
+	CASE 2
+		PRINT 규범이 될 정도의 의욕
+	CASE 3
+		PRINT 분위기에 맞춰주는 정도의 의욕
+	CASE 4
+		PRINT 유혹에 넘어가는 정도의 의욕
+	CASE 5
+		PRINT 놀러온 정도의 의욕
+ENDSELECT
+RETURN 0
+;
+;=======================================;
+;CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER 工房作業時主人意欲設定メニュー
+;=======================================;
+@CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+LOCALS:0 = 　
+LOCALS:1 = ☆
+PRINTL 주인의 공방 작업 시 의욕을 고르세요 (☆:현재의 설정)
+PRINTS LOCALS:(FLAG:1106 == 0)
+PRINTL [  0]매번 변하는 정도의 의욕
+PRINTS LOCALS:(FLAG:1106 == 1)
+PRINTL [  1]기강을 바로잡는 정도의 의욕 (작업에 전념하며, 노예들이 게으름 피우지 않게 한다)
+PRINTS LOCALS:(FLAG:1106 == 2)
+PRINTL [  2]규범이 될 정도의 의욕 (자기도 빠지지 않고 작업에 임한다)
+PRINTS LOCALS:(FLAG:1106 == 3)
+PRINTL [  3]분위기에 맞춰주는 정도의 의욕 (작업하거나 공방 안의 상황을 받아들인다)
+PRINTS LOCALS:(FLAG:1106 == 4)
+PRINTL [  4]유혹에 넘어가는 정도의 의욕 (노예가 유혹하면 반드시 받아준다)
+PRINTS LOCALS:(FLAG:1106 == 5)
+PRINTL [  5]놀러온 정도의 의욕 (자기 작업을 수행하지 않고, 다른 작업을 방해한다)
+PRINTL 　[100]변경하지 않음
+$INPUT_LOOP_1
+INPUT
+SELECTCASE RESULT
+	CASE 100
+		RETURN 0
+	CASE 0 TO 5
+		FLAG:1106 = RESULT
+		CALL SHOW_CONFIGURATION_SELECT_WORKSHOP_MOTIVATION_MASTER
+		PRINTL 으로 설정했습니다.
+		RETURN 1
+	CASEELSE
+		PRINTL 올바른 값을 입력하세요.
+ENDSELECT
+GOTO INPUT_LOOP_1
+
+;=======================================;
+;CONFIGURATION_SELECT_WORKSHOP_DEBUG_MESSAGES 工房作業時主人意欲設定メニュー
+;=======================================;
+@CONFIGURATION_SELECT_WORKSHOP_DEBUG_MESSAGES
+LOCALS:0 = ×
+LOCALS:1 = ○
+PRINTL 현재 공방 내 디버깅 출력 설정은 다음과 같습니다.
+WHILE 1
+	PRINTS LOCALS:((FLAG:1109 & 1) == 1)
+	PRINTL [  0]디버깅 출력을 실시한다
+	IF FLAG:1109 & 1
+		PRINTS LOCALS:((FLAG:1109 & 2) == 2)
+		PRINTL [  1]함수 출입 시 디버깅 출력을 실시한다
+		PRINTS LOCALS:((FLAG:1109 & 4) == 4)
+		PRINTL [  2]변수에 대한 디버깅 출력을 실시한다
+		PRINTS LOCALS:((FLAG:1109 & 8) == 8)
+		PRINTL [  3]분기 이동 시 디버깅 출력을 실시한다
+	ENDIF
+	PRINTL 　[100]돌아간다
+	WHILE 1
+		INPUT
+		SELECTCASE RESULT
+			CASE 100
+				RETURN 0
+			CASE 0
+				IF FLAG:1109 & 1
+					FLAG:1109 -= 1
+					PRINTW 디버깅 출력을 실시하지 않는 것으로 설정했습니다.
+				ELSE
+					FLAG:1109 |= 1
+					PRINTW 디버깅 출력을 실시하는 것으로 설정했습니다.
+				ENDIF
+				BREAK
+			CASE 1
+				IF FLAG:1109 & 1
+					IF FLAG:1109 & 2
+						FLAG:1109 -= 2
+						PRINTW 함수 출입 시 디버깅 출력을 실시하지 않는 것으로 설정했습니다.
+					ELSE
+						FLAG:1109 |= 2
+						PRINTW 함수 출입 시 디버깅 출력을 실시하는 것으로 설정했습니다.
+					ENDIF
+					BREAK
+				ENDIF
+			CASE 2
+				IF FLAG:1109 & 1
+					IF FLAG:1109 & 4
+						FLAG:1109 -= 4
+						PRINTW 변수에 대한 디버깅 출력을 실시하지 않는 것으로 설정했습니다.
+					ELSE
+						FLAG:1109 |= 4
+						PRINTW 변수에 대한 디버깅 출력을 실시하는 것으로 설정했습니다.
+					ENDIF
+					BREAK
+				ENDIF
+			CASE 3
+				IF FLAG:1109 & 1
+					IF FLAG:1109 & 8
+						FLAG:1109 -= 8
+						PRINTW 분기 이동 시 디버깅 출력을 실시하지 않는 것으로 설정했습니다.
+					ELSE
+						FLAG:1109 |= 8
+						PRINTW 분기 이동 시 디버깅 출력을 실시하는 것으로 설정했습니다.
+					ENDIF
+					BREAK
+				ENDIF
+		ENDSELECT
+		PRINTL 올바른 값을 입력하세요.
+	WEND
+	PRINTL 공방 내 디버깅 출력 설정은 다음과 같이 되었습니다.
+WEND

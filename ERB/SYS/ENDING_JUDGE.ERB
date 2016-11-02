@@ -1,0 +1,1576 @@
+﻿;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;엔딩 관련 처리
+;
+;여기서는 주로 각 엔딩 판정을 실행한다
+;≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+;=============================================================================
+;판정용 범용 함수군
+;=============================================================================
+;-------------------------------------------------
+;조수 가능 캐릭터의 계산
+;-------------------------------------------------
+@GET_ABLE_ASSI
+#FUNCTION
+;이번 주위에서 이미 계산 완료라면 가격만 반사한다
+SIF LOCAL:1 == FLAG:6
+	RETURNF LOCAL
+LOCAL = 0
+FOR COUNT, 1, CHARANUM
+	SIF CFLAG:COUNT:1 == 2 && CFLAG:COUNT:4 != 1
+		LOCAL++
+NEXT
+;계산 완료 플래그
+LOCAL:1 = FLAG:6
+RETURNF LOCAL
+
+;-------------------------------------------------
+;여성 캐릭터의 연모 판정
+;-------------------------------------------------
+@CHECK_FEMALE_CHARA(ARG, ARG:1)
+#FUNCTION
+;ARG：캐릭터의 NO
+RETURNF (GETCHARA(ARG, ARG:1) != -1 && TALENT:GETCHARA(ARG, ARG:1):120 == 0 && TALENT:GETCHARA(ARG, ARG:1):150 && CFLAG:GETCHARA(ARG, ARG:1):4 != 1)
+
+;-------------------------------------------------
+;남성 캐릭터의 연모 판정
+;-------------------------------------------------
+@CHECK_MALE_CHARA(ARG, ARG:1)
+#FUNCTION
+;ARG：캐릭터의 NO
+RETURNF (GETCHARA(ARG, ARG:1) != -1 && TALENT:GETCHARA(ARG, ARG:1):120 && TALENT:GETCHARA(ARG, ARG:1):150 && CFLAG:GETCHARA(ARG, ARG:1):4 != 1)
+
+;-------------------------------------------------
+;성별 조건 없을 때의 캐릭터 연모 판정
+;-------------------------------------------------
+@CHECK_CHARA(ARG, ARG:1)
+#FUNCTION
+;ARG：캐릭터의 NO
+RETURNF (GETCHARA(ARG, ARG:1) != -1 && TALENT:GETCHARA(ARG, ARG:1):150 && CFLAG:GETCHARA(ARG, ARG:1):4 != 1)
+
+;-------------------------------------------------
+;성별 조건 없을 때의 캐릭터 조수 판정
+;-------------------------------------------------
+@CHECK_CHARA_ASSI(ARG, ARG:1)
+#FUNCTION
+;ARG：캐릭터의 NO
+RETURNF (GETCHARA(ARG, ARG:1) != -1 && CFLAG:GETCHARA(ARG, ARG:1):1 == 2 && CFLAG:GETCHARA(ARG, ARG:1):4 != 1)
+
+;=============================================================================
+;각 엔딩의 판정
+;=============================================================================
+;-------------------------------------------------
+;통상 하렘 엔딩
+;-------------------------------------------------
+@ENDING_JUDGE2
+RETURN (GET_ABLE_ASSI() >= 10)
+
+;-------------------------------------------------
+;영이 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE5
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(100)
+LOCAL += CHECK_FEMALE_CHARA(122)
+LOCAL += CHECK_FEMALE_CHARA(123)
+LOCAL += CHECK_FEMALE_CHARA(124)
+LOCAL += CHECK_FEMALE_CHARA(125)
+
+;남성 캐릭터 열거
+LOCAL:1 += CHECK_MALE_CHARA(121)
+
+;그 외 캐릭터 열거
+LOCAL:2 += CHECK_CHARA(120)
+
+RETURN (LOCAL >= 6 && LOCAL:1 && LOCAL:2)
+
+;-------------------------------------------------
+;봉마 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE6
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+SIF CHECK_FEMALE_CHARA(2, 1) && CFLAG:GETCHARA(2, 1):0 == 1
+	LOCAL++
+LOCAL += CHECK_FEMALE_CHARA(100)
+LOCAL += CHECK_FEMALE_CHARA(101)
+LOCAL += CHECK_FEMALE_CHARA(102)
+
+RETURN (LOCAL >= 5)
+
+;-------------------------------------------------
+;몽시공 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE7
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(103)
+LOCAL += CHECK_FEMALE_CHARA(104)
+LOCAL += CHECK_FEMALE_CHARA(105)
+LOCAL += CHECK_FEMALE_CHARA(106)
+LOCAL += CHECK_FEMALE_CHARA(107)
+LOCAL += CHECK_FEMALE_CHARA(108)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(127)
+
+RETURN (LOCAL >= 6) ? ((LOCAL:1) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;환상향 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE8
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(34)
+LOCAL += CHECK_FEMALE_CHARA(109)
+LOCAL += CHECK_FEMALE_CHARA(110)
+LOCAL += CHECK_FEMALE_CHARA(111)
+LOCAL += CHECK_FEMALE_CHARA(112)
+LOCAL += CHECK_FEMALE_CHARA(113)
+
+RETURN (LOCAL >= 6)
+
+;-------------------------------------------------
+;괴기담 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE9
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+SIF CHECK_FEMALE_CHARA(14, 1) && CFLAG:GETCHARA(14, 1):0 == 1
+	LOCAL++
+LOCAL += CHECK_FEMALE_CHARA(116)
+LOCAL += CHECK_FEMALE_CHARA(117)
+LOCAL += CHECK_FEMALE_CHARA(118)
+LOCAL += CHECK_FEMALE_CHARA(119)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(114)
+LOCAL:1 += CHECK_CHARA(115)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 2) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;홍마향 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE10
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(6)
+LOCAL += CHECK_FEMALE_CHARA(8)
+LOCAL += CHECK_FEMALE_CHARA(9)
+LOCAL += CHECK_FEMALE_CHARA(10)
+LOCAL += CHECK_FEMALE_CHARA(11)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(3)
+LOCAL:1 += CHECK_CHARA(4)
+LOCAL:1 += CHECK_CHARA(5)
+LOCAL:1 += CHECK_CHARA(7)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 4) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;요요몽 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE11
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(13)
+LOCAL += CHECK_FEMALE_CHARA(19)
+LOCAL += CHECK_FEMALE_CHARA(20)
+LOCAL += CHECK_FEMALE_CHARA(21)
+LOCAL += CHECK_FEMALE_CHARA(22)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(5)
+LOCAL:1 += CHECK_CHARA(12)
+LOCAL:1 += CHECK_CHARA(14)
+LOCAL:1 += CHECK_CHARA(15)
+LOCAL:1 += CHECK_CHARA(16)
+LOCAL:1 += CHECK_CHARA(17)
+LOCAL:1 += CHECK_CHARA(18)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 7) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;췌몽상 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE12
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(22)
+LOCAL += CHECK_FEMALE_CHARA(23)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(6)
+LOCAL:1 += CHECK_CHARA_ASSI(8)
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(10)
+LOCAL:1 += CHECK_CHARA_ASSI(14)
+LOCAL:1 += CHECK_CHARA_ASSI(19)
+LOCAL:1 += CHECK_CHARA_ASSI(20)
+
+;ENDING 파생용 판정
+LOCAL:2 += CHECK_CHARA(6)
+LOCAL:2 += CHECK_CHARA(8)
+LOCAL:2 += CHECK_CHARA(9)
+LOCAL:2 += CHECK_CHARA(10)
+LOCAL:2 += CHECK_CHARA(14)
+LOCAL:2 += CHECK_CHARA(19)
+LOCAL:2 += CHECK_CHARA(20)
+
+RETURN (LOCAL >= 4 && LOCAL:1 >= 6) ? ((LOCAL:2 >= 7) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;영야초 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE13
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(27)
+LOCAL += CHECK_FEMALE_CHARA(28)
+LOCAL += CHECK_FEMALE_CHARA(29)
+LOCAL += CHECK_FEMALE_CHARA(30)
+LOCAL += CHECK_FEMALE_CHARA(31)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(1)
+LOCAL:1 += CHECK_CHARA(2)
+LOCAL:1 += CHECK_CHARA(24)
+LOCAL:1 += CHECK_CHARA(25)
+LOCAL:1 += CHECK_CHARA(26)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 5) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;화영총 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE14
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(35)
+LOCAL += CHECK_FEMALE_CHARA(36)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(1)
+LOCAL:1 += CHECK_CHARA_ASSI(2)
+LOCAL:1 += CHECK_CHARA_ASSI(5)
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(16)
+LOCAL:1 += CHECK_CHARA_ASSI(19)
+LOCAL:1 += CHECK_CHARA_ASSI(25)
+LOCAL:1 += CHECK_CHARA_ASSI(27)
+LOCAL:1 += CHECK_CHARA_ASSI(28)
+LOCAL:1 += CHECK_CHARA_ASSI(32)
+LOCAL:1 += CHECK_CHARA_ASSI(33)
+LOCAL:1 += CHECK_CHARA_ASSI(34)
+
+;ENDING 파생용 판정
+LOCAL:2 += CHECK_CHARA(1)
+LOCAL:2 += CHECK_CHARA(2)
+LOCAL:2 += CHECK_CHARA(5)
+LOCAL:2 += CHECK_CHARA(9)
+LOCAL:2 += CHECK_CHARA(16)
+LOCAL:2 += CHECK_CHARA(19)
+LOCAL:2 += CHECK_CHARA(25)
+LOCAL:2 += CHECK_CHARA(27)
+LOCAL:2 += CHECK_CHARA(28)
+LOCAL:2 += CHECK_CHARA(32)
+LOCAL:2 += CHECK_CHARA(33)
+LOCAL:2 += CHECK_CHARA(34)
+
+RETURN (LOCAL >= 2 && LOCAL:1 >= 7) ? ((LOCAL:2 >= 12) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;풍신록 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE15
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(32)
+LOCAL += CHECK_FEMALE_CHARA(40)
+LOCAL += CHECK_FEMALE_CHARA(42)
+LOCAL += CHECK_FEMALE_CHARA(43)
+LOCAL += CHECK_FEMALE_CHARA(44)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(37)
+LOCAL:1 += CHECK_CHARA(38)
+LOCAL:1 += CHECK_CHARA(39)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 3) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;비상천 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE16
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(23)
+LOCAL += CHECK_FEMALE_CHARA(51)
+LOCAL += CHECK_FEMALE_CHARA(52)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(1)
+LOCAL:1 += CHECK_CHARA_ASSI(2)
+LOCAL:1 += CHECK_CHARA_ASSI(8)
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(10)
+LOCAL:1 += CHECK_CHARA_ASSI(14)
+LOCAL:1 += CHECK_CHARA_ASSI(19)
+LOCAL:1 += CHECK_CHARA_ASSI(20)
+LOCAL:1 += CHECK_CHARA_ASSI(22)
+LOCAL:1 += CHECK_CHARA_ASSI(28)
+LOCAL:1 += CHECK_CHARA_ASSI(32)
+LOCAL:1 += CHECK_CHARA_ASSI(35)
+
+;ENDING 파생용 판정
+LOCAL:2 += CHECK_CHARA(1)
+LOCAL:2 += CHECK_CHARA(2)
+LOCAL:2 += CHECK_CHARA(8)
+LOCAL:2 += CHECK_CHARA(9)
+LOCAL:2 += CHECK_CHARA(10)
+LOCAL:2 += CHECK_CHARA(14)
+LOCAL:2 += CHECK_CHARA(19)
+LOCAL:2 += CHECK_CHARA(20)
+LOCAL:2 += CHECK_CHARA(22)
+LOCAL:2 += CHECK_CHARA(28)
+LOCAL:2 += CHECK_CHARA(32)
+LOCAL:2 += CHECK_CHARA(35)
+
+RETURN (LOCAL >= 3 && LOCAL:1 >= 7) ? ((LOCAL:2 >= 12) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;지령전 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE17
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(60)
+LOCAL += CHECK_FEMALE_CHARA(61)
+LOCAL += CHECK_FEMALE_CHARA(62)
+LOCAL += CHECK_FEMALE_CHARA(63)
+LOCAL += CHECK_FEMALE_CHARA(64)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(57)
+LOCAL:1 += CHECK_CHARA(58)
+LOCAL:1 += CHECK_CHARA(59)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 3) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;맹월초 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE18
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(22)
+LOCAL += CHECK_FEMALE_CHARA(29)
+LOCAL += CHECK_FEMALE_CHARA(53)
+LOCAL += CHECK_FEMALE_CHARA(54)
+LOCAL += CHECK_FEMALE_CHARA(55)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(1)
+LOCAL:1 += CHECK_CHARA_ASSI(2)
+LOCAL:1 += CHECK_CHARA_ASSI(8)
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(10)
+LOCAL:1 += CHECK_CHARA_ASSI(19)
+LOCAL:1 += CHECK_CHARA_ASSI(20)
+LOCAL:1 += CHECK_CHARA_ASSI(21)
+LOCAL:1 += CHECK_CHARA_ASSI(22)
+LOCAL:1 += CHECK_CHARA_ASSI(28)
+LOCAL:1 += CHECK_CHARA_ASSI(29)
+LOCAL:1 += CHECK_CHARA_ASSI(53)
+LOCAL:1 += CHECK_CHARA_ASSI(54)
+LOCAL:1 += CHECK_CHARA_ASSI(55)
+
+RETURN (LOCAL >= 5 && LOCAL:1 >= 5) ? ((LOCAL:2 >= 12) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;성련선 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE19
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(71)
+LOCAL += CHECK_FEMALE_CHARA(73)
+LOCAL += CHECK_FEMALE_CHARA(75)
+LOCAL += CHECK_FEMALE_CHARA(76)
+LOCAL += CHECK_FEMALE_CHARA(77)
+LOCAL += CHECK_FEMALE_CHARA(78)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(72)
+LOCAL:1 += CHECK_CHARA(74)
+SIF GETCHARA(72) != -1 && TALENT:GETCHARA(72):151
+	LOCAL:2 += 1
+
+RETURN (LOCAL >= 6) ? ((LOCAL:1 >= 2) ? ((LOCAL:2) ? 4 # 2) # 1) # 0
+
+;-------------------------------------------------
+;향림당 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE20
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(22)
+LOCAL += CHECK_FEMALE_CHARA(68)
+
+;남성 캐릭터 열거
+LOCAL += CHECK_MALE_CHARA(69)
+
+RETURN (LOCAL >= 5)
+
+;-------------------------------------------------
+;삼월정 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE21
+VARSET LOCAL, 0
+
+;여성 캐릭터 열거
+LOCAL += (CHECK_FEMALE_CHARA(1) && CHECK_CHARA_ASSI(1))
+LOCAL += (CHECK_FEMALE_CHARA(2) && CHECK_CHARA_ASSI(2))
+LOCAL += (CHECK_FEMALE_CHARA(45) && CHECK_CHARA_ASSI(45))
+LOCAL += (CHECK_FEMALE_CHARA(46) && CHECK_CHARA_ASSI(46))
+LOCAL += (CHECK_FEMALE_CHARA(47) && CHECK_CHARA_ASSI(47))
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(4)
+LOCAL:1 += CHECK_CHARA_ASSI(5)
+LOCAL:1 += CHECK_CHARA_ASSI(6)
+LOCAL:1 += CHECK_CHARA_ASSI(8)
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(10)
+LOCAL:1 += CHECK_CHARA_ASSI(14)
+LOCAL:1 += CHECK_CHARA_ASSI(15)
+LOCAL:1 += CHECK_CHARA_ASSI(19)
+LOCAL:1 += CHECK_CHARA_ASSI(22)
+LOCAL:1 += CHECK_CHARA_ASSI(23)
+LOCAL:1 += CHECK_CHARA_ASSI(27)
+LOCAL:1 += CHECK_CHARA_ASSI(28)
+LOCAL:1 += CHECK_CHARA_ASSI(29)
+LOCAL:1 += CHECK_CHARA_ASSI(35)
+
+RETURN (LOCAL >= 5 && LOCAL:1 >= 5)
+
+;-------------------------------------------------
+;문화첩 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE22
+VARSET LOCAL, 0
+
+;주인의 기교나 촬영 기능이 5 미만이라면 안 나옴
+SIF ABL:MASTER:12 < 5 || ABL:MASTER:71 < 5
+	RETURN 0
+;아야야야야 체크
+LOCAL += (CHECK_FEMALE_CHARA(32) && CHECK_CHARA_ASSI(32) && TALENT:GETCHARA(32):160 && ABL:GETCHARA(32):12 >= 5 && ABL:GETCHARA(32):71 >= 5)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(3)
+LOCAL:1 += CHECK_CHARA_ASSI(5)
+LOCAL:1 += CHECK_CHARA_ASSI(6)
+LOCAL:1 += CHECK_CHARA_ASSI(8)
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(10)
+LOCAL:1 += CHECK_CHARA_ASSI(11)
+LOCAL:1 += CHECK_CHARA_ASSI(12)
+LOCAL:1 += CHECK_CHARA_ASSI(13)
+LOCAL:1 += CHECK_CHARA_ASSI(14)
+LOCAL:1 += CHECK_CHARA_ASSI(19)
+LOCAL:1 += CHECK_CHARA_ASSI(20)
+LOCAL:1 += CHECK_CHARA_ASSI(21)
+LOCAL:1 += CHECK_CHARA_ASSI(22)
+LOCAL:1 += CHECK_CHARA_ASSI(23)
+LOCAL:1 += CHECK_CHARA_ASSI(24)
+LOCAL:1 += CHECK_CHARA_ASSI(26)
+LOCAL:1 += CHECK_CHARA_ASSI(27)
+LOCAL:1 += CHECK_CHARA_ASSI(28)
+LOCAL:1 += CHECK_CHARA_ASSI(29)
+LOCAL:1 += CHECK_CHARA_ASSI(30)
+LOCAL:1 += CHECK_CHARA_ASSI(31)
+LOCAL:1 += CHECK_CHARA_ASSI(33)
+LOCAL:1 += CHECK_CHARA_ASSI(35)
+LOCAL:1 += CHECK_CHARA_ASSI(36)
+
+RETURN (LOCAL >= 1 && LOCAL:1 >= 11)
+
+;-------------------------------------------------
+;자가선 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE23
+VARSET LOCAL, 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(45)
+LOCAL += CHECK_FEMALE_CHARA(46)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(22)
+LOCAL:1 += CHECK_CHARA_ASSI(23)
+LOCAL:1 += CHECK_CHARA_ASSI(35)
+LOCAL:1 += CHECK_CHARA_ASSI(40)
+LOCAL:1 += CHECK_CHARA_ASSI(43)
+LOCAL:1 += CHECK_CHARA_ASSI(44)
+LOCAL:1 += CHECK_CHARA_ASSI(81)
+LOCAL:1 += CHECK_CHARA_ASSI(83)
+LOCAL:1 += CHECK_CHARA_ASSI(87)
+
+RETURN (LOCAL >= 4 && LOCAL:1 >= 6)
+
+;-------------------------------------------------
+;요정대전쟁 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE24
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;주인이 [요정지식] 이나 [요정]이 없으면 안 됨 - 일단 임시로 이 조건은 빼놓음
+;SIF !(TALENT:MASTER:57 || TALENT:MASTER:200)
+;	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(5)
+LOCAL += CHECK_FEMALE_CHARA(45)
+LOCAL += CHECK_FEMALE_CHARA(46)
+LOCAL += CHECK_FEMALE_CHARA(47)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(4)
+LOCAL:1 += CHECK_CHARA(15)
+LOCAL:1 += CHECK_CHARA(56)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 3) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;신령묘 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE25
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(82)
+LOCAL += CHECK_FEMALE_CHARA(83)
+LOCAL += CHECK_FEMALE_CHARA(84)
+LOCAL += CHECK_FEMALE_CHARA(85)
+LOCAL += CHECK_FEMALE_CHARA(86)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(81)
+LOCAL:1 += CHECK_CHARA(87)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 2) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;영나암 엔딩 판정
+;-------------------------------------------------
+;@ENDING_JUDGE26
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(48)
+LOCAL += CHECK_FEMALE_CHARA(88)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(9)
+LOCAL:1 += CHECK_CHARA_ASSI(10)
+LOCAL:1 += CHECK_CHARA_ASSI(87)
+LOCAL:1 += CHECK_CHARA_ASSI(89)
+LOCAL:1 += CHECK_CHARA_ASSI(226)
+
+RETURN (LOCAL >= 4 && LOCAL:1 >= 5)
+
+;-------------------------------------------------
+;심기루 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE27
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(64)
+LOCAL += CHECK_FEMALE_CHARA(77)
+LOCAL += CHECK_FEMALE_CHARA(86)
+LOCAL += CHECK_FEMALE_CHARA(87)
+LOCAL += CHECK_FEMALE_CHARA(89)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(2)
+LOCAL:1 += CHECK_CHARA_ASSI(40)
+LOCAL:1 += CHECK_CHARA_ASSI(73)
+LOCAL:1 += CHECK_CHARA_ASSI(74)
+LOCAL:1 += CHECK_CHARA_ASSI(85)
+
+;ENDING 파생용 판정
+LOCAL:2 += CHECK_CHARA(2)
+LOCAL:2 += CHECK_CHARA(40)
+LOCAL:2 += CHECK_CHARA(73)
+LOCAL:2 += CHECK_CHARA(85)
+
+RETURN (LOCAL >= 6 && LOCAL:1 >= 4) ? ((LOCAL:2 >= 4) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;휘침성 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE28
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(223)
+LOCAL += CHECK_FEMALE_CHARA(224)
+LOCAL += CHECK_FEMALE_CHARA(225)
+LOCAL += CHECK_FEMALE_CHARA(226)
+LOCAL += CHECK_FEMALE_CHARA(227)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(220)
+LOCAL:1 += CHECK_CHARA(221)
+LOCAL:1 += CHECK_CHARA(222)
+
+RETURN (LOCAL >= 5) ? ((LOCAL:1 >= 3) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;더블스포일러 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE29
+VARSET LOCAL, 0
+;주인의 기교나 촬영 기능이 5 미만이라면 안 나옴
+SIF ABL:MASTER:12 < 5 || ABL:MASTER:71 < 5
+	RETURN 0
+;아야, 하타테 체크
+LOCAL += (CHECK_FEMALE_CHARA(32) && CHECK_CHARA_ASSI(32) && TALENT:GETCHARA(32):160 && ABL:GETCHARA(32):12 >= 5 && ABL:GETCHARA(32):71 >= 5)
+LOCAL += (CHECK_FEMALE_CHARA(79) && CHECK_CHARA_ASSI(79) && TALENT:GETCHARA(79):160 && ABL:GETCHARA(79):12 >= 5 && ABL:GETCHARA(79):71 >= 5)
+
+;조수 가능 캐릭터 판정
+LOCAL:1 += CHECK_CHARA_ASSI(37)
+LOCAL:1 += CHECK_CHARA_ASSI(38)
+LOCAL:1 += CHECK_CHARA_ASSI(39)
+LOCAL:1 += CHECK_CHARA_ASSI(40)
+LOCAL:1 += CHECK_CHARA_ASSI(41)
+LOCAL:1 += CHECK_CHARA_ASSI(42)
+LOCAL:1 += CHECK_CHARA_ASSI(43)
+LOCAL:1 += CHECK_CHARA_ASSI(44)
+LOCAL:1 += CHECK_CHARA_ASSI(57)
+LOCAL:1 += CHECK_CHARA_ASSI(58)
+LOCAL:1 += CHECK_CHARA_ASSI(59)
+LOCAL:1 += CHECK_CHARA_ASSI(60)
+LOCAL:1 += CHECK_CHARA_ASSI(61)
+LOCAL:1 += CHECK_CHARA_ASSI(62)
+LOCAL:1 += CHECK_CHARA_ASSI(63)
+LOCAL:1 += CHECK_CHARA_ASSI(64)
+LOCAL:1 += CHECK_CHARA_ASSI(71)
+LOCAL:1 += CHECK_CHARA_ASSI(72)
+LOCAL:1 += CHECK_CHARA_ASSI(73)
+LOCAL:1 += CHECK_CHARA_ASSI(74)
+LOCAL:1 += CHECK_CHARA_ASSI(75)
+LOCAL:1 += CHECK_CHARA_ASSI(76)
+LOCAL:1 += CHECK_CHARA_ASSI(77)
+LOCAL:1 += CHECK_CHARA_ASSI(78)
+
+RETURN (LOCAL >= 2 && LOCAL:1 >= 10)
+
+;-------------------------------------------------
+;하쿠레이 신사 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE50
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(1)
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(14)
+LOCAL += CHECK_FEMALE_CHARA(23)
+LOCAL += CHECK_FEMALE_CHARA(48)
+LOCAL += CHECK_FEMALE_CHARA(100)
+
+RETURN (LOCAL >= 6)
+
+;-------------------------------------------------
+;인형사 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE51
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += (CHECK_FEMALE_CHARA(14, 1) && CFLAG:GETCHARA(14, 1):0 == 0)
+LOCAL += CHECK_FEMALE_CHARA(33)
+LOCAL += CHECK_FEMALE_CHARA(66)
+LOCAL += CHECK_FEMALE_CHARA(67)
+LOCAL += CHECK_FEMALE_CHARA(96)
+LOCAL += CHECK_FEMALE_CHARA(97)
+
+RETURN (LOCAL >= 6)
+
+;-------------------------------------------------
+;환상악단 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE52
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(16)
+LOCAL += CHECK_FEMALE_CHARA(17)
+LOCAL += CHECK_FEMALE_CHARA(18)
+LOCAL += CHECK_FEMALE_CHARA(25)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_CHARA(81)
+LOCAL:1 += CHECK_CHARA(223)
+LOCAL:1 += CHECK_CHARA(224)
+LOCAL:1 += CHECK_CHARA(227)
+
+RETURN (LOCAL >= 4) ? ((LOCAL:1 >= 4) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;요치원 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE53
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(4)
+LOCAL += CHECK_FEMALE_CHARA(5)
+LOCAL += CHECK_FEMALE_CHARA(15)
+LOCAL += CHECK_FEMALE_CHARA(45)
+LOCAL += CHECK_FEMALE_CHARA(46)
+LOCAL += CHECK_FEMALE_CHARA(47)
+
+RETURN (LOCAL >= 6)
+
+;-------------------------------------------------
+;누님 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE54
+VARSET LOCAL, 0
+
+;여성 캐릭터 열거
+LOCAL += (CHECK_FEMALE_CHARA(20) && CHECK_CHARA_ASSI(20))
+LOCAL += (CHECK_FEMALE_CHARA(21) && CHECK_CHARA_ASSI(21))
+LOCAL += (CHECK_FEMALE_CHARA(22) && CHECK_CHARA_ASSI(22))
+LOCAL += (CHECK_FEMALE_CHARA(29) && CHECK_CHARA_ASSI(29))
+LOCAL += (CHECK_FEMALE_CHARA(34) && CHECK_CHARA_ASSI(34))
+LOCAL += (CHECK_FEMALE_CHARA(35) && CHECK_CHARA_ASSI(35))
+LOCAL += (CHECK_FEMALE_CHARA(36) && CHECK_CHARA_ASSI(36))
+LOCAL += (CHECK_FEMALE_CHARA(43) && CHECK_CHARA_ASSI(43))
+LOCAL += (CHECK_FEMALE_CHARA(60) && CHECK_CHARA_ASSI(60))
+LOCAL += (CHECK_FEMALE_CHARA(100) && CHECK_CHARA_ASSI(100))
+LOCAL += (CHECK_FEMALE_CHARA(119) && CHECK_CHARA_ASSI(119))
+
+RETURN (LOCAL >= 11)
+
+;-------------------------------------------------
+;여동생 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE55
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(11)
+LOCAL += CHECK_FEMALE_CHARA(16)
+LOCAL += CHECK_FEMALE_CHARA(17)
+LOCAL += CHECK_FEMALE_CHARA(38)
+LOCAL += CHECK_FEMALE_CHARA(54)
+LOCAL += CHECK_FEMALE_CHARA(64)
+LOCAL += CHECK_FEMALE_CHARA(112)
+
+RETURN (LOCAL >= 7)
+
+;-------------------------------------------------
+;미움받는 자 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE56
+VARSET LOCAL, 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(33)
+LOCAL += CHECK_FEMALE_CHARA(39)
+LOCAL += CHECK_FEMALE_CHARA(58)
+LOCAL += CHECK_FEMALE_CHARA(59)
+LOCAL += CHECK_FEMALE_CHARA(61)
+
+RETURN (LOCAL >= 5)
+
+;-------------------------------------------------
+;동물랜드 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE57
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;연모 보유 캐릭터 수 열거
+LOCAL += CHECK_CHARA(10)
+LOCAL += CHECK_CHARA(11)
+LOCAL += CHECK_CHARA(21)
+LOCAL += CHECK_CHARA(24)
+LOCAL += CHECK_CHARA(25)
+LOCAL += CHECK_CHARA(27)
+LOCAL += CHECK_CHARA(28)
+LOCAL += CHECK_CHARA(32)
+LOCAL += CHECK_CHARA(41)
+LOCAL += CHECK_CHARA(44)
+LOCAL += CHECK_CHARA(55)
+LOCAL += CHECK_CHARA(58)
+LOCAL += CHECK_CHARA(61)
+LOCAL += CHECK_CHARA(62)
+LOCAL += CHECK_CHARA(63)
+LOCAL += CHECK_CHARA(71)
+LOCAL += CHECK_CHARA(76)
+LOCAL += CHECK_CHARA(79)
+LOCAL += CHECK_CHARA(87)
+LOCAL += CHECK_CHARA(220)
+LOCAL += CHECK_CHARA(222)
+
+;연모 보유한 첸이 필수
+RETURN (LOCAL >= 5 && CHECK_CHARA(13))
+
+;-------------------------------------------------
+;낭자애 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE58
+VARSET LOCAL, 0
+
+;남성 캐릭터 열거
+LOCAL += CHECK_MALE_CHARA(19)
+LOCAL += CHECK_MALE_CHARA(24)
+LOCAL += CHECK_MALE_CHARA(31)
+LOCAL += CHECK_MALE_CHARA(41)
+LOCAL += CHECK_MALE_CHARA(60)
+LOCAL += CHECK_MALE_CHARA(107)
+
+RETURN (LOCAL >= 6)
+
+;-------------------------------------------------
+;사나이의 세계 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE59
+VARSET LOCAL, 0
+
+;남성 캐릭터 열거
+LOCAL += CHECK_MALE_CHARA(69)
+LOCAL += CHECK_MALE_CHARA(70)
+LOCAL += CHECK_MALE_CHARA(74)
+LOCAL += CHECK_MALE_CHARA(99)
+LOCAL += CHECK_MALE_CHARA(121)
+
+RETURN (LOCAL >= 5)
+
+;-------------------------------------------------
+;미디어 왕 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE60
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += ((TALENT:COUNT:150 || TALENT:COUNT:170) && (TALENT:COUNT:94 || ABL:COUNT:71 >= 5) && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;착유 노예 목장 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE61
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += (CFLAG:COUNT:1 == 2 && TALENT:COUNT:134 && (ABL:COUNT:3 >= 5 || ABL:COUNT:34 >= 3) && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;교주님 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE62
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += (TALENT:COUNT:151 && TALENT:COUNT:153 == 0 && TALENT:COUNT:161 == 0 && TALENT:COUNT:162 == 0 && TALENT:COUNT:167 == 0 && TALENT:COUNT:168 == 0 && TALENT:COUNT:169 == 0 && TALENT:COUNT:180 == 0 && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;동방 하렘 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE63
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 51
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	;S패치 등을 고려하면 NO의 조건은 조금만 더 고쳐봐야 할지도
+	LOCAL += (TALENT:COUNT:150 && (NO:COUNT < 148 || NO:COUNT == 220 || NO:COUNT == 221 || NO:COUNT == 222 || NO:COUNT == 223 || NO:COUNT == 224 || NO:COUNT == 225 || NO:COUNT == 226 || NO:COUNT == 227) && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (50 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 50)
+
+;-------------------------------------------------
+;중간 보스 연합 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE64
+VARSET LOCAL, 0
+
+;아이템 사용에다 로터가 없는 상태면 못 봄
+SIF !(ITEM:0 || NOITEM)
+	RETURN 0
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(4)
+LOCAL += CHECK_FEMALE_CHARA(7)
+LOCAL += CHECK_FEMALE_CHARA(27)
+LOCAL += CHECK_FEMALE_CHARA(37)
+LOCAL += CHECK_FEMALE_CHARA(41)
+LOCAL += CHECK_FEMALE_CHARA(57)
+LOCAL += CHECK_FEMALE_CHARA(84)
+
+;여성 캐릭터 열거 그 두 번째
+LOCAL:1 += CHECK_FEMALE_CHARA(15)
+LOCAL:1 += CHECK_FEMALE_CHARA(56)
+
+RETURN (LOCAL >= 7 && LOCAL:1 >= 1)
+
+;-------------------------------------------------
+;10인의 귀부인 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE65
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(10)
+LOCAL += CHECK_FEMALE_CHARA(30)
+LOCAL += CHECK_FEMALE_CHARA(31)
+LOCAL += CHECK_FEMALE_CHARA(36)
+LOCAL += CHECK_FEMALE_CHARA(54)
+LOCAL += CHECK_FEMALE_CHARA(98)
+LOCAL += CHECK_FEMALE_CHARA(101)
+LOCAL += CHECK_FEMALE_CHARA(102)
+LOCAL += CHECK_FEMALE_CHARA(106)
+LOCAL += CHECK_FEMALE_CHARA(119)
+
+;위의 10명 외에 캐릭터가 있으면 안 된다
+RETURN (LOCAL >= 10 && CHARANUM == 11)
+
+;-------------------------------------------------
+;음마 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE66
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += (TALENT:COUNT:180 && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;악마왕 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE67
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += (TALENT:COUNT:169 && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;무명 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE68
+VARSET LOCAL, 0
+
+;캐릭터 수가 모자라면 불가
+SIF CHARANUM < 34
+	RETURN 0
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;캐릭터 번호가 150에서 199에 해당하는 캐릭터를 열거한다
+FOR LOCAL, 150, 200
+	;존재하지 않은 캐릭터는 떨궈낸다
+	SIF EXISTCSV(LOCAL , 0) <= 0
+		CONTINUE
+	LOCAL:1 += CHECK_CHARA(LOCAL)
+	LOCAL:2 += 1
+NEXT
+
+RETURN (LOCAL:1 >= LOCAL:2)
+
+;-------------------------------------------------
+;산의 신사 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE69
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(37)
+LOCAL += CHECK_FEMALE_CHARA(38)
+LOCAL += CHECK_FEMALE_CHARA(39)
+LOCAL += CHECK_FEMALE_CHARA(42)
+LOCAL += CHECK_FEMALE_CHARA(43)
+LOCAL += CHECK_FEMALE_CHARA(44)
+
+;ENDING 파생용 체크
+LOCAL:1 += CHECK_CHARA(119)
+LOCAL:1 += CHECK_CHARA(124)
+LOCAL:1 += CHECK_CHARA(125)
+
+RETURN (LOCAL >= 6) ? ((LOCAL:1 >= 3) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;무지개색 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE70
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(6)
+LOCAL += CHECK_FEMALE_CHARA(8)
+LOCAL += CHECK_FEMALE_CHARA(11)
+LOCAL += CHECK_FEMALE_CHARA(14)
+LOCAL += CHECK_FEMALE_CHARA(16)
+LOCAL += CHECK_FEMALE_CHARA(17)
+LOCAL += CHECK_FEMALE_CHARA(18)
+LOCAL += CHECK_FEMALE_CHARA(98)
+
+RETURN (LOCAL >= 8)
+
+;-------------------------------------------------
+;비매 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE71
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+RETURN (FLAG:33 <= 0 && FLAG:66 <= 0 && FLAG:67 <= 0)
+
+;-------------------------------------------------
+;대부호 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE72
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+RETURN (MONEY >= (MONEY:100*10))
+
+;-------------------------------------------------
+;도시락가게 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE73
+VARSET LOCAL, 0
+
+;주인의 요리 기능이 4 미만이라면 볼 필요 없음
+SIF ABL:MASTER:70 < 4
+	RETURN 0
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += ((TALENT:COUNT:150 || TALENT:COUNT:160) && (ABL:COUNT:70 >= 5 && EXP:COUNT:70 >= 200) && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;아이돌 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE74
+VARSET LOCAL, 0
+
+;주인이 가창 기능이든 조교사 Lv이든 안 가지고 있으면 못 봄
+SIF !(ABL:MASTER:72 || ABL:MASTER:99)
+	RETURN 0
+;주인이 [매력], [매혹], [수수께끼의 매력], [고무], [대범함] 모두 다 가지고 있지 않으면 못 봄
+SIF !(TALENT:MASTER:90 || TALENT:MASTER:91 || TALENT:MASTER:92 || TALENT:MASTER:95 || TALENT:MASTER:98)
+	RETURN 0
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += ((TALENT:COUNT:150 || TALENT:COUNT:160) && (ABL:COUNT:72 >= 5 && TALENT:COUNT:94) && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;연회 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE75
+VARSET LOCAL, 0
+
+;술 목욕탕 없으면 못 봄
+SIF !(FLAG:74 & 128)
+	RETURN 0
+;아이템 없음 설정이거나 술을 모든 종류 가지고 있지 않으면 못 봄
+SIF !(NOITEM || (ITEM:600 && ITEM:601 && ITEM:602 && ITEM:603 && ITEM:604 && ITEM:605))
+	RETURN 0
+;연모 보유한 스이카 · 유기 중 한쪽이라도 빠졌으면 못 봄
+SIF !(CHECK_CHARA(23) && CHECK_CHARA(60))
+	RETURN 0
+
+;필수인 스이카 · 유기 외에 대상 조수 가능 캐릭터를 열거
+FOR COUNT, 1, CHARANUM
+	SIF NO:COUNT != 23 && NO:COUNT != 60 && CFLAG:COUNT:4 != 1
+		LOCAL += (ABL:COUNT:12 > 4 || ABL:COUNT:70 > 4)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (8 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL > 7)
+
+;-------------------------------------------------
+;몽상 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE76
+VARSET LOCAL, 0
+
+;필수인 린이 연모에다 조수 가능이 아니라면 못 봄
+SIF !(CHECK_CHARA(147) && CHECK_CHARA_ASSI(147))
+	RETURN 0
+
+;캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(147)
+LOCAL:1 += (CHECK_CHARA_ASSI(147) && TALENT:GETCHARA(147):150)
+LOCAL += CHECK_FEMALE_CHARA(200)
+LOCAL:1 += (CHECK_CHARA_ASSI(200) && TALENT:GETCHARA(200):150)
+LOCAL += CHECK_FEMALE_CHARA(201)
+LOCAL:1 += (CHECK_CHARA_ASSI(201) && TALENT:GETCHARA(201):150)
+LOCAL += CHECK_FEMALE_CHARA(202)
+LOCAL:1 += (CHECK_CHARA_ASSI(202) && TALENT:GETCHARA(202):150)
+LOCAL += CHECK_FEMALE_CHARA(203)
+LOCAL:1 += (CHECK_CHARA_ASSI(203) && TALENT:GETCHARA(203):150)
+LOCAL += CHECK_FEMALE_CHARA(204)
+LOCAL:1 += (CHECK_CHARA_ASSI(204) && TALENT:GETCHARA(204):150)
+LOCAL += CHECK_FEMALE_CHARA(205)
+LOCAL:1 += (CHECK_CHARA_ASSI(205) && TALENT:GETCHARA(205):150)
+LOCAL += CHECK_FEMALE_CHARA(206)
+LOCAL:1 += (CHECK_CHARA_ASSI(206) && TALENT:GETCHARA(206):150)
+LOCAL += CHECK_FEMALE_CHARA(207)
+LOCAL:1 += (CHECK_CHARA_ASSI(207) && TALENT:GETCHARA(207):150)
+LOCAL += CHECK_FEMALE_CHARA(208)
+LOCAL:1 += (CHECK_CHARA_ASSI(208) && TALENT:GETCHARA(208):150)
+LOCAL += CHECK_FEMALE_CHARA(209)
+LOCAL:1 += (CHECK_CHARA_ASSI(209) && TALENT:GETCHARA(209):150)
+LOCAL += CHECK_FEMALE_CHARA(210)
+LOCAL:1 += (CHECK_CHARA_ASSI(210) && TALENT:GETCHARA(210):150)
+LOCAL += CHECK_FEMALE_CHARA(211)
+LOCAL:1 += (CHECK_CHARA_ASSI(211) && TALENT:GETCHARA(211):150)
+LOCAL += CHECK_FEMALE_CHARA(212)
+LOCAL:1 += (CHECK_CHARA_ASSI(212) && TALENT:GETCHARA(212):150)
+LOCAL += CHECK_FEMALE_CHARA(213)
+LOCAL:1 += (CHECK_CHARA_ASSI(213) && TALENT:GETCHARA(213):150)
+LOCAL += CHECK_FEMALE_CHARA(214)
+LOCAL:1 += (CHECK_CHARA_ASSI(214) && TALENT:GETCHARA(214):150)
+LOCAL += CHECK_FEMALE_CHARA(215)
+LOCAL:1 += (CHECK_CHARA_ASSI(215) && TALENT:GETCHARA(215):150)
+LOCAL += CHECK_FEMALE_CHARA(216)
+LOCAL:1 += (CHECK_CHARA_ASSI(216) && TALENT:GETCHARA(216):150)
+LOCAL += CHECK_FEMALE_CHARA(217)
+LOCAL:1 += (CHECK_CHARA_ASSI(217) && TALENT:GETCHARA(217):150)
+LOCAL += CHECK_FEMALE_CHARA(218)
+LOCAL:1 += (CHECK_CHARA_ASSI(218) && TALENT:GETCHARA(218):150)
+
+RETURN (LOCAL >= 10 && LOCAL:1 >= 10)
+
+;-------------------------------------------------
+;순애 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE77
+VARSET LOCAL, 0
+
+;순애 이벤트 무효라면 못 봄
+SIF (FLAG:12 & 32) == 0
+	RETURN 0
+;주인이 광기 보유자라면 기각
+SIF TALENT:MASTER:158
+	RETURN 0
+;주인이 강간하거나 당했을 경우에는 기각
+SIF (EXP:MASTER:80 || EXP:MASTER:81 || EXP:MASTER:82 || EXP:MASTER:83)
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	IF CFLAG:COUNT:4 != 1 && (TALENT:COUNT:152 || TALENT:COUNT:153) & (CFLAG:COUNT:11 & 2) == 0 && (CFLAG:COUNT:11 & 4) == 0 && MARK:COUNT:3 == 0 && MARK:COUNT:8 == 0 && MARK:COUNT:9 == 0 && MARK:COUNT:96 == 0 && MARK:COUNT:97 == 0 && (CFLAG:COUNT:17 & 2) == 0
+		SIF TALENT:COUNT:157 == 0 && TALENT:COUNT:161 == 0 && TALENT:COUNT:163 == 0 && TALENT:COUNT:39 == 0 && EXP:COUNT:53 == 0 && EXP:COUNT:56 == 0 && EXP:COUNT:76 == 0 && EXP:COUNT:80 == 0 && EXP:COUNT:81 == 0 && EXP:COUNT:82 == 0 && EXP:COUNT:83 == 0
+			LOCAL++
+	ENDIF
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;대도서관 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE78
+VARSET LOCAL, 0
+
+;촉수 능력을 조사해, 하나라도 개발되어 있으면 기각
+SIF SPECIALTENTACLE_CHECK() || CHARATENTACLE_CHECK()
+	RETURN 0
+
+;그 주차 중에, 촉수에게 산제물을 바쳤으면 기각
+SIF FLAG:33 > 0
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += (CHECK_FEMALE_CHARA(2) && CHECK_CHARA_ASSI(2) && ABL:GETCHARA(2):10 >= 5 && ABL:GETCHARA(2):12 >= 5 && (ABL:GETCHARA(2):30 + ABL:GETCHARA(2):31 + ABL:GETCHARA(2):32 + ABL:GETCHARA(2):33 + ABL:GETCHARA(2):34 + ABL:GETCHARA(2):35 + ABL:GETCHARA(2):36 + ABL:GETCHARA(2):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(7) && CHECK_CHARA_ASSI(7) && ABL:GETCHARA(7):10 >= 5 && ABL:GETCHARA(7):12 >= 5 && (ABL:GETCHARA(7):30 + ABL:GETCHARA(7):31 + ABL:GETCHARA(7):32 + ABL:GETCHARA(7):33 + ABL:GETCHARA(7):34 + ABL:GETCHARA(7):35 + ABL:GETCHARA(7):36 + ABL:GETCHARA(7):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(8) && CHECK_CHARA_ASSI(8) && ABL:GETCHARA(8):10 >= 5 && ABL:GETCHARA(8):12 >= 5 && (ABL:GETCHARA(8):30 + ABL:GETCHARA(8):31 + ABL:GETCHARA(8):32 + ABL:GETCHARA(8):33 + ABL:GETCHARA(8):34 + ABL:GETCHARA(8):35 + ABL:GETCHARA(8):36 + ABL:GETCHARA(8):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(14) && CHECK_CHARA_ASSI(14) && ABL:GETCHARA(14):10 >= 5 && ABL:GETCHARA(14):12 >= 5 && (ABL:GETCHARA(14):30 + ABL:GETCHARA(14):31 + ABL:GETCHARA(14):32 + ABL:GETCHARA(14):33 + ABL:GETCHARA(14):34 + ABL:GETCHARA(14):35 + ABL:GETCHARA(14):36 + ABL:GETCHARA(14):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(48) && CHECK_CHARA_ASSI(48) && ABL:GETCHARA(48):10 >= 5 && ABL:GETCHARA(48):12 >= 5 && (ABL:GETCHARA(48):30 + ABL:GETCHARA(48):31 + ABL:GETCHARA(48):32 + ABL:GETCHARA(48):33 + ABL:GETCHARA(48):34 + ABL:GETCHARA(48):35 + ABL:GETCHARA(48):36 + ABL:GETCHARA(48):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(61) && CHECK_CHARA_ASSI(61) && ABL:GETCHARA(61):10 >= 5 && ABL:GETCHARA(61):12 >= 5 && (ABL:GETCHARA(61):30 + ABL:GETCHARA(61):31 + ABL:GETCHARA(61):32 + ABL:GETCHARA(61):33 + ABL:GETCHARA(61):34 + ABL:GETCHARA(61):35 + ABL:GETCHARA(61):36 + ABL:GETCHARA(61):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(68) && CHECK_CHARA_ASSI(68) && ABL:GETCHARA(68):10 >= 5 && ABL:GETCHARA(68):12 >= 5 && (ABL:GETCHARA(68):30 + ABL:GETCHARA(68):31 + ABL:GETCHARA(68):32 + ABL:GETCHARA(68):33 + ABL:GETCHARA(68):34 + ABL:GETCHARA(68):35 + ABL:GETCHARA(68):36 + ABL:GETCHARA(68):37) < 5)
+LOCAL += (CHECK_FEMALE_CHARA(88) && CHECK_CHARA_ASSI(88) && ABL:GETCHARA(88):10 >= 5 && ABL:GETCHARA(88):12 >= 5 && (ABL:GETCHARA(88):30 + ABL:GETCHARA(88):31 + ABL:GETCHARA(88):32 + ABL:GETCHARA(88):33 + ABL:GETCHARA(88):34 + ABL:GETCHARA(88):35 + ABL:GETCHARA(88):36 + ABL:GETCHARA(88):37) < 5)
+
+;ENDING 파생용 판정
+LOCAL:1 += CHECK_FEMALE_CHARA(423)
+LOCAL:1 += CHECK_FEMALE_CHARA(424)
+LOCAL:1 += CHECK_FEMALE_CHARA(425)
+LOCAL:1 += CHECK_FEMALE_CHARA(426)
+LOCAL:1 += CHECK_FEMALE_CHARA(427)
+LOCAL:1 += CHECK_FEMALE_CHARA(428)
+LOCAL:1 += CHECK_FEMALE_CHARA(429)
+
+RETURN (LOCAL >= 6) ? ((LOCAL:1 >= 7) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;봉래인 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE79
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+;주인이 봉래인이 아니면 기각
+SIF TALENT:MASTER:49 == 0
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += ((TALENT:COUNT:49 || MARK:COUNT:10 > 2) && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)
+
+;-------------------------------------------------
+;마법소녀 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE80
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(2)
+LOCAL += CHECK_FEMALE_CHARA(8)
+LOCAL += CHECK_FEMALE_CHARA(11)
+LOCAL += CHECK_FEMALE_CHARA(14)
+LOCAL += CHECK_FEMALE_CHARA(34)
+LOCAL += CHECK_FEMALE_CHARA(77)
+LOCAL += CHECK_FEMALE_CHARA(103)
+LOCAL += CHECK_FEMALE_CHARA(116)
+LOCAL += CHECK_FEMALE_CHARA(117)
+
+RETURN (LOCAL >= 9)
+
+;-------------------------------------------------
+;황혼주점 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE83
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;이사미의 연모 체크
+LOCAL += CHECK_CHARA(139)
+
+;타츠미, 루미, 텐지가 조수 가능하고 요리기능 5인지 체크. 루미는 가창기능이라도 가능
+LOCAL += CHECK_CHARA_ASSI(140) && ABL:GETCHARA(140):70 >= 5
+LOCAL += CHECK_CHARA_ASSI(141) && (ABL:GETCHARA(141):70 >= 5 || ABL:GETCHARA(141):72 >= 5)
+LOCAL += CHECK_CHARA_ASSI(142) && ABL:GETCHARA(142):70 >= 5
+
+RETURN (LOCAL >= 4)
+
+;-------------------------------------------------
+;신선 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE84
+VARSET LOCAL, 0
+
+;여성 캐릭터 열거, 욕망이 4 이하이며, 00중독 Lv의 합계가 5 미만이고 이상경험을 변동하고 있지 않을 것
+LOCAL += (CHECK_FEMALE_CHARA(51) && CHECK_CHARA_ASSI(51) && ABL:GETCHARA(51):11 < 5 && (ABL:GETCHARA(51):30 + ABL:GETCHARA(51):31 + ABL:GETCHARA(51):32 + ABL:GETCHARA(51):33 + ABL:GETCHARA(51):34 + ABL:GETCHARA(51):35 + ABL:GETCHARA(51):36 + ABL:GETCHARA(51):37) < 5) && (CFLAG:GETCHARA(51):11 & 4) == 0
+LOCAL += (CHECK_FEMALE_CHARA(52) && CHECK_CHARA_ASSI(52) && ABL:GETCHARA(52):11 < 5 && (ABL:GETCHARA(52):30 + ABL:GETCHARA(52):31 + ABL:GETCHARA(52):32 + ABL:GETCHARA(52):33 + ABL:GETCHARA(52):34 + ABL:GETCHARA(52):35 + ABL:GETCHARA(52):36 + ABL:GETCHARA(52):37) < 5) && (CFLAG:GETCHARA(52):11 & 4) == 0
+LOCAL += (CHECK_FEMALE_CHARA(80) && CHECK_CHARA_ASSI(80) && ABL:GETCHARA(80):11 < 5 && (ABL:GETCHARA(80):30 + ABL:GETCHARA(80):31 + ABL:GETCHARA(80):32 + ABL:GETCHARA(80):33 + ABL:GETCHARA(80):34 + ABL:GETCHARA(80):35 + ABL:GETCHARA(80):36 + ABL:GETCHARA(80):37) < 5) && (CFLAG:GETCHARA(80):11 & 4) == 0
+LOCAL += (CHECK_FEMALE_CHARA(83) && CHECK_CHARA_ASSI(83) && ABL:GETCHARA(83):11 < 5 && (ABL:GETCHARA(83):30 + ABL:GETCHARA(83):31 + ABL:GETCHARA(83):32 + ABL:GETCHARA(83):33 + ABL:GETCHARA(83):34 + ABL:GETCHARA(83):35 + ABL:GETCHARA(83):36 + ABL:GETCHARA(83):37) < 5) && (CFLAG:GETCHARA(83):11 & 4) == 0
+LOCAL += (CHECK_FEMALE_CHARA(84) && CHECK_CHARA_ASSI(84) && ABL:GETCHARA(84):11 < 5 && (ABL:GETCHARA(84):30 + ABL:GETCHARA(84):31 + ABL:GETCHARA(84):32 + ABL:GETCHARA(84):33 + ABL:GETCHARA(84):34 + ABL:GETCHARA(84):35 + ABL:GETCHARA(84):36 + ABL:GETCHARA(84):37) < 5) && (CFLAG:GETCHARA(84):11 & 4) == 0
+LOCAL += (CHECK_FEMALE_CHARA(85) && CHECK_CHARA_ASSI(85) && ABL:GETCHARA(85):11 < 5 && (ABL:GETCHARA(85):30 + ABL:GETCHARA(85):31 + ABL:GETCHARA(85):32 + ABL:GETCHARA(85):33 + ABL:GETCHARA(85):34 + ABL:GETCHARA(85):35 + ABL:GETCHARA(85):36 + ABL:GETCHARA(85):37) < 5) && (CFLAG:GETCHARA(85):11 & 4) == 0
+LOCAL += (CHECK_FEMALE_CHARA(86) && CHECK_CHARA_ASSI(86) && ABL:GETCHARA(86):11 < 5 && (ABL:GETCHARA(86):30 + ABL:GETCHARA(86):31 + ABL:GETCHARA(86):32 + ABL:GETCHARA(86):33 + ABL:GETCHARA(86):34 + ABL:GETCHARA(86):35 + ABL:GETCHARA(86):36 + ABL:GETCHARA(86):37) < 5) && (CFLAG:GETCHARA(86):11 & 4) == 0
+
+RETURN (LOCAL >= 7)
+
+;-------------------------------------------------
+;츠쿠모가미 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE85
+VARSET LOCAL, 0
+
+;조수 가능 인원수가 부족하다면 불가
+SIF (GET_ABLE_ASSI() < 10)
+	RETURN 0
+
+;여성 캐릭터 열거
+LOCAL += CHECK_FEMALE_CHARA(33)
+LOCAL += CHECK_FEMALE_CHARA(72)
+LOCAL += CHECK_FEMALE_CHARA(89)
+LOCAL += CHECK_FEMALE_CHARA(223)
+LOCAL += CHECK_FEMALE_CHARA(224)
+LOCAL += CHECK_FEMALE_CHARA(227)
+
+;ENDING 파생용 체크
+;파생 엔딩 조건 테스트중. 이렇게 하면 버그 안 나나...?
+LOCAL:1 += (CHECK_FEMALE_CHARA(33) && EXP:GETCHARA(33):21 >= 500)
+LOCAL:1 += (CHECK_FEMALE_CHARA(72) && EXP:GETCHARA(72):21 >= 500)
+LOCAL:1 += (CHECK_FEMALE_CHARA(89) && EXP:GETCHARA(89):21 >= 500)
+LOCAL:1 += (CHECK_FEMALE_CHARA(223) && EXP:GETCHARA(223):21 >= 500)
+LOCAL:1 += (CHECK_FEMALE_CHARA(224) && EXP:GETCHARA(224):21 >= 500)
+LOCAL:1 += (CHECK_FEMALE_CHARA(227) && EXP:GETCHARA(227):21 >= 500)
+
+RETURN (LOCAL >= 6) ? ((LOCAL:1 >= 6) ? 2 # 1) # 0
+
+;-------------------------------------------------
+;알낳는 노예목장 엔딩 판정
+;-------------------------------------------------
+@ENDING_JUDGE86
+VARSET LOCAL, 0
+
+;애초에 캐릭터 수가 모자라면 못 봄
+SIF CHARANUM < 11
+	RETURN 0
+
+FOR COUNT, 1, CHARANUM
+	LOCAL += (CFLAG:COUNT:1 == 2 && (TALENT:COUNT:135 || TALENT:COUNT:136) && EXP:COUNT:32 >= 10 && EXP:COUNT:51 >= 1 && CFLAG:COUNT:4 != 1)
+	;조건이 만족될 가능성이 없어진 시점에서 돌아온다
+	SIF (CHARANUM - 1) - COUNT < (10 - LOCAL)
+		RETURN 0
+NEXT
+
+RETURN (LOCAL >= 10)

@@ -1,0 +1,3267 @@
+﻿;=============================================================================
+;야외 라이브
+;=============================================================================
+;노예더러 노래를 부르게 해 티켓을 파는 옵션.
+;최초의 함수에서는 야외 라이브 성공 판정을 실행한다
+;-------------------------------------------------
+;성공 판정
+;-------------------------------------------------
+;TFLAG:236 = 트리오 라이브 플래그(구V)
+;TFLAG:237 = 트리오의 세 명째(구W)
+;LOCAL:1 = 실행치(구L)
+;LOCAL:2 = 난이도 기준치(구P)
+@CONCERT_JUDGE
+TFLAG:235 = 0
+VARSET LOCAL, 0
+TFLAG:236 = CHECK_TRIO()
+SIF TFLAG:236 != 0 && TALENT:(TFLAG:237):205 && TIME == 0 && ITEM:48 == 0 && NOITEM == 0
+	TFLAG:236 = 0
+;여기까지 해두고서 트리오 라이브의 확률은 20%
+SIF RAND:5 != 0
+	TFLAG:236 = 0
+;트리오 라이브 플래그 ON
+SIF TFLAG:236 != 0
+	CFLAG:151 |= 8
+
+;ABL:가창기능
+IF ABL:72 == 0
+	LOCAL:1 = 0
+ELSEIF ABL:72 == 1
+	LOCAL:1 = 1
+ELSEIF ABL:72 == 2
+	LOCAL:1 = 2
+ELSEIF ABL:72 == 3
+	LOCAL:1 = 4
+ELSEIF ABL:72 == 4
+	LOCAL:1 = 7
+ELSE
+	LOCAL:1 = 10
+ENDIF
+
+;EXP:가창경험을 본다
+IF EXP:73 < EXPLV:1
+	LOCAL:1 += 1
+ELSEIF EXP:73 < EXPLV:2
+	LOCAL:1 += 2
+ELSEIF EXP:73 < EXPLV:3
+	LOCAL:1 += 4
+ELSEIF EXP:73 < EXPLV:4
+	LOCAL:1 += 7
+ELSEIF EXP:73 < EXPLV:5
+	LOCAL:1 += 10
+ELSE
+	LOCAL:1 += 15
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 < 2
+	LOCAL:1 += 1
+ELSEIF ABL:14 < 4
+	LOCAL:1 += 4
+ELSE
+	LOCAL:1 += 9
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	LOCAL:1 -= 2
+;자제심
+SIF TALENT:20
+	LOCAL:1 += 1
+;호기심
+SIF TALENT:23
+	LOCAL:1 += 1
+;눈에 띄고 싶어함
+SIF TALENT:28
+	LOCAL:1 += 2
+;억압
+IF TALENT:32
+	LOCAL:1 -= 1
+;해방
+ELSEIF TALENT:33
+	LOCAL:1 += 1
+ENDIF
+;부끄럼쟁이
+IF TALENT:35
+	LOCAL:1 -= 1
+;부끄럼 적음
+ELSEIF TALENT:36
+	LOCAL:1 += 2
+ENDIF
+
+;EASY가 아니라면 주도자의 체력 소모, 기력 소모, 취기, 스트레스에 따른 마이너스 보정이 있음
+IF FLAG:3 != 1
+	;체력 소모 상태
+	SIF MAXBASE:0 > 0 && (100 * BASE:0) / MAXBASE:0 <= 25
+		LOCAL:1 -= 1
+	;기력 소모 상태
+	SIF MAXBASE:1 > 0 && (100 * BASE:1) / MAXBASE:1 <= 25
+		LOCAL:1 -= 1
+	;취해 있다
+	SIF MAXBASE:8 > 0 && (100 * BASE:8) / MAXBASE:8 >= 80
+		LOCAL:1 -= 2
+
+	;스트레스가 10000 이상
+	IF CFLAG:65 >= 10000
+		LOCAL:1 -= 2
+	;스트레스가 1000 이상
+	ELSEIF CFLAG:65 >= 1000
+		LOCAL:1 -= 1
+	ENDIF
+ENDIF
+
+LOCAL:1 = MAX(LOCAL:1, 0)
+
+;고무
+IF TALENT:95
+	LOCAL:1 += 1 + RAND:15
+ELSE
+	LOCAL:1 += 1 + RAND:10
+ENDIF
+
+;난이도 기준치
+LOCAL:2 = 20
+
+;트리오 보너스
+IF TFLAG:236 & 1
+	LOCAL:2 -= 2
+ELSEIF TFLAG:236 & 2
+	LOCAL:2 -= 1
+ELSEIF TFLAG:236 & 3
+	LOCAL:2 -= 1
+ELSEIF TFLAG:236 & 4
+	LOCAL:2 -= 1
+ELSEIF TFLAG:236 & 5
+	LOCAL:2 -= 2
+ENDIF
+
+;상애
+IF TALENT:153
+	LOCAL:2 += RAND:11
+;연모, 친애
+ELSEIF TALENT:150 || TALENT:152
+	LOCAL:2 += RAND:16
+ELSE
+	LOCAL:2 += RAND:21
+ENDIF
+;무대 경험이 쌓였으면 난이도 다운
+IF EXP:73 > EXPLV:5
+	LOCAL:2 -= 5
+ELSEIF EXP:73 > EXPLV:4
+	LOCAL:2 -= 3
+ELSEIF EXP:73 > EXPLV:3
+	LOCAL:2 -= 1
+ENDIF
+
+;캐릭터에 따라 난이도 변화
+;[음감] 보유
+SIF TALENT:191
+	LOCAL:2 -= 5
+IF ASSI >= 0
+	;조수에 [음감] 보유자가 있으면 난이도 저하
+	SIF TALENT:ASSI:191
+		LOCAL:2 -= 3
+	;조수가 [고무] 보유자 또는 가창기능 Lv5 이상이면 난이도 저하
+	SIF TALENT:ASSI:95
+		LOCAL:2 -= 1
+	SIF ABL:ASSI:72 >= 5
+		LOCAL:2 -= 1
+ENDIF
+;[음치] 보유
+SIF TALENT:190
+	LOCAL:2 += 2
+;[천식]이나 [구문지] 보유
+SIF TALENT:47 || TALENT:216
+	LOCAL:2 += 3
+
+IF LOCAL:1 < LOCAL:2
+	;실패
+	CALL CONCERT_FAILURE
+ELSE
+	;성공
+	CALL CONCERT_SUCCESS
+ENDIF
+
+TFLAG:154 = 1
+TFLAG:99 = 0
+;휴식 플래그를 세운다
+FLAG:0 = 1
+BEGIN TURNEND
+
+RETURN 1
+
+;-------------------------------------------------
+;야외 라이브 실패
+;-------------------------------------------------
+@CONCERT_FAILURE
+;TFLAG:236 = 트리오 라이브 플래그(구V)
+;TFLAG:237 = 트리오의 세 명째(구W)
+;LOCAL   = 가격 보정(구L)
+;LOCAL:1 = 가격의 기초(구N)
+;LOCAL:2 = 가격 그 자체(구M)
+;LOCAL:3 = 난수 처리용(구P)
+;LOCAL:4 = 습득의 구슬 증가량(구O)
+VARSET LOCAL, 0
+LOCAL:1 = 10
+
+;ABL:가창기능을 본다
+IF ABL:72 == 0
+	LOCAL = 5
+ELSEIF ABL:72 == 1
+	LOCAL = 10
+ELSEIF ABL:72 == 2
+	LOCAL = 15
+ELSEIF ABL:72 == 3
+	LOCAL = 20
+ELSEIF ABL:72 == 4
+	LOCAL = 25
+ELSE
+	LOCAL = 30
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	TIMES LOCAL , 0.70
+ELSEIF ABL:14 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:14 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:14 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:14 == 4
+	TIMES LOCAL , 1.30
+ELSE
+	TIMES LOCAL , 1.50
+ENDIF
+
+;EXP:가창경험을 본다
+IF EXP:73 < EXPLV:1
+	TIMES LOCAL , 0.80
+ELSEIF EXP:73 < EXPLV:2
+	TIMES LOCAL , 1.00
+ELSEIF EXP:73 < EXPLV:3
+	TIMES LOCAL , 1.20
+ELSEIF EXP:73 < EXPLV:4
+	TIMES LOCAL , 1.40
+ELSEIF EXP:73 < EXPLV:5
+	TIMES LOCAL , 1.70
+ELSE
+	TIMES LOCAL , 2.00
+ENDIF
+
+;트리오 보정
+IF TFLAG:236 & 1
+	TIMES LOCAL , 1.80
+ELSEIF TFLAG:236 & 2
+	TIMES LOCAL , 1.50
+ELSEIF TFLAG:236 & 3
+	TIMES LOCAL , 1.60
+ELSEIF TFLAG:236 & 4
+	TIMES LOCAL , 1.50
+ELSEIF TFLAG:236 & 5
+	TIMES LOCAL , 1.80
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL , 0.80
+;꿋꿋함
+SIF TALENT:12
+	TIMES LOCAL , 1.20
+;솔직함
+SIF TALENT:13
+	TIMES LOCAL , 1.20
+;얌전함
+SIF TALENT:14
+	TIMES LOCAL , 1.10
+;프라이드 높음
+SIF TALENT:16
+	TIMES LOCAL , 1.10
+;츤데레
+SIF TALENT:18
+	TIMES LOCAL , 1.20
+;자제심
+SIF TALENT:20
+	TIMES LOCAL , 1.10
+;무관심
+SIF TALENT:21
+	TIMES LOCAL , 0.90
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.90
+;호기심
+SIF TALENT:23
+	TIMES LOCAL , 1.10
+;억압
+SIF TALENT:32
+	TIMES LOCAL , 0.80
+;해방
+SIF TALENT:33
+	TIMES LOCAL , 1.20
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL , 0.90
+;부끄럼없음
+SIF TALENT:36
+	TIMES LOCAL , 1.10
+;눈에 띄고 싶어함
+SIF TALENT:28
+	TIMES LOCAL , 1.20
+;헌신적
+SIF TALENT:63
+	TIMES LOCAL , 1.20
+;연모
+SIF TALENT:150
+	TIMES LOCAL , 2.00
+
+;[음감]
+IF TALENT:191
+	TIMES LOCAL:1 , 1.50
+;[천식], [구문지]
+ELSEIF TALENT:47 || TALENT:216
+	TIMES LOCAL:1 , 0.80
+;[음치]
+ELSEIF TALENT:190
+	TIMES LOCAL:1 , 0.90
+;노래를 잘 할 것 같은 분(개인적 주관이 들어갔습니다)
+;사쿠야 씨, 리그룽, 사나에 씨, 뱌쿠렌 님, 카센, 청아냥냥, 코코로
+ELSEIF NO:TARGET == 9 || NO:TARGET == 24 || NO:TARGET == 42 || NO:TARGET == 77 || NO:TARGET == 80 || NO:TARGET == 83 || NO:TARGET == 89
+	TIMES LOCAL:1 , 1.25
+;유유 님, 카구야, 카나코 님, 케로쨩, 토지코
+ELSEIF NO:TARGET == 20 || NO:TARGET == 30 || NO:TARGET == 39 || NO:TARGET == 43 || NO:TARGET == 44 || NO:TARGET == 84
+	TIMES LOCAL:1 , 1.10
+ENDIF
+
+;트리오 보정
+IF TFLAG:236 & 1
+	TIMES LOCAL:1 , 1.20
+ELSEIF TFLAG:236 & 2
+	TIMES LOCAL:1 , 1.10
+ELSEIF TFLAG:236 & 3
+	TIMES LOCAL:1 , 1.15
+ELSEIF TFLAG:236 & 4
+	TIMES LOCAL:1 , 1.10
+ELSEIF TFLAG:236 & 5
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+PRINTL 
+IF TFLAG:236 & 1
+	PRINTFORMW  %CALLNAME:TARGET%들은 프리즘리버 야외 라이브를 열었다
+ELSEIF TFLAG:236 & 2
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 삼월정에 의한 야외 라이브를 개최했다
+ELSEIF TFLAG:236 & 3
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 모리야 삼신 야외 라이브를 개최했다
+ELSEIF TFLAG:236 & 4
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 호족난무 트리오 야외 라이브를 개최했다
+ELSEIF TFLAG:236 & 5
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 츠쿠모가미 트리오 야외 라이브를 개최했다
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 야외 라이브를 개최했다
+ENDIF
+;스케쥴 (보다 빠른 처리)
+IF CFLAG:TARGET:4 >0
+	PRINTL 
+	PRINTL   「♪～」
+	PRINTL  「♪♪～」
+	PRINTL 「♪～♪～」
+	PRINTL 「…………」
+	PRINTL ………………
+	PRINTL 
+	PRINTFORML 너무 긴장해서 그런지, 노래부르는 와중에 %조사처리(CALLNAME:TARGET,"는")% 굳어버리고 말았다.
+	PRINTW 아무래도 이번 라이브 공연은 실패인 것 같다……
+;일반
+ELSE
+	PRINTL 
+	PRINTW   「♪～」
+	PRINTW  「♪♪～」
+	PRINTW 「♪～♪～」
+	PRINTW 「…………」
+	PRINTW ………………
+	PRINTL 
+	PRINTFORML 너무 긴장해서 그런지, 노래부르는 와중에 %조사처리(CALLNAME:TARGET,"는")% 굳어버리고 말았다.
+	PRINTW 아무래도 이번 라이브 공연은 실패인 것 같다……
+	PRINTW      ･
+	PRINTW      ･
+	PRINTW      ･
+ENDIF
+
+;라이브 실패 플래그 ON
+CFLAG:151 |= 1
+;이벤트 대사 야외 라이브 실패용
+CALL SELF_KOJO, TARGET, 110, 0
+
+;스케쥴로 발동시에는 체력 소모 없음 (2중처리 방지)
+IF CFLAG:4 > 0
+	;처리없음
+ELSE
+	BASE:0 = MAX(BASE:0 - LOCAL * 8, 1)
+	BASE:1 = MAX(BASE:1 - LOCAL * 5, 1)
+	CFLAG:65 += LOCAL * 5
+	;조수가 [흡혈귀]일 때에, 낮 턴일 경우 특주 양산이 없으면 라이브를 거들지 않는다
+	IF ASSI >= 0 && (TALENT:ASSI:205 == 0 || TIME == 1 || ITEM:48 || NOITEM)
+		BASE:ASSI:0 = MAX(BASE:ASSI:0 - LOCAL * 7, 1)
+		BASE:ASSI:1 = MAX(BASE:ASSI:1 - LOCAL * 4, 1)
+		CFLAG:ASSI:65 += LOCAL * 4
+		IF TFLAG:236 != 0
+			BASE:(TFLAG:237):0 = MAX(BASE:(TFLAG:237):0 - LOCAL * 7, 1)
+			BASE:(TFLAG:237):1 = MAX(BASE:(TFLAG:237):1 - LOCAL * 4, 1)
+			CFLAG:(TFLAG:237):65 += LOCAL * 4
+		ENDIF
+	ENDIF
+	PRINTFORML %조사처리(CALLNAME:TARGET,"는")% 체력과 기력을 소모했다.
+ENDIF
+
+PRINTFORMW 방으로 돌아온 %조사처리(CALLNAME:MASTER,"는")% 울고 있는 %CALLNAME:TARGET%의 머리를 끌어안고는 가만히 쓰다듬어줬다……
+PRINTL 
+LOCAL:3 = MIN(ABL:72, 5)
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL*LOCAL:3), 0
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL*20), 0
+;치정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 15, (LOCAL:1*(LOCAL:3+15)), 0
+LOCAL:4 = (LOCAL:3 + RAND:6) / 3
+LOCAL:4 = MAX(LOCAL:4, 1)
+;가창경험
+CALL COMMON_UP_EXP, TARGET, 73, LOCAL:4, 1
+;조수가 [흡혈귀]일 때에, 낮 턴일 경우 특주 양산이 없으면 라이브를 거들지 않는다
+IF ASSI >= 0 && (TALENT:ASSI:205 == 0 || TIME == 1 || ITEM:48 || NOITEM)
+	CALL COMMON_UP_EXP, ASSI, 73, (1+RAND:(LOCAL:4)), 0
+	SIF TFLAG:236 != 0
+		CALL COMMON_UP_EXP, TFLAG:237, 73, (1+RAND:(LOCAL:4)), 0
+ENDIF
+PRINTL 
+WAIT
+
+RETURN 1
+
+;-------------------------------------------------
+;야외 라이브 성공
+;-------------------------------------------------
+@CONCERT_SUCCESS
+;TFLAG:236 = 트리오 라이브 플래그(구V)
+;TFLAG:237 = 트리오의 세 명째(구W)
+;LOCAL   = 티켓 가격 보정(구L)
+;LOCAL:1 = 티켓 가격의 기초(구N)
+;LOCAL:2 = 티켓 가격 그 자체(구M)
+;LOCAL:3 = 난수 처리용(구P)
+;LOCAL:4 = 습득의 구슬 증가량(구O)
+;LOCAL:5 = 노래의 종류(구K)
+;LOCAL:6 = 성공 실패 플래그(구H)
+;TFLAG:235 = 자기 노래 선보이기 플래그(1로 자기 노래 선보이기)
+VARSET LOCAL, 0
+LOCAL:5 = RAND:21
+
+;ABL:가창기능을 본다
+IF ABL:72 == 0
+	LOCAL = 10
+ELSEIF ABL:72 == 1
+	LOCAL = 20
+ELSEIF ABL:72 == 2
+	LOCAL = 40
+ELSEIF ABL:72 == 3
+	LOCAL = 60
+ELSEIF ABL:72 == 4
+	LOCAL = 80
+ELSE
+	LOCAL = 100
+ENDIF
+
+;ABL:노출벽을 본다
+IF ABL:14 == 0
+	TIMES LOCAL , 0.70
+ELSEIF ABL:14 == 1
+	TIMES LOCAL , 0.90
+ELSEIF ABL:14 == 2
+	TIMES LOCAL , 1.00
+ELSEIF ABL:14 == 3
+	TIMES LOCAL , 1.10
+ELSEIF ABL:14 == 4
+	TIMES LOCAL , 1.30
+ELSE
+	TIMES LOCAL , 1.50
+ENDIF
+
+;EXP:가창경험을 본다
+IF EXP:73 < EXPLV:1
+	TIMES LOCAL , 0.80
+ELSEIF EXP:73 < EXPLV:2
+	TIMES LOCAL , 1.00
+ELSEIF EXP:73 < EXPLV:3
+	TIMES LOCAL , 1.20
+ELSEIF EXP:73 < EXPLV:4
+	TIMES LOCAL , 1.40
+ELSEIF EXP:73 < EXPLV:5
+	TIMES LOCAL , 1.70
+ELSE
+	TIMES LOCAL , 2.00
+ENDIF
+
+;트리오 보정
+IF TFLAG:236 & 1
+	TIMES LOCAL , 1.80
+ELSEIF TFLAG:236 & 2
+	TIMES LOCAL , 1.50
+ELSEIF TFLAG:236 & 3
+	TIMES LOCAL , 1.60
+ELSEIF TFLAG:236 & 4
+	TIMES LOCAL , 1.50
+ELSEIF TFLAG:236 & 5
+	TIMES LOCAL , 1.80
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL , 0.80
+;꿋꿋함
+SIF TALENT:12
+	TIMES LOCAL , 1.20
+;솔직함
+SIF TALENT:13
+	TIMES LOCAL , 1.20
+;얌전함
+SIF TALENT:14
+	TIMES LOCAL , 1.10
+;프라이드 높음
+SIF TALENT:16
+	TIMES LOCAL , 1.10
+;츤데레
+SIF TALENT:18
+	TIMES LOCAL , 1.20
+;자제심
+SIF TALENT:20
+	TIMES LOCAL , 1.10
+;무관심
+SIF TALENT:21
+	TIMES LOCAL , 0.90
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL , 0.90
+;호기심
+SIF TALENT:23
+	TIMES LOCAL , 1.10
+;억압
+SIF TALENT:32
+	TIMES LOCAL , 0.80
+;해방
+SIF TALENT:33
+	TIMES LOCAL , 1.20
+;부끄럼쟁이
+SIF TALENT:35
+	TIMES LOCAL , 0.90
+;부끄럼없음
+SIF TALENT:36
+	TIMES LOCAL , 1.10
+;눈에 띄고 싶어함
+SIF TALENT:28
+	TIMES LOCAL , 1.20
+;헌신적
+SIF TALENT:63
+	TIMES LOCAL , 1.20
+;연모
+SIF TALENT:150
+	TIMES LOCAL , 2.00
+;친애
+SIF TALENT:152
+	TIMES LOCAL , 2.20
+
+;EASY가 아니라면 주도자의 체력 소모, 기력 소모, 취기, 스트레스에 따른 마이너스 보정이 있음
+IF FLAG:3 != 1
+	;체력 소모 상태
+	SIF MAXBASE:0 > 0 && (100 * BASE:0) / MAXBASE:0 <= 25
+		TIMES LOCAL , 0.90
+	;기력 소모 상태
+	SIF MAXBASE:1 > 0 && (100 * BASE:1) / MAXBASE:1 <= 25
+		TIMES LOCAL , 0.90
+	;취해 있다
+	SIF MAXBASE:8 > 0 && (100 * BASE:8) / MAXBASE:8 >= 80
+		TIMES LOCAL , 0.50
+
+	;스트레스가 10000 이상
+	IF CFLAG:65 >= 10000
+		TIMES LOCAL , 0.80
+	;스트레스가 1000 이상
+	ELSEIF CFLAG:65 >= 1000
+		TIMES LOCAL , 0.90
+	ENDIF
+ENDIF
+
+;LOCAL:5 = 노래의 종류
+IF LOCAL:5 == 0 && ABL:72 >= 5
+	;캐릭터의 자기 노래
+	LOCAL:1 += 100
+ELSEIF LOCAL:5 == 1 || LOCAL:5 == 2
+	LOCAL:1 += 90
+ELSEIF LOCAL:5 >= 3 && LOCAL:5 < 6
+	LOCAL:1 += 70
+ELSEIF LOCAL:5 >= 6 && LOCAL:5 < 10
+	LOCAL:1 += 50
+ELSEIF LOCAL:5 >= 10 && LOCAL:5 < 15
+	LOCAL:1 += 30
+ELSE
+	LOCAL:1 += 10
+ENDIF
+
+;[음감]
+IF TALENT:191
+	TIMES LOCAL:1 , 1.50
+;[천식], [구문지]
+ELSEIF TALENT:47 || TALENT:216
+	TIMES LOCAL:1 , 0.80
+;[음치]
+ELSEIF TALENT:190
+	TIMES LOCAL:1 , 0.90
+;노래 잘 부를 것 같은 분(개인적 주관이 들어갔습니다)
+;사쿠야 씨, 리그룽, 사나에 씨, 뱌쿠렌 님, 카센, 청아냥냥, 코코로
+ELSEIF NO:TARGET == 9 || NO:TARGET == 24 || NO:TARGET == 42 || NO:TARGET == 77 || NO:TARGET == 80 || NO:TARGET == 83 || NO:TARGET == 89
+	TIMES LOCAL:1 , 1.25
+;유유 님, 카구야, 카나코 님, 케로쨩, 토지코
+ELSEIF NO:TARGET == 20 || NO:TARGET == 30 || NO:TARGET == 39 || NO:TARGET == 43 || NO:TARGET == 44 || NO:TARGET == 84
+	TIMES LOCAL:1 , 1.10
+;새러데이 나잇 피버한 이쿠 씨
+ELSEIF NO:TARGET == 51 && DAY:7 >= 7 && TIME == 1 && ABL:72 >= 5 && LOCAL:5 == 0
+	TIMES LOCAL:1 , 1.20
+ENDIF
+
+;트리오 보정
+IF TFLAG:236 & 1
+	TIMES LOCAL:1 , 1.20
+ELSEIF TFLAG:236 & 2
+	TIMES LOCAL:1 , 1.10
+ENDIF
+
+;아이돌 보정
+;매력
+SIF TALENT:90
+	TIMES LOCAL:1 , 1.10
+;매혹
+SIF TALENT:91
+	TIMES LOCAL:1 , 1.10
+;수수께끼의 매력
+SIF TALENT:92
+	TIMES LOCAL:1 , 1.10
+;인기
+SIF TALENT:94
+	TIMES LOCAL:1 , 1.25
+;고무
+SIF TALENT:95
+	TIMES LOCAL:1 , 1.30
+
+;종족, 특성보정
+;동물귀
+SIF TALENT:116
+	TIMES LOCAL:1 , 1.20
+;기본적으로 날개가 있을 것이라 추정되는 종족들은 소소하게 보너스
+;요정
+SIF TALENT:200
+	TIMES LOCAL:1 , 1.20
+;흡혈귀
+SIF TALENT:205
+	TIMES LOCAL:1 , 1.10
+;기계
+;보컬로이드는 환상향에서도 먹힐...지도 (?)
+SIF TALENT:206
+	TIMES LOCAL:1 , 1.10
+;인형
+SIF TALENT:208
+	TIMES LOCAL:1 , 1.20
+;악마
+SIF TALENT:209
+	TIMES LOCAL:1 , 1.10
+;요호
+SIF TALENT:211
+	TIMES LOCAL:1 , 1.20
+;오니
+SIF TALENT:214
+	TIMES LOCAL:1 , 1.20
+;누에
+SIF TALENT:217
+	TIMES LOCAL:1 , 1.30
+;하쿠레이의 무녀
+SIF TALENT:218
+	TIMES LOCAL:1 , 1.30
+;카제하후리
+SIF TALENT:219
+	TIMES LOCAL:1 , 1.25
+;신령
+SIF TALENT:222
+	TIMES LOCAL:1 , 1.30
+;반신
+SIF TALENT:223
+	TIMES LOCAL:1 , 1.25
+;강시
+SIF TALENT:226
+	TIMES LOCAL:1 , 0.80
+;인어
+SIF TALENT:228
+	TIMES LOCAL:1 , 1.20
+
+PRINTL 
+IF TFLAG:236 & 1
+	PRINTFORMW %CALLNAME:TARGET%들은 프리즘리버 야외 라이브를 열었다
+ELSEIF TFLAG:236 & 2
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 삼월정에 의한 야외 라이브를 개최했다
+;앞으로 추가할지도 모르는 트리오라이브
+ELSEIF TFLAG:236 & 3
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 모리야 삼신 야외 라이브를 개최했다
+ELSEIF TFLAG:236 & 4
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 호족난무 트리오 야외 라이브를 개최했다
+ELSEIF TFLAG:236 & 5
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 츠쿠모가미 트리오 야외 라이브를 개최했다
+ELSEIF DAY:7 >= 7 && TIME == 1 && ABL:72 >= 5 && LOCAL:5 == 0 && NO:TARGET == 51
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 피버한 야외 라이브를 열었다
+ELSE
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 야외 라이브를 개최했다
+ENDIF
+PRINTL 
+PRINTW   「♪～」
+PRINTW  「♪♪～」
+PRINTW 「♪～♪～」
+PRINTW ………………
+PRINTW      !
+PRINTL 
+PRINTFORM %CALLNAME:TARGET%
+IF LOCAL:5 == 0 && ABL:72 >= 5
+	TFLAG:235 = 1
+	;고유 자기 노래 선보이기 플래그 ON
+	CFLAG:151 |= 2
+	PRINTFORM %조사만처리(CALLNAME:TARGET,"가")% 선보인 비장의 18번 
+	;(전용) 대사 쪽에서 정의되어 있는 자기 노래가 25%의 확률로 나온다
+	IF CSTR:89 != "" && RAND:4 == 0 && TFLAG:236 == 0
+		FONTBOLD
+		PRINTFORM 『%CSTR:89%』
+		FONTREGULAR
+		LOCAL:1 -= 40
+		LOCAL:1 += RAND:66
+	;캐릭터의 자기 노래
+	ELSE
+		FONTBOLD
+		CALL SPECIAL_SONG, LOCAL:1
+		FONTREGULAR
+		LOCAL:1 = RESULT
+	ENDIF
+ELSE
+	PRINT 의 라이브
+ENDIF
+LOCAL:1 = MAX(LOCAL:1, 0)
+LOCAL:1 += LOCAL
+PRINT 는 
+IF LOCAL:1 >= 180
+	PRINTW 대성공이다.
+	PRINTFORML %CALLNAME:TARGET%의 매력적인 노랫소리에, 회장에 모여있던 관객들은 열광적인 환호를 질러댔다.
+	PRINTFORMW 한 곡 다 뽑고 나서 %조사처리(CALLNAME:TARGET,"는")% 달성감 넘치는 미소를 관객, 그리고 %CALLNAME:MASTER%에게 보내왔다……
+ELSEIF LOCAL:1 >= 120 && LOCAL:1 < 180
+	PRINTW 성공이다.
+	PRINTFORML 노래를 끝내고, %조사처리(CALLNAME:TARGET,"가")% 떠난 뒤에도 환호가 계속 들려왔다.
+	PRINTFORMW 타올로 얼굴에 흐른 땀을 닦고는, %조사처리(CALLNAME:TARGET,"는")% 만족한 듯한 미소를 이쪽에 보냈다
+ELSEIF LOCAL:1 >= 60 && LOCAL:1 < 120
+	PRINTW 괜찮은 느낌으로 성공한 것 같다.
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 노래를 끝낸 뒤에도 기분이 고양된 건지, 아까부터 게속 콧노래를 부르고 있다……
+ELSEIF LOCAL:1 < 60 && EXP:73 == 0
+	PRINTFORMW 아직 완벽이란 말과는 거리가 멀다.
+	PRINTL 하지만 보아하니 팬을 만드는데는 성공한 것 같다.
+	PRINTFORMW 연습을 거듭하다 보면 %CALLNAME:TARGET%의 인기는 지금 이상으로 오를지도 모르겠다……
+ELSE
+	PRINTW 실패하지 않고 끝낸 것 같다.
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% 긴장한 건지, 무대를 내려오자 안심한 듯한 표정을 띄웠다.
+ENDIF
+PRINTW      ･
+PRINTW      ･
+PRINTW      ･
+;이벤트 대사 야외 라이브 성공요
+CALL SELF_KOJO, TARGET, 110, 1
+;스케쥴로 발동했다면
+IF CFLAG:TARGET:4 > 0
+	;체력기력 처리는 하지 않는다.
+;기존 시스템에서만 이쪽을 사용
+ELSE
+	BASE:0 = MAX(BASE:0 - LOCAL * 6, 1)
+	BASE:1 = MAX(BASE:0 - LOCAL * 4, 1)
+	;조수가 [흡혈귀]일 때에, 낮 턴일 경우 특주 양산이 없으면 라이브를 거들지 않는다
+	IF ASSI >= 0 && (TALENT:ASSI:205 == 0 || TIME == 1 || ITEM:48 || NOITEM)
+		BASE:ASSI:0 = MAX(BASE:ASSI:0 - LOCAL * 5, 1)
+		BASE:ASSI:1 = MAX(BASE:ASSI:1 - LOCAL * 3, 1)
+		IF TFLAG:236 != 0
+			BASE:(TFLAG:237):0 = MAX(BASE:(TFLAG:237):0 - LOCAL * 5, 1)
+			BASE:(TFLAG:237):1 = MAX(BASE:(TFLAG:237):0 - LOCAL * 3, 1)
+		ENDIF
+	ENDIF
+	PRINTFORML %CALLNAME:TARGET%의 체력과 기력이 감소했다
+ENDIF
+
+LOCAL:3 = ABL:72
+;습득의 구슬
+CALL COMMON_UP_JUEL, TARGET, 11, (LOCAL*(5+LOCAL:3)), 0
+;순종의 구슬
+CALL COMMON_UP_JUEL, TARGET, 12, (LOCAL*10), 0
+;치정의 구슬
+CALL COMMON_UP_JUEL, TARGET, 15, (LOCAL:1*(3+LOCAL:3)), 0
+LOCAL:4 = LOCAL:3 + 1 + RAND:5
+;조수가 [흡혈귀]일 때에, 낮 턴일 경우 특주 양산이 없으면 라이브를 거들지 않는다
+IF ASSI >= 0 && (TALENT:ASSI:205 == 0 || TIME == 1 || ITEM:48 || NOITEM)
+	CALL COMMON_UP_EXP, ASSI, 73, (1+RAND:(LOCAL:4)), 0
+	SIF TFLAG:236 != 0 
+		CALL COMMON_UP_EXP, TFLAG:237, 73, (1+RAND:(LOCAL:4)), 0
+ENDIF
+;가창경험
+CALL COMMON_UP_EXP, TARGET, 73, LOCAL:4, 1
+PRINTL 
+LOCAL:2 = (LOCAL + LOCAL:1) / 10
+PRINTFORM %조사처리(CALLNAME:TARGET,"가")% 
+PRINTFORML 연 라이브 공연으로 {LOCAL:2}장의 음악 티켓이 팔렸다.
+LOCAL:3 = MAX(LOCAL:3, 1)
+LOCAL:2 = (LOCAL + LOCAL:1) * (1 + LOCAL:3 + RAND:(LOCAL:3)) / 2
+;HARDモード이상
+IF FLAG:3 >= 3
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 5000, 3)
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 10000, 3)
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 50000, 4)
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 100000, 5)
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 500000, 10)
+ELSE
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 5000, 2)
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 10000, 3)
+	LOCAL:2 = TABLE_CALC(LOCAL:2, 50000, 4)
+ENDIF
+MONEY += LOCAL:2
+PRINTFORMW 매상 ({LOCAL:2}원)
+;--------------------------------------------------
+;야외 라이브로 번 최고 금액 판정 처리
+MONEY:1 = LOCAL:2
+SIF MONEY:1 > MONEY:972
+	CALL NEW_HIGH_INCOME_ALL, 972
+SIF MONEY:1 > CFLAG:84
+	CALL NEW_HIGH_INCOME_SLAVE, 84
+CALL TOTAL_INCOME_SLAVE, MONEY:1
+;--------------------------------------------------
+;가창경험 500 이상에다 라이브 대성공시 인기를 취득
+IF EXP:73 >= 500 && LOCAL:1 >= 180 && TALENT:94 == 0
+	PRINTFORMW %CALLNAME:TARGET%의 노래가 인기를 끌기 시작한 것 같다.
+	CALL SELF_KOJO, TARGET, 110, 2
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"는")% [인기]를 얻었다.
+	TALENT:94 = 1
+ENDIF
+
+;스케쥴로 발동했다면
+;IF CFLAG:TARGET:4 > 0
+	;선물은 받지 못한다.
+;기존 시스템;成功するとファンからお酒をプレゼントされる
+;ELSEIF LOCAL:1 >= 120 && ITEM:600 < 99 && ITEM:601 < 99 && ITEM:602 < 99 && ITEM:603 < 99 && ITEM:604 < 99 && ITEM:605 < 99
+;	CALL CONCERT_PRESENT, LOCAL:1
+;ENDIF
+
+SIF LOCAL:1 >= 120 && ITEM:600 < 99 && ITEM:601 < 99 && ITEM:602 < 99 && ITEM:603 < 99 && ITEM:604 < 99 && ITEM:605 < 99
+	CALL CONCERT_PRESENT, LOCAL:1
+
+RETURN 1
+
+;-------------------------------------------------
+;팬이 주는 술 선물 판정
+;-------------------------------------------------
+;ARG = 성공도(N)→호출처에서는 LOCAL:1
+@CONCERT_PRESENT, ARG
+LOCAL:1 = 1
+IF ARG >= 250
+	LOCAL = RAND:101
+	LOCAL:1 += RAND:3
+ELSEIF ARG >= 210
+	LOCAL = RAND:81
+	LOCAL:1 += RAND:2
+ELSEIF ARG >= 180
+	LOCAL = RAND:51
+	LOCAL:1 += RAND:2
+ELSEIF ARG >= 150
+	LOCAL = RAND:21
+ELSE
+	LOCAL = RAND:11
+ENDIF
+;《신편귀독주》
+IF LOCAL >= 80
+	LOCAL:2 = 605
+;스피리터스
+ELSEIF LOCAL >= 60
+	LOCAL:2 = 604
+;대음양주
+ELSEIF LOCAL >= 40
+	LOCAL:2 = 603
+;와인
+ELSEIF LOCAL >= 20
+	LOCAL:2 = 602
+;맥주
+ELSEIF LOCAL >= 10
+	LOCAL:2 = 601
+;칼루아
+ELSE
+	LOCAL:2 = 600
+ENDIF
+;대상이 [오니]이며 《신편귀독주》를 받을 경우에는 스피리터스로 변경
+SIF TALENT:214 && LOCAL:2 == 605
+	LOCAL:2 = 604
+
+;99개가 한계
+SIF ITEM:(LOCAL:2) + LOCAL:1 > 99
+	LOCAL:1 = 99 - ITEM:(LOCAL:2)
+SIF LOCAL:1 < 1
+	RETURN 0
+
+PRINTFORMW %CALLNAME:TARGET%의 노래에 매료된 팬에게서 선물이 도착했다.
+PRINTFORMW %조사처리(ITEMNAME:(LOCAL:2),"를")% {LOCAL:1}병 얻었다.
+ITEM:(LOCAL:2) += LOCAL:1
+;선물받았음 플래그 ON
+CFLAG:151 |= 4
+
+;-------------------------------------------------
+;트리오 라이브 판정 처리
+;-------------------------------------------------
+@CHECK_TRIO
+#FUNCTION
+;-------------------------------------------------
+;LOCAL = 세 명째의 참가자(→TFLAGF:237에 넣는다)
+;LOCAL:1 = 트리오 라이브가 되었는가? (비트 관리 0=트리오가 아니다  1=프리즘리버 2=삼월정)
+;-------------------------------------------------
+LOCAL:1 = 0
+LOCAL = 0
+
+;대전제: 조수가 있고, 대상&조수가 반발각인 또는 공포각인 Lv3을 갖고 있을 때에는 트리오가 되지 않는다
+SIF ASSI < 0
+	RETURNF 0
+SIF MARK:9 || MARK:8 >= 3
+	RETURNF 0
+SIF MARK:ASSI:9 || MARK:ASSI:8 >= 3
+	RETURNF 0
+;조수가 [흡혈귀]이고 밤이 아니며 특주 양산이 없을 때에도 트리오가 되지 않는다
+SIF TALENT:ASSI:205 && TIME == 0 && ITEM:48 == 0 && NOITEM == 0
+	RETURNF 0
+;특정 캐릭터일 경우에는 트리오로 라이브할 수 있을지도 모른다. 단, 조수가 없으면 불가능
+;추가로 세 명째는 그 자리에 있으며, 수면약의 영향이 없고, 반발각인 없으며 공포각인 Lv2 이하에 조수 가능해야 한다. 또, 주인이어도 안 된다.
+;프리즘리버 3자매
+IF (NO:TARGET == 16 && NO:ASSI == 17) || (NO:TARGET == 17 && NO:ASSI == 16)
+	LOCAL = GETCHARA(18)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 1
+ELSEIF (NO:TARGET == 16 && NO:ASSI == 18) || (NO:TARGET == 18 && NO:ASSI == 16)
+	LOCAL = GETCHARA(17)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 1
+ELSEIF (NO:TARGET == 17 && NO:ASSI == 18) || (NO:TARGET == 18 && NO:ASSI == 17)
+	LOCAL = GETCHARA(16)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 1
+;삼월정
+ELSEIF (NO:TARGET == 45 && NO:ASSI == 46) || (NO:TARGET == 46 && NO:ASSI == 45)
+	LOCAL = GETCHARA(47)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 2
+ELSEIF (NO:TARGET == 45 && NO:ASSI == 47) || (NO:TARGET == 47 && NO:ASSI == 45)
+	LOCAL = GETCHARA(46)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 2
+ELSEIF (NO:TARGET == 46 && NO:ASSI == 47) || (NO:TARGET == 47 && NO:ASSI == 46)
+	LOCAL = GETCHARA(45)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 2
+;모리야 삼신
+ELSEIF (NO:TARGET == 42 && NO:ASSI == 43) || (NO:TARGET == 43 && NO:ASSI == 42)
+	LOCAL = GETCHARA(44)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 3
+ELSEIF (NO:TARGET == 42 && NO:ASSI == 44) || (NO:TARGET == 44 && NO:ASSI == 42)
+	LOCAL = GETCHARA(43)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 3
+ELSEIF (NO:TARGET == 43 && NO:ASSI == 44) || (NO:TARGET == 44 && NO:ASSI == 43)
+	LOCAL = GETCHARA(42)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 3
+;호족난무 트리오
+ELSEIF (NO:TARGET == 84 && NO:ASSI == 85) || (NO:TARGET == 85 && NO:ASSI == 84)
+	LOCAL = GETCHARA(86)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 4
+ELSEIF (NO:TARGET == 84 && NO:ASSI == 86) || (NO:TARGET == 86 && NO:ASSI == 84)
+	LOCAL = GETCHARA(85)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 4
+ELSEIF (NO:TARGET == 85 && NO:ASSI == 86) || (NO:TARGET == 86 && NO:ASSI == 85)
+	LOCAL = GETCHARA(84)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 4
+;츠쿠모가미 트리오
+ELSEIF (NO:TARGET == 223 && NO:ASSI == 224) || (NO:TARGET == 224 && NO:ASSI == 223)
+	LOCAL = GETCHARA(227)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 5
+ELSEIF (NO:TARGET == 223 && NO:ASSI == 227) || (NO:TARGET == 227 && NO:ASSI == 223)
+	LOCAL = GETCHARA(224)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 5
+ELSEIF (NO:TARGET == 224 && NO:ASSI == 227) || (NO:TARGET == 227 && NO:ASSI == 224)
+	LOCAL = GETCHARA(223)
+	SIF LOCAL > 0 && CFLAG:LOCAL:4 == 0 && EQUIP:LOCAL:14 == 0 && MARK:LOCAL:9 == 0 && MARK:LOCAL:8 < 3 && CFLAG:LOCAL:1 >= 2
+		LOCAL:1 |= 5
+ENDIF
+TFLAG:237 = LOCAL
+RETURNF LOCAL:1
+
+;-------------------------------------------------
+;캐릭터 고유 노래 선택＆표시 처리
+;-------------------------------------------------
+@SPECIAL_SONG, ARG
+;-------------------------------------------------
+;ARG = 가격 수정(호출처의 LOCAL:1)
+;LOCALS = 요일(히나쨩 용)
+;-------------------------------------------------
+VARSET LOCALS, ""
+SPLIT "無,日,月,火,水,木,金,土", ",", LOCALS
+LOCALS = %LOCALS:(DAY:7)%
+
+SELECTCASE NO:TARGET
+	;레이무, 레이무 님
+	CASE 1
+		;레이무
+		IF CFLAG:0 == 0
+			LOCAL:3 = (ASSI >= 0 && NO:ASSI == 2 && CFLAG:ASSI:0 == 0 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+			;레이무＆마리사 콤비
+			IF LOCAL:3 == 2
+				PRINT 『너란 사람, 멋대로더라』
+				ARG /= 2
+				ARG += RAND:512
+			ELSE
+			LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT 『이색연화접』
+				ARG -= 2
+				ARG += RAND:149
+			ELSEIF LOCAL:3 == 1
+				PRINT 『따끈따끈 신사』
+				ARG -= 14
+				ARG += RAND:99
+			ELSEIF LOCAL:3 == 2
+				PRINT “BICHROME -Another color-”
+				ARG -= 16
+				ARG += RAND:121
+			ELSE
+				PRINT 『낙원의 무녀』
+				ARG -= 20
+				ARG += RAND:71
+			ENDIF
+			ENDIF
+		;레이무 님
+		ELSE
+			PRINT 『낙원의 여왕님』
+			ARG -= 25
+			ARG += RAND:66
+		ENDIF
+		RETURN ARG
+
+	;마리사, 구작 마리사
+	CASE 2
+		;마리사
+		IF CFLAG:0 == 0
+			LOCAL:3 = (ASSI >= 0 && NO:ASSI == 1 && CFLAG:ASSI:0 == 0 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+			;마리사＆레이무 콤비
+			IF LOCAL:3 == 2
+				PRINT 『이래봬도, 신경쓰고 있다구』
+				ARG /= 2
+				ARG += RAND:512
+			ELSE
+			LOCAL:3 = RAND:5
+			IF LOCAL:3 == 0
+				PRINT “Magus Night”
+				ARG -= 24
+				ARG += RAND:158
+			ELSEIF LOCAL:3 == 1
+				PRINT 『별빛 밤하늘』
+				ARG -= 17
+				ARG += RAND:121
+			ELSEIF LOCAL:3 == 2
+				PRINT 『격하게 화내며 마지막엔 뿜뿜 마스터 스파크』
+				ARG -= 23
+				ARG += RAND:115
+			ELSEIF LOCAL:3 == 2
+				PRINT 『사랑색 마스터 스파크』
+				ARG -= 16
+				ARG += RAND:88
+			ELSE
+				PRINT 『탄막은 파워』
+				ARG -= 15
+				ARG += RAND:66
+			ENDIF
+			ENDIF
+		;구작 마리사
+		ELSE
+			PRINT 『우후후 마리사의 단독 라이브』
+			ARG -= 25
+			ARG += RAND:77
+		ENDIF
+		RETURN ARG
+
+	;루미아,EX루미아
+	CASE 3
+		;루미아
+		IF CFLAG:0 == 0
+			PRINT 『상암비행대』
+			ARG -= 25
+			ARG += RAND:66
+		;EX루미아
+		ELSE
+			PRINT 『상암비행대・LUNATIC』
+			ARG -= 20
+			ARG += RAND:88
+		ENDIF
+		RETURN ARG
+
+	;대요정
+	CASE 4
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 5 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;다이쨩＆치르노 콤비
+		IF LOCAL:3 == 2
+			PRINT 『사이좋은 콤비로 최강이지!』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT 『이름없는 자의 시』
+				ARG = 150
+			ELSEIF LOCAL:3 == 3
+				PRINT “#Fairy_dancing_in_lake”
+				ARG -= 29
+				ARG += RAND:74
+			ELSE
+				PRINT 『다이쨩 자장가』
+				ARG -= 21
+				ARG += RAND:62
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;치르노
+	CASE 5
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 4 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;치르노＆다이쨩 콤비
+		IF LOCAL:3 == 2
+			PRINT 『사이좋은 콤비로 최강이지!』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:256
+			IF LOCAL:3 == 0
+				PRINT 『이 몸은 정말 최강이지! ～⑨중주』
+				ARG = 999
+			ELSEIF LOCAL:3 >= 9 && LOCAL:3 < 51
+				PRINT 『치르노의 퍼펙트 산수교실』
+				ARG += 99
+			ELSEIF LOCAL:3 >= 51 && LOCAL:3 < 93
+				PRINT “Cirno Break”
+				ARG -= 99
+				ARG += 299
+			ELSEIF LOCAL:3 >= 93 && LOCAL:3 < 142
+				PRINT 『말괄량이☆러브 걸』
+				ARG -= 19
+				ARG += 199
+			ELSE
+				PRINT 『이 몸은 정말 최강이지!』
+				ARG += 9
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;메이링
+	CASE 6
+		PRINT 『채광원무』
+		ARG -= 50
+		ARG += RAND:101
+		RETURN ARG
+
+	;코아
+	CASE 7
+		LOCAL:3 = RAND:30
+		IF LOCAL:3 == 0
+			PRINT 『당신을 양으로♪』
+			ARG = 666
+		ELSE
+			PRINT 『이름없는 자의 시』
+			ARG = 150
+		ENDIF
+		RETURN ARG
+
+	;파츄리
+	CASE 8
+		PRINT 『외워봐 오늘의 마법』
+		ARG -= 23
+		ARG += RAND:45
+		RETURN ARG
+
+	;사쿠야 씨
+	CASE 9
+		;사쿠야 씨
+    LOCAL:3 = RAND:4
+		IF LOCAL:3 == 0
+		  PRINT 『진짜로 사냥할거야☆사쿠야쨩』
+		  ARG -= 30
+		  ARG += RAND:56
+		ELSEIF LOCAL:3 == 1
+			PRINT 『삿큥 라이트』
+			ARG -= 15
+			ARG += RAND:102
+		ELSEIF LOCAL:3 == 2
+			PRINT 『달밤에 빛나는 시리얼 킬러』
+			ARG -= 15
+			ARG += RAND:91
+    ELSE
+			PRINT 『나이트 오브 나이츠』
+			ARG -= 20
+			ARG += RAND:77
+		ENDIF
+		RETURN ARG
+
+	;레밀리아
+	CASE 10
+		LOCAL:3 = RAND:6
+		IF LOCAL:3 == 0
+			PRINT 『내 손이 빨갛게 불타오르고 있다! 전세계 나이트메어・흡혈귀 레밀리아쨩』
+			ARG -= 40
+			ARG += RAND:171
+		ELSEIF LOCAL:3 == 1
+			PRINT “taboo tears you up”
+			ARG -= 34
+			ARG += RAND:180
+		ELSEIF LOCAL:3 == 2
+			PRINT “No Life Queen”
+			ARG -= 20
+			ARG += RAND:164
+		ELSEIF LOCAL:3 == 3
+			PRINT “SCAPEGOAT BOY”
+			ARG -= 27
+			ARG += RAND:165
+		ELSEIF LOCAL:3 == 4
+			PRINT 『태양은 그만! 우리들의 스칼렛 경찰』
+			ARG -= 23
+			ARG += RAND:141
+		ELSE
+			PRINT 『카리스마 대빵큰오리의 발라드』
+			ARG -= 20
+			ARG += RAND:101
+		ENDIF
+		RETURN ARG
+
+	;플랑쨩
+	CASE 11
+		LOCAL:3 = RAND:5
+		IF LOCAL:3 == 0
+			PRINT 『꾸욱하고 안았더니 퍼ー엉』
+			ARG -= 30
+			ARG += RAND:151
+		ELSEIF LOCAL:3 == 1
+			PRINT 『최종귀축 여동생 플랑드르 S』
+			ARG -= 49
+			ARG += RAND:200
+		ELSEIF LOCAL:3 == 2
+			PRINT “Sweets Time”
+			ARG -= 33
+			ARG += RAND:150
+		ELSEIF LOCAL:3 == 3
+			PRINT “Grip & Break down !!”
+			ARG -= 29
+			ARG += RAND:160
+		ELSE
+			PRINT 『크랜베리 트랩』
+			ARG -= 15
+			ARG += RAND:126
+		ENDIF
+		RETURN ARG
+
+	;레티 씨
+	CASE 12
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT “Valanga”
+			ARG -= 45
+			ARG += RAND:186
+		ELSEIF LOCAL:3 == 1
+			PRINT 『맹취설 세레나데』
+			ARG -= 29
+			ARG += RAND:56
+		ELSE
+			PRINT 『눈보라 세레나데』
+			ARG -= 24
+			ARG += RAND:95
+		ENDIF
+		RETURN ARG
+
+	;첸
+	CASE 13
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT 『검은 고양이 왈츠』
+			ARG -= 20
+			ARG += RAND:110
+		ELSEIF LOCAL:3 == 1
+			PRINT 『검은 고양이 경단』
+			ARG -= 6
+			ARG += RAND:181
+		ELSE
+			PRINT 『스톰! 어스! 파이어!』
+			ARG -= 6
+			ARG += RAND:168
+		ENDIF
+		RETURN ARG
+
+	;앨리스
+	CASE 14
+		;통상의 앨리스
+		IF CFLAG:0 == 0
+			LOCAL:3 = RAND:6
+			IF LOCAL:3 == 0
+				PRINT 『돌격 마이 허니』
+				ARG += 10
+				ARG += RAND:91
+			ELSEIF LOCAL:3 == 1
+				PRINT 『마리사는 엄청난 것을 훔쳐갔습니다』
+				ARG -= 15
+				ARG += RAND:79
+			ELSEIF LOCAL:3 == 2
+				PRINT “Breeds PuPPet”
+				ARG -= 15
+				ARG += RAND:109
+			ELSEIF LOCAL:3 == 3
+				PRINT “The Grimoire Of Alice”
+				ARG += RAND:102
+			;동방 MMD 소재
+			ELSEIF LOCAL:3 == 3
+				PRINT “Sweet Magic”
+				ARG += RAND:204
+			ELSE
+				PRINT 『앨리스→데레』
+				ARG -= 20
+				ARG += RAND:88
+			ENDIF
+		;꼬마 앨리스
+		ELSE
+			LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT “Mystic Dream”
+				ARG += RAND:100
+			ELSEIF LOCAL:3 == 1
+				PRINT “Romantic Children”
+				ARG += RAND:112
+			ELSEIF LOCAL:3 == 2
+				PRINT “Meteralice”
+				ARG += RAND:102
+			ELSE
+				PRINT 『이상한 나라에 어서오세요』
+				ARG -= 20
+				ARG += RAND:88
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;릴리 화이트
+	CASE 15
+		PRINT 『봄의 노래』
+		ARG -= 40
+		ARG += RAND:111
+		RETURN ARG
+
+	;소령 3자매 (루나사 · 메를랑 · 리리카)
+	CASE 16 TO 18
+		;트리오 라이브 때
+		IF TFLAG:236 & 1
+			PRINTFORM 『프리즘리버・메들리』
+			ARG -= 3
+			ARG += RAND:333
+		;트리오 라이브가 아닐 때(에는 조수가 튀어나오질 않아요ㅋ)
+		ELSE
+			PRINTFORM 『%CALLNAME:TARGET%・솔로』
+			ARG -= 12
+			ARG += RAND:256
+		ENDIF
+		RETURN ARG
+
+	;요우무
+	CASE 19
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『백옥루 블루스』
+			ARG -= 37
+			ARG += RAND:172
+		ELSE
+			PRINT 『칼부림특급』
+			ARG -= 31
+			ARG += RAND:60
+		ENDIF
+		RETURN ARG
+
+	;유유 님, 생전 유유 님
+	CASE 20
+		IF CFLAG:0 == 0
+			;유유 님
+			LOCAL:3 = (ASSI >= 0 && NO:ASSI == 22 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+			;유유유카 콤비
+			IF LOCAL:3 == 2
+				PRINT 『할망과 누님의 경계～더블 백합계～』
+				ARG /= 2
+				ARG += RAND:512
+			ELSE
+				PRINT 『유아하게 피어라, 묵염의 벚꽃』
+				ARG -= 18
+				ARG += RAND:145
+			ENDIF
+		;생전 유유 님
+		ELSE
+			PRINT 『엷은 묵색 벚꽃이 피는 정원에서』
+			ARG -= 22
+			ARG += RAND:125
+		ENDIF
+		RETURN ARG
+
+	;란 샤마
+	CASE 21
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT “The Fox (What Does the Fox Say?)”
+			ARG -= 21
+			ARG += RAND:101
+		ELSE
+			PRINT 『사면초가☆챠밍』
+			ARG -= 21
+			ARG += RAND:101
+		ENDIF
+
+	;유카링
+	CASE 22
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 20 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;유카유유 콤비
+		IF LOCAL:3 == 2
+			PRINT 『할망과 누님의 경계～더블 백합계～』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			PRINT 『아름답고 잔혹하게』
+			ARG -= 13
+			ARG += RAND:146
+		ENDIF
+		RETURN ARG
+
+	;스이카
+	CASE 23
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT 『환상향 음주 음두』
+			ARG -= 23
+			ARG += RAND:86
+		ELSEIF LOCAL:3 == 1
+			PRINT “Ogre who cries”
+			ARG -= 17
+			ARG += RAND:98
+		ELSE
+			PRINT 『슈와슈퍼 대작전☆』
+			ARG -= 19
+			ARG += RAND:114
+		ENDIF
+
+	;리글
+	CASE 24
+		PRINT 『전세계 나이트버그』
+		ARG -= 8
+		ARG += RAND:65
+		RETURN ARG
+
+	;미스치
+	CASE 25
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 81 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;미스티아&쿄코 콤비(요괴 펑크 라이브)
+		IF LOCAL:3 == 2
+			PRINT 『요괴 펑크 라이브』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:5
+			IF LOCAL:3 == 0
+				PRINT 『미스티아 음두』
+				ARG -= 27
+				ARG += RAND:252
+			ELSEIF LOCAL:3 == 1
+				PRINT 『칭칭하게 해줄게!』
+				ARG -= 74
+				ARG += RAND:512
+			ELSEIF LOCAL:3 == 2
+				PRINT “Far east nightbird”
+				ARG -= 24
+				ARG += RAND:180
+			ELSEIF LOCAL:3 == 3
+				PRINT “nightbird lost wing”
+				ARG -= 27
+				ARG += RAND:190
+			ELSE
+				PRINT 『짹짹 월드』
+				ARG -= 21
+				ARG += RAND:120
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;케이네 선생님
+	CASE 26
+		PRINT 『만월필굴』
+		ARG -= 24
+		ARG += RAND:48
+		RETURN ARG
+
+	;테위
+	CASE 27
+		PRINT “Lucky joker”
+		ARG /= 5
+		ARG += RAND:256
+		RETURN ARG
+
+	;레이센
+	CASE 28
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT 『달토끼 자포자기곡(버서커 노이즈) ～에링 센스～』
+			ARG -= 11
+			ARG += RAND:142
+		ELSEIF LOCAL:3 == 1
+			PRINT “Rabbit shooting”
+			ARG -= 11
+			ARG += RAND:128
+		ELSE
+			PRINT 『달토끼 자포자기곡(버서커 노이즈)』
+			ARG -= 11
+			ARG += RAND:71
+		ENDIF
+		RETURN ARG
+
+	;에이린 선생님
+	CASE 29
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『호접몽환 나이트메어』
+			ARG -= 41
+			ARG += RAND:120
+		ELSE
+			PRINT 『아폴로 11호』
+			ARG -= 28
+			ARG += RAND:56
+		ENDIF
+		RETURN ARG
+
+	;카구야
+	CASE 30
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 31 && CFLAG:ASSI:0 == 0 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;테루모코 콤비
+		IF LOCAL:3 == 2
+			;모코우도 노래하지 않을래?
+			PRINT 『카구랑 모코, 친하게 싸우렴♪』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT “KAGUYA TABLE”
+				ARG -= 11
+				ARG += RAND:145
+			ELSE
+				PRINT 『남자라면 금각사』
+				ARG -= 13
+				ARG += RAND:179
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;모코우, 귀족의 딸 모코우
+	CASE 31
+		;통상의 모코우
+		IF CFLAG:0 == 0
+			;아무리 그래도 듀엣은 창피하잖냐…＞카구야
+			LOCAL:3 = RAND:3
+			IF LOCAL:3 == 0
+				PRINT 『무한일야』
+				ARG -= 21
+				ARG += RAND:160
+			ELSEIF LOCAL:3 == 1
+				PRINT 『봉래연화』
+				ARG -= 16
+				ARG += RAND:87
+			ELSE
+				PRINT 『개풍쾌청』
+				ARG -= 11
+				ARG += RAND:45
+			ENDIF
+		;귀족의 딸 모코우
+		ELSE
+			PRINT 『후지와라의 우아』
+			ARG -= 25
+			ARG += RAND:50
+		ENDIF
+		RETURN ARG
+
+	;아야야
+	CASE 32
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT “Force-A-Nature”
+		  ARG -= 16
+		  ARG += RAND:95
+		ELSEIF LOCAL:3 == 0
+			PRINT 『텐구가 떨어뜨린 수첩』
+		  ARG -= 36
+		  ARG += RAND:160
+		ELSE
+			PRINT 『풍신소녀』
+		  ARG -= 20
+		  ARG += RAND:80
+		ENDIF
+		RETURN ARG
+
+	;메디슨
+	CASE 33
+		PRINT 『스위트☆포이즌』
+		ARG -= 26
+		ARG += RAND:110
+		RETURN ARG
+
+	;유우카링
+	CASE 34
+		;마조끼가 5 이상 또는 [마조]를 가지고 있으면 노래가 바뀐다
+		IF ABL:21 > 4 || TALENT:82 || (TALENT:85 && RAND:2 == 0)
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT “Inanimate Dream”
+				ARG -= 25
+				ARG += RAND:100
+			ELSE
+				PRINT 『스러지는 꽃들에게 바치는 레퀴엠』
+				ARG -= 15
+				ARG += RAND:80
+			ENDIF
+		ELSE
+			LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT 『해바라기 참격』
+				ARG -= 20
+				ARG += RAND:226
+			ELSEIF LOCAL:3 == 1
+				PRINT 『여왕님이라 불러라』
+				ARG -= 15
+				ARG += RAND:202
+			ELSEIF LOCAL:3 == 2
+				PRINT 『파멸의 스쿼드』
+				ARG -= 40
+				ARG += RAND:256
+			ELSE
+				PRINT 『붕괴 듀얼스파크』
+				ARG -= 15
+				ARG += RAND:192
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;코마치
+	CASE 35
+			LOCAL:3 = (ASSI >= 0 && NO:ASSI == 36 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+			;에이키&코마치 콤비, 동방 M-1 소재
+			IF LOCAL:3 == 2
+				PRINT “MONOLIFE”
+				ARG /= 2
+				ARG += RAND:512
+			ELSE
+				PRINT 『Sabotage ～ 더는 아무것도 하고 싶지 않아』
+				ARG -= 24
+				ARG += RAND:72
+			ENDIF
+		RETURN ARG
+
+	;에이키 님
+	CASE 36
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 35 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;에이키&코마치 콤비, 동방 M-1 소재
+		IF LOCAL:3 == 2
+			PRINT “MONOLIFE”
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:256
+			IF LOCAL:3 == 0
+				PRINT 『염라님의 고마우신 설교』
+				ARG -= 50
+				ARG += RAND:222
+			ELSEIF LOCAL:3 >= 240 && LOCAL:3 < 256
+				PRINT “Starlight Vision”
+				ARG -= 12
+				ARG += RAND:180
+			ELSE
+				PRINT 『야마자나두 음두』
+				ARG += RAND:678
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;시즈하 누나
+	CASE 37
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 38 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;아키 자매 듀엣
+		IF LOCAL:3 == 2
+			PRINT 『가을 이제부터야! 전편』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			PRINT 『홍엽일순』
+			ARG -= 32
+			ARG += RAND:129
+		ENDIF
+		RETURN ARG
+
+	;미노리코, 稔子
+	CASE 38
+		;미노리코
+		IF CFLAG:0 == 0
+			LOCAL:3 = (ASSI >= 0 && NO:ASSI == 37 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+			;아키 자매 듀엣
+			IF LOCAL:3 == 2
+				PRINT 『플랜트필리아가 싫어요!』
+				ARG /= 2
+				ARG += RAND:512
+			ELSE
+				PRINT 『풍작기원의 춤』
+				ARG -= 16
+				ARG += RAND:91
+			ENDIF
+		;稔子
+		ELSE
+			PRINT 『흉작기원의 춤』
+			ARG -= 16
+			ARG += RAND:77
+		ENDIF
+		RETURN ARG
+
+	;히나
+	CASE 39
+		LOCAL:3 = RAND:128
+		IF LOCAL:3 == 0 && TALENT:45 && TALENT:134
+			PRINTFORM 『대회전! 위에서 아래로 액을 뿌린다!!』
+			ARG -= 89
+			ARG += RAND:890
+			;분유 경험(표시하지 않음)
+			CALL COMMON_UP_EXP, TARGET, 5, 1, 2
+			;방뇨 경험(표시하지 않음)
+			CALL COMMON_UP_EXP, TARGET, 6, 1, 2
+		ELSEIF LOCAL:3 < 2 && TALENT:134
+			PRINTFORM 『대회전! 위로 액을 뿌린다!!』
+			ARG -= 89
+			ARG += RAND:289
+			;분유 경험(표시하지 않음)
+			CALL COMMON_UP_EXP, TARGET, 5, 1, 2
+		ELSEIF LOCAL:3 < 2 && TALENT:45
+			PRINTFORM 『대회전! 아래로 액을 뿌린다!!!』
+			ARG -= 89
+			ARG += RAND:289
+			;방뇨 경험(표시하지 않음)
+			CALL COMMON_UP_EXP, TARGET, 6, 1, 2
+		ELSE
+			PRINTFORM 『액의 %LOCALS%요일』
+			ARG -= 50
+			ARG += RAND:210
+		ENDIF
+		RETURN ARG
+
+	;니토리, 클린댐
+	CASE 40
+		;니토리
+		IF CFLAG:0 == 0
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT 『초요괴 음두』
+				ARG -= 13
+				ARG += RAND:105
+			ELSE
+				PRINT 『오이 헌터』
+				ARG -= 17
+				ARG += RAND:111
+			ENDIF
+		;클린댐
+		ELSE
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT 『야한게 좋다고 생각합니다!』
+				ARG -= 33
+				ARG += RAND:122
+			ELSE
+				PRINT 『일본어 할 수 있는 나, 대단해라!』
+				ARG -= 27
+				ARG += RAND:100
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;모밋치
+	CASE 41
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 1
+			PRINT 『장기는 졸부터』
+			ARG -= 20
+			ARG += RAND:70
+		ELSE
+			PRINT 『멍멍이 파수꾼씨』
+			ARG -= 25
+			ARG += RAND:65
+		ENDIF
+		RETURN ARG
+
+	;사나에, 사나에 님
+	CASE 42
+		IF TFLAG:236 & 3
+			PRINT 『신들의 황혼』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+		;사나에
+		IF CFLAG:0 == 0
+		LOCAL:3 = RAND:6
+			IF LOCAL:3 == 0
+				PRINT 『시나노의 자장가』
+				ARG -= 15
+				ARG += RAND:84
+			ELSEIF LOCAL:3 == 1
+				PRINT 『미라클☆걸』
+				ARG -= 7
+				ARG += RAND:77
+			ELSEIF LOCAL:3 == 2
+				PRINT “Prayer”
+				ARG -= 9
+				ARG += RAND:94
+			ELSEIF LOCAL:3 == 3
+				PRINT “Prayer Blue”
+				ARG -= 11
+				ARG += RAND:111
+			ELSEIF LOCAL:3 == 4
+				PRINT “Pray For Answer”
+				ARG -= 12
+				ARG += RAND:99
+			ELSE
+				PRINT 『복숭아빛 환상향』
+				ARG -= 15
+				ARG += RAND:100
+			ENDIF
+		;사나에 님
+		ELSE
+		LOCAL:3 = RAND:24
+			IF LOCAL:3 == 0
+				PRINT 『You Can't Explain Anything Without The Word 'Destruction'』
+				ARG = 777
+			ELSEIF LOCAL:3 >= 1 &&  LOCAL:3 < 12
+				PRINT 『상식은 내다버리는 것』
+				ARG -= 21
+				ARG += RAND:89
+			ELSE
+				PRINT 『피망이 아니야』
+				ARG -= 25
+				ARG += RAND:84
+			ENDIF
+		ENDIF
+		ENDIF
+		RETURN ARG
+
+	;카나코
+	CASE 43
+		IF TFLAG:236 & 3
+			PRINT 『신들의 황혼』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+		LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT 『신화전대 온바시라』
+				ARG -= 30
+				ARG += RAND:120
+			ELSEIF LOCAL:3 == 1
+				PRINT 『신화전대 온바시라 DX』
+				ARG -= 25
+				ARG += RAND:56
+			ELSEIF LOCAL:3 == 2
+				PRINT 『신화전대 온바시라 외전』
+				ARG -= 20
+				ARG += RAND:130
+			ELSE
+				PRINT 『신화전대 온바시라・FinalEdition』
+				ARG -= 20
+				ARG += RAND:150
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;케로쨩
+	CASE 44
+		IF TFLAG:236 & 3
+			PRINT 『신들의 황혼』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			LOCAL:3 = RAND:16
+			IF LOCAL:3 == 0
+				PRINT 『내일은 맑은 날, 개구리의 어제』
+				ARG /= 2
+				ARG += 196
+			ELSEIF LOCAL:3 == 9
+				PRINT 『케로⑨데스티니』
+				ARG -= 20
+				ARG += 168
+			ELSE
+				PRINT 『개구리의 마음』
+				ARG -= 30
+				ARG += RAND:60
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;서니
+	CASE 45
+		;트리오 라이브 때
+		IF TFLAG:236 & 2
+			PRINT 『페어리 카니발・태양편』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			PRINT 『태양란란』
+			ARG -= 24
+			ARG += RAND:75
+		ENDIF
+		RETURN ARG
+
+	;루나
+	CASE 46
+		;트리오 라이브 때
+		IF TFLAG:236 & 2
+			PRINT 『페어리 카니발・월광편』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			PRINT 『밤이라서 잠이 안와』
+			ARG -= 25
+			ARG += RAND:72
+		ENDIF
+		RETURN ARG
+
+	;스타
+	CASE 47
+		;트리오 라이브 때
+		IF TFLAG:236 & 2
+			PRINT 『페어리 카니발・유성편』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT 『별님에게 소원을』
+				ARG -= 24
+				ARG += RAND:70
+			ELSE
+				PRINT 『별을 보는 요정』
+				ARG -= 10
+				ARG += RAND:50
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;아큐
+	CASE 48
+		PRINT 『전생인  ～ Reincarnation』
+		ARG -= 25
+		ARG += RAND:130
+		RETURN ARG
+
+	;렌코
+	CASE 49
+		;렌코
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 50 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:2 # 0
+		;렌코메리 콤비
+		IF LOCAL:3 == 1
+			PRINT 『소녀비봉구락부』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:3
+			IF LOCAL:3 == 0
+				PRINT 『시간읊기』
+				ARG -= 10
+				ARG += RAND:111
+			ELSEIF LOCAL:3 == 1
+				PRINT “Heart of Singularity”
+				ARG -= 21
+				ARG += RAND:126
+			ELSE
+				PRINT “G.M.T”
+				ARG -= 23
+				ARG += RAND:90
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;메리
+	CASE 50
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 49 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:2 # 0
+		;메리렌코 콤비
+		IF LOCAL:3 == 1
+			PRINT 『소녀비봉구락부』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			IF LOCAL:3 == 0
+				PRINT 『몽현』
+				ARG -= 12
+				ARG += RAND:60
+			ELSEIF LOCAL:3 == 1
+				PRINT “Dreaming hour”
+				ARG -= 19
+				ARG += RAND:114
+			ELSE
+				PRINT 『양의 탑』
+				ARG -= 18
+				ARG += RAND:102
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;이쿠 씨
+	CASE 51
+		LOCAL:3 = RAND:3
+		;토요일 밤은 물론!
+		IF DAY:7 >= 7 && TIME == 1
+			PRINT 『새러데잇 나이트·피버! 」
+			ARG -= 77
+			ARG += RAND:777
+		ELSEIF LOCAL:3 == 0
+			PRINT 『피버!」
+			ARG -= 22
+			ARG += RAND:144
+		ELSEIF LOCAL:3 == 1
+			;카부키 록스란 게임에 있더라 이거
+			PRINT 『너의 마음에 레일건』
+			ARG -= 22
+			ARG += RAND:100
+		ELSE
+			PRINT 『너의 머리 위에 100만 볼트』
+			ARG -= 22
+			ARG += RAND:88
+		ENDIF
+		RETURN ARG
+
+	;텐시
+	CASE 52
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『피치 업・걸』
+			ARG -= 20
+			ARG += RAND:75
+		ELSE
+			PRINT “Earthquake Super Shock”
+			ARG -= 19
+			ARG += RAND:99
+		ENDIF
+		RETURN ARG
+
+	;와타츠미 자매(토요히메, 요리히메)
+	CASE 53 TO 54
+		LOCAL:3 = (ASSI >= 0 && (NO:ASSI == 53 || NO:ASSI == 54) && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;와타츠키 자매로 듀엣
+		IF LOCAL:3 == 0
+			PRINT 『달빛 자매』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:3
+			IF LOCAL:3 == 0
+				PRINT 『망월』
+				ARG -= 10
+				ARG += RAND:111
+			ELSEIF LOCAL:3 == 1
+				PRINT 『농월』
+				ARG -= 25
+				ARG += RAND:126
+			ELSE
+				PRINT “Lunatic Blue”
+				ARG -= 28
+				ARG += RAND:90
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;레이센 2호
+	CASE 55
+		LOCAL:3 = RAND:6
+		IF LOCAL:3 == 0
+			PRINT 『달의 조각』
+			ARG -= 20
+			ARG += RAND:60
+		ELSE
+			PRINT 『문라이트 전승』
+			ARG -= 14
+			ARG += RAND:50
+		ENDIF
+		RETURN ARG
+
+	;릴리 블랙
+	CASE 56
+		LOCAL:3 = RAND:6
+		IF LOCAL:3 == 0
+			PRINT 『봄의 노래』
+			ARG -= 40
+			ARG += RAND:111
+		ELSEIF LOCAL:3 == 1
+			PRINT 『츤데렐라틱한 노래』
+			IF TALENT:13 && ABL:10 >= 4
+				ARG += 55
+				ARG += RAND:111
+			ELSE
+				ARG -= 55
+				ARG += RAND:111
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;키스메
+	CASE 57
+		;키스메
+		PRINT 『두레박 떨구기의 겨울방학』
+		ARG /= 2
+		ARG += RAND:180
+		RETURN ARG
+
+	;야마메 씨
+	CASE 58
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT “Lunatic Underground”
+			ARG += RAND:256
+		ELSEIF LOCAL:3 == 1
+			PRINT “ARACHNE”
+			ARG += RAND:179
+		ELSE
+			PRINT “Hi-tension Feaver”
+			ARG += RAND:101
+		ENDIF
+		RETURN ARG
+
+	;파르시
+	CASE 59
+		LOCAL:3 = RAND:7
+		IF LOCAL:3 == 0
+			PRINT 『이뤄지지 않은 사랑의 질투노래』
+			ARG -= 50
+			ARG += RAND:196
+		ELSEIF LOCAL:3 == 1
+			PRINT “Apparition Lover”
+			ARG -= 28
+			ARG += RAND:175
+		ELSEIF LOCAL:3 == 2
+			PRINT “root_A / evenescence”
+			ARG -= 24
+			ARG += RAND:186
+		ELSEIF LOCAL:3 == 3
+			PRINT “Alone With You (Dying To See Your Face)”
+			ARG -= 18
+			ARG += RAND:147
+		ELSEIF LOCAL:3 == 4 && TALENT:152 == 1
+			PRINT “Lumiere de courage”
+			ARG += RAND:155
+		ELSEIF LOCAL:3 == 5
+			PRINT “Lady Green Eyed”
+			ARG -= 21
+			ARG += RAND:165
+		ELSE
+			PRINT “Slinking Cat”
+			ARG /= 2
+			ARG += RAND:145
+		ENDIF
+		RETURN ARG
+
+	;유기
+	CASE 60
+		PRINT 『삼보필살』
+		ARG -= 35
+		ARG += RAND:85
+		RETURN ARG
+
+	;사토리
+	CASE 61
+		LOCAL:3 = RAND:8
+		IF LOCAL:3 == 0
+			PRINT “3y3s”
+			ARG -= 33
+			ARG += RAND:191
+		ELSEIF LOCAL:3 == 1
+			PRINT “Tag”
+			ARG -= 14
+			ARG += RAND:145
+		ELSEIF LOCAL:3 == 2
+			PRINT “Merciless Lazuli Rose”
+			ARG -= 28
+			ARG += RAND:183
+		ELSEIF LOCAL:3 == 3
+			PRINT “Enter 3rd Eye”
+			ARG -= 14
+			ARG += RAND:141
+		ELSEIF LOCAL:3 == 4
+			PRINT “Innocent Eyes”
+			ARG -= 21
+			ARG += RAND:180
+		ELSEIF LOCAL:3 == 5 && TALENT:150 == 1
+			PRINT 『가속하는 사랑은 아무도 멈출 수 없어』
+			ARG += RAND:168
+		ELSEIF LOCAL:3 == 6
+			PRINT 『나의 안력에는 어떠한 힘도 통하지 않는다』
+			ARG -= 12
+			ARG += RAND:128
+		ELSE
+			PRINT 『소녀Ｓ』
+			ARG -= 12
+			ARG += RAND:143
+		ENDIF
+
+	;오린
+	CASE 62
+		LOCAL:3 = RAND:6
+		IF LOCAL:3 == 0
+			PRINT 『화아아아아아아차아아아!』
+			ARG += 31
+			ARG += RAND:60
+		ELSEIF LOCAL:3 == 1
+			PRINT “Wheel”
+			ARG += 21
+			ARG += RAND:70
+		ELSEIF LOCAL:3 == 2
+			PRINT “tod un feuer”
+			ARG += 17
+			ARG += RAND:99
+		ELSEIF LOCAL:3 == 3
+			PRINT “Phosphorus”
+			ARG += 28
+			ARG += RAND:81
+		ELSEIF LOCAL:3 == 4
+			PRINT 『오링링 월드』
+			ARG -= 25
+			ARG += RAND:80
+		ELSE
+			PRINT 『오링링 랜드』
+			ARG -= 30
+			ARG += RAND:70
+		ENDIF
+		RETURN ARG
+
+	;오쿠, 태양 없는 오쿠
+	CASE 63
+		;오쿠
+		IF CFLAG:0 == 0
+			LOCAL:3 = RAND:32
+			IF LOCAL:3 == 0
+				PRINT “Flames Within These Black Feathers”
+				ARG -= 25
+				ARG += RAND:198
+			ELSEIF LOCAL:3 >= 1 && LOCAL:3 < 5
+				PRINT 『작열의 파이어 걸』
+				ARG -= 30
+				ARG += RAND:80
+			ELSEIF LOCAL:3 >= 5 && LOCAL:3 < 10
+				PRINT “Melty Kiss”
+				ARG -= 21
+				ARG += RAND:120
+			ELSEIF LOCAL:3 >= 10 && LOCAL:3 < 15
+				PRINT 『작염 멜트다운』
+				ARG -= 24
+				ARG += RAND:110
+			ELSEIF LOCAL:3 >= 15 && LOCAL:3 < 20
+				PRINT “Impulsive Fly”
+				ARG -= 22
+				ARG += RAND:130
+			ELSE
+				PRINT 『혼돈! 파괴!망가!』
+				ARG -= 20
+				ARG += RAND:128
+			ENDIF
+		;태양 없는 오쿠
+		ELSE
+			LOCAL:3 = RAND:6
+			IF LOCAL:3 == 0
+				PRINT 『하이페리온에 꽃다발을』
+				ARG += RAND:99
+			ELSE
+				PRINT 『삶은 달걀이 먹고 싶구나』
+				ARG -= 25
+				ARG += RAND:75
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;코이시
+	CASE 64
+		LOCAL:3 = RAND:64
+		IF LOCAL:3 == 0
+			PRINT 『일립무의식에 300미터』
+			ARG -= 20
+			ARG += RAND:240
+		ELSEIF LOCAL:3 >= 1 && LOCAL:3 < 10
+			PRINT “Wandering, never Wondering”
+			ARG -= 25
+			ARG += RAND:180
+		ELSEIF LOCAL:3 >= 11 && LOCAL:3 < 20
+			PRINT “Nostalgia”
+			ARG -= 26
+			ARG += RAND:161
+		ELSEIF LOCAL:3 >= 21 && LOCAL:3 < 30
+			PRINT 『서성의 퀄리아 ～Subterranean rose～』
+			ARG -= 24
+			ARG += RAND:106
+		ELSEIF LOCAL:3 >= 31 && LOCAL:3 < 40
+			PRINT 『방황의 피날레』
+			ARG -= 22
+			ARG += RAND:111
+		ELSEIF LOCAL:3 >= 41 && LOCAL:3 < 50
+			IF TALENT:213 == 2
+				PRINT “All This Time”
+				ARG -= 23
+				ARG += RAND:154
+			ELSE
+				PRINT “TRULY GLORY”
+				ARG += RAND:168
+			ENDIF
+		ELSEIF LOCAL:3 >= 51 && LOCAL:3 < 60
+			PRINT “Last Remote”
+			ARG -= 22
+			ARG += RAND:123
+		ELSEIF LOCAL:3 == 64 && TALENT:158 == 1 
+			PRINT 『코메이지 코이시의 두근두근 대모험 오프닝』
+			ARG -= 25
+			ARG += RAND:222
+		ELSE
+			PRINT 『포키 CM송』
+			ARG -= 20
+			ARG += RAND:50
+		ENDIF
+		RETURN ARG
+
+	;반령
+	CASE 65
+		PRINT 『반은 환상의 사랑』
+		ARG -= 30
+		ARG += RAND:70
+		RETURN ARG
+
+	;상하이 인형
+	CASE 66
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 67 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # RAND:2
+		;상하이＆호라이
+		IF LOCAL:3 == 2
+			PRINT 『성소녀연정 ~ 목 매달기 기행 ~』
+			ARG /= 2
+			ARG += RAND:512
+		ELSEIF LOCAL:3 == 0
+			PRINT 『상하이 돌』
+			ARG -= 27
+			ARG += RAND:143
+		ELSE
+			PRINT 『인형들의 론도』
+			ARG -= 10
+			ARG += RAND:123
+		ENDIF
+		RETURN ARG
+
+	;호라이 인형
+	CASE 67
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 66 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # RAND:2
+		;호라이＆상하이
+		IF LOCAL:3 == 2
+			PRINT 『금지된 장난 ~ 상하이편 ~』
+			ARG /= 2
+			ARG += RAND:512
+		ELSEIF LOCAL:3 == 0
+			PRINT 『마리오넷 뮤지엄』
+			ARG -= 27
+			ARG += RAND:143
+		ELSE
+			PRINT 『인형들의 론도』
+			ARG -= 10
+			ARG += RAND:123
+		ENDIF
+		RETURN ARG
+
+	;토키코
+	CASE 68
+		PRINT 『이름없는 자의 시』
+		ARG = 150
+		RETURN ARG
+
+	;란노스케
+	CASE 69
+		LOCAL:3 = RAND:4
+		IF LOCAL:3 == 0
+			PRINT 『반쪽이의 시』
+			ARG -= 32
+			ARG += RAND:128
+		ELSE
+			PRINT 『모두 함께 가자　향림당!』
+			ARG -= 256
+			ARG += RAND:384
+		ENDIF
+		RETURN ARG
+
+	;요우키
+	CASE 70
+		PRINT 『쾌도난마』
+		ARG -= 32
+		ARG += RAND:64
+		RETURN ARG
+
+	;나즈린 동지
+	CASE 71
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT 『인터내셔널』
+			ARG -= 30
+			ARG += RAND:111
+		ELSEIF LOCAL:3 == 1
+			PRINT 『들어라 만국의 노동자』
+			ARG -= 25
+			ARG += RAND:120
+		ELSE
+			;이건 디○니에겐 절대로 비밀이다…
+			PRINT 『나즈린 마우스 마치』
+			ARG -= 200
+			ARG += RAND:320
+		ENDIF
+		RETURN ARG
+
+	;코가삿치
+	CASE 72
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『우산』
+			ARG -= 40
+			ARG += RAND:90
+		ELSE
+			PRINT 『우산 잊어먹는 거 조심하세요』
+			ARG -= 60
+			ARG += RAND:135
+		ENDIF
+		RETURN ARG
+
+	;이치린
+	CASE 73
+		PRINT 『비구니 절에 스님이』
+		ARG -= 75
+		ARG += RAND:80
+		RETURN ARG
+
+	;운잔 씨
+	CASE 74
+		PRINT 『아저씨의 주먹』
+		ARG -= 35
+		ARG += RAND:98
+		RETURN ARG
+
+	;무라사 선장
+	CASE 75
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『나는야 바다의 아이』
+			ARG -= 30
+			ARG += RAND:90
+		ELSE
+			PRINT 『해적의 노래』
+			ARG -= 30
+			ARG += RAND:92
+		ENDIF
+		RETURN ARG
+
+	;토라마루네 쇼 씨
+	CASE 76
+		;비사문천에 기도하는 경 비슷한 거
+		PRINT 『옴페이시라마나야소와카』
+		ARG -= 50
+		ARG += RAND:115
+		RETURN ARG
+
+	;뱌쿠렌 누님
+	CASE 77
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 81 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;뱌쿠렌&쿄코 콤비(요괴 독경 라이브)
+		IF LOCAL:3 == 2
+			PRINT 『마하반야바라밀다심경』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:3
+			IF LOCAL:3 == 0
+				PRINT “TSUGUNAI!”
+				ARG -= 12
+				ARG += RAND:90
+			ELSEIF LOCAL:3 == 1
+				PRINT “FOUR SEASONS OF LONELINESS”
+				ARG -= 23
+				ARG += RAND:131
+			ELSE
+				;이, 이봐!
+				PRINT “대연화”
+				ARG -= 10
+				ARG += RAND:88
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;누에
+	CASE 78
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			;원 출전(아마 아무도 모름)을 신나게 제목 수정
+			PRINT “환상세계소녀와 누에”
+			ARG -= 96
+			ARG += RAND:132
+		ELSE
+			;이, 이봐! 그 두 번째
+			PRINT “ＵＦＯ”
+			ARG -= 100
+			ARG += RAND:100
+		ENDIF
+		RETURN ARG
+
+	;하타테
+	CASE 79
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT “아주아주 맛있는 조갯살”
+			ARG -= 30
+			ARG += RAND:105
+		ELSE
+			PRINT “신출내기 기자애가”
+			ARG -= 80
+			ARG += RAND:80
+		ENDIF
+		RETURN ARG
+
+	;카센
+	CASE 80
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 83 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;카센&청아 콤비. 동방 M-1 소재
+		IF LOCAL:3 == 2
+			PRINT “DESIRE SHOOTING”
+			ARG /= 2
+			ARG += RAND:333
+		ELSE
+			;한국판 포○몬 1기 엔딩
+			PRINT 『우리는 모두 친구』
+			ARG -= 22
+			ARG += RAND:88
+		ENDIF
+		RETURN ARG
+
+	;쿄코
+	CASE 81
+		LOCAL:3 = (ASSI >= 0 && (NO:ASSI == 25 || NO:ASSI == 77) && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;쿄코&미스티아 콤비(요괴 펑크 라이브)
+		IF LOCAL:3 == 2 && NO:ASSI == 25
+			PRINT 『요괴 펑크 라이브』
+			ARG /= 2
+			ARG += RAND:512
+		;쿄코&뱌쿠렌 콤비(요괴 독경 라이브)
+		ELSEIF LOCAL:3 == 2 && NO:ASSI == 77
+			PRINT 『마하반야바라밀다심경』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT 『아제아제 바라아제』
+				ARG -= 30
+				ARG += RAND:105
+			ELSE
+				PRINT 『반야심경』
+				ARG -= 90
+				ARG += RAND:80
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;요시카
+	CASE 82
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT “Braineater”
+			ARG -= 17
+			ARG += RAND:89
+		ELSEIF LOCAL:3 == 1
+			PRINT 『미나리 따는 노래』
+			ARG -= 15
+			ARG += RAND:71
+		ENDIF
+		RETURN ARG
+
+	;청아
+	CASE 83
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 80 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;카센&청아 콤비. 동방 M-1 소재
+		IF LOCAL:3 == 2
+			PRINT “DESIRE SHOOTING”
+			ARG /= 2
+			ARG += RAND:333
+		ELSE
+			LOCAL:3 = RAND:2
+			IF LOCAL:3 == 0
+				PRINT “DesireDrive”
+				ARG -= 15
+				ARG += RAND:132
+			ELSE
+				;역시 M-1의 그거. 유니콘~
+				PRINT 『날치기 방지의 노래』
+				ARG -= 19
+				ARG += RAND:83
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;토지코 
+	CASE 84
+		;트리오 라이브 때
+		IF TFLAG:236 & 4
+			PRINT 『호족난무』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT “ASUKA!”
+				ARG -= 15
+				ARG += RAND:97
+			ELSEIF LOCAL:3 == 1
+				PRINT “Thunderbolt”
+				ARG -= 15
+				ARG += RAND:135
+			ELSEIF LOCAL:3 == 2
+				PRINT “ra'am”
+				ARG -= 22
+				ARG += RAND:111
+			ELSE
+				PRINT 『소가노 토지코는 노래하지 않는다』
+				ARG -= 20
+				ARG += RAND:79
+			ENDIF
+		ENDIF
+
+		RETURN ARG
+
+	;후토
+	CASE 85
+		;트리오 라이브 때
+		IF TFLAG:236 & 4
+			PRINT 『호족난무』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			LOCAL:3 = RAND:4
+			IF LOCAL:3 == 0
+				PRINT “FIRE FIRE”
+				ARG -= 30
+				ARG += RAND:150
+			ELSEIF LOCAL:3 == 1
+				PRINT “Nice Boat.”
+				ARG -= 16
+				ARG += RAND:82
+			ELSEIF LOCAL:3 == 2
+   			 ;이니셜만 따면 FUTO
+				PRINT “FIRE UP THUNDER OUT”
+				ARG -= 21
+				ARG += RAND:121
+			ELSE
+				PRINT 『그대는 불타고 있는가』
+				ARG -= 20
+				ARG += RAND:96
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;태자님
+	CASE 86
+		;트리오 라이브 때
+		IF TFLAG:236 & 4
+			PRINT 『호족난무』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			LOCAL:3 = RAND:3
+			IF LOCAL:3 == 0
+				PRINT 『성상윤회 ~Repeat~』
+				ARG -= 30
+				ARG += RAND:170
+			ELSEIF LOCAL:3 == 1
+				PRINT 『아스카문화어택』
+				ARG -= 20
+				ARG += RAND:100
+			ELSE
+				PRINT 『성덕전설』
+				ARG -= 18
+				ARG += RAND:128
+			ENDIF
+		ENDIF
+		RETURN ARG
+
+	;마미조
+	CASE 87
+		PRINT “Mami Mami Zone”
+		ARG -= 10
+		ARG += RAND:173
+		RETURN ARG
+
+	;코코로
+	CASE 89
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			TSTR:6 = 『심기루』
+			;こころの面は66枚
+			ARG -= 66
+			ARG += RAND:666
+		ELSE
+			TSTR:6 = 『암흑 노가쿠』
+			;66 - 希望の面
+			ARG -= 1
+			ARG += RAND:66
+		ENDIF
+		RETURN ARG
+
+	;오오에도 인형
+	CASE 96
+		LOCAL:3 = RAND:256
+		IF LOCAL:3 == 0
+			PRINT 『거대화음두』
+			ARG -= 57
+			ARG += RAND:550
+		ELSE
+			PRINT 『에도의 꽃』
+			ARG -= 50
+			ARG += RAND:99
+		ENDIF
+		RETURN ARG
+
+	;미마 님
+	CASE 100
+		PRINT “Darkness Soul”
+		ARG -= 6
+		ARG += RAND:66
+		RETURN ARG
+
+	;리카
+	CASE 101
+		LOCAL:3 = RAND:256
+		IF LOCAL:3 == 0
+			PRINT 『나, 리카쨩♪』
+			ARG -= 24
+			ARG += RAND:198
+		ELSEIF LOCAL:3 == 28
+			PRINT 『니파~☆』
+			ARG -= 28
+			ARG += RAND:128
+		ELSEIF LOCAL:3 == 33
+			PRINT 『미이~』
+			ARG -= 33
+			ARG += RAND:133
+		ELSEIF LOCAL:3 == 51
+			PRINT 『조각모음』
+			ARG -= 1
+			ARG += RAND:151
+		ELSEIF LOCAL:3 == 70
+			PRINT 『나노데스』
+			ARG -= 17
+			ARG += RAND:110
+		ELSE
+			PRINT 『전차 소녀의 사랑 노래』
+			ARG -= 12
+			ARG += RAND:66
+		ENDIF
+		RETURN ARG
+
+	;메이라
+	CASE 102
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT 『해질녁을 메운 여무사』
+			ARG -= 21
+			ARG += RAND:96
+		ELSE
+			PRINT 『태양의 끝, 달의 시작』
+			ARG -= 13
+			ARG += RAND:108
+		ENDIF
+		RETURN ARG
+
+	;엘렌
+	CASE 103
+		PRINT 『사랑하는 폭신폭신 소녀』
+		ARG -= 10
+		ARG += RAND:80
+		RETURN ARG
+
+	;코토히메
+	CASE 104
+		PRINT 『프린세스 스마일』
+		ARG -= 22
+		ARG += RAND:88
+		RETURN ARG
+
+	;카나
+	CASE 105
+		PRINT 『카나베랄의 몽환소녀』
+		ARG -= 15
+		ARG += RAND:80
+		RETURN ARG
+
+	;리카코
+	CASE 106
+		PRINT 『과학신화』
+		ARG -= 45
+		ARG += RAND:70
+		RETURN ARG
+
+	;치유리
+	CASE 107
+		PRINT 『치유치유 체리』
+		ARG -= 6
+		ARG += RAND:66
+		RETURN ARG
+
+	;유메미 교수
+	CASE 108
+		LOCAL:3 = RAND:4
+		IF LOCAL:3 == 0
+			PRINT 『스트로베리 댄스』
+			ARG /= 5
+			LOCAL:3 = 1 + RAND:15
+			REPEAT LOCAL:3
+				ARG += RAND:15
+			REND
+		ELSE
+			PRINT “Strawberry Crisis!!”
+			ARG -= 12
+			ARG += RAND:111
+		ENDIF
+		RETURN ARG
+
+	;오렌지
+	CASE 109
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『밀감색 여름방학』
+			ARG -= 22
+			ARG += RAND:96
+		ELSE
+			PRINT 『퓻퓻퓻～ 노퓨～』
+			ARG -= 34
+			ARG += RAND:70
+		ENDIF
+		RETURN ARG
+
+	;쿠루미
+	CASE 110
+		PRINT 『붉은 호수의 파반느』
+		ARG -= 45
+		ARG += RAND:80
+		RETURN ARG
+
+	;엘리
+	CASE 111
+		PRINT 『몽환관의 문 앞에서』
+		ARG -= 25
+		ARG += RAND:77
+		RETURN ARG
+
+	;무게츠
+	CASE 112
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 113 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;몽환 듀엣
+		IF LOCAL:3 == 2
+			PRINT 『몽환환상 Duet　～몽(夢)～』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			PRINT 『몽환의 달』
+			ARG -= 24
+			ARG += RAND:120
+		ENDIF
+		RETURN ARG
+
+	;겐게츠
+	CASE 113
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 112 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;환몽 듀엣
+		IF LOCAL:3 == 2
+			PRINT 『몽환환상 Duet　～환(幻)～』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			PRINT 『몽환의 달』
+			ARG -= 24
+			ARG += RAND:120
+		ENDIF
+		RETURN ARG
+
+	;사라
+	CASE 114
+		PRINT 『꿈 열차』
+		ARG -= 31
+		ARG += RAND:98
+		RETURN ARG
+
+	;루이즈
+	CASE 115
+		;여행을 좋아한다고 해서 환상향으로 이어져 있을 듯한 장소를 모조리
+		LOCAL:3 = RAND:6
+		IF LOCAL:3 == 0
+			;로그에 있던 월세계 여행에 한 글자 더하기
+			PRINT 『월면세계여행』
+			ARG /= 2
+			ARG *= 1 + RAND:3
+		ELSEIF LOCAL:3 == 1
+			PRINT 『환상세계여행』
+			ARG -= 25
+			ARG += RAND:96
+		ELSEIF LOCAL:3 == 2
+			PRINT 『지저세계여행』
+			ARG -= 20
+			ARG += RAND:61
+		ELSEIF LOCAL:3 == 3
+			PRINT 『명계여행』
+			ARG -= 15
+			ARG += RAND:41
+		ELSEIF LOCAL:3 == 4
+			PRINT 『천계여행』
+			ARG -= 10
+			ARG += RAND:36
+		ELSE
+			PRINT 『마계여행』
+			ARG -= 5
+			ARG += RAND:21
+		ENDIF
+		RETURN ARG
+
+	;유키
+	CASE 116
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 117 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;유키마이 콤비
+		IF LOCAL:3 == 2
+			PRINT 『두 사람은 ○리큐어♪ Max Heart!』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			PRINT “Black in Mind”
+			ARG -= 24
+			ARG += RAND:84
+		ENDIF
+		RETURN ARG
+
+	;마이
+	CASE 117
+		LOCAL:3 = (ASSI >= 0 && NO:ASSI == 116 && ABL:ASSI:32 >= 3 && ABL:32 >= 3) ? RAND:3 # 0
+		;마이유키 콤비
+		IF LOCAL:3 == 2
+			PRINT 『두 사람은 ○리큐어♪ Splash Star!』
+			ARG /= 2
+			ARG += RAND:512
+		ELSE
+			PRINT “Judas Kiss”
+			ARG -= 24
+			ARG += RAND:84
+		ENDIF
+		RETURN ARG
+
+	;유메코 씨
+	CASE 118
+		PRINT 『메이드 걸』
+		ARG -= 10
+		ARG += RAND:100
+		RETURN ARG
+
+	;신키 님
+	CASE 119
+		PRINT “Song of GOD”
+		ARG /= 2
+		ARG += RAND:164
+		RETURN ARG
+
+	;중천사
+	CASE 126
+		PRINT “Holy Gospel”
+		ARG -= 25
+		ARG += RAND:60
+		RETURN ARG
+
+	;ＶＩＶＩＴ
+	CASE 128
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『선인장과 메이드』
+			ARG -= 18
+			ARG += RAND:64
+		ELSE
+			PRINT 『빌로드 에어걸』
+			ARG -= 44
+			ARG += RAND:155
+		ENDIF
+		RETURN ARG
+
+	;히라노
+	CASE 129
+		PRINT 『사랑의 굿 장단에 흐트러져서』
+		ARG -= 25
+		ARG += RAND:95
+		RETURN ARG
+
+	;밀리아
+	CASE 130
+		LOCAL:3 = RAND:3
+		IF LOCAL:3 == 0
+			PRINT 『최속의 실피드』
+			ARG -= 10
+			ARG += RAND:55
+		ELSEIF LOCAL:3 == 1
+			PRINT 『신 환상』
+			ARG -= 33
+			ARG += RAND:111
+		ELSE
+			PRINT 『순진 프림로즈』
+			ARG -= 22
+			ARG += RAND:99
+		ENDIF
+		RETURN ARG
+
+	;마리
+	CASE 134
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			PRINT 『기계장치의 마리 서커스』
+			ARG -= 22
+			ARG += RAND:88
+		ELSE
+			PRINT 『오를레앙의 성기사』
+			ARG -= 15
+			ARG += RAND:45
+		ENDIF
+		RETURN ARG
+
+	;이사미
+	CASE 139
+		PRINT 『주정뱅이 블루스』
+		ARG -= 41
+		ARG += RAND:41
+		RETURN ARG
+
+	;사츠키 린
+	CASE 147
+		PRINT 『지금부터 내 차례구나!』
+		ARG -= 100
+		ARG += RAND:147
+		RETURN ARG
+
+	;아들, 딸
+	CASE 148 TO 149
+		PRINT 『아빠를 위해서!』
+		ARG -= 80
+		ARG += RAND:66
+		RETURN ARG
+
+	CASE 150 TO 199
+		;무명 캐릭터
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+			IF TALENT:48 && RAND:2 == 0
+				;종족 「좀비 페어리」용
+				PRINT 『주정 울적하게』
+				ARG -= 64
+				ARG += RAND:81
+			ELSEIF TALENT:200
+				;해바라기 요정 외 종족 「요정」용
+				PRINT 『요정 쨍쨍하게』
+				ARG -= 32
+				ARG += RAND:81
+			ELSEIF TALENT:208
+				;앨리스표 인형 외 종족 「인형」용
+				PRINT 『인형들의 윤무』
+				ARG -= 8
+				ARG += RAND:110
+			ELSEIF TALENT:19 || TALENT:157
+				;질투하기 쉬움 or 질투 보유자 용
+				PRINT 『질러시 스톰』
+				ARG -= 16
+				ARG += RAND:100
+			ELSE
+				PRINT 『이름없는 자의 시』
+				ARG = 150
+			ENDIF
+		ELSE
+			PRINT 『이름없는 자의 시』
+			ARG = 150
+		ENDIF
+		RETURN ARG
+
+	;와카사기히메
+	CASE 220
+		LOCAL:3 = RAND:4
+		IF LOCAL:3 == 0
+			PRINT “Mermaid girl”
+			ARG -= 18
+			ARG += RAND:130
+		ELSEIF LOCAL:3 == 1
+			PRINT “Decretum”
+			ARG -= 22
+			ARG += RAND:122
+		ELSEIF LOCAL:3 == 2
+			PRINT 『인어의 노래』
+			ARG -= 22
+			ARG += RAND:135
+		ELSE
+    ;인어하면 제일 익숙할 그 곡...이지만 호수에 사는 인어가 바다를 논해도 되는 것인가
+			PRINT “Under the Sea”
+			ARG -= 15
+			ARG += RAND:150
+		ENDIF
+		RETURN ARG
+
+	;세키반키
+	CASE 221
+  ;마미루와 관계있는 곡들 (?) + 적당히 중2병틱한 것
+		LOCAL:3 = RAND:4
+		IF LOCAL:3 == 0
+    ;마미선배 테마
+			PRINT “Credens Justitiam”
+			ARG -= 15
+			ARG += RAND:125
+    ;패러디 영상으로도 많이 나왔던 듀라라라 ED곡
+		ELSEIF LOCAL:3 == 1
+			PRINT “Trust Me”
+			ARG -= 25
+			ARG += RAND:95
+		ELSEIF LOCAL:3 == 2
+    ;스컬걸즈 미스포츈 게이지5개 필살기명
+			PRINT “The 5th of Dismember”
+			ARG -= 15
+			ARG += RAND:135
+		ELSE
+			PRINT 『뭐하고 있냐 몸통아!』
+			ARG -= 20
+			ARG += RAND:78
+		ENDIF
+		RETURN ARG
+
+	;츠쿠모 벤벤
+	CASE 223
+		;트리오 라이브 때
+		IF TFLAG:236 & 2
+			PRINT 『환상 조루리』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			PRINT 『기원정사의 종소리』
+			ARG -= 20
+			ARG += RAND:200
+		ENDIF
+		RETURN ARG
+
+	;츠쿠모 야츠하시
+	CASE 224
+		;트리오 라이브 때
+		IF TFLAG:236 & 2
+			PRINT 『환상 조루리』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+			PRINT 『제행무상의 고토 소리』
+			ARG -= 20
+			ARG += RAND:200
+		ENDIF
+		RETURN ARG
+
+	;키진 세이자
+	CASE 225
+		LOCAL:3 = RAND:2
+		IF LOCAL:3 == 0
+		;메구포이드 곡. 일본어 독음이 '아마노쟈쿠'라서.
+			PRINT 『천성의 약함(天ノ弱)』
+			ARG -= 6
+			ARG += RAND:69
+		ELSE
+			PRINT “Reverse Gravity”
+			ARG -= 9
+			ARG += RAND:96
+		ENDIF
+		RETURN ARG
+
+	;스쿠나 신묘마루
+	CASE 226
+		LOCAL:3 = RAND:5
+		IF LOCAL:3 == 0
+			PRINT “Little Little Princess”
+			ARG -= 18
+			ARG += RAND:212
+		ELSEIF LOCAL:3 == 1
+			PRINT “Little Rock Overture”
+			ARG -= 27
+			ARG += RAND:175
+		ELSEIF LOCAL:3 == 2
+    ;인류는 쇠퇴했습니다 오프닝
+			PRINT “Real World”
+			ARG -= 15
+			ARG += RAND:92
+		ELSEIF LOCAL:3 == 3
+    ;여신님 작다는건 편리해! 엔딩
+			PRINT “Call Me Darling”
+			ARG -= 20
+			ARG += RAND:105
+		ELSE
+			PRINT 『인형의 집 속 섬벨리나』
+			ARG -= 22
+			ARG += RAND:111
+		ENDIF
+		RETURN ARG
+
+	;호리카와 라이코
+	CASE 227
+		;트리오 라이브 때
+		IF TFLAG:236 & 2
+			PRINT 『환상 조루리』
+			ARG -= 33
+			ARG += RAND:333
+		ELSE
+		;태고의 달인 곡
+			PRINT 『사이타마2000』
+			ARG -= 20
+			ARG += RAND:200
+		ENDIF
+		RETURN ARG
+
+	;헬코
+	CASE 497
+		PRINT 『지옥의 묵시록』
+		ARG -= 666
+		ARG += RAND:6
+		RETURN ARG
+
+;		예시용
+	;캐릭터
+;	CASE  
+;		PRINT 『(노래 이름)』
+;		ARG -= 
+;		ARG += RAND:
+;		예시용 2
+	;캐릭터
+;	CASE  
+;		LOCAL:3 = RAND:2
+;		IF LOCAL:3 == 0
+;			PRINT 『(노래 이름)』
+;			ARG -= 
+;			ARG += RAND:
+;		ELSE
+;			PRINT 『(노래 이름)』
+;			ARG -= 
+;			ARG += RAND:
+;		ENDIF
+ENDSELECT
+RETURN ARG
+

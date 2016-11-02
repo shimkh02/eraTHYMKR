@@ -1,0 +1,157 @@
+﻿;=============================================================================
+;자위 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE321
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:321 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;순종4미만 · 레즈끼(BL끼)3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || ((TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3) || (TALENT:120 && TALENT:ASSI:120 && ABL:ASSI:23 < 3))) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;한증탕과 암반욕 외의 ○○ 욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM321
+
+;조교자가 전회와 같아 전회의 조교가 후배위나 후배위 자위의 경우로 대상이 비대 음핵이나 후타나리의 경우, 후배위 자위에
+SIF PREVCOM == 21 || PREVCOM == 630 && ((ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0)) && (TALENT:1 || TALENT:121)
+	JUMP COM630
+
+PRINTL 자위한다
+TSTR:0 = 자위한다
+CALL TRAIN_MESSAGE_COM321
+
+;-------------------------------------------------
+;실행 결정
+;-------------------------------------------------
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 10
+DOWNBASE:1 += 100
+
+SOURCE:11 = 500
+SOURCE:12 = 600
+SOURCE:14 = 500
+SOURCE:18 = 800
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 60
+	SOURCE:15 = 60
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 180
+	SOURCE:15 = 180
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 800
+	SOURCE:15 = 800
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1700
+	SOURCE:15 = 1700
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2700
+	SOURCE:15 = 2700
+ELSE
+	SOURCE:0 = 3800
+	SOURCE:15 = 3800
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	SOURCE:16 = 130
+ELSEIF ABL:21 == 1
+	SOURCE:16 = 250
+ELSEIF ABL:21 == 2
+	SOURCE:16 = 500
+ELSEIF ABL:21 == 3
+	SOURCE:16 = 800
+ELSEIF ABL:21 == 4
+	SOURCE:16 = 1400
+ELSE
+	SOURCE:16 = 2000
+ENDIF
+
+;플레이어의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.50
+	TIMES SOURCE:15 , 0.50
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:15 , 0.80
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:15 , 1.00
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:15 , 1.50
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 1.50
+	TIMES SOURCE:15 , 2.50
+ELSE
+	TIMES SOURCE:0 , 2.00
+	TIMES SOURCE:15 , 4.00
+ENDIF
+
+;조교자의 손가락⇔노예의 P의 불결이 이동
+IF TALENT:1 || TALENT:121 || TALENT:122
+	STAIN:PLAYER:2 |= STAIN:1
+	STAIN:2 |= STAIN:PLAYER:1
+;노예의 손가락⇔조교자의 V의 불결이 이동
+ELSE
+	STAIN:PLAYER:3 |= STAIN:2
+	STAIN:3 |= STAIN:PLAYER:2
+ENDIF
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 4
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 4
+ENDIF
+
+;조교자가 후타나리
+SIF TALENT:PLAYER:121
+	SOURCE:22 /= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM321
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;친애/상애로 주인 조교로 반발 2 이하
+IF MARK:9 < 3 && ASSIPLAY == 0 && (TALENT:152 || TALENT:153)
+	PRINTFORML %CALLNAME:TARGET%의 페니스를 손으로 훑어주었다….
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 사랑하는 사람의 행동에 사랑스러운 소리로 응했다….
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%의 페니스를 손으로 훑어주었다….
+ENDIF

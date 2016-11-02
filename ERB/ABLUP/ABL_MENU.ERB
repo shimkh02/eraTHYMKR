@@ -1,0 +1,319 @@
+﻿;=============================================================================
+;능력 업 가부 판정 범용 처리
+;=============================================================================
+@SHOW_JUEL
+CALLFORM SHOW_JUEL_{(FLAG:12 & 2) / 2 + 1}
+
+@SHOW_ABLUP_SELECT
+;매각 조건
+CALL SPOILER_PRINT_SELL
+;함락 조건
+CALL SPOILER_PRINT_FALLTALENT
+CALLFORM SHOW_ABLUP_SELECT_{(FLAG:12 & 2) / 2 + 1}
+
+@USERABLUP
+IF RESULT == 100
+	CALL JUJUN_UP_CHECK
+	BEGIN TURNEND
+	RETURN 1
+ELSE
+	REUSELASTLINE  
+ENDIF
+RETURN 0
+
+;-------------------------------------------------
+;COUNT→ABL 번호의 변환함수(무효의 ABL에 대해서는 -1가 돌아옴)
+;-------------------------------------------------
+@GET_ABL_NUMBER(ARG)
+#FUNCTION
+SELECTCASE ARG
+	CASE 0 TO 3
+		;Ｃ감각(0)、Ｖ감각(1)、Ａ감각(2)、Ｂ감각(3)
+		RETURNF COUNT
+	CASE 4 TO 8
+		;従順(10)、欲望(11)、技巧(12)、奉仕精神(13)、露出癖(14)
+		RETURNF COUNT + 6
+	CASE 9, 10
+		;サドっ気(20)、マゾっ気(21)
+		RETURNF COUNT + 11
+	CASE 11
+		;レズっ気(22)、ＢＬっ気(23)
+		RETURNF 22 + TALENT:120
+	CASE 12, 13
+		;自慰中毒(30)、精液中毒(31)
+		RETURNF COUNT + 18
+	CASE 14
+		;レズ中毒(32)、ＢＬ中毒(33)
+		RETURNF 32 + TALENT:120
+	CASE 15
+		;噴乳中毒
+		SIF TALENT:120 == 0 && FLAG:15 & 8
+			RETURNF 34
+	CASE 16
+		;触手中毒
+		SIF FLAG:15 & 4096
+			RETURNF 35
+	CASE 17
+		;排泄中毒
+		SIF FLAG:15 & 4
+			RETURNF 36
+	CASE 18
+		;射精中毒
+		SIF TALENT:120 || TALENT:121
+			RETURNF 37
+	CASE 19
+		;料理技能
+		SIF FLAG:12 & 16
+			RETURNF 70
+	CASE 20
+		;撮影技能
+		SIF FLAG:15 & 128 && (ITEM:50 || ITEM:51 || NOITEM)
+			RETURNF 71
+	CASE 21
+		;歌唱技能
+		SIF FLAG:12 & 16 && (ITEM:52 || NOITEM)
+			RETURNF 72
+	CASE 22
+		;공작기능
+		SIF FLAG:12 & 16 && FLAG:1100 & 1
+			RETURNF 73
+	CASE 23
+		;수영기능
+		SIF FLAG:89 & 1
+			RETURNF 78
+ENDSELECT
+RETURNF -1
+
+;-------------------------------------------------
+;능력 여부 판정 처리 
+;-------------------------------------------------
+@CHECK_ISABLUP, ARG
+RESULT = -1
+SIF ARG != -1
+	CALLFORM ISABLUP{ARG}
+RETURN RESULT
+
+;-------------------------------------------------
+;능력 상승 가부의 표시 범용 처리
+;-------------------------------------------------
+@SHOW_ISABLUP_COMMON, ARG
+IF ARG == 0
+	PRINT ＯＫ
+ELSE
+	SIF ARG & 1
+		PRINT 구슬 부족 
+	SIF ARG & 2
+		PRINT 경험 부족 
+	SIF ARG & 4
+		PRINT 능력 부족 
+	SIF ARG & 8
+
+		PRINT 각인 부족 
+
+	SIF ARG & 16
+		PRINT τ의 부족 
+	SIF ARG & 32
+		PRINT 제물 수 부족 
+	SIF ARG & 64
+		PRINT 자금 부족
+ENDIF
+PRINTL 
+
+;-------------------------------------------------
+;한계에 따른 능력 상승 불가의 표시 범용 처리
+;-------------------------------------------------
+@ABLUP_MAX
+PRINTW 이미 MAX입니다.
+
+;=============================================================================
+;능력 업 가부 판정(1형 표시)
+;=============================================================================
+@SHOW_JUEL_1
+DRAWLINE
+CALL SHOW_INFO_EXP, TARGET
+CALL SHOW_INFO_JUEL, TARGET
+
+@SHOW_ABLUP_SELECT_1
+LOCALS:0 = \@(TALENT:MASTER:831) ? 기근 # ×\@
+LOCALS:1 = \@(TALENT:MASTER:831) ? 풍작 # ○\@
+REPEAT 24
+	LOCAL = GET_ABL_NUMBER(COUNT)
+	IF LOCAL != -1
+		CALL CHECK_ISABLUP, LOCAL
+
+		;능력의 수치가 5이상이라면 표시하지 않음
+		SIF ABL:LOCAL >= 5
+			CONTINUE
+		PRINTFORMLC  [{LOCAL, 2}] %ABLNAME:LOCAL, 8, LEFT%-LV{ABL:LOCAL}　%LOCALS:RESULT%
+	ENDIF
+REND
+IF MARK:3 < 3
+	CALL ISABLUP93
+	PRINTFORMLC  [93] %MARKNAME:3%-LV{MARK:3}　%LOCALS:RESULT%
+ENDIF
+REPEAT 2
+	IF MARK:(8 + COUNT)
+		CALLFORM ISABLUP{98 + COUNT}
+		PRINTFORMLC  [{98 + COUNT} ]%MARKNAME:(8 + COUNT)%-LV{MARK:(8 + COUNT)}　%LOCALS:RESULT%
+	ENDIF
+REND
+PRINTL [100] 능력치 업의 종료
+
+;=============================================================================
+;능력 업 가부 판정(2형 표시)
+;=============================================================================
+@SHOW_JUEL_2
+CUSTOMDRAWLINE ･
+CALL NEW_PRINT_EXP, TARGET
+CALL NEW_PRINT_JUEL, TARGET
+CUSTOMDRAWLINE ･
+
+@SHOW_ABLUP_SELECT_2
+LOCAL:1 = 0
+REPEAT 24
+	LOCAL = GET_ABL_NUMBER(COUNT)
+	SIF LOCAL < 0
+		CONTINUE
+
+	CALL CHECK_ISABLUP, LOCAL
+	PRINTFORM [{LOCAL, 2}] %ABLNAME:LOCAL, 8, LEFT%:LV{ABL:LOCAL} %BARSTR(ABL:LOCAL, 5, 5)%　
+	IF ABL:LOCAL >= 5
+		PRINT ☆ 　　　　　　
+	ELSE
+		PRINTFORM \@(RESULT == 1) ? ◇레벨업 가능◇ # ―레벨업 불가―\@
+	ENDIF
+	;개행 판정
+	LOCAL:1 += 1
+	IF (LOCAL:1)%2 == 0
+		PRINTL 
+	ELSE
+		PRINT 　
+	ENDIF
+REND
+IF MARK:3 < 3
+	CALL ISABLUP93
+	PRINTFORM [93] %MARKNAME:3%:LV{MARK:3} 　%BARSTR(MARK:3, 3, 3)%　\@(RESULT == 1) ? ◇레벨업 가능◇ # ―레벨업 불가―\@
+	;개행 판정
+	LOCAL:1 += 1
+	IF (LOCAL:1)%2 == 0
+		PRINTL 
+	ELSE
+		PRINT 　
+	ENDIF
+ENDIF
+			PRINTL 
+REPEAT 2
+	IF MARK:(8 + COUNT)
+		CALLFORM ISABLUP{98 + COUNT}
+		PRINTFORM [{98 + COUNT}] %MARKNAME:(8 + COUNT)%:LV{MARK:(8 + COUNT)} 　%BARSTR(MARK:(8 + COUNT), 3, 3)%　\@(RESULT == 1) ? ◇레벨다운 가능◇ # ―레벨다운 불가―\@
+		;개행 판정
+		LOCAL:1 += 1
+		;IF (LOCAL:1)%2 == 0
+			PRINTL 
+		;ELSE
+		;	PRINT 　
+		;ENDIF
+	ENDIF
+REND
+;마지막의 루프에서 개행하지 않았다면, 여기서 개행해둔다
+;SIF LOCAL:1%2 != 0
+PRINTL [100] 능력치 업의 종료
+
+;=============================================================================
+;수동 능력 업
+;=============================================================================
+;-------------------------------------------------
+;능력 상승 캐릭터 선택 처리
+;-------------------------------------------------
+@ABL_MANUAL_MENU
+;ターゲット退避(夜イベと共通。TFLAG:210)
+TFLAG:210 = TARGET
+;表示させるキャラを抽出（LOCAL:2に人数）
+VARSET LOCAL, 0
+CALLF CLEAR_LIST
+REPEAT CHARANUM
+	MARK:COUNT:98 = 0
+	;主人は除外
+	SIF COUNT == MASTER
+		CONTINUE
+	;失踪中などこの場にいないなら除外
+	;SIF CFLAG:COUNT:4
+	;	CONTINUE
+	;토리코모드 수정부분.
+	;실종중인 상태만 빼고 출력한다.
+	SIF CFLAG:COUNT:4 == 1
+		CONTINUE
+
+	CALLF SET_LIST, LOCAL:2, COUNT
+	LOCAL:2 += 1
+	MARK:COUNT:98 = 1
+REND
+LOCAL:1 = (LOCAL:2 - 1) / 20
+
+$PRINT_LIST
+DRAWLINE
+PRINTFORML 누구의 능력을 상승시키겠습니까? ＜page.{LOCAL+1}＞
+DRAWLINE
+
+;………………………………………………
+;능력 상승 캐릭터의 표시 처리
+;………………………………………………
+;주인은 능력 상승 불가능한 것으로
+DRAWLINE
+REPEAT 20
+	SIF COUNT + LOCAL * 20 >= CHARANUM
+		BREAK
+	LOCAL:3 = GET_LIST(COUNT + LOCAL * 20)
+	SIF LOCAL:3 == 0
+		CONTINUE
+
+	PRINT 　
+	CALL ARRANGE_CHARALIST, LOCAL:3
+	CALL ARRANGE_CHARALIFE, LOCAL:3
+	PRINTL 
+REND
+
+DRAWLINE
+PRINTFORMLC \@(LOCAL <= 0) ? %" " * 16% # [1001] 앞페이지로\@
+PRINTLC [1000] 돌아가기
+PRINTFORMLC \@(LOCAL >= LOCAL:1) ? %" " * 16% # [1009] 다음페이지로\@
+
+$INPUT_LOOP
+INPUT
+IF RESULT == 1000
+	TARGET = TFLAG:210
+	RETURN 0
+ELSEIF RESULT == 1001 && LOCAL > 0
+	LOCAL -= 1
+	GOTO PRINT_LIST
+ELSEIF RESULT == 1009 && LOCAL < LOCAL:1
+	LOCAL += 1
+	GOTO PRINT_LIST
+ELSEIF RESULT < 0 || RESULT >= CHARANUM || MARK:RESULT:98 == 0
+	GOTO INPUT_LOOP
+ENDIF
+
+TARGET = RESULT
+SIF JUEL:100 > 0
+	CALL DENIAL_CHECK
+CALL ABL_MANUAL_MAIN
+GOTO PRINT_LIST
+
+;-------------------------------------------------
+;상승시키는 능력 선택의 처리
+;-------------------------------------------------
+@ABL_MANUAL_MAIN
+CALL NEW_DRAWLINE
+PRINTFORML %CALLNAME:TARGET%의 능력을 상승시키겠습니까?
+CALL SHOW_JUEL
+CALL SHOW_ABLUP_SELECT
+$INPUT_LOOP1
+INPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF RESULT < 0 || RESULT > 100
+	GOTO INPUT_LOOP1
+ELSE
+	TRYCALLFORM ABLUP{RESULT}
+ENDIF
+RESTART

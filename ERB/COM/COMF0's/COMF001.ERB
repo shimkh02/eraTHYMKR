@@ -1,0 +1,173 @@
+﻿;=============================================================================
+;커닐링구스
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE1
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:1 > 0
+	RETURN 0
+;성기가 더러워져 있으면 MASTER의 경우 쿤닐링구스는 할 수 없다(조교자가 더러운 무시나 애액, 모유의 얼룩이라면 OK)
+SIF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && ASSIPLAY == 0 && TALENT:MASTER:64 == 0
+	RETURN 0
+;성기가 더러워져 있고 악취 민감해 순종 4 미만의 ASSI의 경우 쿤닐링구스는 할 수 없다(조교자가 더러운 무시나 애액, 모유의 얼룩이라면 OK)
+IF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && ASSIPLAY
+	SIF ABL:ASSI:10 <= 3 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;조교자가 고양이혀라면 고양이 펠라 패치 유효하지 않으면 안 됨
+SIF TALENT:PLAYER:54 && (FLAG:14 & 16) == 0
+	RETURN 0
+;조교자가 고양이혀라면 조교자에게 기교 4 필요
+SIF TALENT:PLAYER:54 && ABL:PLAYER:12 < 4
+	RETURN 0
+;남자라면 안 됨
+SIF TALENT:120
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;한증과 암반 욕 이외의00목욕탕 입욕 중에는 불가
+SIF TEQUIP:55 && TEQUIP:55 != 12 && TEQUIP:55 != 15
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용중의 경우 조교자의 기교 4이상 필수
+SIF TEQUIP:59 == 17 && ABL:PLAYER:12 < 4
+	RETURN 0
+;촉수 조교중일 시 주인의 촉수사역Lv2 이하는 안 됨
+SIF TEQUIP:90 && ABL:MASTER:98 <= 2
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM1
+
+;전회와 금회의 조교자가 동일
+IF (ASSIPLAY && TFLAG:133) || (ASSIPLAY == 0 && TFLAG:133 == 0)
+	;縄使用中でなく前回の調教がフェラチオかクンニ強制かシックスナインだとシックスナインに
+	IF (PREVCOM == 41 || PREVCOM == 300 || PREVCOM == 602) && TEQUIP:40 == 0
+		CALL EXCOM_ABLE602
+		SIF RESULT == 1
+			JUMP COM602
+	;縄使用中でなく前回の調教がパイズリか縦パイズリかパイズリフェラか６９パイズリだと６９パイズリに
+	ELSEIF (PREVCOM == 42 || PREVCOM == 208 || PREVCOM == 209 || PREVCOM == 603) && TEQUIP:40 == 0
+		CALL EXCOM_ABLE603
+		SIF RESULT == 1
+			JUMP COM603
+	ENDIF
+ENDIF
+
+;수치 플레이 중에 대상이 수면 중 및 기절 중이 아니면 岩清水にランクアップ(ただし吸血鬼持ちは通常の鏡の場合ランクアップしない)
+IF (TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0)) && EQUIP:14 == 0 && TFLAG:899 <= 0
+	CALL EXCOM_ABLE611
+	SIF RESULT == 1
+		JUMP COM611
+ENDIF
+
+PRINTL 커닐링구스
+TSTR:0 = 커닐링구스
+CALL TRAIN_MESSAGE_COM001
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 220
+SOURCE:19 = 100
+SOURCE:31 = 50
+
+;ABL:Ｃ감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 40
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 160
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 700
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1500
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2400
+ELSE
+	SOURCE:0 = 3300
+ENDIF
+
+;クスコ装着中は効果変動
+IF TEQUIP:21
+	TIMES SOURCE:0 , 0.30
+	SOURCE:12 += 500
+ENDIF
+
+;조교자의 TALENT:혀놀림을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:0 , 2.00
+	SOURCE:17 += SOURCE:0 / 20
+ENDIF
+
+;조교자의 고양이혀를 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:0 , 0.70
+
+;노예의 Ｖ⇔조교자의 입의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:3
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 3
+ENDIF
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM001
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;고양이혀
+IF TALENT:PLAYER:54
+	PRINTFORM %CALLNAME:TARGET%의 보지를 입술로 물고는 
+	IF TEQUIP:68
+		PRINT 가지 못하도록 혀끝으로 상냥하게 애무했다….
+	ELSEIF TALENT:121 && PALAM:13 >= PALAMLV:3
+		PRINT 우뚝 솟은 페니스를 혀끝으로 간질였다….
+	ELSEIF TALENT:121
+		PRINT 페니스의 뿌리 끝부분을 입으로 빨아들였다….
+	ELSEIF PALAM:13 >= PALAMLV:3
+		PRINT 딱딱하게 발기한 클리토리스를 혀끝으로 빙글빙글 돌렸다….
+	ELSE
+		PRINT 혀끝으로 상냥하게 애무했다….
+	ENDIF
+	PRINTW
+;노멀
+ELSE
+	IF TEQUIP:68
+		SIF EX:20
+			PRINT 단단하게 팽창해 절정을 고대하고 있는 
+		PRINTW 클리토리스에 가만히 혀 끝을 들이댔다….
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%의 보지를 정성 들여 핥았다.
+		IF TALENT:121 && PALAM:13 >= PALAMLV:3
+			PRINT 그리고 우뚝 솟은 페니스로 혀를 옮겨 정성스레 빨았다.
+		ELSEIF TALENT:121
+			PRINT 그리고 페니스의 뿌리 끝을 물고 빨았다.
+		ELSEIF PALAM:13 >= PALAMLV:3
+			PRINT 그러면서 우뚝 솟은 클리토리스를 이로 살짝 물어주었다.
+		ENDIF
+		PRINTW
+	ENDIF
+ENDIF

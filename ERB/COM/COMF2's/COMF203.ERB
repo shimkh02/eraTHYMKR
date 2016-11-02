@@ -1,0 +1,189 @@
+﻿;=============================================================================
+;유두 빨기
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE203
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:203 > 0
+	RETURN 0
+;Ｂ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 8) == 0
+	RETURN 0
+;母乳体質だとダメ
+SIF TALENT:134
+	RETURN 0
+;Ｂ계 장착구 사용 중에는 불가
+SIF TEQUIP:35 || TEQUIP:36
+	RETURN 0
+;ウェディングドレス · ゴスロリ着用中の場合기교4이상 필수
+SIF (TEQUIP:59 == 19 || TEQUIP:59 == 20) && ABL:PLAYER:12 < 4
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM203
+PRINTL 유두 빨기
+TSTR:0 = 유두 빨기
+CALL TRAIN_MESSAGE_COM203
+
+DOWNBASE:0 += 5
+DOWNBASE:1 += 50
+
+SOURCE:12 = 100
+SOURCE:15 = 60
+SOURCE:16 = 40
+SOURCE:30 = 20
+
+;ABL:B감각을 본다
+IF ABL:3 == 0
+	SOURCE:3 = 20
+	SOURCE:11 = 60
+ELSEIF ABL:3 == 1
+	SOURCE:3 = 100
+	SOURCE:11 = 120
+ELSEIF ABL:3 == 2
+	SOURCE:3 = 500
+	SOURCE:11 = 180
+ELSEIF ABL:3 == 3
+	SOURCE:3 = 1200
+	SOURCE:11 = 250
+ELSEIF ABL:3 == 4
+	SOURCE:3 = 1800
+	SOURCE:11 = 280
+ELSE
+	SOURCE:3 = 2600
+	SOURCE:11 = 300
+ENDIF
+
+;ABL:봉사 정신을 본다
+IF ABL:13 == 0
+	TIMES SOURCE:11 , 0.80
+	TIMES SOURCE:15 , 0.80
+	TIMES SOURCE:30 , 1.20
+	TIMES SOURCE:3 , 0.80
+ELSEIF ABL:13 == 1
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+	TIMES SOURCE:30 , 1.00
+	TIMES SOURCE:3 , 1.00
+ELSEIF ABL:13 == 2
+	TIMES SOURCE:15 , 1.00
+	TIMES SOURCE:16 , 1.00
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.00
+ELSEIF ABL:13 == 3
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.20
+ELSEIF ABL:13 == 4
+	TIMES SOURCE:15 , 1.20
+	TIMES SOURCE:16 , 1.20
+	TIMES SOURCE:30 , 0.60
+	TIMES SOURCE:3 , 1.20
+ELSE
+	TIMES SOURCE:15 , 1.40
+	TIMES SOURCE:16 , 1.40
+	TIMES SOURCE:30 , 0.40
+	TIMES SOURCE:3 , 1.40
+ENDIF
+
+;음유
+IF TALENT:174
+	TIMES SOURCE:11 , 1.40
+	TIMES SOURCE:30 , 0.80
+	TIMES SOURCE:3 , 1.40
+ENDIF
+
+;조교자의 TALENT:혀사용을 본다
+IF TALENT:PLAYER:52
+	TIMES SOURCE:3 , 1.40
+ENDIF
+;조교자의 TALENT:고양이혀을 본다
+SIF TALENT:PLAYER:54
+	TIMES SOURCE:3 , 0.70
+;조교자가［유아］,［유치］
+IF TALENT:PLAYER:130 || TALENT:PLAYER:131
+	TIMES SOURCE:3 , 1.20
+	TIMES SOURCE:11 , 1.20
+ENDIF
+;조교자가［유아 퇴행］
+SIF TALENT:PLAYER:159
+	TIMES SOURCE:11 , 1.20
+
+;노예의 B⇔조교자의 입의 불결이 이동
+STAIN:5 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:5
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 5
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 5
+ENDIF
+
+;촉수 조교나 B감각 4 미만,[모유 체질],[남자],[소인 체형],[작은 몸집 체형],[빈유],[절벽]소유에서는 발생하지 않는다.
+SIF ABL:3 > 3 && TEQUIP:90 == 0 && TALENT:120 == 0  && TALENT:134 == 0 && TALENT:127 == 0 && TALENT:128 == 0 && TALENT:110 == 0  && TALENT:111 == 0
+	CALL YOUJI
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM203
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %CALLNAME:TARGET%의 
+IF TALENT:110
+	PRINT 거의 없는 거나 다름없는 
+ELSEIF TALENT:128 && TALENT:111
+	PRINT 간신히 부풀어 오른 게 느껴지는 정도의 
+ELSEIF TALENT:111
+	PRINT 표준보다 약간 작은 
+ELSEIF TALENT:112
+	PRINT 커다랗고 곡선이 아름다운 
+ELSEIF TALENT:113
+	PRINT 감당하기 힘들 만큼 큰 
+ENDIF
+IF TEQUIP:68
+	PRINT 가슴의 
+	SIF EX:23
+		PRINT 탱글탱글하게 응어리진 
+	PRINTW 유두에 키스했다….
+ELSEIF RAND:2 == 0
+	IF PALAM:13 > PALAMLV:3 && TALENT:150
+		PRINTL 기대에 떨리는 가슴의 끄트머리를
+		PRINTL 강하게 갓난아이가 하듯이 빨아 올리자,
+		PRINTFORM %조사선택(CALLNAME:TARGET, "는")% 교성을 지르며 
+		IF TALENT:110
+			PRINT 거의 없는 거나 다름없는 
+		ELSEIF TALENT:111
+			PRINT 그 빈약한 
+		ELSEIF TALENT:112
+			PRINT 그 커다란 
+		ELSEIF TALENT:113
+			PRINT 그 거대한 
+		ENDIF
+		SIF TALENT:134
+			PRINT 모유가 방울져 떨어지는 
+		PRINTL 가슴을 강조하듯이 쑥 내밀어,
+		PRINTFORMW %CALLNAME:PLAYER%의 얼굴에 꽉 눌렀다….
+	ELSEIF PALAM:13 > PALAMLV:3
+		PRINTW 가슴의 끄트머리의, 완전히 딱딱해진 돌기를 빨아들였다….
+	ELSE
+		PRINTW 가슴의 끄트머리의, 아직 부드러운 돌기를 빨아들였다….
+	ENDIF
+ELSE
+	IF TALENT:134
+		PRINTFORMW 가슴의 끄트머리\@(PALAM:13 > PALAMLV:3) ? 의, 발기해 버린 돌기로부터 모유를 # 로부터 모유를\@ 빨아내려고 했다….
+	ELSE
+		PRINTFORMW 가슴의 끄트머리\@(PALAM:13 > PALAMLV:3) ? 의, 발기해 버린 돌기를 달콤하게 씹으며 빨아올렸다…. # 를 입 안 가득 빨았다….\@
+	ENDIF
+ENDIF

@@ -1,0 +1,2329 @@
+﻿;-------------------------------------------------
+;코가사 말파일 X 깜짝 말파일
+;-------------------------------------------------
+;-와 YM v1. 0 파일 A 스토리 말파일
+
+;코가사 독자적인 처리를이 낚시 돌진한 전용 파일입니다.
+;재료 들키고 싫은 아이는 보지 않는 편이 좋아
+
+@KOJO_72_X1
+
+;-------------------------------------------------
+;코가사 독자적인 처리
+;-------------------------------------------------
+;·굴종 이벤트의 처리등을 실시한다
+;·한 번이라도 처리가 통과하면(자), 코가사의 물건화 플래그가 서, 불가역의 굴종 모드가 된다
+;-------------------------------------------------
+;사토코이 사라지고 있는 경우 플래그를에 해 꺾는다
+IF CFLAG:9103
+	LOCAL = 0
+	REPEAT CHARANUM
+		SIF SATOKO(COUNT)
+			LOCAL = 1
+	REND
+	SIF ! LOCAL
+		CFLAG:9103 = 0
+ENDIF
+
+CFLAG:9104 = -1
+;Ex엔드 후의 경우, 조수가 사토코이라면 궁합을 일시적으로 200으로 한다
+IF CFLAG:9103 == 7 && SATOKO(ASSI)
+	CFLAG:9104 = RELATION:171
+	RELATION:171 = 200
+ENDIF
+
+;코가사 독자적인 처리
+SIF CFLAG:9101
+	RETURN 1
+;굴종 하고 있다면 갈아넣는다
+IF CFLAG:9001
+	CALL KOJO_72_X2
+	RETURN RESULT
+ENDIF
+
+;우선 이벤트를 참조한다
+RESULT = 0
+CALL KOJO_72_X4
+SIF RESULT
+	RETURN RESULT
+
+
+;친애인가 이어받아 캐릭터나 사토코 엔드 후라면 면제된다
+IF TALENT:152 == 0 && CFLAG:18 == 0 && CFLAG:9003 != 7
+	;도구 포인트의 산출
+	LOCAL = 0
+	;굴복 각인 Lv2로 1포인트, Lv3로 3포인트
+	IF MARK:2 == 2
+		LOCAL += 1
+	ELSEIF MARK:2 >= 3
+		LOCAL += 3
+	ENDIF
+	;순종 Lv4로 1포인트, Lv5로 3포인트
+	IF ABL:10 == 4
+		LOCAL += 1
+	ELSEIF ABL:10 >= 5
+		LOCAL += 3
+	ENDIF
+	;이상 경험  3이후,  1마다 1포인트
+	IF EXP:50 >= 3
+		LOCAL += (EXP:50)-2
+	ENDIF
+	;공포 각인 Lv3로 2포인트
+	IF MARK:8 >= 3
+		LOCAL += 2
+	ENDIF
+	;새디즘기분 Lv5나 드 S가 아닌 경우, 애무·성교계 커멘드 실행수와 봉사계 커멘드 실행수를 비교
+	IF ABL:20 < 5 && TALENT:177 == 0
+		;봉사가 3배 이상 많으면+5포인트
+		IF CFLAG:9003 > (3*CFLAG:9002)
+			LOCAL += 5
+			;새디즘기분 Lv3 이상이라면 경감
+			SIF ABL:20 > 2
+				LOCAL -= 2
+		;봉사가 2배 이상 많으면+3포인트
+		ELSEIF CFLAG:9003 > (2*CFLAG:9002)
+			LOCAL += 3
+			;새디즘기분 Lv3 이상이라면 경감
+			SIF ABL:20 > 2
+				LOCAL -= 2
+		;봉사 쪽이 많으면+1포인트
+		ELSEIF CFLAG:9003 > CFLAG:9002
+			LOCAL += 1
+			;새디즘기분 Lv3 이상이라면 경감
+			SIF ABL:20 > 2
+				LOCAL -= 1
+		ENDIF
+	ENDIF
+	;애정 경험  200마다―1포인트(덤)
+	LOCAL -= (EXP:21)/200
+
+	;연모라면 10포인트, 비연모라면 6포인트 이상으로 굴종
+	IF LOCAL > 9 || (LOCAL > 5 && TALENT:150 == 0)
+		IF FLAG:11 > 0
+			PRINTFORMW 「%MASTERNAME%…」
+			PRINTFORMW 코가사의 모습이 이상하다. …어쩐지, 깊은 생각에 빠진 표정을 하고 있다.
+			PRINTFORMW 「나, %MASTERNAME%의 물건이예요. 요전에, 어쩐지, 쿵하고 납득해버렸어」
+			PRINTFORMW 「%MASTERNAME%의 제자도 아니고, 물건. 이상한 착각, 할 것 같았어」
+			PRINTFORMW 시원하게, 투명하게 웃는 얼굴로, 코가사는 그런 일을 말한다.
+			PRINTFORMW 「이제, %조사처리(MASTERNAME,"라")%고 부를 수 없어…주인님. 그래, 주인 같아」
+			PRINTFORMW 「주인님을 위해서라면, 나. 좋은 아이가 될거야. 분명하게 도구로 있을테니까」
+			PRINTFORMW 「코가사를…쭉 쭉, 잘 부탁드립니다」
+			PRINTFORMW 「…훌쩍. 슬프지만, 알아 버렸는걸」
+			PRINTFORMW 「주인님의 우산이 될 수 있어서, 기뻐. 눈물이 나올 정도로. 진짜」
+			PRINTFORMW 「그러니까, 귀여워해 줘…으응. 이것도 멋대로네」
+			PRINTFORMW 「주인님의 것이니까, 나는 주인님의 마음대로 해 주세요」
+			PRINTFORMW 「 이제 이기적인 말은 하지 않을테니까. 알아 버렸으니까. 사양하지 않아도 좋으니까」
+			PRINTFORMW 「 그렇지만, 할 수 있으면 쭉…잘 부탁해」
+			PRINTFORMW 「 나, 정말 정말 좋아했어. 사 주고, 사용해 줘서, 고마워…」
+			PRINTFORMW …….
+			PRINTFORML  
+			PRINTFORML ――코가사는 진심으로 %CALLNAME:MASTER%에 굴복했습니다――
+			PRINTFORMW  
+			PRINTFORMW 「――있지, %MASTERNAME%」
+		ENDIF
+		CFLAG:9001 = 1
+		RETURN 1
+	;연모 때 8포인트, 비연모 때 5포인트 이상이 된다고 경고
+	ELSEIF (LOCAL > 7 || (LOCAL > 4 && TALENT:150 == 0)) && CFLAG:9004 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「%MASTERNAME%… 나, 사양하고 있지 않아?」
+			PRINTFORMW 코가사가 걱정스러운 듯이 그렇게 말한다. 반대로 걱정이 된다.
+			PRINTFORMW 「응, 아무것도 아니지만 …어쩐지, %조사처리(MASTERNAME,"로")%부터 애정을 받고 싶어」
+			PRINTFORMW 「%MASTERNAME%의 물건이라고 실감을 갖고 싶은 것일까―으음…」
+			PRINTFORMW …-멍하니 허공을 응시하며 그렇게 말하는 코가사.
+			PRINTFORMW 그 얼굴에는 평상시의 발랄한 생기는 볼 수  없었다.
+			PRINTFORMW 「뭐야, 운이 좋은건가?」
+			PRINTFORMW ――너무 물건처럼 취급한 것일까.
+			PRINTFORMW 코가사가 점점, 요괴가 아니라――단순한 도구로서의 마음에 가까워지고 있다는 생각이 든다.
+			PRINTFORMW 「에헤헤, 지금이라면 어쩐지, %조사처리(MASTERNAME,"가")% 말하는 것 뭐든지 들을 수 있을 것 같아」
+			PRINTFORMW 그것은, 노예로서는 이상적인 기질인지도 모르겠지만….
+		ENDIF
+		CFLAG:9004 = 1
+		RETURN 1
+	;순종 Lv4 이상으로 경고
+	ELSEIF ABL:10 > 3 && CFLAG:9005 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「%MASTERNAME%에겐 이길 수 없지요…무슨 말을 해도 무심코 들어버리게 되니까」
+			PRINTFORMW 「으응…오히려, 명령받고 싶어져버려. 등이 근질근질해」
+			PRINTFORMW 최근 온순하게 되었다고 생각했던, 코가사가 그런 일을 말하기 시작했다.
+			PRINTFORMW 「뭐든지 말하는 걸 듣는, %MASTERNAME%의 우산이 되어 오고 있을까―」
+			PRINTFORMW 너무 온순한 것도 경쟁이 없겠지만….
+			PRINTFORMW 「지금이라면 물어볼 수 있을지도. 나, 좀 더 얌전한게 좋아…?」
+			PRINTFORMW 무심코, 그렇지 않다고 대답했다.
+			PRINTFORMW ――YES라고 대답하면, 코가사가 없어져 버릴 것 같은…그런 생각이 들었다.
+			PRINTFORMW 「%MASTERNAME%, 이상해. 나에게 말하는 것 들려주고 싶지 않았어?」
+		ENDIF
+		CFLAG:9005 = 1
+		RETURN 1
+	;새디즘기분 Lv2 이하로, 봉사 쪽이 많다고 경고
+	ELSEIF CFLAG:9003 > CFLAG:9002 && ABL:20 < 3 && CFLAG:9006 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「%MASTERNAME%, 오늘은 어디로 봉사해? 입?」
+			PRINTFORMW 「왜? 나의 신체로 기분 좋고 나름대로 왔잖아?」
+			PRINTFORMW 그렇게 말하면 최근, 코가사에게 봉사시키만 한 것 같은 생각이 든다.
+			PRINTFORMW 「%조사처리(MASTERNAME,"가")% 적당할 때에, 좋아하는 곳을 사용해 기분 좋아진다」
+			PRINTFORMW 「 나는, 그런 물건이야?」
+			PRINTFORMW ――조금, 너무 사용한 것 같다.
+			PRINTFORMW 「 나도 기분 좋게 시켜줘? 사양하지 않아도 괜찮은데, %MASTERNAME%」
+			PRINTFORMW 과잉 도구취급은, 재미없을지도 모른다.
+		ENDIF
+		CFLAG:9006 = 1
+		RETURN 1
+	;이상 경험 2이상으로 경고
+	ELSEIF EXP:50 > 1 && CFLAG:9007 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「%MASTERNAME%… 오늘은, 어떤 일 하는거야?」
+			PRINTFORMW 「나, 망가지면 쓰레기통으로 가는거야. 망가져 버리면, 버려지겠지? 그것은 곤란해」
+			PRINTFORMW 확실히, 코가사에겐 우산의 도리에 맞지 않은 일을 시키고 있다.
+			PRINTFORMW 「%조사처리(MASTERNAME,"가")% 하고 싶은 것은 가능한 한 하겠지만… 나, 부수지 말아줘」
+			PRINTFORMW 「망가져, 쓸모가 있지 않게 되면 곤란하지…?」
+			PRINTFORMW ――그렇다면 물론 망가져버려서는 곤란하다.
+			PRINTFORMW 「도구라도 할 수 있으면 상냥하게 사용하기를 원해」
+			PRINTFORMW 이제부터라도, 상궤를 벗어난 플레이는 삼가하는 편이 좋을까.
+		ENDIF
+		CFLAG:9007 = 1
+		RETURN 1
+	ENDIF
+ENDIF
+RETURN 0
+
+
+;-------------------------------------------------
+;조교 개시시 말굴종이 끝난 상태
+;-------------------------------------------------
+@KOJO_72_X2
+;범용화하고 있다
+IF CFLAG:9001 == 3
+	IF FLAG:11 > 0
+		PRINTFORML 「와 줬구나」
+		PRINTFORMW 벽옥색의 양눈이 탁해져버려 야무지지 못하게 웃는 코가사.
+		PRINTFORM 「아, 아, 응응…응, 사용할 수 있으니까, 아무쪼록…
+		CALL HEARTBW
+		PRINTFORMW 그 음탕한 미소조차, 어딘가 무기물같다.
+	ENDIF
+	RETURN 1
+ENDIF
+
+;=================================================
+;조교 단계별 CFLAG:6001~6040
+;=================================================
+;·「조교 개시시 말」에 속한다
+;·특정의 소질이나 각인을 취득한 후의 조교 개시시에 표시한다
+;·조수나 오나금등의 특수한 개시시 말에 대해서 우선된다
+;-------------------------------------------------
+
+;=================================================
+;함락계 소질 CFLAG:6001~6010
+;=================================================
+;·「조교 개시시 말」 「조교 단계별」에 속한다
+;·조교 완료의 고비가 되는 것 같은 소질을 취득한 후의 조교 개시시에 표시한다
+;-------------------------------------------------
+
+;-------------------------------------------------
+;[연모]취득 후 CFLAG:6001
+;-------------------------------------------------
+;·애정계 소질의 제일 단계
+;·말주가 MASTER에 연정을 안은 것을 나타낸다
+;-------------------------------------------------
+;기입 체크
+LOCAL = 1
+;-------------------------------------------------
+
+IF LOCAL && TALENT:150 && CFLAG:6001 == 0
+	IF FLAG:11 > 0
+		PRINTFORML 「주인님, 와 줬구나…너무 좋아, 입니다」
+		PRINTFORMW 넋을 잃은 눈으로 우산의 다리를 가슴에 안아, 선 채로 맞이하는 코가사.
+		PRINTFORMW 「어째서 서있냐니…? 어째선지 모르게,에요」
+		PRINTFORMW 「도구가 주인님을 경이나 키라고 안되겠지요, 미안해요」
+		PRINTFORMW ――그러나 코가사도, 변해 버린 것이다.
+		PRINTFORMW 「정말 좋아하는 주인님에게 사용당해지는 것이 행복해서, 안절부절 기다렸어」
+		PRINTFORMW 「그랬더니 정말로 와 줬어…이제부터는, 쭉 서 기다려도 좋습니까?」
+		PRINTFORMW …과연 그래서 신체를 부수어져도 곤란하다.
+		PRINTFORMW 「나, 참을거야. 주인님의 말이라면, 뭐든지 참습니다」
+		PRINTFORMW 「좋아해서 좋아해서 견딜 수 없기 때문에, 노력해서 물건의 분수를 분별하지 않으면…♪」
+		PRINTFORMW 황홀한 표정으로 그런 일을 말하는 코가사를, 살그머니 침대까지 데려 갔다.
+	ENDIF
+	CFLAG:6001 = 1
+	RETURN 1
+ENDIF
+
+
+;-------------------------------------------------
+;[친애]취득 후 CFLAG:6002
+;-------------------------------------------------
+;·애정계 소질의 제2 단계
+;·말주가 MASTER에 특히 깊은 애정을 안은 것을 나타낸다
+;-------------------------------------------------
+;기입 체크
+LOCAL = 1
+;-------------------------------------------------
+
+IF LOCAL && TALENT:152 && CFLAG:6002 == 0
+	IF FLAG:11 > 0
+		PRINTFORML 「주인님, 최근…너무 상냥해」
+		PRINTFORMW 코가사부휘어짐이라고 중얼거리고 나서, 깜짝 얼굴을 올렸다.
+		PRINTFORMW 「아아니, 그런, 미안해! 우산따위가 너무 지나쳤어」
+		PRINTFORMW 「에, 계속…인가? 응, 에또…그렇게 물건 취급을 해 주었는데」
+		PRINTFORMW 「최근의 주인님은, 마치 애인…보통 여자 아이로 하는 것 같이, 상냥해서」
+		PRINTFORMW 「바보로 사용할 수 없는 싸구려 고물우산인 나는, 우스운 착각을 참는데 필사적.」
+		PRINTFORMW 훌쩍훌쩍 울면서 코가사는 말한다. 우산 안에서 비가 내리고 있어 피할 수도 없다.
+		PRINTFORMW 「좋아하, 다니…그런, 어째서」
+		PRINTFORMW 「…어째서, 그런 일, 이제 와서…훌쩍」
+		PRINTFORMW 그리운…옛 코가사를 생각해 내는 우는 방법이다.
+		PRINTFORMW 「늦어버렸어. 이제, 여자 아이로써의 코가사에는 돌아오고 싶지 않아. 돌아올 수 없다구, 주인님에게 말해져도」
+		PRINTFORM 「그러니까 들리지 않는걸. 자 주인님, 고물우산
+		SIF TALENT:0 == 0
+			PRINTFORM 으로써 오나홀
+		SIF TALENT:121
+			PRINTFORM 으로써 바이브
+		PRINTFORMW 의 코가사를 사용해 주세요」
+		PRINTFORMW 「자」
+		PRINTFORMW 「자…」
+		PRINTFORMW 「응, 응! 사용해 주세요도 참…――」
+		PRINTFORMW 코가사는 그대로, 우물쭈물 쓰러져 울었다.
+	ENDIF
+	CFLAG:6002 = 1
+	RETURN 2
+ENDIF
+
+
+;-------------------------------------------------
+;[음란]취득 후 CFLAG:6003
+;-------------------------------------------------
+;·음란계 소질의 기본
+;·말주가 성의 쾌락에 빠진 것을 나타낸다
+;-------------------------------------------------
+;기입 체크
+LOCAL = 0
+;-------------------------------------------------
+
+IF LOCAL && TALENT:170 && CFLAG:6003 == 0
+	;연모
+	IF TALENT:150
+		IF FLAG:11 > 0
+			PRINTFORM 
+			PRINTFORM 
+		ENDIF
+	;그 이외
+	ELSE
+		IF FLAG:11 > 0
+			PRINTFORM 
+			PRINTFORM 
+		ENDIF
+	ENDIF
+	CFLAG:6003 = 1
+	RETURN 3
+ENDIF
+
+
+;=================================================
+;각인계 CFLAG:6031~6040
+;=================================================
+;·「조교 개시시 말」 「조교 단계별」에 속한다
+;·일반적인 각인을 취득한 후의 조교 개시시에 표시한다
+;·텐프레는 취급하기 쉬움을 중시해 편집되어 있지만, 구문 지식이 있으면 개변가능
+;-------------------------------------------------
+
+;-------------------------------------------------
+;반발 각인 취득 후 CFLAG:6031
+;-------------------------------------------------
+;·조교에 반감이나 불쾌감을 가져, MASTER에 적대 감정을 가진 것을 나타낸다
+;·애정계 소질 취득의 방해가 되지만, 주로 줄일 수도 있다
+;·디폴트에서는 한 번에 고레벨을 취득했을 경우, 최상정도의 말을 한 번만 표시한다
+;-------------------------------------------------
+;기입 체크
+LOCAL = 1
+;-------------------------------------------------
+
+IF LOCAL && MARK:9
+	;Lv3
+	IF MARK:9 >= 3 && CFLAG:6031 < 3
+		IF FLAG:11 > 0
+			PRINTFORML 「주인님에게 된다면, 이 정도 일은」
+			PRINTFORMW 많이 여윈 코가사지만, %조사처리(CALLNAME:MASTER,"가")% 오면 출렁하고 일어났다.
+			PRINTFORMW 「뭐든지 따를테니까…그러니까, 버리지 마」
+			PRINTFORMW 「망가질 때까지…으응. 망가져도, 주인님이 사용해 줘…」
+		ENDIF
+		CFLAG:6031 = 3
+		RETURN 313
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;조교 개시시 범용
+;-------------------------------------------------
+;음란·비처녀·뚜껑이든지
+IF TALENT:170 && TALENT:0 == 0 && TALENT:121
+	IF FLAG:11 > 0
+		PRINTFORML 「10종 만능 나이프란게 있잖아. 그렇다면, 10종 만능 우산도 괜찮다고 생각해」
+		PRINTFORMW 「우산, 보지, 엉덩이, 자지에, 입, 손, 발, 가슴, 머리카락, 어, 응, 겨드랑이?」
+		PRINTFORMW 「주인님이 전부 사용했으면 좋겠어…♪」
+	ENDIF
+	RETURN 1
+;비처녀
+ELSEIF TALENT:0 == 0
+	IF FLAG:11 > 0
+		PRINTFORML 「지금까지 쭉, 자신을 요괴 우산이라고 생각하고 있었는데」
+		PRINTFORMW 침대 위에서 엎드린 채로, 엉덩이를 향하면서 코가사는 말한다.
+		PRINTFORML 「 나는… 요괴 오나홀이었는가도, 알려지겠네」
+		PRINTFORMW 「아무쪼록. 주인님…사용해 줘」
+	ENDIF
+	RETURN 1
+;그 이외
+ELSE
+	IF FLAG:11 > 0
+		PRINTFORML 「주인님, 어서 와」
+		PRINTFORMW 「오늘도 코가사를 사용해 주는거야? 기뻐…」
+		PRINTFORMW 「손이야? 입? …다리, 사용하는거야?」
+	ENDIF
+	RETURN 1
+ENDIF
+
+RETURN 0
+
+
+@KOJO_72_X3
+;-------------------------------------------------
+;코가사 독자적인 처리
+;-------------------------------------------------
+;·코가사이 놀래키고 이벤트의 처리를 실시한다
+;-------------------------------------------------
+;엑스트라 구문으로 허가하고 있지 않는지, 입문 하고 있지 않는지, 30%의 확률로 돌아온다
+SIF CFLAG:5231 == 2
+	RETURN 0
+SIF CFLAG:9000 == 0
+	RETURN 0
+SIF CFLAG:9001
+	RETURN 0
+SIF PERCENT(30)
+	RETURN 0
+
+LOCAL:10 = 0
+$KOGASA_LOOP
+
+;이벤트 계통 선택
+A = RAND:4
+;각 이벤트에는 1~5의 레벨이 있어, 기본적으로 한 번 밖에 발생하지 않는다.
+;다만, Lv5까지 본 계통은 Lv1~5의 리메이크판적인 회화가 랜덤에 재발생 하게 된다.
+;Lv1는 무조건 볼 수 있지만, Lv2 이후는 어떠한 조건이 있어 그것을 채울 때까지 다음은 볼 수  없다
+
+;위협계외 이벤트의 진행도에 의한다
+;단순한 바보 이벤트라고도 말한다
+IF A == 0
+	LOCAL = 0
+	SIF CFLAG:9011 != 6
+		LOCAL = CFLAG:9011
+	SIF CFLAG:9012 > LOCAL
+		LOCAL = CFLAG:9012
+	SIF CFLAG:9013 > LOCAL
+		LOCAL = CFLAG:9013
+	SIF CFLAG:9014 > LOCAL
+		LOCAL = CFLAG:9014
+	SIF CFLAG:9015 > LOCAL
+		LOCAL = CFLAG:9015
+	;Lv1
+	IF CFLAG:9010 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「원통하도다―!」
+			PRINTFORMW 코가사의 방에 들어가자, 한쪽 발을 세운채 혀를 내밀어 위협하고 있을 생각을 하고 있던 소녀에게 조우한다.
+			PRINTFORMW 「놀랐다!」
+			PRINTFORMW 이것으로 놀래킬 수 있다고 생각하고 있는 사실은 어느 의미로 놀라움이다.
+			PRINTFORMW 「스승. 그렇게 무감동으로, 딸꾹질이 멈추지 않게 되어도 몰라?」
+			PRINTFORMW ――딸꾹.
+			PRINTFORMW 「아, 어? 히익, 나, 나네 스승! 놀래켜―?! 딸꾹」
+		ENDIF
+		CFLAG:9010 = 1
+		IF GLOBALEVENT(72, 0)
+			PRINTL  
+			PRINTW ※※놀래키기 이벤트 No1를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 101
+	;Lv2·타이벤트의 어떤 것인가가 Lv2 이상
+	ELSEIF CFLAG:9010 == 1 && LOCAL >= 2
+		IF FLAG:11 > 0
+			PRINTFORML 딸랑딸랑, 꼬꼬, 딸랑딸랑.
+			PRINTFORMW 코가사의 방에서, 기색 좋은 소리가 들려 온다.
+			PRINTFORMW ――나막신을 신고 바쁘게 돌아다니는 소리다.
+			PRINTFORMW 음만으로 무엇을 하고 있을까 헤아릴 수가 있는 것은, 코가사의 주인이 아니라면 불가능할 것이다.
+			PRINTFORMW 「원통하도다아아아아아?! 스승이 없네――!」
+			PRINTFORMW 문만 열고 복도의 모퉁이에 숨으면서, %조사처리(CALLNAME:MASTER,"는")% 웃음을 견디고 있었다.
+			PRINTFORMW 「훌쩍훌쩍… 스승… 아니, 싫어… 두고 가지마∼…」
+			PRINTFORMW ――아휴. …밝은 울보, 정말로 감정이 불안정한 아가씨다.
+		ENDIF
+		CFLAG:9010 = 2
+		IF GLOBALEVENT(72, 1)
+			PRINTL  
+			PRINTW ※※놀래키기 이벤트 No2를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 102
+	;Lv3·타이벤트의 어떤 것인가가 Lv3 이상
+	ELSEIF CFLAG:9010 == 2 && LOCAL >= 3
+		IF FLAG:11 > 0
+			PRINTFORML ――.
+			PRINTFORMW 문을 열자, 코끝에 미지근한 것이 접했다.
+			PRINTFORML 「원통하도다―! 읏!」
+			PRINTFORMW 문답 무용으로, 눈앞의 곤약을 코가사에 내던졌다.
+			PRINTFORMW 「훌쩍… 음식으로 장난치면 안 되는데」
+			PRINTFORMW 이쪽의 대사다.
+			PRINTFORMW 「곤약으로도 안되면, 나는 무엇을 믿으면 좋은 거야. 훌쩍훌쩍」
+			;주인에게 페니스가 있는 경우만
+			IF TALENT:MASTER:120 || TALENT:MASTER:121
+				PRINTFORMW 「스승, 이 곤약을 사용하는거야. 그거 집어넣고 읍 」
+				PRINTFORMW 코가사의 입에 곤약을 집어넣어 입다물게 해 조교를 시작하기로 했다.
+			ENDIF
+		ENDIF
+		CFLAG:9010 = 3
+		IF GLOBALEVENT(72, 2)
+			PRINTL  
+			PRINTW ※※놀래키기 이벤트 No3를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 103
+	;Lv4·타이벤트의 어떤 것인가가 Lv4 이상
+	ELSEIF CFLAG:9010 == 3 && LOCAL >= 4
+		IF FLAG:11 > 0
+			PRINTFORML 「원통해 어택!」
+			PRINTFORMW 문을 열자, 코가사가 우산을 돌리면서 기세 좋게 돌진해 왔다.
+			PRINTFORML 「꺄 아 아!」
+			PRINTFORMW 이런 일이 있을 거라 예상하고 문 뒤에 숨어 있던 %조사처리(CALLNAME:MASTER,"를")% 그냥 지나쳐 나간다.
+			PRINTFORMW 설마 장대한 탈주 계획이라던가…. 그런 생각이 일순간 뇌리를 지난다.
+			PRINTFORMW 데굴데굴 쾅, 이라고 이상한 소리가 나고 나서 코가사가…일어나지 않는다. 도망칠 생각은 아닌 것 같다.
+			PRINTFORMW 「…아파」
+			PRINTFORMW 반울상으로 일어서는 코가사. 우산의 뼈대가 구부러져 이상한 방향으로 휘어있다. 괜찮은건가.
+			PRINTFORMW 「이렇게 하면 탄막을 그레이즈 하면서 공격할 수 있지 않을까 생각했지만…」
+			PRINTFORMW 그런 요괴 있겠냐. 태클을 걸까 생각했었지만…환상향이라면 있을지도 모르겠다.
+		ENDIF
+		CFLAG:9010 = 4
+		IF GLOBALEVENT(72, 3)
+			PRINTL  
+			PRINTW ※※놀래키기 이벤트 No4를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 104
+	;Lv5·타이벤트의 어떤 것인가가 Lv5
+	ELSEIF CFLAG:9010 == 4 && LOCAL == 5
+		IF FLAG:11 > 0
+			PRINTFORML 「아돌―!」
+			PRINTFORMW 닫은 우산의 끝을 이쪽으로 향하고 기세 좋게 덤벼들어 오는 코가사.
+			PRINTFORML 「우와앗」
+			PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% 우선 한 번 문을 닫고 나서 평화적 해결을 시도하기로 했다.
+			PRINTFORMW 「심하네 …우산으로 『아돌!』한 세대가 아닌거야, 스승은?」
+			PRINTFORMW 「그럼 이건가! 아방스트랏슈―!」
+			PRINTFORMW 이번은 우산을 역수로 들고 베어 붙여 온다. 힘이 들어가지 않을 자세이기에, 용이하게 제지당한다.
+			PRINTFORMW 「스승은 꿈이 없네. 우산 검법에는 소년의 꿈이 차 있다고∼」
+			PRINTFORMW 코가사의 망언을 들은체 만체 하는 것도, 상당히 익숙해져간다.
+		ENDIF
+		CFLAG:9010 = 5
+		IF GLOBALEVENT(72, 4)
+			PRINTL  
+			PRINTW ※※놀래키기 이벤트 No5를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 105
+	;Lv5 이후·몇 번이라도 표시된다
+	ELSEIF CFLAG:9010 == 5
+		;리메이크 선택
+		A = RAND:5
+		;Lv1 리메이크
+		IF A == 0
+			IF FLAG:11 > 0
+				PRINTFORMW 「스승―…히끅, 히끅」
+				PRINTFORMW 비장한 표정으로 히끅 히끅 말하는 코가사, 또 이상한 일로 울고 있었던 것일까.
+				PRINTFORMW 「딸꾹질이, 히끅, 멈, 끅, 멈추지 않아요─히끅」
+				PRINTFORMW 「히끅, 스승, 히끅, 그거, 해줘, 히끅. 그거!」
+				PRINTFORMW ――그거?
+				PRINTFORMW 「기분 좋아서, 몸이, 히끅, 놀라는, 그거, 히끅」
+				PRINTFORMW …어쩌면, 딸꾹질 자체가 이것의 구실인 것은….
+			ENDIF
+			IF GLOBALEVENT(72, 5)
+				PRINTL  
+				PRINTW ※※놀래키기 이벤트 No6를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 201
+		;Lv2 리메이크
+		ELSEIF A == 1
+			IF FLAG:11 > 0
+				PRINTFORML 딸랑, 딸랑 딸랑. 
+				PRINTFORMW 코가사의 방으로부터 흐뭇한 소리가 난다. 또 뭔가 장치를 하고 있는 걸까.
+				PRINTFORMW 덜컥, 탓, 와르르르. 
+				PRINTFORMW 「…히야아아아아…도와줘어～…」
+				PRINTFORMW …이것은 그건가. 문을 열면 실은 깜짝 놀래킨다는.
+				PRINTFORMW 그것도 성가시므로, %조사처리(CALLNAME:MASTER,"는")% 조금 상태를 보기로 했다.
+				PRINTFORMW …….
+				PRINTFORMW ――10분 후, 잡동사니의 산에 파묻혀 몹시 놀란 코가사가 발견되었다.
+			ENDIF
+			IF GLOBALEVENT(72, 6)
+				PRINTL  
+				PRINTW ※※놀래키기 이벤트 No7를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 202
+		;Lv3 리메이크·요리 기능 Lv2 이상
+		ELSEIF A == 2 && ABL:70 >= 2
+			IF FLAG:11 > 0
+				PRINTFORML 「스승, 기다렸어요―」
+				PRINTFORMW 문을 열면, 구수한 냄새가 코를 간질인다. 
+				PRINTFORML 「곤약으로 두부된장구이를 만들어 보았어요오」
+				PRINTFORMW …놀래키지 않는 것일까?
+				PRINTFORMW 「가지도 넣었고 이거 맛있어! 놀라운 일이군요, 그쵸 스승!」
+				PRINTFORMW 「…안돼?」
+				PRINTFORMW 아니, 맛은 나쁘지 않지만.
+				PRINTFORMW 「여기서 실은 자위에 사용한 곤약, 이라고 하는 경악의 사실이!」
+				PRINTFORMW 팍.
+				PRINTFORMW 「히야아아 뜨, 뜨거워어엇!? …훌쩍훌쩍」
+			ENDIF
+			PRINTFORML  
+			EXP:10 += 1
+			EXP:70 += 2
+			PRINTFORML 조리경험＋2
+			PRINTFORMW 자위경험＋1
+			IF GLOBALEVENT(72, 7)
+				PRINTL  
+				PRINTW ※※놀래키기 이벤트 No8를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 203
+		;Lv4 리메이크
+		ELSEIF A == 3
+			IF FLAG:11 > 0
+				PRINTFORML 「여기서 새로운 방법!」
+				PRINTFORMW 쑤욱! 하고 우산을 내밀어 결정 포즈를 취하는 코가사.
+				PRINTFORML 「우산 회전이라면 이렇게 옆으로 돌면, 원심력으로～!」
+				PRINTFORMW 휘청, 휘청, 휘청, 넬름, 휘청, 휘청.
+				PRINTFORMW 「하라～, 굉장한 기세로 빨 수 있어, 이것은 놀랍죠」
+				PRINTFORMW 눈을 돌려 눌러앉은 채, 자랑스러운 듯이 해설하는 코가사.
+				PRINTFORMW 타액 투성이로 내려보는, 만면 미소의 %CALLNAME:MASTER%.
+				PRINTFORMW 「스, 스승, 어라!? 잠깐, 눈이, 눈이 무서워요!」
+				PRINTFORMW ――오늘의 조교는 즐거워질 것 같다.
+			ENDIF
+			IF GLOBALEVENT(72, 8)
+				PRINTL  
+				PRINTW ※※놀래키기 이벤트 No9를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 204
+		;Lv5 리메이크
+		ELSEIF A == 4
+			IF FLAG:11 > 0
+				PRINTFORML 「훌쩍훌쩍」
+				PRINTFORMW 코가사의 방에 들어가면, 예의 가지같은 우산을 안아 코가사가 무언가 하고 있다.
+				PRINTFORML 「우산 검법의 연습을 하다가, 깨져 버렸어」
+				PRINTFORMW 아무래도 풀과 종이로 수리하고 있는 것 같다.
+				PRINTFORMW 어디서 도구가 나왔는지는 변함없이 수수께끼다. 괜찮은 건가 이 시설.
+				PRINTFORMW 「아파 아파, 원망스러워, 아아 원망스러워」
+				PRINTFORMW 「그러한 이유로 스승에게는, 상냥하고 아프지 않게 기분 좋은 대접을 요구한다!」
+				PRINTFORMW 몰라.
+			ENDIF
+			IF GLOBALEVENT(72, 9)
+				PRINTL  
+				PRINTW ※※놀래키기 이벤트 No10를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 205
+		ENDIF
+	ENDIF
+;조수계 기교·새디즘기분·레즈비언기분등 다방면에 의한다
+;조건이 비교적 세세하게 엄 해 우물송곳 이벤트
+;Lv2와 Lv4는 코가사 조교시 이외에 50%로 발생한다. Lv5 이후는 5%
+;Lv1의 선택사항으로 안 됨이라고 했을 경우, 스스로 조수에 선택할 때까지 Lv2는 발생하지 않는다(마음대로 조수가 되어 판매가가 내리는 것의 대책)
+ELSEIF A == 1
+	TRYCALL KOGASA_ASSI
+	B = 0
+	SIF CHARANUM < CALC_SLAVE_CAPACITY() && FLAG:4 < 50
+		B = 1
+	C = 0
+	REPEAT CHARANUM
+		SIF NO:COUNT == 171 && CFLAG:8900
+			C = 1
+	REND
+	;Lv1·조수 경험 없음
+	IF CFLAG:9011 == 0 && ISASSI == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「스승에게 놀래켜질 뿐은 재미없어요」
+			PRINTFORMW 코가사가 또 뭔가 이상한 것을 말하기 시작했다.
+			PRINTFORMW 「있지 않아? 그 밖에도, 나 같은 아이」
+			PRINTFORMW 「있잖아 스승. 조만간, 나도 시켜줄 수 있어?」
+			PRINTFORML [0] 그럴 생각
+			PRINTFORML [1] 그건 안돼
+			$INPUT_LOOP_9011
+			INPUT
+			IF RESULT == 0
+				PRINTFORMW 「조오아, 스승 비전의 놀래키는 테크닉으로 모두 헤롱헤롱하게 해버리겠어!」
+				PRINTFORMW 그것은 과연, 놀래킨다고 말할 수 있을까….
+				PRINTFORMW 「스승이 가르쳐 주었어요? 몸을 질겅질겅 만지작거려 기분 좋게 해 주면」
+				PRINTFORMW 「벌벌 떨려 넋을 잃어버릴 정도로, 놀라버린다는 걸…♪」
+				CFLAG:9011 = 1
+			ELSEIF RESULT == 1
+				PRINTFORMW 「에에～! 어째서?」
+				PRINTFORMW 조수로서 사용하게 되면, 노예상에게 터무니없이 가격이 깎이므로 할 수 없다.
+				PRINTFORMW ――같은 일은, 말하지 않았다.
+				PRINTFORMW 「훌쩍훌쩍. 놀래킬 수 없는 요괴는 존재 가치 없는데─」
+				PRINTFORMW 괜찮아. 큰 돈을 갖고 싶어하는 녀석이, 세상에는 있다.
+				CFLAG:9011 = 6
+			ELSE
+				GOTO INPUT_LOOP_9011
+			ENDIF
+		ELSE
+			CFLAG:9011 = 6
+		ENDIF
+		IF GLOBALEVENT(72, 10)
+			PRINTL  
+			PRINTW ※※조수 이벤트 No1를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 111
+	;Lv1·조수 경험 있어
+	ELSEIF CFLAG:9011 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「스승에게 놀래켜질 뿐은 재미없어요」
+			PRINTFORMW 코가사가 또 뭔가 이상한 것을 말하기 시작했다.
+			PRINTFORMW 「또, 다른 아이를 놀래키는 것, 하고싶어─」
+			PRINTFORMW …요컨대 조수를 하고 싶다고 하는 건가.
+			PRINTFORMW 「스승이 가르쳐 주었어요? 신체를 질겅질겅 만지작거려 기분 좋게 해 주면」
+			PRINTFORMW 「벌벌 떨려 넋을 잃어버릴 정도로, 놀라버린다는 걸…♪」
+		ENDIF
+		CFLAG:9011 = 1
+		IF GLOBALEVENT(72, 10)
+			PRINTL  
+			PRINTW ※※조수 이벤트 No1를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 111
+	;Lv3·기교＋새디즘기분＋레즈비언기합계 6이상, 조교 가능한 노예가 있는, 그 노예의 C감각·욕망 각 2이상, 체력 1000이상
+	ELSEIF CFLAG:9011 == 2 && LOCAL@KOGASA_ASSI && (ABL:12 + ABL:20 + ABL:22) >= 6 && ABL:LOCAL@KOGASA_ASSI:0 >= 2 && ABL:LOCAL@KOGASA_ASSI:11 >= 2 && BASE:LOCAL@KOGASA_ASSI:0 >= 1000
+		IF FLAG:11 > 0
+			PRINTFORML 『여기, 어때? 몸이 놀라지요, 후후후』
+			PRINTFORMW 「히야, 앗, 아앗… 안돼…」
+			PRINTFORML 코가사의 방에는 먼저 온 손님이 있었다. …누구인가 하고 생각하면 %조사처리(CALLNAME:LOCAL@KOGASA_ASSI,"이다")%.
+			PRINTFORMW 알몸으로 벗겨져 침대 위에서, 즐거운 것 같은 코가사에게 성기를 빨려지고 있다.
+			PRINTFORMW 『아, 스승 어서오세요～. 스승도 할래?』
+			PRINTFORMW 그럼 실례하겠어….
+			PRINTFORMW 라고 말하고 싶은 생각이 굴뚝같지만 조금 기다려, 뭐야 이 상황은.
+			PRINTFORMW 코가사를 조교하려고 생각하면, 코가사가 %조사처리(CALLNAME:LOCAL@KOGASA_ASSI,"를")% 조교하고 있었다.
+			PRINTFORMW 스승이 보고 있어요, 기분 좋나요?』
+			PRINTFORMW 좀 더 무서운 우산 요괴의 편린을 맛보았다구….
+			;조수가 있었을 경우
+			SIF ASSI > 0
+				PRINTFORMW ――방이 좁기 때문에, 어쩔 수 없이 %조사처리(CALLNAME:ASSI,"는")% 돌려보내기로 했다.
+		ENDIF
+		ASSI = TARGET
+		TARGET = LOCAL@KOGASA_ASSI
+		PALAM:13 += (500+RAND:1000)
+		PALAM:10 += (300+RAND:2000)
+		PALAM:0 += (2000+RAND:1000)
+		PALAM:14 += (200+RAND:500)
+		PALAM:3 += (100+RAND:200)
+		PALAM:15 += (100+RAND:300)
+		
+		BASE:0 -= RAND:400
+		BASE:1 -= (MAXBASE:0-BASE:0+RAND:400)
+		
+		
+		TRYCALL ASSI_CHANGE
+		TARGET = ASSI
+		CFLAG:9011 = 3
+		CFLAG:9101 = 1
+		IF GLOBALEVENT(72, 12)
+			PRINTL  
+			PRINTW ※※조수 이벤트 No3를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 113
+	;Lv5·기교 4이상, 새디즘기분·레즈비언기 각 2이상, 노예에 빈 곳이 있다
+	ELSEIF CFLAG:9011 == 4 && B && ABL:12 >= 4 && ABL:20 >= 2 && ABL:22 >= 2
+		LOCAL = FLAG:4
+		FLAG:4 = 50
+		LOCAL:1 = 0
+		LOCAL:2 = TARGET
+		IF FLAG:12 & 512
+			FLAG:12 -= 512
+			LOCAL:1 = 1
+		ENDIF
+		ADDCHARA 171
+		TARGET = CHARANUM-1
+		CALL CHARA_RANDOM_STATE
+		FLAG:4 = LOCAL
+		SIF LOCAL:1
+			FLAG:12 |= 512
+		IF FLAG:11 > 0
+			PRINTFORML 『앗 스승, 근무 수고하셨습니다』
+			PRINTFORMW 「앗아아, 코가사 씨, 거기, 기분 좋아…」
+			PRINTFORMW 또냐.
+			PRINTFORMW 라고 생각한 %조사처리(CALLNAME:MASTER,"였")%지만, 지금까지와는 조금 사정이 다르다는 것을 깨달았다.
+			PRINTFORMW 「코가사 씨, 거기, 읏쿠우운」
+			PRINTFORMW 요염한 흑발을 흩뜨려 번민하고 있는 소녀. 꽤나 돋우는 것이 있다.
+			PRINTFORMW …근데. 이 여자, 누구.
+			PRINTFORMW 『이 아이, 근처를 배회하고 있던 인간이야. 이봐요 %CALLNAME%, 자기소개』
+			PRINTFORMW 「아앗, 저, 마을에 살고 있던 %조사처리(CALLNAME,"라")%고 합니다, 아, 기분 좋아…♪」
+			PRINTFORMW 『에헤헤. 잔뜩 놀래켰더니 따라와 버려서』
+			PRINTFORMW 「코가사 씨의 혀, 아아앗, 좀 더, 거기, 거기…♪」
+			PRINTFORMW 덧붙여 빨고 있는 것은 우산으로부터 나와 있는 엄청나게 큰 혀다.
+			PRINTFORMW 『상당히 완성되고 있으니, 스승이 해주어요』
+			PRINTFORMW 「아항, 코가사 씨의, 스승님…♪」
+			PRINTFORMW 예, 예. 두통약을 마셨으면 하네.
+			;조수가 있었을 경우
+			SIF ASSI > 0
+				PRINTFORMW ――방이 좁기 때문에, 어쩔 수 없이 %조사처리(CALLNAME:ASSI,"는")% 돌려보내기로 했다.
+		ENDIF
+		ASSI = LOCAL:2
+
+		;마을 소녀를 적당? 에 조교합니다
+		ABL:10 += (2+RAND:2)
+		ABL:11 += (2+RAND:2)
+		ABL:12 += (1+RAND:2)
+		ABL:13 += RAND:3
+		ABL:0 += (2+RAND:2)
+		ABL:3 += RAND:3
+		ABL:14 += RAND:3
+		ABL:20 += RAND:2
+		ABL:21 += RAND:3
+		ABL:22 += (2+RAND:2)
+		ABL:30 += RAND:1
+		IF TALENT:ASSI:121
+			ABL:31 += (1+RAND:2)
+			MARK:2 += 1
+			MARK:0 += 1
+			EXP:4 += (3+RAND:20)
+			IF RAND:3 || TALENT:0 == 0
+				TALENT:0 = 0
+				EXP:0 += (3+RAND:20)
+			ENDIF
+		ENDIF
+		IF TALENT:0 == 0
+			ABL:1 += (2+RAND:2)
+			EXP:0 += (3+RAND:10)
+		ENDIF
+		MARK:2 += 1
+		MARK:9 = 0
+		MARK:1 = 2
+		EXP:2 += (2+RAND:30)
+		EXP:12 += (2+RAND:30)
+		EXP:11 += (2+RAND:10)
+		EXP:10 += (EXP:11+RAND:10)
+		
+		TALENT:16 = 0
+		TALENT:17 = 0
+		TALENT:70 = 1
+		TALENT:71 = 0
+		
+		RELATION:72 = 200
+		
+		CFLAG:8900 = 1
+		
+		CSTR:ASSI:91 = %CALLNAME%
+		
+		REPEAT 30
+			SIF ABL:COUNT > 5
+				ABL:COUNT = 5
+			SIF MARK:COUNT > 3
+				MARK:COUNT = 3
+		REND
+		
+		PALAM:13 += (2000+RAND:4000)
+		PALAM:10 += (1000+RAND:5000)
+		PALAM:0 += (4000+RAND:6000)
+		PALAM:14 += (500+RAND:2000)
+		PALAM:3 += (500+RAND:2000)
+		PALAM:15 += (1000+RAND:3000)
+		
+		BASE:0 -= RAND:500
+		BASE:1 -= (MAXBASE:0-BASE:0+RAND:200)
+		
+		TARGET = LOCAL:2
+		CFLAG:9011 = 5
+		CFLAG:9101 = 3
+		CFLAG:9103 = 1
+		IF GLOBALEVENT(72, 14)
+			PRINTL  
+			PRINTW ※※조수 이벤트 No5를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 115
+	;Lv5 이후·몇 번이라도 표시된다
+	;Lv2·4는 코가사 이외를 조교시에 일어나기 (위해)때문에, 놀라게 해 이벤트 자체를 리로르 한다
+	ELSEIF CFLAG:9011 == 5
+		;리메이크 선택
+		A = RAND:5
+		;Lv1 리메이크
+		IF A == 0
+			IF FLAG:11 > 0
+				PRINTFORMW 「놀래키는 것은 환상향의 평화로 연결돼」
+				PRINTFORMW 납득한 것 같은 얼굴로 의미불명의 말을 되뇌이는 코가사.
+				PRINTFORMW 「잔뜩 놀래켜주면, 처음엔 싫다든가 죽어라든가 말하고 있던 아이도」
+				PRINTFORMW 「곧 눈을 흐리멍텅하게 해, 행복한 얼굴로 울어주게 되잖아?」
+				PRINTFORMW 그건 놀래키는 것과는 다르다.
+				PRINTFORMW 「나도, 스승에게 좀 더 놀래켜졌으면 좋겠어. 러브 앤드 피―스야!」
+				PRINTFORMW 분명, 코가사의 머릿속은 필시 평화일 것이다.
+			ENDIF
+			RETURN 211
+			IF GLOBALEVENT(72, 15)
+				PRINTL  
+				PRINTW ※※조수 이벤트 No6를 클리어 체크에 등록했습니다※※
+			ENDIF
+		;Lv2 리메이크
+		ELSEIF A == 1
+			GOTO KOGASA_LOOP
+		;Lv3 리메이크·요점 아이마스크·볼 개그·미약·줄, 조교 가능한 노예가 있는, 그 노예의 C감각·욕망 각 3이상, 체력 1000이상
+		ELSEIF A == 2 && LOCAL@KOGASA_ASSI && ((ITEM:29 && ITEM:30 && ITEM:31 && ITEM:61) || NOITEM) && ABL:LOCAL@KOGASA_ASSI:0 >= 3 && ABL:LOCAL@KOGASA_ASSI:11 >= 3 && BASE:LOCAL@KOGASA_ASSI:0 >= 1000
+			IF FLAG:11 > 0
+				PRINTFORML 「읍, 읍―! 으읍―웃!?」
+				PRINTFORMW 문을 열면, 아이마스크와 볼재갈을 한 여자가 사타구니를 벌린 채로 묶여있었다.
+				PRINTFORML 『스승 늦어―, 조금만 더 하면 %조사처리(CALLNAME:LOCAL@KOGASA_ASSI,"가")% 정말로 미쳐버리는 것이었어?』
+				PRINTFORMW …오늘도 또 화려하게 해치워 주고 있는 것 같다, 코가사는.
+				PRINTFORMW 『그 곳에 미약 흠뻑 칠해서, 가버리지 않도록 빨고 있었는데』
+				PRINTFORMW 『약 빨아 버려서, 나도 근질근질 해버려서. 우산이랑 같이 %CALLNAME:LOCAL@KOGASA_ASSI%의 양쪽 귀를 빨며』
+				PRINTFORMW 『그래서 오나니해서 가버려, 잔뜩 목소리 들려 주었어요』
+				PRINTFORMW 와― 깜짝.
+				PRINTFORMW 「읍, 으응읏, 으으읍」
+				PRINTFORMW 줄이 피부에 먹혀드는 것도 상관치 않고 번민하는 %CALLNAME:LOCAL@KOGASA_ASSI%.
+				PRINTFORMW 침 투성이의 뺨에, 아이마스크로부터 흐른 눈물이 흐르고 있었다….
+				;조수가 있었을 경우
+				SIF ASSI > 0
+					PRINTFORMW ――방이 좁기 때문에, 어쩔 수 없이 %조사처리(CALLNAME:ASSI,"는")% 돌려보내기로 했다.
+			ENDIF
+			
+			IF NOITEM == 0
+				ITEM:61 -= 1
+				SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+					CALL FILL_PLURAL_ITEM, 61
+			ENDIF
+			CFLAG:9101 = 4
+			IF GLOBALEVENT(72, 17)
+				PRINTL  
+				PRINTW ※※조수 이벤트 No8를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 213
+		;Lv4 리메이크
+		ELSEIF A == 3
+			GOTO KOGASA_LOOP
+		;Lv5 리메이크·노예에 빈 곳이 있는, 납치한 딸(아가씨)가 수중에 없는, 주인에 페니스가 있는, 요점 아이마스크
+		ELSEIF A == 4 && B && C == 0 && (TALENT:MASTER:120 || TALENT:MASTER:121) &&(ITEM:30 || NOITEM)
+			LOCAL = FLAG:4
+			FLAG:4 = 50
+			LOCAL:1 = 0
+			LOCAL:2 = TARGET
+			IF FLAG:12 & 512
+				FLAG:12 -= 512
+				LOCAL:1 = 1
+			ENDIF
+			ADDCHARA 171
+			TARGET = CHARANUM-1
+			CALL CHARA_RANDOM_STATE
+			FLAG:4 = LOCAL
+			SIF LOCAL:1
+				FLAG:12 |= 512
+			IF FLAG:11 > 0
+				PRINTFORML 『스승, 스승』
+				PRINTFORMW 코가사의 방 앞에서, 코가사가 작은 소리로 불러세웠다. …또 돌아다니고 있던 건가.
+				PRINTFORMW 『조용히 따라와줘. 내 방, 소리 내면 안 돼요』
+				PRINTFORMW …어쩔 수 없다, 교제하자. 쓰잘데 없는 일을 꾀하고 있는 것은 틀림 없겠지.
+				;조수가 있었을 경우
+				SIF ASSI > 0
+					PRINTFORMW ――우선, %조사처리(CALLNAME:ASSI,"는")% 돌려보내기로 했다.
+				PRINTFORMW 찰칵.
+				PRINTFORMW 「아, 코가사 씨…?」
+				PRINTFORMW 코가사의 방에는, 아이마스크로 인상은 분명치 않지만… 아마 %조사처리(CALLNAME:MASTER,"가")% 모르는 아가씨가 있었다.
+				PRINTFORMW 『%CALLNAME%, 다녀왔어. 착한 아이로 있었지?』
+				PRINTFORMW 「아아, 코가사 씨, 나…♪」
+				PRINTFORMW 아무래도 또 마을로부터 소녀를 움켜… 아니, 놀라게 해 대려온 것 같다.
+				PRINTFORMW 게다가 조교도 끝나, 완전히 넋을 빼 버린 것 같다. 행여 나보다도 재능이 있는 건….
+				PRINTFORMW 『후후, %CALLNAME%의 몸은 이렇게 음란하게 구불구불 하군요. 놀랐어』
+				PRINTFORMW 코가사가 윙크로 지시해 온다. 『스승이 범해서 놀래켜 줘!』라고.
+				PRINTFORMW …정말이지, 이 우산놈.
+			ENDIF
+			ASSI = LOCAL:2
+
+			;마을의 딸(아가씨)를 적당? 에 조교합니다
+			ABL:10 += (2+RAND:2)
+			ABL:11 += (2+RAND:2)
+			ABL:12 += (1+RAND:2)
+			ABL:13 += RAND:3
+			ABL:0 += (2+RAND:2)
+			ABL:3 += RAND:3
+			ABL:14 += RAND:3
+			ABL:20 += RAND:2
+			ABL:21 += RAND:3
+			ABL:22 += (2+RAND:2)
+			ABL:30 += RAND:1
+			
+			;억지로 처녀에게
+			TALENT:0 = 1
+			ABL:1 = 0
+			EXP:0 = 0
+
+			MARK:2 += 1
+			MARK:9 = 0
+			MARK:1 = 2
+			EXP:2 += (2+RAND:30)
+			EXP:12 += (2+RAND:30)
+			EXP:11 += (2+RAND:10)
+			EXP:10 += (EXP:11+RAND:10)
+			
+			TALENT:16 = 0
+			TALENT:17 = 0
+			TALENT:70 = 1
+			TALENT:71 = 0
+			
+			RELATION:72 = 200
+			
+			CFLAG:8900 = 2
+			
+			CSTR:ASSI:91 = %CALLNAME%
+			
+			REPEAT 30
+				SIF ABL:COUNT > 5
+					ABL:COUNT = 5
+				SIF MARK:COUNT > 3
+					MARK:COUNT = 3
+			REND
+			
+			PALAM:13 += (2000+RAND:4000)
+			PALAM:10 += (1000+RAND:5000)
+			PALAM:0 += (1000+RAND:3000)
+			PALAM:14 += (500+RAND:2000)
+			PALAM:3 += (500+RAND:2000)
+			PALAM:15 += (1000+RAND:3000)
+			
+			BASE:0 -= RAND:200
+			BASE:1 -= (MAXBASE:0-BASE:0+RAND:200)
+			
+			TARGET = LOCAL:2
+			CFLAG:9011 = 5
+			CFLAG:9101 = 5
+			CFLAG:9103 = 0
+			IF GLOBALEVENT(72, 19)
+				PRINTL  
+				PRINTW ※※조수 이벤트 No10를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 215
+		ENDIF
+	ENDIF
+;사랑계 주로 호감도에 의한다
+;너무 큰 이벤트는 없다. Lv2는 조교 종료시에 발생한다
+ELSEIF A == 2
+	;키스의 실행 가부
+	CALL COM_ORDER, 6,1
+	;Lv1
+	IF CFLAG:9012 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「스승은, 어떤 일 하고 있는 사람이야?」
+			PRINTFORMW 여자아이를 범해 헤롱헤롱하게 만든 후 팔아서 돈을 벌어, 라고 솔직하게 가르쳐 주었다.
+			PRINTFORMW 「그건 놀랍군요! 그치만 나, 팔리지 않아. 인기 없는 우산인걸, 훌쩍훌쩍」
+			PRINTFORMW 울기 시작했…지만, 울고있는 포인트가 좀 어긋나 있는 것 같은 생각이 든다.
+			PRINTFORMW 「중고라도 구매자가 있다니, 다른 아이들이 부러워… 흑」
+			PRINTFORMW ――아아. 코가사는 역시, 마음의 구조가 「물건」 일 것이다.
+			PRINTFORMW 「부럽고 원망스러워, 좀 더 모두를 놀래키지 않으면!」
+		ENDIF
+		CFLAG:9012 = 1
+		IF GLOBALEVENT(72, 20)
+			PRINTL  
+			PRINTW ※※애정 이벤트 No1를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 121
+	;Lv2용 처리·먼저 연모가 되어 있으면(자) 플래그를 세운다
+	ELSEIF CFLAG:9012 == 1 && TALENT:150
+		CFLAG:9012 = 2
+	;Lv3·호감도 500이상
+	ELSEIF CFLAG:9012 == 2 && CFLAG:2 >= 500
+		IF FLAG:11 > 0
+			PRINTFORML 방에 들어가면, 코가사가 외눈박이가 되어 있었다. 
+			PRINTFORMW …아니 다르다. 오른쪽 눈을 감고 왼쪽 눈의 주위를 다홍색으로 크게 칠해 놓았다. 
+			PRINTFORMW 「놀랐어?」
+			PRINTFORMW 입술도 귓전까지 주홍색으로 칠해져 있다. 요괴답기는 하지만, 놀라기 전에 기분 나쁘다. 
+			PRINTFORMW 「요괴인 만큼 화장을 하기로 했어」 (*化生와 화장의 발음이 같음)
+			PRINTFORMW ――%조사처리(CALLNAME:MASTER,"는")% 말 없이 코가사의 얼굴을 시트로 쓱쓱 닦기 시작했다. 
+			PRINTFORMW 「아얏, 으읍, 얼굴 새빨갛게 되어버려어어!?」
+		ENDIF
+		CFLAG:9012 = 3
+		IF GLOBALEVENT(72, 22)
+			PRINTL  
+			PRINTW ※※애정 이벤트 No3를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 123
+	;Lv4·호감도 800이상
+	ELSEIF CFLAG:9012 == 3 && CFLAG:2 >= 800
+		IF FLAG:11 > 0
+			PRINTFORML 「스승, 스승」
+			PRINTFORMW 신기한 표정으로 코가사가 말을 건네 왔다. 
+			PRINTFORMW 「나는, 스승의 물건이야? 스승의 우산이 되는 걸로, 괜찮을까」
+			PRINTFORMW …괜찮아, 라고 말하고 싶지만. 
+			PRINTFORMW 그렇게 말하면 코가사는, 어떻게 되어 버리는 걸까. 
+			PRINTFORMW 지금까지대로의 밝고 명랑한, 사랑스러운 요괴 소녀인 채로 있을 수 있는 것일까. 
+			PRINTFORMW 「역시 안 된다… 훌쩍훌쩍, 스승의 눈은 높구나」
+			PRINTFORMW 물건으로서의 코가사가 아닌, 소녀로서의 코가사를 갖고 싶다…. 
+			PRINTFORMW 이것은 조교자의 욕망인 걸까. 아니면…. 
+			PRINTFORMW 「히끅… 흑, 어쩌지. 왜, 이런…슬픈 걸까…」
+		ENDIF
+		CFLAG:9012 = 4
+		IF GLOBALEVENT(72, 23)
+			PRINTL  
+			PRINTW ※※애정 이벤트 No4를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 124
+	;Lv5·호감도 1500이상, 연모 있어, 키스 실행가능
+	ELSEIF CFLAG:9012 == 4 && CFLAG:2 >= 1500 && TALENT:150 && RESULT
+		IF FLAG:11 > 0
+			PRINTFORMW 방에 들어가면, 코가사와 눈이 맞았다. 
+			PRINTFORMW 철렁, 했다. 두드러지는 큰 눈동자, 은은한 주홍빛으로 물든 뺨과 하얀 피부. 점처럼 새빨간 입술. 
+			PRINTFORMW 「놀랐어?」
+			PRINTFORMW 또 화장하고 있는 것인가, 라고 간신히 짐작이 간다. 이번은 매우 사랑스럽다. 
+			PRINTFORMW 「라니 어라? 이런 것으로 놀라는 거야!?」
+			PRINTFORMW 솔직히 조금 놀랐지만, 분하기 때문에 냉정하게 머리를 가로젓는다. 
+			PRINTFORMW 「안 되는 건가―. 그럼, 사랑스러워?」
+			PRINTFORMW 그렇게 말하고 날름 혀를 내민다. 이번에는 수긍해, 코가사의 혀 끝에 입술을 떨어뜨려, 그대로 들이마셔 입술을 빼앗는다. 
+			PRINTFORMW 「응……♪ 흐응, 응, 으응」
+			PRINTFORMW 머리카락을 어루만지면서 목덜미를 간질이자, 우유같이 달콤한 향기가 솟아올랐다. 
+			PRINTFORMW ――충동과 사랑이 향하는 대로, 키스에 몰두한다. 
+		ENDIF
+		CFLAG:9102 = 7
+		NEXTCOM = 6
+		CFLAG:9012 = 5
+		IF GLOBALEVENT(72, 24)
+			PRINTL  
+			PRINTW ※※애정 이벤트 No5를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 125
+	;Lv5 이후·몇 번이라도 표시된다
+	;Lv2는 조교 종료시에 일어나기 (위해)때문에, 놀라게 해 이벤트 자체를 리로르 한다
+	ELSEIF CFLAG:9012 == 5
+		;재료 선택
+		A = RAND:5
+		;Lv1 리메이크
+		IF A == 0
+			IF FLAG:11 > 0
+				PRINTFORML 「스승은 나를 어디서 주워 왔어? 역이라든지?」
+				PRINTFORMW …역이라니 어디의?
+				PRINTFORMW 「…사왔어!? 버려져 있던 게 아니라!?」
+				PRINTFORMW 노예 상인이 어디서 주워왔는지 까지는, 과연 모르겠지만. 
+				PRINTFORMW 「흑」
+				PRINTFORMW 울렸다!
+				PRINTFORMW 「이상한 색, 이상한 형태라고 무시되어, 버려진 채로 쭈욱. 마지막으로 요괴가 되어」
+				PRINTFORMW 「설마 사질 수 있었다니… 스승, 나는 행복한 물건입니다」
+				PRINTFORMW 오오오, 하고 울며 웃는 코가사. …정말로 좋은 건가, 이걸로. 
+			ENDIF
+			IF GLOBALEVENT(72, 25)
+				PRINTL  
+				PRINTW ※※애정 이벤트 No6를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 221
+		;Lv2 리메이크
+		ELSEIF A == 1
+			GOTO KOGASA_LOOP
+		;Lv3 리메이크
+		ELSEIF A == 2
+			IF FLAG:11 > 0
+				PRINTFORML 「스승, 신작품! 이걸로 모두 깜짝 놀라는거야!」
+				PRINTFORMW 오늘의 코가사는 파란 페인트로 얼굴을 칠해놓았다. 기분 나빠. 
+				PRINTFORMW 「어라, 놀라지 않아…훌쩍훌쩍」
+				PRINTFORMW 적어도 판토마임의 하나 정도는 공개해 주지 않으면…. 
+				PRINTFORMW 「그러면! 이대로 일단 부딪혀 본다! 이름하여 페인트 칠한 채 공격」
+				PRINTFORMW 바보 같은 말을 지껄이는 코가사를 무시하고, 옷을 벗겨 간다. 
+				PRINTFORMW 「야얏, 스승도 참 성급하구나♪ 라니, 에? 어라?」
+				PRINTFORMW 그대로 코가사를 욕실까지 메고 간다…. 
+				PRINTFORMW 「히에에아아아～」
+				PRINTFORMW ――풍덩. 
+				PRINTFORMW 목욕통에 던져 담았다. …뜨거운 물이 조금, 푸르스름해졌다. 
+			ENDIF
+			CFLAG:9102 = 8
+			TEQUIP:53 = 1
+			NEXTCOM = 351
+			IF GLOBALEVENT(72, 27)
+				PRINTL  
+				PRINTW ※※애정 이벤트 No8를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 223
+		;Lv4 리메이크
+		ELSEIF A == 3
+			IF FLAG:11 > 0
+				PRINTFORML 「꿈?」
+				PRINTFORMW 코가사에게, 꿈은 없는 것인지 물어 보았다. 
+				PRINTFORMW 「사들여져, 소중하게, 그래도 너덜너덜이 될 때 까지 사용되는 거야」
+				PRINTFORMW 예상한 대로의 대답이었다. 
+				PRINTFORMW 「응――조금 전까지는, 그랬어」
+				PRINTFORMW 「지금은…모르겠어. 나, 우산 실격이 되어 버린 걸까」
+				PRINTFORMW 코가사에게, 요괴로서…소녀로서의 가치관이 계속 생기고 있는 걸까. 
+				PRINTFORMW …코가사에게, 생물로서의 애정이라는 것을 가르쳐 준다면. 어떻게 되는걸까. 
+				PRINTFORMW 「스승. 뭔가 이상한 얼굴 하고 있어」
+				PRINTFORMW ――조교사인 내가 애정?
+				PRINTFORMW 어처구니없다. 라고, 웃어 버리는 것은 왠지…할 수 없었다. 
+			ENDIF
+			IF GLOBALEVENT(72, 28)
+				PRINTL  
+				PRINTW ※※애정 이벤트 No9를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 224
+		;Lv5 리메이크·키스 실행가능
+		ELSEIF A == 4 && RESULT
+			IF FLAG:11 > 0
+				PRINTFORMW 방에 들어가면, 코가사는 거울 앞에서 화장하고 있었다. 
+				PRINTFORMW 「아앗, 스승 안 돼! 여자아이의 비밀의 시간인데」
+				PRINTFORMW 아니 알까보냐. 
+				PRINTFORMW 「스승은 델리커시가 없다」
+				PRINTFORMW 「어서어서 나가 나가. 놀랄 정도로 사랑스러워져 줄 테니까」
+				PRINTFORMW ――솔직히, 코가사는 맨얼굴로도 충분히 사랑스럽다고 생각했지만서도. 
+				PRINTFORMW  
+				PRINTFORMW ――그래도 역시, 사랑스러움을 강조한 코가사의 앞에 서면. 
+				PRINTFORMW 「후응, 으응, 응무후…, 응후…♪」
+				PRINTFORMW 주홍색으로 칠해진 입술의 인력에, 거역할 수 없는 것이었다. 
+			ENDIF
+			CFLAG:9102 = 7
+			NEXTCOM = 6
+			IF GLOBALEVENT(72, 29)
+				PRINTL  
+				PRINTW ※※애정 이벤트 No10를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 225
+		ENDIF
+	ENDIF
+;도구계 주로 도구의 사용 경험에 의한다
+ELSEIF A == 3
+	;로터 자위의 실행 가부
+	CALL COM_ORDER, 124,1
+	;Lv1
+	IF CFLAG:9013 == 0
+		IF FLAG:11 > 0
+			PRINTFORML 「원―망―스―러―워―」
+			PRINTFORMW 방에 들어가면, 어쩐지 어둡다. 그리고 코가사가 거꾸로 매달려 있었다. 
+			PRINTFORML 「놀―라―버―려―라―」
+			PRINTFORMW 의표를 찔리긴 했지만 놀랄 수 없는 것은 왜 일까…. 
+			PRINTFORMW 천장, 마루를 바라보고, 조명이 꺼져있다는 것을 눈치챘다. 
+			PRINTFORMW 잘 살펴보니 로프를 다리에 묶어서 매단 것 같다. 
+			PRINTFORMW …특별히 공을 많이 들인 모양새지만, 방 중앙에 매달려있어도 별로 놀라지는 않는다. 
+			PRINTFORMW 「스승―」
+			PRINTFORML 「내려갈 수 없는거야―, 훌쩍훌쩍」
+			PRINTFORMW 안 돼겠다 이 우산. 
+			PRINTFORMW 「내려줘―, 라니, 우왓!?」
+			PRINTFORML 바둥바둥 날뛰자 코가사의 스커트가 휙 뒤집혔다. 
+			PRINTFORMW 불쌍한 우산 요괴는 얼굴을 스커트에 덮인 채, 팬티 노출로 흔들거리고 있다…. 
+			PRINTFORMW 「스승―! 도와, 앗, 다리 아파! 아, 스승도 놀랐다!?」
+			PRINTFORMW ――돌아갈까…라니, 잠깐 뭔가에 씌였다. 
+		ENDIF
+		;매달고
+		;줄이 없어도 여유
+		TEQUIP:40 = 4
+		CFLAG:9013 = 1
+		IF GLOBALEVENT(72, 30)
+			PRINTL  
+			PRINTW ※※도구 이벤트 No1를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 131
+	;Lv2·로터 자위 실행가능·로터를 소지
+	ELSEIF CFLAG:9013 == 1 && RESULT && ITEM
+		IF FLAG:11 > 0
+			PRINTFORMW 곤란했다. 
+			PRINTFORMW ――아무래도 로터를 없애 버린 것 같다. 
+			PRINTFORML 「스승―, 무슨 일이야?」
+			PRINTFORMW 없는 것은 어쩔 수 없기 때문에, 참고 %조사처리(CALLNAME:MASTER,"는")% 코가사의 방에 왔던 것이었다. 
+			PRINTFORMW 「으응…후…저기, 스승, 시작하지 않는 거야?」
+			PRINTFORMW 흐리멍텅하게 눈이 풀린, 섹시한 표정으로 코가사는 말했다. 
+			PRINTFORMW …그러고보니 무언가 저음의 소리가 난다. 
+			PRINTFORML 「아앙…으응, 쿠응」
+			PRINTFORMW ――코가사의 다리를 잡아 침대 위로 뒤집는다. 
+			PRINTFORMW 「우왓!? 스승도 참 대담해!?」
+			PRINTFORMW …코가사의 팬티 안에, 불룩 부풀어 올라 위이잉 하고 진동음을 내는 부분이 있다. 
+			PRINTFORM 「아아앙, 꽉 눌리고 있어…
+			CALL HEARTBW
+			PRINTFORMW 이 우산, 어떻게 해 줄까…. 
+		ENDIF
+		PALAM:13 += (2000+RAND:1000)
+		PALAM:10 += (RAND:3000)
+		PALAM:0 += (1000+RAND:3000)
+		PALAM:15 += (1000+RAND:3000)
+		CFLAG:9013 = 2
+		CFLAG:9102 = 10
+		;로터 자위
+		NEXTCOM = 124
+		IF GLOBALEVENT(72, 31)
+			PRINTL  
+			PRINTW ※※도구 이벤트 No2를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 132
+	;Lv3·바이브 사용 회수 5회 이상＆바이브를 소지＆V감각 3이상
+	ELSEIF CFLAG:9013 == 2 && CFLAG:7012 >= 5 && (ITEM:3 || NOITEM) && ABL:1 > 2
+		IF FLAG:11 > 0
+			PRINTFORML 「스승, 들어봐 들어봐!」
+			PRINTFORMW 코가사가 무언가 기쁜 듯이, 손에 든 바이브를 휘두르며 떠들고 있다. 
+			PRINTFORMW 보관해둔 장소를 가르쳐준 기억은 없지만…. 
+			PRINTFORML 「좋은 생각이 났어. 이걸 인기척 없는 곳에 두고 오면」
+			PRINTFORMW 「기분 좋은 요괴로 변해 놀래키러 올 지도!?」
+			PRINTFORMW ――%조사처리(CALLNAME:MASTER,"는")% 도구 상자에 채울 자물쇠를 준비하기로 했다. 
+		ENDIF
+		CFLAG:9013 = 3
+		IF GLOBALEVENT(72, 32)
+			PRINTL  
+			PRINTW ※※도구 이벤트 No3를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 133
+	;Lv4·바이브를 소지
+	ELSEIF CFLAG:9013 == 3 && (ITEM:3 || NOITEM)
+		IF FLAG:11 > 0
+			PRINTFORMW ――어라？
+			PRINTFORMW 평소같이 조교 도구를 준비하고 있던 %CALLNAME:MASTER%였지만, 문득 위화감을 느꼈다. 
+			PRINTFORMW …도구가 부족하다. 또 코가사인가？
+			PRINTFORMW 「? 스승, 무슨 일이야?」
+			PRINTFORMW 뭐가 부족한지 생각해보면…부족한 것은, 바이브다. 
+			PRINTFORMW 「아아, 바이브라면 요괴의 산에 이렇게, 에잇! 하고」
+			PRINTFORMW 「기분 좋은 요괴에게 선행 투자! 후후후, 기대되요」
+			PRINTFORMW ――일단, 이 바보우산에게 어떤 벌을 줄까 기대된다. 기다려진다.
+		ENDIF
+		ITEM:3 = 0
+		CFLAG:9013 = 4
+		CFLAG:9110 = DAY
+		IF GLOBALEVENT(72, 33)
+			PRINTL  
+			PRINTW ※※도구 이벤트 No4를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 134
+	;Lv5·Lv4로부터 3일 이상 경과＆바이브를 비소지＆코가사이 비처녀(재생 포함하고)＆코가사의 체력 1000이상
+	ELSEIF CFLAG:9013 == 4 && CFLAG:9110+3 < DAY && ! ITEM:3 && ! TALENT:0 && BASE:0 >= 1000
+		IF FLAG:11 > 0
+			PRINTFORMW 코가사의 방. 
+			PRINTFORMW 분홍색 머리카락의 소녀가 코가사를 억눌러, 핏줄 선 페니스를 밀어 붙이고 있었다. 
+			PRINTFORMW 『앗, 안녕 주인님! 나 두고와졌던 바이브입니다』
+			PRINTFORMW 좋아, 놀라지 않았다고. 
+			PRINTFORMW 『어라라, 날 대신할 아이는 사지 않았습니까？』
+			PRINTFORMW 『기쁘군요. 조금 기다리고 있어 주세요, 지금 이 바보우산에게 벌을 주고 있으니까!』
+			PRINTFORMW 「하우, 히, 싫, 아, 아앗, 문지르면 안돼…엣♪」
+			PRINTFORMW 아무래도, 코가사가 버린 바이브가 벌써 건강하게 요괴화 될 수 있어 참배하러 왔다, 고 하는 것 같다. 
+			PRINTFORMW 가까스로 상황은 이해할 수 있었지만, 이 분홍색 요괴는 뭐라고 불러야 하는 걸까. 
+			PRINTFORMW 『엣, 내 이름? 그런 거, 나 단순한 바이브니까!』
+			;조수가 있었을 경우
+			SIF ASSI > 0
+				PRINTFORMW ――우선, %조사처리(CALLNAME:ASSI,"는")% 돌려보내기로 했다. 
+		ENDIF
+		;마을 소녀를 이용해 바이브 요괴를 위조한다
+		ADDCHARA 171
+		ASSI = CHARANUM-1
+		CALLNAME:ASSI = 바이브 요괴
+		NAME:ASSI = 바이브 요괴
+		NICKNAME:ASSI = 유쾌한 분실 바이브
+		TALENT:ASSI:121 = 1
+		TALENT:ASSI:24 = 0
+		TALENT:ASSI:30 = 0
+		TALENT:ASSI:52 = 0
+		TALENT:ASSI:33 = 1
+		TALENT:ASSI:37 = 1
+		TALENT:ASSI:36 = 1
+		TALENT:ASSI:43 = 1
+		TALENT:ASSI:58 = 1
+		TALENT:ASSI:63 = 1
+		TALENT:ASSI:64 = 1
+		CFLAG:ASSI:3201 = 0
+		CFLAG:ASSI:3202 = 1
+		ABL:ASSI:0 = 3
+		ABL:ASSI:12 = 4
+		ABL:ASSI:13 = 3
+		ABL:ASSI:10 = 3
+		ABL:ASSI:11 = 3
+		
+		PALAM:1 += 2000+RAND:3000
+		PALAM:10 += 3000+RAND:5000
+		PALAM:13 += 1000+RAND:2000
+		
+		ASSIPLAY = 1
+		PLAYER = ASSI
+		CFLAG:9102 = 9
+		NEXTCOM = 20
+		CFLAG:9013 = 5
+		CFLAG:9110 = DAY
+		IF GLOBALEVENT(72, 34)
+			PRINTL  
+			PRINTW ※※도구 이벤트 No5를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 135
+	;Lv5 이후·몇 번이라도 표시된다
+	ELSEIF CFLAG:9013 >= 5
+		;재료 선택
+		A = RAND:5
+		;Lv1 리메이크
+		IF A == 0
+			IF FLAG:11 > 0
+				PRINTFORML 「스승―, 놀라라―」
+				PRINTFORMW 방에 들어가자, 코가사가 공이 되어 있었다. 
+				PRINTFORMW …냉정하게 관찰하니 줄이다. 줄로 빙빙 감겨 구르고 있었다. 
+				PRINTFORMW 「…풀리지 않아. 훌쩍훌쩍」
+				PRINTFORMW 줄로 무엇을 할 생각이었는지는 모르겠지만. 
+				PRINTFORMW 「히아～」
+				PRINTFORMW 조금 차 보면 데굴데굴 굴러간다. 조금 재미있다. 
+				PRINTFORMW 「스승, 거기 당겨서, 풀어, 앗, 놀지마아아!」
+			ENDIF
+			;사지 긴박
+			;줄이 없어도 여유
+			TEQUIP:40 = 2
+			IF GLOBALEVENT(72, 35)
+				PRINTL  
+				PRINTW ※※도구 이벤트 No6를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 231
+		;Lv2 리메이크·로터 소지·비처녀(재생하고 있지 않는 한 비처녀일 것이지만 일단)
+		ELSEIF A == 1 && ! TALENT:0 && ITEM
+			IF FLAG:11 > 0
+				PRINTFORMW 곤란하다. 로터가 눈에 띄지 않는다. 코가사가 알고 있지 않을까. 
+				PRINTFORMW 부자연스럽게 그런 것을 말하면서 방에 들어간다. 
+				PRINTFORM 「로터 쨩? 우응, 앗, 몰라요. 아, 아앙, 으응…」
+				CALL HEARTBW
+				PRINTFORMW 배도 꿈틀꿈틀 거리고, 코가사 씨는 아무래도 컨디션이 좋지 않은 것 같다. 
+				PRINTFORMW 「아, 아, 아앗, 누르지 말아, 아아아아♪」
+				PRINTFORMW 걱정이 되서 하복부를 강하게 문질러주면,  아무래도 단순한 일은 아닌 것 같다. 
+				PRINTFORM 「스승, 그만 둬, 아, 아앗, 미안, 미안, 미안하다니까아아」
+				CALL HEARTBW
+				PRINTFORMW 아아, 걱정이다. 문질문질. 둥글둥글. 
+			ENDIF
+			;로터 삽입
+			TEQUIP:20 = 3
+			PALAM:13 += (4000+RAND:1000)
+			PALAM:10 += (9000+RAND:3000)
+			PALAM:1 += (7000+RAND:3000)
+			PALAM:15 += (1000+RAND:3000)
+			IF GLOBALEVENT(72, 36)
+				PRINTL  
+				PRINTW ※※도구 이벤트 No7를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 232
+		;Lv3 리메이크·어널 바이브 소지
+		ELSEIF A == 2 && ITEM:9
+			IF FLAG:11 > 0
+				PRINTFORML 「스승, 바이브 쨩은 버렸더니 요괴가 되어 버렸던 거군요」
+				PRINTFORMW 신기한 얼굴로, 어디서 꺼냈는지 애널바이브를 보고 탄식하는 코가사. 
+				PRINTFORMW 「으응, 흥미는 있어요, 있긴 한데」
+				PRINTFORMW 「역시 무서운데―, 치질이 걸려버리면 어쩌지. 스승 어떻게 생각해?」
+				PRINTFORMW ――물론, 몰수입니다. 
+			ENDIF
+			IF GLOBALEVENT(72, 37)
+				PRINTL  
+				PRINTW ※※도구 이벤트 No8를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 223
+		;Lv4 리메이크·저온 초 5개(살) 이상 소지
+		ELSEIF A == 3 && (ITEM:80 > 4 || NOITEM)
+			IF FLAG:11 > 0
+				PRINTFORML 「원망스러워어어…」
+				PRINTFORMW ――이번은 꽤 분위기가 있다. 
+				PRINTFORMW 방을 어둡게 해서, 툭툭하고 초의 불빛으로, 붉은 혀가 빛난다. 
+				PRINTFORMW 「…스승, 놀랐어?」
+				PRINTFORMW 유감스럽게도, 놀라기 전에 해야 할 일이 있다. 
+				PRINTFORMW 「헤웃!? 히야, 뜨거워, 뜨겁, 싫어어어어!?」
+				PRINTFORMW 비치품인 저온촛불을 낭비하는 우산에게는 벌이 필요하다. 
+			ENDIF
+			IF NOITEM == 0
+				ITEM:80 -= 4
+				SIF FLAG:13 & 4 && MONEY:0 >= 4*ITEMPRICE:80
+					CALL FILL_PLURAL_ITEM, 61
+			ENDIF
+			CFLAG:9102 = 11
+			;초
+			NEXTCOM = 223
+			IF GLOBALEVENT(72, 38)
+				PRINTL  
+				PRINTW ※※도구 이벤트 No9를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 234
+		;Lv5 리메이크·바이브를 소지·비처녀·체력 1000이상·전회로부터 5일 이상 경과
+		ELSEIF A == 4 && ITEM:3 && ! TALENT:0 && BASE:0 >= 1000 && CFLAG:9110+5 < DAY
+			IF FLAG:11 > 0
+				PRINTFORMW 「그런데 말이야, 스승도 참 너무한거야」
+				PRINTFORMW 『응응, 물건의 기분을 알아주지 않는거네』
+				PRINTFORMW 「소중하게 가득 사용해주지 않으면 안되는걸. …아, 스승, 얏호―」
+				PRINTFORMW 『이크 이것은 주인님, 매번 실례하고 있습니다』
+				PRINTFORMW 문을 열자 갑작스레, 코가사와 바이브 요괴가 담소하고 있었다. 
+				PRINTFORMW 『아니―최근 신통치가 않아서, 우산 요괴에게 양보하고 싶습니다만』
+				PRINTFORMW 「스승, 이 녀석 멀쩡한 녀석이야. 오늘은 이 아이로 해!」
+				PRINTFORMW ――에―. 
+				;조수가 있었을 경우
+				SIF ASSI > 0
+					PRINTFORMW ――%조사처리(CALLNAME:ASSI,"는")% 싫증나서 돌아가버렸다. 죄송합니다. 
+			ENDIF
+			;마을의 딸(아가씨)를 이용해 바이브 요괴를 위조한다
+			ADDCHARA 171
+			ASSI = CHARANUM-1
+			CALLNAME:ASSI = 바이브 요괴
+			NAME:ASSI = 바이브 요괴
+			NICKNAME:ASSI = 유쾌한 분실 바이브
+			TALENT:ASSI:121 = 1
+			TALENT:ASSI:24 = 0
+			TALENT:ASSI:30 = 0
+			TALENT:ASSI:52 = 0
+			TALENT:ASSI:33 = 1
+			TALENT:ASSI:37 = 1
+			TALENT:ASSI:36 = 1
+			TALENT:ASSI:43 = 1
+			TALENT:ASSI:58 = 1
+			TALENT:ASSI:63 = 1
+			TALENT:ASSI:64 = 1
+			CFLAG:ASSI:3201 = 0
+			CFLAG:ASSI:3202 = 1
+			ABL:ASSI:0 = 3
+			ABL:ASSI:12 = 4
+			ABL:ASSI:13 = 3
+			ABL:ASSI:10 = 3
+			ABL:ASSI:11 = 3
+			
+			PALAM:1 += 2000+RAND:3000
+			PALAM:10 += 3000+RAND:5000
+			PALAM:13 += 1000+RAND:2000
+			
+			ASSIPLAY = 1
+			PLAYER = ASSI
+			CFLAG:9102 = 9
+			CFLAG:9013 = 6
+			NEXTCOM = 24
+			CFLAG:9110 = DAY
+			IF GLOBALEVENT(72, 39)
+				PRINTL  
+				PRINTW ※※도구 이벤트 No10를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 235
+		ENDIF
+	ENDIF
+;음행계 감각계·욕망·자위 중독·노출버릇등의 ABL나 음란 소질에 의한다
+ELSEIF A == 4
+	;Lv1·자위 실행가능
+	IF CFLAG:9014 == 0
+		;자위의 실행 가부
+		PALAM:13 += 500
+		CALL COM_ORDER, 7,1
+		IF ! RESULT
+			PALAM:13 -= 500
+			GOTO KOGASA_LOOP
+		ENDIF
+		IF FLAG:11 > 0
+			PRINTFORML 「음―음―, 으응―, 으으음―」
+			PRINTFORMW 코가사의 방에 들어가자, 알몸이 되어 오른손으로 클리토리스를 만지고 있었다. 
+			PRINTFORML 「아, %CALLNAME:MASTER%. 놀랐어!?」
+			PRINTFORMW 코가사의 방에 들어가기 전엔당연히 무엇인가가 있을 것을 경계하고 있다. 
+			PRINTFORMW 그런 %조사처리(CALLNAME:MASTER,"를")% 놀래키려면 이 정도로는 충분하지 않다. 
+			PRINTFORMW 「있잖아 스승. 스승에게 당해 기분 좋게 되었을 때의 그거」
+			PRINTFORMW 「그걸 또 해주었으면 하지만…스스로는 잘 안돼는 거 같아. 흑」
+			PRINTFORMW ――우선, 자위의 방법을 가르쳐 주어야 하는건가. 
+		ENDIF
+		CFLAG:9014 = 1
+		CFLAG:9102 = 12
+		;자위
+		NEXTCOM = 124
+		IF GLOBALEVENT(72, 40)
+			PRINTL  
+			PRINTW ※※음행 이벤트 No1를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 141
+	;Lv2
+	ELSEIF CFLAG:9014 == 1
+		GOTO KOGASA_LOOP
+		CFLAG:9014 = 2
+		IF GLOBALEVENT(72, 41)
+			PRINTL  
+			PRINTW ※※음행 이벤트 No2를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 142
+	;Lv3
+	ELSEIF CFLAG:9014 == 2
+		GOTO KOGASA_LOOP
+		CFLAG:9014 = 3
+		IF GLOBALEVENT(72, 42)
+			PRINTL  
+			PRINTW ※※음행 이벤트 No3를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 143
+	;Lv4
+	ELSEIF CFLAG:9014 == 3
+		GOTO KOGASA_LOOP
+		CFLAG:9014 = 4
+		IF GLOBALEVENT(72, 43)
+			PRINTL  
+			PRINTW ※※음행 이벤트 No4를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 144
+	;Lv5
+	ELSEIF CFLAG:9014 == 4
+		GOTO KOGASA_LOOP
+		CFLAG:9014 = 5
+		IF GLOBALEVENT(72, 44)
+			PRINTL  
+			PRINTW ※※음행 이벤트 No5를 클리어 체크에 등록했습니다※※
+		ENDIF
+		RETURN 145
+	;Lv5 이후·몇 번이라도 표시된다
+	ELSEIF CFLAG:9014 >= 5
+		GOTO KOGASA_LOOP
+		;재료 선택
+		A = RAND:5
+		;Lv1 리메이크
+		IF A == 0
+			IF GLOBALEVENT(72, 45)
+				PRINTL  
+				PRINTW ※※음행 이벤트 No6를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 241
+		;Lv2 리메이크
+		ELSEIF A == 1
+			IF GLOBALEVENT(72, 46)
+				PRINTL  
+				PRINTW ※※음행 이벤트 No7를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 242
+		;Lv3 리메이크
+		ELSEIF A == 2
+			IF GLOBALEVENT(72, 47)
+				PRINTL  
+				PRINTW ※※음행 이벤트 No8를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 243
+		;Lv4 리메이크
+		ELSEIF A == 3
+			IF GLOBALEVENT(72, 48)
+				PRINTL  
+				PRINTW ※※음행 이벤트 No9를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 244
+		;Lv5 리메이크
+		ELSEIF A == 4
+			IF GLOBALEVENT(72, 49)
+				PRINTL  
+				PRINTW ※※음행 이벤트 No10를 클리어 체크에 등록했습니다※※
+			ENDIF
+			RETURN 245
+		ENDIF
+	ENDIF
+ENDIF
+
+;통하지 않았던 경우, 10회까지 루프 시킨다
+LOCAL:10 += 1
+SIF LOCAL:10 < 11
+	GOTO KOGASA_LOOP
+RETURN 0
+
+@KOGASA_ASSI
+;코가사 이외의 여성 캐릭터를 랜덤에 선택한다
+LOCAL = 0
+REPEAT CHARANUM
+	SIF RAND:2 && NO:COUNT != 72 && COUNT != MASTER && TALENT:COUNT:120 == 0 && MARK:COUNT:90 == 0 && CFLAG:COUNT:4 == 0
+		LOCAL = COUNT
+REND
+RETURN 0
+
+
+;조수계 이벤트·타캐릭터 조교시에 발생하는 것
+@KOGASA_ASSI_2
+;Lv2·매각 가능해 Lv1 때에 허가하고 있는 or조수 경험이 있다
+DRAWLINE
+IF FLAG:11 > 0
+	PRINTFORML 『원망스러워―!』
+	PRINTFORMW %CALLNAME%의 방 앞에 도착하자, 복도의 그늘로부터 코가사가 튀어 나왔다. 
+	PRINTFORMW …기다려, 밖으로부터 잠긴 방에 있어야 할 코가사가, 왜 여기에 있어. 
+	PRINTFORMW 『그 부분은 그거, 놀래키기 위해서라면 이 타타라, 눈이 오든 비가 오든』
+	PRINTFORMW 그것은 평범한 우산이다. 
+	PRINTFORMW 『그거는 그거, 나를 버려두고 간다니 아아 원망스럽다 하는거야』
+	PRINTFORMW 『라고 하는 것으로 스승, 오늘은 나를 사용해주세요』
+	PRINTFORMW 그런 말을 들어도 오늘은 %조사처리(CALLNAME,"를")% 조교하기로 결정했다. 
+	PRINTFORMW 『아아 아니요, 그 %CALLNAME% 님을 놀라게 하는 도구의 하나로』
+	PRINTFORMW 그러고 보니 조수를 하고 싶다고 말한 것 같다…. 
+ENDIF
+;조수 경험이 없는 경우
+IF ISASSI:RESULT == 0
+	IF FLAG:11 > 0
+		PRINTFORMW 본래, 노예끼리 결탁하는 것을 막기 위해, 반항하지 않게 될 때까진 조수로 쓰지 않지만. 
+		PRINTFORMW 방을 빠져나갔으면서, 이런 곳에서 이런 말을 하고 있는 우산이다. 
+	ENDIF
+		PRINTFORML  
+		PRINTFORML ――코가사가 조수 가능하게 되었습니다――
+		PRINTFORMW  
+	SIF FLAG:11 > 0
+		PRINTFORMW …뭐 좋은가. 
+ENDIF
+IF FLAG:11 > 0
+	IF ASSI > 0
+		PRINTFORMW 그러고 보니, 조수로서 데려온 %CALLNAME:ASSI%의 모습이 보이지 않는다. 
+		PRINTFORMW 『%CALLNAME:ASSI% 씨라면, 안전한 곳에서 주무시게 해주었습니다』
+		PRINTFORMW …어이. 
+		PRINTFORMW 『스승, 무서워. 왜냐면 방해였으니까, 흑』
+		PRINTFORMW 『끝나면 무사히 돌려주기 때문에, 이런 일로 놀라면 안 돼요？』
+		PRINTFORMW ――이 우산, 실은 위험할 지도 모른다.
+	ENDIF
+ENDIF
+GETCHARA 72
+ASSI = RESULT
+CFLAG:ASSI:9011 = 2
+CFLAG:ASSI:1 = 2
+IF GLOBALEVENT(72, 11)
+	PRINTL  
+	PRINTW ※※조수 이벤트 No2를 클리어 체크에 등록했습니다※※
+ENDIF
+TRYCALL ASSI_CHANGE
+RETURN 1
+
+@KOGASA_ASSI_4
+;Lv4·욕망 4이상
+IF FLAG:11 > 0
+	DRAWLINE
+	PRINTFORML 「Welcome・원망스러워 가게!!」
+	PRINTFORMW 실례했습니다, 착각했습니다. 
+	PRINTFORMW ――덜컹. 
+	PRINTFORMW %조사처리(CALLNAME:MASTER,"는")% %CALLNAME%의 방 문을 닫았다. 
+	PRINTFORMW …틀림없이 %CALLNAME%의 방이다. 
+	PRINTFORMW 「훌쩍훌쩍, 닫아버리면 싫어요. 어서 스승 들어와줘요」
+	PRINTFORMW 왜 코가사가 여기에 있다. 게다가, %CALLNAME%의 모습은 흔적도 없다. 
+	PRINTFORMW 「라고 하는 것으로 스승!」
+	PRINTFORMW 「%CALLNAME% 쨩을 무사히 돌려받고 싶으면, 나를 기분 좋게 해 보는 겁니다」
+	PRINTFORMW 협박!? 제자에게 협박받는 거야!?
+ENDIF
+GETCHARA 72
+TARGET = RESULT
+CFLAG:9011 = 4
+CFLAG:9101 = 2
+IF GLOBALEVENT(72, 13)
+	PRINTL  
+	PRINTW ※※조수 이벤트 No4를 클리어 체크에 등록했습니다※※
+ENDIF
+RETURN 1
+
+@KOGASA_ASSI_2A
+;Lv2 리메이크·요미약
+DRAWLINE
+IF FLAG:11 > 0
+	PRINTFORML 『스승 늦―어!』
+	PRINTFORMW %CALLNAME%의 방에 들어가자, 부르지 않은 코가사가 맞이해왔다. …이제 익숙해졌어. 
+	PRINTFORMW 「…쿠…이런」
+	PRINTFORMW %조사처리(CALLNAME,"는")% 무사한 것 같지만, 상태가 이상하다. 이불을 감싸 코가사를 원망스러운 듯이 보고 있다. 
+	PRINTFORMW 『%CALLNAME% 씨의 밥에 이걸 섞었어요. 그래서 쭉 관찰하고 있어』
+	PRINTFORMW …아아, 미약. 이 우산은 정말로 사양하지 않는구만. 
+	PRINTFORMW 『이 아이 의외로 완고해요. 갑작스럽게 자위해 스승을 놀래켜 줄 거라고 생각했는데』
+	PRINTFORMW 죄송합니다, 그런 서프라이즈한 노예는 부족하지 않습니다.
+	;조수가 있었을 경우
+	SIF ASSI > 0
+		PRINTFORMW ――방이 좁기 때문에, 어쩔 수 없이 %조사처리(CALLNAME:ASSI,"는")% 돌려보내기로 했다. 
+ENDIF
+IF NOITEM == 0
+	ITEM:61 -= 1
+	SIF FLAG:13 & 4 && MONEY:0 >= ITEMPRICE:61
+		CALL FILL_PLURAL_ITEM, 61
+ENDIF
+ASSI = TARGET
+GETCHARA 72
+TARGET = RESULT
+CFLAG:9101 = 6
+IF GLOBALEVENT(72, 16)
+	PRINTL  
+	PRINTW ※※조수 이벤트 No7를 클리어 체크에 등록했습니다※※
+ENDIF
+RETURN 1
+
+@KOGASA_ASSI_4A
+;Lv4 리메이크
+IF FLAG:11 > 0
+	DRAWLINE
+	PRINTFORMW ――큥, 샤―. 
+	PRINTFORMW %CALLNAME%의 조교에 앞서 몸을 깨끗이 하기 위해, 샤워를 하는 %CALLNAME:MASTER%. 
+	PRINTFORMW 「스승 위험해―!」
+	PRINTFORMW …눈 앞으로 뛰쳐나온 소녀가, 몸을 날려 샤워를 막는다. 코가사다. 
+	PRINTFORMW 도대체 욕실 어디에 잠복하고 있었던 걸까. 수수께끼이다. 
+	PRINTFORMW 「스승을 비로부터 지키는 것이 나의 일!」
+	PRINTFORMW 아무래도 좋지만, 비켜주지 않으면 샤워를 할 수 없다. 
+	PRINTFORMW 「걱정하지 않아도 돼, %CALLNAME% 쨩이라면 조금 전 내가 처리했어」
+	PRINTFORMW 「일어설 수 없도록 엉망진창으로 가게 해줬으니, 완벽!」
+	PRINTFORMW 멋대로 무엇을 하는 거냐, 이 우산은. 
+	PRINTFORMW 「그러니까 스승, 이대로 여기서 기분 좋은 일, 잔뜩 합시다!」
+	PRINTFORMW ――어쩔 수 없지. 갈 곳 없는 의욕을, 소원대로 코가사에게 쏟아주기로 했다. 
+ENDIF
+GETCHARA 72
+TARGET = RESULT
+TEQUIP:53 = 1
+CFLAG:9101 = 2
+IF GLOBALEVENT(72, 18)
+	PRINTL  
+	PRINTW ※※조수 이벤트 No9를 클리어 체크에 등록했습니다※※
+ENDIF
+RETURN 1
+
+
+;정애계 이벤트 Lv2
+@EVENTTURNEND
+SIF TARGET < 0 || NO != 72 || CFLAG:9012 == 0 || CFLAG:9001
+	RETURN 0
+;Lv2·호감도 200이상, 발생 확률 50%·정말로 연모라면 나오지 않는다
+IF CFLAG:9012 == 1 && CFLAG:2 >= 200 && RAND:2 && TALENT:150 == 0
+	PRINTFORMW %조사처리(CALLNAME:TARGET,"이")% 이쪽을 보는 눈이 이상하다…
+	PRINTFORML %조사처리(CALLNAME:TARGET,"은")% %조사처리(CALLNAME:MASTER,"와")%의 행위에 즐거움을 느끼고 있는 것 같다…
+	PRINTFORMW %조사처리(NAME:TARGET,"은")% [연모]를 얻었다
+	PRINTFORMW  
+	PRINTFORMW  
+	PRINTFORMW 「――뭐―라고!」
+	PRINTFORMW 「놀랐어? 놀랐지? 야얏!?」
+	PRINTFORMW 코가사에게 냉정하게 츳코미를 걸고, %조사처리(CALLNAME:MASTER,"는")% 자기 방으로 돌아왔다…. 
+	PRINTFORML  
+	CFLAG:9012 = 2
+	IF GLOBALEVENT(72, 21)
+		PRINTL  
+		PRINTW ※※애정 이벤트 No2를 클리어 체크에 등록했습니다※※
+	ENDIF
+;Lv2 리메이크·발생 확률 3%·정말로 음마라면 나오지 않는다
+ELSEIF CFLAG:9012 == 5 && RAND:100 < 3 && TALENT:180 == 0
+	PRINTFORMW %CALLNAME:TARGET%의 눈초리가 이상하다…
+	PRINTFORML %조사처리(CALLNAME:TARGET,"은")% 몸도 마음도 완전히 타락해 퇴보 할 수 없는 영역에 발을 디뎌 버린 것 같다
+	PRINTFORML %조사처리(CALLNAME:TARGET,"은")% 마치 유혹하는 듯한 눈으로 올려보면서, %CALLNAME:MASTER%의 몸에 기대왔다…
+	PRINTFORMW %조사처리(NAME:TARGET,"은")% [음마]를 얻었다
+	PRINTFORMW  
+	PRINTFORMW  
+	PRINTFORMW 「――뭐―라…고…어? 이제 뭘 해도 괜찮아!?」
+	PRINTFORMW 「뭘 해도 기분 좋게 되기 때문에, 엉망진창에 너덜너덜에…히이이!!」
+	PRINTFORMW 「그, 그건 안 돼, 안 돼, 안 돼에! 지금 건 무효! 스승, 죄송합니다―앗!?」
+	PRINTFORML  
+	IF GLOBALEVENT(72, 26)
+		PRINTL  
+		PRINTW ※※조수 이벤트 No7를 클리어 체크에 등록했습니다※※
+	ENDIF
+ENDIF
+
+@EVENTTRAIN
+#LATER
+GETCHARA 72
+SIF RESULT < 0
+	RETURN 0
+IF CFLAG:RESULT:9101 || CFLAG:RESULT:9102
+	;코가사이 다른 여자 아이를 데려 왔을 경우등의 처리
+	;Lv3
+	IF CFLAG:RESULT:9101 == 1
+		TARGET = LOCAL@KOGASA_ASSI
+		ASSIPLAY = 1
+		PLAYER = ASSI
+		CFLAG:RESULT:9101 = 0
+		DRAWLINE
+		CFLAG:RESULT:9102 = 1
+		NEXTCOM = 1
+	;Lv5
+	ELSEIF CFLAG:RESULT:9101 == 3
+		TARGET = CHARANUM-1
+		ASSIPLAY = 1
+		PLAYER = ASSI
+		CFLAG:RESULT:9101 = 0
+		DRAWLINE
+		CFLAG:RESULT:9102 = 2
+		NEXTCOM = 1
+	;Lv2 리메이크
+	ELSEIF CFLAG:RESULT:9101 == 6
+		TARGET = ASSI
+		ASSI = RESULT
+		TEQUIP:11 = 1
+		CFLAG:RESULT:9101 = 0
+		DRAWLINE
+		CFLAG:RESULT:9102 = 5
+		ASSIPLAY = 1
+		PLAYER = ASSI
+		NEXTCOM = 115
+	;Lv3 리메이크
+	ELSEIF CFLAG:RESULT:9101 == 4
+		ASSI = TARGET
+		CFLAG:RESULT:9102 = 3
+		CFLAG:RESULT:9101 = 0
+		TRYCALL ASSI_CHANGE
+		TARGET = LOCAL@KOGASA_ASSI
+		PALAM:13 += (10000+RAND:10000)
+		PALAM:10 += (4000+RAND:2000)
+		PALAM:0 += (9500+RAND:500)
+		PALAM:14 += (6000+RAND:3000)
+		PALAM:3 += (3000+RAND:2000)
+		PALAM:15 += (3000+RAND:3000)
+
+		TEQUIP:11 = 1
+		TEQUIP:40 = 1
+		TEQUIP:41 = 1
+		TEQUIP:42 = 1
+
+		BASE:0 -= RAND:800
+		BASE:1 -= (MAXBASE:0-BASE:0+RAND:800)
+		ASSIPLAY = 1
+		PLAYER = ASSI
+		DRAWLINE
+		NEXTCOM = 9
+	;Lv5 리메이크
+	ELSEIF CFLAG:RESULT:9101 == 5
+		TARGET = CHARANUM-1
+		TEQUIP:41 = 1
+		CFLAG:RESULT:9101 = 0
+		DRAWLINE
+		CFLAG:RESULT:9102 = 4
+		NEXTCOM = 20
+	ELSEIF NEXTCOM >= 0
+		DRAWLINE
+	ENDIF
+	CFLAG:RESULT:9101 = 0
+ENDIF
+
+
+;우선 이벤트
+;우선도가 놀래키고 이벤트나 굴종 경고보다 높다
+@KOJO_72_X4
+;조수가 사토코
+IF SATOKO(ASSI)
+	;첫회
+	IF CFLAG:9103 == 2
+		IF FLAG:11 > 0
+			PRINTFORMW 「내 이야기? 상관 없지만, 별로 재미있진 않아?」
+			PRINTFORMW 「고물상에서 팔리고 있었지만. 이런 디자인이라. 쭉 팔리지 않고 남았어」
+			PRINTFORMW 「날이 지나도, 매물로 나온 우산 일 뿐. 비가 내려도, 펼쳐져 본 적 없어」
+			PRINTFORMW 「흑…떠올리니까, 슬퍼져 버렸다」
+			PRINTFORMW 「듣는 이도 울고, 말하는 이도 울었다 라는 것은 이런 거군요. 훌쩍훌쩍…아, 계속하라고? 미안」
+			PRINTFORMW 「…라고 해도, 잘 기억하고 있지는 않아, 요괴가 되기 전의 일은」
+			PRINTFORMW 「그러니까 어떤 가게였는 지도, 어떤 사람이 왔던 지도 기억나지 않아」
+			PRINTFORMW 「단지, 거기의 주인이 이따금, 나를 손질해 준 것은 기억하고 있어」
+			PRINTFORMW 「그 때 밖에 열리지 않는 우산이었으니까, 으―응하고 기지개를 켜며」
+			PRINTFORMW 「벌레가 먹지 않았나, 풀은 붙고 있는지. 정중하게 만져 주는 것은 기분 좋았을까」
+			PRINTFORMW 「팔렸냐고? 으응. 손님의 여자아이에게, 공짜로 건네졌어」
+			PRINTFORMW 「말했었지요. 나를 사 주는 사람은, 스승 밖에 없는 걸. 훌쩍훌쩍」
+			PRINTFORMW 『그런… 코가사 씨, 나도 사고 싶습니다!』
+			PRINTFORMW 「%조사처리(CALLNAME:ASSI,"는")% 착한 아이네. 오늘은, 나를 많이 놀래켜줘?」
+		ENDIF
+		CFLAG:9103 = 3
+		RETURN 1
+	;2회째
+	ELSEIF CFLAG:9103 == 3
+		IF FLAG:11 > 0
+			PRINTFORMW 「나를 받은 여자아이의 이야기? …응, 잘 기억하고 있어」
+			PRINTFORMW 「양가의 아가씨 같아, 처음은 나를 소중히 여겨 주었지만」
+			PRINTFORMW 「그렇지만, 한 번도 사용해주지 않았어. 흑」
+			PRINTFORMW 「비 오는 날의 외출에도, 데리고 가지 않고, 데리고 가져도 펼쳐 주지 않았어」
+			PRINTFORMW 「말은 걸어 주었지만, 그 때의 나는 인간의 말 같은거 모르는 거야」
+			PRINTFORMW 「손질도 하지 않게 되었어. 사용되지 않기 때문에 손상되지도 않았지만, 한 번도 펼쳐지지 못했어」
+			PRINTFORMW 「스승은, 잔뜩 나를 펼쳐주어, 사용해 주는 걸. 엣찌한 일에」
+			PRINTFORMW 「…그 아이? 몰라. 나는 버려져 버렸어. 훌쩍훌쩍」
+			PRINTFORMW 「누구에게? 잘 모르겠어. 하지만, 그 아이는 찾으러 오지 않았어」
+			PRINTFORMW 「그러니까, 그 아이는 원망스럽다. 그러니까 잘 기억하고 있어…아아, 마음의 오랜 상처가～」
+			PRINTFORMW 옆에서 듣고 있는 %조사처리(CALLNAME:ASSI,"가")% 뭔가 진지한 표정을 하고 있다. 
+			PRINTFORMW 『에? 아, 아니요… 아무 것도 아닙니다』
+		ENDIF
+		CFLAG:9103 = 4
+		RETURN 1
+	ENDIF
+ENDIF
+RETURN 0
+
+;비우선 이벤트
+;우선도가 놀래키고 이벤트보다 낮다
+@KOJO_72_X5
+;Ex엔드 후
+IF CFLAG:9103 == 7
+	;조수가 사토코
+	IF SATOKO(ASSI)
+		IF FLAG:11 > 0
+			PRINTFORMW 『안녕하세요, 코가사 씨. 손질하러 왔어요』
+			PRINTFORMW 「우웃… %조사처리(MASTERNAME,"를")% 놓치는 건 싫은데」
+			PRINTFORMW 「소유자의 %CALLNAME%에게 손대어지면, 녹아 버릴 정도로 기분이 좋은걸」
+		ENDIF
+	;그 이외
+	ELSE
+		IF FLAG:11 > 0
+			PRINTFORM 
+			PRINTFORM 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+@KOJO_72_X_COMEVENT
+;정애계 이벤트 Lv5·및 리메이크(키스 한다)
+IF CFLAG:9102 == 7
+	IF FLAG:11 > 0
+		PRINTFORML 「으응, 응후… 낼름…♪」
+		PRINTFORMW 두 명의 입술이, 서로 아쉬운 듯, 떨어졌다가는 다시 달라붙는다. 
+		PRINTFORMW 이 날은, 조교 개시가 꽤 늦었다. 
+	ENDIF
+	RETURN 1
+;정애계 이벤트 Lv3 리메이크(샤워)
+ELSEIF CFLAG:9102 == 8
+	IF FLAG:11 > 0
+		PRINTFORMW 코가사를 억눌러, 새파란 얼굴에 샤워를 퍼붓는다. 
+		PRINTFORMW 「부베베바보바부부베베베바바바보」
+		PRINTFORMW …가까이서 샤워를 받으면서 말하지 마. 
+		PRINTFORMW 우선, 푸른 색이 지워질 때까지 샤워를 퍼부어 비누로 문질렀다. 
+		PRINTFORMW 「스승 너무해…코에 물 들어갔어, 훌쩍훌쩍」
+		PRINTFORMW …여기는 손이 시퍼렇다. 
+	ENDIF
+	RETURN 1
+;도구계 이벤트 Lv2(로터 자위)
+ELSEIF CFLAG:9102 == 10
+	IF FLAG:11 > 0
+		PRINTFORM 「아우웅, 스승, 이 도구 기분 좋구나, 하앙…
+		CALL HEARTBW
+		PRINTFORMW 다리를 벌리고 쑥 내민 허리를 흔들어 넋을 잃고 있는 코가사. 
+		PRINTFORMW 손바닥을 팬티 위로 대고, 클리토리스에 로터를 꽉 누르고 있는 것 같다. 
+		PRINTFORMW …그런 일 하면 정말로 느껴버릴테지. 
+		PRINTFORMW 「이번엔, 안에 푸욱 들어가는 도구도 사용해 보고 싶어요, 후아」
+		IF TALENT:0
+			PRINTFORMW 이 우산, 처녀가 아니었던 걸까. 
+			PRINTFORMW 「스승이 천천히 다루어준다면 괜찮아」
+		ENDIF
+		PRINTFORMW 분명, 도구와의 궁합은 좋겠지. 우산이니 만큼. 
+		PRINTFORMW 기분이 내키면, 바이브를 주는 것도 괜찮을지 모른다. 
+	ENDIF
+	RETURN 1
+;도구계 이벤트 Lv4 리메이크(초)
+ELSEIF CFLAG:9102 == 11
+	IF FLAG:11 > 0
+		PRINTFORMW 「싫어어어어, 앗뜨거, 뜨거워…우우…흑」
+		PRINTFORMW 「우산은 기름종이야. 화기엄금. 훌쩍훌쩍」
+		PRINTFORMW 자업자득이라고 하는 거다. 
+	ENDIF
+	RETURN 1
+;음행계 이벤트 Lv1(자위)
+ELSEIF CFLAG:9102 == 12
+	IF FLAG:11 > 0
+		PRINTFORMW 「후에? %MASTERNAME%, 가르쳐 주는거야?」
+		PRINTFORMW 「에, 가죽? 무려, 나의 콩 씨는 우산 모양이었던 건가!」
+		PRINTFORMW 아무래도 포피를 몰랐던 것 같다. 
+		PRINTFORMW 「후잇!?」
+		PRINTFORMW 벗겨서 스스로 만지면 아니나 다를까, 강한 자극으로 뛰어 오른다. 
+		PRINTFORM 「%MASTERNAME%… 이거 안 돼, 계속할 수 없어…
+		CALL HEARTBW
+		PRINTFORMW 같이 유두를 만지작 거리는 것도 알려 줄게. 
+		PRINTFORMW 「아, 이거…힘든데, 손가락이 멈추지 않아서, 굉장해…」
+		PRINTFORMW 처음은 포피 너머 쪽이 좋다고 하는 것은, 가르치지 않기로 했다. 
+	ENDIF
+	RETURN 1
+;도구계 이벤트 Lv5(섹스계 커멘드)
+ELSEIF CFLAG:9102 == 9
+	;삽입 G스포 고문
+	IF SELECTCOM == 614
+		;정상위
+		IF PREVCOM == 20
+			IF FLAG:11 > 0
+				PRINTFORMW 「후에……?」
+				PRINTFORMW 신체를 떼어 놓아져, 허리아래에 베개를 넣자, 일순간 딱 하는 코가사. 
+				PRINTFORMW 『이렇게 해서 아래로부터 하면…자, 딱 맞는군요. 읏차, 자』
+				PRINTFORMW 「캇…후, 아, 아, 아, 아, 아아아아아아」
+				PRINTFORMW 페니스의 앙각으로 Ｇ스폿을 긁어져, 코가사의 다리가 부들부들 떨린다…. 
+			ENDIF
+		;후배위
+		ELSEIF PREVCOM == 21
+			IF FLAG:11 > 0
+				PRINTFORMW 『자, 잡았다. 이 바보 우산놈, 미쳐버리는 게 좋아』
+				PRINTFORMW 등 뒤로부터 코가사의 가슴을 안아, 딱맞게 감싸 움직임을 멈춘다. 
+				PRINTFORMW 「에, 아, 아아, 아, 긁혀지고 있을 뿐인데, 거기, 거기는…앗♪」
+				PRINTFORMW 페니스의 뒤가 Ｇ스폿을 완만하게 문지르자, 코가사의 목소리가 꾸물꾸물거린다. 
+				PRINTFORMW 『이대로 바이브 해 줄테니까. 자, 갖고 싶다고 말해』
+				PRINTFORM 「갖고 싶어, 갖고 싶어, 거기 몇번이든, 읏아, 왔, 다아, 아와, 아, 아아…
+				CALL HEARTBW
+				PRINTFORMW 진동 소리가 들리자, 코가사의 팔이 덜커덕 접혔다. 쑥 내민 엉덩이만이 흔들린다…. 
+			ENDIF
+		;대면좌위
+		ELSEIF PREVCOM == 22
+			IF FLAG:11 > 0
+				PRINTFORMW 『긁히고 있어? 강하게 해줄테니, 자, 밖으로부터 눌러줄 테니까』
+				PRINTFORM 「아, 안돼 안돼, 손, 안돼, 안됀다니까…
+				CALL HEARTBW
+				PRINTFORMW 허리를 조금 뗴어 놓아, 코가사의 배꼽아래를 손바닥으로 강하게 압박한다. 
+				PRINTFORMW 『어디에 닿고 있어? 자 말해봐』
+				PRINTFORM 「G, G스폿, 굉장, 좋은 곳, 읏아아, 손가락, 손가락, 콩까지…
+				CALL HEARTBW
+			ENDIF
+		;배면좌위
+		ELSEIF PREVCOM == 23
+			IF FLAG:11 > 0
+				PRINTFORMW 『히히히, 주인님 보고 있나요? 이 바보우산 완전히 망가져버렸어요』
+				PRINTFORMW 배면자위로 과시해 오기 때문에, 오히려 빠끔히 연 바이브 요괴의 여성기에 눈이 간다. 
+				PRINTFORMW 『이크 주인님, 나 단순한 바이브니까 그쪽은 금지입니다. 그보다 이 녀석을…』
+				PRINTFORM 「후잇!? 아, 앗아아, 아, 아아아, 아, 아, 아아앗아아아아…
+				CALL HEARTBW
+				PRINTFORMW 「G스포의 곳볼록 가득 올라 ,  바이브로 그체비치는 곳 ,  자주(잘) 보이는군요」
+				PRINTFORMW 「지금 이 우산 천국 봐 버리고 있습니다,  입 빠끔빠끔 키빠짐면 ,  나로부터는 안보이는데…♪」
+			ENDIF
+		;기승위
+		ELSEIF PREVCOM == 24
+			IF FLAG:11 > 0
+				PRINTFORMW 『너 자, 바이브오나는 좀 더 능숙하게 해 훈 없으면 』
+				PRINTFORMW 「이다, 다 아라고, 와, 간, , 있고 히」
+				PRINTFORMW 『브릿지 할 생각으로 요일인것 같은 차이』
+				PRINTFORM 「늘어 아이것, 이것, 여기…, 등에 오는, 몸, 아, 아아 아
+				CALL HEARTBW
+				PRINTFORMW 『은 있고 브릿지군요. 쭉 G스포에 맞힌 채로, 무너질 때까지 그렇게 해서. 일어날 수 없지요 』
+				PRINTFORMW 부드러운 신체로 브릿지의 자세를 유지 알려진 채로, 쾌락에 경직되어 무너지는 일도 할 수 없는 코가사.
+				PRINTFORM 「, 아, 만나는, 아, 아, 아, 아, 만나는, 아, 아, 아 만난다, 아, 아우우
+				CALL HEARTBW
+				PRINTFORMW 일으켜 줄 때까지, 스스로 G스포트에 문지르면서, 의미가 없는 소리를 흘려 보낼 뿐(만큼)이었다….
+			ENDIF
+		ENDIF
+	;삽입 자궁구 고문
+	ELSEIF SELECTCOM == 615
+		;정상위
+		IF PREVCOM == 20
+			IF FLAG:11 > 0
+				PRINTFORMW 「다리 여세요. …바보 우산 응. 이러해요 ,  하늘」
+				PRINTFORMW 바이브 요괴는  힘껏 ,  코가사의 무릎의 뒤를 잡아 양다리를 위에 들어 올렸다.
+				PRINTFORMW 「무렵와 죄다 보임. 보기 흉하구나 고물우산 ,  이봐…♪」
+				PRINTFORM 「아아 ,  깊은 , 나 ,  ,  아직…,  ,  맞는다…
+				CALL HEARTBW
+				PRINTFORMW 그 자세로 위로부터 체중을 걸면(자) ,  바이브 요괴의 페니스는 푹 코가사의 안으로 메워졌다.
+				PRINTFORMW 「이 적당한들 넓적다리가 걸리지 않아서 ,  안쪽의 여기를 귀여운을 라고 할 수 있는 것」
+				PRINTFORM 「뭐야,  뭐야 이것 , 나 ,  몸이 ,  아우 ,  ,  패턴라고 ,  그것 ,  그것네…
+				CALL HEARTBW
+			ENDIF
+		;후배위
+		ELSEIF PREVCOM == 21
+			IF FLAG:11 > 0
+				PRINTFORMW 「히우아아!」
+				PRINTFORMW 바이브 요괴는 연결된 채로 ,  코가사의 무릎의 뒤를 간질간질하며 간질였다.
+				PRINTFORMW 당연히 코가사의 허리는 스르륵하고 떨어져 괴롭히며 떠 움직이는 페니스를 최안쪽까지 맞이해 버린다.
+				PRINTFORMW 「어머어머 ,  그런 안쪽 갖고 싶었다. 입열어둔 채로 군침 흘려 보내버린다…? 」
+				PRINTFORMW 코가사의 뇌리에 ,  독중개 ,  독중개 , 라고 소리가 울린다. 질압을 밀어 헤쳐 자궁구를 희롱음.
+				PRINTFORM 「은 ,  후아째 , 째 ,  ,  ,  아아 ,  히야 ,  째…
+				CALL HEARTBW
+				PRINTFORMW 코가사는 단속적으로 떨리면서 ,  여자의 몸은 결코 반항할 수 없다 쾌락에두까지 가라앉힐 수 있었다.
+			ENDIF
+		;대면좌위
+		ELSEIF PREVCOM == 22
+			IF FLAG:11 > 0
+				PRINTFORMW 「등뼈의 것,  허리의 뒤의 구덩이가 무엇을 위해에 있을까 알고 있나」
+				PRINTFORMW 양손으로 허리를 안고 그 구덩이를 무로 ,  , 라고 손가락끝으로 압박한다.
+				PRINTFORM 「네 ,  아…,  ,  그것 ,  히 , 나 , 나 ,  무슨, 아아아 만나는 아아앗
+				CALL HEARTBW
+				PRINTFORMW 「뱃속의 ,  자대 마다 껴안아 빠득빠득 꾸짖어 주기 위해서(때문에) 있어요. 트야? 」
+				PRINTFORM 「이것 ,  삐걱삐걱 안돼 ,  안돼 ,  ,  후아아아,  ,  과부 아아아…
+				CALL HEARTBW
+			ENDIF
+		;배면좌위
+		ELSEIF PREVCOM == 23
+			IF FLAG:11 > 0
+				PRINTFORMW 「아아앙 ,  이 자세는 안쪽은 시 어렵구나 ,  어쩔 수 없다 ,  좀 더 허리 내리세요」
+				PRINTFORMW 「히아 , ,  …」
+				PRINTFORMW 「끝부분의 로터만 최강으로 넣어 할 테니까…배안 부들부들 요 소매치기 당해 주세요」
+				PRINTFORMW 「히,  부들부들 하고 있는…글자-라고 ,  영향을 주는…달구나 …♪」
+				PRINTFORMW 「그래요…몸의 심지까지 영향을 주어 전해지면(자) ,  녹아버린다,  밀어넣고 있을 뿐의 안쪽 로터」
+				PRINTFORM 「히…,  온 ,  이것 ,  놀라는…아 ,  ,  떨려 그치지 않지…
+				CALL HEARTBW
+			ENDIF
+		;기승위
+		ELSEIF PREVCOM == 24
+			IF FLAG:11 > 0
+				PRINTFORMW 「허리 들어 있지 않잖아 ,  이제(벌써) 앉아. 허리 떨어뜨려 안쪽까지질네없음 있어라」
+				PRINTFORMW 「,  아아의 , 나 ,  다리 잡지 말고 ,  아 ,  아아아…」
+				PRINTFORMW 「그대로 전후에 허리 흔들어인. 있고~있고 느낌에 바보가 될 수 있는 난걸까로」
+				PRINTFORM 「은 아…스쳐 ,  아아 ,  이것 네…젓는 것 ,  좋다…
+				CALL HEARTBW
+				PRINTFORMW 「1회나 틀려와 멈출 수 없게 되는 거에요군요. 안으로 조금 움직이면(자)…이봐」
+				PRINTFORM 「히앗 ,  ,  ,  안쪽 ,  독중개 ,  ♪ 아 ,  개 ,  이것 ,  아앗 아아…
+				CALL HEARTBW
+				PRINTFORMW 코가사는 ,  바이브 요괴를 사용한 자위를 잠시 멈출 수가 없었다.
+			ENDIF
+		ENDIF
+	;통상
+	ELSE
+		;정상위
+		IF SELECTCOM == 20
+			IF FLAG:11 > 0
+				PRINTFORMW 「%MASTERNAME%,  도와 ,  히,  ,  아아아 ,  두인 체하며 …」
+				PRINTFORMW 「자 ,  천천히(느긋하게) 움직여 할게요…이 바보 우산째 ,  벌로 좋아하고 있을 뿐이 아닌가」
+				PRINTFORMW 바이브 요괴는 깊은 stroke로 느긋하게 허리를 전후 시킨다.
+				PRINTFORMW 「이나 ,  ,  대단한 것 ,  오싹오싹 라고 신체에 승라고 ,!」
+				PRINTFORMW 천천히(느긋하게) 당겨 빠르게 꽂는 허리 사용에 ,  코가사의 달콤한 목소리가 나타나 가는….
+			ENDIF
+		;후배위
+		ELSEIF SELECTCOM == 21
+			IF FLAG:11 > 0
+				PRINTFORMW 「엉덩이 향하여…이렇게 해서 바이브 넣었다 (일)것은 있어? 자신은 하기 어렵지만 키 군이야―」
+				PRINTFORMW 「히아아…, 나 ,  허리 ,  아래로부터 ,  와 ,  이것 ,  키구 ,  안다…♪」
+				PRINTFORMW 코가사의 엉덩이를 잡아 끌어 들여 무릎을 사용해 아래로부터 찌른다. 훌륭한 허리의 사용법이다.
+				PRINTFORM 「몸 ,  뿔뿔이 흩어지게 되는 ,  바닥구 ,  열어버린다
+				CALL HEARTBW
+			ENDIF
+		;대면좌위
+		ELSEIF SELECTCOM == 22
+			IF FLAG:11 > 0
+				PRINTFORMW 『 안아 주는…이봐요, 연결된 채로 』
+				PRINTFORMW 「하아, 하아……! 히,!」
+				PRINTFORMW 『 쉴 수 있다고 생각했어? 나 바이브니까…이대로 질겅질겅으로 해 주기 때문에 』
+				PRINTFORM 「아, 아안돼, 맞는, 손 치워 , 때굴때굴 이이와 개 맞는 …
+				CALL HEARTBW
+				PRINTFORMW 코가사이 깜짝 놀라고 있는 것을 옆에서 보고 있는 것도, 나쁘지 않다.
+			ENDIF
+		;배면좌위
+		ELSEIF SELECTCOM == 23
+			IF FLAG:11 > 0
+				PRINTFORMW 「의지하세요 ,  이봐요. 가슴 만지작거려 줄 테니까」
+				PRINTFORMW 「히,  ,  아아앙 ,  안돼 ,  연결된 채로는 ,  망가지기 때문에 아아」
+				PRINTFORMW 「우산의 물방울을 떨어뜨릴 때 라고 흔들지요. 이봐요 ,  이렇게 해서 해요」
+				PRINTFORMW %CALLNAME:MASTER%에 과시할 수 있는 결합부에서 ,  바이브 요괴의 페니스가 진동한다.
+				PRINTFORM 「아아아 ,  바이브 안돼 ,  안됏 ,  몸이 놀라버린다…
+				CALL HEARTBW
+			ENDIF
+		;기승위
+		ELSEIF SELECTCOM == 24
+			IF FLAG:11 > 0
+				PRINTFORMW 「바이브라고 말해도 ,  여자를 기쁘게 하는 자원봉사는 잠깐만」
+				PRINTFORMW 위로 향해 엎드려 누워 ,  코가사를 위에 이끌면서 투덜대는 바이브 요괴.
+				PRINTFORMW 「움직이세요 ,  이봐요. 할 수 있는 것이겠죠 ,  같은 도구 이니까」
+				PRINTFORM 「허리가…기분 좋아서 ,  힘 빠지고 있을 뿐으로 ,  히앙! (이)나 …
+				CALL HEARTBW
+				PRINTFORMW 「미만으로 써 혼합해 줄 테니까 ,  이봐요. 자연스럽게 움직일 수 있겠죠…그렇게 ,  그 상태…♪」
+				PRINTFORMW 질내에서 페니스를 원운동시키면서 ,  바이브 요괴는 마음 좋을 것 같게 미소지었다….
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+IF CFLAG:9001 == 3
+	CALL TRAINVOICE
+	RETURN 1
+ENDIF
+
+RETURN 0
+
+@EVENTCOMEND
+#LATER
+IF NO == 72
+	;사랑계 이벤트 Lv5·및 리메이크(키스 한다)
+	IF CFLAG:9102 == 7
+		NEXTCOM = -1
+		CFLAG:9102 = 0
+	;사랑계 이벤트 Lv3 리메이크(샤워)
+	ELSEIF CFLAG:9102 == 8
+		NEXTCOM = -1
+		CFLAG:9102 = 0
+	;도구계 이벤트 Lv2(로터 자위)
+	ELSEIF CFLAG:9102 == 10
+		NEXTCOM = -1
+		CFLAG:9102 = 0
+	;도구계 이벤트 Lv4 리메이크(초)
+	ELSEIF CFLAG:9102 == 11
+		NEXTCOM = -1
+		CFLAG:9102 = 0
+	;음행계 이벤트 Lv1(자위)
+	ELSEIF CFLAG:9102 == 12
+		NEXTCOM = -1
+		CFLAG:9102 = 0
+	;도구계 이벤트 Lv5
+	ELSEIF CFLAG:9102 == 9
+		IF RAND:2 && SELECTCOM != 614 && SELECTCOM != 615 && FLAG:15 & 2
+			NEXTCOM = SELECTCOM
+		ELSE
+			NEXTCOM = 20+RAND:5
+		ENDIF
+		DRAWLINE
+	ENDIF
+ENDIF
+
+
+;클리어 체크같은 것
+@KOJO_72_X_CHECK
+PRINTL ※※코가사의 클리어 체크·공략의 힌트를 듣겠습니까?※※
+PRINTL [0] 꼭 듣는다
+PRINTL [1] 돌아가도 좋다
+PRINTL [2] 체크를 초기화한다
+CALL INPUTINT(0, 1, 2)
+IF RESULT == 1
+	RETURN 0
+ELSEIF ! RESULT
+	CALLF SINGLELOADG(1072)
+	CALLF SINGLELOADG(1171)
+	PRINTFORMW ~코가사 대사 이벤트 체크~
+	PRINTL  
+	PRINTFORMW 「원망스러워―!」
+	PRINTFORML 「안녕하세요, 코가사야―!」
+	PRINTFORMW 「지금까지의 플레이로, 나에 대해서 얼마나 알고 있었던 지를 체크 하네요!」
+	PRINTL  
+	PRINTFORMW ＠조교전 놀래키기 이벤트＠
+	PRINTL  
+	PRINTFORMW 「조교전에, 내가 스승을 놀래키는 이벤트야」
+	PRINTFORMW 「4 계통 각 10방법으로 총 40 종류 있어,   본 이벤트는 체크되는 거야!」
+	PRINTFORMW 「10개 중 1～5번째는, 일정한 조건으로 차례로 표시되는데」
+	PRINTFORMW 「6～10번째는,   각각 1～5번째와 유사한 이벤트가 되어」
+	PRINTFORMW 「5번째까지 본 후에 랜덤으로 발생하기 때문에, 우선은 5번째까지 보는 거야!」
+	PRINTL  
+	LOCAL = GLOBALEVENTCHECK( 72, 0, 10, 1)
+	PRINTFORML 「놀라게 하는 이벤트 {LOCAL}/10」
+	PRINTFORMW 「조건은 특별히 없지만서도, 다른 이벤트가 어느 정도 진행되지 않으면 나오지 않아」
+	IF LOCAL == 10
+		PRINTFORMW 「굉장해! 그렇지만, 여기는 비교적 간단하게 갖추어지니까요. 힘내!」
+	ELSEIF LOCAL > 4
+		PRINTFORMW 「전부 보는 것은 끈기와 운도 중요. 좀 더 나와 얽혀줘!」
+	ELSE
+		PRINTFORMW 「조금만 더 노력하지 않으면. 우선은 다른 이벤트의 조건을 갖추는 것 부터!」
+	ENDIF
+	PRINTL  
+	LOCAL = GLOBALEVENTCHECK( 72, 10, 10, 1)
+	PRINTFORML 「조수 이벤트 {LOCAL}/10」
+	PRINTFORMW 「내가 조수가 되는 것과 관계된 이벤트야. 어려운 부분일지도」
+	IF LOCAL == 10
+		PRINTFORMW 「대―단해! 큰 일이었지요. 기뻐요. 훌쩍훌쩍」
+	ELSEIF LOCAL > 4
+		PRINTFORMW 「여기까지 오면 앞으로 조금 뿐. 그렇네. 그 아이를 한 번 손놓아 보는 것도…?」
+	ELSE
+		PRINTFORMW 「조수로 하거나 하지 않거나 해보고, 다른 아이가 있는 상태로 여러 가지 해 봐」
+	ENDIF
+	PRINTL  
+	LOCAL = GLOBALEVENTCHECK( 72, 20, 10, 1)
+	PRINTFORML 「애정 이벤트 {LOCAL}/10」
+	PRINTFORMW 「나와 스승의 사랑에 관한 이벤트! 호감도만 있으면 간단할까」
+	IF LOCAL == 10
+		PRINTFORMW 「전부 봐준 거네! 우웃, 사랑받고 있는 거구나. 흑」
+	ELSEIF LOCAL > 4
+		PRINTFORMW 「조건이 갖추어져 있다면, 몇 번이든 나에게 와 주면 반드시 나와」
+	ELSE
+		PRINTFORMW 「호감도를 높일 뿐만이 아니라, 제대로 나를 반하게 해?」
+	ENDIF
+
+	PRINTL  
+	LOCAL = GLOBALEVENTCHECK( 72, 30, 10, 1)
+	PRINTFORML 「도구 이벤트 {LOCAL}/10」
+	PRINTFORMW 「조교 도구를 사용하니까, 도구나 콘피그가 필요할지도 몰라요」
+	IF LOCAL == 10
+		PRINTFORMW 「그 분홍색 아이의 이벤트는 이제 없냐고? 없어!」
+	ELSEIF LOCAL > 4
+		PRINTFORMW 「평상시 사용하지 않는 도구… SM용의 소모품이라든지도,  많이 준비해두면 좋을지도?」
+	ELSE
+		PRINTFORMW 「기본적인 조교 도구는 갖추어 둬. 물론, 나에게 사용하지 않으면 안 돼요?」
+	ENDIF
+	PRINTL  
+	LOCAL = GLOBALEVENTCHECK( 72, 0, 40, 1)
+	PRINTFORML 「조교 전 이벤트 종합 {LOCAL}/40」
+	IF LOCAL == 40
+		PRINTFORMW 「굉장해 굉장해! 스승이야말로 우산 마스터―인거야!」
+		PRINTFORMW 「 나를 주지! 뭣―, 필요 없다고」
+	ELSEIF LOCAL > 20
+		PRINTFORMW 「이제 대체로 알겠지? 자,  좀 더 나에게 놀라라!」
+	ELSEIF GETCHARA(72) >= 0 && CFLAG:(GETCHARA(72)):9000 == 0
+		PRINTFORMW 「나는 입문하지 않으면 이상한 것 하지 않아」
+		PRINTFORMW 「우선은 기분 좋은 일을 해서, 놀래켜봐?」
+	ELSE
+		PRINTFORMW 「나를,  물건 취급해 버린 것이 아닐까」
+		PRINTFORMW 「주인님의 물건이 되어버렸다면, 못된 장난은 할 수 없게 되어버리는 걸」
+	ENDIF
+	PRINTL  
+	PRINTFORMW ＠엔딩＠
+	PRINTL  
+	LOCAL = GLOBALEVENTCHECK( 72, 60, 4, 1)
+	LOCAL += GLOBALEVENTCHECK( 171, 60, 3, 1)
+	PRINTFORML 「엔딩 체크 {LOCAL}/7」
+	IF LOCAL == 7
+		PRINTFORMW 「우웃,  잔뜩 봐 주었군요. 기쁜걸…」
+		PRINTFORMW 「흑,  훌쩍훌쩍…스승을 만날 수 있어 행복해요」
+	ELSEIF ! GLOBALREAD( 72, 61)
+		PRINTFORMW 「나를,  나인 채로 귀여워해주는 것은 할 수 없는걸까」
+		PRINTFORMW 「못된 장난도 많이 하는데. 그런 나는 싫은 걸까, 역시…」
+	ELSEIF ! GLOBALREAD( 72, 62)
+		PRINTFORMW 「불행한 결말로, 정말로 끝나는 걸까?」
+		PRINTFORMW 「후후, 자, 놀라라―!」
+	ELSEIF ! GLOBALREAD( 72, 60)
+		PRINTFORMW 「스승에게 유용하게 쓰여, 요괴의 마음이 없어져 버려도」
+		PRINTFORMW 「소중히 여겨지면, 나는 행복한걸―?」
+	ELSEIF ! GLOBALREAD( 171, 60) && ! GLOBALREAD( 171, 61) && ! GLOBALREAD( 171, 62)
+		PRINTFORMW 「나와 스승만이라고 해도, 정말로 전부 다는 모를지도 몰라요」
+		PRINTFORMW 「자. 있었네요,  그 아이도 같이 해 주자」
+	ELSEIF ! GLOBALREAD( 171, 60) && GLOBALREAD( 171, 62)
+		PRINTFORMW 「그 아이와 나, 둘이서 음란한 일 서로 하는 동안에」
+		PRINTFORMW 「좀 더 사이 좋게 되어, 몰랐던 비밀을 알 수 있기도 하는 거야」
+		SIF GLOBALREAD( 72, 19)
+			PRINTFORMW 「두 명째의 그 아이? 그런 만남은 마음을 열어 주지 않는 걸」
+	ELSEIF GLOBALREAD( 171, 60) && ! GLOBALREAD( 171, 62)
+		PRINTFORMW 「그 아이라고 해도 여자아이야, 스승에게 귀여움받았다면 할 수 없지요」
+		PRINTFORMW 「…나를 매도해 잊어버리고, 스승에게 헤롱헤롱해버릴 지도」
+		PRINTFORMW 「나? 그런 원망스러운 일, 허락할 리가 없잖아!」
+	ELSE
+		PRINTFORMW 「우리들을 스승만의 여자로 하기 위한 선물은」
+		PRINTFORMW 「반지만이 아니지요. 그쵸? 두근두근」
+	ENDIF
+	PRINTL  
+	PRINTFORMW 「힌트는 여기까지―」
+	PRINTFORMW 「다시 듣고싶어졌다면, 이 이전의 세이브로부터 나를 불러줘?」
+	PRINTFORMW 「새로운 이벤트를 보면, 제대로 새로운 것을 가르쳐 줄 테니까!」
+	PRINTFORMW 「그러면 또 보자―. 원망스러워―!」
+ELSE
+	LOADGLOBAL
+	GLOBAL:1072 = 0
+	CALLF SINGLESAVEG(1072)
+	GLOBAL:1171 = 0
+	CALLF SINGLESAVEG(1171)
+	SAVEGLOBAL
+	PRINTFORMW 「…안녕, 스승과의 추억」
+	PRINTFORMW 「흑」
+	PRINTL  
+	PRINTW ※※클리어 체크를 초기화했습니다※※
+ENDIF
+

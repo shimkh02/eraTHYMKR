@@ -1,0 +1,396 @@
+﻿;=============================================================================
+;사진 촬영
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE102
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:102 > 0
+	RETURN 0
+;촬영 커맨드 확장의 설정이 유효하지 않으면 불가
+SIF (FLAG:15 & 128) == 0
+	RETURN 0
+;展示室の設定が有効でないとダメ
+SIF (FLAG:12 & 8) == 0
+	RETURN 0
+;조교자가 「あなた」か, [家電사역知識][工作名人][報道者]のどれかを所有している場合, 問題なし
+IF NO:PLAYER != 0 && TALENT:PLAYER:189 == 0 && TALENT:PLAYER:195 == 0 && TALENT:PLAYER:196 == 0
+	;그 외의 경우, 撮影경험＋工作경험＋教育경험의 합계가 200이상 없으면 안 됨
+	SIF (EXP:PLAYER:71 + EXP:PLAYER:74 + EXP:PLAYER:75) < 200
+		RETURN 0
+	;조교자가 助手の場合, さらに기교가 4이상 필요
+	SIF ASSIPLAY && ABL:ASSI:12 < 4
+		RETURN 0
+ENDIF
+;拘束されていない場合は
+IF TEQUIP:40 == 0
+	;대상의 순종と奉仕精神と노출증がどれもLv1이상 없으면 안 됨
+	SIF ABL:10 < 1 || ABL:13 < 1 || ABL:14 < 1
+		RETURN 0
+	;反感または不快が500이상あるとダメ
+	SIF PALAM:20 >= 500 || PALAM:21 >= 500
+		RETURN 0
+ENDIF
+;カメラとフィルムを持っているか, 아이템なし設定でないとダメ
+SIF (ITEM:51 == 0 || ITEM:76 == 0) && NOITEM == 0
+	RETURN 0
+;今回の調教で既に写真を撮っているとダメ(文花帖みたいに連続して写真が撮れないと勝手に解釈)
+SIF TFLAG:124 > 0
+	RETURN 0
+;ビデオ観賞中はダメ
+SIF TEQUIP:51
+	RETURN 0
+;暗闇展開中は조교자가 にとりかはたてかもしくは工作技能Lv5이상でないとダメ
+SIF TEQUIP:70 && CAMERA_IN_DARK_ABLE_BONUS(PLAYER) == 0 && ABL:PLAYER:73 < 5
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;LOCAL:1 = 종합적인 가격 수정 기초
+;LOCAL:2 = 촬영자 및 대상의 능력에 의한 가격 수정 기초
+;LOCAL:3 = 장소 및 장착 도구에 의한 가격 수정 기초
+;LOCAL:4 = 대상으로 걸린 정액에 의한 가격 수정 기초
+;LOCAL:5 = 대상 노예의 가격에 의한 가격 수정 기초
+;LOCAL:6 = 최종적인 가격 수정
+@COM102
+PRINTL 사진 촬영
+TSTR:0 = 사진 촬영
+CALL TRAIN_MESSAGE_COM102
+
+DOWNBASE:0 += 0
+DOWNBASE:1 += 80
+
+SOURCE:24 = 1000
+SOURCE:31 = 2000
+
+;구속되고 있는 경우는 일탈과 반감 추가
+IF TEQUIP:40
+	TIMES SOURCE:31 , 1.20
+	SOURCE:32 = 1000
+ENDIF
+
+;반발 소유가 촬영되면(자) 반감 추가
+SOURCE:32 += (MARK:9 * 500)
+
+LOCAL:1 = 1
+LOCAL:3 = 0
+;필름 소비
+IF NOITEM == 0
+	ITEM:76 -= 1
+	SIF FLAG:13 & 16 && MONEY:0 >= ITEMPRICE:76
+		CALL FILL_PLURAL_ITEM, 76
+ENDIF
+;조교자의 ABL:촬영 기능을 본다
+IF ABL:PLAYER:71 == 0
+	LOCAL:2 = 1
+ELSEIF ABL:PLAYER:71 == 1
+	LOCAL:2 = 2
+ELSEIF ABL:PLAYER:71 == 2
+	LOCAL:2 = 4
+ELSEIF ABL:PLAYER:71 == 3
+	LOCAL:2 = 7
+ELSEIF ABL:PLAYER:71 == 4
+	LOCAL:2 = 11
+ELSE
+	LOCAL:2 = 16
+ENDIF
+
+;PALAM:욕정을 본다
+IF PALAM:13 < PALAMLV:1
+	SOURCE:12 = 1500
+ELSEIF PALAM:13 < PALAMLV:2
+	SOURCE:12 = 2000
+ELSEIF PALAM:13 < PALAMLV:3
+	SOURCE:12 = 2500
+ELSEIF PALAM:13 < PALAMLV:4
+	SOURCE:12 = 3000
+ELSE
+	SOURCE:12 = 3700
+ENDIF
+
+;노출벽을 본다
+IF ABL:14 == 0
+	SOURCE:22 = 3400
+	LOCAL:2 += 1
+ELSEIF ABL:14 == 1
+	SOURCE:22 = 2600
+	LOCAL:2 += 2
+ELSEIF ABL:14 == 2
+	SOURCE:22 = 1900
+	LOCAL:2 += 3
+ELSEIF ABL:14 == 3
+	SOURCE:22 = 1300
+	LOCAL:2 += 5
+ELSEIF ABL:14 == 4
+	SOURCE:22 = 800
+	LOCAL:2 += 8
+ELSE
+	SOURCE:22 = 400
+	LOCAL:2 += 12
+ENDIF
+
+;ABL:마조끼를 본다
+IF ABL:21 == 0
+	TIMES SOURCE:24 , 0.70
+	TIMES SOURCE:12 , 0.80
+ELSEIF ABL:21 == 1
+	TIMES SOURCE:24 , 1.00
+	TIMES SOURCE:12 , 1.00
+ELSEIF ABL:21 == 2
+	TIMES SOURCE:24 , 1.30
+	TIMES SOURCE:12 , 1.20
+ELSEIF ABL:21 == 3
+	TIMES SOURCE:24 , 1.60
+	TIMES SOURCE:12 , 1.40
+ELSEIF ABL:21 == 4
+	TIMES SOURCE:24 , 1.90
+	TIMES SOURCE:12 , 1.60
+ELSE
+	TIMES SOURCE:24 , 2.10
+	TIMES SOURCE:12 , 1.80
+ENDIF
+
+;입계 도구 장착
+IF TEQUIP:42
+	LOCAL:1 += 10
+	LOCAL:3 += 1
+ENDIF
+;A계 도구 장착
+IF TEQUIP:25 || TEQUIP:26
+	LOCAL:1 += 15
+	LOCAL:3 += 1
+ENDIF
+;C계, 카테터 도구 장착
+IF TEQUIP:30 || TEQUIP:32
+	LOCAL:1 += 13
+	LOCAL:3 += 1
+ENDIF
+;B계 도구 장착
+IF TEQUIP:35 || TEQUIP:36
+	LOCAL:1 += 12
+	LOCAL:3 += 1
+ENDIF
+;V계 도구 장착
+IF TEQUIP:20 || TEQUIP:21
+	LOCAL:1 += 18
+	LOCAL:3 += 1
+ENDIF
+;눈은폐계 도구 장착
+IF TEQUIP:41
+	LOCAL:1 += 12
+	LOCAL:3 += 1
+ENDIF
+;어두운 곳 전개는 오히려 마이너스
+SIF TEQUIP:70
+	LOCAL:1 -= 10
+;줄로 긴박, 가시나무로 긴박, 거미의 실로 긴박
+IF TEQUIP:40
+	LOCAL:1 += 10
+	LOCAL:3 += 1
+	IF TEQUIP:40 >= 5
+		LOCAL:1 += 5
+	ELSEIF TEQUIP:40 >= 2 && TEQUIP:40 < 5
+		LOCAL:1 += 5
+	ENDIF
+ENDIF
+;약제계 효과 발휘중
+IF EQUIP:14 || TEQUIP:11 || TEQUIP:12 || TEQUIP:13 || TEQUIP:14 || TEQUIP:15 || TEQUIP:16 || TEQUIP:17
+	LOCAL:1 += 7
+	LOCAL:3 += 1
+ENDIF
+;장소계
+;야외 플레이, 수치 플레이중, 목욕탕 플레이
+IF TEQUIP:52 || TEQUIP:53 || (TEQUIP:56 == 2 || (TEQUIP:56 == 1 && TALENT:205 == 0))
+	LOCAL:1 += 22
+	LOCAL:3 += 1
+ENDIF
+;상황계
+;샤워, 비디오 촬영, 나체정식
+IF TEQUIP:51 || TEQUIP:54 || TEQUIP:60
+	LOCAL:1 += 10
+	LOCAL:3 += 1
+	SIF TEQUIP:60 && TFLAG:153 >= 94
+		LOCAL:1 += 5
+ENDIF
+;촉수 조교, 특수 목욕탕
+IF TEQUIP:55 || TEQUIP:90
+	LOCAL:1 += 10
+	LOCAL:3 += 1
+	IF TEQUIP:90
+		;촉수 최면
+		SIF TEQUIP:92
+			LOCAL:1 += 1
+		;촉수질내 산란
+		SIF TEQUIP:93
+			LOCAL:1 += 1
+		;촉수장내 산란
+		SIF TEQUIP:94
+			LOCAL:1 += 1
+		;촉수 관통
+		SIF TEQUIP:25 == 3
+			LOCAL:1 += 1
+		;촉수 카테터
+		SIF TEQUIP:32
+			LOCAL:1 += 3
+	ENDIF
+ENDIF
+;착의계외
+;알몸 앞치마, 학교수영복 플레이, 코스프레, 의사 플레이, 사라시 장착중
+IF TEQUIP:36 || TEQUIP:57 || TEQUIP:59
+	LOCAL:1 += 20
+	LOCAL:3 += 1
+ENDIF
+;아무것도 장착하고 있지 않는 경우와 복수의 도구를 장착하고 있을 때의 보너스
+IF LOCAL:3 == 0
+	LOCAL:1 += 1
+ELSEIF LOCAL:3 > 1
+	TIMES LOCAL:3 , 1.50
+	LOCAL:1 += LOCAL:3
+ENDIF
+
+;정액의 보정은 LOCAL:4
+LOCAL:4 = 0
+;정액의 더러움(구, 손, 페니스, 보지, 애널, 가슴, 머리카락의 순서)으로 이것은 뿌릴 수 있었던 노예가 나는 것에서 만나며, 촬영자가 이러쿵저러쿵은 관계없기 때문에 수정
+SIF STAIN:0 & 4
+	LOCAL:4 += 1
+SIF STAIN:1 & 4
+	LOCAL:4 += 2
+SIF STAIN:2 & 4
+	LOCAL:4 += 4
+SIF STAIN:3 & 4
+	LOCAL:4 += 5
+SIF STAIN:4 & 4
+	LOCAL:4 += 9
+SIF STAIN:5 & 4
+	LOCAL:4 += 2
+SIF STAIN:7 & 4
+	LOCAL:4 += 2
+;정액의 더러움이 없는 경우와 있을 때의 보너스
+IF LOCAL:4 == 0
+	LOCAL:1 += 1
+ELSE
+	TIMES LOCAL:4 , 1.80
+	LOCAL:1 = MAX(LOCAL:1 - LOCAL:4, 0)
+ENDIF
+
+;겁쟁이
+SIF TALENT:10
+	TIMES LOCAL:1 , 1.20
+;반항적
+SIF TALENT:11
+	TIMES LOCAL:1 , 2.00
+;프라이드 높다
+IF TALENT:16
+	TIMES LOCAL:1 , 2.00
+;프라이드 낮다
+ELSEIF TALENT:17
+	TIMES LOCAL:1 , 0.80
+ENDIF
+;자제심
+SIF TALENT:20
+	TIMES LOCAL:1 , 1.50
+;감정결여
+SIF TALENT:22
+	TIMES LOCAL:1 , 0.60
+;튀고 싶어함
+SIF TALENT:28
+	TIMES LOCAL:1 , 0.80
+;억압
+SIF TALENT:32
+	TIMES LOCAL:1 , 3.00
+;저항
+SIF TALENT:34
+	TIMES LOCAL:1 , 3.00
+;부끄럼쟁이
+IF TALENT:35
+	TIMES LOCAL:1 , 3.50
+;부끄럼없음
+ELSEIF TALENT:36
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+;조교자 또는 조수가 보도자나 공작 명인이라면 효과증
+IF TALENT:PLAYER:196
+	TIMES LOCAL:1 , 1.70
+ELSEIF TALENT:PLAYER:195
+	TIMES LOCAL:1 , 1.30
+ENDIF
+IF ASSI >= 0 && ASSIPLAY == 0
+	IF TALENT:ASSI:196
+		TIMES LOCAL:1 , 1.50
+	ELSEIF TALENT:ASSI:195
+		TIMES LOCAL:1 , 1.20
+	ENDIF
+ENDIF
+
+LOCAL:6 = (LOCAL:1 * LOCAL:2)/7
+
+;사진의 판매가에 캐릭터의 가격의 일부를 가산(노예만)
+LOCAL:5 = MIN(ITEMPRICE:(100 + NO:TARGET) / 50, 100)
+LOCAL:6 += LOCAL:5
+
+;매력
+SIF TALENT:90
+	TIMES LOCAL:6 , 1.50
+;매혹
+SIF TALENT:91
+	TIMES LOCAL:6 , 1.75
+;수수께끼의 매력
+SIF TALENT:92
+	TIMES LOCAL:6 , 1.50
+;인기
+SIF TALENT:94
+	TIMES LOCAL:6 , 1.75
+;낙인
+SIF TALENT:161
+	TIMES LOCAL:6 , 0.50
+;음란
+SIF TALENT:170
+	TIMES LOCAL:6 , 1.50
+
+;사진을 매각하는 경우의 가격
+;임산부의 경우는 보다 가격에 격차가 있다
+IF TALENT:140 || TALENT:145
+	TFLAG:124 = LOCAL:6 * (25 + RAND:21) / 8
+ELSE
+	TFLAG:124 = LOCAL:6 * (30 + RAND:11) / 8
+ENDIF
+;촬영자가 보도자
+SIF TALENT:PLAYER:196
+	TIMES TFLAG:124 , 1.25
+
+SIF TFLAG:124 < 1
+	PRINTL 아무래도 촬영은 잘 되지 않았던 것 같다.
+
+TCVAR:PLAYER:71 += 1
+TCVAR:72 += 1
+
+;노출 쾌락 경험 입수 판정
+TFLAG:100 |= 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM102
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% %CALLNAME:TARGET%의 부끄럽기 짝이 없는 모습을 
+SIF TALENT:PLAYER:196
+	PRINT 압축해서 
+PRINTL 메모리카드에 담았다.
+PRINTFORML 다음에 %CALLNAME:TARGET%의 사진을 현상하도록 하자….
+IF TALENT:22 == 0 && TALENT:170 == 0 && ABL:14 < 3
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 모습이 찍힌 걸 눈치챘는지 얼굴이 굳어지고 있다.
+ELSEIF TALENT:22 || TALENT:170
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 모습이 찍힌 걸 신경 쓰지 않고 있다.
+ELSE
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 부끄러운 모습이 찍혀서 얼굴이 빨개졌다.
+ENDIF

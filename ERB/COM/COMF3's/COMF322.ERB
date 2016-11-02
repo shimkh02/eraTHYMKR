@@ -1,0 +1,154 @@
+﻿;=============================================================================
+;파이즈리 한다
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE322
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:322 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;조교 대상에게 페니스가 없으면 불가
+SIF EXIST_BAR(TARGET) == 0
+	RETURN 0
+;조교자가 남자면 안 됨
+SIF TALENT:PLAYER:120
+	RETURN 0
+;순종4미만 · 레즈끼3미만의 ASSI일 경우, 조교 대상이 동성이라면 실행할 수 없다(망신か복종ならＯＫ)
+IF ASSIPLAY
+	SIF (ABL:ASSI:10 < 4 || (TALENT:120 == 0 && TALENT:ASSI:120 == 0 && ABL:ASSI:22 < 3)) && TALENT:ASSI:151 == 0 && TALENT:ASSI:160 == 0
+	RETURN 0
+ENDIF
+;주인이 [금단의 지식]持ちじゃないとき, 体格差が2段階以内か조교자가 [금단의 지식]持ちじゃないとダメ
+SIF TALENT:MASTER:56 == 0 && COMMON_BODYSIZE_CHECK(PLAYER, TARGET) == 0
+	RETURN 0
+;性器が汚れているとMASTERの場合はできない(조교자가 汚れ無視か愛液, Ｐ, 母乳のよごれならＯＫ)
+SIF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && ASSIPLAY == 0 && TALENT:MASTER:64 == 0
+	RETURN 0
+;性器が汚れており, 汚臭敏感で순종4미만의 ASSI일 경우はできない(조교자가 汚れ無視か愛液, Ｐ, 母乳のよごれならＯＫ)
+IF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && ASSIPLAY
+	SIF ABL:ASSI:10 < 4 && TALENT:ASSI:62 && TALENT:ASSI:64 == 0
+		RETURN 0
+ENDIF
+;[절벽]이면 불가
+IF TALENT:PLAYER:110
+	RETURN 0
+;[貧乳]だと기교4이상 필요
+ELSEIF TALENT:PLAYER:111 && ABL:PLAYER:12 < 4
+	RETURN 0
+;[巨乳]なら기교2이상 필요
+ELSEIF TALENT:PLAYER:112 && ABL:PLAYER:12 < 2
+	RETURN 0
+;[爆乳]なら기교LV1이상 필요
+ELSEIF TALENT:PLAYER:113 && ABL:PLAYER:12 < 1
+	RETURN 0
+;그 외의 경우에는 기교3이상 필요
+ELSEIF TALENT:PLAYER:111 == 0 && TALENT:PLAYER:112 == 0 && TALENT:PLAYER:113 == 0 && ABL:PLAYER:12 < 3
+	RETURN 0
+ENDIF
+;오나홀 · 전극 오나홀사용 중에는 불가
+SIF TEQUIP:30 == 2 || TEQUIP:30 == 6
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;조수가 ウェディングドレス · ゴスロリ着用中の場合助手の기교4이상 필수
+SIF ASSI >= 0 && ASSIPLAY && (TEQUIP:ASSI:59 == 19 || TEQUIP:ASSI:59 == 20) && ABL:ASSI:12 < 4
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM322
+PRINTL 파이즈리한다
+TSTR:0 = 파이즈리한다
+CALL TRAIN_MESSAGE_COM322
+
+DOWNBASE:0 += 50
+DOWNBASE:1 += 180
+
+SOURCE:11 = 1000
+SOURCE:12 = 220
+SOURCE:14 = 1000
+SOURCE:16 = 1000
+SOURCE:31 = 50
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 1000
+	SOURCE:24 = 800
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 1600
+	SOURCE:24 = 1000
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 2200
+	SOURCE:24 = 1300
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 2700
+	SOURCE:24 = 1700
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 3300
+	SOURCE:24 = 2200
+ELSE
+	SOURCE:0 = 3400
+	SOURCE:24 = 2800
+ENDIF
+TCVAR:PLAYER:22 += 1
+
+;노예의 P⇔조교자의 입의 불결이 이동
+STAIN:2 |= STAIN:PLAYER:0
+STAIN:PLAYER:0 |= STAIN:2
+;노예의 P⇔조교자의 가슴의 불결이 이동
+STAIN:2 |= STAIN:PLAYER:5
+STAIN:PLAYER:5 |= STAIN:2
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 7
+
+;조교자의 파이즈리 실행 회수
+CFLAG:PLAYER:56 += 1
+;조교 대상의 파이즈리 능숙 회수
+CFLAG:57 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM322
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+IF TALENT:PLAYER:110 || TALENT:PLAYER:111
+	PRINTFORM 납작한 가슴으로 열심히 %CALLNAME:TARGET%의 페니스를 
+ELSEIF TALENT:PLAYER:112 || TALENT:PLAYER:113
+	PRINTFORM 풍만한 가슴으로 %CALLNAME:TARGET%의 페니스를 감싸 
+ELSE
+	PRINTFORM 가슴으로 %CALLNAME:TARGET%의 페니스를 끼워 
+ENDIF
+;친애/상애로 주인 조교로 반발 2 이하
+IF MARK:9 < 3 && ASSIPLAY == 0 && (TALENT:152 || TALENT:153)
+	PRINTL 비비고 있다….
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 사랑하는 사람의 행위에 교태섞인 소리로 응했다….
+ELSE
+	PRINTW 비비고 있다….
+ENDIF

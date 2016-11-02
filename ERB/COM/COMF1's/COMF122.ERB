@@ -1,0 +1,158 @@
+﻿;=============================================================================
+;클리집중자극
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE122
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:122 > 0
+	RETURN 0
+;Ｃ계 확장 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 1) == 0
+	RETURN 0
+;대상에게 페니스가 있다면 불가
+SIF EXIST_BAR(TARGET)
+	RETURN 0
+;쿠스코 삽입 중에는 불가
+SIF TEQUIP:21
+	RETURN 0
+;Ｃ계 장착구 사용 중에는 불가
+SIF TEQUIP:30
+	RETURN 0
+;승마 중에는 불가
+SIF TEQUIP:43
+	RETURN 0
+;욕실 플레이 중에는 플레이 매트가 없으면 불가
+SIF TEQUIP:53 && ITEM:42 == 0 && NOITEM == 0
+	RETURN 0
+;샤워 중에는 불가
+SIF TEQUIP:54
+	RETURN 0
+;○○목욕탕 입욕 중에는 불가
+SIF TEQUIP:55
+	RETURN 0
+;기저귀 플레이 중에는 불가
+SIF TEQUIP:58
+	RETURN 0
+;훈도시 착용 중일 경우는 안 됨
+SIF TEQUIP:59 == 17
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;학교수영복 플레이 중에는 불가
+SIF TEQUIP:59 == 2
+	RETURN 0
+;애태우기 플레이 중에는 불가
+SIF TEQUIP:68
+	RETURN 0
+;시간정지 중에는 무리
+SIF TEQUIP:71
+	RETURN 0
+;촉수 조교 중에는 불가
+SIF TEQUIP:90
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM122
+PRINTL 클리집중자극
+TSTR:0 = 클리집중자극
+CALL TRAIN_MESSAGE_COM122
+
+DOWNBASE:0 += 80
+DOWNBASE:1 += 120
+
+SOURCE:12 = 200
+SOURCE:19 = 100
+SOURCE:22 = 500
+SOURCE:31 = 150
+
+;ABL:C감각을 본다
+IF ABL:0 == 0
+	SOURCE:0 = 40
+	SOURCE:20 = 50
+ELSEIF ABL:0 == 1
+	SOURCE:0 = 160
+	SOURCE:20 = 250
+ELSEIF ABL:0 == 2
+	SOURCE:0 = 700
+	SOURCE:20 = 325
+ELSEIF ABL:0 == 3
+	SOURCE:0 = 1500
+	SOURCE:20 = 750
+ELSEIF ABL:0 == 4
+	SOURCE:0 = 2400
+	SOURCE:20 = 1250
+ELSE
+	SOURCE:0 = 3300
+	SOURCE:20 = 1500
+ENDIF
+
+;조교자의 ABL:기교를 본다
+IF ABL:PLAYER:12 == 0
+	TIMES SOURCE:0 , 0.60
+	TIMES SOURCE:20 , 4.00
+ELSEIF ABL:PLAYER:12 == 1
+	TIMES SOURCE:0 , 0.80
+	TIMES SOURCE:20 , 2.00
+ELSEIF ABL:PLAYER:12 == 2
+	TIMES SOURCE:0 , 1.00
+	TIMES SOURCE:20 , 1.50
+ELSEIF ABL:PLAYER:12 == 3
+	TIMES SOURCE:0 , 1.20
+	TIMES SOURCE:20 , 1.20
+ELSEIF ABL:PLAYER:12 == 4
+	TIMES SOURCE:0 , 1.40
+	TIMES SOURCE:20 , 1.10
+ELSE
+	TIMES SOURCE:0 , 1.60
+	TIMES SOURCE:20 , 1.00
+ENDIF
+
+;새드, 왕S, 새드끼 3이상을 본다
+SIF TALENT:PLAYER:81 || TALENT:PLAYER:177 || ABL:PLAYER:20 > 2
+	TIMES SOURCE:20 , 2.00
+;C민감, 둔감을 본다
+IF TALENT:100
+	TIMES SOURCE:0 , 1.50
+ELSEIF TALENT:101
+	TIMES SOURCE:0 , 0.60
+ENDIF
+
+;노예의 V⇔조교자의 손의 불결이 이동
+STAIN:3 |= STAIN:PLAYER:1
+STAIN:PLAYER:1 |= STAIN:3
+
+SIF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 3
+
+SIF PLAYER == MASTER
+	TCVAR:41 += 2
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM122
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+PRINTFORM %조사선택(CALLNAME:PLAYER, "는")% 
+PRINTFORM %CALLNAME:TARGET%의 
+SIF ABL:0 >= 3
+	PRINT 크게 부풀어 오른 
+IF TALENT:128
+	PRINT 사랑스러운 콩을 
+ELSE
+	PRINT 복숭아 색의 진주와도 같은 음핵을 
+ENDIF
+SIF TALENT:81 || TALENT:177 || ABL:20 > 2
+	PRINT 차분하게 
+PRINTW 손끝으로 집어 자극했다….

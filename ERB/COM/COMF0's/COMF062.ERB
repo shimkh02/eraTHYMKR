@@ -1,0 +1,103 @@
+﻿;=============================================================================
+;이뇨제
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE62
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:62 > 0
+	RETURN 0
+;아이템을 가지고 있는지, 아이템 없음 설정이나 촉수 조교중이 아니면 안 됨
+SIF ITEM:62 == 0 && NOITEM == 0 && TEQUIP:90 == 0
+	RETURN 0
+;약물내성의 경우, 직접 주입 이외 안 됨
+SIF TALENT:44 && TEQUIP:90 == 0
+	RETURN 0
+;기계라면 안 됨
+SIF TALENT:206
+	RETURN 0
+;알몸 앞치마 중에는 불가
+SIF TEQUIP:59 == 1
+	RETURN 0
+;수면중은 불가
+SIF EQUIP:14
+	RETURN 0
+;강제개구기 외에 다른 걸로 입이 막혀 있으면 불가
+SIF TEQUIP:42 && TEQUIP:42 != 3
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+@COM62
+IF TEQUIP:90
+	PRINTL 촉수 이뇨제 전개
+	TSTR:0 = 촉수 이뇨제 전개
+ELSE
+	PRINTL 이뇨제
+	TSTR:0 = 이뇨제
+ENDIF
+CALL TRAIN_MESSAGE_COM062
+
+;調合知識があれば消費を抑える
+IF TALENT:MASTER:55 || (ASSI >= 0 && TALENT:ASSI:55)
+	DOWNBASE:0 += 50
+	DOWNBASE:1 += 50
+ELSE
+	DOWNBASE:0 += 120
+	DOWNBASE:1 += 120
+ENDIF
+
+SOURCE:26 = 100
+SOURCE:31 = 2000
+;利尿剤効果で軽く変動
+SOURCE:32 = 150
+
+IF TEQUIP:90 == 0 && NOITEM == 0
+	ITEM:62 -= 1
+	SIF FLAG:13 & 8 && MONEY:0 >= ITEMPRICE:62
+		CALL FILL_PLURAL_ITEM, 62
+ENDIF
+TEQUIP:12 = 1
+
+CALL CALC_GAUGE4_SLAVE, TARGET, 1
+
+IF TALENT:120 == 0 && TALENT:PLAYER:120 == 0
+	TCVAR:12 += 1
+ELSEIF TALENT:120 && TALENT:PLAYER:120
+	TCVAR:13 += 1
+ENDIF
+
+;약물경험
+TCVAR:40 += 1
+
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM062
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+IF TEQUIP:90
+	PRINTL 가는 촉수가 이뇨 작용이 있는 액체를 요도에 넣었다.
+ELSE
+	PRINTFORM %CALLNAME:TARGET%에게 
+	SIF ABL:PLAYER:12 >= 3
+		PRINT 입으로 
+	SIF ABL:10 <= 2
+		PRINT 억지로 
+	PRINTL 이뇨제를 먹였다.
+ENDIF
+IF EQUIP:14 == 0 || TFLAG:899 == 0
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 거친 숨을 쉬면서 요의를 참고 있다.
+ELSEIF EQUIP:14
+	PRINTFORMW %조사선택(CALLNAME:TARGET, "는")% 자면서도 숨소리가 거칠어지고 있다.
+ELSEIF TFLAG:899
+	PRINTW
+ENDIF

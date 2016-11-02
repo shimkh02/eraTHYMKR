@@ -1,0 +1,146 @@
+﻿;=============================================================================
+;피버!
+;=============================================================================
+;………………………………………………
+;실행 판정
+;………………………………………………
+@COM_ABLE449
+;개별 설정 커맨드 필터
+SIF DITEMTYPE:999:449 > 0
+	RETURN 0
+;조교자奉仕 · ウフフ系커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 2048) == 0
+	RETURN 0
+;캐릭터 전용 커맨드를 유효로 하지 않으면 불가
+SIF (FLAG:15 & 16384) == 0
+	RETURN 0
+;対象, または조교자가 衣玖さんでないとダメ
+SIF NO:TARGET != 51 && NO:PLAYER != 51
+	RETURN 0
+;조교자가 主人か[恋慕]か奉仕경험Lv3이상이 아니면 불가
+SIF ASSIPLAY && TALENT:PLAYER:150 == 0 && ABL:PLAYER:13 < 3
+	RETURN 0
+;조교자가 [精神崩壊], [傀儡]だとダメ
+SIF TALENT:PLAYER:167 || TALENT:PLAYER:168
+	RETURN 0
+;조교 대상이 [精神崩壊], [傀儡]だとダメ
+SIF TALENT:167 || TALENT:168
+	RETURN 0
+;수면 중에는 불가
+SIF EQUIP:14
+	RETURN 0
+;目隠し, 耳栓, 暗闇展開をしていた場合効果は無し
+SIF TEQUIP:41 || TEQUIP:45 || TEQUIP:70
+	RETURN 0
+;실신 중에는 불가
+SIF TFLAG:899 > 0
+	RETURN 0
+RETURN 1
+
+;--------------------------------------------------
+;커맨드 본체
+;--------------------------------------------------
+;이쿠 씨를 위한 강화형--!
+;끈질기게 사용하면(자) 미움받는 것은 같이--!(와)과 공용
+@COM449
+;토요일의 밤은!
+IF DAY:7 == 7 && TIME == 1
+	PRINTL 토요일 밤 피버!
+	TSTR:0 = 토요일 밤 피버!
+ELSE
+	PRINTL 피버!
+	TSTR:0 = 피버!
+ENDIF
+CALL TRAIN_MESSAGE_COM449
+
+;-------------------------------------------------
+;소스의 계산
+;-------------------------------------------------
+DOWNBASE:0 += 5
+DOWNBASE:1 += 45
+
+IF TFLAG:143 > 10
+	SOURCE:31 = (TFLAG:143 - 10) * 10
+ELSE
+	SOURCE:24 = 60 - (TFLAG:143 * 5)
+ENDIF
+
+;역피버!
+IF NO:TARGET == 51
+	;ABL:노출벽을 본다
+	IF ABL:14 == 0
+		SOURCE:12 = 500
+		SOURCE:25 = 400
+		SOURCE:31 += 100
+		SOURCE:32 = 250
+	ELSEIF ABL:14 == 1
+		SOURCE:12 = 250
+		SOURCE:25 = 50
+		SOURCE:31 += 50
+		SOURCE:32 = 100
+	ELSEIF ABL:14 == 2
+		SOURCE:12 = 150
+		SOURCE:25 = 10
+		SOURCE:31 += 25
+		SOURCE:32 = 50
+	ELSEIF ABL:14 == 3
+		SOURCE:12 = 75
+		SOURCE:31 += 10
+		SOURCE:32 = 25
+	ELSEIF ABL:14 == 4
+		SOURCE:12 = 50
+	ELSE
+		SOURCE:12 = 250
+	ENDIF
+;것 폰의 피버!
+ELSEIF NO:PLAYER == 51
+	;ABL:봉사 정신을 본다
+	IF ABL:13 == 0
+		SOURCE:11 = 10
+		SOURCE:16 = 10
+	ELSEIF ABL:13 == 1
+		SOURCE:11 = 25
+		SOURCE:16 = 20
+	ELSEIF ABL:13 == 2
+		SOURCE:11 = 50
+		SOURCE:16 = 40
+	ELSEIF ABL:13 == 3
+		SOURCE:11 = 75
+		SOURCE:16 = 60
+	ELSEIF ABL:13 == 4
+		SOURCE:11 = 100
+		SOURCE:16 = 80
+	ELSE
+		SOURCE:11 = 150
+		SOURCE:16 = 120
+	ENDIF
+	SOURCE:24 *= 2
+ENDIF
+
+;토요일 밤은 피버!
+IF DAY:7 == 7 && TIME == 1
+	TIMES SOURCE:16 , 1.20
+	TIMES SOURCE:24 , 1.20
+ENDIF
+
+;카운트
+TFLAG:143 += 1
+RETURN 1
+
+;--------------------------------------------------
+;조교시 메시지
+;--------------------------------------------------
+@TRAIN_MESSAGE_COM449
+CALL KOJO_TRAIN_MESSAGE_COM
+SIF FLAG:10 == 0 || CFLAG:99 == 1 || RESULT != 0
+	RETURN 0
+
+PRINTL
+;토요일 밤 피버!
+IF DAY:7 == 7 && TIME == 1
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 왼손을 허리에 대어 오른손의 집게 손가락을 하늘 높이 올려, 시선은 %조사선택(CALLNAME:TARGET, "를")% 응시하면서
+	PRINTW 만면의 미소를 띠고 「토요일 밤 피버!」라고 외쳤다.
+ELSE
+	PRINTFORML %조사선택(CALLNAME:PLAYER, "는")% 왼손을 허리에 대어 오른손의 집게 손가락을 하늘 높이 올려, 시선은 %조사선택(CALLNAME:TARGET, "를")% 응시하면서
+	PRINTW 만면의 미소를 띠고 「피버!」라고 외쳤다.
+ENDIF
