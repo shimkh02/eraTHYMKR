@@ -553,6 +553,22 @@ CFLAG:ARG:4010 = 0
 RESULT:1 = LOCAL:1
 RETURN RESULT:1
 
+;--------------------------------------------
+;전투 시 환상향의 왕 능력치 출력
+;--------------------------------------------
+@PRINT_KING_OF_FANTASY_WORLD, ARG
+PRINTFORML ♣총대장♣
+;주인 이름
+PRINTFORM %CALLNAME:MASTER%
+PRINTL
+;주인 체력표시
+PRINTFORM ♡체력:({BASE:MASTER:0}/{MAXBASE:MASTER:0})
+CALL PRINT_COLORBAR(BASE:MASTER:0, MAXBASE:MASTER:0, MAXBASE:MASTER:0/40, BARCOLORSET("緑"), BARCOLORSET("赤"))
+PRINTL
+;주인 전투력 표시, (자신의 기력 * 0.1)
+PRINTFORML ☆공격력:{(MAXBASE:MASTER:1 * 10/100)}
+DRAWLINE
+
 ;-------------------------------------------
 ;전투(구출시) 처리
 ;ARG = 구출자. (보통 TARGET이지만, 일단 이렇게 해서 유연하게 제작해둠)
@@ -574,7 +590,7 @@ LOCAL:4 = 0
 LOCAL:5 = 0
 ;구출자의 공격력
 LOCAL:6 = 0
-;이번 턴의 행동 (1. 싸운다 2. 방어한다. 999.도망간다)
+;이번 턴의 행동 (1. 싸운다, 2. 방어한다, 4.내가 싸운다, 999.도망간다)
 LOCAL:7 = 0
 ;침입자의 공격패턴 (0.일반공격. 1.필살기)
 LOCAL:8 = 0
@@ -588,6 +604,29 @@ LOCAL:11 = 0
 LOCAL:12 = 0
 ;경비대장의 캐릭터 번호 저장
 LOCAL:13 = FINDCHARA(CFLAG:4013, 2)
+;시간정지 발동 중 움직일 수 있는 최대시간(현재 5초)
+LOCAL:14 = 5
+;버서커 모드 사용여부 - 내가 싸울 시 분기(0:쓰지 않음, 1:사용함)
+LOCAL:15 = 0
+;시간정지 발동 중 움직이는 데 경과한 시간(기본 최대 5초까지)
+LOCAL:16 = -1
+;시간정지 중 상대에게 먹인 축적 대미지
+LOCAL:17 = 0
+;시간정지 사용여부 변수(0.평상시, 1.시간정지中)
+LOCAL:18 = 0
+;시간정지 도중 발동중단 조정변수
+LOCAL:19 = 0
+;환상향의 왕의 공격력
+LOCAL:20 = 0
+;환상향의 왕이 준 순간대미지(시간정지中)
+LOCAL:21 = 0
+;왕 휘하의 경비원이 모두 전멸했을 시, 왕 혼자 싸우게 되는 변수
+;(0.경비원과 대장이 살아있을 때, 1.왕 혼자 남았을 때 - 계속 싸울 것을 선택)
+LOCAL:22 = 0
+;이자요이 사쿠야의 시간정지 능력 여부(0.평상시, 1.회중시계로 시간을 멈췄다)
+LOCAL:23 = 0
+;경비대장 사쿠야의 시간정지 능력 여부(0.평상시, 1.회중시계로 시간을 멈췄다)
+LOCAL:24 = 0
 ;침입자의 버프 상태
 LOCALS:0 = 
 ;침입자가 때릴 캐릭터의 대표명. 만약 경비대장이 있으면 경비대장명이, 아니면 그냥 '경비원' 이 된다.
@@ -623,9 +662,11 @@ BASE:ARG:0 = BASE:ARG:0*LOCAL:11/100
 BASE:ARG:1 = BASE:ARG:1*LOCAL:12/100
 ;....................................................................................
 ;난이도 보정. 난이도 1당 1.3배씩 체력이 오른다. 이지에서는 변화없음.
-;기력(공격력)은 난이도에 따른 보정은 없다.
 MAXBASE:ARG:0 += MAXBASE:ARG:0 *(FLAG:3 -1)*30/100
 BASE:ARG:0 += BASE:ARG:0 *(FLAG:3 -1)*30/100
+;난이도당 기력을 1.5배 증가시킨다(밸런스 패치, 이지모드 포함)
+MAXBASE:ARG:1 += MAXBASE:ARG:1 *(FLAG:3)*50/100
+BASE:ARG:1 += BASE:ARG:1 *(FLAG:3)*50/100
 
 ;주차보정. 2회차부터 주차당 체력 기력이 5% 씩 세진다.
 MAXBASE:ARG:0 += MAXBASE:ARG:0 * (FLAG:6-1)*10/100
@@ -639,7 +680,7 @@ IF ARG:1 == LOCAL:13
 		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
 		FONTBOLD
 		PRINTFORMW !!!%조사처리(CALLNAME:ARG,"는")% 말도 안 되는 상황에 아무 말도 못하고 굳어져 버렸다…!
-		LOCALS:0 = 대혼란 
+		LOCALS:0 = 대혼란
 		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG% (공격력 대하락)
 		FONTREGULAR
 		RESETCOLOR
@@ -656,31 +697,31 @@ IF ARG:1 == LOCAL:13
 		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%	(공격력 하락)
 		RESETCOLOR
 	ENDIF
-	;능력치 변화. 상성에 따른 체력상승은 무효가 되고, 상성 100당 공격력이 33% 씩 깎여나간다.
+	;능력치 변화. 상성에 따른 체력상승은 무효가 되고, 상성 100당 공격력이 10% 씩 깎여나간다.
 	;MAXBASE:ARG:0 += MAXBASE:ARG:0 * (LOCAL:9-100) /100
 	;BASE:ARG:0 += BASE:ARG:0 * (LOCAL:9-100) /100
-	MAXBASE:ARG:1 -= MAXBASE:ARG:1 * (LOCAL:9-100) /300
-	BASE:ARG:1 -= BASE:ARG:1 * (LOCAL:9-100) /300
+	MAXBASE:ARG:1 -= MAXBASE:ARG:1 * (LOCAL:9-100) /1000
+	BASE:ARG:1 -= BASE:ARG:1 * (LOCAL:9-100) /1000
 ;상성보정. 
 ELSEIF LOCAL:9 > 100
 	IF LOCAL:9 >= 300
 		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
 		FONTBOLD
 		PRINTFORMW !!!%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 반드시 구해내고야 말겠다는 각오로 숨은 힘을 해방시켰다!!!
-		LOCALS:0 = 超 
+		LOCALS:0 = 超
 		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%
 		FONTREGULAR
 		RESETCOLOR
 	ELSEIF LOCAL:9 >= 200
 		CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
 		PRINTFORMW !!%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구하겠다는 마음에 리미터가 해제되었다!!!
-		LOCALS:0 = 슈퍼 
+		LOCALS:0 = 슈퍼
 		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%
 		RESETCOLOR
 	ELSEIF LOCAL:9 > 100
 		CALL SETCOLOR_TORIKOMODE, "YELLOW", 1
 		PRINTFORMW !%조사처리(CALLNAME:ARG,"는")% %조사처리(CALLNAME:(ARG:1),"를")% 구하겠다는 마음에 능력치가 상승했다!
-		LOCALS:0 = 분노 
+		LOCALS:0 = 분노
 		PRINTFORMW %CALLNAME:ARG% → %LOCALS:0%%CALLNAME:ARG%	
 		RESETCOLOR
 	ENDIF
@@ -690,13 +731,14 @@ ELSEIF LOCAL:9 > 100
 	MAXBASE:ARG:1 += MAXBASE:ARG:1 * (LOCAL:9-100) /300
 	BASE:ARG:1 += BASE:ARG:1 * (LOCAL:9-100) /300
 ENDIF
+
 ;날짜보정. 침입한 날짜에 따라 점점 세짐. 1%씩 세진다. 최대 100일까지만 추가됨.
-IF DAY <= 100
-	MAXBASE:ARG:0 += MAXBASE:ARG:0 * DAY / 100
-	BASE:ARG:0 += BASE:ARG:0 * DAY / 100
-	MAXBASE:ARG:1 += MAXBASE:ARG:1 * DAY / 100
-	BASE:ARG:1 += BASE:ARG:1 * DAY / 100
-ENDIF
+;IF DAY <= 100
+;	MAXBASE:ARG:0 += MAXBASE:ARG:0 * DAY / 100
+;	BASE:ARG:0 += BASE:ARG:0 * DAY / 100
+;	MAXBASE:ARG:1 += MAXBASE:ARG:1 * DAY / 100
+;	BASE:ARG:1 += BASE:ARG:1 * DAY / 100
+;ENDIF
 
 ;...........................................................................................
 ;전투턴
@@ -707,6 +749,14 @@ DO
 	DRAWLINE
 	;턴 정보 표시
 	PRINTFORML <{LOCAL:0+1}/5 턴>
+	IF LOCAL:18 == 1
+		;시간정지 중이라는 표시
+		FONTBOLD
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 1
+		PRINTFORML <시간정지中>
+		RESETCOLOR
+		FONTREGULAR
+	ENDIF
 	DRAWLINE
 	;구출자 상태 출력
 	;이름출력.
@@ -746,7 +796,6 @@ DO
 	LOCAL:6 = (MAXBASE:ARG:1 * 10/100)
 	PRINTFORM ☆공격력:{LOCAL:6}
 	PRINTL
-
 	DRAWLINE
 	FONTBOLD
 	PRINT [전투대]
@@ -787,6 +836,10 @@ DO
 	RESETCOLOR
 	PRINTL
 	DRAWLINE
+	;환상향의 왕 출력
+	IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+		CALL PRINT_KING_OF_FANTASY_WORLD, ARG
+	ENDIF
 	;경비대장 출력
 	IF LOCAL:13 > 0
 		PRINTL ♆경비대장♆
@@ -849,10 +902,80 @@ DO
 	;작전지정! (두번째 턴 부터)
 	ELSE
 		$SELECT_LIST2
-		PRINTFORML "%CALLNAME:MASTER% 님. 명령을 내려주십시오!"
-		PRINTFORML [1] 싸워라! : 계속 싸웁니다.
-		PRINTFORML [2] 방어해라! : 방어를 해서 경비원이 받는 피해를 줄입니다. 공격은 하지 않음.
-		PRINTFORML [999] 도망쳐라!!!! : 침입자를 무시하고 도망갑니다.
+		IF LOCAL:18 == 1
+			;시간정지 중일 때의 커맨드 메뉴
+			PRINTFORML 『시간이 멈추자 '나'를 제외한 모든이들, 아니, 모든 세계가 정지했다.』
+			PRINTFORML 『이 시점에서 어떻게 하면 좋을까…….』
+			FONTBOLD
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+			PRINTFORML ※경과한 정지시간 {LOCAL:16}/{LOCAL:14}초
+			RESETCOLOR
+			FONTREGULAR				
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+				;환상향의 왕이 있어야 한다
+				PRINTFORML [5] 자신이 직접 전투 : 압도적인 실력으로 때려눕힌다!
+			ENDIF
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69 && TALENT:MASTER:831
+				;야채의 연금술사여야 버서커모드가 가능!
+				IF FLAG:574 >= 10000
+					;야채가 10000개 이상이어야 한다
+					PRINTFORML [6] 자신의 버서커모드 발동 : 압도적인 실력으로 때려눕힌다!! (야채 10000개 소비) ※야채수:{FLAG:574}
+				ELSE
+					;버서커모드 불가능
+					PRINTFORML [x] 버서커모드 불가능 : Warning! 야채가 부족합니다! ※야채수:{FLAG:574}
+				ENDIF
+			ENDIF
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69 && TALENT:MASTER:831
+				PRINTFORML [7] 시간정지 발동중지 : 그리고 시간은 다시 움직인다~♪♬
+			ENDIF
+		ELSE
+			;평상시의 커맨드 메뉴
+			IF LOCAL:22 == 1
+				PRINTFORML 「나 혼자 남았는데, 이제 어떡하면 좋을까.」
+			ELSE
+				PRINTFORML "%CALLNAME:MASTER% 님. 명령을 내려주십시오!"
+			ENDIF
+			
+			IF LOCAL:22 == 1
+				PRINTFORML [x] 경비원 전멸상태 : 공격명령 불가!
+			ELSE
+				PRINTFORML [1] 싸워라! : 계속 싸웁니다.
+			ENDIF
+			IF LOCAL:22 == 1
+				PRINTFORML [x] 경비원 전멸상태 : 방어명령 불가!
+			ELSE
+				PRINTFORML [2] 방어해라! : 방어를 해서 경비원이 받는 피해를 줄입니다. 공격은 하지 않음.
+			ENDIF
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69 && TALENT:MASTER:831
+			;야채의 연금술사여야 시간정지를 발동가능!
+				IF FLAG:574 >= 3000
+					;야채가 3000개 이상이어야 한다
+					PRINTFORML [4] 시간정지를 발동 : 야채(YASAI) 더 월드! 시간이여 멈춰라!! (야채 3000개 소비) ※야채수:{FLAG:574}
+				ELSE
+					;시간정지 불가능
+					PRINTFORML [x] 시간정지 불가능 : Warning! 야채가 부족합니다! ※야채수:{FLAG:574}
+				ENDIF
+			ENDIF
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+				;환상향의 왕이 있어야 한다
+				PRINTFORML [5] 자신이 직접 전투 : 압도적인 실력으로 때려눕힌다!
+			ENDIF
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69 && TALENT:MASTER:831
+				;야채의 연금술사여야 버서커모드가 가능!
+				IF FLAG:574 >= 10000
+					;야채가 10000개 이상이어야 한다
+					PRINTFORML [6] 자신의 버서커모드 발동 : 압도적인 실력으로 때려눕힌다!! (야채 10000개 소비) ※야채수:{FLAG:574}
+				ELSE
+					;버서커모드 불가능
+					PRINTFORML [x] 버서커모드 불가능 : Warning! 야채가 부족합니다! ※야채수:{FLAG:574}
+				ENDIF
+			ENDIF
+			IF LOCAL:22 == 1
+				PRINTFORML [x] 왕의 결심 : 물러서진 않는다(도망불가)!
+			ELSE
+				PRINTFORML [999] 도망쳐라!!!! : 침입자를 무시하고 도망갑니다.
+			ENDIF
+		ENDIF
 		INPUT
 		IF  RESULT == 1
 			LOCAL:7 = 1
@@ -860,6 +983,92 @@ DO
 			PRINTFORMW 방어해라!
 			PRINTFORMW 경비원들은 방어를 하며 시간을 끌기 시작했다….
 			LOCAL:7 = 2
+		ELSEIF RESULT == 4
+			;시간정지 구현
+			FLAG:574 -= 3000 ;야채소비
+			LOCAL:7 = 0 ;우발적인 공격방지 - 에러방지
+			LOCAL:4 = 0 ;적으로의 데미지 변수 초기화 - 누적대미지 준비
+			LOCAL:18 = 1 ;'시간정지'변수를 ON
+			FONTBOLD
+			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+			PRINTFORMW 『야채(YASAI) 더 월드! 시간이여 멈춰라!!』
+			RESETCOLOR
+			FONTREGULAR
+
+			;시간을 멈출 시 두 사람의 반응
+			IF CALLNAME:ARG == "사쿠야"
+				SELECTCASE RAND:2
+				CASE 0
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+					PRINTFORMW 「나와 비슷한 능력인데 뭔가, 달ㄹ...」
+					RESETCOLOR
+				CASE 1
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+					PRINTFORMW 「이럴수가, 내 시간정지는 안 통하...」
+					RESETCOLOR
+				ENDSELECT
+				SETBGCOLOR 0,0,111 ; 시간정지(야채 더 월드) 적합배경바탕 변경
+				CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+				FONTBOLD
+				PRINTFORM %CALLNAME:ARG%
+				FONTREGULAR
+				RESETCOLOR
+				PRINTFORMW 는 필사적으로 저항해보려 했지만 %CALLNAME:MASTER%의 시간축을 쥐어트는 힘이 너무나도 강해 이윽고 세계와 같이 정지되어 얼어버렸다.
+			ELSEIF CALLNAME:ARG == "유카리"
+				SELECTCASE RAND:2
+				CASE 0
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+					PRINTFORMW 「간섭할 수 없...」
+					RESETCOLOR
+					SETBGCOLOR 0,0,111 ; 시간정지(야채 더 월드) 적합배경바탕 변경
+					CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+					FONTBOLD
+					PRINTFORM %CALLNAME:ARG%
+					FONTREGULAR
+					RESETCOLOR
+					PRINTFORMW 는 재빨리 경계를 조작하여 시간축으로부터 벗어나려 했으나 %CALLNAME:MASTER%의 시간축을 쥐어트는 힘이 너무나도 강해 이윽고 세계와 같이 정지되어 얼어버렸다.
+				CASE 1
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+					PRINTFORMW 「얼른 경계로 들...」
+					RESETCOLOR
+					SETBGCOLOR 0,0,111 ; 시간정지(야채 더 월드) 적합배경바탕 변경
+					CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+					FONTBOLD
+					PRINTFORM %CALLNAME:ARG%
+					FONTREGULAR
+					RESETCOLOR
+					PRINTFORMW 는 재빨리 경계를 열어 스키마 속으로 들어가는 데는 성공했으나, %CALLNAME:MASTER%의 시간축을 쥐어트는 힘이 너무나도 강해 스키마 속의 시간까지 정지되고 말았다.
+					PRINTFORMW 현재 그녀는 스키마를 열어둔 그 모습대로 정지되어 얼어있다.
+				ENDSELECT
+			ELSE
+				SETBGCOLOR 0,0,111 ; 시간정지(야채 더 월드) 적합배경바탕 변경
+				PRINTFORMW %CALLNAME:MASTER%는 발동주문을 크게 외치며 시간을 정지했다!
+			ENDIF
+		ELSEIF RESULT == 5
+			;환상향의 왕 직접전투
+			LOCAL:7 = 4 ;이번 턴의 행동을 '내가 싸운다'로 설정
+			LOCAL:15 = 0 ;버서커모드 안 씀
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+			PRINTFORMW %CALLNAME:MASTER%는 스스로 싸우기 위해 앞으로 나섰다!
+			RESETCOLOR
+		ELSEIF RESULT == 6
+			;환상향의 왕 버서커 모드 발동
+			FLAG:574 -= 10000 ;야채소비
+			LOCAL:7 = 4 ;이번 턴의 행동을 '내가 싸운다'로 설정
+			LOCAL:15 = 1 ;버서커모드 사용
+			CALL SETCOLOR_TORIKOMODE, "RED", 2
+			PRINTFORMW %CALLNAME:MASTER%는 스스로 싸우기 위해 기합을 크게 주고 앞으로 나섰다!!
+			RESETCOLOR
+		ELSEIF RESULT == 7
+			;만약 시간정지 중일때, [시간정지]를 그만둔다
+			FONTBOLD
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+			PRINTFORMW 『이제 그만 시간을 되돌려야겠군.』
+			PRINTFORMW 『시간은 다시 움직인다~♪』
+			RESETCOLOR
+			FONTREGULAR
+			LOCAL:19 = 1 ;시간정지 도중중단 조정스위치 ON
+			PRINTFORMW %CALLNAME:MASTER%는 발동주문을 크게 외치며 시간을 다시 움직였다!
 		ELSEIF RESULT == 999
 			LOCAL:1 = 999
 			PRINTFORMW 도망쳐라!!!
@@ -873,193 +1082,497 @@ DO
 			GOTO SELECT_LIST2
 		ENDIF
 	ENDIF
+
+	;이자요이 사쿠야의 어설픈 일시시간정지 능력
+	IF CALLNAME:ARG == "사쿠야"
+		;사쿠야가 능력을 발동하는 확률(50%)
+		IF RAND:2 == 1
+			IF LOCAL:18 == 0
+			;야채 더 월드가 발동되어 있으면 안 된다
+				IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+				;왕께서는 하찮은 시간일시정지 능력을 기력으로 억누르셨다
+					FONTBOLD
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+					PRINTFORMW 「회중시계…, 발동(째깍)!」
+					RESETCOLOR
+					FONTREGULAR
+					SETBGCOLOR 0,80,0 ;사쿠야의 일시시간정지 적합배경바탕 변경
+					PRINTFORMW 사쿠야는 '시간의 흐름'을 '일시정지'시키려 했으나...
+					RESETBGCOLOR ;검은화면 배경바탕 복구 - 일시시간정지 무효화!!
+					PRINTFORMW 갑자기 영문도 모르게 능력발동이 무효화되었다!
+					PRINTL
+					;무효화된 능력을 본 사쿠야의 반응
+					SELECTCASE RAND:2
+					CASE 0
+						PRINTFORMW 「큭, 어째서…….」
+						PRINTFORMW 『네년은 절대로 내 앞에서 그딴 잔재주를 부릴 수 없다.』
+						PRINTFORMW 「그, 그러는 당신이야 말로….」
+						PRINTFORMW 『고작 시간의 흐름을 단순히 경직시키는 것이잖냐! 감히 짐의 [야채 더 월드]와 비교하지 말라!』
+						PRINTFORMW 「큭…!」
+					CASE 1
+						PRINTFORMW 「말도, 안 돼….」
+						FONTBOLD
+						CALL SETCOLOR_TORIKOMODE, "BLUE", 3
+						PRINTFORMW 『실력자들끼리의 싸움은 '기력'의 싸움, 네년의 잔재주따윈, 내 기력(요력+영력)으로 전부 억눌러주마.』
+						RESETCOLOR
+						FONTREGULAR
+						PRINTFORMW 「큭…!」
+					ENDSELECT
+					PRINTL
+					;사쿠야의 일시시간정지 스위치 OFF - 왕에 의해 막혔지만 일단 안전빵으로..
+					LOCAL:23 = 0
+				ELSE
+					;전투에 환상향의 왕이 없으니 무난히 시간을 일시정지한다
+					FONTBOLD
+					CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+					PRINTFORMW 「회중시계…, 발동(째깍)!」
+					RESETCOLOR
+					FONTREGULAR
+					SETBGCOLOR 0,80,0 ;사쿠야의 일시시간정지 적합배경바탕 변경
+					PRINTFORMW 사쿠야는 '시간의 흐름'을 '일시정지'시켰다.
+					;사쿠야의 일시시간정지 스위치 ON
+					LOCAL:23 = 1
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+
+	;경비대장 사쿠야의 어설픈 일시시간정지 능력
+	IF LOCAL:13 > 0
+		;경비대장이 있는지부터 검사
+		IF CALLNAME:(LOCAL:13) == "사쿠야"
+			;사쿠야가 능력을 발동하는 확률(50%)
+			IF RAND:2 == 1
+				IF LOCAL:18 == 0
+				;야채 더 월드가 발동되어 있으면 안 된다
+					IF LOCAL:7 != 4
+					;환상향의 왕이 직접 전투에 나서면 안 된다
+						FONTBOLD
+						CALL SETCOLOR_TORIKOMODE, "GREEN", 2
+						PRINTFORMW 「회중시계…, 발동(째깍)!」
+						RESETCOLOR
+						FONTREGULAR
+						SETBGCOLOR 0,80,0 ;사쿠야의 일시시간정지 적합배경바탕 변경
+						PRINTFORMW 사쿠야는 '시간의 흐름'을 '일시정지'시켰다.
+						;사쿠야의 일시시간정지 스위치 ON
+						LOCAL:24 = 1
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+	
 	;전투시작
 	;PHASE1:구출자 턴. 아직까지 공격패턴은 단순하다. 그냥 때릴 뿐. 가끔 필살기 나가나?
-	LOCAL:99 =0
-	DO
-		;타겟 지정. 0~9까지의 경비대를 때린다. 만약 경비대장이 있으면 11을 돌려서 10이 나오면 경비대장을 때림.
-		IF LOCAL:13  == -1
-			LOCAL:2 = RAND:10
+	IF LOCAL:18 == 1
+		IF LOCAL:19 == 1
+			;시간정지 도중중단 스킵처리
 		ELSE
-			LOCAL:2 = RAND:11
+			;시간정지 발동 중. 상대방은 공격을 할 수 없다.
+			PRINTFORMW 상대방은 [시간정지]로 인해 움직일 수가 없다.
 		ENDIF
-		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:2)
-		;타겟이 살아있는 [전투원] 이라면
-		IF RESULT:6 == 1
-			;두들겨 맞을 경비원의 이름을 저장한다. (배틀크라이용)
-			LOCALS:1 = %RESULTS:0%
-			;두들겨 맞을 경비원의 현재 체력을 받아온다.
-			LOCAL:5 = RESULT:4
-			;노예가 공격실행
-			CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, LOCALS:1
-			;대미지를 저장.
-			LOCAL:3 = RESULT
-			;경비원들이 방어중이면 대미지는 40~60%로 줄어든다.
-			SIF LOCAL:7 == 2
-				LOCAL:3 = LOCAL:3*(RAND:20+40)/100
-			PRINTFORM %RESULTS:0%에게 {LOCAL:3}
-			FONTREGULAR
-			PRINTFORMW 대미지!!
-			RESETCOLOR
-			;경비원 체력감소.
-			LOCAL:5 -= LOCAL:3
-			;경비원이 죽었다
-			IF LOCAL:5 <= 0
-				;경비원 배틀크라이 출력
-				CALL BATTLECRY_GUARDSMAN_TORIKOMODE, RESULTS:0, 4
-				CALL SETCOLOR_TORIKOMODE, "RED", 3
-				FONTBOLD
-				PRINTFORMW  !!%조사처리(RESULTS:0,"는")% 쓰러졌다!
-				FONTREGULAR
-				RESETCOLOR
-				;배틀크라이
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 4, LOCALS:1
-				;경비원 삭제
-				FLAG:(5051+LOCAL:2) = 0
-			;살았다.
-			ELSE
-				CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:2)
-				;체력감소.
-				FLAG:(5051+LOCAL:2) += - (RESULT:4*100000) + (LOCAL:5*100000)
-				;경비원 경험치 획득. 랜덤 1500 +2000을 획득한다.
-				CALL GETEXP_GUARDSMAN_TORIKOMODE, (5051+LOCAL:2), (2000+RAND:1500)
-			ENDIF
-			;그만 돌린다.
-			LOCAL:99 ++
-		;경비대장을 친다면
-		ELSEIF LOCAL:2 == 10
-		;두들겨 맞을 경비대장의 현재 체력을 받아온다.
-			LOCAL:5 = BASE:(LOCAL:13):0
+	ELSE
+		;평상시대로의 전투
+		IF LOCAL:7 == 4
+		;환상향의 왕이 직접 전투할 경우
+		;환상향의 왕이 쳐맞는 부분
+			;두들겨 맞을 왕의 현재 체력을 받아온다.
+			LOCAL:5 = BASE:MASTER:0
 			;침입자가 공격실행
-			CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, CALLNAME:(LOCAL:13)
+			CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, CALLNAME:MASTER
 			;대미지를 저장.
 			LOCAL:3 = RESULT
-			;작전이 방어중이면 대미지는 40~60%로 줄어든다.
-			SIF LOCAL:7 == 2
-				LOCAL:3 = LOCAL:3*(RAND:20+40)/100
-			PRINTFORM %CALLNAME:(LOCAL:13)%에게 {LOCAL:3}
+			IF LOCAL:15 == 0
+			;통상전투 때
+			;60%의 확률로 대미지는 40~60%로 줄어든다.
+				SIF RAND:100 > 40
+					LOCAL:3 = LOCAL:3*(RAND:20+40)/100
+			ELSEIF LOCAL:15 == 1
+			;버서커모드 때
+			;90%의 확률로 대미지는 40~60%로 줄어든다.
+				SIF RAND:100 > 10
+					LOCAL:3 = LOCAL:3*(RAND:20+40)/100
+			ENDIF
+			PRINTFORM %CALLNAME:MASTER%에게 {LOCAL:3}
 			FONTREGULAR
 			PRINTFORMW 대미지!!
 			RESETCOLOR
-			;경비대장 체력감소.
-			BASE:(LOCAL:13):0 -= LOCAL:3
-			BASE:(LOCAL:13):0 = MAX(BASE:(LOCAL:13):0, 50)
-			;경비대장이 빈사
-			IF BASE:(LOCAL:13):0 == 50
-				;경비대장 배틀크라이 출력.쓰러짐.
-				CALL BATTLECRY_GUARDSMAN_TORIKOMODE, NO:(LOCAL:13), 6
-				;쓰러지기
+			;왕의 체력감소.
+			BASE:MASTER:0 -= LOCAL:3
+			BASE:MASTER:0 = MAX(BASE:MASTER:0, 50)
+			;왕이 빈사
+			IF BASE:MASTER:0 == 50
+				;왕의 배틀크라이 출력.쓰러짐.
+				CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 1, CALLNAME:ARG ;왕의 죽음ㅠㅠ
+				CALL BADEND_COMMON ;배드엔드
+			;왕이 살았다
+			ELSE
+				;왕의 피격 배틀크라이. 100%확률로 발동함
+				CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 2, CALLNAME:ARG ;왕의 부상
+			ENDIF
+		ELSE
+			IF LOCAL:22 == 1
+				;왕이 마지막에 혼자 싸울 것을 결심했을 때
+				;휘하병력이 전부 소실되었기에 상대방은 전혀 왕의 휘하병력을 공격할 일이 없다
+			ELSEIF LOCAL:24 == 1
+				;경비대장 사쿠야가 시간정지를 발동했을 때 구출자는 움직일 수가 없다
+				FONTBOLD
+				CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+				PRINTFORM %CALLNAME:ARG%
+				RESETCOLOR
+				FONTREGULAR
+				PRINTFORMW 는 사쿠야의 능력으로 움직이지 못 한다.
+			ELSE
+				;왕의 휘하병력이 아직 살아있을 때
+				LOCAL:99 =0
+				;적의 무차별 공격루프문
+				DO 
+					;타겟 지정. 0~9까지의 경비대를 때린다. 만약 경비대장이 있으면 11을 돌려서 10이 나오면 경비대장을 때림.
+					IF LOCAL:13  == -1
+						LOCAL:2 = RAND:10
+					ELSE
+						LOCAL:2 = RAND:11
+					ENDIF
+					CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:2)
+					;타겟이 살아있는 [전투원] 이라면
+					IF RESULT:6 == 1
+						;두들겨 맞을 경비원의 이름을 저장한다. (배틀크라이용)
+						LOCALS:1 = %RESULTS:0%
+						;두들겨 맞을 경비원의 현재 체력을 받아온다.
+						LOCAL:5 = RESULT:4
+						;침입자가 공격실행
+						CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, LOCALS:1
+						;만약 사쿠야가 일시시간정지를 쓰고 있을 경우
+						IF CALLNAME:ARG == "사쿠야"
+							IF LOCAL:23 == 1
+								;배경을 일시시간정지로 바꿈
+								SETBGCOLOR 0,80,0 ;사쿠야의 일시시간정지 적합배경바탕 변경
+							ENDIF
+						ENDIF
+						;대미지를 저장.
+						LOCAL:3 = RESULT
+						;경비원들이 방어중이면 대미지는 40~60%로 줄어든다.
+						SIF LOCAL:7 == 2
+							LOCAL:3 = LOCAL:3*(RAND:20+40)/100
+						PRINTFORM %RESULTS:0%에게 {LOCAL:3}
+						FONTREGULAR
+						PRINTFORMW 대미지!!
+						RESETCOLOR
+						;경비원 체력감소.
+						LOCAL:5 -= LOCAL:3
+						;경비원이 죽었다
+						IF LOCAL:5 <= 0
+							;경비원 배틀크라이 출력
+							;사쿠야의 능력이 발동중일 경우 대사가 나오지 않는다
+							SIF LOCAL:23 == 0
+								CALL BATTLECRY_GUARDSMAN_TORIKOMODE, RESULTS:0, 4
+							CALL SETCOLOR_TORIKOMODE, "RED", 3
+							FONTBOLD
+							PRINTFORMW  !!%조사처리(RESULTS:0,"는")% 쓰러졌다!
+							FONTREGULAR
+							RESETCOLOR
+							;배틀크라이
+							CALL BATTLECRY_TORIKOMODE, (NO:ARG), 4, LOCALS:1
+							;경비원 삭제
+							FLAG:(5051+LOCAL:2) = 0
+						;살았다.
+						ELSE
+							CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:2)
+							;체력감소.
+							FLAG:(5051+LOCAL:2) += - (RESULT:4*100000) + (LOCAL:5*100000)
+							;경비원 경험치 획득. 랜덤 200 +100을 획득한다.
+							CALL GETEXP_GUARDSMAN_TORIKOMODE, (5051+LOCAL:2), (200+RAND:100)
+						ENDIF
+						;그만 돌린다.
+						LOCAL:99 ++
+					;경비대장을 친다면
+					ELSEIF LOCAL:2 == 10
+						;두들겨 맞을 경비대장의 현재 체력을 받아온다.
+						LOCAL:5 = BASE:(LOCAL:13):0
+						;침입자가 공격실행
+						CALL ATTACK_SLAVE_TORIKOMODE, ARG, LOCAL:6, CALLNAME:(LOCAL:13)
+						;만약 사쿠야가 일시시간정지를 쓰고 있을 경우
+						IF CALLNAME:ARG == "사쿠야"
+							IF LOCAL:23 == 1
+								;배경을 일시시간정지로 바꿈
+								SETBGCOLOR 0,80,0 ;사쿠야의 일시시간정지 적합배경바탕 변경
+							ENDIF
+						ENDIF
+						;대미지를 저장.
+						LOCAL:3 = RESULT
+						;작전이 방어중이면 대미지는 40~60%로 줄어든다.
+						SIF LOCAL:7 == 2
+							LOCAL:3 = LOCAL:3*(RAND:20+40)/100
+						PRINTFORM %CALLNAME:(LOCAL:13)%에게 {LOCAL:3}
+						FONTREGULAR
+						PRINTFORMW 대미지!!
+						RESETCOLOR
+						;경비대장 체력감소.
+						BASE:(LOCAL:13):0 -= LOCAL:3
+						BASE:(LOCAL:13):0 = MAX(BASE:(LOCAL:13):0, 50)
+						;경비대장이 빈사
+						IF BASE:(LOCAL:13):0 == 50
+							;경비대장 배틀크라이 출력.쓰러짐.
+							;사쿠야의 능력이 발동중일 경우 대사가 나오지 않는다
+							SIF LOCAL:23 == 0
+								CALL BATTLECRY_GUARDSMAN_TORIKOMODE, NO:(LOCAL:13), 6
+							;쓰러지기
+							CALL SETCOLOR_TORIKOMODE, "RED", 3
+							FONTBOLD
+							PRINTFORMW !!%조사처리(CALLNAME:(LOCAL:13),"는")% 쓰러졌다!!
+							FONTREGULAR
+							RESETCOLOR
+							PRINTFORMW (%조사처리(CALLNAME:(LOCAL:13),"는")% 퇴각했습니다)
+							;경비대장 해임
+							PRINTFORMW (%조사처리(CALLNAME:(LOCAL:13),"는")% 경비대장에서 해임 되었습니다)
+							CFLAG:(LOCAL:13):4013 = 0
+							;경비대장 정보 갱신.
+							LOCAL:13 = FINDCHARA(CFLAG:4013, 2)
+						;경비대장이 살았다.
+						ELSE
+							;경비대장 피격 배틀크라이. 100%확률로 발동함
+							;사쿠야의 능력이 발동중일 경우 대사가 나오지 않는다
+							SIF LOCAL:23 == 0
+								CALL BATTLECRY_TORIKOMODE, NO:(LOCAL:13), 3, CALLNAME:ARG
+						ENDIF
+						;그만 돌린다.
+						LOCAL:99 ++
+					ELSE
+						;한바퀴 더 돌린다.
+					ENDIF
+				LOOP LOCAL:99 == 0
+			ENDIF
+		ENDIF	
+	ENDIF
+
+
+	;PHASE2 :경비원 전멸체크.
+	IF LOCAL:22 == 1
+		;경비원과 대장이 모두 죽고난 뒤, 왕 혼자서 결투를 속행할 때
+		;환상향의 왕이 혼자 싸우는 중이면 전멸체크가 필요없다
+		;왕이 죽으면 모든 게 다 끝이다, 배드엔딩뿐이다.
+	ELSE
+		CALL CALC_SECURITY_POWER_TORIKOMODE
+		;전투종료.전멸
+		IF FLAG:5042 <= 0 && LOCAL:13 == -1
+			IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+			;환상향의 왕이 있다면
 				CALL SETCOLOR_TORIKOMODE, "RED", 3
 				FONTBOLD
-				PRINTFORMW !!%조사처리(CALLNAME:(LOCAL:13),"는")% 쓰러졌다!!
+				PRINTFORML !!!경비대가 전멸했다!!!
 				FONTREGULAR
 				RESETCOLOR
-				PRINTFORMW (%조사처리(CALLNAME:(LOCAL:13),"는")% 퇴각했습니다)
-				;경비대장 해임
-				PRINTFORMW (%조사처리(CALLNAME:(LOCAL:13),"는")% 경비대장에서 해임 되었습니다)
-				CFLAG:(LOCAL:13):4013 = 0
-				;경비대장 정보 갱신.
-				LOCAL:13 = FINDCHARA(CFLAG:4013, 2)
-			;경비대장이 살았다.
-			ELSE
-				;경비대장 피격 배틀크라이. 100%확률로 발동함
-				CALL BATTLECRY_TORIKOMODE, NO:(LOCAL:13), 3, CALLNAME:ARG
-			ENDIF
-			;그만 돌린다.
-			LOCAL:99 ++
-		ELSE
-			;한바퀴 더 돌린다.
-		ENDIF
-	LOOP LOCAL:99 == 0
-	;PHASE2 :경비원 전멸체크.
-	;전멸체크. 만약 전투력 = 0이며 경비대장이 없다면, 결과를 생성해내고 종료한다.
-	CALL CALC_SECURITY_POWER_TORIKOMODE
-	;전투종료.전멸
-	IF FLAG:5042 <= 0 && LOCAL:13 == -1
-		CALL SETCOLOR_TORIKOMODE, "RED", 3
-		FONTBOLD
-		PRINTFORML !!!경비대가 전멸했다!!!
-		FONTREGULAR
-		RESETCOLOR
-		;배틀크라이. 승리
-		;CALL BATTLECRY_TORIKOMODE, (NO:ARG), 8, CALLNAME:(LOCAL:13)
-		CALL BATTLECRY_TORIKOMODE, (NO:ARG), 8
-		RESULT:1 = 1
-		RETURN RESULT:1
-		RETURN 0
-	ENDIF
-	;PHASE3 : 경비원들이 침입자를 때린다.
-	IF LOCAL:7 == 1
-		;경비원 공격 턴
-		LOCAL:99 =0
-		DO
-		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
-		;살아있는 전투원 이라면
-		IF RESULT:6 == 1
-			;일반공격. 공격력은 작전에 따라 변동. +-25%. 그리고 랜덤으로 한번 더 +-25%
-			;공격자의 이름을 저장. 
-			LOCALS:1 = %RESULTS:0%
-			;대미지를 저장.
-			LOCAL:3 = RESULT
-			;작전에 따른변동
-			LOCAL:4 = RESULT:19 + RESULT:19*(LOCAL:1-1)*(25-RAND:50)/100
-			;랜덤변동
-			LOCAL:4 = LOCAL:4* (RAND:50 + 75) /100
-			;공격멘트.
-			PRINTFORM %조사처리(RESULTS:0,"는")% %조사처리(RESULTS:4,"로")% 
-			;무기에 따른 공격묘사를 불러온다.
-			CALL DATA_WEAPON_GUARDSMAN_TORIKOMODE, RESULT:3
-			PRINTFORM %RESULTS:3% 
-			;대미지를 준다.
-			PRINTFORM %CALLNAME:ARG%에게 
-			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
-			FONTBOLD
-			PRINTFORM {LOCAL:4}
-			FONTREGULAR
-			RESETCOLOR
-			PRINTFORMW 대미지!
-			;피격 배틀크라이. 단, 30%확률로만 발동함
-			SIF RAND:100 > 70
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, LOCALS:1
-			;빈사 배틀크라이.
-			SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, LOCALS:1
-			;경비원 경험치 획득. 랜덤 1500 +2000을 획득한다.
-			CALL GETEXP_GUARDSMAN_TORIKOMODE, 5051+LOCAL:99, (2000+RAND:1500)
-			;구출자 체력감소.
-			BASE:ARG:0 -= LOCAL:4
-			;구출자가 쓰러졌다.
-			IF BASE:ARG:0 <= 2
-				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
-				FONTBOLD
-				PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
-				FONTREGULAR
+				PRINTL
+				PRINTFORML %CALLNAME:MASTER%는 자신의 수하들이 모두 당해버렸다는 것을 깨달았다.
+				PRINTFORML 경비원들은 모두 죽었고, 심지어 경비대장마저 없어졌다.
+				CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+				PRINTFORML 『(흠…. 어떡하지……. 이대로 나 혼자서 싸울까?)』
 				RESETCOLOR
-				;배틀크라이.패배
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, LOCALS:1
-				;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
-				IF LOCAL:1 == 1
-					RESULT:1 = 3
-				ELSEIF LOCAL:1 == 2
-					RESULT:1 = 4
-				ELSEIF LOCAL:1 == 3
-					RESULT:1 = 5
+				PRINTFORML [1] 전투를 단념하고 상대방을 보내준다.
+				PRINTFORML [2] 아직 끝나지 않았다, 싸움을 계속한다!
+				INPUT
+				IF RESULT == 1 ;상대방을 보내준다
+					PRINTL
+					PRINTFORMW 『(나의 수하들이 이미 보기좋게 당해버렸다.)』
+					PRINTFORMW 『(그렇기에 내가 이대로 싸움을 계속한다고 해도 의미가 없다.)』
+					PRINTFORMW 『(그렇다면 내가 취할 행동은 단 한 가지밖에 없지.)』
+					PRINTL
+					PRINTFORML %CALLNAME:MASTER%는 전투를 포기하고 %CALLNAME:ARG%에게 길을 비켜주었다.
+					IF CALLNAME:ARG == "치르노"
+						PRINTFORMW %CALLNAME:ARG%는 '바보'라서 린노스케의 행동을 전혀 이해하지 못 했다.
+						PRINTFORMW 그 사실을 깨달은 %CALLNAME:MASTER%는 %CALLNAME:ARG%에게 '보내줄 테니 얼른 가라'고 제대로 설명했다.
+						PRINTFORMW 그런데도 %CALLNAME:ARG%는 그 의미를 이해하지 못 한 채 고개만 갸우뚱거렸다.
+						PRINTFORMW 알아들어먹지 못 하자 %CALLNAME:MASTER%는 답답해하며 %CALLNAME:ARG%에게 얼른 꺼지라고 소리쳤다!
+						PRINTFORMW 그랬더니 이제서야 %CALLNAME:ARG%는 그 의미를 이해하고 %CALLNAME:MASTER%를 손쌀같이 지나갔다.
+					ELSE
+						PRINTFORMW %CALLNAME:ARG%는 %CALLNAME:MASTER%의 눈이 '얼른 지나가라'고 말하는 것을 깨달았다.
+						PRINTFORMW 어째서 비켜주는지 그 이유를 몰라서 의아해하는 %CALLNAME:ARG%였지만……
+						PRINTFORMW 허나 %CALLNAME:ARG%는 망설이지 않고 %CALLNAME:MASTER%를 통과해 지나갔다.
+					ENDIF
+					RESULT:1 = 1
+					RETURN RESULT:1
+					RETURN 0
+				ELSEIF RESULT == 2 ;포기하지 않고 싸움을 계속한다
+					PRINTL
+					PRINTFORMW 『(나의 수하들이 이미 보기좋게 당해버렸다.)』
+					PRINTFORMW 『(하지만 아직 '나 자신'이 남아있다.) 』
+					PRINTFORMW 『(나는 '환상향의 왕'이 될 자, 결코 쓰러지지 않는다!)』
+					PRINTFORMW 『(있는 건 오직 승리뿐!)』
+					PRINTL
+					PRINTFORMW 계속 싸우기로 결심한 %CALLNAME:MASTER%는 전투테세를 취하며 %CALLNAME:ARG%를 계속 막아섰다.
+					PRINTFORMW %CALLNAME:ARG%는 악명높은 자칭 '환상향의 왕'이 상대여서 조금 긴장했지만, %CALLNAME:(ARG:1)%을 구출하기 위해서 마음을 다잡고 덤볐다!
+					LOCAL:22 = 1 ;홀로 남은 왕의 전투스위치 ON
 				ENDIF
+			ELSE
+			;전멸체크. 만약 전투력 = 0이며 경비대장이 없다면, 결과를 생성해내고 종료한다.
+				;사쿠야의 일시시간정지가 발동되어 있다면
+				IF LOCAL:23 == 1
+					;화면색깔을 원래대로
+					RESETBGCOLOR ;검은화면 배경바탕 복구
+					LOCAL:23 = 0
+				ENDIF
+				CALL SETCOLOR_TORIKOMODE, "RED", 3
+				FONTBOLD
+				PRINTFORML !!!경비대가 전멸했다!!!
+				FONTREGULAR
+				RESETCOLOR
+				;배틀크라이. 승리
+				;CALL BATTLECRY_TORIKOMODE, (NO:ARG), 8, CALLNAME:(LOCAL:13)
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 8
+				RESULT:1 = 1
 				RETURN RESULT:1
 				RETURN 0
 			ENDIF
 		ENDIF
-		LOCAL:99++
-		LOOP LOCAL:99 <10
+	ENDIF
+	
 
+
+	;PHASE3 : 경비원들이 침입자를 때린다.
+	IF LOCAL:18 == 1
+		IF LOCAL:19 == 1
+			;시간정지 도중중단 스킵처리
+		ELSE
+			;시간정지 발동 중. 우리편도 역시 공격을 할 수 없다.
+			IF LOCAL:22 == 1 
+				;왕 혼자서 싸울 때	
+			ELSE
+				;경비원과 대장이 모두 있을 때
+				PRINTFORMW 우리편도 [시간정지]로 인해 움직일 수가 없다.
+			ENDIF
+			PRINTFORMW 역시 나밖에 움직일 수 없는 것 같다.
+			IF LOCAL:7 == 4
+			;시간정지中 왕께서 상대방에게 죽빵과 배빵을 하시는 부분 - 누적대미지 가능!
+				;왕의 공격력 계산
+				IF LOCAL:15 == 0
+				;통상전투 때
+					LOCAL:20 = (MAXBASE:MASTER:1 * 10/100)
+				ELSEIF LOCAL:15 == 1
+				;버서커모드 때
+					LOCAL:20 = (MAXBASE:MASTER:1 * 10/100 * 3)
+				ENDIF
+				;공격패턴 선택
+				CALL ATTACK_FANTASY_KING_TORIKOMODE, LOCAL:20, CALLNAME:ARG
+				; 시간정지 적합배경바탕 변경
+				SETBGCOLOR 0,0,111
+				;순간대미지 변수에 기록
+				LOCAL:21 = RESULT
+				;0부터 데미지 가산 - 누적데미지
+				LOCAL:4 += RESULT
+				;침입자에게 준 순간대미지 출력
+				PRINTFORM %CALLNAME:ARG%에게 
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+				FONTBOLD
+				PRINTFORM {LOCAL:21}
+				FONTREGULAR
+				RESETCOLOR
+				PRINTFORMW 대미지!
+				PRINTL
+				;침입자에게 준 누적대미지 출력
+				PRINTFORM 지금까지 %CALLNAME:ARG%에게 총
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				FONTBOLD
+				PRINTFORM  {LOCAL:4}
+				FONTREGULAR
+				RESETCOLOR
+				PRINTFORMW 의 대미지가 누적되었다!
+				
+				;정지된 세계에서 죽빵/배빵을 하시면서 말씀하시는 대사
+				CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 6, CALLNAME:ARG 
+			ENDIF
+		ENDIF
+	ELSE
+		;평상시대로의 전투
+		;경비원 공격 턴
+		IF LOCAL:7 == 1
+			LOCAL:99 =0
+			DO
+				CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(5051+LOCAL:99)
+				;살아있는 전투원 이라면
+				IF RESULT:6 == 1
+					IF LOCAL:23 == 1 || LOCAL:24 == 1
+					;사쿠야의 일시시간정지로 경비대장은 못 움직인다
+						FONTBOLD
+						CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+						PRINTFORM %RESULTS:0%
+						RESETCOLOR
+						FONTREGULAR
+						PRINTFORMW 는 사쿠야의 능력으로 움직이지 못 한다.
+					ELSE
+						;일반공격. 공격력은 작전에 따라 변동. +-25%. 그리고 랜덤으로 한번 더 +-25%
+						;공격자의 이름을 저장. 
+						LOCALS:1 = %RESULTS:0%
+						;대미지를 저장.
+						LOCAL:3 = RESULT
+						;작전에 따른변동
+						LOCAL:4 = RESULT:19 + RESULT:19*(LOCAL:1-1)*(25-RAND:50)/100
+						;랜덤변동
+						LOCAL:4 = LOCAL:4* (RAND:50 + 75) /100
+						;공격멘트.
+						PRINTFORM %조사처리(RESULTS:0,"는")% %조사처리(RESULTS:4,"로")% 
+						;무기에 따른 공격묘사를 불러온다.
+						CALL DATA_WEAPON_GUARDSMAN_TORIKOMODE, RESULT:3
+						PRINTFORM %RESULTS:3% 
+						;대미지를 준다.
+						PRINTFORM %CALLNAME:ARG%에게 
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+						FONTBOLD
+						PRINTFORM {LOCAL:4}
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 대미지!
+						;피격 배틀크라이. 단, 30%확률로만 발동함
+						SIF RAND:100 > 70
+							CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, LOCALS:1
+						;빈사 배틀크라이.
+						SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
+							CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, LOCALS:1
+						;경비원 경험치 획득. 랜덤 300 +200을 획득한다.
+						CALL GETEXP_GUARDSMAN_TORIKOMODE, 5051+LOCAL:99, (300+RAND:200)
+						;구출자 체력감소.
+						BASE:ARG:0 -= LOCAL:4
+						;구출자가 쓰러졌다.
+						IF BASE:ARG:0 <= 2
+							CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+							FONTBOLD
+							PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
+							FONTREGULAR
+							RESETCOLOR
+							;배틀크라이.패배
+							CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, LOCALS:1
+							;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
+							IF LOCAL:1 == 1
+								RESULT:1 = 3
+							ELSEIF LOCAL:1 == 2
+								RESULT:1 = 4
+							ELSEIF LOCAL:1 == 3
+								RESULT:1 = 5
+							ENDIF
+							RETURN RESULT:1
+							RETURN 0
+						ENDIF
+					ENDIF
+				ENDIF
+				LOCAL:99++
+			LOOP LOCAL:99 <10
+		ENDIF
 		;경비대장 공격 턴
-		IF LOCAL:13 > 0
-			;공격력 계산
-			CALL CALC_ATTACKPOWER_GUARDSMAN_SLAVE, LOCAL:13, 1
+		IF LOCAL:7 == 4
+		;환상향의 왕이 직접 전투할 경우
+		;환상향의 왕이 패는 부분
+			;왕의 공격력 계산
+			IF LOCAL:15 == 0
+			;통상전투 때
+				LOCAL:20 = (MAXBASE:MASTER:1 * 10/100)
+			ELSEIF LOCAL:15 == 1
+			;버서커모드 때
+				LOCAL:20 = (MAXBASE:MASTER:1 * 10/100 * 3)
+			ENDIF
 			;공격패턴 선택
-			CALL ATTACK_SLAVE_TORIKOMODE, LOCAL:13, RESULT, CALLNAME:ARG
+			CALL ATTACK_FANTASY_KING_TORIKOMODE, LOCAL:20, CALLNAME:ARG
 			LOCAL:4 = RESULT
-			;경비대장은 작전에 따른 변동이 없다.
 			;침입자에게 대미지를 준다.
 			PRINTFORM %CALLNAME:ARG%에게 
 			CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
@@ -1068,12 +1581,12 @@ DO
 			FONTREGULAR
 			RESETCOLOR
 			PRINTFORMW 대미지!
-			;피격 배틀크라이. 단, 30%확률로만 발동함
-			SIF RAND:100 > 70
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, CALLNAME:(LOCAL:13)
+			;피격 배틀크라이. 단, 50%확률로만 발동함
+			SIF RAND:100 > 50
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, CALLNAME:MASTER
 			;빈사 배틀크라이.
 			SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, CALLNAME:(LOCAL:13)
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, CALLNAME:MASTER
 			;구출자 체력감소.
 			BASE:ARG:0 -= LOCAL:4
 			;구출자가 쓰러졌다.
@@ -1084,7 +1597,9 @@ DO
 				FONTREGULAR
 				RESETCOLOR
 				;배틀크라이.패배
-				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, CALLNAME:(LOCAL:13)
+				CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, CALLNAME:MASTER
+				;왕의 직접승리 배틀크라이
+				CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 5, CALLNAME:ARG ;왕의 직접승리 배틀크라이
 				;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
 				IF LOCAL:1 == 1
 					RESULT:1 = 3
@@ -1096,11 +1611,394 @@ DO
 				RETURN RESULT:1
 				RETURN 0
 			ENDIF
+		ELSE
+			IF LOCAL:13 > 0
+				IF LOCAL:23 == 1
+				;사쿠야의 일시시간정지로 경비대장은 못 움직인다
+					FONTBOLD
+					CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+					PRINTFORM %CALLNAME:(LOCAL:13)%
+					RESETCOLOR
+					FONTREGULAR
+					PRINTFORMW 는 사쿠야의 능력으로 움직이지 못 한다.
+				ELSE
+					;공격력 계산
+					CALL CALC_ATTACKPOWER_GUARDSMAN_SLAVE, LOCAL:13, 1
+					;공격패턴 선택
+					CALL ATTACK_SLAVE_TORIKOMODE, LOCAL:13, RESULT, CALLNAME:ARG
+					LOCAL:4 = RESULT
+					IF CALLNAME:(LOCAL:13) == "사쿠야"
+						IF LOCAL:24 == 1
+							;배경을 일시시간정지로 바꿈
+							SETBGCOLOR 0,80,0 ;사쿠야의 일시시간정지 적합배경바탕 변경
+						ENDIF
+					ENDIF
+					;경비대장은 작전에 따른 변동이 없다.
+					;침입자에게 대미지를 준다.
+					PRINTFORM %CALLNAME:ARG%에게 
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+					FONTBOLD
+					PRINTFORM {LOCAL:4}
+					FONTREGULAR
+					RESETCOLOR
+					PRINTFORMW 대미지!
+					;피격 배틀크라이. 단, 30%확률로만 발동함
+					;경비대장 사쿠야의 능력이 발동중이면 대사가 없다
+					SIF RAND:100 > 70 && LOCAL:24 == 0
+						CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, CALLNAME:(LOCAL:13)
+					;빈사 배틀크라이.
+					SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100 && LOCAL:24 == 0
+						CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, CALLNAME:(LOCAL:13)
+					;구출자 체력감소.
+					BASE:ARG:0 -= LOCAL:4
+					;구출자가 쓰러졌다.
+					IF BASE:ARG:0 <= 2
+						CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+						FONTBOLD
+						PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
+						FONTREGULAR
+						RESETCOLOR
+						;배틀크라이.패배
+						;경비대장 사쿠야의 능력이 발동중이면 대사가 없다
+						SIF LOCAL:24 == 0
+							CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, CALLNAME:(LOCAL:13)
+						;경비대장 사쿠야의 일시시간정지가 발동되어 있다면
+						IF LOCAL:24 == 1
+							;화면색깔을 원래대로
+							RESETBGCOLOR ;검은화면 배경바탕 복구
+							LOCAL:24 = 0
+						ENDIF
+						;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
+						IF LOCAL:1 == 1
+							RESULT:1 = 3
+						ELSEIF LOCAL:1 == 2
+							RESULT:1 = 4
+						ELSEIF LOCAL:1 == 3
+							RESULT:1 = 5
+						ENDIF
+						RETURN RESULT:1
+						RETURN 0
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	
+	;이자요이 사쿠야의 어설픈 일시시간정지 능력 - 시간초과(1턴마다 풀림)
+	IF CALLNAME:ARG == "사쿠야"
+		IF LOCAL:18 == 0
+		;야채 더 월드가 발동되어 있으면 안 된다
+			IF LOCAL:23 == 1
+				PRINTL
+				PRINTFORMW 「시간이… 다 되었군요.」
+				PRINTL
+				RESETBGCOLOR ;검은화면 배경바탕 복구
+				LOCAL:23 = 0 ;사쿠야의 일시시간정지 스위치 OFF
+				PRINTFORMW 사쿠야의 일시시간정지는 한 순간뿐이었다.
+				PRINTFORMW 제한시간이 다 되자 시간의 흐름은 원래대로 되돌아왔다.
+			ENDIF
 		ENDIF
 	ENDIF
 
+	;경비대장 사쿠야의 어설픈 일시시간정지 능력 - 시간초과(1턴마다 풀림)
+	IF LOCAL:13 > 0
+	;경비대장이 있는지부터 검사
+		IF CALLNAME:(LOCAL:13) == "사쿠야"
+			IF LOCAL:18 == 0
+			;야채 더 월드가 발동되어 있으면 안 된다
+				IF LOCAL:24 == 1
+					PRINTL
+					PRINTFORMW 「시간이… 다 되었군요.」
+					PRINTL
+					RESETBGCOLOR ;검은화면 배경바탕 복구
+					LOCAL:24 = 0 ;경비대장 사쿠야의 일시시간정지 스위치 OFF
+					PRINTFORMW 사쿠야의 일시시간정지는 한 순간뿐이었다.
+					PRINTFORMW 제한시간이 다 되자 시간의 흐름은 원래대로 되돌아왔다.
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+
 	;턴 증가
-	LOCAL:0 ++
+	IF LOCAL:18 == 1
+		IF LOCAL:19 == 1
+			;시간정지 도중중단 주요처리
+			LOCAL:19 = 0 ;시간정지 도중중단 스위치 OFF
+			RESETBGCOLOR ;검은화면 배경바탕 복구
+			LOCAL:16 = -1 ;경과시간 초기화
+			LOCAL:18 = 0 ;시간정지변수 OFF
+			IF LOCAL:4 > 0
+			;시간정지中 왕께서 누적시키신 데미지가 시간이 풀리면서 퍼버벙~♬
+				;처참한 붉은 플래시
+				SETBGCOLOR 255,0,0
+				SETBGCOLOR 255,162,162
+				RESETBGCOLOR
+				;누적대미지 폭발!
+				PRINTFORM 지금까지 누적시킨
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				FONTBOLD
+				PRINTFORM  {LOCAL:4}
+				FONTREGULAR
+				RESETCOLOR
+				PRINTFORMW 의 대미지가 한순간 폭발했다!
+				PRINTL
+				IF LOCAL:4 >= 3500
+				;누적대미지가 상상 이상일 때
+					;처참한 붉은 플래시
+					SETBGCOLOR 255,0,0
+					SETBGCOLOR 255,162,162
+					RESETBGCOLOR
+					;처참한 붉은 플래시
+					SETBGCOLOR 255,0,0
+					SETBGCOLOR 255,162,162
+					RESETBGCOLOR
+					;처참한 붉은 플래시
+					SETBGCOLOR 255,0,0
+					SETBGCOLOR 255,162,162
+					RESETBGCOLOR
+					;피투성이가 된 상대방의 비명묘사
+					CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+					FONTBOLD
+					PRINTFORM %CALLNAME:ARG%
+					FONTREGULAR
+					RESETCOLOR
+					PRINTFORMW 는 누적된 대량의 대미지를 받고 피를 있는 대로 뿜으면서 비명을 질렀다!
+				ELSE
+					;쳐맞은 상대방의 반응묘사
+					IF CALLNAME:ARG == "사쿠야"
+						SELECTCASE RAND:2
+						CASE 0
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「말도 안돼, 내가 쓰는 시간정지와는 전혀 차원(발동원리 & 효과)이 달라!」
+							RESETCOLOR
+						CASE 1
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「이건 단순히 시간축을 정지시키는 게 아냐.」
+							PRINTFORMW 「시간축을 엄청난 기력(요력+영력)의 압력으로 틀어쥐고 있어!」
+							RESETCOLOR
+						ENDSELECT
+						CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+						FONTBOLD
+						PRINTFORM %CALLNAME:ARG%
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 는 %CALLNAME:MASTER%의 시간을 정지시키는 힘이 상상이상이라 생각했다.
+						PRINTFORMW 동시에 그 힘에 간섭할 수 없는 자신을 매우 한탄했다.
+					ELSEIF CALLNAME:ARG == "유카리"
+						SELECTCASE RAND:2
+						CASE 0
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「경계의 능력을 발동할 틈도 없었어.」
+							PRINTFORMW 「심지어 스키마 속의 시간조차 얼려버리다니!」
+							RESETCOLOR
+						CASE 1
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「이건 저항 못 해.」
+							PRINTFORMW 「그보다 기력이 강하지 않은 이상은 무리야.」
+							RESETCOLOR
+						ENDSELECT
+						CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+						FONTBOLD
+						PRINTFORM %CALLNAME:ARG%
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 는 %CALLNAME:MASTER%의 시간을 정지시키는 힘이 상상이상이라 생각했다.
+						PRINTFORMW 동시에 그 힘에 간섭할 수 없는 자신을 매우 한탄했다.
+					ELSE
+						CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+						FONTBOLD
+						PRINTFORM %CALLNAME:ARG%
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 는 치명상을 입은 상처를 부여잡은 채, 자신이 왜 갑자기 대미지를 받았는지 의문스러워하면서 당황했다!
+					ENDIF
+				ENDIF
+				;피격 배틀크라이. 단, 70%확률로만 발동함
+				SIF RAND:100 > 30
+					CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, CALLNAME:MASTER
+				;빈사 배틀크라이.
+				SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
+					CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, CALLNAME:MASTER
+				;구출자 체력감소.
+				BASE:ARG:0 -= LOCAL:4
+				;구출자가 쓰러졌다.
+				IF BASE:ARG:0 <= 2
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+					FONTBOLD
+					PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
+					FONTREGULAR
+					RESETCOLOR
+					;배틀크라이.패배
+					CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, CALLNAME:MASTER
+					;왕의 직접승리 배틀크라이
+					CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 5, CALLNAME:ARG ;왕의 직접승리 배틀크라이
+					;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
+					IF LOCAL:1 == 1
+						RESULT:1 = 3
+					ELSEIF LOCAL:1 == 2
+						RESULT:1 = 4
+					ELSEIF LOCAL:1 == 3
+						RESULT:1 = 5
+					ENDIF
+					RETURN RESULT:1
+					RETURN 0
+				ENDIF
+				LOCAL:0 ++ ;데미지를 주는 데 성공하면 턴이 증가
+			ENDIF
+		ELSEIF LOCAL:16 < LOCAL:14 - 1
+			;시간정지 중에는 턴이 증가하지 않는다
+			;대신 유지경과시간이 증가한다 - 몇 초까지 시간을 멈출 수 있지?
+			;경과한 시간이 최대경과가능시간 이하까지는 정지상태
+			LOCAL:16 ++
+			IF LOCAL:16 > 0
+				PRINTL
+				FONTBOLD
+				CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+				PRINTFORMW 《 {LOCAL:16}초 경과 》
+				RESETCOLOR
+				FONTREGULAR
+				PRINTL
+			ENDIF
+		ELSEIF LOCAL:16 >= LOCAL:14 - 1
+			;정지가능한 시간이 초과되어 버리면 강제로 시간이 흐르기 시작한다
+			LOCAL:16 ++ ;정지시간 한계시점
+			PRINTL
+			FONTBOLD
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+			PRINTFORMW 『칫, 시간이 다 되어버렸군….』
+			PRINTFORMW 『시간은 다시 움직인다~♪』
+			RESETCOLOR
+			FONTREGULAR
+			RESETBGCOLOR ;검은화면 배경바탕 복구
+			PRINTFORMW 정지시간이 한계에 달하자 '시간정지'가 풀리면서 세계가 움직이기 시작했다!
+			PRINTL
+			LOCAL:16 = -1 ;경과시간 초기화
+			LOCAL:18 = 0 ;시간정지변수 OFF
+			IF LOCAL:4 > 0
+			;시간정지中 왕께서 누적시키신 데미지가 시간이 풀리면서 퍼버벙~♬
+				;처참한 붉은 플래시
+				SETBGCOLOR 255,0,0
+				SETBGCOLOR 255,162,162
+				RESETBGCOLOR
+				;누적대미지 폭발!
+				PRINTFORM 지금까지 누적시킨
+				CALL SETCOLOR_TORIKOMODE, "RED", 2
+				FONTBOLD
+				PRINTFORM  {LOCAL:4}
+				FONTREGULAR
+				RESETCOLOR
+				PRINTFORMW 의 대미지가 한순간 폭발했다!
+				PRINTL
+				IF LOCAL:4 >= 3500
+				;누적대미지가 상상 이상일 때
+					;처참한 붉은 플래시
+					SETBGCOLOR 255,0,0
+					SETBGCOLOR 255,162,162
+					RESETBGCOLOR
+					;처참한 붉은 플래시
+					SETBGCOLOR 255,0,0
+					SETBGCOLOR 255,162,162
+					RESETBGCOLOR
+					;처참한 붉은 플래시
+					SETBGCOLOR 255,0,0
+					SETBGCOLOR 255,162,162
+					RESETBGCOLOR
+					;피투성이가 된 상대방의 비명묘사
+					CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+					FONTBOLD
+					PRINTFORM %CALLNAME:ARG%
+					FONTREGULAR
+					RESETCOLOR
+					PRINTFORMW 는 누적된 대량의 대미지를 받고 피를 있는 대로 뿜으면서 비명을 질렀다!
+				ELSE
+					;쳐맞은 상대방의 반응묘사
+					IF CALLNAME:ARG == "사쿠야"
+						SELECTCASE RAND:2
+						CASE 0
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「말도 안돼, 내가 쓰는 시간정지와는 전혀 차원(발동원리 & 효과)이 달라!」
+							RESETCOLOR
+						CASE 1
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「이건 단순히 시간축을 정지시키는 게 아냐.」
+							PRINTFORMW 「시간축을 엄청난 기력(요력+영력)의 압력으로로 틀어쥐고 있어!」
+							RESETCOLOR
+						ENDSELECT
+						CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+						FONTBOLD
+						PRINTFORM %CALLNAME:ARG%
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 는 %CALLNAME:MASTER%의 시간을 정지시키는 힘이 상상이상이라 생각했다.
+						PRINTFORMW 동시에 그 힘에 간섭할 수 없는 자신을 매우 한탄했다.
+					ELSEIF CALLNAME:ARG == "유카리"
+						SELECTCASE RAND:2
+						CASE 0
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「경계의 능력을 발동할 틈도 없었어.」
+							PRINTFORMW 「심지어 스키마 속의 시간조차 얼려버리다니!」
+							RESETCOLOR
+						CASE 1
+							CALL SETCOLOR_TORIKOMODE, "YELLOW", 2
+							PRINTFORMW 「이건 저항 못 해.」
+							PRINTFORMW 「그보다 기력이 강하지 않은 이상은 무리야.」
+							RESETCOLOR
+						ENDSELECT
+						CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+						FONTBOLD
+						PRINTFORM %CALLNAME:ARG%
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 는 %CALLNAME:MASTER%의 시간을 정지시키는 힘이 상상이상이라 생각했다.
+						PRINTFORMW 동시에 그 힘에 간섭할 수 없는 자신을 매우 한탄했다.
+					ELSE
+						CALL SETCOLOR_TORIKOMODE, "MAGENTA", 2
+						FONTBOLD
+						PRINTFORM %CALLNAME:ARG%
+						FONTREGULAR
+						RESETCOLOR
+						PRINTFORMW 는 치명상을 입은 상처를 부여잡은 채, 자신이 왜 갑자기 대미지를 받았는지 의문스러워하면서 당황했다!
+					ENDIF
+				ENDIF
+				;피격 배틀크라이. 단, 70%확률로만 발동함
+				SIF RAND:100 > 30
+					CALL BATTLECRY_TORIKOMODE, (NO:ARG), 3, CALLNAME:MASTER
+				;빈사 배틀크라이.
+				SIF BASE:ARG:0 < MAXBASE:ARG:0 *20/100
+					CALL BATTLECRY_TORIKOMODE, (NO:ARG), 5, CALLNAME:MASTER
+				;구출자 체력감소.
+				BASE:ARG:0 -= LOCAL:4
+				;구출자가 쓰러졌다.
+				IF BASE:ARG:0 <= 2
+					CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+					FONTBOLD
+					PRINTFORMW <%조사처리(CALLNAME:ARG,"가")% 쓰러졌다!>
+					FONTREGULAR
+					RESETCOLOR
+					;배틀크라이.패배
+					CALL BATTLECRY_TORIKOMODE, (NO:ARG), 6, CALLNAME:MASTER
+					;왕의 직접승리 배틀크라이
+					CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 5, CALLNAME:ARG ;왕의 직접승리 배틀크라이
+					;전투종료.승리. 작전에 따라 결과값을 다르게 돌려준다.
+					IF LOCAL:1 == 1
+						RESULT:1 = 3
+					ELSEIF LOCAL:1 == 2
+						RESULT:1 = 4
+					ELSEIF LOCAL:1 == 3
+						RESULT:1 = 5
+					ENDIF
+					RETURN RESULT:1
+					RETURN 0
+				ENDIF
+				LOCAL:0 ++ ;데미지를 주는 데 성공하면 턴이 증가
+			ENDIF
+		ENDIF
+	ELSE
+		;평상시에는 턴이 증가한다
+		LOCAL:0 ++
+	ENDIF
+
 
 LOOP LOCAL:0 < 5
 ;전투종료.무승부
@@ -1466,6 +2364,187 @@ RESULT = LOCAL:1
 RETURN RESULT
 
 
+
+;-------------------------------------------
+;환상향의 왕의 공격패턴과 대미지 계산
+;ARG = 왕의 공격력(공격측의 공격격)
+;ARGS = 공격대상의 이름. 배틀크라이 용.
+;-------------------------------------------
+@ATTACK_FANTASY_KING_TORIKOMODE, ARG, ARGS
+LOCAL:0 = 0 ;공격패턴(0:탄막, 1:스펠카드)
+LOCAL:1 = 0 ;대미지
+;
+;필살기 30% 확률로 발동한다.
+IF RAND:100 > 70
+	;스펠카드. 공격력의 1.8~2.2배
+	LOCAL:0  = 1
+	LOCAL:1 = ARG * (RAND:40 + 180) /100
+;일반공격
+ELSE
+	;일반공격. 0.75~1.25배
+	LOCAL:0  = 0
+	LOCAL:1 = ARG * (RAND:50 + 75) /100
+ENDIF
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+PRINTFORM %CALLNAME:MASTER%는 
+RESETCOLOR
+;필살기
+IF LOCAL:0 == 1
+	;배경 번쩍이기 이펙트
+	SETBGCOLOR 205,255,255
+	SETBGCOLOR 115,237,255
+	RESETBGCOLOR
+	CALL SETCOLOR_TORIKOMODE, "GREEN", 5
+	FONTBOLD
+	PRINTFORM 스펠카드
+	FONTREGULAR
+	RESETCOLOR
+;강공격
+ELSEIF LOCAL:0  == 0 && LOCAL:1  > ARG
+	CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+	PRINTFORM 강탄막
+	RESETCOLOR
+ELSE
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+	PRINTFORM 탄막
+	RESETCOLOR
+ENDIF
+CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+PRINTFORML 을(를) 쐈다!
+FONTBOLD
+;공격멘트
+IF LOCAL:0  == 1
+	;스펠카드 공격멘트
+	CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 3, ARGS ;스펠카드
+ELSE
+	;탄막 공격멘트
+	CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 4, ARGS ;탄막
+ENDIF
+;대미지를 반환한다.
+RESULT = LOCAL:1
+RETURN RESULT
+
+
+;-------------------------------------------
+;환상향의 왕의 배틀크라이
+;ARG = 상황대사(1.왕의 죽음ㅠ, 2.왕의 부상, 3.스펠카드, 4. 탄막, 5.왕의 직접승리, 6.시간정지中 줘팰 때 읆조리시는 대사
+;ARGS = 구출자/전투상대의 이름
+;-------------------------------------------
+@FANTASY_KING_BATTLECRY_TORIKOMODE, ARG, ARGS
+;상황에 따라 적절한 말씀을 하신다
+IF ARG == 1
+;왕의 죽음대사
+	SELECTCASE RAND:2
+	CASE 0
+		CALL SETCOLOR_TORIKOMODE, "BLUE", 3
+		PRINTFORMW 『이.. 이럴수가.. 내가..! 내가 지다니!』
+		PRINTFORMW 『그,그럴리가 없어! 그럴리가 없단 말이다!!』
+		PRINTFORMW 『크아악! 안돼! 피가 멈추지 않아..』
+		PRINTFORMW 『명색이 환상향의 왕인 이 몸이.. 이 몸이!!(털썩!)』
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORMW %CALLNAME:MASTER%는 패배로 오열하다가 결국 출혈이 심해져 그만 쓰러져버리고 말았다.
+		RESETCOLOR
+		PRINTFORMW ...
+		PRINTFORMW ......
+		PRINTFORMW .........
+		PRINTFORMW ............
+		PRINTFORMW ...................
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORMW %CALLNAME:MASTER%는 쓰러진 채 움직이지 않았다.
+		PRINTFORMW 몸은 이리저리 찢겨 엉망진창이다.
+		PRINTFORMW 반응은 커녕 일체의 미동조차 없다.
+		PRINTFORMW 가슴에 귀를 대어봐도 숨소리는 커녕 심장의 고동음조차 없다.
+		PRINTFORMW %CALLNAME:MASTER%는...... 죽은 것이다.
+		RESETCOLOR
+	CASE 1
+		CALL SETCOLOR_TORIKOMODE, "BLUE", 3
+		PRINTFORMW 『크윽.. 이렇게 죽는 것인가..』
+		PRINTFORMW 『믿을 수가 없군. 분명 나는 최강일 텐데..』
+		PRINTFORMW 『젠장, 눈이 자꾸만 감기고 있어. 이제 여기까진가..』
+		PRINTFORMW 『그래, 이제 끝이구만. 정말이지.. 나 나름대로 끝까지 야망을 관철하려고 했는...데...(털썩!)』
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORMW %CALLNAME:MASTER%는 단념한 채 푸념하다가 결국 출혈이 심해져 쓰러져버리고 말았다.
+		RESETCOLOR
+		PRINTFORMW ...
+		PRINTFORMW ......
+		PRINTFORMW .........
+		PRINTFORMW ............
+		PRINTFORMW ...................
+		CALL SETCOLOR_TORIKOMODE, "RED", 3
+		PRINTFORMW %CALLNAME:MASTER%는 쓰러진 채 움직이지 않았다.
+		PRINTFORMW 반응은 커녕 일체의 미동조차 없다.
+		PRINTFORMW 가슴에 귀를 대어봐도 숨소리는 커녕심장의 고동음조차 없다.
+		PRINTFORMW %CALLNAME:MASTER%는...... 죽은 것이다.
+		RESETCOLOR
+	ENDSELECT
+ELSEIF ARG == 2
+;왕의 부상시 대사
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	SELECTCASE RAND:3
+	CASE 0
+		PRINTFORMW 『조금 간지럽군.』
+	CASE 1
+		PRINTFORMW 『공격이 단조로워.』
+	CASE 2
+		PRINTFORMW 『감히 네깟놈이 왕을 상대하면서 이정도의 공격밖에 못 하는거냐? 발칙한 것!』
+	ENDSELECT
+	RESETCOLOR
+ELSEIF ARG == 3
+;왕이 몸소 친히 스펠을 개방하신다
+	SELECTCASE RAND:3
+	CASE 0
+		CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+		PRINTFORMW 『태극부 '천지천명'!』
+		RESETCOLOR
+	CASE 1
+		CALL SETCOLOR_TORIKOMODE, "MAGENTA", 3
+		PRINTFORMW 『극기 '삼신기의 분노'!』
+		RESETCOLOR
+	CASE 2
+		CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 3
+		PRINTFORMW 『극광기 '혜성의 호우'!』
+		RESETCOLOR
+	ENDSELECT
+ELSEIF ARG == 4
+;왕이 진정한 탄막을 선보이신다
+	CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+	SELECTCASE RAND:3
+	CASE 0
+		PRINTFORMW 『탄막은 이렇게 쏘는거다!』
+	CASE 1
+		PRINTFORMW 『네놈들의 탄막이 느려터진 거야!』
+	CASE 2
+		PRINTFORMW 『벌집으로 만들어주마!』
+	ENDSELECT
+	RESETCOLOR
+ELSEIF ARG == 5
+	;왕이 직접승리할 시
+	SELECTCASE RAND:2
+	CASE 0
+		CALL SETCOLOR_TORIKOMODE, "BLUE", 3
+		PRINTFORMW 『어리석긴, 감히 이 몸에게 도전하다니.』
+		RESETCOLOR
+	CASE 1
+		CALL SETCOLOR_TORIKOMODE, "BLUE", 3
+		PRINTFORMW 『네놈의 패인은 단 한 가지다. %ARGS%. 넌 나를 화나게 했다.』
+		RESETCOLOR
+	ENDSELECT
+ELSEIF ARG == 6
+	;왕이 시간정지中 죽빵/배빵을 하실 때
+	FONTBOLD
+	CALL SETCOLOR_TORIKOMODE, "RED", 3
+	SELECTCASE RAND:3
+	CASE 0
+		PRINTFORMW 『이것이 바로 '왕의 능력'이다.』
+	CASE 1
+		PRINTFORMW 『죽어라! %ARGS%!!』
+	CASE 2
+		PRINTFORMW 『네놈은 자신이 죽은 것조차도 깨닫지 못 한다.』
+		
+	ENDSELECT
+	RESETCOLOR
+	FONTREGULAR
+ENDIF
 
 
 ;-----------------------------------------------

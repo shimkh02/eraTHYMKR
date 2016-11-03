@@ -1030,7 +1030,7 @@ DRAWLINE
 ;카운터
 LOCAL:99 = 0
 ;경험치
-LOCAL:0 = 2500+ RAND:1500
+LOCAL:0 = 30+ RAND:50
 ;체력 회복량
 LOCAL:1 = 0
 ;총 지불된 봉급
@@ -1041,7 +1041,7 @@ PRINTFORML #경비원 봉급 지불
 DO
 	;존재하는 경비원에 대해서 처리.
 	IF FLAG:(LOCAL:99+5051) > 0
-		;경험치 획득 > 레벨업. 일일 경험치는 임무에 관계없이 모두에게 준다. 2500~3500 정도 줌. (3일에 1렙업 정도 하도록)
+		;경험치 획득 > 레벨업. 일일 경험치는 임무에 관계없이 모두에게 준다. 30~80 정도 줌. (실전도 없는데 실력이 빨리 오르겠냐?)
 		CALL GETEXP_GUARDSMAN_TORIKOMODE, LOCAL:99+5051, LOCAL:0
 		;체력 상승 처리. 최대체력을 받아서, 체력을 회복한다. 10%+50 회복한다.
 		CALL CALC_DATA_GUARDSMAN_TORIKOMODE, FLAG:(LOCAL:99+5051)
@@ -1118,6 +1118,10 @@ LOCAL:7 = 0
 LOCAL:8 = 0
 ;(경비대장)노예의 전투력
 LOCAL:9 = 0
+;소모된 왕의 체력(일일단련)
+LOCAL:10 = 0
+;소모된 왕의 기력(일일단련)
+LOCAL:11 = 0
 ;
 $SELECT_GUARDSMAN
 ;경비대장 추출.
@@ -1162,10 +1166,23 @@ IF LOCAL:8 > 0
 ELSE
 	PRINTL - - - - - - - - - - 미 임명 - - - - - - - - - - - - 
 ENDIF
+IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+	DRAWLINE
+	PRINTFORML ♣총대장♣
+	;주인 이름
+	PRINTFORM [100] %CALLNAME:MASTER%
+	PRINTL
+	;주인 체력표시
+	PRINTFORM ♡체력:({BASE:MASTER:0}/{MAXBASE:MASTER:0})
+	CALL PRINT_COLORBAR(BASE:MASTER:0, MAXBASE:MASTER:0, MAXBASE:MASTER:0 /40, BARCOLORSET("緑"), BARCOLORSET("赤"))
+	PRINTL
+	;주인 전투력 표시
+	PRINTFORML ☆공격력:{MAXBASE:MASTER:1 * 10/100}
+ENDIF
 DRAWLINE
 ;리스트 출력 종료
 ;돌아가기 출력
-PRINTL [100] 돌아간다.
+PRINTL [101] 돌아간다.
 PRINTL
 ;경비력 계산.출력
 PRINTFORM #경비력 = 
@@ -1419,7 +1436,8 @@ IF RESULT <10 && RESULT != 0
 ;경비대장 관리
 ELSEIF RESULT == 99
 	$SELECT_GUARDSMAN_CAPTAIN
-	PRINTL [0] 경비대장을 임명한다
+	SIF LOCAL:8 <= 0
+		PRINTL [0] 경비대장을 임명한다
 	SIF LOCAL:8 > 0
 		PRINTL [1] 경비대장을 해임한다
 	PRINTL [999] 돌아간다
@@ -1488,6 +1506,121 @@ ELSEIF RESULT == 99
 	;관리 메인으로 돌아간다.
 	GOTO SELECT_GUARDSMAN
 ELSEIF RESULT == 100
+	IF CALLNAME:MASTER == "린노스케" && CSTR:MASTER:1 == "향림당" && NO:MASTER == 69
+		PRINTL
+		PRINTL 전투훈련을 하시겠습니까?
+		PRINTFORML [0] 전투훈련을 한다
+		PRINTFORML [100] 그만둔다
+		INPUT
+		IF RESULT == 0
+		;전투훈련을 한다
+			DRAWLINE
+			SELECTCASE RAND:2
+			CASE 0
+				PRINTFORMW %CALLNAME:MASTER%는 조교관의 훈련용 도장에서 열심히 체력을 단련했다.
+				PRINTFORMW 또한 전투기술을 단련하는 것도 잊지 않았다.
+				PRINTFORMW 도장에 설치된 과녁을 이용해 탄막사격을 연습했다.
+				PRINTL
+				IF LOCAL:7 > 0
+					PRINTFORMW 마침 경비원들도 도장에서 일일단련을 하고 있었기에
+					PRINTFORMW %CALLNAME:MASTER%는 그들과 함께 단련을 할 수가 있었다.
+					PRINTFORMW 마침 체술단련을 위해 %CALLNAME:MASTER%는 경비원들과 함께 수박투를 즐겼다.
+					PRINTFORMW 그들은 %CALLNAME:MASTER%를 조금이라도 이겨보고자 떼로 덤벼들었지만
+					PRINTFORMW %CALLNAME:MASTER%는 그들을 너무나도 가볍게 제압했다.
+				ENDIF
+			CASE 1
+				PRINTFORMW %CALLNAME:MASTER%는 밖에서 준비운동을 했다.
+				PRINTFORMW 그리고 일정거리를 한없이 달리기 시작했다.
+				PRINTFORMW %CALLNAME:MASTER%의 달리는 속도는 빠르기 그지 없었다.
+				PRINTL
+				IF LOCAL:7 > 0
+					PRINTFORMW 마침 경비원들도 %CALLNAME:MASTER%를 따라 달리고 있었다.
+					PRINTFORMW 허나 %CALLNAME:MASTER%가 지나치게 빨라서 그들은 결코 따라잡을 수가 없었다.
+					PRINTFORMW 애석하게도 도중에 낙오하는 자들이 속출했다.
+					PRINTFORMW %CALLNAME:MASTER%는 하는 수 없이 낙오자들은 쉬게 하고
+					PRINTFORMW 따라올 수 있는 자들만 데리고 유카의 밭까지 달렸다.
+					PRINTFORMW 물론 거기에 들어가지는 않았지만…….
+				ENDIF
+			ENDSELECT
+			;훈련효과 - 최대체력 상승
+			LOCAL:10 = RAND:10 + 1
+			MAXBASE:MASTER:0 += LOCAL:10
+			;훈련효과 - 최대기력 상승
+			LOCAL:11 = RAND:10 + 1
+			MAXBASE:MASTER:1 += LOCAL:11
+			;훈련으로 소모한 에너지
+			BASE:MASTER:0 -= 100
+			BASE:MASTER:1 -= 100
+			
+			PRINTL
+			PRINTFORM %CALLNAME:MASTER% 체력
+			CALL SETCOLOR_TORIKOMODE, "RED", 3
+			PRINTFORM  -100
+			RESETCOLOR
+			
+			PRINTL
+			
+			PRINTFORM %CALLNAME:MASTER% 기력
+			CALL SETCOLOR_TORIKOMODE, "RED", 3
+			PRINTFORM  -100
+			RESETCOLOR
+		
+			PRINTL
+		
+			PRINTFORM %CALLNAME:MASTER%의 최대체력이
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+			PRINTFORM  {LOCAL:10}
+			RESETCOLOR
+			PRINTFORM 상승하여
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+			PRINTFORM  {MAXBASE:MASTER:0 - LOCAL:10}
+			RESETCOLOR
+			PRINTFORM 에서
+			CALL SETCOLOR_TORIKOMODE, "GREEN", 3
+			PRINTFORM  {MAXBASE:MASTER:0}
+			RESETCOLOR
+			PRINTFORM 가 되었다.
+			
+			PRINTL
+	
+			PRINTFORM %CALLNAME:MASTER%의 최대기력이
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+			PRINTFORM  {LOCAL:11}
+			RESETCOLOR
+			PRINTFORM 상승하여
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+			PRINTFORM  {MAXBASE:MASTER:1 - LOCAL:11}
+			RESETCOLOR
+			PRINTFORM 에서
+			CALL SETCOLOR_TORIKOMODE, "YELLOW", 3
+			PRINTFORM  {MAXBASE:MASTER:1}
+			RESETCOLOR
+			PRINTFORM 가 되었다.
+			PRINTL
+			DRAWLINE
+			DRAWLINE
+			;훈련으로 한나절 보냄
+			BEGIN TURNEND
+		ELSEIF RESULT == 100
+			;그만둔다
+				GOTO SELECT_GUARDSMAN
+			ENDIF
+		
+		
+		;CALL SETCOLOR_TORIKOMODE, "SKYBLUE", 2
+		;PRINTFORM <임명가능>
+		;RESETCOLOR
+		;최대체력 2배 상승(삼신기 흡수버프)
+		;MAXBASE:MASTER:0 = (MAXBASE:MASTER:0 * 2)
+		;BASE:MASTER:0 = (BASE:MASTER:0 * 2)
+		;최대기력 5배 상승(삼신기 흡수버프)
+		;MAXBASE:MASTER:1 = (MAXBASE:MASTER:1 * 5)
+		;BASE:MASTER:1 = (BASE:MASTER:1 * 5)
+		;CALL FANTASY_KING_BATTLECRY_TORIKOMODE, 1, CALLNAME:ARG ;왕의 직접승리 배틀크라이
+		;BEGIN TURNEND
+		;CALL BADEND_COMMON ;배드엔드
+	ENDIF
+ELSEIF RESULT == 101
 	RETURN 0
 ELSE
 	GOTO SELECT_GUARDSMAN
